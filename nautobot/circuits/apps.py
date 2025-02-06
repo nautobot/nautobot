@@ -2,6 +2,7 @@ from nautobot.core.apps import NautobotConfig
 
 
 class CircuitsConfig(NautobotConfig):
+    default = True
     name = "nautobot.circuits"
     verbose_name = "Circuits"
     searchable_models = [

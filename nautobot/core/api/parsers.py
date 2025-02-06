@@ -190,7 +190,13 @@ class NautobotCSVParser(BaseParser):
             elif isinstance(serializer_field, (serializers.DictField, serializers.JSONField)):
                 # We currently only store lists or dicts in JSONFields, never bare ints/strings.
                 # On the CSV write side, we only render dicts to JSON
-                if value is not None:
+                from nautobot.extras.api.serializers import ObjectMetadataValueJSONField
+
+                if isinstance(serializer_field, ObjectMetadataValueJSONField):
+                    # Do not split value into a list or dicts when it comes to the value of ObjectMetadata
+                    # we want to store it as bare ints/strings
+                    pass
+                elif value is not None:
                     if value.startswith(("{", "[")):
                         value = json.loads(value)
                     else:

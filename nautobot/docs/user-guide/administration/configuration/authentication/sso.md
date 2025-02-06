@@ -28,10 +28,10 @@ If you are using OpenID Connect or SAML you will also need to install the extra 
     sudo apt install -y libxmlsec1-dev libxmlsec1-openssl pkg-config
     ```
 
-Furthermore, due to potential incompatibilities between the precompiled binaries for the `lxml` and `xmlsec` Python packages that this installation will bring in, you need to tell Pip to not install the precompiled binary for `lxml`. Run the following command as the `nautobot` user:
+Furthermore, due to potential incompatibilities between the precompiled binaries for the `lxml` and `xmlsec` Python packages that this installation will bring in, you need to tell Pip to not install the precompiled binary for either of these packages. Run the following command as the `nautobot` user:
 
 ```no-highlight
-pip3 install --no-binary=lxml "nautobot[sso]"
+pip3 install --no-binary=lxml,xmlsec "nautobot[sso]"
 ```
 
 ## Configuration
@@ -104,7 +104,7 @@ By default, once authenticated, if the user has never logged in before a new use
 This new user will not be a member of any group or have any permissions assigned. If you would like to create users with
 a default set of permissions there are some additional variables to configure the permissions.
 
-Please see the documentation on [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/optional-settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/optional-settings.md#external_auth_default_permissions) for more information.
+Please see the documentation on [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/settings.md#external_auth_default_permissions) for more information.
 
 ---
 
@@ -278,7 +278,7 @@ SOCIAL_AUTH_OKTA_OPENIDCONNECT_SCOPE = ['groups']
 
 In order to use this returned scope a custom function needs to be written and added to the `SOCIAL_AUTH_PIPELINE` as described in the [`python-social-auth` authentication pipeline documentation](https://python-social-auth.readthedocs.io/en/stable/pipeline.html).
 
-An example to sync groups with Okta is provided in the [`examples/okta`](https://github.com/nautobot/nautobot/tree/develop/examples/okta) folder in the root of the Nautobot repository.
+A group syncing function is provided and but needs to be configured. See [Group Syncing](#group-syncing).
 
 ### Google - OAuth2
 
@@ -451,7 +451,7 @@ This should be the URL that is mapped to the "Log in" button on the top right of
 
 ---
 
-Be sure to configure [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/optional-settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/optional-settings.md#external_auth_default_permissions) next.
+Be sure to configure [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/settings.md#external_auth_default_permissions) next.
 
 ---
 
@@ -507,6 +507,7 @@ class MetadataView(View):
 6. Click on the *Add a Redirect URI* link on the page and configure it as follows:
 
     * *Redirect URIs*: should be the Base URI plus `/complete/azuread-oauth2/` such as `https://nautobot.example.com/complete/azuread-oauth2/`
+    * *Redirect URIs with Tenant*: should be the Base URI plus `/complete/azuread-tenant-oauth2/` such as `https://nautobot.example.com/complete/azuread-tenant-oauth2/`
 
 7. Once the Redirect URI is set, the last thing you'll need is to generate a *client secret*. To do so, click on *Certificates & secrets* and then the *New client secret* option. At this point you'll need to specify the expiration for the secret. Microsoft recommends less than 12 months with a maximum of 24 months as an option. Ensure you make a note of the secret that's generated for the next step.
 
@@ -545,7 +546,55 @@ SOCIAL_AUTH_AZUREAD_TENANT_OAUTH2_TENANT_ID = "<Tenant ID from Azure>"
 
 With those settings in place your users should be able to authenticate against Azure AD and successfully login to Nautobot. However, that user will not be placed in any groups or given any permissions. In order to do so, you'll need to utilize a script to synchronize the groups passed from Azure to Nautobot after authentication succeeds. Any group permissions will need to be set manually in the Nautobot admin panel.
 
-An example to sync groups with Azure is provided in the [`examples/azure_ad`](https://github.com/nautobot/nautobot/tree/main/examples/azure_ad) folder in the root of the Nautobot repository.
+A group syncing function is provided and but needs to be configured. See [Group Syncing](#group-syncing).
 
 !!! note
     You may need to set `UWSGI_BUFFER_SIZE` to something bigger than the default 4096 bytes in the UWSGI config if you are seeing errors like `invalid request block size` in your application logs (see [here](https://uwsgi-docs.readthedocs.io/en/latest/Options.html#buffer-size) for more information)
+
+## Group Syncing
+
+To do so `nautobot.extras.group_sync.group_sync` must be part of `SOCIAL_AUTH_PIPELINE` which can be achieved
+by setting the environment variable `NAUTOBOT_SSO_ENABLE_GROUP_SYNC` to `true`. Or by setting
+the following in your settings:
+
+```python
+SOCIAL_AUTH_PIPELINE = (
+    "social_core.pipeline.social_auth.social_details",
+    "social_core.pipeline.social_auth.social_uid",
+    "social_core.pipeline.social_auth.auth_allowed",
+    "social_core.pipeline.social_auth.social_user",
+    "social_core.pipeline.user.get_username",
+    "social_core.pipeline.user.create_user",
+    "social_core.pipeline.social_auth.associate_user",
+    "social_core.pipeline.social_auth.load_extra_data",
+    "social_core.pipeline.user.user_details",
+    "nautobot.extras.group_sync.group_sync",
+)
+```
+
+You must then enable the scope that will provide your groups in your provider. The default
+settings module will read the `NAUTOBOT_SSO_CLAIMS_GROUP` environment variable and use
+the default value of `"groups"`. For Azure you should override the value like:
+
+```python
+# for Azure
+SSO_CLAIMS_GROUP = "groups"
+```
+
+```bash
+# for Azure (if set via env)
+NAUTOBOT_SSO_CLAIMS_GROUP = "roles"
+```
+
+Lastly you must configure which groups shall be granted additional permissions as such:
+
+```python
+SSO_SUPERUSER_GROUPS = ["Nautobot Admins", "MySuperUsers"]
+SSO_STAFF_GROUPS = ["Nautobot Admins"]
+```
+
+```bash
+# if set via env
+NAUTOBOT_SSO_SUPERUSER_GROUPS = "Nautobot Admins,MySuperUsers"
+NAUTOBOT_SSO_STAFF_GROUPS = "Nautobot Admins"
+```

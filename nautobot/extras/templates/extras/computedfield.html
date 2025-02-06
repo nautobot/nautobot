@@ -1,4 +1,4 @@
-{% extends 'generic/object_detail.html' %}
+{% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
 
 {% block content_left_page %}
@@ -19,6 +19,10 @@
                     <tr>
                         <td>Key</td>
                         <td><span>{{ object.key }}</span></td>
+                    </tr>
+                    <tr>
+                        <td>Grouping</td>
+                        <td>{{ object.grouping | placeholder }}</td>
                     </tr>
                     <tr>
                         <td>Description</td>

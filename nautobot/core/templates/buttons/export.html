@@ -1,17 +1,65 @@
 {% if export_url %}
-    {% if export_templates or include_yaml_option %}
-        <form style="display: inline-block" action="{{ export_url }}" method="post">
-            {% csrf_token %}
-            <input type="hidden" name="content_type" value="{{ content_type.pk }}">
-            <input type="hidden" name="query_string" value="{{ query_string }}">
-            <input type="hidden" name="export_format"
-                   value="{% if include_yaml_option %}yaml{% else %}csv{% endif %}">
-            <input type="hidden" name="_schedule_type" value="immediately">
+    {% if list_element %}
+        {% if export_templates %}
+            <li class="text-center">Export Templates</li>
+        {% endif %}
+        {% if include_yaml_option %}
+            <li>
+                <form action="{{ export_url }}" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="content_type" value="{{ content_type.pk }}">
+                    <input type="hidden" name="query_string" value="{{ query_string }}">
+                    <input type="hidden" name="_schedule_type" value="immediately">
+                    <input type="hidden" name="export_format" value="yaml">
+                    <button type="submit">
+                        <span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as YAML
+                    </button>
+                </form>
+            </li>
+        {% endif %}
+        <li>
+            <form action="{{ export_url }}" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="content_type" value="{{ content_type.pk }}">
+                <input type="hidden" name="query_string" value="{{ query_string }}">
+                <input type="hidden" name="_schedule_type" value="immediately">
+                <input type="hidden" name="export_format" value="csv">
+                <button type="submit">
+                    <span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as CSV
+                </button>
+            </form>
+        </li>
+        {% if export_templates %}
+            {% for et in export_templates %}
+                <li>
+                    <form action="{{ export_url }}" method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="content_type" value="{{ content_type.pk }}">
+                        <input type="hidden" name="export_template" value="{{ et.pk }}">
+                        <input type="hidden" name="query_string" value="{{ query_string }}">
+                        <input type="hidden" name="_schedule_type" value="immediately">
+                        <button type="submit"
+                            {% if et.description %}title="{{ et.description }}"{% endif %}
+                        ><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> {{ et.name }}</button>
+                    </form>
+                </li>
+            {% endfor %}
+        {% endif %}
+    {% else %}
+        {% if export_templates or include_yaml_option %}
             <div class="btn-group">
-                <button type="submit" class="btn btn-success">
+                <button type="submit" class="btn btn-success" form="export_default">
                     <span class="mdi mdi-database-export" aria-hidden="true"></span>
                     Export
                 </button>
+                <form id="export_default" style="display: inline-block" action="{{ export_url }}" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="content_type" value="{{ content_type.pk }}">
+                    <input type="hidden" name="query_string" value="{{ query_string }}">
+                    <input type="hidden" name="export_format"
+                        value="{% if include_yaml_option %}yaml{% else %}csv{% endif %}">
+                    <input type="hidden" name="_schedule_type" value="immediately">
+                </form>
                 <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     <span class="caret"></span>
                     <span class="sr-only">Toggle Dropdown</span>
@@ -19,7 +67,7 @@
                 <ul class="dropdown-menu dropdown-menu-right">
                     {% if include_yaml_option %}
                         <li>
-                            <button type="submit" class="btn btn-link">YAML format</button>
+                            <button type="submit" class="btn btn-link" form="export_default">Export as YAML</button>
                         </li>
                         <li>
                             <form action="{{ export_url }}" method="post">
@@ -27,12 +75,12 @@
                                 <input type="hidden" name="content_type" value="{{ content_type.pk }}">
                                 <input type="hidden" name="query_string" value="{{ query_string }}">
                                 <input type="hidden" name="_schedule_type" value="immediately">
-                                <button type="submit" class="btn btn-link">CSV format</button>
+                                <button type="submit" class="btn btn-link">Export as CSV</button>
                             </form>
                         </li>
                     {% else %}
                         <li>
-                            <button type="submit" class="btn btn-link">CSV format</button>
+                            <button type="submit" class="btn btn-link" form="export_default">CSV format</button>
                         </li>
                     {% endif %}
                     {% if export_templates %}
@@ -54,16 +102,16 @@
                     {% endif %}
                 </ul>
             </div>
-        </form>
-    {% else %}
-        <form style="display: inline-block" action="{{ export_url }}" method="post">
-            {% csrf_token %}
-            <input type="hidden" name="content_type" value="{{ content_type.pk }}">
-            <input type="hidden" name="query_string" value="{{ query_string }}">
-            <input type="hidden" name="_schedule_type" value="immediately">
-            <button type="submit" class="btn btn-success">
-                <span class="mdi mdi-database-export" aria-hidden="true"></span> Export
-            </button>
-        </form>
+        {% else %}
+            <form style="display: inline-block" action="{{ export_url }}" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="content_type" value="{{ content_type.pk }}">
+                <input type="hidden" name="query_string" value="{{ query_string }}">
+                <input type="hidden" name="_schedule_type" value="immediately">
+                <button type="submit" class="btn btn-success">
+                    <span class="mdi mdi-database-export" aria-hidden="true"></span> Export
+                </button>
+            </form>
+        {% endif %}
     {% endif %}
 {% endif %}

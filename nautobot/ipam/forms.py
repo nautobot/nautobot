@@ -94,6 +94,12 @@ class NamespaceBulkEditForm(
         ]
 
 
+class NamespaceFilterForm(LocatableModelFilterFormMixin, NautobotFilterForm):
+    model = Namespace
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(required=False)
+
+
 #
 # VRFs
 #
@@ -119,6 +125,7 @@ class VRFForm(NautobotModelForm, TenancyForm):
             "name",
             "rd",
             "namespace",
+            "status",
             "description",
             "import_targets",
             "export_targets",
@@ -134,14 +141,21 @@ class VRFForm(NautobotModelForm, TenancyForm):
         }
         help_texts = {
             "rd": "Route distinguisher unique to this Namespace (as defined in RFC 4364)",
+            "status": "Operational status of this VRF",
         }
 
 
-class VRFBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+class VRFBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=VRF.objects.all(), widget=forms.MultipleHiddenInput())
     namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    add_prefixes = DynamicModelMultipleChoiceField(
+        queryset=Prefix.objects.all(), required=False, query_params={"namespace": "$namespace"}
+    )
+    remove_prefixes = DynamicModelMultipleChoiceField(
+        queryset=Prefix.objects.all(), required=False, query_params={"namespace": "$namespace"}
+    )
 
     class Meta:
         nullable_fields = [
@@ -150,9 +164,9 @@ class VRFBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         ]
 
 
-class VRFFilterForm(NautobotFilterForm, TenancyFilterForm):
+class VRFFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, TenancyFilterForm):
     model = VRF
-    field_order = ["q", "import_targets", "export_targets", "tenant_group", "tenant"]
+    field_order = ["q", "import_targets", "export_targets", "status", "tenant_group", "tenant"]
     q = forms.CharField(required=False, label="Search")
     import_targets = DynamicModelMultipleChoiceField(
         queryset=RouteTarget.objects.all(), to_field_name="name", required=False
@@ -358,6 +372,12 @@ class PrefixBulkEditForm(
     remove_locations = DynamicModelMultipleChoiceField(
         queryset=Location.objects.all(), required=False, query_params={"content_type": Prefix._meta.label_lower}
     )
+    add_vrfs = DynamicModelMultipleChoiceField(
+        queryset=VRF.objects.all(), required=False, query_params={"namespace": "$namespace"}
+    )
+    remove_vrfs = DynamicModelMultipleChoiceField(
+        queryset=VRF.objects.all(), required=False, query_params={"namespace": "$namespace"}
+    )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
     date_allocated = forms.DateTimeField(required=False, widget=DateTimePicker)
@@ -562,10 +582,14 @@ class IPAddressForm(IPAddressFormMixin, ReturnURLForm):
                 if nat_inside_parent.count() == 1:
                     nat_inside_parent = nat_inside_parent.first()
                     if nat_inside_parent.interface is not None:
-                        initial["nat_location"] = nat_inside_parent.interface.device.location.pk
-                        if nat_inside_parent.interface.device.rack:
-                            initial["nat_rack"] = nat_inside_parent.interface.device.rack.pk
-                        initial["nat_device"] = nat_inside_parent.interface.device.pk
+                        parent_device = nat_inside_parent.interface.device
+                        if parent_device is None and nat_inside_parent.interface.module is not None:
+                            parent_device = nat_inside_parent.interface.module.device
+                        if parent_device:
+                            initial["nat_location"] = parent_device.location.pk
+                            if parent_device.rack:
+                                initial["nat_rack"] = parent_device.rack.pk
+                            initial["nat_device"] = parent_device.pk
                     elif nat_inside_parent.vm_interface is not None:
                         initial["nat_cluster"] = nat_inside_parent.vm_interface.virtual_machine.cluster.pk
                         initial["nat_virtual_machine"] = nat_inside_parent.vm_interface.virtual_machine.pk
@@ -646,6 +670,8 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         "role",
         "tenant_group",
         "tenant",
+        "nat_inside",
+        "has_nat_inside",
     ]
     q = forms.CharField(required=False, label="Search")
     parent = forms.CharField(
@@ -682,6 +708,12 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         widget=StaticSelect2(),
     )
     tags = TagFilterField(model)
+    nat_inside = DynamicModelChoiceField(queryset=IPAddress.objects.all(), required=False, label="NAT Inside Address")
+    has_nat_inside = forms.NullBooleanField(
+        required=False,
+        label="Has NAT Inside",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
 
 
 #
@@ -695,7 +727,9 @@ class VLANGroupForm(LocatableModelFormMixin, NautobotModelForm):
         fields = [
             "location",
             "name",
+            "range",
             "description",
+            "tags",
         ]
 
 
@@ -718,6 +752,7 @@ class VLANForm(NautobotModelForm, TenancyForm):
     )
     vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
+        query_params={"location": "$locations"},
         required=False,
     )
 
@@ -745,6 +780,22 @@ class VLANForm(NautobotModelForm, TenancyForm):
         }
 
     def clean(self):
+        vlan_group = self.cleaned_data["vlan_group"]
+        locations = self.cleaned_data["locations"]
+        # Validate Vlan Group Location is one of the ancestors of the VLAN locations specified.
+        if vlan_group and vlan_group.location and locations:
+            vlan_group_location = vlan_group.location
+            is_vlan_group_valid = False
+            for location in locations:
+                if vlan_group_location in location.ancestors(include_self=True):
+                    is_vlan_group_valid = True
+                    break
+
+            if not is_vlan_group_valid:
+                locations = list(locations.values_list("name", flat=True))
+                raise ValidationError(
+                    {"vlan_group": [f"VLAN Group {vlan_group} is not in locations {locations} or their ancestors."]}
+                )
         # Validation error raised in signal is not properly handled in form clean
         # Hence handling any validationError that might occur.
         try:
@@ -841,6 +892,12 @@ class ServiceForm(NautobotModelForm):
         base_field=forms.IntegerField(min_value=SERVICE_PORT_MIN, max_value=SERVICE_PORT_MAX),
         help_text="Comma-separated list of one or more port numbers. A range may be specified using a hyphen.",
     )
+    ip_addresses = DynamicModelMultipleChoiceField(
+        queryset=IPAddress.objects.all(),
+        required=False,
+        label="IP addresses",
+        query_params={"device_id": "$device", "virtual_machine_id": "$virtual_machine"},
+    )
 
     class Meta:
         model = Service
@@ -860,7 +917,6 @@ class ServiceForm(NautobotModelForm):
         }
         widgets = {
             "protocol": StaticSelect2(),
-            "ip_addresses": StaticSelect2Multiple(),
         }
 
     def __init__(self, *args, **kwargs):

@@ -77,11 +77,11 @@ class RackGroup(TreeModel, OrganizationalModel):
         # Parent RackGroup (if any) must belong to the same or ancestor Location
         if (
             self.parent is not None
-            and self.parent.location is not None
-            and self.parent.location not in self.location.ancestors(include_self=True)
+            and self.parent.location is not None  # pylint: disable=no-member
+            and self.parent.location not in self.location.ancestors(include_self=True)  # pylint: disable=no-member
         ):
             raise ValidationError(
-                {
+                {  # pylint: disable=no-member  # false positive on parent.location
                     "location": f'Location "{self.location}" is not descended from '
                     f'parent rack group "{self.parent}" location "{self.parent.location}".'
                 }
@@ -91,7 +91,6 @@ class RackGroup(TreeModel, OrganizationalModel):
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
@@ -297,7 +296,7 @@ class Rack(PrimaryModel):
             # Determine which devices the user has permission to view
             permitted_device_ids = []
             if user is not None:
-                permitted_device_ids = self.devices.restrict(user, "view").values_list("pk", flat=True)
+                permitted_device_ids = self.devices.restrict(user, "view").values_list("pk", flat=True)  # pylint: disable=no-member
 
             for device in queryset:
                 if expand_devices:
@@ -392,9 +391,9 @@ class Rack(PrimaryModel):
             Defaults to True, showing device full name and hiding truncated.
         """
         if unit_width is None:
-            unit_width = get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_WIDTH")
+            unit_width = get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_WIDTH", fallback=230)
         if unit_height is None:
-            unit_height = get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_HEIGHT")
+            unit_height = get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", fallback=22)
         elevation = RackElevationSVG(
             self, user=user, include_images=include_images, base_url=base_url, display_fullname=display_fullname
         )

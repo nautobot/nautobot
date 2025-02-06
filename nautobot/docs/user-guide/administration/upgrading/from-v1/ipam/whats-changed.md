@@ -103,10 +103,9 @@ When identifying possible ancestors for child `Prefix` or `IPAddress` objects du
 - `VRF` null
 - Default ordering
 
-<!-- markdownlint-disable-next-line MD033 -->
+<!-- pyml disable-num-lines 4 no-inline-html -->
 <figure markdown>
   ![Tenant affinity decision tree](../../../../../media/user-guide/administration/upgrading/from-v1/ipam/tenant-affinity.png)
-  <!-- markdownlint-disable-next-line MD033 -->
   <figcaption>Tenant affinity decision tree</figcaption>
 </figure>
 
@@ -121,7 +120,7 @@ The `Interface`/`VMInterface` assignment constraints are as follows:
 - If the `VRF` has no `Prefixes` assigned, `IPAddresses` may freely be assigned to the `Interface`/`VMInterface`
 - If the `VRF` has `Prefixes` assigned, only child `IPAddresses` of those `Prefixes` may be assigned to the `Interface`/`VMInterface`
 
-## IPAddress prefix_length is now mask_length
+## IPAddress `prefix_length` is now `mask_length`
 
 The `prefix_length` field on `IPAddress` has been renamed to `mask_length`. This is to enforce that this field is used for documentation purposes only to indicate the mask length that may be used in practice when configuring this address for use on your network.
 

@@ -4,6 +4,7 @@ import re
 from django.core import exceptions
 from django.core.validators import MaxLengthValidator, RegexValidator
 from django.db import models
+from django.forms import TextInput
 from django.utils.text import slugify
 from django_extensions.db.fields import AutoSlugField as _AutoSlugField
 from netaddr import AddrFormatError, EUI, mac_unix_expanded
@@ -11,8 +12,10 @@ from taggit.managers import TaggableManager
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import fields, widgets
+from nautobot.core.forms.utils import compress_range, parse_numeric_range
 from nautobot.core.models import ordering
 from nautobot.core.models.managers import TagsManager
+from nautobot.core.models.validators import EnhancedURLValidator
 
 
 class mac_unix_expanded_uppercase(mac_unix_expanded):
@@ -277,6 +280,8 @@ class JSONArrayField(models.JSONField):
     """
     An ArrayField implementation backed JSON storage.
     Replicates ArrayField's base field validation.
+
+    Supports choices in the base field.
     """
 
     _default_hint = ("list", "[]")
@@ -372,12 +377,28 @@ class JSONArrayField(models.JSONField):
 
     def formfield(self, **kwargs):
         """Return a django.forms.Field instance for this field."""
+        defaults = {
+            "form_class": fields.JSONArrayFormField,
+            "base_field": self.base_field.formfield(),
+        }
+        # If the base field has choices, pass them to the form field.
+        if self.base_field.choices:
+            defaults["choices"] = self.base_field.choices
+        defaults.update(**kwargs)
+        return super().formfield(**defaults)
+
+
+class LaxURLField(models.URLField):
+    """Like models.URLField, but using validators.EnhancedURLValidator and forms.LaxURLField."""
+
+    default_validators = [EnhancedURLValidator()]
+
+    def formfield(self, **kwargs):
         return super().formfield(
             **{
-                "form_class": fields.JSONArrayFormField,
-                "base_field": self.base_field.formfield(),
+                "form_class": fields.LaxURLField,
                 **kwargs,
-            }
+            },
         )
 
 
@@ -400,3 +421,57 @@ class TagsField(TaggableManager):
         kwargs.setdefault("required", False)
         kwargs.setdefault("query_params", {"content_types": self.model._meta.label_lower})
         return super().formfield(form_class=form_class, **kwargs)
+
+
+class PositiveRangeNumberTextField(models.TextField):
+    default_error_messages = {
+        "invalid": "Invalid value. Specify a value using non-negative integers in a range format (i.e. '10-20').",
+    }
+
+    description = "A text based representation of positive number range."
+
+    def __init__(self, min_boundary=0, max_boundary=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.min_boundary = min_boundary
+        self.max_boundary = max_boundary
+
+    def to_python(self, value):
+        if value is None:
+            return None
+
+        try:
+            self.expanded = sorted(parse_numeric_range(value))
+        except (ValueError, AttributeError):
+            raise exceptions.ValidationError(
+                self.error_messages["invalid"],
+                code="invalid",
+                params={"value": value},
+            )
+
+        converted_ranges = compress_range(self.expanded)
+        normalized_range = ",".join([f"{x[0]}" if x[0] == x[1] else f"{x[0]}-{x[1]}" for x in converted_ranges])
+
+        return normalized_range
+
+    def validate(self, value, model_instance):
+        """
+        Validate `value` and raise ValidationError if necessary.
+        """
+        super().validate(value, model_instance)
+
+        if (self.min_boundary is not None and self.expanded[0] < self.min_boundary) or (
+            self.max_boundary is not None and self.expanded[-1] > self.max_boundary
+        ):
+            raise exceptions.ValidationError(
+                message=f"Invalid value. Specify a range value between {self.min_boundary}-{self.max_boundary or 'unlimited'}",
+                code="outofrange",
+                params={"value": value},
+            )
+
+    def formfield(self, **kwargs):
+        return super().formfield(
+            **{
+                "widget": TextInput,
+                **kwargs,
+            }
+        )

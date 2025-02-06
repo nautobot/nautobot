@@ -1,4 +1,4 @@
-{% extends 'generic/object_detail.html' %}
+{% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
 {% load static %}
 
@@ -12,50 +12,11 @@
             <li>{{ object|hyperlinked_object }}</li>
 {% endblock breadcrumbs %}
 
-{% block extra_buttons %}
-        {% if perms.dcim.change_device %}
-            <div class="btn-group">
-                <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Components <span class="caret"></span>
-                </button>
-                <ul class="dropdown-menu">
-                    {% if perms.dcim.add_consoleport %}
-                        <li><a href="{% url 'dcim:consoleport_add' %}?device={{ object.pk }}&return_url={% url 'dcim:device_consoleports' pk=object.pk %}">Console Ports</a></li>
-                    {% endif %}
-                    {% if perms.dcim.add_consoleserverport %}
-                        <li><a href="{% url 'dcim:consoleserverport_add' %}?device={{ object.pk }}&return_url={% url 'dcim:device_consoleserverports' pk=object.pk %}">Console Server Ports</a></li>
-                    {% endif %}
-                    {% if perms.dcim.add_powerport %}
-                        <li><a href="{% url 'dcim:powerport_add' %}?device={{ object.pk }}&return_url={% url 'dcim:device_powerports' pk=object.pk %}">Power Ports</a></li>
-                    {% endif %}
-                    {% if perms.dcim.add_poweroutlet %}
-                        <li><a href="{% url 'dcim:poweroutlet_add' %}?device={{ object.pk }}&return_url={% url 'dcim:device_poweroutlets' pk=object.pk %}">Power Outlets</a></li>
-                    {% endif %}
-                    {% if perms.dcim.add_interface %}
-                        <li><a href="{% url 'dcim:interface_add' %}?device={{ object.pk }}&return_url={% url 'dcim:device_interfaces' pk=object.pk %}">Interfaces</a></li>
-                    {% endif %}
-                    {% if perms.dcim.add_frontport %}
-                        <li><a href="{% url 'dcim:frontport_add' %}?device={{ object.pk }}&return_url={% url 'dcim:device_frontports' pk=object.pk %}">Front Ports</a></li>
-                    {% endif %}
-                    {% if perms.dcim.add_rearport %}
-                        <li><a href="{% url 'dcim:rearport_add' %}?device={{ object.pk }}&return_url={% url 'dcim:device_rearports' pk=object.pk %}">Rear Ports</a></li>
-                    {% endif %}
-                    {% if perms.dcim.add_devicebay %}
-                        <li><a href="{% url 'dcim:devicebay_add' %}?device={{ object.pk }}&return_url={% url 'dcim:device_devicebays' pk=object.pk %}">Device Bays</a></li>
-                    {% endif %}
-                    {% if perms.dcim.add_inventoryitem %}
-                        <li><a href="{% url 'dcim:inventoryitem_add' %}?device={{ object.pk }}&return_url={% url 'dcim:device_inventory' pk=object.pk %}">Inventory Items</a></li>
-                    {% endif %}
-                </ul>
-            </div>
-        {% endif %}
-{% endblock extra_buttons %}
-
 {% block masthead %}
     <span class="hover_copy">
         <h1>
             <span id="devicename">{% block title %}{{ object }}{% endblock title %}</span>
-            <button class="btn btn-xs btn-default hover_copy_button" data-clipboard-target="#devicename">
+            <button class="btn btn-xs btn-default hover_copy_button" data-clipboard-text="{{ object }}">
                 <span class="mdi mdi-content-copy"></span>
             </button>
         </h1>
@@ -63,6 +24,11 @@
 {% endblock masthead %}
 
 {% block extra_nav_tabs %}
+        {% if modulebay_count %}
+            <li role="presentation" {% if active_tab == 'module-bays' %} class="active"{% endif %}>
+                <a href="{% url 'dcim:device_modulebays' pk=object.pk %}">Modules {% badge module_count %}</a>
+            </li>
+        {% endif %}
         {% with interface_count=object.vc_interfaces.count %}
             {% if interface_count %}
                 <li role="presentation" {% if active_tab == 'interfaces' %} class="active"{% endif %}>
@@ -70,42 +36,42 @@
                 </li>
             {% endif %}
         {% endwith %}
-        {% with frontport_count=object.front_ports.count %}
+        {% with frontport_count=object.all_front_ports.count %}
             {% if frontport_count %}
                 <li role="presentation" {% if active_tab == 'front-ports' %} class="active"{% endif %}>
                     <a href="{% url 'dcim:device_frontports' pk=object.pk %}">Front Ports {% badge frontport_count %}</a>
                 </li>
             {% endif %}
         {% endwith %}
-        {% with rearport_count=object.rear_ports.count %}
+        {% with rearport_count=object.all_rear_ports.count %}
             {% if rearport_count %}
                 <li role="presentation" {% if active_tab == 'rear-ports' %} class="active"{% endif %}>
                     <a href="{% url 'dcim:device_rearports' pk=object.pk %}">Rear Ports {% badge rearport_count %}</a>
                 </li>
             {% endif %}
         {% endwith %}
-        {% with consoleport_count=object.console_ports.count %}
+        {% with consoleport_count=object.all_console_ports.count %}
             {% if consoleport_count %}
                 <li role="presentation" {% if active_tab == 'console-ports' %} class="active"{% endif %}>
                     <a href="{% url 'dcim:device_consoleports' pk=object.pk %}">Console Ports {% badge consoleport_count %}</a>
                 </li>
             {% endif %}
         {% endwith %}
-        {% with consoleserverport_count=object.console_server_ports.count %}
+        {% with consoleserverport_count=object.all_console_server_ports.count %}
             {% if consoleserverport_count %}
                 <li role="presentation" {% if active_tab == 'console-server-ports' %} class="active"{% endif %}>
                     <a href="{% url 'dcim:device_consoleserverports' pk=object.pk %}">Console Server Ports {% badge consoleserverport_count %}</a>
                 </li>
             {% endif %}
         {% endwith %}
-        {% with powerport_count=object.power_ports.count %}
+        {% with powerport_count=object.all_power_ports.count %}
             {% if powerport_count %}
                 <li role="presentation" {% if active_tab == 'power-ports' %} class="active"{% endif %}>
                     <a href="{% url 'dcim:device_powerports' pk=object.pk %}">Power Ports {% badge powerport_count %}</a>
                 </li>
             {% endif %}
         {% endwith %}
-        {% with poweroutlet_count=object.power_outlets.count %}
+        {% with poweroutlet_count=object.all_power_outlets.count %}
             {% if poweroutlet_count %}
                 <li role="presentation" {% if active_tab == 'power-outlets' %} class="active"{% endif %}>
                     <a href="{% url 'dcim:device_poweroutlets' pk=object.pk %}">Power Outlets {% badge poweroutlet_count %}</a>
@@ -126,6 +92,12 @@
                 </li>
             {% endif %}
         {% endwith %}
+        {% if 'wireless' in object.controller_managed_device_group.capabilities %}
+            <li role="presentation" {% if active_tab == 'wireless' %} class="active"{% endif %}>
+                {% comment %} Not placing a badge as we are using the controller_managed_device_groups count to see if there are any attached controller_managed_device_groups, but the count for wireless networks will be larger {% endcomment %}
+                <a href="{% url 'dcim:device_wireless' pk=object.pk %}">Wireless</a>
+            </li>
+        {% endif %}
         {% if perms.dcim.napalm_read_device %}
             {% if not object.platform %}
                 {% include 'dcim/inc/device_napalm_tabs.html' with disabled_message='No platform assigned to this device' %}

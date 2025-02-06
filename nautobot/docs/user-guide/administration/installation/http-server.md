@@ -16,15 +16,15 @@ Two files will be created: the public certificate (`nautobot.crt`) and the priva
 
 === "Ubuntu/Debian"
 
-    ```no-highlight
+    ```no-highlight title="Create SSL certificate"
     sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
       -keyout /etc/ssl/private/nautobot.key \
       -out /etc/ssl/certs/nautobot.crt
     ```
 
-=== "CentOS/RHEL8"
+=== "Fedora/RHEL"
 
-    ```no-highlight
+    ```no-highlight title="Create SSL certificate"
     sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
       -keyout /etc/pki/tls/private/nautobot.key \
       -out /etc/pki/tls/certs/nautobot.crt
@@ -39,8 +39,7 @@ Any HTTP server of your choosing is supported. For your convenience, setup instr
 
 ### NGINX
 
-[NGINX](https://www.nginx.com/resources/wiki/) is a free, open source, high-performance HTTP server and reverse proxy
-and is by far the most popular choice.
+[NGINX](https://www.nginx.com/resources/wiki/) is a free, open source, high-performance HTTP server and reverse proxy.
 
 #### Install NGINX
 
@@ -48,26 +47,37 @@ Begin by installing NGINX:
 
 === "Ubuntu/Debian"
 
-    ```no-highlight
+    ```no-highlight title="Install NGINX"
     sudo apt install -y nginx
     ```
 
-=== "CentOS/RHEL8"
+=== "Fedora/RHEL"
 
-    ```no-highlight
+    ```no-highlight title="Install NGINX"
     sudo dnf install -y nginx
     ```
 
 #### Configure NGINX
 
-Once NGINX is installed, copy and paste the following NGINX configuration into
-`/etc/nginx/sites-available/nautobot.conf` for Ubuntu or `/etc/nginx/conf.d/nautobot.conf` for CentOS/RHEL:
-
 !!! note
     If the file location of SSL certificates had to be changed in the [Obtain an SSL Certificate](#obtain-an-ssl-certificate) step above, then the location will need to be changed in the NGINX configuration below.
 
 === "Ubuntu/Debian"
-    ```nginxconf
+    Once NGINX is installed, copy and paste the following NGINX configuration into `/etc/nginx/sites-available/nautobot.conf`:
+
+    === "Vim"
+
+        ```no-highlight title="Edit NGINX config with Vim"
+        sudo vim /etc/nginx/sites-available/nautobot.conf
+        ```
+
+    === "Nano"
+
+        ```no-highlight title="Edit NGINX config with Nano"
+        sudo nano /etc/nginx/sites-available/nautobot.conf
+        ```
+
+    ```nginxconf title="/etc/nginx/sites-available/nautobot.conf"
     server {
         listen 443 ssl http2 default_server;
         listen [::]:443 ssl http2 default_server;
@@ -111,9 +121,22 @@ Once NGINX is installed, copy and paste the following NGINX configuration into
     }
     ```
 
-=== "CentOS/RHEL8"
+=== "Fedora/RHEL"
+    Once NGINX is installed, copy and paste the following NGINX configuration for the Nautobot NGINX site.
 
-    ```nginxconf
+    === "Vim"
+
+        ```no-highlight title="Edit Nautobot site config with Vim"
+        sudo vim /etc/nginx/conf.d/nautobot.conf
+        ```
+
+    === "Nano"
+
+        ```no-highlight title="Edit Nautobot site config with Nano"
+        sudo nano /etc/nginx/conf.d/nautobot.conf
+        ```
+
+    ```nginxconf title="/etc/nginx/conf.d/nautobot.conf"
     server {
         listen 443 ssl http2 default_server;
         listen [::]:443 ssl http2 default_server;
@@ -164,38 +187,60 @@ Once NGINX is installed, copy and paste the following NGINX configuration into
     To enable the Nautobot site, you'll need to delete `/etc/nginx/sites-enabled/default` and create a symbolic link in the
     `sites-enabled` directory to the configuration file you just created:
 
-    ```no-highlight
+    ```no-highlight title="Link Nautobot NGINX site config"
     sudo rm -f /etc/nginx/sites-enabled/default
     sudo ln -s /etc/nginx/sites-available/nautobot.conf /etc/nginx/sites-enabled/nautobot.conf
     ```
 
-=== "CentOS/RHEL8"
+=== "Fedora/RHEL"
 
     Run the following command to disable the default site that comes with the `nginx` package:
 
-    ```no-highlight
+    ```no-highlight title="Link Nautobot NGINX site config"
     sudo sed -i 's@ default_server@@' /etc/nginx/nginx.conf
     ```
+
+#### Add NGINX User Account to Nautobot Group
+
+The NGINX service needs to be able to read the files in `/opt/nautobot/static/` (CSS files, fonts, etc.) to serve them to users. There are various ways this could be accomplished (including changing the `STATIC_ROOT` configuration in Nautobot to a different location then re-running `nautobot-server collectstatic`), but we'll go with the simple approach of adding the appropriate user to the `nautobot` user group and opening `$NAUTOBOT_ROOT` to be readable by members of that group.
+
+=== "Ubuntu/Debian"
+
+    The NGINX user is usually `www-data`. To add the user, you'll need to use `usermod` like this:
+
+    ```no-highlight title="Add www-data user to nautobot group"
+    sudo usermod -aG nautobot www-data
+    ```
+
+=== "Fedora/RHEL"
+
+    The NGINX user is usually `nginx`. To add the user, you'll need to use `usermod` like this:
+
+    ```no-highlight title="Add nginx user to nautobot group"
+    sudo usermod -aG nautobot nginx
+    ```
+
+!!! info
+    If the `usermod` command fails with a `does not exist` error, check what user NGINX is using by examining `/etc/nginx/nginx.conf`.
+
+#### Set Permissions for `NAUTOBOT_ROOT`
+
+Ensure that the `NAUTOBOT_ROOT` permissions are set to `750`, allowing other members of the `nautobot` user group (including the `nginx` account) to read and execute files in this directory:
+
+```no-highlight title="Update access permissions to 750 for $NAUTOBOT_ROOT"
+chmod 750 $NAUTOBOT_ROOT
+```
 
 #### Restart NGINX
 
 Finally, restart the `nginx` service to use the new configuration.
 
-```no-highlight
+```no-highlight title="Restart NGINX"
 sudo systemctl restart nginx
 ```
 
 !!! info
     If the restart fails, and you changed the default key location, check to make sure the `nautobot.conf` file you pasted has the updated key location. For example, CentOS requires keys to be in `/etc/pki/tls/` instead of `/etc/ssl/`.
-
-## Confirm Permissions for NAUTOBOT_ROOT
-
-Ensure that the `NAUTOBOT_ROOT` permissions are set to `755`.
-If permissions need to be changed, as the `nautobot` user run:
-
-```no-highlight
-chmod 755 $NAUTOBOT_ROOT
-```
 
 ## Confirm Connectivity
 
@@ -218,55 +263,7 @@ If you are unable to connect to the HTTP server, check that:
 
 ### Static Media Failure
 
-If you get a *Static Media Failure; The following static media file failed to load: css/base.css*, verify the permissions on the `$NAUTOBOT_ROOT` directory are `755`.
-
-Example of correct permissions (at the `[root@localhost ~]#` prompt)
-
-```no-highlight
-ls -l /opt/
-```
-
-Example output:
-
-```no-highlight
-total 4
-drwxr-xr-x. 11 nautobot nautobot 4096 Apr  5 11:24 nautobot
-[root@localhost ~]#
-```
-
-If the permissions are not correct, modify them accordingly.
-
-Example of modifying the permissions:
-
-```no-highlight
-ls -l /opt/
-```
-
-Example output:
-
-```no-highlight
-total 4
-drwx------. 11 nautobot nautobot 4096 Apr  5 10:00 nautobot
-```
-
-At the prompt `[nautobot@localhost ~]$` execute:
-
-```no-highlight
-chmod 755 $NAUTOBOT
-```
-
-Then to verify that the user has the permissions to the directory execute at the `[nautobot@localhost ~]$` prompt:
-
-```no-highlight
-ls -l /opt/
-```
-
-Example output shows that the user and group are both `nautobot` below:
-
-```no-highlight
-total 4
-drwxr-xr-x. 11 nautobot nautobot 4096 Apr  5 11:24 nautobot
-```
+If you get a *Static Media Failure; The following static media file failed to load: css/base.css*, verify that the permissions on the `$NAUTOBOT_ROOT` directory are correctly set and that the `nginx` account is a member of the `nautobot` group, as described above.
 
 ### 502 Bad Gateway
 
@@ -274,6 +271,4 @@ If you are able to connect but receive a 502 (bad gateway) error, check the foll
 
 - The uWSGI worker processes are running (`systemctl status nautobot` should show a status of `active (running)`)
 - NGINX is configured to connect to the port on which uWSGI is listening (default is `8001`).
-- SELinux may be preventing the reverse proxy connection. You may need to allow HTTP network connections with the
-  command `setsebool -P httpd_can_network_connect 1`. For further information, view the [SELinux
-  troubleshooting](selinux-troubleshooting.md) guide.
+- SELinux may be preventing the reverse proxy connection. You may need to allow HTTP network connections with the command `setsebool -P httpd_can_network_connect 1`. For further information, view the [SELinux troubleshooting](../guides/selinux-troubleshooting.md) guide.

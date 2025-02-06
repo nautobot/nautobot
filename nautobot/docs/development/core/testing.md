@@ -41,7 +41,7 @@ The `invoke unittest` and `invoke integration-test` commands are intentionally d
 
 +++ 2.0.0
 
-Nautobot provides a set of generic tests for testing the behavior of FilterSets. These tests are located in [`nautobot.core.testing.filters.FilterTestCase`](../../code-reference/nautobot/apps/testing.md#nautobot.core.testing.filters.FilterTestCases.FilterTestCase) and can be used to test some common filters in Nautobot.
+Nautobot provides a set of generic tests for testing the behavior of FilterSets. These tests are located in [`nautobot.core.testing.filters.FilterTestCase`](../../code-reference/nautobot/apps/testing.md#nautobot.apps.testing.FilterTestCases.FilterTestCase) and can be used to test some common filters in Nautobot.
 
 ### Generic Boolean Filter Tests
 
@@ -88,8 +88,8 @@ Factories for each Nautobot app's models are defined in the corresponding `nauto
 >>> # Create 5 Tenant instances
 >>> TenantFactory.create_batch(5)
 [<Tenant: Smith-Vance>, <Tenant: Sanchez, Brown and Davis>, <Tenant: Benson and Sons>, <Tenant: Pennington PLC>, <Tenant: Perez and Sons>]
->>> # Create 5 more Tenant instances all with a specified "group" value
->>> TenantFactory.create_batch(5, group=TenantGroup.objects.first())
+>>> # Create 5 more Tenant instances all with a specified "tenant_group" value
+>>> TenantFactory.create_batch(5, tenant_group=TenantGroup.objects.first())
 [<Tenant: Mercado, Wilson and Fuller>, <Tenant: Blackburn-Andrade>, <Tenant: Oliver-Ramirez>, <Tenant: Pugh-Clay>, <Tenant: Norman and Sons>]
 ```
 
@@ -99,15 +99,30 @@ Factories for each Nautobot app's models are defined in the corresponding `nauto
 Nautobot's custom [test runner](https://docs.djangoproject.com/en/3.2/topics/testing/advanced/#defining-a-test-runner) class (`nautobot.core.tests.runner.NautobotTestRunner`) makes use of the various factories to pre-populate the test database with data before running any tests. This reduces the need for individual tests to define their own baseline data sets.
 
 !!! info
-    Because Apps also commonly use Nautobot's test runner, the base Nautobot `settings.py` currently defaults [`TEST_USE_FACTORIES`](../../user-guide/administration/configuration/optional-settings.md#test_use_factories) to `False` so as to not negatively impact App tests that may not be designed to account for the presence of pre-populated test data in the database. This configuration is overridden to `True` in `nautobot/core/tests/nautobot_config.py` for Nautobot's own tests.
+    Because Apps also commonly use Nautobot's test runner, the base Nautobot `settings.py` currently defaults [`TEST_USE_FACTORIES`](../../user-guide/administration/configuration/settings.md#test_use_factories) to `False` so as to not negatively impact App tests that may not be designed to account for the presence of pre-populated test data in the database. This configuration is overridden to `True` in `nautobot/core/tests/nautobot_config.py` for Nautobot's own tests.
+
+!!! warning
+    Factories should generally **not** be called within test code, i.e. in a `setUp()` or `setUpTestData()` method. This is because factory output is *stateful*, that is to say the output of any given factory call will depend on the history of *all previous factory calls* since the process was started. This means that a call to a factory within a test case will depend on which other test cases have also called factories, and what order they were called in, as well as whether the initial test database population was done via factories or whether they were bypassed by reuse of cached test data (see below).
+
+    In short, we should only have one place in our tests where factories are called, and that's the `generate_test_data` management command. Individual tests should use standard `create()` or `save()` model methods, never factories.
 
 ### Factory Caching
 
 +++ 1.5.11
 
-To reduce the time taken between multiple test runs, a new argument has been added to the `nautobot-server test`, `invoke unittest` and `invoke integration-test` commands: `--cache-test-fixtures`. When running one of these commands with `--cache-test-fixtures` for the first time, after the factory data has been generated it will be saved to a `factory_dump.json` file in the `development` directory. On subsequent runs of unit or integration tests, the factory data will be loaded from the file instead of being generated again. This can significantly reduce the time taken to run tests. It's a good idea to let this file be regenerated after pulling new code from the repository, as the factory data may have changed.
+To reduce the time taken between multiple test runs, a new argument has been added to the `nautobot-server test` command: `--cache-test-fixtures`. When running tests with `--cache-test-fixtures` for the first time, after the factory data has been generated it will be saved to a `factory_dump.json` file in the `development` directory. On subsequent runs of unit or integration tests, if `--cache-test-fixtures` is again specified (hint: it is included by default when running `invoke unittest` or `invoke integration-test`), the factory data will be loaded from the file instead of being generated again. This can significantly reduce the time taken to run tests.
 
-Factory caching is disabled by default. When using the `invoke` commands to run tests, caching can be enabled by default for your development environment by setting the `cache_test_fixtures` key to `True` in the `invoke.yml` file.
++/- 2.2.7 "Hashing of migrations in the factory dump"
+    The test runner now calculates a hash of applied database migrations and uses that as a key when creating/locating the factory data file. This serves as a way to avoid inadvertently using cached test data from the wrong branch or wrong set of migrations, and reduces the frequency with which you might need to manually delete the fixture file. For example, the set of migrations present in `develop` might result in a `factory_dump.966e2e1ed4ae5f924d54.json`, while those in `next` might result in `factory_dump.72b71317c5f5c047493e.json` - both files can coexist, and when you switch between branches during development, the correct one will automatically be selected.
+
++/- 2.3.4 "Factory caching is enabled by default in invoke tasks"
+    Factory caching is now enabled by default with the `invoke unittest` and `invoke integration-test` commands. To bypass it, either use the `--no-cache-test-fixtures` argument to `invoke unittest` or `invoke integration-test`, or manually remove the `development/factory_dump.*.json` cache file(s).
+
+!!! tip
+    Although changes to the set of migrations defined will automatically invalidate an existing factory dump, there are two other cases where you will currently need to manually remove the file in order to force regeneration of the factory data:
+
+    1. When the contents of an existing migration file are modified (the hashing implementation currently can't detect this change).
+    2. When the definition of a factory is changed or a new factory is added.
 
 ## Performance Tests
 
@@ -159,7 +174,7 @@ Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_
 ```
 
 !!! info
-    To output the performance evaluation to a file for later use, i.e. as performance baselines for future test runs, do `invoke performance-test --performance-snapshot`. This command will collect the `names` of the test and their `execution_time` and store them in a .yml file default to `report.yml`. Subsequently, the data in that file will have to be manually added to the baseline file set at [`TEST_PERFORMANCE_BASELINE_FILE`](../../user-guide/administration/configuration/optional-settings.md#test_performance_baseline_file) to be used as baselines in performance tests.
+    To output the performance evaluation to a file for later use, i.e. as performance baselines for future test runs, do `invoke performance-test --performance-snapshot`. This command will collect the `names` of the test and their `execution_time` and store them in a .yml file default to `report.yml`. Subsequently, the data in that file will have to be manually added to the baseline file set at [`TEST_PERFORMANCE_BASELINE_FILE`](../../user-guide/administration/configuration/settings.md#test_performance_baseline_file) to be used as baselines in performance tests.
 
 Example output of `invoke performance-test --performance-snapshot`:
 

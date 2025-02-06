@@ -6,6 +6,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.db import transaction
 from django.test.client import RequestFactory
 
+from nautobot.core.events import publish_event
 from nautobot.extras.choices import ObjectChangeEventContextChoices
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from nautobot.extras.models import ObjectChange
@@ -90,11 +91,19 @@ class ChangeContext:
             for key in self._object_change_batch(batch_size):
                 for entry in self.deferred_object_changes[key]:
                     objectchange = entry["instance"].to_objectchange(entry["action"])
-                    objectchange.user = entry["user"]
-                    objectchange.request_id = self.change_id
-                    objectchange.change_context = self.context
-                    objectchange.change_context_detail = self.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
-                    create_object_changes.append(objectchange)
+                    if objectchange is not None:
+                        objectchange.user = entry["user"]
+                        objectchange.user_name = objectchange.user.username
+                        objectchange.request_id = self.change_id
+                        objectchange.change_context = self.context
+                        objectchange.change_context_detail = self.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
+                        if not objectchange.changed_object_id:  # changed_object was deleted
+                            # Clear out the GenericForeignKey to keep Django from complaining about an unsaved object:
+                            objectchange.changed_object = None
+                            # Set the component fields individually:
+                            objectchange.changed_object_id = entry.get("changed_object_id")
+                            objectchange.changed_object_type = entry.get("changed_object_type")
+                        create_object_changes.append(objectchange)
                 self.deferred_object_changes.pop(key, None)
             ObjectChange.objects.bulk_create(create_object_changes, batch_size=batch_size)
 
@@ -167,8 +176,9 @@ def web_request_context(
     :param user: User object
     :param context_detail: Optional extra details about the transaction (ex: the plugin name that initiated the change)
     :param change_id: Optional uuid object to uniquely identify the transaction. One will be generated if not supplied
-    :param context: Optional string value of the generated change log entries' "change_context" field, defaults to ObjectChangeEventContextChoices.CONTEXT_ORM.
-        Valid choices are in nautobot.extras.choices.ObjectChangeEventContextChoices
+    :param context: Optional string value of the generated change log entries' "change_context" field.
+        Defaults to `ObjectChangeEventContextChoices.CONTEXT_ORM`.
+        Valid choices are in `nautobot.extras.choices.ObjectChangeEventContextChoices`.
     :param request: Optional web request instance, one will be generated if not supplied
     """
     from nautobot.extras.jobs import enqueue_job_hooks  # prevent circular import
@@ -194,10 +204,51 @@ def web_request_context(
         with change_logging(change_context):
             yield request
     finally:
+        jobs_reloaded = False
+        # In bulk operations, we are performing the same action (create/update/delete) on the same content-type.
+        # Save some repeated database queries by reusing the same evaluated querysets where applicable:
+        jobhook_queryset = None
+        webhook_queryset = None
+        last_action = None
+        last_content_type = None
         # enqueue jobhooks and webhooks, use change_context.change_id in case change_id was not supplied
-        for object_change in ObjectChange.objects.filter(request_id=change_context.change_id).iterator():
-            enqueue_job_hooks(object_change)
-            enqueue_webhooks(object_change)
+        for oc in (
+            ObjectChange.objects.select_related("changed_object_type", "user")
+            .filter(request_id=change_context.change_id)
+            .order_by("time")  # default ordering is -time but we want oldest first not newest first
+            .iterator()
+        ):
+            if oc.action != last_action or oc.changed_object_type != last_content_type:
+                jobhook_queryset = None
+                webhook_queryset = None
+
+            if context != ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK:
+                # Make sure JobHooks are up to date (only once) before calling them
+                did_reload_jobs, jobhook_queryset = enqueue_job_hooks(
+                    oc, may_reload_jobs=(not jobs_reloaded), jobhook_queryset=jobhook_queryset
+                )
+                if did_reload_jobs:
+                    jobs_reloaded = True
+
+            # TODO: get_snapshots() currently requires a DB query per object change processed.
+            # We need to develop a more efficient approach: https://github.com/nautobot/nautobot/issues/6303
+            snapshots = oc.get_snapshots()
+            webhook_queryset = enqueue_webhooks(oc, snapshots=snapshots, webhook_queryset=webhook_queryset)
+
+            # topic examples: "nautobot.change.dcim.device", "nautobot.add.ipam.ipaddress"
+            event_topic = f"nautobot.{oc.action}.{oc.changed_object_type.app_label}.{oc.changed_object_type.model}"
+            event_payload = snapshots.copy()
+            event_payload["context"] = {
+                "change_context": oc.get_change_context_display(),
+                "change_context_detail": oc.change_context_detail,
+                "request_id": str(oc.request_id),
+                "user_name": oc.user_name,
+                "timestamp": str(oc.time),
+            }
+            publish_event(topic=event_topic, payload=event_payload)
+
+            last_action = oc.action
+            last_content_type = oc.changed_object_type
 
 
 @contextmanager

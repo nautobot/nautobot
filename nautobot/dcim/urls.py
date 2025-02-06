@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.generic.base import RedirectView
 
 from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras.views import ImageAttachmentEditView, ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView
@@ -16,7 +17,6 @@ from .models import (
     Interface,
     InventoryItem,
     Location,
-    LocationType,
     Manufacturer,
     Platform,
     PowerFeed,
@@ -33,36 +33,22 @@ from .models import (
 app_name = "dcim"
 
 router = NautobotUIViewSetRouter()
-router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
+router.register("controller-managed-device-groups", views.ControllerManagedDeviceGroupUIViewSet)
+router.register("controllers", views.ControllerUIViewSet)
 router.register("device-families", views.DeviceFamilyUIViewSet)
+router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
 router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
 router.register("interface-redundancy-groups-associations", views.InterfaceRedundancyGroupAssociationUIViewSet)
+router.register("location-types", views.LocationTypeUIViewSet)
+router.register("module-bays", views.ModuleBayUIViewSet)
+router.register("module-bay-templates", views.ModuleBayTemplateUIViewSet)
+router.register("modules", views.ModuleUIViewSet)
+router.register("module-types", views.ModuleTypeUIViewSet)
 router.register("software-image-files", views.SoftwareImageFileUIViewSet)
 router.register("software-versions", views.SoftwareVersionUIViewSet)
-router.register("controllers", views.ControllerUIViewSet)
-router.register("controller-managed-device-groups", views.ControllerManagedDeviceGroupUIViewSet)
+router.register("virtual-device-contexts", views.VirtualDeviceContextUIViewSet)
 
 urlpatterns = [
-    # Location types
-    path("location-types/", views.LocationTypeListView.as_view(), name="locationtype_list"),
-    path("location-types/add/", views.LocationTypeEditView.as_view(), name="locationtype_add"),
-    path("location-types/import/", views.LocationTypeBulkImportView.as_view(), name="locationtype_import"),  # 3.0 TODO
-    path("location-types/delete/", views.LocationTypeBulkDeleteView.as_view(), name="locationtype_bulk_delete"),
-    path("location-types/<uuid:pk>/", views.LocationTypeView.as_view(), name="locationtype"),
-    path("location-types/<uuid:pk>/edit/", views.LocationTypeEditView.as_view(), name="locationtype_edit"),
-    path("location-types/<uuid:pk>/delete/", views.LocationTypeDeleteView.as_view(), name="locationtype_delete"),
-    path(
-        "location-types/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="locationtype_changelog",
-        kwargs={"model": LocationType},
-    ),
-    path(
-        "location-types/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="locationtype_notes",
-        kwargs={"model": LocationType},
-    ),
     # Locations
     path("locations/", views.LocationListView.as_view(), name="location_list"),
     path("locations/add/", views.LocationEditView.as_view(), name="location_add"),
@@ -83,6 +69,11 @@ urlpatterns = [
         ObjectNotesView.as_view(),
         name="location_notes",
         kwargs={"model": Location},
+    ),
+    path(
+        "locations/<uuid:pk>/migrate-data-to-contact/",
+        views.MigrateLocationDataToContactView.as_view(),
+        name="location_migrate_data_to_contact",
     ),
     path(
         "locations/<uuid:object_id>/images/add/",
@@ -205,7 +196,7 @@ urlpatterns = [
         name="rack_notes",
         kwargs={"model": Rack},
     ),
-    path(
+    path(  # 3.0 TODO: remove, no longer needed/used since 2.3
         "racks/<uuid:pk>/dynamic-groups/",
         ObjectDynamicGroupsView.as_view(),
         name="rack_dynamicgroups",
@@ -609,9 +600,23 @@ urlpatterns = [
         name="device_consoleports",
     ),
     path(
+        "devices/<uuid:pk>/console-ports/add/",
+        RedirectView.as_view(
+            url="/dcim/console-ports/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/console-ports/"
+        ),
+        name="device_consoleports_add",
+    ),
+    path(
         "devices/<uuid:pk>/console-server-ports/",
         views.DeviceConsoleServerPortsView.as_view(),
         name="device_consoleserverports",
+    ),
+    path(
+        "devices/<uuid:pk>/console-server-ports/add/",
+        RedirectView.as_view(
+            url="/dcim/console-server-ports/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/console-server-ports/"
+        ),
+        name="device_consoleserverports_add",
     ),
     path(
         "devices/<uuid:pk>/power-ports/",
@@ -619,9 +624,21 @@ urlpatterns = [
         name="device_powerports",
     ),
     path(
+        "devices/<uuid:pk>/power-ports/add/",
+        RedirectView.as_view(url="/dcim/power-ports/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/power-ports/"),
+        name="device_powerports_add",
+    ),
+    path(
         "devices/<uuid:pk>/power-outlets/",
         views.DevicePowerOutletsView.as_view(),
         name="device_poweroutlets",
+    ),
+    path(
+        "devices/<uuid:pk>/power-outlets/add/",
+        RedirectView.as_view(
+            url="/dcim/power-outlets/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/power-outlets/"
+        ),
+        name="device_poweroutlets_add",
     ),
     path(
         "devices/<uuid:pk>/interfaces/",
@@ -629,9 +646,19 @@ urlpatterns = [
         name="device_interfaces",
     ),
     path(
+        "devices/<uuid:pk>/interfaces/add/",
+        RedirectView.as_view(url="/dcim/interfaces/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/interfaces/"),
+        name="device_interfaces_add",
+    ),
+    path(
         "devices/<uuid:pk>/front-ports/",
         views.DeviceFrontPortsView.as_view(),
         name="device_frontports",
+    ),
+    path(
+        "devices/<uuid:pk>/front-ports/add/",
+        RedirectView.as_view(url="/dcim/front-ports/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/front-ports/"),
+        name="device_frontports_add",
     ),
     path(
         "devices/<uuid:pk>/rear-ports/",
@@ -639,9 +666,31 @@ urlpatterns = [
         name="device_rearports",
     ),
     path(
+        "devices/<uuid:pk>/rear-ports/add/",
+        RedirectView.as_view(url="/dcim/rear-ports/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/rear-ports/"),
+        name="device_rearports_add",
+    ),
+    path(
         "devices/<uuid:pk>/device-bays/",
         views.DeviceDeviceBaysView.as_view(),
         name="device_devicebays",
+    ),
+    path(
+        "devices/<uuid:pk>/device-bays/add/",
+        RedirectView.as_view(url="/dcim/device-bays/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/device-bays/"),
+        name="device_devicebays_add",
+    ),
+    path(
+        "devices/<uuid:pk>/module-bays/",
+        views.DeviceModuleBaysView.as_view(),
+        name="device_modulebays",
+    ),
+    path(
+        "devices/<uuid:pk>/module-bays/add/",
+        RedirectView.as_view(
+            url="/dcim/module-bays/add/?parent_device=%(pk)s&return_url=/dcim/devices/%(pk)s/module-bays/"
+        ),
+        name="device_modulebays_add",
     ),
     path(
         "devices/<uuid:pk>/inventory/",
@@ -665,7 +714,7 @@ urlpatterns = [
         name="device_notes",
         kwargs={"model": Device},
     ),
-    path(
+    path(  # 3.0 TODO: remove, no longer needed/used since 2.3
         "devices/<uuid:pk>/dynamic-groups/",
         views.DeviceDynamicGroupsView.as_view(),
         name="device_dynamicgroups",
@@ -696,6 +745,11 @@ urlpatterns = [
         ImageAttachmentEditView.as_view(),
         name="device_add_image",
         kwargs={"model": Device},
+    ),
+    path(
+        "devices/<uuid:pk>/wireless/",
+        views.DeviceWirelessView.as_view(),
+        name="device_wireless",
     ),
     # Console ports
     path("console-ports/", views.ConsolePortListView.as_view(), name="consoleport_list"),
@@ -1250,6 +1304,12 @@ urlpatterns = [
         views.DeviceBulkAddDeviceBayView.as_view(),
         name="device_bulk_add_devicebay",
     ),
+    # Module bays (legacy views)
+    path(
+        "devices/module-bays/add/",
+        views.DeviceBulkAddModuleBayView.as_view(),
+        name="device_bulk_add_modulebay",
+    ),
     # Inventory items
     path(
         "inventory-items/",
@@ -1312,6 +1372,11 @@ urlpatterns = [
         "devices/inventory-items/add/",
         views.DeviceBulkAddInventoryItemView.as_view(),
         name="device_bulk_add_inventoryitem",
+    ),
+    path(
+        "devices/<uuid:pk>/inventory-items/add/",
+        RedirectView.as_view(url="/dcim/inventory-items/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/inventory/"),
+        name="device_inventoryitems_add",
     ),
     # Cables
     path("cables/", views.CableListView.as_view(), name="cable_list"),

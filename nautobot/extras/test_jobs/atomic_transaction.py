@@ -19,7 +19,7 @@ class TestAtomicDecorator(Job):
     fail = BooleanVar()
 
     @transaction.atomic
-    def run(self, fail=False):
+    def run(self, fail=False):  # pylint:disable=arguments-differ
         try:
             Status.objects.create(name="Test database atomic rollback 1")
             if fail:
@@ -37,7 +37,7 @@ class TestAtomicContextManager(Job):
 
     fail = BooleanVar()
 
-    def run(self, fail=False):
+    def run(self, fail=False):  # pylint:disable=arguments-differ
         try:
             with transaction.atomic():
                 Status.objects.create(name="Test database atomic rollback 2")

@@ -4,8 +4,8 @@ The documentation assumes that you are running one of the following:
 
 - Ubuntu 20.04+
 - Debian 11+
-- RHEL/CentOS 8.2+
-    - Also includes other derivatives of RHEL such as RockyLinux or AlmaLinux
+- Fedora, RHEL/CentOS 8.2+ and derivatives
+    - Delimited by `Fedora/RHEL` tabs in the docs, but also includes other derivatives of RHEL such as RockyLinux or AlmaLinux
 
 ## Install System Packages
 
@@ -20,16 +20,16 @@ This will install:
 
 === "Ubuntu/Debian"
 
-    ```bash
+    ```bash title="Install system dependencies"
     sudo apt update -y
     sudo apt install -y git python3 python3-pip python3-venv python3-dev redis-server
     ```
 
-=== "RHEL8 + Derivatives"
+=== "Fedora/RHEL"
 
-    ```bash
+    ```bash title="Install system dependencies"
     sudo dnf check-update
-    sudo dnf install -y git python38 python38-devel python38-pip redis
+    sudo dnf install -y git python3 python3-devel python3-pip redis
     ```
 
 ## Database Setup
@@ -40,410 +40,467 @@ You must select either MySQL (MariaDB is **not** supported) or PostgreSQL. Postg
 
 Please follow the steps for your selected database backend below.
 
-=== "Ubuntu/Debian PostgreSQL"
+<!--
+We intentionally use explicit <h3> tags inside the tabbed block below rather than ### markdown.
+This is done so that these subheads don't get included in the page table of contents, where it would be confusing
+to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entries.
+-->
 
-    ### Install PostgreSQL
+=== "Ubuntu/Debian"
 
-    This will install the PostgreSQL database server and client.
+    === "PostgreSQL"
 
-    ```no-highlight
-    sudo apt install -y postgresql
-    ```
+        <h3>Install PostgreSQL</h3>
 
-    ### Create a PostgreSQL Database
+        This will install the PostgreSQL database server and client.
 
-    At a minimum, we need to create a database for Nautobot and assign it a username and password for authentication. This
-    is done with the following commands.
+        ```no-highlight title="Install Postgres"
+        sudo apt install -y postgresql
+        ```
 
-    !!! danger
-        **Do not use the password from the example.** Choose a strong, random password to ensure secure database authentication for your Nautobot installation.
+        <h3>Create a PostgreSQL Database</h3>
 
-    ```no-highlight
-    sudo -u postgres psql
-    ```
+        At a minimum, we need to create a database for Nautobot and assign it a username and password for authentication. This is done with the following commands.
 
-    Example output:
+        !!! danger
+            **Do not use the password from the example.** Choose a strong, random password to ensure secure database authentication for your Nautobot installation.
 
-    ```no-highlight
-    psql (12.5 (Ubuntu 12.5-0ubuntu0.20.04.1))
-    Type "help" for help.
+        ```no-highlight title="Enter into Postgres"
+        sudo -u postgres psql
+        ```
 
-    postgres=# CREATE DATABASE nautobot;
-    CREATE DATABASE
-    postgres=# CREATE USER nautobot WITH PASSWORD 'insecure_password';
-    CREATE ROLE
-    postgres=# GRANT ALL PRIVILEGES ON DATABASE nautobot TO nautobot;
-    GRANT
-    postgres=# \connect nautobot
-    You are now connected to database "nautobot" as user "postgres".
-    nautobot=# GRANT CREATE ON SCHEMA public TO nautobot;
-    GRANT
-    nautobot=# \q
-    ```
+        ??? example "Example of Entering Postgres"
 
-    #### Verify PostgreSQL Service Status
+            ```no-highlight title="Entering Postgres DB"
+            psql (16.3 (Ubuntu 16.3-0ubuntu0.24.04.1))
+            Type "help" for help.
 
-    You can verify that authentication works issuing the following command and providing the configured password. (Replace `localhost` with your database server if using a remote database.)
+            postgres=#
+            ```
 
-    If successful, you will enter a `nautobot` prompt. Type `\conninfo` to confirm your connection, or type `\q` to exit.
+        ```no-highlight title="Create the Nautobot DB"
+        CREATE DATABASE nautobot;
+        CREATE USER nautobot WITH PASSWORD 'insecure_password';
+        GRANT ALL PRIVILEGES ON DATABASE nautobot TO nautobot;
+        \connect nautobot
+        GRANT CREATE ON SCHEMA public TO nautobot;
+        \q
+        ```
 
-    ```no-highlight
-    psql --username nautobot --password --host localhost nautobot
-    ```
+        ??? example "Example Postgres DB Creation Output"
+            ```no-highlight title="Example output of creating the DB"
+            postgres=# CREATE DATABASE nautobot;
+            CREATE DATABASE
+            postgres=# CREATE USER nautobot WITH PASSWORD 'insecure_password';
+            CREATE ROLE
+            postgres=# GRANT ALL PRIVILEGES ON DATABASE nautobot TO nautobot;
+            GRANT
+            postgres=# \connect nautobot
+            You are now connected to database "nautobot" as user "postgres".
+            nautobot=# GRANT CREATE ON SCHEMA public TO nautobot;
+            GRANT
+            nautobot=# \q
+            ```
 
-    Example output:
+        <h3>Verify PostgreSQL Service Status</h3>
 
-    ```no-highlight
-    Password for user nautobot:
-    psql (12.5 (Ubuntu 12.5-0ubuntu0.20.04.1))
-    SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, bits: 256, compression: off)
-    Type "help" for help.
+        You can verify that authentication works issuing the following command and providing the configured password. (Replace `localhost` with your database server if using a remote database.)
 
-    nautobot=> \conninfo
-    You are connected to database "nautobot" as user "nautobot" on host "localhost" (address "127.0.0.1") at port "5432".
-    SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, bits: 256, compression: off)
-    nautobot=> \q
-    ```
+        If successful, you will enter a `nautobot` prompt. Type `\conninfo` to confirm your connection, or type `\q` to exit.
 
-=== "Ubuntu/Debian MySQL"
+        ```no-highlight title="Connect to the Nautobot DB"
+        psql --username nautobot --password --host localhost nautobot
+        ```
 
-    ### Install MySQL
+        ??? example "Example Postgres Connection Output"
 
-    This will install the MySQL database server and client. Additionally, MySQL requires that the MySQL development libraries are installed so that we may compile the Python `mysqlclient` library during the Nautobot installation steps.
+            ```no-highlight title="Example output"
+            Password for user nautobot:
+            psql (16.3 (Ubuntu 16.3-0ubuntu0.24.04.1))
+            SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, compression: off)
+            Type "help" for help.
 
-    ```no-highlight
-    sudo apt install -y libmysqlclient-dev mysql-server
-    ```
+            nautobot=> \conninfo
+            You are connected to database "nautobot" as user "nautobot" on host "localhost" (address "::1") at port "5432".
+            SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, compression: off)
+            nautobot=> \q
+            ```
 
-    !!! note
-        In the Nautobot Docker image `libmariadb-dev` is installed due to licensing challenges with `libmysqlclient-dev`. 
+    === "MySQL"
 
-    ### Create a MySQL Database
+        <h3>Install MySQL</h3>
 
-    At a minimum, we need to create a database for Nautobot and assign it a username and password for authentication. This is done with the following commands.
+        This will install the MySQL database server and client. Additionally, MySQL requires that the MySQL development libraries and the `pkg-config` package are both installed so that we may compile the Python `mysqlclient` library during the Nautobot installation steps.
 
-    !!! note
-        Replace `localhost` below with your database server if using a remote database.
+        ```no-highlight title="Install MySQL required packages"
+        sudo apt install -y libmysqlclient-dev mysql-server pkg-config
+        ```
 
-    !!! danger
-        **Do not use the password from the example.** Choose a strong, random password to ensure secure database authentication for your Nautobot installation.
+        <h3>Create a MySQL Database</h3>
 
-    ```no-highlight
-    sudo -u root mysql
-    ```
+        At a minimum, we need to create a database for Nautobot and assign it a username and password for authentication. This is done with the following commands.
 
-    Example output:
+        !!! note
+            Replace `localhost` below with your database server if using a remote database.
 
-    ```no-highlight
-    Welcome to the MySQL monitor.  Commands end with ; or \g.
-    Your MySQL connection id is 11
-    Server version: 8.0.25-0ubuntu0.20.04.1 (Ubuntu)
+        !!! danger
+            **Do not use the password from the example.** Choose a strong, random password to ensure secure database authentication for your Nautobot installation.
 
-    Copyright (c) 2000, 2021, Oracle and/or its affiliates.
+        ```no-highlight title="Connect to MySQL"
+        sudo -u root mysql
+        ```
 
-    Oracle is a registered trademark of Oracle Corporation and/or its
-    affiliates. Other names may be trademarks of their respective
-    owners.
+        ```no-highlight title="Create the Nautobot DB"
+        CREATE DATABASE nautobot;
+        CREATE USER 'nautobot'@'localhost' IDENTIFIED BY 'insecure_password';
+        GRANT ALL ON nautobot.* TO 'nautobot'@'localhost';
+        \q
+        ```
 
-    Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+        ??? example "Example MySQL output"
 
-    mysql> CREATE DATABASE nautobot;
-    Query OK, 1 row affected (0.00 sec)
+            ```no-highlight title="Example MySQL DB creation output."
+            Welcome to the MySQL monitor.  Commands end with ; or \g.
+            Your MySQL connection id is 11
+            Server version: 8.0.37-0ubuntu0.24.04.1 (Ubuntu)
 
-    mysql> CREATE USER 'nautobot'@'localhost' IDENTIFIED BY 'insecure_password';
-    Query OK, 0 rows affected (0.01 sec)
+            Copyright (c) 2000, 2024, Oracle and/or its affiliates.
 
-    mysql> GRANT ALL ON nautobot.* TO 'nautobot'@'localhost';
-    Query OK, 0 rows affected (0.00 sec)
+            Oracle is a registered trademark of Oracle Corporation and/or its
+            affiliates. Other names may be trademarks of their respective
+            owners.
 
-    mysql> \q
-    Bye
-    ```
+            Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
 
-    #### Verify MySQL Service Status
+            mysql> CREATE DATABASE nautobot;
+            Query OK, 1 row affected (0.00 sec)
 
-    You can verify that authentication works issuing the following command and providing the configured password.
+            mysql> CREATE USER 'nautobot'@'localhost' IDENTIFIED BY 'insecure_password';
+            Query OK, 0 rows affected (0.01 sec)
 
-    If successful, you will enter a `mysql>` prompt. Type `status` to confirm your connection, or type `\q` to exit.
+            mysql> GRANT ALL ON nautobot.* TO 'nautobot'@'localhost';
+            Query OK, 0 rows affected (0.00 sec)
 
-    !!! note
-        Replace `localhost` below with your database server if using a remote database.
+            mysql> \q
+            Bye
+            ```
 
-    ```no-highlight
-    mysql --user nautobot --password --host localhost nautobot
-    ```
+        <h3>Verify MySQL Service Status</h3>
 
-    Example output:
+        You can verify that authentication works issuing the following command and providing the configured password.
 
-    ```no-highlight
-    Enter password:
-    Welcome to the MySQL monitor.  Commands end with ; or \g.
-    Your MySQL connection id is 13
-    Server version: 8.0.25-0ubuntu0.20.04.1 (Ubuntu)
+        If successful, you will enter a `mysql>` prompt. Type `status` to confirm your connection, or type `\q` to exit.
 
-    Copyright (c) 2000, 2021, Oracle and/or its affiliates.
+        !!! note
+            Replace `localhost` below with your database server if using a remote database.
 
-    Oracle is a registered trademark of Oracle Corporation and/or its
-    affiliates. Other names may be trademarks of their respective
-    owners.
+        ```no-highlight title="Test the MySQL DB connection"
+        mysql --user nautobot --password --host localhost nautobot
+        ```
 
-    Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+        Then after the password prompt you can use `status` and `\q` commands
 
-    mysql> status
-    --------------
-    mysql  Ver 8.0.25-0ubuntu0.20.04.1 for Linux on x86_64 ((Ubuntu))
+        ``` no title="Check the status and quit"
+        status
+        \q
+        ```
 
-    Connection id:          13
-    Current database:       nautobot
-    Current user:           nautobot@localhost
-    SSL:                    Not in use
-    Current pager:          stdout
-    Using outfile:          ''
-    Using delimiter:        ;
-    Server version:         8.0.25-0ubuntu0.20.04.1 (Ubuntu)
-    Protocol version:       10
-    Connection:             Localhost via UNIX socket
-    Server characterset:    utf8mb4
-    Db     characterset:    utf8mb4
-    Client characterset:    utf8mb4
-    Conn.  characterset:    utf8mb4
-    UNIX socket:            /var/run/mysqld/mysqld.sock
-    Binary data as:         Hexadecimal
-    Uptime:                 26 min 31 sec
+        ??? example "Example Verification of MySQL database"
 
-    Threads: 2  Questions: 29  Slow queries: 0  Opens: 193  Flush tables: 3  Open tables: 112  Queries per second avg: 0.018
-    --------------
+            ```no-highlight title="Example test output"
+            Enter password:
+            Welcome to the MySQL monitor.  Commands end with ; or \g.
+            Your MySQL connection id is 13
+            Server version: 8.0.37-0ubuntu0.24.04.1 (Ubuntu)
 
-    mysql> \q
-    Bye
-    ```
+            Copyright (c) 2000, 2024, Oracle and/or its affiliates.
 
-=== "RHEL8 PostgreSQL"
+            Oracle is a registered trademark of Oracle Corporation and/or its
+            affiliates. Other names may be trademarks of their respective
+            owners.
 
-    ### Install PostgreSQL
+            Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
 
-    This will install the PostgreSQL database server and client.
+            mysql> status
+            --------------
+            mysql  Ver 8.0.37-0ubuntu0.24.04.1 for Linux on x86_64 ((Ubuntu))
 
-    ```no-highlight
-    sudo dnf install -y postgresql-server
-    ```
+            Connection id:          13
+            Current database:       nautobot
+            Current user:           nautobot@localhost
+            SSL:                    Not in use
+            Current pager:          stdout
+            Using outfile:          ''
+            Using delimiter:        ;
+            Server version:         8.0.37-0ubuntu0.24.04.1 (Ubuntu)
+            Protocol version:       10
+            Connection:             Localhost via UNIX socket
+            Server characterset:    utf8mb4
+            Db     characterset:    utf8mb4
+            Client characterset:    utf8mb4
+            Conn.  characterset:    utf8mb4
+            UNIX socket:            /var/run/mysqld/mysqld.sock
+            Binary data as:         Hexadecimal
+            Uptime:                 26 min 31 sec
 
-    ### Initialize PostgreSQL
+            Threads: 2  Questions: 29  Slow queries: 0  Opens: 193  Flush tables: 3  Open tables: 112  Queries per second avg: 0.018
+            --------------
 
-    CentOS/RHEL requires a manual step to generate the initial configurations required by PostgreSQL.
+            mysql> \q
+            Bye
+            ```
 
-    ```no-highlight
-    sudo postgresql-setup --initdb
-    ```
+=== "Fedora/RHEL"
 
-    ### Configure Authentication
+    === "PostgreSQL"
 
-    CentOS/RHEL configures PostgreSQL to use [`ident`](https://www.postgresql.org/docs/current/auth-ident.html) host-based authentication by default. Because Nautobot will need to authenticate using a username and password, we must update `pg_hba.conf` to support [`md5` password](https://www.postgresql.org/docs/current/auth-password.html) authentication.
+        <h3>Install PostgreSQL</h3>
 
-    As root, edit `/var/lib/pgsql/data/pg_hba.conf` and change `ident` to `md5` for the lines below.
+        This will install the PostgreSQL database server and client.
 
-    Before:
+        ```no-highlight title="Install Postgres"
+        sudo dnf install -y postgresql-server
+        ```
 
-    ```no-highlight
-    # IPv4 local connections:
-    host    all             all             127.0.0.1/32            ident
-    # IPv6 local connections:
-    host    all             all             ::1/128                 ident
-    ```
+        <h3>Initialize PostgreSQL</h3>
 
-    After:
+        Fedora/RHEL and related distros typically require a manual step to generate the initial configurations required by PostgreSQL.
 
-    ```no-highlight
-    # IPv4 local connections:
-    host    all             all             127.0.0.1/32            md5
-    # IPv6 local connections:
-    host    all             all             ::1/128                 md5
-    ```
+        ```no-highlight title="Setup initial required configurations"
+        sudo postgresql-setup --initdb
+        ```
 
-    #### Start PostgreSQL
+        <h3>Configure Authentication</h3>
 
-    Start the service and enable it to run at system startup:
+        Fedora/RHEL and related distros typically configure PostgreSQL to use [`ident`](https://www.postgresql.org/docs/current/auth-ident.html) host-based authentication by default. Because Nautobot will need to authenticate using a username and password, we must update `pg_hba.conf` to support [`md5` password](https://www.postgresql.org/docs/current/auth-password.html) authentication.
 
-    ```no-highlight
-    sudo systemctl enable --now postgresql
-    ```
+        !!! tip
+            Under many distros, you may be able to use the more secure `scram-sha-256` as an alternative to `md5`, but this option may not be available by default; enabling it is beyond the scope of this documentation.
 
-    #### Create a PostgreSQL Database
+        As root, edit `/var/lib/pgsql/data/pg_hba.conf` and change `ident` to `md5` for the lines below.
 
-    At a minimum, we need to create a database for Nautobot and assign it a username and password for authentication. This
-    is done with the following commands.
+        Before:
 
-    !!! danger
-        **Do not use the password from the example.** Choose a strong, random password to ensure secure database authentication for your Nautobot installation.
+        ```no-highlight title="Before /var/lib/pgsql/data/pg_hba.conf"
+        # IPv4 local connections:
+        host    all             all             127.0.0.1/32            ident
+        # IPv6 local connections:
+        host    all             all             ::1/128                 ident
+        ```
 
-    ```no-highlight
-    sudo -u postgres psql
-    ```
+        After:
 
-    Example output:
+        ```no-highlight title="After /var/lib/pgsql/data/pg_hba.conf"
+        # IPv4 local connections:
+        host    all             all             127.0.0.1/32            md5
+        # IPv6 local connections:
+        host    all             all             ::1/128                 md5
+        ```
 
-    ```no-highlight
-    psql (10.15)
-    Type "help" for help.
-    ```
+        <h3>Start PostgreSQL</h3>
 
-    ```no-highlight
-    postgres=# CREATE DATABASE nautobot;
-    CREATE DATABASE
-    postgres=# CREATE USER nautobot WITH PASSWORD 'insecure_password';
-    CREATE ROLE
-    postgres=# GRANT ALL PRIVILEGES ON DATABASE nautobot TO nautobot;
-    GRANT
-    postgres=# \connect nautobot
-    You are now connected to database "nautobot" as user "postgres".
-    nautobot=# GRANT CREATE ON SCHEMA public TO nautobot;
-    GRANT
-    nautobot=# \q
-    ```
+        Start the service and enable it to run at system startup:
 
-    ### Verify PostgreSQL Service Status
+        ```no-highlight title="Start and enable the Postgres service at start up"
+        sudo systemctl enable --now postgresql
+        ```
 
-    You can verify that authentication works issuing the following command and providing the configured password. (Replace `localhost` with your database server if using a remote database.)
+        <h3>Create a PostgreSQL Database</h3>
 
-    If successful, you will enter a `nautobot` prompt. Type `\conninfo` to confirm your connection, or type `\q` to exit.
+        At a minimum, we need to create a database for Nautobot and assign it a username and password for authentication. This
+        is done with the following commands.
 
-    ```no-highlight
-    psql --username nautobot --password --host localhost nautobot
-    ```
+        !!! danger
+            **Do not use the password from the example.** Choose a strong, random password to ensure secure database authentication for your Nautobot installation.
 
-    Example output:
+        ```no-highlight title="Enter into Postgres"
+        sudo -u postgres psql
+        ```
 
-    ```no-highlight
-    Password for user nautobot:
-    psql (10.15)
-    Type "help" for help.
+        Create the database and grant permissions to the Nautobot user.
 
-    nautobot=> \conninfo
-    You are connected to database "nautobot" as user "nautobot" on host "localhost" (address "127.0.0.1") at port "5432".
-    nautobot=> \q
-    ```
+        ```no-highlight title="Create Nautobot DB"
+        CREATE DATABASE nautobot;
+        CREATE USER nautobot WITH PASSWORD 'insecure_password';
+        GRANT ALL PRIVILEGES ON DATABASE nautobot TO nautobot;
+        \connect nautobot
+        GRANT CREATE ON SCHEMA public TO nautobot;
+        \q
+        ```
 
-=== "RHEL8 MySQL"
+        ??? example "Example Database creation output."
 
-    ### Install MySQL
+            ```no-highlight title="Example DB creation output"
+            postgres=# CREATE DATABASE nautobot;
+            CREATE DATABASE
+            postgres=# CREATE USER nautobot WITH PASSWORD 'insecure_password';
+            CREATE ROLE
+            postgres=# GRANT ALL PRIVILEGES ON DATABASE nautobot TO nautobot;
+            GRANT
+            postgres=# \connect nautobot
+            You are now connected to database "nautobot" as user "postgres".
+            nautobot=# GRANT CREATE ON SCHEMA public TO nautobot;
+            GRANT
+            nautobot=# \q
+            ```
 
-    This will install the MySQL database server and client. Additionally, MySQL requires that `gcc` and the MySQL development libraries are installed so that we may compile the Python `mysqlclient` library during the Nautobot installation steps.
+        <h3>Verify PostgreSQL Service Status</h3>
 
-    ```no-highlight
-    sudo dnf install -y gcc mysql-server mysql-devel
-    ```
+        You can verify that authentication works issuing the following command and providing the configured password. (Replace `localhost` with your database server if using a remote database.)
 
-    ### Start MySQL
+        If successful, you will enter a `nautobot` prompt. Type `\conninfo` to confirm your connection, or type `\q` to exit.
 
-    Start the service and enable it to run at system startup:
+        ```no-highlight title="Test connection to Nautobot DB"
+        psql --username nautobot --password --host localhost nautobot
+        ```
 
-    ```no-highlight
-    sudo systemctl enable --now mysql
-    ```
+        ??? example "Example Verification Output"
 
-    ### Create a MySQL Database
+            ```no-highlight
+            Password for user nautobot:
+            psql (16.3)
+            Type "help" for help.
 
-    At a minimum, we need to create a database for Nautobot and assign it a username and password for authentication. This is done with the following commands.
+            nautobot=> \conninfo
+            You are connected to database "nautobot" as user "nautobot" on host "localhost" (address "::1") at port "5432".
+            nautobot=> \q
+            ```
 
-    !!! note
-        Replace `localhost` below with your database server if using a remote database.
+    === "MySQL"
 
-    !!! danger
-        **Do not use the password from the example.** Choose a strong, random password to ensure secure database authentication for your Nautobot installation.
+        <h3>Install MySQL</h3>
 
-    ```no-highlight
-    sudo -u root mysql
-    ```
+        This will install the MySQL database server and client. Additionally, MySQL requires that `gcc` and the MySQL development libraries are installed so that we may compile the Python `mysqlclient` library during the Nautobot installation steps.
 
-    Example output:
+        ```no-highlight title="Install MySQL packages"
+        sudo dnf install -y gcc mysql-server mysql-devel
+        ```
 
-    ```no-highlight
-    Welcome to the MySQL monitor.  Commands end with ; or \g.
-    Your MySQL connection id is 8
-    Server version: 8.0.21 Source distribution
+        !!! tip
+            If you get an error about `Unable to find a match: mysql-devel`, you may need to enable additional sources for packages. On at least CentOS 9 and AlmaLinux 9, the command `sudo dnf config-manager --set-enabled crb` is the way to enable the necessary repository.
 
-    Copyright (c) 2000, 2020, Oracle and/or its affiliates. All rights reserved.
+        <h3>Start MySQL</h3>
 
-    Oracle is a registered trademark of Oracle Corporation and/or its
-    affiliates. Other names may be trademarks of their respective
-    owners.
+        Start the service and enable it to run at system startup:
 
-    Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+        ```no-highlight title="Start and enable at start up of the MySQL service"
+        sudo systemctl enable --now mysql
+        ```
 
-    mysql> CREATE DATABASE nautobot;
-    Query OK, 1 row affected (0.00 sec)
+        !!! tip
+            Depending on your Linux distribution, the service may be named `mysqld` instead of `mysql`. If you get an error with the above command, try `sudo systemctl enable --now mysqld` instead.
 
-    mysql> CREATE USER 'nautobot'@'localhost' IDENTIFIED BY 'insecure_password';
-    Query OK, 0 rows affected (0.00 sec)
+        <h3>Create a MySQL Database</h3>
 
-    mysql> GRANT ALL ON nautobot.* TO 'nautobot'@'localhost';
-    Query OK, 0 rows affected (0.00 sec)
+        At a minimum, we need to create a database for Nautobot and assign it a username and password for authentication. This is done with the following commands.
 
-    mysql> \q
-    Bye
-    ```
+        !!! note
+            Replace `localhost` below with your database server if using a remote database.
 
-    ### Verify MySQL Service Status
+        !!! danger
+            **Do not use the password from the example.** Choose a strong, random password to ensure secure database authentication for your Nautobot installation.
 
-    You can verify that authentication works issuing the following command and providing the configured password.
+        ```no-highlight title="Connect to MySQL"
+        sudo -u root mysql
+        ```
 
-    If successful, you will enter a `mysql>` prompt. Type `status` to confirm your connection, or type `\q` to exit.
+        ```no-highlight title="Create Nautobot DB"
+        CREATE DATABASE nautobot;
+        CREATE USER 'nautobot'@'localhost' IDENTIFIED BY 'insecure_password';
+        GRANT ALL ON nautobot.* TO 'nautobot'@'localhost';
+        \q
+        ```
 
-    !!! note
-        Replace `localhost` below with your database server if using a remote database.
+        ??? example "Example Creation of MySQL DB"
 
-    ```no-highlight
-    mysql --user nautobot --password --host localhost nautobot
-    ```
+            ```no-highlight title="Example output creation of DB"
+            Welcome to the MySQL monitor.  Commands end with ; or \g.
+            Your MySQL connection id is 8
+            Server version: 8.0.37 Source distribution
 
-    Example output:
+            Copyright (c) 2000, 2024, Oracle and/or its affiliates. All rights reserved.
 
-    ```no-highlight
-    Enter password:
-    Welcome to the MySQL monitor.  Commands end with ; or \g.
-    Your MySQL connection id is 10
-    Server version: 8.0.21 Source distribution
+            Oracle is a registered trademark of Oracle Corporation and/or its
+            affiliates. Other names may be trademarks of their respective
+            owners.
 
-    Copyright (c) 2000, 2020, Oracle and/or its affiliates. All rights reserved.
+            Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
 
-    Oracle is a registered trademark of Oracle Corporation and/or its
-    affiliates. Other names may be trademarks of their respective
-    owners.
+            mysql> CREATE DATABASE nautobot;
+            Query OK, 1 row affected (0.00 sec)
 
-    Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+            mysql> CREATE USER 'nautobot'@'localhost' IDENTIFIED BY 'insecure_password';
+            Query OK, 0 rows affected (0.00 sec)
 
-    mysql> status
-    --------------
-    mysql  Ver 8.0.21 for Linux on x86_64 (Source distribution)
+            mysql> GRANT ALL ON nautobot.* TO 'nautobot'@'localhost';
+            Query OK, 0 rows affected (0.00 sec)
 
-    Connection id:          10
-    Current database:       nautobot
-    Current user:           nautobot@localhost
-    SSL:                    Not in use
-    Current pager:          stdout
-    Using outfile:          ''
-    Using delimiter:        ;
-    Server version:         8.0.21 Source distribution
-    Protocol version:       10
-    Connection:             Localhost via UNIX socket
-    Server characterset:    utf8mb4
-    Db     characterset:    utf8mb4
-    Client characterset:    utf8mb4
-    Conn.  characterset:    utf8mb4
-    UNIX socket:            /var/lib/mysql/mysql.sock
-    Binary data as:         Hexadecimal
-    Uptime:                 4 min 12 sec
+            mysql> \q
+            Bye
+            ```
 
-    Threads: 2  Questions: 12  Slow queries: 0  Opens: 151  Flush tables: 3  Open tables: 69  Queries per second avg: 0.047
-    --------------
+        <h3>Verify MySQL Service Status</h3>
 
-    mysql> \q
-    Bye
-    ```
+        You can verify that authentication works issuing the following command and providing the configured password.
+
+        If successful, you will enter a `mysql>` prompt. Type `status` to confirm your connection, or type `\q` to exit.
+
+        !!! note
+            Replace `localhost` below with your database server if using a remote database.
+
+        ```no-highlight
+        mysql --user nautobot --password --host localhost nautobot
+        ```
+
+        ??? example "Example MySQL Verification"
+
+            ```no-highlight
+            Enter password:
+            Welcome to the MySQL monitor.  Commands end with ; or \g.
+            Your MySQL connection id is 10
+            Server version: 8.0.37 Source distribution
+
+            Copyright (c) 2000, 2024, Oracle and/or its affiliates. All rights reserved.
+
+            Oracle is a registered trademark of Oracle Corporation and/or its
+            affiliates. Other names may be trademarks of their respective
+            owners.
+
+            Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+            mysql> status
+            --------------
+            mysql  Ver 8.0.37 for Linux on x86_64 (Source distribution)
+
+            Connection id:          10
+            Current database:       nautobot
+            Current user:           nautobot@localhost
+            SSL:                    Not in use
+            Current pager:          stdout
+            Using outfile:          ''
+            Using delimiter:        ;
+            Server version:         8.0.37 Source distribution
+            Protocol version:       10
+            Connection:             Localhost via UNIX socket
+            Server characterset:    utf8mb4
+            Db     characterset:    utf8mb4
+            Client characterset:    utf8mb4
+            Conn.  characterset:    utf8mb4
+            UNIX socket:            /var/lib/mysql/mysql.sock
+            Binary data as:         Hexadecimal
+            Uptime:                 4 min 12 sec
+
+            Threads: 2  Questions: 12  Slow queries: 0  Opens: 151  Flush tables: 3  Open tables: 69  Queries per second avg: 0.047
+            --------------
+
+            mysql> \q
+            Bye
+            ```
 
 ### Troubleshooting
 
-#### django.db.utils.NotSupportedError: conversion between UTF8 and SQL_ASCII is not supported
+<!-- pyml disable-next-line no-inline-html -->
+<h4>django.db.utils.NotSupportedError: conversion between UTF8 and SQL_ASCII is not supported</h4>
 
 Django requires the database encoding for PostgreSQL databases to be set to UTF-8. If you receive the error `django.db.utils.NotSupportedError: conversion between UTF8 and SQL_ASCII is not supported`, you will need to drop and re-create the `nautobot` database with the correct encoding.
 
@@ -453,39 +510,39 @@ Django requires the database encoding for PostgreSQL databases to be set to UTF-
 
     Since Redis was already installed, let's just verify that it's working using `redis-cli`:
 
-    ```no-highlight
+    ```no-highlight title="Test Redis connection"
     redis-cli ping
     ```
 
-    Example output:
+    ??? example "Example Redis check output"
 
-    ```no-highlight
-    PONG
-    ```
+        ```no-highlight title="redis-cli ping output"
+        PONG
+        ```
 
-=== "RHEL8"
+=== "Fedora/RHEL"
 
-    ### Start Redis
+    <h3>Start Redis</h3>
 
     Start the service and enable it to run at system startup:
 
-    ```no-highlight
+    ```no-highlight title="Enable Redis to start on boot and start Redis now"
     sudo systemctl enable --now redis
     ```
 
-    ### Verify Redis Service Status
+    <h3>Verify Redis Service Status</h3>
 
     Use the `redis-cli` utility to ensure the Redis service is functional:
 
-    ```no-highlight
+    ```no-highlight title="Test Redis connection"
     redis-cli ping
     ```
 
-    Example output:
+    ??? example "Example Redis check output"
 
-    ```no-highlight
-    PONG
-    ```
+        ```no-highlight
+        PONG
+        ```
 
 ## Deploy Nautobot
 

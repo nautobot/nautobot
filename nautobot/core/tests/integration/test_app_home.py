@@ -9,7 +9,6 @@ from example_app.models import ExampleModel
 class AppHomeTestCase(SeleniumTestCase):
     """Integration test the Example App homepage extensions."""
 
-    fixtures = ["user-data.json"]  # bob/bob
     layout = {
         "Organization": {
             "Locations": {"model": Location, "permission": "dcim.view_location"},

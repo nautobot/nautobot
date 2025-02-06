@@ -1,4 +1,4 @@
-{% extends 'generic/object_detail.html' %}
+{% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
 
 {% block content_left_page %}
@@ -20,7 +20,13 @@
                         <td>
                             {{ object.status| hyperlinked_object_with_color }}
                         </td>
-                    </tr>
+                </tr>
+                <tr>
+                    <td>Role</td>
+                    <td>
+                        {{ object.role| hyperlinked_object_with_color }}
+                    </td>
+                </tr>
                 <tr>
                     <td>Enabled</td>
                     <td>{{ object.enabled | render_boolean }}</td>
@@ -34,6 +40,10 @@
                              <span class="text-muted">None</span>
                          {% endif %}
                      </td>
+                </tr>
+                <tr>
+                    <td>VRF</td>
+                    <td>{{ object.vrf|hyperlinked_object }} </td>
                 </tr>
                 <tr>
                      <th scope="row">Bridge</th>

@@ -1,15 +1,28 @@
 # Used to run the final container images vs the dev containers
 ---
-version: "3.4"
 services:
+  # The final image runs as user "nautobot", not as root, so we have to fix ownership of the media_root volume
+  # to avoid a "permission denied" error at startup.
+  permission_fixup:
+    image: "local/nautobot-dev:local-${NAUTOBOT_VER}-py${PYTHON_VER}"
+    restart: "no"
+    entrypoint: "/bin/sh -c 'chown nautobot:nautobot /opt/nautobot/media'"
+    volumes:
+      - media_root:/opt/nautobot/media
   nautobot:
     build:
       target: final
-    image: "local/nautobot-final:local-py${PYTHON_VER}"
+    image: "local/nautobot-final:local-${NAUTOBOT_VER}-py${PYTHON_VER}"
     ports:
       - 8443:8443
+    depends_on:
+      - permission_fixup
   celery_worker:
-    image: "local/nautobot-final:local-py${PYTHON_VER}"
+    image: "local/nautobot-final:local-${NAUTOBOT_VER}-py${PYTHON_VER}"
     entrypoint: "nautobot-server celery worker -l INFO --events"
+    depends_on:
+      - permission_fixup
   celery_beat:
-    image: "local/nautobot-final:local-py${PYTHON_VER}"
+    image: "local/nautobot-final:local-${NAUTOBOT_VER}-py${PYTHON_VER}"
+    depends_on:
+      - permission_fixup

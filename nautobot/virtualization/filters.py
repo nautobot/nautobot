@@ -30,8 +30,8 @@ __all__ = (
     "ClusterFilterSet",
     "ClusterGroupFilterSet",
     "ClusterTypeFilterSet",
-    "VirtualMachineFilterSet",
     "VMInterfaceFilterSet",
+    "VirtualMachineFilterSet",
 )
 
 
@@ -153,9 +153,15 @@ class VirtualMachineFilterSet(
     )
     cluster_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Cluster.objects.all(),
-        label="Cluster (ID)",
+        label="Cluster (ID) - Deprecated (use cluster filter)",
+    )
+    cluster = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Cluster.objects.all(),
+        to_field_name="name",
+        label="Cluster (name or ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Location.objects.all(),
         field_name="cluster__location",
         to_field_name="name",
@@ -218,13 +224,25 @@ class VirtualMachineFilterSet(
         to_field_name="version",
         label="Software version (version or ID)",
     )
+    ip_addresses = MultiValueCharFilter(
+        method="filter_ip_addresses",
+        label="IP addresses (address or ID)",
+        distinct=True,
+    )
+    has_ip_addresses = RelatedMembershipBooleanFilter(field_name="interfaces__ip_addresses", label="Has IP addresses")
+
+    def filter_ip_addresses(self, queryset, name, value):
+        pk_values = set(item for item in value if is_uuid(item))
+        addresses = set(item for item in value if item not in pk_values)
+
+        ip_queryset = IPAddress.objects.filter_address_or_pk_in(addresses, pk_values)
+        return queryset.filter(interfaces__ip_addresses__in=ip_queryset).distinct()
 
     class Meta:
         model = VirtualMachine
         fields = [
             "id",
             "name",
-            "cluster",
             "vcpus",
             "memory",
             "disk",
@@ -262,7 +280,9 @@ class VirtualMachineFilterSet(
         return queryset.filter(primary_ip6__in=ip_queryset)
 
 
-class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomFieldModelFilterSetMixin):
+class VMInterfaceFilterSet(
+    BaseFilterSet, RoleModelFilterSetMixin, StatusModelFilterSetMixin, CustomFieldModelFilterSetMixin
+):
     q = SearchFilter(filter_predicates={"name": "icontains"})
 
     cluster_id = django_filters.ModelMultipleChoiceFilter(
@@ -318,6 +338,7 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
         label="MAC address",
     )
     tagged_vlans = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="vid",
         queryset=VLAN.objects.all(),
         label="Tagged VLANs (VID or ID)",
@@ -327,11 +348,16 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
         label="Has Tagged VLANs",
     )
     untagged_vlan = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="vid",
         queryset=VLAN.objects.all(),
         label="Untagged VLAN (VID or ID)",
     )
-    ip_addresses = MultiValueCharFilter(method="filter_ip_addresses", label="IP addresses (address or ID)")
+    ip_addresses = MultiValueCharFilter(
+        method="filter_ip_addresses",
+        label="IP addresses (address or ID)",
+        distinct=True,
+    )
     has_ip_addresses = RelatedMembershipBooleanFilter(field_name="ip_addresses", label="Has IP addresses")
 
     def filter_ip_addresses(self, queryset, name, value):
@@ -339,7 +365,7 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
         addresses = set(item for item in value if item not in pk_values)
 
         ip_queryset = IPAddress.objects.filter_address_or_pk_in(addresses, pk_values)
-        return queryset.filter(ip_addresses__in=ip_queryset)
+        return queryset.filter(ip_addresses__in=ip_queryset).distinct()
 
     class Meta:
         model = VMInterface

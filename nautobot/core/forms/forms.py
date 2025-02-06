@@ -1,8 +1,11 @@
+import contextlib
 import json
 import logging
 import re
 
 from django import forms
+from django.core.exceptions import FieldDoesNotExist
+from django.db.models.fields.related import ManyToManyField
 from django.forms import formset_factory
 from django.urls import reverse
 import yaml
@@ -15,8 +18,8 @@ __all__ = (
     "BootstrapMixin",
     "BulkEditForm",
     "BulkRenameForm",
-    "ConfirmationForm",
     "CSVModelForm",
+    "ConfirmationForm",
     "DynamicFilterForm",
     "ImportForm",
     "PrefixFieldMixin",
@@ -59,6 +62,13 @@ class AddressFieldMixin(forms.ModelForm):
 class BootstrapMixin(forms.BaseForm):
     """
     Add the base Bootstrap CSS classes to form elements.
+
+    Note that this only applies to form fields that are:
+
+    1. statically defined on the form class at declaration time, or
+    2. dynamically added to the form at init time by a class **later in the MRO than this mixin**.
+
+    If a class earlier in the MRO adds its own fields, it will have to ensure that the widgets are correctly configured.
     """
 
     def __init__(self, *args, **kwargs):
@@ -73,8 +83,9 @@ class BootstrapMixin(forms.BaseForm):
 
         for field in self.fields.values():
             if field.widget.__class__ not in exempt_widgets:
-                css = field.widget.attrs.get("class", "")
-                field.widget.attrs["class"] = " ".join([css, "form-control"]).strip()
+                css_classes = field.widget.attrs.get("class", "")
+                if "form-control" not in css_classes:
+                    field.widget.attrs["class"] = " ".join([css_classes, "form-control"]).strip()
             if field.required and not isinstance(field.widget, forms.FileInput):
                 field.widget.attrs["required"] = "required"
             if "placeholder" not in field.widget.attrs:
@@ -105,7 +116,7 @@ class BulkEditForm(forms.Form):
     a more powerful subclass and should be used instead of directly inheriting from this class.
     """
 
-    def __init__(self, model, *args, **kwargs):
+    def __init__(self, model, *args, edit_all=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.model = model
         self.nullable_fields = []
@@ -114,6 +125,38 @@ class BulkEditForm(forms.Form):
         if hasattr(self.Meta, "nullable_fields"):
             self.nullable_fields = self.Meta.nullable_fields
 
+        if edit_all:
+            self.fields["pk"].required = False
+            self.fields["_all"] = forms.BooleanField(widget=forms.HiddenInput(), required=False, initial=True)
+
+    def _save_m2m_fields(self, obj):
+        """Save M2M fields"""
+        from nautobot.core.models.fields import TagsField  # Avoid circular dependency
+
+        m2m_field_names = []
+        # Handle M2M Save
+        for key in self.cleaned_data.keys():
+            if key.startswith(("add_", "remove_")):
+                field_name = key.lstrip("add_")
+                if field_name in m2m_field_names:
+                    continue
+                with contextlib.suppress(FieldDoesNotExist):
+                    field = obj._meta.get_field(field_name)
+                    is_m2m_field = isinstance(field, (ManyToManyField, TagsField))
+                    if is_m2m_field:
+                        m2m_field_names.append(field_name)
+
+        for field_name in m2m_field_names:
+            m2m_field = getattr(obj, field_name)
+            if self.cleaned_data.get(f"add_{field_name}", None):
+                m2m_field.add(*self.cleaned_data[f"add_{field_name}"])
+            if self.cleaned_data.get(f"remove_{field_name}", None):
+                m2m_field.remove(*self.cleaned_data[f"remove_{field_name}"])
+
+    def post_save(self, obj):
+        """Post save action"""
+        self._save_m2m_fields(obj)
+
 
 class BulkRenameForm(forms.Form):
     """
@@ -121,7 +164,7 @@ class BulkRenameForm(forms.Form):
     """
 
     find = forms.CharField()
-    replace = forms.CharField()
+    replace = forms.CharField(required=False, strip=False)
     use_regex = forms.BooleanField(required=False, initial=True, label="Use regular expressions")
 
     def clean(self):

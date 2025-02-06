@@ -5,9 +5,9 @@ Nautobot generally follows the [Django style guide](https://docs.djangoproject.c
 * [Ruff](https://docs.astral.sh/ruff) is used to enforce code formatting conventions as well as perform code analysis.
 * [Pylint](https://pylint.pycqa.org/en/latest/) is used for Python static code analysis.
 * [Hadolint](https://github.com/hadolint/hadolint) is used to lint and validate Docker best practices in the Dockerfile.
-* [MarkdownLint-cli](https://github.com/igorshubovych/markdownlint-cli) is used to lint and validate Markdown (documentation) files.
+* [PyMarkdown](https://github.com/jackdewinter/pymarkdown) is used to lint and validate Markdown (documentation) files.
 
-Nautobot-specific configuration of these tools is maintained in the files `.markdownlint.yml` or `pyproject.toml` as appropriate to the individual tool.
+Nautobot-specific configuration of these tools is maintained in the `pyproject.toml` file as appropriate to the individual tool.
 
 It is strongly recommended to include all of the above tools as part of your commit process before opening any pull request. A Git commit hook is provided in the source at `scripts/git-hooks/pre-commit`. Linking to this script from `.git/hooks/` will invoke these tools prior to every commit attempt and abort if the validation fails.
 
@@ -63,7 +63,7 @@ New dependencies can be added to the project via the `poetry add` command. This 
 
 +++ 1.4.0
 
-    * Similarly, for filter forms, `nautobot.extras.forms.NautobotFilterForm` combines `nautobot.core.forms.BootstrapMixin`, `nautobot.extras.forms.CustomFieldModelFilterFormMixin`, and `nautobot.extras.forms.RelationshipModelFilterFormMixin`, and should be used where appropriate.
+    * Similarly, for filter forms, `nautobot.extras.forms.NautobotFilterForm` combines `nautobot.core.forms.BootstrapMixin`, `nautobot.extras.forms.ContactTeamModelFilterFormMixin` (since Nautobot 2.3.0), `nautobot.extras.forms.CustomFieldModelFilterFormMixin`, and `nautobot.extras.forms.RelationshipModelFilterFormMixin`, and should be used where appropriate.
 
     * Similarly, for bulk-edit forms, `nautobot.extras.forms.NautobotBulkEditForm` combines `nautobot.core.forms.BulkEditForm` and `nautobot.core.forms.BootstrapMixin` with `nautobot.extras.forms.CustomFieldModelBulkEditFormMixin`, `nautobot.extras.forms.RelationshipModelBulkEditFormMixin` and `nautobot.extras.forms.NoteModelBulkEditFormMixin`, and should be used where appropriate.
 
@@ -77,7 +77,7 @@ New dependencies can be added to the project via the `poetry add` command. This 
 
 * When referring to Nautobot in writing, use the proper form "Nautobot," with the letter N. The lowercase form "nautobot" should be used in code, filenames, etc.
 
-<!-- markdownlint-disable-next-line NAUTOBOTMD001 -->
+<!-- pyml disable-next-line NAU001 -->
 * There is an SVG form of the Nautobot logo at [nautobot/docs/nautobot_logo.svg](../../nautobot_logo.svg). It is preferred to use this logo for all purposes as it scales to arbitrary sizes without loss of resolution. If a raster image is required, the SVG logo should be converted to a PNG image of the prescribed size.
 
 ## Importing Python Packages

@@ -1,4 +1,4 @@
-{% extends 'generic/object_detail.html' %}
+{% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
 
 {% block header %}
@@ -7,27 +7,32 @@
             <ol class="breadcrumb">
                 {% block breadcrumbs %}
                     <li><a href="{% url 'apps:apps_list' %}">Installed Apps</a></li>
-                    <li><a href="{% url 'apps:app_detail' app=object.name %}">{{ object.verbose_name | bettertitle }}</a></li>
+                    <li><a href="{% url 'apps:app_detail' app=app_data.package %}">{{ app_data.name | bettertitle }}</a></li>
                 {% endblock breadcrumbs %}
             </ol>
         </div>
     </div>
     <div class="pull-right noprint">
         {% block buttons %}
-            {% if object.home_view_name %}
-                <a href="{% url object.home_view_name %}" class="btn btn-success">
+            {% if app_data.home_url %}
+                <a href="{% url app_data.home_url %}" class="btn btn-primary">
                     <i class="mdi mdi-home"></i> App Home
                 </a>
             {% endif %}
-            {% if object.config_view_name %}
-                <a href="{% url object.config_view_name %}" class="btn btn-warning">
+            {% if app_data.config_url %}
+                <a href="{% url app_data.config_url %}" class="btn btn-warning">
                     <i class="mdi mdi-cog"></i> App Configuration
+                </a>
+            {% endif %}
+            {% if app_data.docs_url %}
+                <a href="{% url app_data.docs_url %}" class="btn btn-info">
+                    <i class="mdi mdi-cog"></i> App Documentation
                 </a>
             {% endif %}
         {% endblock buttons %}
     </div>
     {% block masthead %}
-        <h1>{% block title %}{{ object.verbose_name | bettertitle }}{% endblock %}</h1>
+        <h1>{% block title %}{{ app_data.name | bettertitle }}{% endblock %}</h1>
     {% endblock masthead %}
 {% endblock header %}
 
@@ -42,25 +47,37 @@
                     <table class="table table-hover panel-body attr-table">
                         <tr>
                             <td>Package Name</td>
-                            <td><code>{{ object.name }}</code></td>
+                            <td><code>{{ app_data.package }}</code></td>
                         </tr>
+                        <tr>
+                            <td>Headline</td>
+                            <td>{{ app_data.headline }}</td>
+                        </tr>
+                        {% if app_data.description and app_data.headline != app_data.description %}
                         <tr>
                             <td>Description</td>
-                            <td>{{ object.description }}</td>
+                            <td>{{ app_data.description }}</td>
                         </tr>
+                        {% endif %}
                         <tr>
                             <td>Version</td>
-                            <td>{{ object.version }}</td>
+                            <td>v{{ app_data.version }}</td>
                         </tr>
                         <tr>
-                            <td>Author</td>
+                            <td>By</td>
                             <td>
-                                {{ object.author | placeholder }}
-                                {% if object.author_email %}
-                                    (<a href="mailto:{{ object.author_email }}">{{ object.author_email }}</a>)
+                                {{ app_data.author | placeholder }}
+                                {% if app_data.author_email %}
+                                    (<a href="mailto:{{ app_data.author_email }}">{{ app_data.author_email }}</a>)
                                 {% endif %}
                             </td>
                         </tr>
+                        {% if app_data.availability %}
+                        <tr>
+                            <td>License</td>
+                            <td><label class="label label-transparent">{{ app_data.availability }}</label></td>
+                        </tr>
+                        {% endif %}
                     </table>
                 </div>
                 <div class="panel panel-default">
@@ -70,11 +87,11 @@
                     <table class="table table-hover panel-body attr-table">
                         <tr>
                             <td>Min Nautobot Version</td>
-                            <td>{{ object.min_version | placeholder }}</td>
+                            <td>v{{ object.min_version | placeholder }}</td>
                         </tr>
                         <tr>
                             <td>Max Nautobot Version</td>
-                            <td>{{ object.max_version | placeholder }}</td>
+                            <td>v{{ object.max_version | placeholder }}</td>
                         </tr>
                     </table>
                 </div>
@@ -274,6 +291,39 @@
                                         </ul>
                                     {% else %}
                                         {% include 'utilities/render_boolean.html' with value=features.secrets_providers %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Table Extensions</td>
+                                <td>
+                                    {% if features.table_extensions %}
+                                        {% if features.table_extensions.columns %}
+                                        <b>Custom Columns</b>
+                                        <ul class="list-unstyled">
+                                            {% for column in features.table_extensions.columns %}
+                                                <li><code>{{ column }}</code></li>
+                                            {% endfor %}
+                                        </ul>
+                                        {% endif %}
+                                        {% if features.table_extensions.add_to_default_columns %}
+                                        <b>Additional Default Columns</b>
+                                        <ul class="list-unstyled">
+                                            {% for column in features.table_extensions.add_to_default_columns %}
+                                                <li><code>{{ column }}</code></li>
+                                            {% endfor %}
+                                        </ul>
+                                        {% endif %}
+                                        {% if features.table_extensions.remove_from_default_columns %}
+                                        <b>Remove from Default Columns</b>
+                                        <ul class="list-unstyled">
+                                            {% for column in features.table_extensions.remove_from_default_columns %}
+                                                <li><code>{{ column }}</code></li>
+                                            {% endfor %}
+                                        </ul>
+                                        {% endif %}
+                                    {% else %}
+                                        {% include 'utilities/render_boolean.html' with value=features.table_extensions %}
                                     {% endif %}
                                 </td>
                             </tr>

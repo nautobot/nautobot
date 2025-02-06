@@ -2,7 +2,7 @@
 
 Interfaces in Nautobot represent network interfaces used to exchange data with connected devices.
 
-More information on Interfaces is in the [Interfaces](../../core-data-model/dcim/device.md#interfaces) section of the Nautobot documentation.
+More information on Interfaces is in the [Interfaces](../../core-data-model/dcim/interface.md) section of the Nautobot documentation.
 
 Interfaces can be added at the Device or the Device Type level:
 

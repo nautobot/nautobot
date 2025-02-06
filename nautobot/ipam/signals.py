@@ -65,9 +65,9 @@ def ip_address_to_interface_pre_delete(instance, raw=False, **kwargs):
     # that is the primary_v{version} of the host machine.
 
     if getattr(instance, "interface"):
-        host = instance.interface.device
+        host = instance.interface.parent
         other_assignments_exist = (
-            IPAddressToInterface.objects.filter(interface__device=host, ip_address=instance.ip_address)
+            IPAddressToInterface.objects.filter(interface__in=host.all_interfaces, ip_address=instance.ip_address)
             .exclude(id=instance.id)
             .exists()
         )
@@ -109,8 +109,10 @@ def assert_locations_content_types(sender, instance, action, reverse, model, pk_
         # instance = the Prefix or VLAN
         # model = Location class
         instance_ct = ContentType.objects.get_for_model(instance)
-        invalid_locations = model.objects.select_related("location_type").filter(
-            Q(pk__in=pk_set), ~Q(location_type__content_types__in=[instance_ct])
+        invalid_locations = (
+            model.objects.without_tree_fields()
+            .select_related("location_type")
+            .filter(Q(pk__in=pk_set), ~Q(location_type__content_types__in=[instance_ct]))
         )
         if invalid_locations.exists():
             invalid_location_types = {location.location_type.name for location in invalid_locations}

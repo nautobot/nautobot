@@ -6,6 +6,8 @@ definitions:
     type: "string"
   callable:
     type: "string"
+  date:
+    type: "string"
   regex:
     type: "string"
   relative_path:
@@ -47,7 +49,7 @@ properties:
     description: >-
       A list of valid fully-qualified domain names (FQDNs) and/or IP addresses that can be used to reach the
       Nautobot service. (If provided as an environment variable, it should be a space-separated string, for example
-      `NAUTOBOT_ALLOWED_HOSTS="localhost 127.0.0.1 example.com"`)
+      `NAUTOBOT_ALLOWED_HOSTS="localhost 127.0.0.1 nautobot.example.com"`)
     details: |-
       Usually this is the same as the hostname for the Nautobot server, but can also be different; for example,
       when using a reverse proxy serving the Nautobot website under a different FQDN than the hostname of the
@@ -70,7 +72,7 @@ properties:
 
       !!! tip
           If there is more than one hostname in this list, you may also need to set
-          [CSRF_TRUSTED_ORIGINS](optional-settings.md#csrf_trusted_origins) as well.
+          [CSRF_TRUSTED_ORIGINS](settings.md#csrf_trusted_origins) as well.
 
       If you are not yet sure what the domain name and/or IP address of the Nautobot installation will be,
       and are comfortable accepting the risks in doing so, you can set this to a wildcard (asterisk) to
@@ -83,7 +85,6 @@ properties:
       !!! warning
           It is not recommended to leave this value as `['*']` for production deployments.
     environment_variable: "NAUTOBOT_ALLOWED_HOSTS"
-    is_required_setting: true
     items:
       type: "string"
     see_also:
@@ -128,24 +129,40 @@ properties:
     type: "array"
   BANNER_BOTTOM:
     default: ""
-    description: "Custom content to be displayed in a banner at the bottom of the page. HTML is allowed."
+    description: >-
+      Custom content to be displayed in a banner at the bottom of all Nautobot pages.
+    details: |-
+      +/- 2.2.4
+          Markdown formatting is supported within this message, as well as
+          [a limited subset of HTML](../../platform-functionality/template-filters.md#render_markdown).
     environment_variable: "NAUTOBOT_BANNER_BOTTOM"
     is_constance_config: true
     type: "string"
   BANNER_LOGIN:
     default: ""
-    description: "Custom content to be displayed on the login page above the login form. HTML is allowed."
+    description: >-
+      Custom content to be displayed in a banner on the login page above the login form.
+    details: |-
+      +/- 2.2.4
+          Markdown formatting is supported within this message, as well as
+          [a limited subset of HTML](../../platform-functionality/template-filters.md#render_markdown).
     environment_variable: "NAUTOBOT_BANNER_LOGIN"
     is_constance_config: true
     type: "string"
   BANNER_TOP:
     default: ""
-    description: "Custom content to be displayed in a banner at the top of the page. HTML is allowed."
+    description: >-
+      Custom content to be displayed in a banner at the top of all Nautobot pages.
+    details: |-
+      +/- 2.2.4
+          Markdown formatting is supported within this message, as well as
+          [a limited subset of HTML](../../platform-functionality/template-filters.md#render_markdown).
     environment_variable: "NAUTOBOT_BANNER_TOP"
     is_constance_config: true
     type: "string"
   BRANDING_FILEPATHS:
     default:
+      css: null
       favicon: null
       header_bullet: null
       icon_16: null
@@ -153,57 +170,76 @@ properties:
       icon_180: null
       icon_192: null
       icon_mask: null
+      javascript: null
       logo: null
       nav_bullet: null
     description: >-
-      A set of filepaths relative to the [`MEDIA_ROOT`](#media_root) which locate image assets used for
-      custom branding. Each of these assets takes the place of the corresponding stock Nautobot asset.
+      A set of filepaths relative to the [`MEDIA_ROOT`](#media_root) which locate assets used for
+      custom branding of your Nautobot instance.
+      With the exception of `css` and `javascript`, which provide the option to add an _additional_ file to Nautobot
+      page content, each of the other assets takes the place of the corresponding stock Nautobot asset.
       This allows for, for instance, providing your own navbar logo and favicon.
-      If a custom image asset is not provided for any of the above options, the stock Nautobot asset is used.
+      If a custom asset is not provided for any of the above options, the stock Nautobot asset is used.
+    details: |-
+      +++ 2.1.0
+          The `header_bullet` and `nav_bullet` assets were added as options.
+
+      +++ 2.2.4
+          The `css` and `javascript` assets were added as options.
     properties:
+      css:
+        "$ref": "#/definitions/relative_path"
+        default: null
+        description: "Custom global CSS file"
+        environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_CSS"
       favicon:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "Browser favicon"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_FAVICON"
       header_bullet:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "Bullet image used for various view headers"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET"
       icon_16:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "16x16px icon"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_ICON_16"
       icon_180:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "180x180px icon - used for the apple-touch-icon header"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_ICON_180"
       icon_192:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "192x192px icon"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_ICON_192"
       icon_32:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "32x32px icon"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_ICON_32"
       icon_mask:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "Mono-chrome icon used for the mask-icon header"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK"
+      javascript:
+        "$ref": "#/definitions/relative_path"
+        default: null
+        description: "Custom global JavaScript file"
+        environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_JAVASCRIPT"
       logo:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "Navbar logo"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_LOGO"
       nav_bullet:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "Bullet image used for nav menu headers"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET"
     type: "object"
@@ -262,19 +298,21 @@ properties:
         TIMEOUT: 300
     description: "The `CACHES` setting is required to simplify the configuration for `django-redis`."
     details: |-
-      The [`django-redis`](https://github.com/jazzband/django-redis) Django plugin is used to enable Redis
-      as a concurrent write lock for preventing race conditions when allocating IP address objects.
+      The [`django-redis`](https://github.com/jazzband/django-redis) Django plugin is used to enable Redis as a
+      concurrent write lock for preventing race conditions when allocating IP address objects.
+      Nautobot also uses the built-in [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/)
+      (which also relies on the `CACHES` setting) to perform caching. This includes caching of the values of
+      [administratively configurable settings](#administratively-configurable-settings) as stored in the database.
 
-      !!! important
-          Nautobot also utilizes the built-in
-          [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/)
-          (which also relies on the `CACHES` setting) to perform caching.
+      !!! tip
+          Rather than directly setting `CACHES["default"]["LOCATION"]`, we recommend managing this setting via
+          the various `NAUTOBOT_REDIS_*` environment variables, as those variables apply to both `CACHES` and
+          [`CELERY_BROKER_URL`](#celery_broker_url) alike, which is typically preferable.
 
-      +/- 2.0.0
-          The default value of `CACHES["default"]["LOCATION"]` has changed from `redis://localhost:6379/0`
-          to `redis://localhost:6379/1`, as Django's native caching is now taking the role previously occupied by
-          `django-cacheops`.
-    is_required_setting: true
+      +++ 2.3.4 "`NAUTOBOT_CACHES_TIMEOUT` environment variable"
+          Added support for the environment variable `NAUTOBOT_CACHES_TIMEOUT` for configuring the
+          `CACHES["default"]["TIMEOUT"]` setting. This environment variable also controls the cache timeout
+          for administratively configurable settings.
     properties:
       default:
         properties:
@@ -287,6 +325,13 @@ properties:
             type: "string"
           LOCATION:
             default: "redis://localhost:6379/1"
+            environment_variables:
+            - "NAUTOBOT_REDIS_SCHEME"
+            - "NAUTOBOT_REDIS_SSL"
+            - "NAUTOBOT_REDIS_USERNAME"
+            - "NAUTOBOT_REDIS_PASSWORD"
+            - "NAUTOBOT_REDIS_HOST"
+            - "NAUTOBOT_REDIS_PORT"
             format: "uri"
             type: "string"
           OPTIONS:
@@ -301,10 +346,11 @@ properties:
             type: "object"
           TIMEOUT:
             default: 300
+            environment_variable: "NAUTOBOT_CACHES_TIMEOUT"
             type: "integer"
         type: "object"
     see_also:
-      "Guide to Nautobot Caching, including TLS and HA configuration": "../../administration/guides/caching.md"
+      "Guide to Nautobot Redis configuration, including TLS and HA configuration": "redis.md"
     type: "object"
   CELERY_BEAT_HEARTBEAT_FILE:
     default: "/tmp/nautobot_celery_beat_heartbeat"
@@ -316,8 +362,7 @@ properties:
     default: {}
     description: "A dict of additional options passed to the Celery broker transport."
     details: >-
-      This is only required when
-      [configuring Celery to utilize Redis Sentinel](../../administration/guides/caching.md#celery-sentinel-configuration).
+      This is only required when [configuring Celery to utilize Redis Sentinel](redis.md#celery-sentinel-configuration).
     properties:
       master_name:
         type: "string"
@@ -331,7 +376,18 @@ properties:
   CELERY_BROKER_URL:
     default: "redis://localhost:6379/0"
     description: "Celery broker URL used to tell workers where queues are located."
-    environment_variable: "NAUTOBOT_CELERY_BROKER_URL"
+    details: >-
+      If the `NAUTOBOT_CELERY_BROKER_URL` environment variable is not set, the default for this setting will be
+      influenced by the various `NAUTOBOT_REDIS_*` environment variables instead, which is often preferable as those
+      variables also influence the [`CACHES`](#caches) configuration as well.
+    environment_variables:
+    - "NAUTOBOT_CELERY_BROKER_URL"
+    - "NAUTOBOT_REDIS_SCHEME"
+    - "NAUTOBOT_REDIS_SSL"
+    - "NAUTOBOT_REDIS_USERNAME"
+    - "NAUTOBOT_REDIS_PASSWORD"
+    - "NAUTOBOT_REDIS_HOST"
+    - "NAUTOBOT_REDIS_PORT"
     format: "uri"
     type: "string"
   CELERY_BROKER_USE_SSL:
@@ -391,6 +447,20 @@ properties:
     see_also:
       "`CELERY_TASK_SOFT_TIME_LIMIT`": "#celery_task_soft_time_limit"
     type: "integer"
+  CELERY_WORKER_PREFETCH_MULTIPLIER:
+    default: 4
+    description: "How many tasks a worker is allowed to reserve for its own consumption and execution."
+    details: >-
+      If set to `0` (not recommended) a single worker can reserve all tasks even if other workers are free.
+      For short running tasks (such as webhooks) you may want to set this to a larger number to increase throughput.
+      Conversely, for long-running tasks (such as SSoT or Golden-Config Jobs at scale) you may want to set this to `1`
+      so that a worker executing a long-running task will not prefetch other tasks, which would block their execution
+      until the long-running task completes.
+    environment_variable: "NAUTOBOT_CELERY_WORKER_PREFETCH_MULTIPLIER"
+    see_also:
+      "Celery documentation": "https://docs.celeryq.dev/en/stable/userguide/optimizing.html#prefetch-limits"
+    type: "integer"
+    version_added: "2.2.9"
   CELERY_WORKER_PROMETHEUS_PORTS:
     default: []
     description: "Ports for Prometheus metric HTTP server running on the celery worker(s)."
@@ -432,6 +502,12 @@ properties:
       !!! warning
           If enabling indefinite changelog retention, it is recommended to periodically delete old entries.
           Otherwise, the database may eventually exceed capacity.
+
+      +/- 2.3.0
+          As of Nautobot 2.3.0, changelog cleanup does not run automatically. Use the `Cleanup of ObjectChange records`
+          system Job to handle changelog cleanup; you may schedule this to run automatically like any other Job if
+          desired. The `CHANGELOG_RETENTION` setting provides a default age cutoff for the Job but may be overridden
+          at runtime if desired.
     environment_variable: "NAUTOBOT_CHANGELOG_RETENTION"
     is_constance_config: true
     type: "integer"
@@ -513,6 +589,16 @@ properties:
     description: >-
       A list of hosts (fully-qualified domain names (FQDNs) or subdomains) that are considered trusted origins
       for cross-site secure requests such as HTTPS POST.
+
+      You might need to set this if you are using a reverse proxy or load balancer that changes the host header or if you face the error
+      'Invalid Form Submission - CSRF failure has occured' and 'Origin checking failed - https://subdomain.example.com does not match any trusted origins.'
+
+      Example:
+
+      ```python
+      CSRF_TRUSTED_ORIGINS = ['https://subdomain.example.com', 'https://*.example.com']
+      ```
+    environment_variable: "NAUTOBOT_CSRF_TRUSTED_ORIGINS"
     items:
       type: "string"
     see_also:
@@ -573,7 +659,6 @@ properties:
 
           As of Nautobot 1.1.5 and later, if you have generated a new `nautobot_config.py` using
           `nautobot-server init`, this line is already present in your config and no action is required.
-    is_required_setting: true
     properties:
       default:
         additionalProperties: true
@@ -683,19 +768,57 @@ properties:
     is_constance_config: true
     type: "boolean"
     version_added: "2.0.0"
-  DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT:
-    default: 0
+  EVENT_BROKERS:
+    default: {}
     description: >-
-      The number of seconds to cache the member list of dynamic groups. Set this to `0` to disable caching.
-    details: >-
-      With large datasets (those in scope of a Dynamic Group and number of Dynamic Groups themselves),
-      users will encounter a performance penalty using or accessing the membership lists.
-      This setting allows users to accept a cached list for common use cases (particularly in the UI)
-      that expires after the configured time."
-    environment_variable: "NAUTOBOT_DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"
-    is_constance_config: true
-    type: "integer"
-    version_added: "1.6.0"
+      A dictionary defining event brokers that handle event publishing in Nautobot.
+      Each broker specifies its import path, along with topics to include or exclude
+      when publishing events.
+    details: |-
+      Each broker consists of a name, the class it uses for publishing events, and the topics
+      it filters. Topics are the categories of events that a broker will publish or exclude
+      based on the provided filters.
+
+      Example:
+
+      ```python
+      EVENT_BROKERS = {
+          "SyslogEventBroker": {
+              "CLASS": "nautobot.core.events.SyslogEventBroker",
+              "TOPICS": {
+                  "INCLUDE": ["nautobot.test.*"],
+                  "EXCLUDE": ["*.no-publish*"],
+              },
+          },
+      }
+      ```
+
+      In this example:
+      - **SyslogEventBroker** is the broker name.
+      - **CLASS** specifies the path to the event broker's Python class.
+      - **INCLUDE** filters the events the broker will publish, such as all topics starting with "nautobot.test."
+      - **EXCLUDE** filters out specific topics like those with "no-publish" in the name.
+
+      !!! note
+          If **INCLUDE** is set to ["*"], all topics will be published unless excluded by **EXCLUDE**.
+    properties:
+      CLASS:
+        type: "string"
+      TOPICS:
+        type: "object"
+        properties:
+          INCLUDE:
+            type: "array"
+            description: >-
+              List of topics that the broker should publish events for.
+              If empty or set to ["*"], all topics will be included.
+          EXCLUDE:
+            type: "array"
+            description: >-
+              List of topics that the broker should exclude from publishing.
+              If empty, no topics are excluded.
+    type: "object"
+    version_added: "2.4.0"
   EXEMPT_VIEW_PERMISSIONS:
     default: []
     description: "A list of Nautobot models to exempt from the enforcement of view permissions."
@@ -738,7 +861,7 @@ properties:
     description: "A mapping of permissions to assign a new user account when created using SSO authentication."
     details: |-
       Each key in the dictionary will be the permission name specified as `<app_label>.<action>_<model>`,
-      and the value should be set to the permission [constraints](../guides/permissions.md#constraints),
+      and the value should be set to the permission [constraints](../guides/permissions.md#example-constraint-definitions),
       or `None` to allow all objects.
 
       Example:
@@ -786,7 +909,7 @@ properties:
   FORCE_SCRIPT_NAME:
     default: null
     description: >-
-      If not None, this will be used as the value of the SCRIPT_NAME environment variable in any HTTP request.
+      If not None, this will be used as the value of the `SCRIPT_NAME` environment variable in any HTTP request.
     details: |-
       This setting can be used to override the server-provided value of `SCRIPT_NAME`, which is most commonly used
       for hosting Nautobot in a subdirectory (e.g. _example.com/nautobot/_).
@@ -937,6 +1060,41 @@ properties:
       +/- 2.0.0
           This directory no longer requires an `__init__.py` file.
     environment_variable: "NAUTOBOT_JOBS_ROOT"
+  KUBERNETES_DEFAULT_SERVICE_ADDRESS:
+    default: ""
+    description: "HTTP address of the Kubernetes cluster. e.g. https://kubernetes.default.svc"
+    environment_variable: "NAUTOBOT_KUBERNETES_DEFAULT_SERVICE_ADDRESS"
+    type: "string"
+    version_added: "2.4.0"
+  KUBERNETES_JOB_MANIFEST:
+    default: {}
+    description: "A dictionary that contains the pod manifest used to create a job pod in the kubernetes cluster."
+    type: "object"
+    version_added: "2.4.0"
+  KUBERNETES_JOB_POD_NAME:
+    default: ""
+    description: "Name of the Kubernetes pod."
+    environment_variable: "NAUTOBOT_KUBERNETES_JOB_POD_NAME"
+    type: "string"
+    version_added: "2.4.0"
+  KUBERNETES_JOB_POD_NAMESPACE:
+    default: ""
+    description: "Name of the namespace that the Kubernetes pod is created in."
+    environment_variable: "NAUTOBOT_KUBERNETES_JOB_POD_NAMESPACE"
+    type: "string"
+    version_added: "2.4.0"
+  KUBERNETES_SSL_CA_CERT_PATH:
+    default: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+    description: "File path to the SSL CA CERT used for authentication to create the job and job pod."
+    environment_variable: "NAUTOBOT_KUBERNETES_SSL_CA_CERT_PATH"
+    type: "string"
+    version_added: "2.4.0"
+  KUBERNETES_TOKEN_PATH:
+    default: "/var/run/secrets/kubernetes.io/serviceaccount/token"
+    description: "File path to the Bearer token used for authentication to create the job and job pod."
+    environment_variable: "NAUTOBOT_KUBERNETES_TOKEN_PATH"
+    type: "string"
+    version_added: "2.4.0"
   LOCATION_NAME_AS_NATURAL_KEY:
     default: false
     description: >-
@@ -1071,6 +1229,34 @@ properties:
       * `nautobot.core.graphql.*` - [GraphQL](../../platform-functionality/graphql.md) initialization and operation.
       * `nautobot.extras.plugins.*` - App loading and activity
       * `nautobot.core.views.generic.*` - Generic views which handle business logic for the web UI
+
+      #### Structlog Configuration
+
+      As of Nautobot 2.3, [django-structlog](https://django-structlog.readthedocs.io/en/latest/) is added as a core dependency. To use structlog, you can add the following code to your `nautobot_config.py` file:
+
+      ```python
+      from nautobot.core.settings_funcs import setup_structlog_logging
+
+      setup_structlog_logging(
+          LOGGING,
+          INSTALLED_APPS,
+          MIDDLEWARE,
+          log_level="DEBUG" if DEBUG else "INFO",
+          root_level="INFO",
+          plain_format=bool(DEBUG),  # Set to True to use human-readable structlog format over JSON
+          debug_db=False,  # Set to True to log all database queries
+      )
+      ```
+
+      Calling this function disables logging if running tests, otherwise:
+
+      * Overwrites all `formatters` and `handlers` to avoid logging duplication.
+          It's possible to add custom `formatters` and `handlers` after calling this function.
+      * Updates all `loggers` to use structlog with the specified `log_level`.
+      * Adds or updates the root logger to use structlog with the specified `root_level`.
+      * Uses a human-readable structlog format if `plain_format` is True, otherwise uses JSON.
+      * Adds database query logging if `debug_db` is True.
+      * Adds necessary Django apps and middleware for structlog.
     properties:
       additionalProperties: true
       disable_existing_loggers:
@@ -1135,7 +1321,7 @@ properties:
       !!! note
           The Docker container normally attempts to run migrations on startup; however, if the database is
           in a read-only state the Docker container will fail to start. Setting the environment variable
-          [`NAUTOBOT_DOCKER_SKIP_INIT`](../installation/docker.md#nautobot_docker_skip_init) to `true`
+          [`NAUTOBOT_DOCKER_SKIP_INIT`](../guides/docker.md#nautobot_docker_skip_init) to `true`
           will prevent the migrations from occurring.
 
       !!! note
@@ -1243,7 +1429,7 @@ properties:
 
       !!! note
           If a given device has an appropriately populated
-          [secrets group](../../platform-functionality/secret.md#secretsgroup) assigned to it,
+          [secrets group](../../platform-functionality/secret.md#secrets-groups) assigned to it,
           the [secrets](../../platform-functionality/secret.md) defined in that group will take precedence
           over these default values.
     environment_variable: "NAUTOBOT_NAPALM_PASSWORD"
@@ -1265,7 +1451,7 @@ properties:
 
       !!! note
           If a given device has an appropriately populated
-          [secrets group](../../platform-functionality/secret.md#secretsgroup) assigned to it,
+          [secrets group](../../platform-functionality/secret.md#secrets-groups) assigned to it,
           the [secrets](../../platform-functionality/secret.md) defined in that group will take precedence
           over these default values.
     environment_variable: "NAUTOBOT_NAPALM_USERNAME"
@@ -1307,6 +1493,17 @@ properties:
     is_constance_config: true
     type: "object"
     version_added: "1.6.0"
+  NTC_SUPPORT_CONTRACT_EXPIRATION_DATE:
+    "$ref": "#/definitions/date"
+    default: ""
+    description: >-
+      Expiration date for an active Nautobot support contract with Network to Code.
+      This value is displayed in the "About" page to provide additional support information.
+    details: >-
+      If specified as an environment variable, use ISO 8601 (`YYYY-MM-DD`) format.
+    environment_variable: "NAUTOBOT_NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"
+    is_constance_config: true
+    version_added: "2.4.0"
   PAGINATE_COUNT:
     default: 50
     description: >-
@@ -1375,6 +1572,14 @@ properties:
     environment_variable: "NAUTOBOT_PREFER_IPV4"
     is_constance_config: true
     type: "boolean"
+  PUBLISH_ROBOTS_TXT:
+    default: true
+    description: >-
+        Setting this to true causes Nautobot to publish a `robots.txt` that discourages indexing by web crawlers.
+        Irrelevant if deployed behind a firewall.
+    environment_variable: "NAUTOBOT_PUBLISH_ROBOTS_TXT"
+    type: "boolean"
+    version_added: "2.3.15"
   RACK_ELEVATION_DEFAULT_UNIT_HEIGHT:
     default: 22
     description: >-
@@ -1539,7 +1744,6 @@ properties:
           In the case of a highly available installation with multiple web servers, `SECRET_KEY` must be identical
           among all servers in order to maintain a persistent user session state.
     environment_variable: "NAUTOBOT_SECRET_KEY"
-    is_required_setting: true
     type: "string"
   SESSION_CACHE_ALIAS:
     default: "default"
@@ -1608,6 +1812,37 @@ properties:
       "Single Sign On": "./authentication/sso.md"
       "`social-auth-app-django`": "https://python-social-auth.readthedocs.io/en/latest/configuration/django.html"
     type: "string"
+  SSO_CLAIMS_GROUP:
+    default: "groups"
+    description: "OAuth2/OIDC claim which will contain the groups which the authenticated user is a member of."
+    environment_variable: "NAUTOBOT_SSO_CLAIMS_GROUP"
+    see_also:
+      "Single Sign On": "./authentication/sso.md"
+  SSO_ENABLE_GROUP_SYNC:
+    default: false
+    type: "boolean"
+    description: "Enables the group syncing authentication module."
+    environment_variable: "NAUTOBOT_SSO_ENABLE_GROUP_SYNC"
+    see_also:
+      "Single Sign On": "./authentication/sso.md"
+  SSO_STAFF_GROUPS:
+    default: []
+    description: "List of groups that a user can be a member of to get the Django Staff permission."
+    environment_variable: "NAUTOBOT_SSO_STAFF_GROUPS"
+    see_also:
+      "Single Sign On": "./authentication/sso.md"
+    items:
+      type: "string"
+    type: "array"
+  SSO_SUPERUSER_GROUPS:
+    default: []
+    description: "List of groups that a user can be a member of to be a Django Super User."
+    environment_variable: "NAUTOBOT_SSO_SUPERUSER_GROUPS"
+    see_also:
+      "Single Sign On": "./authentication/sso.md"
+    items:
+      type: "string"
+    type: "array"
   STATIC_ROOT:
     "$ref": "#/definitions/absolute_path"
     default: "~/.nautobot/static"
@@ -1760,9 +1995,9 @@ properties:
       The time zone Nautobot will use when dealing with dates and times. It is recommended to use UTC time unless you have a specific need to use a local time zone. Please see the [list of available time zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
     details: |-
       !!! warning
-          Scheduled jobs will run in the time zone configured in this setting. If you change this setting from the
-          default UTC, you must change it on the Celery Beat server and all Nautobot web servers or your scheduled
-          jobs may run in the wrong time zone.
+          Scheduled jobs will default to running in the time zone configured in this setting.
+          If you change this setting from the default UTC, it must be set consistently on the Celery Beat server
+          and all Nautobot web servers, or else your scheduled jobs may run in the wrong time zone.
     environment_variable: "NAUTOBOT_TIME_ZONE"
     see_also:
       "Time Zones documentation": "./time-zones.md"

@@ -33,10 +33,10 @@ class ChangeLoggedModel(models.Model):
 
     def to_objectchange(self, action, *, related_object=None, object_data_extra=None, object_data_exclude=None):
         """
-        Return a new ObjectChange representing a change made to this object. This will typically be called automatically
-        by ChangeLoggingMiddleware.
-        """
+        Return a new ObjectChange representing a change made to this object, or None if the object shouldn't be logged.
 
+        This will typically be called automatically by ChangeLoggingMiddleware.
+        """
         return ObjectChange(
             changed_object=self,
             object_repr=str(self)[:CHANGELOG_MAX_OBJECT_REPR],
@@ -169,14 +169,18 @@ class ObjectChange(BaseModel):
     def get_action_class(self):
         return ObjectChangeActionChoices.CSS_CLASSES.get(self.action)
 
-    def get_next_change(self, user=None):
+    def get_next_change(self, user=None, only=None):
         """Return next change for this changed object, optionally restricting by user view permission"""
         related_changes = self.get_related_changes(user=user)
+        if only:
+            related_changes = related_changes.only(*only)
         return related_changes.filter(time__gt=self.time).order_by("time").first()
 
-    def get_prev_change(self, user=None):
+    def get_prev_change(self, user=None, only=None):
         """Return previous change for this changed object, optionally restricting by user view permission"""
         related_changes = self.get_related_changes(user=user)
+        if only:
+            related_changes = related_changes.only(*only)
         return related_changes.filter(time__lt=self.time).order_by("-time").first()
 
     def get_related_changes(self, user=None, permission="view"):
@@ -207,7 +211,7 @@ class ObjectChange(BaseModel):
         prechange = None
         postchange = None
 
-        prior_change = self.get_prev_change()
+        prior_change = self.get_prev_change(only=["object_data_v2", "object_data"])
 
         if self.action != ObjectChangeActionChoices.ACTION_CREATE and prior_change is not None:
             prechange = prior_change.object_data_v2

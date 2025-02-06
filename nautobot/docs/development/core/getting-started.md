@@ -65,8 +65,6 @@ Remote repos are managed using the `git remote` command.
 
 Upon cloning Nautobot for the first time, you will have only a single remote:
 
-<!-- markdownlint-disable MD010 -->
-
 ```no-highlight
 git remote -v
 ```
@@ -74,11 +72,9 @@ git remote -v
 Example output:
 
 ```no-highlight
-origin	git@github.com:yourusername/nautobot.git (fetch)
-origin	git@github.com:yourusername/nautobot.git (push)
+origin      git@github.com:yourusername/nautobot.git (fetch)
+origin      git@github.com:yourusername/nautobot.git (push)
 ```
-
-<!-- markdownlint-enable MD010 -->
 
 Add the official Nautobot repo as a the `upstream` remote:
 
@@ -88,8 +84,6 @@ git remote add upstream git@github.com:nautobot/nautobot.git
 
 View your remotes again to confirm you've got both `origin` pointing to your fork and `upstream` pointing to the official repo:
 
-<!-- markdownlint-disable MD010 -->
-
 ```no-highlight
 git remote -v
 ```
@@ -97,48 +91,16 @@ git remote -v
 Example output:
 
 ```no-highlight
-origin	git@github.com:yourusername/nautobot.git (fetch)
-origin	git@github.com:yourusername/nautobot.git (push)
-upstream	git@github.com:nautobot/nautobot.git (fetch)
-upstream	git@github.com:nautobot/nautobot.git (push)
+origin      git@github.com:yourusername/nautobot.git (fetch)
+origin      git@github.com:yourusername/nautobot.git (push)
+upstream    git@github.com:nautobot/nautobot.git (fetch)
+upstream    git@github.com:nautobot/nautobot.git (push)
 ```
-
-<!-- markdownlint-enable MD010 -->
 
 You're now ready to proceed to the next steps.
 
 !!! hint
     You will always **push** changes to `origin` (your fork) and **pull** changes from `upstream` (official repo).
-
-### Creating a Branch
-
-Before you make any changes, always create a new branch. Again, for bug fixes and minor features, you'll want to create your branches from the `develop` branch, while for major new features, you'll branch from `next` instead.
-
-Before you ever create a new branch, always checkout the appropriate branch and make sure you you've got the latest changes from `upstream`:
-
-```no-highlight
-git checkout develop
-git pull upstream develop
-```
-
-!!! warning
-    If you do not do this, you run the risk of having merge conflicts in your branch, and that's never fun to deal with. Trust us on this one.
-
-Now that you've got the latest upstream changes, create your branch. Whether you're creating a branch off a fork or working against the Nautobot origin repo, you should follow this convention for naming your branch: `u/yourusername-0000-branch-summary`, where `0000` is the related GitHub issue number and `yourusername` is your GitHub username. For example:
-
-```no-highlight
-git checkout -b u/yourusername-1234-next-amazing-feature
-```
-
-If you do not have a relevant GitHub issue, please consider opening one to document the context behind your changes.
-
-#### Prototypes
-
-Sometimes code is written as a proof of concept or early implementation candidate but is not quite ready to be merged, or may be picked up by another author sometime in the future. In that case, the convention is to use the `prototype/` prefix to the branch name and not requiring the original authors username. In that scenario, using the example above, you would instead:
-
-```no-highlight
-git checkout -b prototype/1234-next-amazing-feature
-```
 
 ## Enabling Pre-Commit Hooks
 
@@ -210,6 +172,7 @@ Example output:
 ```no-highlight
 Available tasks:
 
+  branch                 Switch to a different Git branch, creating it if requested.
   build                  Build Nautobot docker image.
   build-and-check-docs   Build docs for use within Nautobot.
   build-dependencies
@@ -226,23 +189,25 @@ Available tasks:
   hadolint               Check Dockerfile for hadolint compliance and other style issues.
   integration-test       Run Nautobot integration tests.
   loaddata               Load data from file.
+  logs                   View the logs of a docker compose service.
   makemigrations         Perform makemigrations operation in Django.
-  migration-test         Test database migration from a given dataset to latest Nautobot schema.
   markdownlint           Lint Markdown files.
   migrate                Perform migrate operation in Django.
+  migration-test         Test database migration from a given dataset to latest Nautobot schema.
   nbshell                Launch an interactive Nautobot shell.
   performance-test       Run Nautobot performance tests.
   post-upgrade           Performs Nautobot common post-upgrade operations using a single entrypoint.
   pylint                 Perform static analysis of Nautobot code.
   restart                Gracefully restart containers.
-  ruff                   Run ruff to perform code formatting and/or linting.
-  serve-docs             Runs local instance of mkdocs serve (ctrl-c to stop).
+  ruff                   Run ruff to perform code formatting and linting.
+  serve-docs             Runs local instance of mkdocs serve on port 8001 (ctrl-c to stop).
+  showmigrations         Perform showmigrations operation in Django.
   start                  Start Nautobot and its dependencies in detached mode.
   stop                   Stop Nautobot and its dependencies.
   tests                  Run all linters and unit tests.
   unittest               Run Nautobot unit tests.
   unittest-coverage      Report on code test coverage as measured by 'invoke unittest'.
-  version                Show the version of Nautobot Python and NPM packages or bump them when a valid bump rule is provided.
+  version                Show the version of Nautobot Python package or bump it when a valid bump rule is provided.
   vscode                 Launch Visual Studio Code with the appropriate Environment variables to run in a container.
   yamllint               Run yamllint to validate formatting applies to YAML standards.
 ```
@@ -254,14 +219,17 @@ Available tasks:
 
 A development environment can be easily started up from the root of the project using the following commands:
 
-* `invoke build` - Builds Nautobot docker images
+* `invoke branch` - Creates or switches to the appropriate Git branch
+* `invoke build` - Builds Nautobot docker images appropriate to the current Git branch
 * `invoke migrate` - Performs database migration operation in Django
 * `invoke debug` - Starts Docker containers for Nautobot, PostgreSQL, Redis, Celery, and Celery Beat in debug mode and attaches their output to the terminal in the foreground. You may enter Control-C to stop the containers
 
 Additional useful commands for the development environment:
 
-* `invoke start [-s servicename]` - Starts Docker containers for Nautobot, PostgreSQL, Redis, NGINX, Celery, and Celery Beat (or a specific container/service, such as `invoke start -s redis`) to run in the background with debug disabled
-* `invoke cli [-s servicename]` - Launch a `bash` shell inside the specified service container (if none is specified, defaults to the Nautobot container)
+* `invoke start [-s servicename]` - Starts Docker containers for Nautobot, PostgreSQL, Redis, NGINX, Celery, and Celery Beat (or a specific container/service, such as `invoke start -s redis`) to run in the background
+* `invoke logs [-s servicename]` - View the logs of the containers (or a specific container/service, such as `invoke logs -s nautobot`)
+* `invoke nbshell` - Launches a Nautobot Python shell inside the Nautobot container
+* `invoke cli [-s servicename]` - Launches a `bash` shell inside the specified service container (if none is specified, defaults to the Nautobot container)
 * `invoke stop [-s servicename]` - Stops all containers (or a specific container/service) created by `invoke start`
 * `invoke createsuperuser` - Creates a superuser account for the Nautobot application
 
@@ -283,8 +251,8 @@ This workflow uses Python and Poetry to work with your development environment l
 There are a few things you'll need:
 
 * A Linux system or environment
-* A MySQL or PostgreSQL server, which can be installed locally [per the documentation](../../user-guide/administration/installation/index.md#installing-nautobot-dependencies)
-* A Redis server, which can also be [installed locally](../../user-guide/administration/installation/index.md#installing-nautobot-dependencies)
+* A MySQL or PostgreSQL server, which can be installed locally [per the documentation](../../user-guide/administration/installation/install_system.md)
+* A Redis server, which can also be [installed locally](../../user-guide/administration/installation/install_system.md)
 * A supported version of Python
 * A recent version of [Poetry](https://python-poetry.org/docs/#installation)
 
@@ -318,14 +286,6 @@ For detailed installation instructions, please see the [official Poetry installa
 brew install hadolint
 ```
 
-#### Install markdownlint-cli
-
-[markdownlint-cli](https://github.com/igorshubovych/markdownlint-cli) is a tool used to validate and lint Markdown files, such as Nautobot's documentation, to ensure that they are correctly constructed. On macOS with [Homebrew](https://brew.sh/) you can install markdownlint-cli by running:
-
-```no-highlight
-brew install markdownlint-cli
-```
-
 #### Creating a Python Virtual Environment
 
 A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) (or *virtualenv*) is like a container for a set of Python packages. A virtualenv allow you to build environments suited to specific projects without interfering with system packages or other projects. When installed per the documentation, Nautobot uses a virtual environment in production.
@@ -352,10 +312,10 @@ poetry shell
 Example output:
 
 ```no-highlight
-Spawning shell within /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.8
+Spawning shell within /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.12
 
-. /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.8/bin/activate
-(nautobot-Ams_xyDt-py3.8) $
+. /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.12/bin/activate
+(nautobot-Ams_xyDt-py3.12) $
 ```
 
 Notice that the console prompt changes to indicate the active environment. This updates the necessary system environment variables to ensure that any Python scripts are run within the virtual environment.
@@ -369,7 +329,7 @@ which python
 Example output:
 
 ```no-highlight
-(nautobot-Ams_xyDt-py3.8) $ /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.8/bin/python
+(nautobot-Ams_xyDt-py3.12) $ /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.12/bin/python
 ```
 
 To exit the virtual shell, use `exit`:
@@ -380,6 +340,7 @@ exit
 
 Example output:
 
+<!-- pyml disable-num-lines 3 commands-show-output -->
 ```no-highlight
 $
 ```
@@ -459,15 +420,52 @@ cp development/nautobot_config.py ~/.nautobot/nautobot_config.py
 
 A newly created configuration includes sane defaults. If you need to customize them, edit your `nautobot_config.py` and update the following settings as required:
 
-* [`ALLOWED_HOSTS`](../../user-guide/administration/configuration/required-settings.md#allowed_hosts): This can be set to `["*"]` for development purposes and must be set if `DEBUG=False`
-* [`DATABASES`](../../user-guide/administration/configuration/required-settings.md#databases): Database connection parameters, if different from the defaults
+* [`ALLOWED_HOSTS`](../../user-guide/administration/configuration/settings.md#allowed_hosts): This can be set to `["*"]` for development purposes and must be set if `DEBUG=False`
+* [`DATABASES`](../../user-guide/administration/configuration/settings.md#databases): Database connection parameters, if different from the defaults
 * **Redis settings**: Redis configuration requires multiple settings. The defaults should be fine for development.
-* [`DEBUG`](../../user-guide/administration/configuration/optional-settings.md#debug): Set to `True` to enable verbose exception logging and, if installed, the [Django debug toolbar](https://django-debug-toolbar.readthedocs.io/en/latest/)
-* [`EXTRA_INSTALLED_APPS`](../../user-guide/administration/configuration/optional-settings.md#extra-applications): Optionally provide a list of extra Django apps you may desire to use for development
+* [`DEBUG`](../../user-guide/administration/configuration/settings.md#debug): Set to `True` to enable verbose exception logging and, if installed, the [Django debug toolbar](https://django-debug-toolbar.readthedocs.io/en/latest/)
+* [`EXTRA_INSTALLED_APPS`](../../user-guide/administration/configuration/settings.md#extra-applications): Optionally provide a list of extra Django apps you may desire to use for development
 
 ## Working in your Development Environment
 
 Below are common commands for working your development environment.
+
+### Creating a Branch
+
+Before you make any changes, always create a new branch. Again, for bug fixes and minor features, you'll want to create your branches from the `develop` branch, while for major new features, you'll branch from `next` instead.
+
+In current versions of Nautobot, you can use the `invoke branch` command to create a new branch or switch to an existing branch. Whether you're creating a branch off a fork or working against the Nautobot origin repo, you should follow this convention for naming your branch: `u/yourusername-0000-branch-summary`, where `0000` is the related GitHub issue number and `yourusername` is your GitHub username. (If you do not have a relevant GitHub issue, please consider opening one to document the context behind your changes.)
+
+For example:
+
+```no-highlight
+invoke branch --create --branch u/yourusername-1234-some-bug-fix --parent develop
+```
+
+or:
+
+```no-highlight
+invoke branch --create --branch u/yourusername-1235-amazing-feature --parent next
+```
+
+!!! caution
+    We recommend using this Invoke command instead of directly calling `git checkout` or `git switch` because it automatically handles some other aspects of the development environment, in particular stopping the currently running Nautobot Docker containers, if any, before switching to a different branch.
+
+!!! tip
+    You can switch between any existing branches with simply `invoke branch --branch <name>`.
+
+!!! tip "Nautobot branches and the Docker compose workflow"
+    It's common for the Python dependencies and database schema to differ between major and minor Nautobot releases, and therefore between the primary branches of `main`, `develop`, `next`, and `ltm-1.6`. To account for this, the Docker workflow automatically detects which `major.minor` Nautobot version you're working with and changes the Docker Compose project name accordingly. What this means for you in practice is that when first switching between Nautobot releases, you may need to rerun `invoke build` once for each primary branch, and `invoke start`/`invoke debug` may take some time as it needs to create a new database and migrate its schema. However, in the future, switching between releases should be relatively smooth (just `invoke branch -b <name>` and then `invoke start`) rather than needing to rebuild the container and database every time you switch between `develop` and `next` as would likely be needed if the same Docker Compose project were used for both release trains.
+
+    Conversely, if you're using the virtual environment workflow, you may need to manually run `poetry install` whenever switching between primary branches, and may need to manually drop and restore the database schema as well. Be aware!
+
+#### Prototypes
+
+Sometimes code is written as a proof of concept or early implementation candidate but is not quite ready to be merged, or may be picked up by another author sometime in the future. In that case, the convention is to use the `prototype/` prefix to the branch name and not requiring the original authors username. In that scenario, using the example above, you would instead:
+
+```no-highlight
+invoke branch --create --branch prototype/1234-next-amazing-feature --parent next
+```
 
 ### Creating a Superuser
 
@@ -554,11 +552,10 @@ Example output:
 ...
 # Shell Plus Django Imports
 ...
-# Django version 3.2.16
-# Nautobot version 2.0.0a0
+# Django version 4.2.15
+# Nautobot version 2.3.3b1
 # Example Nautobot App version 1.0.0
-Python 3.8.16 (default, Mar 23 2023, 04:48:11)
-[GCC 10.2.1 20210110] on linux
+Python 3.12.6 (main, Sep 12 2024, 21:12:08) [GCC 12.2.0] on linux
 Type "help", "copyright", "credits" or "license" for more information.
 (InteractiveConsole)
 >>>
@@ -636,14 +633,15 @@ Unit tests are run using the `invoke unittest` command (if using the Docker deve
 
 The `invoke unittest` command supports a number of optional parameters to influence its behavior. Careful use of these parameters can greatly reduce the time it takes to run and re-run tests during development.
 
-* `--cache-test-fixtures` - Cache [test factory data](./testing.md#factory-caching) to disk, or if a cache is already present, load from that cache when initializing the test environment. Can significantly improve the initial startup time of the test suite after your first test run.
 * `--failfast` - Fail as soon as any test failure or error condition is encountered, instead of running to completion.
-* `--keepdb` - Save and reuse the initialized test database between test runs. Can significantly improve the initial startup time of the test suite after your first test run. **Do not use if you're actively making changes to model definitions or migrations.**
 * `--label <module.path>` - Only run the specific subset of tests. Can be broad (`--label nautobot.core.tests`) or specific (`--label nautobot.core.tests.test_graphql.GraphQLQueryTestCase`).
 * `--no-buffer` - Allow stdout/stderr output from the test to be seen in your terminal, instead of being hidden. **If you're debugging code with `breakpoint()`, you should use this option, as otherwise you'll never see the breakpoint happen.**
-* `--parallel` - Split the tests across multiple parallel subprocesses. Can greatly reduce the runtime of the entire test suite when used. Auto-detects the number of workers if not specified with `--parallel-workers`.
-* `--parallel-workers` - Specify the number of workers to use when running tests in parallel. Implies `--parallel`.
+* `--no-cache-test-fixtures` - Prevent caching [test factory data](./testing.md#factory-caching) to disk, or if a cache is already present, prevent loading from that cache when initializing the test environment. **The `--no-cache-test-fixtures` option is mandatory if you're actively making changes to factories or model migrations.**
+* `--no-keepdb` - Prevent saving the initialized test database after a test run for later reuse in a test re-run.
+* `--no-parallel` - By default, Nautobot splits test execution across multiple parallel subprocesses to reduce the runtime of the test suite. When troubleshooting obscure test exceptions, it may be desirable to disable that behavior temporarily using this parameter.
+* `--parallel-workers` - Explicitly specify the number of workers to use when running tests in parallel.
 * `--pattern` - Only run tests which match the given substring. Can be used multiple times.
+* `--no-reusedb` - Prevent reusing the initialized test database from a previous test run; instead, create a new database. **The `--no-reusedb` option is mandatory if you're actively making changes to model migrations, or when switching between branches that differ in their included migrations.**
 * `--skip-docs-build` - Skip building/rebuilding the static Nautobot documentation before running the test. Saves some time on reruns when you haven't changed the documentation source files.
 * `--verbose` - Run tests more verbosely, including describing each test case as it is run.
 
@@ -652,34 +650,39 @@ The `invoke unittest` command supports a number of optional parameters to influe
 In general, when you first run the Nautobot tests in your local copy of the repository, we'd recommend:
 
 ```no-highlight
-invoke unittest --cache-test-fixtures --keepdb --parallel
+invoke unittest
 ```
 
 When there are too many cores on the testing machine, you can limit the number of parallel workers:
 
 ```no-highlight
-invoke unittest --cache-test-fixtures --keepdb --parallel-workers 4
+invoke unittest --parallel-workers 4
 ```
 
 On subsequent reruns, you can add the other performance-related options:
 
 ```no-highlight
-invoke unittest --cache-test-fixtures --keepdb --parallel --skip-docs-build
-invoke unittest --cache-test-fixtures --keepdb --parallel --skip-docs-build --label nautobot.core.tests
+invoke unittest --skip-docs-build
+invoke unittest --skip-docs-build --label nautobot.core.tests
 ```
 
-When switching between significantly different branches of the code base (e.g. `main` vs `develop` vs `next`), you'll need to remove the cached test factory data, and for once omit the `--keepdb` option so that the test database can be destroyed and recreated appropriately:
+When switching between significantly different branches of the code base (e.g. `main` vs `develop` vs `next`), you'll need to for once include the `--no-keepdb` option so that the test database can be destroyed and recreated appropriately:
 
 ```no-highlight
-rm development/factory_dump.json
-invoke unittest --cache-test-fixtures --parallel
+invoke unittest --no-keepdb
+```
+
+To not use the cached test fixture, you will need to include the `--no-cache-test-fixtures` flag
+
+```no-highlight
+invoke unittest --no-cache-test-fixtures
 ```
 
 To limit the test to a specific pattern or label, you can use the `--label` and `--pattern` options:
 
 ```no-highlight
-invoke unittest --cache-test-fixtures --keepdb --verbose --skip-docs-build --label nautobot.core.tests.dcim.test_views.DeviceTestCase
-invoke unittest --cache-test-fixtures --keepdb --verbose --skip-docs-build --pattern Controller
+invoke unittest --verbose --skip-docs-build --label nautobot.core.tests.dcim.test_views.DeviceTestCase
+invoke unittest --verbose --skip-docs-build --pattern Controller
 ```
 
 #### Integration Tests
@@ -733,12 +736,11 @@ If you make changes to the REST API, you should verify that the REST API OpenAPI
 
 To enforce best practices around consistent [coding style](style-guide.md), Nautobot uses [Ruff](https://docs.astral.sh/ruff). Additionally, [static analysis](https://en.wikipedia.org/wiki/Static_program_analysis) of Nautobot code is performed by Ruff and [Pylint](https://pylint.pycqa.org/en/latest/). You should run all of these commands and ensure that they pass fully with regard to your code changes before opening a pull request upstream.
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 4 no-inline-html -->
 | Docker Compose Workflow | Virtual Environment Workflow                                                                                                     |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | `invoke ruff`           | `ruff format --check nautobot/ development/ examples/ tasks.py`<br>and<br>`ruff check nautobot/ development/ examples/ tasks.py` |
 | `invoke pylint`         | `nautobot-server pylint nautobot tasks.py`<br>and<br>`nautobot-server pylint --recursive development/ examples/`                 |
-<!-- markdownlint-enable no-inline-html -->
 
 ### Handling Migrations
 
@@ -812,11 +814,11 @@ Documentation is written in Markdown. If you need to add additional pages or sec
 
 ### Verifying Documentation
 
-Nautobot uses [`markdownlint-cli`](https://github.com/igorshubovych/markdownlint-cli) to verify correctness of the documentation. You should run this command and ensure that it passes fully with regard to your documentation changes before opening a pull request upstream.
+Nautobot uses [`pymarkdownlnt`](https://github.com/jackdewinter/pymarkdown) to verify correctness of the documentation. You should run this command and ensure that it passes fully with regard to your documentation changes before opening a pull request upstream.
 
-| Docker Compose Workflow | Virtual Environment Workflow                                                                      |
-| ----------------------- | ------------------------------------------------------------------------------------------------- |
-| `invoke markdownlint`   | `markdownlint --ignore nautobot/project-static --config .markdownlint.yml nautobot examples *.md` |
+| Docker Compose Workflow | Virtual Environment Workflow                       |
+| ----------------------- | -------------------------------------------------- |
+| `invoke markdownlint`   | `pymarkdown scan --recurse nautobot examples *.md` |
 
 ## Submitting Pull Requests
 

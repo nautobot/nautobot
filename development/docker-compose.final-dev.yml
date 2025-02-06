@@ -1,11 +1,10 @@
 ---
-version: "3.4"
 services:
   nautobot:
     build:
       target: final-dev
-    image: "local/nautobot-final-dev:local-py${PYTHON_VER}"
+    image: "local/nautobot-final-dev:local-${NAUTOBOT_VER}-py${PYTHON_VER}"
   celery_worker:
-    image: "local/nautobot-final-dev:local-py${PYTHON_VER}"
+    image: "local/nautobot-final-dev:local-${NAUTOBOT_VER}-py${PYTHON_VER}"
   celery_beat:
-    image: "local/nautobot-final-dev:local-py${PYTHON_VER}"
+    image: "local/nautobot-final-dev:local-${NAUTOBOT_VER}-py${PYTHON_VER}"

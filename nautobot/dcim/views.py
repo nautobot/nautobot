@@ -1,10 +1,14 @@
 from collections import OrderedDict
+from copy import deepcopy
+import logging
+import re
 import uuid
 
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.core.paginator import EmptyPage, PageNotAnInteger
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import F, Prefetch
 from django.forms import (
     modelformset_factory,
@@ -12,29 +16,63 @@ from django.forms import (
     MultipleHiddenInput,
 )
 from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
+from django.urls import reverse
+from django.utils.encoding import iri_to_uri
 from django.utils.functional import cached_property
 from django.utils.html import format_html
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import View
 from django_tables2 import RequestConfig
+from rest_framework.decorators import action
+from rest_framework.exceptions import MethodNotAllowed
+from rest_framework.response import Response
 
 from nautobot.circuits.models import Circuit
-from nautobot.core.forms import ConfirmationForm
+from nautobot.cloud.models import CloudAccount
+from nautobot.cloud.tables import CloudAccountTable
+from nautobot.core.choices import ButtonColorChoices
+from nautobot.core.exceptions import AbortTransaction
+from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
+from nautobot.core.templatetags.helpers import has_perms
+from nautobot.core.ui import object_detail
+from nautobot.core.ui.choices import SectionChoices
+from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic
 from nautobot.core.views.mixins import (
     GetReturnURLMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+    ObjectChangeLogViewMixin,
     ObjectDestroyViewMixin,
+    ObjectDetailViewMixin,
     ObjectEditViewMixin,
+    ObjectListViewMixin,
+    ObjectNotesViewMixin,
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
+from nautobot.dcim.choices import LocationDataToContactActionChoices
+from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_driver_mapping_tool_names
+from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable
 from nautobot.virtualization.models import VirtualMachine
+from nautobot.wireless.forms import ControllerManagedDeviceGroupWirelessNetworkFormSet
+from nautobot.wireless.models import (
+    ControllerManagedDeviceGroupRadioProfileAssignment,
+    ControllerManagedDeviceGroupWirelessNetworkAssignment,
+)
+from nautobot.wireless.tables import (
+    ControllerManagedDeviceGroupRadioProfileAssignmentTable,
+    ControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
+    RadioProfileTable,
+)
 
 from . import filters, forms, tables
 from .api import serializers
@@ -65,6 +103,10 @@ from .models import (
     Location,
     LocationType,
     Manufacturer,
+    Module,
+    ModuleBay,
+    ModuleBayTemplate,
+    ModuleType,
     PathEndpoint,
     Platform,
     PowerFeed,
@@ -81,7 +123,10 @@ from .models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class BulkDisconnectView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
@@ -147,7 +192,19 @@ class BaseDeviceComponentsBulkRenameView(generic.BulkRenameView):
     def get_selected_objects_parents_name(self, selected_objects):
         selected_object = selected_objects.first()
         if selected_object and selected_object.device:
-            return selected_object.device.name
+            return selected_object.device.display
+        if selected_object and selected_object.module:
+            return selected_object.module.display
+        return ""
+
+
+class BaseDeviceComponentTemplatesBulkRenameView(generic.BulkRenameView):
+    def get_selected_objects_parents_name(self, selected_objects):
+        selected_object = selected_objects.first()
+        if selected_object and selected_object.device_type:
+            return selected_object.device_type.display
+        if selected_object and selected_object.module_type:
+            return selected_object.module_type.display
         return ""
 
 
@@ -156,59 +213,37 @@ class BaseDeviceComponentsBulkRenameView(generic.BulkRenameView):
 #
 
 
-class LocationTypeListView(generic.ObjectListView):
-    queryset = LocationType.objects.with_tree_fields()
-    filterset = filters.LocationTypeFilterSet
-    filterset_form = forms.LocationTypeFilterForm
-    table = tables.LocationTypeTable
-
-
-class LocationTypeView(generic.ObjectView):
+class LocationTypeUIViewSet(NautobotUIViewSet):
     queryset = LocationType.objects.all()
+    filterset_class = filters.LocationTypeFilterSet
+    filterset_form_class = forms.LocationTypeFilterForm
+    table_class = tables.LocationTypeTable
+    form_class = forms.LocationTypeForm
+    bulk_update_form_class = forms.LocationTypeBulkEditForm
+    serializer_class = serializers.LocationSerializer
 
-    def get_extra_context(self, request, instance):
-        children = LocationType.objects.restrict(request.user, "view").filter(parent=instance).select_related("parent")
-        locations = (
-            Location.objects.restrict(request.user, "view")
-            .filter(location_type=instance)
-            .select_related("parent", "location_type")
-        )
-
-        children_table = tables.LocationTypeTable(children)
-        locations_table = tables.LocationTable(locations)
-        locations_table.columns.hide("location_type")
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(children_table)
-        RequestConfig(request, paginate).configure(locations_table)
-
-        return {
-            "children_table": children_table,
-            "locations_table": locations_table,
-        }
-
-
-class LocationTypeEditView(generic.ObjectEditView):
-    queryset = LocationType.objects.all()
-    model_form = forms.LocationTypeForm
-
-
-class LocationTypeDeleteView(generic.ObjectDeleteView):
-    queryset = LocationType.objects.all()
-
-
-class LocationTypeBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = LocationType.objects.all()
-    table = tables.LocationTypeTable
-
-
-class LocationTypeBulkDeleteView(generic.BulkDeleteView):
-    queryset = LocationType.objects.all()
-    filterset = filters.LocationTypeFilterSet
-    table = tables.LocationTypeTable
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                table_class=tables.LocationTypeTable,
+                table_filter="parent",
+                table_title="Child Location Type(s)",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                table_class=tables.LocationTable,
+                table_title="Location(s) of this Type",
+                table_filter="location_type",
+                exclude_columns=["location_type"],
+            ),
+        ),
+    )
 
 
 #
@@ -221,7 +256,6 @@ class LocationListView(generic.ObjectListView):
     filterset = filters.LocationFilterSet
     filterset_form = forms.LocationFilterForm
     table = tables.LocationTable
-    use_new_ui = True
 
 
 class LocationView(generic.ObjectView):
@@ -230,7 +264,6 @@ class LocationView(generic.ObjectView):
     # automatically issue a second query (similar to behavior for
     # https://docs.djangoproject.com/en/3.2/ref/models/querysets/#django.db.models.query.QuerySet.only)
     queryset = Location.objects.without_tree_fields().all()
-    use_new_ui = True
 
     def get_extra_context(self, request, instance):
         related_locations = (
@@ -283,6 +316,10 @@ class LocationView(generic.ObjectView):
             "children_table": children_table,
             "rack_groups": rack_groups,
             "stats": stats,
+            "contact_association_permission": ["extras.add_contactassociation"],
+            # show the button if any of these fields have non-empty value.
+            "show_convert_to_contact_button": instance.contact_name or instance.contact_phone or instance.contact_email,
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -314,13 +351,147 @@ class LocationBulkDeleteView(generic.BulkDeleteView):
     table = tables.LocationTable
 
 
+class MigrateLocationDataToContactView(generic.ObjectEditView):
+    queryset = Location.objects.all()
+    model_form = LocationMigrateDataToContactForm
+    template_name = "dcim/location_migrate_data_to_contact.html"
+
+    def get(self, request, *args, **kwargs):
+        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
+
+        initial_data = normalize_querydict(request.GET, form_class=self.model_form)
+        # remove status from the location itself
+        initial_data["status"] = None
+        initial_data["location"] = obj.pk
+
+        # populate contact tab fields initial data
+        initial_data["name"] = obj.contact_name
+        initial_data["phone"] = obj.contact_phone
+        initial_data["email"] = obj.contact_email
+        form = self.model_form(instance=obj, initial=initial_data)
+        restrict_form_fields(form, request.user)
+        return render(
+            request,
+            self.template_name,
+            {
+                "obj": obj,
+                "obj_type": self.queryset.model._meta.verbose_name,
+                "form": form,
+                "return_url": self.get_return_url(request, obj),
+                "editing": obj.present_in_database,
+                "active_tab": "assign",
+                **self.get_extra_context(request, obj),
+            },
+        )
+
+    def post(self, request, *args, **kwargs):
+        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
+        form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
+        restrict_form_fields(form, request.user)
+
+        associated_object_id = obj.pk
+        associated_object_content_type = ContentType.objects.get_for_model(Location)
+        migrate_action = request.POST.get("action")
+        try:
+            with transaction.atomic():
+                if not has_perms(request.user, ["extras.add_contactassociation"]):
+                    raise PermissionDenied(
+                        "ObjectPermission extras.add_contactassociation is needed to perform this action"
+                    )
+                contact = None
+                team = None
+                if migrate_action == LocationDataToContactActionChoices.CREATE_AND_ASSIGN_NEW_CONTACT:
+                    if not has_perms(request.user, ["extras.add_contact"]):
+                        raise PermissionDenied("ObjectPermission extras.add_contact is needed to perform this action")
+                    contact = Contact(
+                        name=request.POST.get("name"),
+                        phone=request.POST.get("phone"),
+                        email=request.POST.get("email"),
+                    )
+                    contact.validated_save()
+                    # Trigger permission check
+                    Contact.objects.restrict(request.user, "view").get(pk=contact.pk)
+                elif migrate_action == LocationDataToContactActionChoices.CREATE_AND_ASSIGN_NEW_TEAM:
+                    if not has_perms(request.user, ["extras.add_team"]):
+                        raise PermissionDenied("ObjectPermission extras.add_team is needed to perform this action")
+                    team = Team(
+                        name=request.POST.get("name"),
+                        phone=request.POST.get("phone"),
+                        email=request.POST.get("email"),
+                    )
+                    team.validated_save()
+                    # Trigger permission check
+                    Team.objects.restrict(request.user, "view").get(pk=team.pk)
+                elif migrate_action == LocationDataToContactActionChoices.ASSOCIATE_EXISTING_CONTACT:
+                    contact = Contact.objects.restrict(request.user, "view").get(pk=request.POST.get("contact"))
+                elif migrate_action == LocationDataToContactActionChoices.ASSOCIATE_EXISTING_TEAM:
+                    team = Team.objects.restrict(request.user, "view").get(pk=request.POST.get("team"))
+                else:
+                    raise ValueError(f"Invalid action {migrate_action} passed from the form")
+
+                association = ContactAssociation(
+                    contact=contact,
+                    team=team,
+                    associated_object_type=associated_object_content_type,
+                    associated_object_id=associated_object_id,
+                    status=Status.objects.get(pk=request.POST.get("status")),
+                    role=Role.objects.get(pk=request.POST.get("role")),
+                )
+                association.validated_save()
+                # Trigger permission check
+                ContactAssociation.objects.restrict(request.user, "view").get(pk=association.pk)
+
+                # Clear out contact fields from location
+                location = self.get_object(kwargs)
+                location.contact_name = ""
+                location.contact_phone = ""
+                location.contact_email = ""
+                location.validated_save()
+
+                object_created = not form.instance.present_in_database
+
+            self.successful_post(request, obj, object_created, logger)
+
+            return_url = request.POST.get("return_url")
+            if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                return redirect(iri_to_uri(return_url))
+            else:
+                return redirect(self.get_return_url(request, obj))
+
+        except ObjectDoesNotExist:
+            msg = "Object save failed due to object-level permissions violation"
+            logger.debug(msg)
+            form.add_error(None, msg)
+        except PermissionDenied as e:
+            msg = e
+            logger.debug(msg)
+            form.add_error(None, msg)
+        except ValueError:
+            msg = f"Invalid action {action} passed from the form"
+            logger.debug(msg)
+            form.add_error(None, msg)
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "obj": obj,
+                "obj_type": self.queryset.model._meta.verbose_name,
+                "form": form,
+                "return_url": self.get_return_url(request, obj),
+                "editing": obj.present_in_database,
+                **self.get_extra_context(request, obj),
+            },
+        )
+
+
 #
 # Rack groups
 #
 
 
 class RackGroupListView(generic.ObjectListView):
-    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group"))
+    queryset = RackGroup.objects.all()
     filterset = filters.RackGroupFilterSet
     filterset_form = forms.RackGroupFilterForm
     table = tables.RackGroupTable
@@ -346,9 +517,7 @@ class RackGroupView(generic.ObjectView):
         }
         RequestConfig(request, paginate).configure(rack_table)
 
-        return {
-            "rack_table": rack_table,
-        }
+        return {"rack_table": rack_table, **super().get_extra_context(request, instance)}
 
 
 class RackGroupEditView(generic.ObjectEditView):
@@ -366,7 +535,7 @@ class RackGroupBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unus
 
 
 class RackGroupBulkDeleteView(generic.BulkDeleteView):
-    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group")).select_related("location")
+    queryset = RackGroup.objects.all()
     filterset = filters.RackGroupFilterSet
     table = tables.RackGroupTable
 
@@ -377,7 +546,7 @@ class RackGroupBulkDeleteView(generic.BulkDeleteView):
 
 
 class RackListView(generic.ObjectListView):
-    queryset = Rack.objects.annotate(device_count=count_related(Device, "rack"))
+    queryset = Rack.objects.all()
     filterset = filters.RackFilterSet
     filterset_form = forms.RackFilterForm
     table = tables.RackDetailTable
@@ -467,6 +636,7 @@ class RackView(generic.ObjectView):
             "nonracked_devices": nonracked_devices,
             "next_rack": next_rack,
             "prev_rack": prev_rack,
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -486,14 +656,14 @@ class RackBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
 
 
 class RackBulkEditView(generic.BulkEditView):
-    queryset = Rack.objects.select_related("location", "rack_group", "tenant", "role")
+    queryset = Rack.objects.all()
     filterset = filters.RackFilterSet
     table = tables.RackTable
     form = forms.RackBulkEditForm
 
 
 class RackBulkDeleteView(generic.BulkDeleteView):
-    queryset = Rack.objects.select_related("location", "rack_group", "tenant", "role")
+    queryset = Rack.objects.all()
     filterset = filters.RackFilterSet
     table = tables.RackTable
 
@@ -519,7 +689,7 @@ class RackReservationEditView(generic.ObjectEditView):
     model_form = forms.RackReservationForm
     template_name = "dcim/rackreservation_edit.html"
 
-    def alter_obj(self, obj, request, args, kwargs):
+    def alter_obj(self, obj, request, url_args, url_kwargs):
         if not obj.present_in_database:
             if "rack" in request.GET:
                 obj.rack = get_object_or_404(Rack, pk=request.GET.get("rack"))
@@ -555,12 +725,9 @@ class RackReservationBulkDeleteView(generic.BulkDeleteView):
 
 
 class ManufacturerListView(generic.ObjectListView):
-    queryset = Manufacturer.objects.annotate(
-        device_type_count=count_related(DeviceType, "manufacturer"),
-        inventory_item_count=count_related(InventoryItem, "manufacturer"),
-        platform_count=count_related(Platform, "manufacturer"),
-    )
+    queryset = Manufacturer.objects.all()
     filterset = filters.ManufacturerFilterSet
+    filterset_form = forms.ManufacturerFilterForm
     table = tables.ManufacturerTable
 
 
@@ -583,8 +750,24 @@ class ManufacturerView(generic.ObjectView):
         }
         RequestConfig(request, paginate).configure(device_table)
 
+        # Cloud Accounts
+        cloud_accounts = (
+            CloudAccount.objects.restrict(request.user, "view")
+            .filter(provider=instance)
+            .select_related("secrets_group")
+        )
+
+        cloud_account_table = CloudAccountTable(cloud_accounts)
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(cloud_account_table)
+
         return {
             "device_table": device_table,
+            "cloud_account_table": cloud_account_table,
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -603,7 +786,7 @@ class ManufacturerBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, u
 
 
 class ManufacturerBulkDeleteView(generic.BulkDeleteView):
-    queryset = Manufacturer.objects.annotate(device_type_count=count_related(DeviceType, "manufacturer"))
+    queryset = Manufacturer.objects.all()
     table = tables.ManufacturerTable
     filterset = filters.ManufacturerFilterSet
 
@@ -614,17 +797,15 @@ class ManufacturerBulkDeleteView(generic.BulkDeleteView):
 
 
 class DeviceTypeListView(generic.ObjectListView):
-    queryset = DeviceType.objects.annotate(device_count=count_related(Device, "device_type"))
+    queryset = DeviceType.objects.all()
     filterset = filters.DeviceTypeFilterSet
     filterset_form = forms.DeviceTypeFilterForm
     table = tables.DeviceTypeTable
     template_name = "dcim/devicetype_list.html"
-    use_new_ui = True
 
 
 class DeviceTypeView(generic.ObjectView):
     queryset = DeviceType.objects.select_related("manufacturer").prefetch_related("software_image_files")
-    use_new_ui = True
 
     def get_extra_context(self, request, instance):
         instance_count = Device.objects.restrict(request.user).filter(device_type=instance).count()
@@ -662,6 +843,10 @@ class DeviceTypeView(generic.ObjectView):
             DeviceBayTemplate.objects.restrict(request.user, "view").filter(device_type=instance),
             orderable=False,
         )
+        modulebay_table = tables.ModuleBayTemplateTable(
+            ModuleBayTemplate.objects.restrict(request.user, "view").filter(device_type=instance),
+            orderable=False,
+        )
         if request.user.has_perm("dcim.change_devicetype"):
             consoleport_table.columns.show("pk")
             consoleserverport_table.columns.show("pk")
@@ -671,6 +856,7 @@ class DeviceTypeView(generic.ObjectView):
             front_port_table.columns.show("pk")
             rear_port_table.columns.show("pk")
             devicebay_table.columns.show("pk")
+            modulebay_table.columns.show("pk")
 
         software_image_files_table = tables.SoftwareImageFileTable(
             instance.software_image_files.restrict(request.user, "view").annotate(
@@ -690,7 +876,9 @@ class DeviceTypeView(generic.ObjectView):
             "front_port_table": front_port_table,
             "rear_port_table": rear_port_table,
             "devicebay_table": devicebay_table,
+            "modulebay_table": modulebay_table,
             "software_image_files_table": software_image_files_table,
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -715,6 +903,7 @@ class DeviceTypeImportView(generic.ObjectImportView):
         "dcim.add_frontporttemplate",
         "dcim.add_rearporttemplate",
         "dcim.add_devicebaytemplate",
+        "dcim.add_modulebaytemplate",
     ]
     queryset = DeviceType.objects.all()
     model_form = forms.DeviceTypeImportForm
@@ -728,29 +917,253 @@ class DeviceTypeImportView(generic.ObjectImportView):
             ("rear-ports", forms.RearPortTemplateImportForm),
             ("front-ports", forms.FrontPortTemplateImportForm),
             ("device-bays", forms.DeviceBayTemplateImportForm),
+            ("module-bays", forms.ModuleBayTemplateImportForm),
         )
     )
 
 
 class DeviceTypeBulkEditView(generic.BulkEditView):
-    queryset = (
-        DeviceType.objects.select_related("manufacturer")
-        .prefetch_related("software_image_files")
-        .annotate(device_count=count_related(Device, "device_type"))
-    )
+    queryset = DeviceType.objects.all()
     filterset = filters.DeviceTypeFilterSet
     table = tables.DeviceTypeTable
     form = forms.DeviceTypeBulkEditForm
 
 
 class DeviceTypeBulkDeleteView(generic.BulkDeleteView):
-    queryset = (
-        DeviceType.objects.select_related("manufacturer")
-        .prefetch_related("software_image_files")
-        .annotate(device_count=count_related(Device, "device_type"))
-    )
+    queryset = DeviceType.objects.all()
     filterset = filters.DeviceTypeFilterSet
     table = tables.DeviceTypeTable
+
+
+#
+# Module types
+#
+
+
+class ModuleTypeUIViewSet(
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectEditViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectNotesViewMixin,
+):
+    queryset = ModuleType.objects.all()
+    filterset_class = filters.ModuleTypeFilterSet
+    filterset_form_class = forms.ModuleTypeFilterForm
+    form_class = forms.ModuleTypeForm
+    import_model_form = forms.ModuleTypeImportForm
+    bulk_update_form_class = forms.ModuleTypeBulkEditForm
+    serializer_class = serializers.ModuleTypeSerializer
+    table_class = tables.ModuleTypeTable
+    related_object_forms = {
+        "console-ports": forms.ConsolePortTemplateImportForm,
+        "console-server-ports": forms.ConsoleServerPortTemplateImportForm,
+        "power-ports": forms.PowerPortTemplateImportForm,
+        "power-outlets": forms.PowerOutletTemplateImportForm,
+        "interfaces": forms.InterfaceTemplateImportForm,
+        "rear-ports": forms.RearPortTemplateImportForm,
+        "front-ports": forms.FrontPortTemplateImportForm,
+        "module-bays": forms.ModuleBayTemplateImportForm,
+    }
+
+    def get_required_permission(self):
+        view_action = self.get_action()
+        if view_action == "import_view":
+            return [
+                *self.get_permissions_for_model(ModuleType, ["add"]),
+                *self.get_permissions_for_model(ConsolePortTemplate, ["add"]),
+                *self.get_permissions_for_model(ConsoleServerPortTemplate, ["add"]),
+                *self.get_permissions_for_model(PowerPortTemplate, ["add"]),
+                *self.get_permissions_for_model(PowerOutletTemplate, ["add"]),
+                *self.get_permissions_for_model(InterfaceTemplate, ["add"]),
+                *self.get_permissions_for_model(FrontPortTemplate, ["add"]),
+                *self.get_permissions_for_model(RearPortTemplate, ["add"]),
+                *self.get_permissions_for_model(ModuleBayTemplate, ["add"]),
+            ]
+
+        return super().get_required_permission()
+
+    def get_extra_context(self, request, instance):
+        if not instance:
+            return {}
+
+        instance_count = Module.objects.restrict(request.user).filter(module_type=instance).count()
+
+        # Component tables
+        consoleport_table = tables.ConsolePortTemplateTable(
+            ConsolePortTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
+            orderable=False,
+        )
+        consoleserverport_table = tables.ConsoleServerPortTemplateTable(
+            ConsoleServerPortTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
+            orderable=False,
+        )
+        powerport_table = tables.PowerPortTemplateTable(
+            PowerPortTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
+            orderable=False,
+        )
+        poweroutlet_table = tables.PowerOutletTemplateTable(
+            PowerOutletTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
+            orderable=False,
+        )
+        interface_table = tables.InterfaceTemplateTable(
+            list(InterfaceTemplate.objects.restrict(request.user, "view").filter(module_type=instance)),
+            orderable=False,
+        )
+        front_port_table = tables.FrontPortTemplateTable(
+            FrontPortTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
+            orderable=False,
+        )
+        rear_port_table = tables.RearPortTemplateTable(
+            RearPortTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
+            orderable=False,
+        )
+        modulebay_table = tables.ModuleBayTemplateTable(
+            ModuleBayTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
+            orderable=False,
+        )
+        if request.user.has_perm("dcim.change_moduletype"):
+            consoleport_table.columns.show("pk")
+            consoleserverport_table.columns.show("pk")
+            powerport_table.columns.show("pk")
+            poweroutlet_table.columns.show("pk")
+            interface_table.columns.show("pk")
+            front_port_table.columns.show("pk")
+            rear_port_table.columns.show("pk")
+            modulebay_table.columns.show("pk")
+
+        return {
+            "instance_count": instance_count,
+            "consoleport_table": consoleport_table,
+            "consoleserverport_table": consoleserverport_table,
+            "powerport_table": powerport_table,
+            "poweroutlet_table": poweroutlet_table,
+            "interface_table": interface_table,
+            "front_port_table": front_port_table,
+            "rear_port_table": rear_port_table,
+            "modulebay_table": modulebay_table,
+        }
+
+    @action(
+        detail=False,
+        methods=["GET", "POST"],
+        url_name="import",
+        url_path="import",
+    )
+    def import_view(self, request, *args, **kwargs):
+        if request.method == "POST":
+            form = ImportForm(request.POST)
+
+            if form.is_valid():
+                self.logger.debug("Import form validation was successful")
+
+                # Initialize model form
+                data = form.cleaned_data["data"]
+                model_form = self.import_model_form(data)
+                restrict_form_fields(model_form, request.user)
+
+                # Assign default values for any fields which were not specified. We have to do this manually because passing
+                # 'initial=' to the form on initialization merely sets default values for the widgets. Since widgets are not
+                # used for YAML/JSON import, we first bind the imported data normally, then update the form's data with the
+                # applicable field defaults as needed prior to form validation.
+                for field_name, field in model_form.fields.items():
+                    if field_name not in data and hasattr(field, "initial"):
+                        model_form.data[field_name] = field.initial
+
+                if model_form.is_valid():
+                    try:
+                        with transaction.atomic():
+                            # Save the primary object
+                            obj = model_form.save()
+
+                            # Enforce object-level permissions
+                            self.queryset.get(pk=obj.pk)
+
+                            self.logger.debug(f"Created {obj} (PK: {obj.pk})")
+
+                            # Iterate through the related object forms (if any), validating and saving each instance.
+                            for (
+                                field_name,
+                                related_object_form,
+                            ) in self.related_object_forms.items():
+                                self.logger.debug(f"Processing form for related objects: {related_object_form}")
+
+                                related_obj_pks = []
+                                for i, rel_obj_data in enumerate(data.get(field_name, [])):
+                                    # add parent object key to related object data
+                                    rel_obj_data[obj._meta.verbose_name.replace(" ", "_")] = str(obj.pk)
+                                    f = related_object_form(rel_obj_data)
+
+                                    for subfield_name, field in f.fields.items():
+                                        if subfield_name not in rel_obj_data and hasattr(field, "initial"):
+                                            f.data[subfield_name] = field.initial
+
+                                    if f.is_valid():
+                                        related_obj = f.save()
+                                        related_obj_pks.append(related_obj.pk)
+                                    else:
+                                        # Replicate errors on the related object form to the primary form for display
+                                        for subfield_name, errors in f.errors.items():
+                                            for err in errors:
+                                                err_msg = f"{field_name}[{i}] {subfield_name}: {err}"
+                                                model_form.add_error(None, err_msg)
+                                        raise AbortTransaction()
+
+                                # Enforce object-level permissions on related objects
+                                model = related_object_form.Meta.model
+                                if model.objects.filter(pk__in=related_obj_pks).count() != len(related_obj_pks):
+                                    raise ObjectDoesNotExist
+
+                    except AbortTransaction:
+                        pass
+
+                    except ObjectDoesNotExist:
+                        msg = "Object creation failed due to object-level permissions violation"
+                        self.logger.debug(msg)
+                        model_form.add_error(None, msg)
+
+                if not model_form.errors:
+                    self.logger.info(f"Import object {obj} (PK: {obj.pk})")
+                    messages.success(
+                        request,
+                        format_html('Imported object: <a href="{}">{}</a>', obj.get_absolute_url(), obj),
+                    )
+
+                    if "_addanother" in request.POST:
+                        return redirect(request.get_full_path())
+
+                    return_url = form.cleaned_data.get("return_url")
+                    if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                        return redirect(iri_to_uri(return_url))
+                    else:
+                        return redirect(self.get_return_url(request, obj))
+
+                else:
+                    self.logger.debug("Model form validation failed")
+
+                    # Replicate model form errors for display
+                    for field, errors in model_form.errors.items():
+                        for err in errors:
+                            if field == "__all__":
+                                form.add_error(None, err)
+                            else:
+                                form.add_error(None, f"{field}: {err}")
+
+            else:
+                self.logger.debug("Import form validation failed")
+
+        else:
+            form = ImportForm()
+
+        return Response(
+            {
+                "template": "generic/object_import.html",
+                "form": form,
+            }
+        )
 
 
 #
@@ -781,7 +1194,7 @@ class ConsolePortTemplateBulkEditView(generic.BulkEditView):
     filterset = filters.ConsolePortTemplateFilterSet
 
 
-class ConsolePortTemplateBulkRenameView(generic.BulkRenameView):
+class ConsolePortTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
     queryset = ConsolePortTemplate.objects.all()
 
 
@@ -819,7 +1232,7 @@ class ConsoleServerPortTemplateBulkEditView(generic.BulkEditView):
     filterset = filters.ConsoleServerPortTemplateFilterSet
 
 
-class ConsoleServerPortTemplateBulkRenameView(generic.BulkRenameView):
+class ConsoleServerPortTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
     queryset = ConsoleServerPortTemplate.objects.all()
 
 
@@ -857,7 +1270,7 @@ class PowerPortTemplateBulkEditView(generic.BulkEditView):
     filterset = filters.PowerPortTemplateFilterSet
 
 
-class PowerPortTemplateBulkRenameView(generic.BulkRenameView):
+class PowerPortTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
     queryset = PowerPortTemplate.objects.all()
 
 
@@ -895,7 +1308,7 @@ class PowerOutletTemplateBulkEditView(generic.BulkEditView):
     filterset = filters.PowerOutletTemplateFilterSet
 
 
-class PowerOutletTemplateBulkRenameView(generic.BulkRenameView):
+class PowerOutletTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
     queryset = PowerOutletTemplate.objects.all()
 
 
@@ -932,7 +1345,7 @@ class InterfaceTemplateBulkEditView(generic.BulkEditView):
     filterset = filters.InterfaceTemplateFilterSet
 
 
-class InterfaceTemplateBulkRenameView(generic.BulkRenameView):
+class InterfaceTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
     queryset = InterfaceTemplate.objects.all()
 
 
@@ -969,7 +1382,7 @@ class FrontPortTemplateBulkEditView(generic.BulkEditView):
     filterset = filters.FrontPortTemplateFilterSet
 
 
-class FrontPortTemplateBulkRenameView(generic.BulkRenameView):
+class FrontPortTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
     queryset = FrontPortTemplate.objects.all()
 
 
@@ -1006,7 +1419,7 @@ class RearPortTemplateBulkEditView(generic.BulkEditView):
     filterset = filters.RearPortTemplateFilterSet
 
 
-class RearPortTemplateBulkRenameView(generic.BulkRenameView):
+class RearPortTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
     queryset = RearPortTemplate.objects.all()
 
 
@@ -1043,7 +1456,7 @@ class DeviceBayTemplateBulkEditView(generic.BulkEditView):
     filterset = filters.DeviceBayTemplateFilterSet
 
 
-class DeviceBayTemplateBulkRenameView(generic.BulkRenameView):
+class DeviceBayTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
     queryset = DeviceBayTemplate.objects.all()
 
 
@@ -1054,16 +1467,213 @@ class DeviceBayTemplateBulkDeleteView(generic.BulkDeleteView):
 
 
 #
+# Module bay templates
+#
+
+
+class ModuleBayCommonViewSetMixin:
+    """NautobotUIViewSet for ModuleBay views to handle templated create and bulk rename views."""
+
+    def create(self, request, *args, **kwargs):
+        if request.method == "POST":
+            return self.perform_create(request, *args, **kwargs)
+
+        form = self.create_form_class(initial=request.GET)
+        model_form = self.model_form_class(request.GET)
+
+        return Response(
+            {
+                "template": self.create_template_name,
+                "component_type": self.queryset.model._meta.verbose_name,
+                "model_form": model_form,
+                "form": form,
+                "return_url": self.get_return_url(request),
+            },
+        )
+
+    def perform_create(self, request, *args, **kwargs):
+        form = self.create_form_class(
+            request.POST,
+            initial=normalize_querydict(request.GET, form_class=self.create_form_class),
+        )
+        model_form = self.model_form_class(
+            request.POST,
+            initial=normalize_querydict(request.GET, form_class=self.model_form_class),
+        )
+
+        if form.is_valid():
+            new_components = []
+            data = deepcopy(request.POST)
+
+            names = form.cleaned_data["name_pattern"]
+            labels = form.cleaned_data.get("label_pattern")
+            positions = form.cleaned_data.get("position_pattern")
+            for i, name in enumerate(names):
+                label = labels[i] if labels else None
+                position = positions[i] if positions else None
+                # Initialize the individual component form
+                data["name"] = name
+                data["label"] = label
+                data["position"] = position
+                component_form = self.model_form_class(
+                    data,
+                    initial=normalize_querydict(request.GET, form_class=self.model_form_class),
+                )
+                if component_form.is_valid():
+                    new_components.append(component_form)
+                else:
+                    for field, errors in component_form.errors.as_data().items():
+                        # Assign errors on the child form's name/position/label field to *_pattern fields on the parent form
+                        if field.endswith("_pattern"):
+                            field = field[:-8]
+                        for e in errors:
+                            err_str = ", ".join(e)
+                            form.add_error(field, f"{name}: {err_str}")
+
+            if not form.errors:
+                try:
+                    with transaction.atomic():
+                        # Create the new components
+                        new_objs = []
+                        for component_form in new_components:
+                            obj = component_form.save()
+                            new_objs.append(obj)
+
+                        # Enforce object-level permissions
+                        if self.get_queryset().filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):
+                            raise ObjectDoesNotExist
+
+                    messages.success(
+                        request,
+                        f"Added {len(new_components)} {self.queryset.model._meta.verbose_name_plural}",
+                    )
+                    if "_addanother" in request.POST:
+                        return redirect(request.get_full_path())
+                    else:
+                        return redirect(self.get_return_url(request))
+
+                except ObjectDoesNotExist:
+                    msg = "Component creation failed due to object-level permissions violation"
+                    form.add_error(None, msg)
+
+        return Response(
+            {
+                "template": self.create_template_name,
+                "component_type": self.queryset.model._meta.verbose_name,
+                "form": form,
+                "model_form": model_form,
+                "return_url": self.get_return_url(request),
+            },
+        )
+
+    def _bulk_rename(self, request, *args, **kwargs):
+        # TODO: This shouldn't be needed but default behavior of custom actions that don't support "GET" is broken
+        if request.method != "POST":
+            raise MethodNotAllowed(request.method)
+
+        query_pks = request.POST.getlist("pk")
+        selected_objects = self.get_queryset().filter(pk__in=query_pks) if query_pks else None
+
+        # Create a new Form class from BulkRenameForm
+        class _Form(BulkRenameForm):
+            pk = ModelMultipleChoiceField(queryset=self.get_queryset(), widget=MultipleHiddenInput())
+
+        # selected_objects would return False; if no query_pks or invalid query_pks
+        if not selected_objects:
+            messages.warning(request, f"No valid {self.queryset.model._meta.verbose_name_plural} were selected.")
+            return redirect(self.get_return_url(request))
+
+        if "_preview" in request.POST or "_apply" in request.POST:
+            form = _Form(request.POST, initial={"pk": query_pks})
+            if form.is_valid():
+                try:
+                    with transaction.atomic():
+                        renamed_pks = []
+                        for obj in selected_objects:
+                            find = form.cleaned_data["find"]
+                            replace = form.cleaned_data["replace"]
+                            if form.cleaned_data["use_regex"]:
+                                try:
+                                    obj.new_name = re.sub(find, replace, obj.name)
+                                # Catch regex group reference errors
+                                except re.error:
+                                    obj.new_name = obj.name
+                            else:
+                                obj.new_name = obj.name.replace(find, replace)
+                            renamed_pks.append(obj.pk)
+
+                        if "_apply" in request.POST:
+                            for obj in selected_objects:
+                                obj.name = obj.new_name
+                                obj.save()
+
+                            # Enforce constrained permissions
+                            if self.get_queryset().filter(pk__in=renamed_pks).count() != len(selected_objects):
+                                raise ObjectDoesNotExist
+
+                            messages.success(
+                                request,
+                                f"Renamed {len(selected_objects)} {self.queryset.model._meta.verbose_name_plural}",
+                            )
+                            return redirect(self.get_return_url(request))
+
+                except ObjectDoesNotExist:
+                    msg = "Object update failed due to object-level permissions violation"
+                    form.add_error(None, msg)
+
+        else:
+            form = _Form(initial={"pk": query_pks})
+
+        return Response(
+            {
+                "template": "generic/object_bulk_rename.html",
+                "form": form,
+                "obj_type_plural": self.queryset.model._meta.verbose_name_plural,
+                "selected_objects": selected_objects,
+                "return_url": self.get_return_url(request),
+                "parent_name": self.get_selected_objects_parents_name(selected_objects),
+            }
+        )
+
+
+class ModuleBayTemplateUIViewSet(
+    ModuleBayCommonViewSetMixin,
+    ObjectEditViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+):
+    queryset = ModuleBayTemplate.objects.all()
+    filterset_class = filters.ModuleBayTemplateFilterSet
+    bulk_update_form_class = forms.ModuleBayTemplateBulkEditForm
+    create_form_class = forms.ModuleBayTemplateCreateForm
+    form_class = forms.ModuleBayTemplateForm
+    model_form_class = forms.ModuleBayTemplateForm
+    serializer_class = serializers.ModuleBayTemplateSerializer
+    table_class = tables.ModuleBayTemplateTable
+    create_template_name = "dcim/device_component_add.html"
+
+    def get_selected_objects_parents_name(self, selected_objects):
+        selected_object = selected_objects.first()
+        if selected_object:
+            parent = selected_object.device_type or selected_object.module_type
+            return parent.display
+        return ""
+
+    @action(detail=False, methods=["GET", "POST"], url_path="rename", url_name="bulk_rename")
+    def bulk_rename(self, request, *args, **kwargs):
+        return self._bulk_rename(request, *args, **kwargs)
+
+
+#
 # Platforms
 #
 
 
 class PlatformListView(generic.ObjectListView):
-    queryset = Platform.objects.annotate(
-        device_count=count_related(Device, "platform"),
-        virtual_machine_count=count_related(VirtualMachine, "platform"),
-    )
+    queryset = Platform.objects.all()
     filterset = filters.PlatformFilterSet
+    filterset_form = forms.PlatformFilterForm
     table = tables.PlatformTable
 
 
@@ -1089,6 +1699,7 @@ class PlatformView(generic.ObjectView):
         return {
             "device_table": device_table,
             "network_driver_tool_names": get_network_driver_mapping_tool_names(),
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -1098,7 +1709,10 @@ class PlatformEditView(generic.ObjectEditView):
     template_name = "dcim/platform_edit.html"
 
     def get_extra_context(self, request, instance):
-        return {"network_driver_names": sorted(get_all_network_driver_mappings().keys())}
+        return {
+            "network_driver_names": sorted(get_all_network_driver_mappings().keys()),
+            **super().get_extra_context(request, instance),
+        }
 
 
 class PlatformDeleteView(generic.ObjectDeleteView):
@@ -1129,22 +1743,168 @@ class DeviceListView(generic.ObjectListView):
     filterset_form = forms.DeviceFilterForm
     table = tables.DeviceTable
     template_name = "dcim/device_list.html"
-    use_new_ui = True
 
 
 class DeviceView(generic.ObjectView):
     queryset = Device.objects.select_related(
+        "cluster__cluster_group",
+        "controller_managed_device_group__controller",
+        "device_redundancy_group",
+        "device_type__device_family",
         "location",
-        "rack__rack_group",
-        "tenant__tenant_group",
-        "role",
         "platform",
         "primary_ip4",
         "primary_ip6",
+        "rack__rack_group",
+        "role",
+        "secrets_group",
         "software_version",
         "status",
+        "tenant__tenant_group",
+    ).prefetch_related("images", "software_image_files")
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        extra_buttons=(
+            object_detail.DropdownButton(
+                weight=100,
+                color=ButtonColorChoices.BLUE,
+                label="Add Components",
+                icon="mdi-plus-thick",
+                required_permissions=["dcim.change_device"],
+                children=(
+                    object_detail.Button(
+                        weight=100,
+                        link_name="dcim:device_consoleports_add",
+                        label="Console Ports",
+                        icon="mdi-console",
+                        required_permissions=["dcim.add_consoleport"],
+                    ),
+                    object_detail.Button(
+                        weight=200,
+                        link_name="dcim:device_consoleserverports_add",
+                        label="Console Server Ports",
+                        icon="mdi-console-network-outline",
+                        required_permissions=["dcim.add_consoleserverport"],
+                    ),
+                    object_detail.Button(
+                        weight=300,
+                        link_name="dcim:device_powerports_add",
+                        label="Power Ports",
+                        icon="mdi-power-plug-outline",
+                        required_permissions=["dcim.add_powerport"],
+                    ),
+                    object_detail.Button(
+                        weight=400,
+                        link_name="dcim:device_poweroutlets_add",
+                        label="Power Outlets",
+                        icon="mdi-power-socket",
+                        required_permissions=["dcim.add_poweroutlet"],
+                    ),
+                    object_detail.Button(
+                        weight=500,
+                        link_name="dcim:device_interfaces_add",
+                        label="Interfaces",
+                        icon="mdi-ethernet",
+                        required_permissions=["dcim.add_interface"],
+                    ),
+                    object_detail.Button(
+                        weight=600,
+                        link_name="dcim:device_frontports_add",
+                        label="Front Ports",
+                        icon="mdi-square-rounded-outline",
+                        required_permissions=["dcim.add_frontport"],
+                    ),
+                    object_detail.Button(
+                        weight=700,
+                        link_name="dcim:device_rearports_add",
+                        label="Rear Ports",
+                        icon="mdi-square-rounded-outline",
+                        required_permissions=["dcim.add_rearport"],
+                    ),
+                    object_detail.Button(
+                        weight=800,
+                        link_name="dcim:device_devicebays_add",
+                        label="Device Bays",
+                        icon="mdi-circle-outline",
+                        required_permissions=["dcim.add_devicebay"],
+                    ),
+                    object_detail.Button(
+                        weight=900,
+                        link_name="dcim:device_modulebays_add",
+                        label="Module Bays",
+                        icon="mdi-tray",
+                        required_permissions=["dcim.add_modulebay"],
+                    ),
+                    object_detail.Button(
+                        weight=1000,
+                        link_name="dcim:device_inventoryitems_add",
+                        label="Inventory Items",
+                        icon="mdi-invoice-list-outline",
+                        required_permissions=["dcim.add_inventoryitem"],
+                    ),
+                ),
+            ),
+        ),
+        panels=(),  # not yet ported over due to complexity of this template
+        # TODO
+        #     ObjectFieldsPanel(
+        #         weight=100,
+        #         section=SectionChoices.LEFT_HALF,
+        #         fields=["location", "rack", "position", "face", "tenant", "device_type", "serial", "asset_tag"],
+        #         # TODO add device_type.device_family, device_type.u_height,
+        #     ),
+        #     TODO: Virtual Chassis panel
+        #     ObjectFieldsPanel(
+        #         weight=110,
+        #         section=SectionChoices.LEFT_HALF,
+        #         label="Virtual Chassis",
+        #     ),
+        #     ObjectFieldsPanel(
+        #         weight=120,
+        #         section=SectionChoices.LEFT_HALF,
+        #         label="Management",
+        #         fields=["role", "platform", "status", "primary_ip4", "primary_ip6", "secrets_group", "device_redundancy_group", "controller_managed_device_group", "software_version"],
+        #     ),
+        #     TODO: power utilization panel
+        #     ObjectsTablePanel(
+        #       weight=100,
+        #       section=SectionChoices.RIGHT_HALF,
+        #       table_title="Power Utilization",
+        #       table_class=???,
+        #       table_filter="device",
+        #     ),
+        #     ObjectsTablePanel(
+        #         weight=100,
+        #         section=SectionChoices.RIGHT_HALF,
+        #         table_title="Assigned VRFs",
+        #         table_class=VRFDeviceAssignmentTable,
+        #         table_filter="device",
+        #         exclude_columns=["virtual_machine", "device"],
+        #     ),
+        #     TODO: services panel
+        #     ObjectsTablePanel(
+        #         weight=200,
+        #         section=SectionChoices.RIGHT_HALF,
+        #         table_class=???,
+        #         table_filter="device",
+        #     ),
+        #     TODO: images panel
+        #     ObjectsTablePanel(
+        #         weight=300,
+        #         section=SectionChoices.RIGHT_HALF,
+        #         table_class=???,
+        #         table_filter="device",
+        #     ),
+        #     ObjectsTablePanel(
+        #         weight=100,
+        #         section=SectionChoices.FULL_WIDTH,
+        #         table_class=tables.VirtualDeviceContextTable,
+        #         table_filter="device",
+        #         select_related_fields=["tenant", "primary_ip4", "primary_ip6"],
+        #         exclude_columns=["device"],
+        #     ),
+        # ),
     )
-    use_new_ui = True
 
     def get_extra_context(self, request, instance):
         # VirtualChassis members
@@ -1176,48 +1936,82 @@ class DeviceView(generic.ObjectView):
         else:
             software_version_images = []
 
+        modulebay_count = instance.module_bays.count()
+        module_count = instance.module_bays.filter(installed_module__isnull=False).count()
+
+        vdcs = instance.virtual_device_contexts.restrict(request.user).select_related(
+            "tenant", "primary_ip4", "primary_ip6"
+        )
+        vdcs_table = tables.VirtualDeviceContextTable(vdcs, orderable=False, exclude=("device",))
+        vdc_url = reverse("dcim:virtualdevicecontext_add")
+        return_url = instance.get_absolute_url()
+        vdcs_table_add_url = f"{vdc_url}?device={instance.id}&return_url={return_url}"
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(vdcs_table)
+
         return {
+            **super().get_extra_context(request, instance),
             "services": services,
             "software_version_images": software_version_images,
             "vc_members": vc_members,
             "vrf_table": vrf_table,
             "active_tab": "device",
+            "modulebay_count": modulebay_count,
+            "module_count": f"{module_count}/{modulebay_count}",
+            "vdcs_table": vdcs_table,
+            "vdcs_table_add_url": vdcs_table_add_url,
         }
 
 
-class DeviceConsolePortsView(generic.ObjectView):
+class DeviceComponentTabView(generic.ObjectView):
+    queryset = Device.objects.all()
+
+    def get_extra_context(self, request, instance):
+        modulebay_count = instance.module_bays.count()
+        module_count = instance.module_bays.filter(installed_module__isnull=False).count()
+
+        return {
+            "modulebay_count": modulebay_count,
+            "module_count": f"{module_count}/{modulebay_count}",
+        }
+
+
+class DeviceConsolePortsView(DeviceComponentTabView):
     queryset = Device.objects.all()
     template_name = "dcim/device/consoleports.html"
 
     def get_extra_context(self, request, instance):
         consoleports = (
-            ConsolePort.objects.restrict(request.user, "view")
-            .filter(device=instance)
+            instance.all_console_ports.restrict(request.user, "view")
             .select_related("cable")
             .prefetch_related("_path__destination")
         )
-        consoleport_table = tables.DeviceConsolePortTable(data=consoleports, user=request.user, orderable=False)
+        consoleport_table = tables.DeviceModuleConsolePortTable(data=consoleports, user=request.user, orderable=False)
         if request.user.has_perm("dcim.change_consoleport") or request.user.has_perm("dcim.delete_consoleport"):
             consoleport_table.columns.show("pk")
 
         return {
+            **super().get_extra_context(request, instance),
             "consoleport_table": consoleport_table,
             "active_tab": "console-ports",
         }
 
 
-class DeviceConsoleServerPortsView(generic.ObjectView):
+class DeviceConsoleServerPortsView(DeviceComponentTabView):
     queryset = Device.objects.all()
     template_name = "dcim/device/consoleserverports.html"
 
     def get_extra_context(self, request, instance):
         consoleserverports = (
-            ConsoleServerPort.objects.restrict(request.user, "view")
-            .filter(device=instance)
+            instance.all_console_server_ports.restrict(request.user, "view")
             .select_related("cable")
             .prefetch_related("_path__destination")
         )
-        consoleserverport_table = tables.DeviceConsoleServerPortTable(
+        consoleserverport_table = tables.DeviceModuleConsoleServerPortTable(
             data=consoleserverports, user=request.user, orderable=False
         )
         if request.user.has_perm("dcim.change_consoleserverport") or request.user.has_perm(
@@ -1226,54 +2020,55 @@ class DeviceConsoleServerPortsView(generic.ObjectView):
             consoleserverport_table.columns.show("pk")
 
         return {
+            **super().get_extra_context(request, instance),
             "consoleserverport_table": consoleserverport_table,
             "active_tab": "console-server-ports",
         }
 
 
-class DevicePowerPortsView(generic.ObjectView):
+class DevicePowerPortsView(DeviceComponentTabView):
     queryset = Device.objects.all()
     template_name = "dcim/device/powerports.html"
 
     def get_extra_context(self, request, instance):
         powerports = (
-            PowerPort.objects.restrict(request.user, "view")
-            .filter(device=instance)
+            instance.all_power_ports.restrict(request.user, "view")
             .select_related("cable")
             .prefetch_related("_path__destination")
         )
-        powerport_table = tables.DevicePowerPortTable(data=powerports, user=request.user, orderable=False)
+        powerport_table = tables.DeviceModulePowerPortTable(data=powerports, user=request.user, orderable=False)
         if request.user.has_perm("dcim.change_powerport") or request.user.has_perm("dcim.delete_powerport"):
             powerport_table.columns.show("pk")
 
         return {
+            **super().get_extra_context(request, instance),
             "powerport_table": powerport_table,
             "active_tab": "power-ports",
         }
 
 
-class DevicePowerOutletsView(generic.ObjectView):
+class DevicePowerOutletsView(DeviceComponentTabView):
     queryset = Device.objects.all()
     template_name = "dcim/device/poweroutlets.html"
 
     def get_extra_context(self, request, instance):
         poweroutlets = (
-            PowerOutlet.objects.restrict(request.user, "view")
-            .filter(device=instance)
+            instance.all_power_outlets.restrict(request.user, "view")
             .select_related("cable", "power_port")
             .prefetch_related("_path__destination")
         )
-        poweroutlet_table = tables.DevicePowerOutletTable(data=poweroutlets, user=request.user, orderable=False)
+        poweroutlet_table = tables.DeviceModulePowerOutletTable(data=poweroutlets, user=request.user, orderable=False)
         if request.user.has_perm("dcim.change_poweroutlet") or request.user.has_perm("dcim.delete_poweroutlet"):
             poweroutlet_table.columns.show("pk")
 
         return {
+            **super().get_extra_context(request, instance),
             "poweroutlet_table": poweroutlet_table,
             "active_tab": "power-outlets",
         }
 
 
-class DeviceInterfacesView(generic.ObjectView):
+class DeviceInterfacesView(DeviceComponentTabView):
     queryset = Device.objects.all()
     template_name = "dcim/device/interfaces.html"
 
@@ -1287,56 +2082,56 @@ class DeviceInterfacesView(generic.ObjectView):
                 "tags",
             )
             .select_related("lag", "cable")
+            .order_by("_name")
         )
-        interface_table = tables.DeviceInterfaceTable(data=interfaces, user=request.user, orderable=False)
+        interface_table = tables.DeviceModuleInterfaceTable(data=interfaces, user=request.user, orderable=False)
         if VirtualChassis.objects.filter(master=instance).exists():
             interface_table.columns.show("device")
         if request.user.has_perm("dcim.change_interface") or request.user.has_perm("dcim.delete_interface"):
             interface_table.columns.show("pk")
 
         return {
+            **super().get_extra_context(request, instance),
             "interface_table": interface_table,
             "active_tab": "interfaces",
         }
 
 
-class DeviceFrontPortsView(generic.ObjectView):
+class DeviceFrontPortsView(DeviceComponentTabView):
     queryset = Device.objects.all()
     template_name = "dcim/device/frontports.html"
 
     def get_extra_context(self, request, instance):
-        frontports = (
-            FrontPort.objects.restrict(request.user, "view")
-            .filter(device=instance)
-            .select_related("cable", "rear_port")
-        )
-        frontport_table = tables.DeviceFrontPortTable(data=frontports, user=request.user, orderable=False)
+        frontports = instance.all_front_ports.restrict(request.user, "view").select_related("cable", "rear_port")
+        frontport_table = tables.DeviceModuleFrontPortTable(data=frontports, user=request.user, orderable=False)
         if request.user.has_perm("dcim.change_frontport") or request.user.has_perm("dcim.delete_frontport"):
             frontport_table.columns.show("pk")
 
         return {
+            **super().get_extra_context(request, instance),
             "frontport_table": frontport_table,
             "active_tab": "front-ports",
         }
 
 
-class DeviceRearPortsView(generic.ObjectView):
+class DeviceRearPortsView(DeviceComponentTabView):
     queryset = Device.objects.all()
     template_name = "dcim/device/rearports.html"
 
     def get_extra_context(self, request, instance):
-        rearports = RearPort.objects.restrict(request.user, "view").filter(device=instance).select_related("cable")
-        rearport_table = tables.DeviceRearPortTable(data=rearports, user=request.user, orderable=False)
+        rearports = instance.all_rear_ports.restrict(request.user, "view").select_related("cable")
+        rearport_table = tables.DeviceModuleRearPortTable(data=rearports, user=request.user, orderable=False)
         if request.user.has_perm("dcim.change_rearport") or request.user.has_perm("dcim.delete_rearport"):
             rearport_table.columns.show("pk")
 
         return {
+            **super().get_extra_context(request, instance),
             "rearport_table": rearport_table,
             "active_tab": "rear-ports",
         }
 
 
-class DeviceDeviceBaysView(generic.ObjectView):
+class DeviceDeviceBaysView(DeviceComponentTabView):
     queryset = Device.objects.all()
     template_name = "dcim/device/devicebays.html"
 
@@ -1353,8 +2148,31 @@ class DeviceDeviceBaysView(generic.ObjectView):
             devicebay_table.columns.show("pk")
 
         return {
+            **super().get_extra_context(request, instance),
             "devicebay_table": devicebay_table,
             "active_tab": "device-bays",
+        }
+
+
+class DeviceModuleBaysView(DeviceComponentTabView):
+    queryset = Device.objects.all()
+    template_name = "dcim/device/modulebays.html"
+
+    def get_extra_context(self, request, instance):
+        # note: Device modules tab shouldn't show descendant modules until a proper tree view is implemented
+        modulebays = (
+            ModuleBay.objects.restrict(request.user, "view")
+            .filter(parent_device=instance)
+            .prefetch_related("installed_module__status", "installed_module")
+        )
+        modulebay_table = tables.DeviceModuleBayTable(data=modulebays, user=request.user, orderable=False)
+        if request.user.has_perm("dcim.change_modulebay") or request.user.has_perm("dcim.delete_modulebay"):
+            modulebay_table.columns.show("pk")
+
+        return {
+            **super().get_extra_context(request, instance),
+            "modulebay_table": modulebay_table,
+            "active_tab": "module-bays",
         }
 
 
@@ -1394,7 +2212,7 @@ class DeviceLLDPNeighborsView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         interfaces = (
-            instance.vc_interfaces.restrict(request.user, "view")
+            instance.all_interfaces.restrict(request.user, "view")
             .prefetch_related("_path__destination")
             .exclude(type__in=NONCONNECTABLE_IFACE_TYPES)
         )
@@ -1431,7 +2249,7 @@ class DeviceChangeLogView(ObjectChangeLogView):
     base_template = "dcim/device/base.html"
 
 
-class DeviceDynamicGroupsView(ObjectDynamicGroupsView):
+class DeviceDynamicGroupsView(ObjectDynamicGroupsView):  # 3.0 TODO: remove, deprecated in 2.3
     base_template = "dcim/device/base.html"
 
 
@@ -1472,6 +2290,468 @@ class DeviceBulkDeleteView(generic.BulkDeleteView):
     table = tables.DeviceTable
 
 
+class DeviceWirelessView(generic.ObjectView):
+    queryset = Device.objects.all()
+    template_name = "dcim/device/wireless.html"
+
+    def get_extra_context(self, request, instance):
+        controller_managed_device_group = instance.controller_managed_device_group
+        wireless_networks = ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
+            controller_managed_device_group=controller_managed_device_group
+        ).select_related("wireless_network", "controller_managed_device_group", "vlan")
+        wireless_networks_table = ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
+            data=wireless_networks, user=request.user, orderable=False
+        )
+        wireless_networks_table.columns.hide("controller_managed_device_group")
+        wireless_networks_table.columns.hide("controller")
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(wireless_networks_table)
+
+        radio_profiles = ControllerManagedDeviceGroupRadioProfileAssignment.objects.filter(
+            controller_managed_device_group=controller_managed_device_group
+        ).select_related("radio_profile", "controller_managed_device_group")
+        radio_profiles_table = ControllerManagedDeviceGroupRadioProfileAssignmentTable(
+            data=radio_profiles, user=request.user, orderable=False
+        )
+        radio_profiles_table.columns.hide("controller_managed_device_group")
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(radio_profiles_table)
+
+        return {
+            "wireless_networks_table": wireless_networks_table,
+            "radio_profiles_table": radio_profiles_table,
+            "active_tab": "wireless",
+        }
+
+
+#
+# Modules
+#
+
+
+class BulkComponentCreateUIViewSetMixin:
+    def _bulk_component_create(self, request, component_queryset, bulk_component_form, parent_field=None):
+        parent_model_name = self.queryset.model._meta.verbose_name_plural
+        if parent_field is None:
+            parent_field = self.queryset.model._meta.model_name
+        model_name = component_queryset.model._meta.verbose_name_plural
+        model = component_queryset.model
+        component_create_form = get_form_for_model(model)
+
+        # Are we editing *all* objects in the queryset or just a selected subset?
+        if request.POST.get("_all") and self.filterset is not None:
+            pk_list = [obj.pk for obj in self.filterset(request.GET, self.get_queryset().only("pk")).qs]
+        else:
+            pk_list = request.POST.getlist("pk")
+
+        selected_objects = self.get_queryset().filter(pk__in=pk_list)
+        if not selected_objects:
+            messages.warning(
+                request,
+                f"No {parent_model_name} were selected.",
+            )
+            return redirect(self.get_return_url(request))
+        table = self.table_class(selected_objects)
+
+        if "_create" in request.POST:
+            form = bulk_component_form(model, request.POST)
+
+            if form.is_valid():
+                new_components = []
+                data = deepcopy(form.cleaned_data)
+
+                try:
+                    with transaction.atomic():
+                        for obj in data["pk"]:
+                            names = data["name_pattern"]
+                            labels = data["label_pattern"] if "label_pattern" in data else None
+                            for i, name in enumerate(names):
+                                label = labels[i] if labels else None
+
+                                component_data = {
+                                    parent_field: obj.pk,
+                                    "name": name,
+                                    "label": label,
+                                }
+                                component_data.update(data)
+                                component_form = component_create_form(component_data)
+                                if component_form.is_valid():
+                                    instance = component_form.save()
+                                    new_components.append(instance)
+                                else:
+                                    for (
+                                        field,
+                                        errors,
+                                    ) in component_form.errors.as_data().items():
+                                        for e in errors:
+                                            err_str = ", ".join(e)
+                                            form.add_error(
+                                                field,
+                                                f"{obj} {name}: {err_str}",
+                                            )
+
+                        # Enforce object-level permissions
+                        if component_queryset.filter(pk__in=[obj.pk for obj in new_components]).count() != len(
+                            new_components
+                        ):
+                            raise ObjectDoesNotExist
+
+                except IntegrityError:
+                    pass
+
+                except ObjectDoesNotExist:
+                    msg = "Component creation failed due to object-level permissions violation"
+                    form.add_error(None, msg)
+
+                if not form.errors:
+                    msg = f"Added {len(new_components)} {model_name} to {len(form.cleaned_data['pk'])} {parent_model_name}."
+                    messages.success(request, msg)
+
+                    return redirect(self.get_return_url(request))
+
+        else:
+            form = bulk_component_form(model, initial={"pk": pk_list})
+
+        return Response(
+            {
+                "template": "generic/object_bulk_add_component.html",
+                "form": form,
+                "parent_model_name": parent_model_name,
+                "model_name": model_name,
+                "table": table,
+                "return_url": self.get_return_url(request),
+            },
+        )
+
+
+class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
+    queryset = Module.objects.all()
+    filterset_class = filters.ModuleFilterSet
+    filterset_form_class = forms.ModuleFilterForm
+    form_class = forms.ModuleForm
+    bulk_update_form_class = forms.ModuleBulkEditForm
+    serializer_class = serializers.ModuleSerializer
+    table_class = tables.ModuleTable
+    component_model = None
+
+    def get_action(self):
+        if self.component_model:
+            method = self.request.method.lower()
+            if method == "get":
+                return "view"
+            else:
+                return "change"
+
+        return super().get_action()
+
+    def get_required_permission(self):
+        # TODO: standardize a pattern for permissions enforcement on custom actions
+        if self.component_model:
+            model = self.component_model
+            method = self.request.method.lower()
+            if method == "get":
+                component_action = "view"
+                permissions = [*self.get_permissions_for_model(model, [component_action]), "dcim.view_module"]
+            elif self.action.startswith("bulk_add"):
+                component_action = "add"
+                permissions = [*self.get_permissions_for_model(model, [component_action]), "dcim.change_module"]
+            else:
+                component_action = "change"
+                permissions = [*self.get_permissions_for_model(model, [component_action]), "dcim.change_module"]
+
+            return permissions
+
+        return super().get_required_permission()
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if instance:
+            context["modulebay_count"] = instance.module_bays.count()
+            populated_module_count = instance.module_bays.filter(installed_module__isnull=False).count()
+            context["module_count"] = f"{populated_module_count}/{context['modulebay_count']}"
+        if self.action in ["create", "update"]:
+            context["active_parent_tab"] = self._get_edit_view_active_parent_tab(request)
+        return context
+
+    def _get_edit_view_active_parent_tab(self, request):
+        active_parent_tab = "device"
+        form_class = self.get_form_class()
+        form = form_class(
+            data=request.POST,
+            files=request.FILES,
+            initial=normalize_querydict(request.GET, form_class=form_class),
+            instance=self.get_object(),
+        )
+        if form["parent_module_bay_module"].initial:
+            active_parent_tab = "module"
+        elif form["location"].initial:
+            active_parent_tab = "location"
+
+        return active_parent_tab
+
+    @action(detail=True, url_path="console-ports", component_model=ConsolePort)
+    def consoleports(self, request, *args, **kwargs):
+        instance = self.get_object()
+        consoleports = (
+            instance.console_ports.restrict(request.user, "view")
+            .select_related("cable")
+            .prefetch_related("_path__destination")
+        )
+        consoleport_table = tables.DeviceModuleConsolePortTable(data=consoleports, user=request.user, orderable=False)
+        if request.user.has_perm("dcim.change_consoleport") or request.user.has_perm("dcim.delete_consoleport"):
+            consoleport_table.columns.show("pk")
+
+        return Response(
+            {
+                "consoleport_table": consoleport_table,
+                "active_tab": "console-ports",
+            }
+        )
+
+    @action(detail=True, url_path="console-server-ports", component_model=ConsoleServerPort)
+    def consoleserverports(self, request, *args, **kwargs):
+        instance = self.get_object()
+        consoleserverports = (
+            instance.console_server_ports.restrict(request.user, "view")
+            .select_related("cable")
+            .prefetch_related("_path__destination")
+        )
+        consoleserverport_table = tables.DeviceModuleConsoleServerPortTable(
+            data=consoleserverports, user=request.user, orderable=False, parent_module=instance
+        )
+        if request.user.has_perm("dcim.change_consoleserverport") or request.user.has_perm(
+            "dcim.delete_consoleserverport"
+        ):
+            consoleserverport_table.columns.show("pk")
+
+        return Response(
+            {
+                "consoleserverport_table": consoleserverport_table,
+                "active_tab": "console-server-ports",
+            }
+        )
+
+    @action(detail=True, url_path="power-ports", component_model=PowerPort)
+    def powerports(self, request, *args, **kwargs):
+        instance = self.get_object()
+        powerports = (
+            instance.power_ports.restrict(request.user, "view")
+            .select_related("cable")
+            .prefetch_related("_path__destination")
+        )
+        powerport_table = tables.DeviceModulePowerPortTable(
+            data=powerports, user=request.user, orderable=False, parent_module=instance
+        )
+        if request.user.has_perm("dcim.change_powerport") or request.user.has_perm("dcim.delete_powerport"):
+            powerport_table.columns.show("pk")
+
+        return Response(
+            {
+                "powerport_table": powerport_table,
+                "active_tab": "power-ports",
+            }
+        )
+
+    @action(detail=True, url_path="power-outlets", component_model=PowerOutlet)
+    def poweroutlets(self, request, *args, **kwargs):
+        instance = self.get_object()
+        poweroutlets = (
+            instance.power_outlets.restrict(request.user, "view")
+            .select_related("cable", "power_port")
+            .prefetch_related("_path__destination")
+        )
+        poweroutlet_table = tables.DeviceModulePowerOutletTable(
+            data=poweroutlets, user=request.user, orderable=False, parent_module=instance
+        )
+        if request.user.has_perm("dcim.change_poweroutlet") or request.user.has_perm("dcim.delete_poweroutlet"):
+            poweroutlet_table.columns.show("pk")
+
+        return Response(
+            {
+                "poweroutlet_table": poweroutlet_table,
+                "active_tab": "power-outlets",
+            }
+        )
+
+    @action(detail=True, component_model=Interface)
+    def interfaces(self, request, *args, **kwargs):
+        instance = self.get_object()
+        interfaces = (
+            instance.interfaces.restrict(request.user, "view")
+            .prefetch_related(
+                Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)),
+                Prefetch("member_interfaces", queryset=Interface.objects.restrict(request.user)),
+                "_path__destination",
+                "tags",
+            )
+            .select_related("lag", "cable")
+        )
+        interface_table = tables.DeviceModuleInterfaceTable(
+            data=interfaces, user=request.user, orderable=False, parent_module=instance
+        )
+        if request.user.has_perm("dcim.change_interface") or request.user.has_perm("dcim.delete_interface"):
+            interface_table.columns.show("pk")
+
+        return Response(
+            {
+                "interface_table": interface_table,
+                "active_tab": "interfaces",
+            }
+        )
+
+    @action(detail=True, url_path="front-ports", component_model=FrontPort)
+    def frontports(self, request, *args, **kwargs):
+        instance = self.get_object()
+        frontports = instance.front_ports.restrict(request.user, "view").select_related("cable", "rear_port")
+        frontport_table = tables.DeviceModuleFrontPortTable(
+            data=frontports, user=request.user, orderable=False, parent_module=instance
+        )
+        if request.user.has_perm("dcim.change_frontport") or request.user.has_perm("dcim.delete_frontport"):
+            frontport_table.columns.show("pk")
+
+        return Response(
+            {
+                "frontport_table": frontport_table,
+                "active_tab": "front-ports",
+            },
+        )
+
+    @action(detail=True, url_path="rear-ports", component_model=RearPort)
+    def rearports(self, request, *args, **kwargs):
+        instance = self.get_object()
+        rearports = instance.rear_ports.restrict(request.user, "view").select_related("cable")
+        rearport_table = tables.DeviceModuleRearPortTable(
+            data=rearports, user=request.user, orderable=False, parent_module=instance
+        )
+        if request.user.has_perm("dcim.change_rearport") or request.user.has_perm("dcim.delete_rearport"):
+            rearport_table.columns.show("pk")
+
+        return Response(
+            {
+                "rearport_table": rearport_table,
+                "active_tab": "rear-ports",
+            }
+        )
+
+    @action(detail=True, url_path="module-bays", component_model=ModuleBay)
+    def modulebays(self, request, *args, **kwargs):
+        instance = self.get_object()
+        modulebays = instance.module_bays.restrict(request.user, "view").prefetch_related(
+            "installed_module__status", "installed_module"
+        )
+        modulebay_table = tables.ModuleModuleBayTable(data=modulebays, user=request.user, orderable=False)
+        if request.user.has_perm("dcim.change_modulebay") or request.user.has_perm("dcim.delete_modulebay"):
+            modulebay_table.columns.show("pk")
+
+        return Response(
+            {
+                "modulebay_table": modulebay_table,
+                "active_tab": "module-bays",
+            }
+        )
+
+    @action(
+        detail=False,
+        methods=["POST"],
+        url_path="console-ports/add",
+        url_name="bulk_add_consoleport",
+        component_model=ConsolePort,
+    )
+    def bulk_add_consoleport(self, request, *args, **kwargs):
+        return self._bulk_component_create(
+            request=request,
+            component_queryset=ConsolePort.objects.all(),
+            bulk_component_form=forms.ModuleConsolePortBulkCreateForm,
+        )
+
+    @action(
+        detail=False,
+        methods=["POST"],
+        url_path="console-server-ports/add",
+        url_name="bulk_add_consoleserverport",
+        component_model=ConsoleServerPort,
+    )
+    def bulk_add_consoleserverport(self, request, *args, **kwargs):
+        return self._bulk_component_create(
+            request=request,
+            component_queryset=ConsoleServerPort.objects.all(),
+            bulk_component_form=forms.ModuleConsoleServerPortBulkCreateForm,
+        )
+
+    @action(
+        detail=False,
+        methods=["POST"],
+        url_path="power-ports/add",
+        url_name="bulk_add_powerport",
+        component_model=PowerPort,
+    )
+    def bulk_add_powerport(self, request, *args, **kwargs):
+        return self._bulk_component_create(
+            request=request,
+            component_queryset=PowerPort.objects.all(),
+            bulk_component_form=forms.ModulePowerPortBulkCreateForm,
+        )
+
+    @action(
+        detail=False,
+        methods=["POST"],
+        url_path="power-outlets/add",
+        url_name="bulk_add_poweroutlet",
+        component_model=PowerOutlet,
+    )
+    def bulk_add_poweroutlet(self, request, *args, **kwargs):
+        return self._bulk_component_create(
+            request=request,
+            component_queryset=PowerOutlet.objects.all(),
+            bulk_component_form=forms.ModulePowerOutletBulkCreateForm,
+        )
+
+    @action(
+        detail=False,
+        methods=["POST"],
+        url_path="interfaces/add",
+        url_name="bulk_add_interface",
+        component_model=Interface,
+    )
+    def bulk_add_interface(self, request, *args, **kwargs):
+        return self._bulk_component_create(
+            request=request,
+            component_queryset=Interface.objects.all(),
+            bulk_component_form=forms.ModuleInterfaceBulkCreateForm,
+        )
+
+    @action(
+        detail=False,
+        methods=["POST"],
+        url_path="rear-ports/add",
+        url_name="bulk_add_rearport",
+        component_model=RearPort,
+    )
+    def bulk_add_rearport(self, request, *args, **kwargs):
+        return self._bulk_component_create(
+            request=request,
+            component_queryset=RearPort.objects.all(),
+            bulk_component_form=forms.ModuleRearPortBulkCreateForm,
+        )
+
+    @action(
+        detail=False,
+        methods=["POST"],
+        url_path="module-bays/add",
+        url_name="bulk_add_modulebay",
+        component_model=ModuleBay,
+    )
+    def bulk_add_modulebay(self, request, *args, **kwargs):
+        return self._bulk_component_create(
+            request=request,
+            component_queryset=ModuleBay.objects.all(),
+            bulk_component_form=forms.ModuleModuleBayBulkCreateForm,
+            parent_field="parent_module",
+        )
+
+
 #
 # Console ports
 #
@@ -1489,7 +2769,11 @@ class ConsolePortView(generic.ObjectView):
     queryset = ConsolePort.objects.all()
 
     def get_extra_context(self, request, instance):
-        return {"breadcrumb_url": "dcim:device_consoleports"}
+        return {
+            "device_breadcrumb_url": "dcim:device_consoleports",
+            "module_breadcrumb_url": "dcim:module_consoleports",
+            **super().get_extra_context(request, instance),
+        }
 
 
 class ConsolePortCreateView(generic.ComponentCreateView):
@@ -1551,7 +2835,11 @@ class ConsoleServerPortView(generic.ObjectView):
     queryset = ConsoleServerPort.objects.all()
 
     def get_extra_context(self, request, instance):
-        return {"breadcrumb_url": "dcim:device_consoleserverports"}
+        return {
+            "device_breadcrumb_url": "dcim:device_consoleserverports",
+            "module_breadcrumb_url": "dcim:module_consoleserverports",
+            **super().get_extra_context(request, instance),
+        }
 
 
 class ConsoleServerPortCreateView(generic.ComponentCreateView):
@@ -1613,7 +2901,11 @@ class PowerPortView(generic.ObjectView):
     queryset = PowerPort.objects.all()
 
     def get_extra_context(self, request, instance):
-        return {"breadcrumb_url": "dcim:device_powerports"}
+        return {
+            "device_breadcrumb_url": "dcim:device_powerports",
+            "module_breadcrumb_url": "dcim:module_powerports",
+            **super().get_extra_context(request, instance),
+        }
 
 
 class PowerPortCreateView(generic.ComponentCreateView):
@@ -1675,7 +2967,11 @@ class PowerOutletView(generic.ObjectView):
     queryset = PowerOutlet.objects.all()
 
     def get_extra_context(self, request, instance):
-        return {"breadcrumb_url": "dcim:device_poweroutlets"}
+        return {
+            "device_breadcrumb_url": "dcim:device_poweroutlets",
+            "module_breadcrumb_url": "dcim:module_poweroutlets",
+            **super().get_extra_context(request, instance),
+        }
 
 
 class PowerOutletCreateView(generic.ComponentCreateView):
@@ -1764,13 +3060,23 @@ class InterfaceView(generic.ObjectView):
         vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
 
         redundancy_table = self._get_interface_redundancy_groups_table(request, instance)
+        virtual_device_contexts_table = tables.VirtualDeviceContextTable(
+            instance.virtual_device_contexts.restrict(request.user, "view").select_related(
+                "device", "tenant", "primary_ip4", "primary_ip6"
+            ),
+            orderable=False,
+            exclude=("device",),
+        )
 
         return {
             "ipaddress_table": ipaddress_table,
             "vlan_table": vlan_table,
-            "breadcrumb_url": "dcim:device_interfaces",
+            "device_breadcrumb_url": "dcim:device_interfaces",
+            "module_breadcrumb_url": "dcim:module_interfaces",
             "child_interfaces_table": child_interfaces_tables,
             "redundancy_table": redundancy_table,
+            "virtual_device_contexts_table": virtual_device_contexts_table,
+            **super().get_extra_context(request, instance),
         }
 
     def _get_interface_redundancy_groups_table(self, request, instance):
@@ -1857,7 +3163,11 @@ class FrontPortView(generic.ObjectView):
     queryset = FrontPort.objects.all()
 
     def get_extra_context(self, request, instance):
-        return {"breadcrumb_url": "dcim:device_frontports"}
+        return {
+            "device_breadcrumb_url": "dcim:device_frontports",
+            "module_breadcrumb_url": "dcim:module_frontports",
+            **super().get_extra_context(request, instance),
+        }
 
 
 class FrontPortCreateView(generic.ComponentCreateView):
@@ -1919,7 +3229,11 @@ class RearPortView(generic.ObjectView):
     queryset = RearPort.objects.all()
 
     def get_extra_context(self, request, instance):
-        return {"breadcrumb_url": "dcim:device_rearports"}
+        return {
+            "device_breadcrumb_url": "dcim:device_rearports",
+            "module_breadcrumb_url": "dcim:module_rearports",
+            **super().get_extra_context(request, instance),
+        }
 
 
 class RearPortCreateView(generic.ComponentCreateView):
@@ -1981,7 +3295,7 @@ class DeviceBayView(generic.ObjectView):
     queryset = DeviceBay.objects.all()
 
     def get_extra_context(self, request, instance):
-        return {"breadcrumb_url": "dcim:device_devicebays"}
+        return {"device_breadcrumb_url": "dcim:device_devicebays", **super().get_extra_context(request, instance)}
 
 
 class DeviceBayCreateView(generic.ComponentCreateView):
@@ -2029,7 +3343,7 @@ class DeviceBayPopulateView(generic.ObjectEditView):
                 f"Added {device_bay.installed_device} to {device_bay}.",
             )
 
-            return redirect("dcim:device", pk=device_bay.device.pk)
+            return redirect("dcim:device_devicebays", pk=device_bay.device.pk)
 
         return render(
             request,
@@ -2072,7 +3386,7 @@ class DeviceBayDepopulateView(generic.ObjectEditView):
                 f"Removed {removed_device} from {device_bay}.",
             )
 
-            return redirect("dcim:device", pk=device_bay.device.pk)
+            return redirect("dcim:device_devicebays", pk=device_bay.device.pk)
 
         return render(
             request,
@@ -2108,6 +3422,43 @@ class DeviceBayBulkDeleteView(generic.BulkDeleteView):
 
 
 #
+# Module bays
+#
+
+
+class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
+    queryset = ModuleBay.objects.all()
+    filterset_class = filters.ModuleBayFilterSet
+    filterset_form_class = forms.ModuleBayFilterForm
+    bulk_update_form_class = forms.ModuleBayBulkEditForm
+    create_form_class = forms.ModuleBayCreateForm
+    form_class = forms.ModuleBayForm
+    model_form_class = forms.ModuleBayForm
+    serializer_class = serializers.ModuleBaySerializer
+    table_class = tables.ModuleBayTable
+    create_template_name = "dcim/modulebay_create.html"
+
+    def get_extra_context(self, request, instance):
+        if instance:
+            return {
+                "device_breadcrumb_url": "dcim:device_modulebays",
+                "module_breadcrumb_url": "dcim:module_modulebays",
+            }
+        return {}
+
+    def get_selected_objects_parents_name(self, selected_objects):
+        selected_object = selected_objects.first()
+        if selected_object:
+            parent = selected_object.parent_device or selected_object.parent_module
+            return parent.display
+        return ""
+
+    @action(detail=False, methods=["GET", "POST"], url_path="rename", url_name="bulk_rename")
+    def bulk_rename(self, request, *args, **kwargs):
+        return self._bulk_rename(request, *args, **kwargs)
+
+
+#
 # Inventory items
 #
 
@@ -2131,8 +3482,9 @@ class InventoryItemView(generic.ObjectView):
             software_version_images = []
 
         return {
-            "breadcrumb_url": "dcim:device_inventory",
+            "device_breadcrumb_url": "dcim:device_inventory",
             "software_version_images": software_version_images,
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -2269,6 +3621,17 @@ class DeviceBulkAddDeviceBayView(generic.BulkComponentCreateView):
     default_return_url = "dcim:device_list"
 
 
+class DeviceBulkAddModuleBayView(generic.BulkComponentCreateView):
+    parent_model = Device
+    parent_field = "parent_device"
+    form = forms.ModuleBayBulkCreateForm
+    queryset = ModuleBay.objects.all()
+    model_form = forms.ModuleBayForm
+    filterset = filters.DeviceFilterSet
+    table = tables.DeviceTable
+    default_return_url = "dcim:device_list"
+
+
 class DeviceBulkAddInventoryItemView(generic.BulkComponentCreateView):
     parent_model = Device
     parent_field = "device"
@@ -2340,6 +3703,7 @@ class PathTraceView(generic.ObjectView):
             "path": path,
             "related_paths": related_paths,
             "total_length": path.get_total_length() if path else None,
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -2538,7 +3902,7 @@ class InterfaceConnectionsListView(ConnectionsListView):
 
 
 class VirtualChassisListView(generic.ObjectListView):
-    queryset = VirtualChassis.objects.annotate(member_count=count_related(Device, "virtual_chassis"))
+    queryset = VirtualChassis.objects.all()
     table = tables.VirtualChassisTable
     filterset = filters.VirtualChassisFilterSet
     filterset_form = forms.VirtualChassisFilterForm
@@ -2550,9 +3914,7 @@ class VirtualChassisView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         members = Device.objects.restrict(request.user).filter(virtual_chassis=instance)
 
-        return {
-            "members": members,
-        }
+        return {"members": members, **super().get_extra_context(request, instance)}
 
 
 class VirtualChassisCreateView(generic.ObjectEditView):
@@ -2776,7 +4138,7 @@ class VirtualChassisBulkDeleteView(generic.BulkDeleteView):
 
 
 class PowerPanelListView(generic.ObjectListView):
-    queryset = PowerPanel.objects.annotate(power_feed_count=count_related(PowerFeed, "power_panel"))
+    queryset = PowerPanel.objects.all()
     filterset = filters.PowerPanelFilterSet
     filterset_form = forms.PowerPanelFilterForm
     table = tables.PowerPanelTable
@@ -2790,9 +4152,7 @@ class PowerPanelView(generic.ObjectView):
         powerfeed_table = tables.PowerFeedTable(data=power_feeds, orderable=False)
         powerfeed_table.exclude = ["power_panel"]
 
-        return {
-            "powerfeed_table": powerfeed_table,
-        }
+        return {"powerfeed_table": powerfeed_table, **super().get_extra_context(request, instance)}
 
 
 class PowerPanelEditView(generic.ObjectEditView):
@@ -2818,9 +4178,7 @@ class PowerPanelBulkEditView(generic.BulkEditView):
 
 
 class PowerPanelBulkDeleteView(generic.BulkDeleteView):
-    queryset = PowerPanel.objects.select_related("location", "rack_group").annotate(
-        power_feed_count=count_related(PowerFeed, "power_panel")
-    )
+    queryset = PowerPanel.objects.all()
     filterset = filters.PowerPanelFilterSet
     table = tables.PowerPanelTable
 
@@ -2874,11 +4232,7 @@ class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
     filterset_class = filters.DeviceRedundancyGroupFilterSet
     filterset_form_class = forms.DeviceRedundancyGroupFilterForm
     form_class = forms.DeviceRedundancyGroupForm
-    queryset = (
-        DeviceRedundancyGroup.objects.select_related("status")
-        .prefetch_related("devices")
-        .annotate(device_count=count_related(Device, "device_redundancy_group"))
-    )
+    queryset = DeviceRedundancyGroup.objects.all()
     serializer_class = serializers.DeviceRedundancyGroupSerializer
     table_class = tables.DeviceRedundancyGroupTable
 
@@ -2890,6 +4244,9 @@ class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
             devices_table = tables.DeviceTable(devices)
             devices_table.columns.show("device_redundancy_group_priority")
             context["devices_table"] = devices_table
+            controllers = instance.controllers_sorted.restrict(request.user)
+            controllers_table = tables.ControllerTable(controllers)
+            context["controllers_table"] = controllers_table
         return context
 
 
@@ -2900,11 +4257,7 @@ class InterfaceRedundancyGroupUIViewSet(NautobotUIViewSet):
     filterset_class = filters.InterfaceRedundancyGroupFilterSet
     filterset_form_class = forms.InterfaceRedundancyGroupFilterForm
     form_class = forms.InterfaceRedundancyGroupForm
-    queryset = InterfaceRedundancyGroup.objects.select_related("status")
-    queryset = queryset.prefetch_related("interfaces")
-    queryset = queryset.annotate(
-        interface_count=count_related(Interface, "interface_redundancy_groups"),
-    )
+    queryset = InterfaceRedundancyGroup.objects.all()
     serializer_class = serializers.InterfaceRedundancyGroupSerializer
     table_class = tables.InterfaceRedundancyGroupTable
     lookup_field = "pk"
@@ -2952,9 +4305,10 @@ class InterfaceRedundancyGroupAssociationUIViewSet(ObjectEditViewMixin, ObjectDe
 
 class DeviceFamilyUIViewSet(NautobotUIViewSet):
     filterset_class = filters.DeviceFamilyFilterSet
+    filterset_form_class = forms.DeviceFamilyFilterForm
     form_class = forms.DeviceFamilyForm
     bulk_update_form_class = forms.DeviceFamilyBulkEditForm
-    queryset = DeviceFamily.objects.annotate(device_type_count=count_related(DeviceType, "device_family"))
+    queryset = DeviceFamily.objects.all()
     serializer_class = serializers.DeviceFamilySerializer
     table_class = tables.DeviceFamilyTable
     lookup_field = "pk"
@@ -2980,9 +4334,12 @@ class DeviceFamilyUIViewSet(NautobotUIViewSet):
             context["device_type_table"] = device_type_table
 
             total_devices = 0
+            device_type_count = 0
             for device_type in device_types:
                 total_devices += device_type.device_count
+                device_type_count += 1
             context["total_devices"] = total_devices
+            context["device_type_count"] = device_type_count
 
         return context
 
@@ -2997,8 +4354,7 @@ class SoftwareImageFileUIViewSet(NautobotUIViewSet):
     filterset_form_class = forms.SoftwareImageFileFilterForm
     form_class = forms.SoftwareImageFileForm
     bulk_update_form_class = forms.SoftwareImageFileBulkEditForm
-    queryset = SoftwareImageFile.objects.annotate(device_type_count=count_related(DeviceType, "software_image_files"))
-
+    queryset = SoftwareImageFile.objects.all()
     serializer_class = serializers.SoftwareImageFileSerializer
     table_class = tables.SoftwareImageFileTable
 
@@ -3008,11 +4364,7 @@ class SoftwareVersionUIViewSet(NautobotUIViewSet):
     filterset_form_class = forms.SoftwareVersionFilterForm
     form_class = forms.SoftwareVersionForm
     bulk_update_form_class = forms.SoftwareVersionBulkEditForm
-    queryset = SoftwareVersion.objects.annotate(
-        software_image_file_count=count_related(SoftwareImageFile, "software_version"),
-        device_count=count_related(Device, "software_version"),
-        inventory_item_count=count_related(InventoryItem, "software_version"),
-    )
+    queryset = SoftwareVersion.objects.all()
     serializer_class = serializers.SoftwareVersionSerializer
     table_class = tables.SoftwareVersionTable
 
@@ -3038,6 +4390,9 @@ class ControllerUIViewSet(NautobotUIViewSet):
         if self.action == "retrieve" and instance:
             devices = Device.objects.restrict(request.user).filter(controller_managed_device_group__controller=instance)
             devices_table = tables.DeviceTable(devices)
+            devices_table.columns.show("controller_managed_device_group")
+            devices_table.columns.show("capabilities")
+            devices_table.sequence = ("name", "controller_managed_device_group", "capabilities", "...")
 
             paginate = {
                 "paginator_class": EnhancedPaginator,
@@ -3049,17 +4404,42 @@ class ControllerUIViewSet(NautobotUIViewSet):
 
         return context
 
+    @action(detail=True, url_path="wireless-networks", url_name="wirelessnetworks", methods=["get"])
+    def wirelessnetworks(self, request, *args, **kwargs):
+        instance = self.get_object()
+        controller_managed_device_groups = instance.controller_managed_device_groups.restrict(
+            request.user, "view"
+        ).values_list("pk", flat=True)
+        wireless_networks = ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
+            controller_managed_device_group__in=list(controller_managed_device_groups)
+        ).select_related("wireless_network")
+        wireless_networks_table = ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
+            data=wireless_networks, user=request.user, orderable=False
+        )
+        wireless_networks_table.columns.hide("controller")
+
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(wireless_networks_table)
+
+        return Response(
+            {
+                "wireless_networks_table": wireless_networks_table,
+                "active_tab": "wireless-networks",
+            }
+        )
+
+    def get_action(self):
+        "Treat Wireless Networks as the same detail view for permission purposes."
+        return "view" if self.action == "wirelessnetworks" else super().get_action()
+
 
 class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
     filterset_class = filters.ControllerManagedDeviceGroupFilterSet
     filterset_form_class = forms.ControllerManagedDeviceGroupFilterForm
     form_class = forms.ControllerManagedDeviceGroupForm
     bulk_update_form_class = forms.ControllerManagedDeviceGroupBulkEditForm
-    queryset = (
-        ControllerManagedDeviceGroup.objects.all()
-        .prefetch_related("devices")
-        .annotate(device_count=count_related(Device, "controller_managed_device_group"))
-    )
+    queryset = ControllerManagedDeviceGroup.objects.all()
     serializer_class = serializers.ControllerManagedDeviceGroupSerializer
     table_class = tables.ControllerManagedDeviceGroupTable
     template_name = "dcim/controllermanageddevicegroup_create.html"
@@ -3079,4 +4459,69 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
 
             context["devices_table"] = devices_table
 
+            # Wireless Networks
+            wireless_networks = instance.wireless_network_assignments.restrict(request.user, "view")
+            wireless_networks_table = ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(wireless_networks)
+            wireless_networks_table.columns.hide("controller_managed_device_group")
+            wireless_networks_table.columns.hide("controller")
+            RequestConfig(
+                request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+            ).configure(wireless_networks_table)
+            context["wireless_networks_table"] = wireless_networks_table
+            context["wireless_networks_count"] = wireless_networks.count()
+
+            # Radio Profiles
+            radio_profiles = instance.radio_profiles.restrict(request.user, "view")
+            radio_profiles_table = RadioProfileTable(radio_profiles)
+            RequestConfig(
+                request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+            ).configure(radio_profiles_table)
+            context["radio_profiles_table"] = radio_profiles_table
+            context["radio_profiles_count"] = radio_profiles.count()
+
+        if self.action in ["create", "update"]:
+            context["wireless_networks"] = ControllerManagedDeviceGroupWirelessNetworkFormSet(
+                instance=instance,
+                data=request.POST if request.method == "POST" else None,
+            )
+
         return context
+
+    def form_save(self, form, **kwargs):
+        obj = super().form_save(form, **kwargs)
+
+        ctx = self.get_extra_context(self.request, obj)
+        wireless_networks = ctx.get("wireless_networks")
+        if wireless_networks.is_valid():
+            wireless_networks.save()
+        else:
+            raise ValidationError(wireless_networks.errors)
+
+        return obj
+
+
+#
+# Virtual Device Context
+#
+
+
+class VirtualDeviceContextUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.VirtualDeviceContextFilterSet
+    filterset_form_class = forms.VirtualDeviceContextFilterForm
+    form_class = forms.VirtualDeviceContextForm
+    bulk_update_form_class = forms.VirtualDeviceContextBulkEditForm
+    queryset = VirtualDeviceContext.objects.all()
+    serializer_class = serializers.VirtualDeviceContextSerializer
+    table_class = tables.VirtualDeviceContextTable
+
+    def get_extra_context(self, request, instance):
+        if self.action == "retrieve":
+            interfaces_table = tables.InterfaceTable(
+                instance.interfaces.restrict(request.user, "view"), orderable=False, exclude=("device",)
+            )
+
+            return {
+                "interfaces_table": interfaces_table,
+                **super().get_extra_context(request, instance),
+            }
+        return super().get_extra_context(request, instance)

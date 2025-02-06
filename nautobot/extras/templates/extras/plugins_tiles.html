@@ -1,0 +1,90 @@
+{% load helpers %}
+{% load static %}
+
+{% block extra_styles %}
+<style>
+    .tile-header {
+        align-items: flex-start;
+        display: block;
+    }
+
+    .tile-header h2 {
+        margin-bottom: 5px;
+        margin-top: 0;
+    }
+
+    .tile-actions-placeholder {
+        height: 30px;
+        margin-left: 3px;
+    }
+
+    .tile-description {
+        margin-top: 10px;
+        min-height: 72px;  /* allow room for three rows of text */
+    }
+
+    .tile-actions {
+        position: absolute;
+        right: 21px;
+        top: 21px;
+    }
+
+    .tile-actions .btn {
+        padding: 3px 8px;  /* Enlarge action buttons to 32px x 32px */
+    }
+</style>
+{% endblock %}
+
+<section class="tiles">
+    {% for row in table.page.object_list|default:table.rows %}
+        <div style="position: relative;">
+            <a class="tile clickable" href="{% url 'apps:app_detail' app=row.record.app_label %}">
+                <header class="tile-header">
+                    <img
+                        alt="{{ row.record.name }}"
+                        src="{% if app_icons|get_item:row.record.package != None %}{{ app_icons|get_item:row.record.package }}{% else %}{% static 'img/nautobot_icon_192x192.png' %}{% endif %}"
+                        height="64"
+                        width="64"
+                    />
+
+                    <!--
+                       Occupy `.tile-actions` dedicated space with `.tile-actions-placeholder`. See comment above
+                       `.tile-actions` element for detailed explanation of this solution and why it is required here.
+                    -->
+                    {% with actions_count=3 %}
+                        <div
+                            aria-hidden="true"
+                            class="tile-actions-placeholder pull-right"
+                            style="width: calc(32px * {{ actions_count }} + 3px * {{ actions_count|add:-1 }})">
+                        </div>
+                    {% endwith %}
+
+                    <h2>{{ row.record.name }}</h2>
+                </header>
+
+                <p class="tile-description">{{ row.record.headline }}</p>
+
+                <footer class="tile-footer">
+                    <div>By: {{ row.record.author }}</div>
+                    <div>
+                        <label class="label label-transparent">{{ row.record.availability }}</label>
+                        v{{ row.record.version }}
+                    </div>
+                </footer>
+            </a>
+
+            <!--
+                Place app action links outside the "main" `a` tile to adhere to HTML rule that forbid nesting anchors
+                within anchors. Absolutely position the actions to make them appear inside the tile though. Fill their
+                dedicated space with `.tile-actions-placeholder` element.
+            -->
+            <div class="tile-actions">
+                {% for column, cell in row.items %}
+                    {% if column.verbose_name == "" %}
+                        {{ cell }}
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    {% endfor %}
+</section>

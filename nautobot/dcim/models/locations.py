@@ -283,7 +283,7 @@ class Location(TreeModel, PrimaryModel):
             # We shouldn't have a parent, *unless* our own location type is permitted to be nested.
             if self.parent is not None:
                 if self.location_type.nestable:
-                    if self.parent.location_type != self.location_type:
+                    if self.parent.location_type != self.location_type:  # pylint: disable=no-member
                         raise ValidationError(
                             {
                                 "parent": f"A Location of type {self.location_type} may only have "
@@ -304,7 +304,7 @@ class Location(TreeModel, PrimaryModel):
 
             # Is the parent location of a correct type?
             if self.location_type.nestable:
-                if self.parent.location_type not in (self.location_type, self.location_type.parent):
+                if self.parent.location_type not in (self.location_type, self.location_type.parent):  # pylint: disable=no-member
                     raise ValidationError(
                         {
                             "parent": f"A Location of type {self.location_type} can only have a Location "
@@ -312,7 +312,7 @@ class Location(TreeModel, PrimaryModel):
                         }
                     )
             else:
-                if self.parent.location_type != self.location_type.parent:
+                if self.parent.location_type != self.location_type.parent:  # pylint: disable=no-member
                     raise ValidationError(
                         {
                             "parent": f"A Location of type {self.location_type} can only have a Location "

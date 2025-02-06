@@ -1,4 +1,4 @@
-{% extends 'generic/object_detail.html' %}
+{% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
 {% load static %}
 
@@ -52,15 +52,7 @@
                         {% endif %}
                     </td>
                 </tr>
-                <tr>
-                    <td>Tenant</td>
-                    <td>
-                        {% if object.tenant and object.tenant.tenant_group %}
-                            {{ object.tenant.tenant_group|hyperlinked_object }} /
-                        {% endif %}
-                        {{ object.tenant|hyperlinked_object }}
-                    </td>
-                </tr>
+                {% include 'inc/tenant_table_row.html' %}
                 <tr>
                     <td>Primary IPv4</td>
                     <td>
@@ -215,7 +207,7 @@
                     <strong>Interfaces</strong>
                     <div class="pull-right noprint">
                         {% if request.user.is_authenticated %}
-                            <button type="button" class="btn btn-default btn-xs" data-toggle="modal" data-target="#VirtualMachineVMInterfaceTable_config" title="Configure table"><i class="mdi mdi-cog"></i> Configure</button>
+                            {% table_config_button_small vminterface_table %}
                         {% endif %}
                     </div>
                     <div class="pull-right col-md-2 noprint">

@@ -1,5 +1,20 @@
 # REST API Filtering
 
+## Filtering Included Fields
+
+Certain REST API fields can be expensive to look up or render, so Nautobot provides some capabilities to specify via query parameters whether to include or exclude such fields. Specifically, at this time, the following capabilities exist:
+
+- `?include=config_context` - Device and Virtual Machine APIs only. Rendered [configuration context data](../../core-data-model/extras/configcontext.md) is not included by default, but can be added to these API responses by specifying this query parameter.
+- `?include=relationships` - Any object supporting [Relationships](../relationship.md). Relationship data is not included by default, but can be added by specifying this query parameter.
+- `?include=computed_fields` - Any object supporting [Computed Fields](../computedfield.md). Computed field values are not included by default, but can be added by specifying this query parameter.
+- `?exclude_m2m=true` - Any object with many-to-many relations to another type of object. These related objects are included by default, but can be excluded (in many cases improving the REST API performance) by specifying this query parameter.
+
++++ 1.4.0 "Added `include=relationships` and `include=computed_fields` support"
+
++/- 2.0.0 "Changed config contexts to excluded by default, added `include=config_context` support"
+
++++ 2.4.0 "Added `exclude_m2m` support"
+
 ## Filtering Objects
 
 The objects returned by an API list endpoint can be filtered by attaching one or more query parameters to the request URL. For example, `GET /api/dcim/locations/?status=active` will return only locations with a status of "active."
@@ -8,8 +23,8 @@ Multiple parameters can be joined to further narrow results. For example, `GET /
 
 Generally, passing multiple values for a single parameter will result in a logical OR operation. For example, `GET /api/dcim/locations/?parent=north-america&parent=south-america&location_type=country` will return "country" type locations in North America _or_ South America. However, a logical AND operation will be used in instances where a field may have multiple values, such as tags. For example, `GET /api/dcim/locations/?tag=foo&tag=bar` will return only locations which have both the "foo" _and_ "bar" tags applied.
 
-+/- 1.4.0
-    If [STRICT_FILTERING](../../administration/configuration/optional-settings.md#strict_filtering) is True (its default value), unrecognized filter parameters now result in a 400 Bad Request response instead of being silently ignored.
++/- 1.4.0 "`STRICT_FILTERING` by default"
+    If [`STRICT_FILTERING`](../../administration/configuration/settings.md#strict_filtering) is True (its default value), unrecognized filter parameters now result in a 400 Bad Request response instead of being silently ignored.
 
 ### Filtering by Choice Field
 
@@ -65,11 +80,11 @@ GET /api/dcim/locations/?cf_foo=123
 
 Custom fields can be mixed with built-in fields to further narrow results. When creating a custom string field, the type of filtering selected (loose versus exact) determines whether partial or full matching is used.
 
-+++ 1.4.0
-    Custom fields can use the lookup expressions listed in the next section by prepending `cf_` to the custom field `name` (not the `slug`) followed by the required lookup type (see below).
++++ 1.4.0 "Custom field support for lookup expressions"
+    Custom fields can now use the [lookup expressions](#lookup-expressions) listed in the next section.
 
-+/- 2.0.0
-    Custom field filters are now based on the custom field `key` string.
++/- 2.0.0 "Custom field filters changed from `name` to `key` based"
+    Custom field filters are now based on the custom field `key` string (in 1.x they used the field's `name`).
 
 ## Lookup Expressions
 
@@ -94,9 +109,9 @@ Numeric-based fields (ASN, VLAN ID, etc.) as well as date/time fields (`created`
 - `__lte` - less than or equal
 - `__gt` - greater than
 - `__gte` - greater than or equal
+- `__isnull` - is null (only if this field is nullable, which most numeric fields in Nautobot are not)
 
-+++ 2.1.0
-    - `__isnull` - as above, only if this field is nullable (most numeric fields in Nautobot are not)
++++ 2.1.0 "Added `__isnull` support"
 
 ### String Fields
 
@@ -111,24 +126,24 @@ String-based (char) fields (Name, Address, etc.) support these lookup expression
 - `__niew` - negated case-insensitive ends-with
 - `__ie` - case-insensitive exact match
 - `__nie` - negated case-insensitive exact match
+- `__re` - case-sensitive regular expression match
+- `__nre` - negated case-sensitive regular expression match
+- `__ire` - case-insensitive regular expression match
+- `__nire` - negated case-insensitive regular expression match
+- `__isnull` - is null (only if this field is nullable, which most string fields in Nautobot are not)
 
-+++ 1.3.0
-    - `__re` - case-sensitive regular expression match
-    - `__nre` - negated case-sensitive regular expression match
-    - `__ire` - case-insensitive regular expression match
-    - `__nire` - negated case-insensitive regular expression match
++++ 1.3.0 "Added regular expression lookup expressions"
 
-+++ 2.1.0
-    - `__isnull` - as above, only if this field is nullable (most string fields in Nautobot are not)
++++ 2.1.0 "Added `__isnull` lookup expression"
 
 ### Foreign Keys & Other Fields
 
 Certain other fields, namely foreign key relationships support the lookup expression:
 
 - `__n` - not equal to (negation)
+- `__isnull` - is null, only if this field is nullable
 
-+++ 2.1.0
-    - `__isnull` - as above, only if this field is nullable
++++ 2.1.0 "Added `__isnull` lookup expression"
 
 ### Network and Host Fields
 

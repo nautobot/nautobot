@@ -3,6 +3,7 @@ from io import BytesIO, StringIO
 import json
 import os
 from unittest import skip
+import uuid
 
 from constance import config
 from constance.test import override_config
@@ -14,21 +15,24 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.exceptions import ParseError
 from rest_framework.settings import api_settings
+from rest_framework.test import APIRequestFactory, force_authenticate
 import yaml
 
 from nautobot.circuits.models import Provider
 from nautobot.core import testing
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
-from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.api.utils import get_serializer_for_model, get_view_name
 from nautobot.core.api.versioning import NautobotAPIVersioning
+from nautobot.core.api.views import ModelViewSet
 from nautobot.core.constants import COMPOSITE_KEY_SEPARATOR
+from nautobot.core.templatetags.helpers import humanize_speed
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim import models as dcim_models
 from nautobot.dcim.api import serializers as dcim_serializers
 from nautobot.extras import choices, models as extras_models
-from nautobot.ipam import models as ipam_models
-from nautobot.ipam.api import serializers as ipam_serializers
+from nautobot.ipam import filters as ipam_filters, models as ipam_models
+from nautobot.ipam.api import serializers as ipam_serializers, views as ipam_api_views
 from nautobot.tenancy import models as tenancy_models
 
 User = get_user_model()
@@ -380,6 +384,7 @@ class GenerateLookupValueDomElementViewTestCase(testing.APITestCase):
             (
                 '<select name="role" class="form-control nautobot-select2-api" data-multiple="1" '
                 'data-query-param-content_types="[&quot;dcim.device&quot;, &quot;virtualization.virtualmachine&quot;]" '
+                'data-query-param-exclude_m2m="[&quot;true&quot;]" '
                 'display-field="display" value-field="name" data-depth="0" data-url="/api/extras/roles/" id="id_for_role" '
                 "multiple>\n</select>"
             ),
@@ -515,71 +520,78 @@ class NautobotCSVRendererTest(TestCase):
         self.assertEqual(read_data["parent__name"], location_type.parent.name)
 
 
-class BaseModelSerializerTest(TestCase):
-    """
-    Some unit tests for BaseModelSerializer (using concrete subclasses, since BaseModelSerializer is abstract).
-    """
+class ModelViewSetMixinTest(testing.APITestCase):
+    """Unit tests for ModelViewSetMixin, base class for ModelViewSet/ReadOnlyModelViewSet classes."""
 
-    def test_advanced_tab_fields(self):
-        """Test the advanced_tab_fields classproperty."""
-        self.assertEqual(
-            dcim_serializers.DeviceSerializer().advanced_tab_fields,
-            ["id", "url", "object_type", "created", "last_updated", "natural_slug"],
+    class SimpleIPAddressViewSet(ModelViewSet):
+        queryset = ipam_models.IPAddress.objects.all()  # no explicit optimizations
+        serializer_class = ipam_serializers.IPAddressSerializer
+        filterset_class = ipam_filters.IPAddressFilterSet
+
+    def test_get_queryset_optimizations(self):
+        """Test that the queryset is appropriately optimized based on request parameters."""
+        self.user.is_superuser = True
+        self.user.save()
+
+        # Default behavior - m2m fields included
+        view = self.SimpleIPAddressViewSet()
+        view.action_map = {"get": "list"}
+        request = APIRequestFactory().get(reverse("ipam-api:ipaddress-list"), headers=self.header)
+        force_authenticate(request, user=self.user)
+        request = view.initialize_request(request)
+        view.setup(request)
+        view.initial(request)
+
+        queryset = view.get_queryset()
+        with self.assertNumQueries(5):  # IPAddress plus four prefetches
+            instance = queryset.first()
+        # FK related objects should have been auto-selected
+        with self.assertNumQueries(0):
+            instance.status
+            instance.role
+            instance.parent
+            instance.tenant
+            instance.nat_inside
+        # Reverse relations should have been auto-prefetched
+        with self.assertNumQueries(0):
+            list(instance.nat_outside_list.all())
+        # Many-to-many relations should have been auto-prefetched
+        with self.assertNumQueries(0):
+            list(instance.interfaces.all())
+            list(instance.vm_interfaces.all())
+            list(instance.tags.all())
+
+        # With exclude_m2m query parameter
+        view = self.SimpleIPAddressViewSet()
+        view.action_map = {"get": "list"}
+        request = APIRequestFactory().get(
+            reverse("ipam-api:ipaddress-list"), headers=self.header, data={"exclude_m2m": True}
         )
+        force_authenticate(request, user=self.user)
+        request = view.initialize_request(request)
+        view.setup(request)
+        view.initial(request)
 
-    def test_list_display_fields(self):
-        """Test the list_display_fields classproperty."""
-        self.assertEqual(
-            dcim_serializers.DeviceSerializer().list_display_fields,
-            dcim_serializers.DeviceSerializer().Meta.list_display_fields,
-        )
-
-    def test_determine_view_options(self):
-        """Test the determine_view_options API."""
-        view_options = dcim_serializers.DeviceSerializer().determine_view_options()
-        self.maxDiff = None
-
-        # assert base structure rather than exhaustively testing every single field
-
-        self.assertIn("list", view_options)
-
-        self.assertIn("all_fields", view_options["list"])
-        self.assertIn({"dataIndex": "name", "key": "name", "title": "Name"}, view_options["list"]["all_fields"])
-        self.assertIn(
-            {"dataIndex": "parent_bay", "key": "parent_bay", "title": "Parent bay"}, view_options["list"]["all_fields"]
-        )
-
-        self.assertIn("default_fields", view_options["list"])
-        self.assertIn({"dataIndex": "name", "key": "name", "title": "Name"}, view_options["list"]["default_fields"])
-        self.assertNotIn(
-            {"dataIndex": "parent_bay", "key": "parent_bay", "title": "Parent bay"},
-            view_options["list"]["default_fields"],
-        )
-
-        self.assertIn("retrieve", view_options)
-        self.assertIn("tabs", view_options["retrieve"])
-
-        self.assertIn("Advanced", view_options["retrieve"]["tabs"])
-        self.assertIn("Object Details", view_options["retrieve"]["tabs"]["Advanced"][0])
-        self.assertIn("fields", view_options["retrieve"]["tabs"]["Advanced"][0]["Object Details"])
-        self.assertIn("id", view_options["retrieve"]["tabs"]["Advanced"][0]["Object Details"]["fields"])
-
-        self.assertIn("Device", view_options["retrieve"]["tabs"])
-        self.assertIn("Device", view_options["retrieve"]["tabs"]["Device"][0])
-        self.assertIn("fields", view_options["retrieve"]["tabs"]["Device"][0]["Device"])
-        self.assertIn("location", view_options["retrieve"]["tabs"]["Device"][0]["Device"]["fields"])
-
-        self.assertIn("Tags", view_options["retrieve"]["tabs"]["Device"][1])
-        self.assertIn("fields", view_options["retrieve"]["tabs"]["Device"][1]["Tags"])
-        self.assertIn("tags", view_options["retrieve"]["tabs"]["Device"][1]["Tags"]["fields"])
-
-        # Custom tab added through DeviceSerializer.get_additional_detail_view_tabs()
-        self.assertIn("Virtual Chassis", view_options["retrieve"]["tabs"])
-        self.assertIn("Virtual Chassis", view_options["retrieve"]["tabs"]["Virtual Chassis"][0])
-        self.assertIn("fields", view_options["retrieve"]["tabs"]["Virtual Chassis"][0]["Virtual Chassis"])
-        self.assertIn(
-            "virtual_chassis", view_options["retrieve"]["tabs"]["Virtual Chassis"][0]["Virtual Chassis"]["fields"]
-        )
+        queryset = view.get_queryset()
+        with self.assertNumQueries(1):  # IPAddress only, no prefetches
+            instance = queryset.first()
+        # FK related objects should still have been auto-selected
+        with self.assertNumQueries(0):
+            instance.status
+            instance.role
+            instance.parent
+            instance.tenant
+            instance.nat_inside
+        # Reverse relations should NOT have been auto-prefetched
+        with self.assertNumQueries(1):
+            list(instance.nat_outside_list.all())
+        # Many-to-many relations should NOT have been auto-prefetched
+        with self.assertNumQueries(1):
+            list(instance.interfaces.all())
+        with self.assertNumQueries(1):
+            list(instance.vm_interfaces.all())
+        with self.assertNumQueries(1):
+            list(instance.tags.all())
 
 
 class WritableNestedSerializerTest(testing.APITestCase):
@@ -754,6 +766,25 @@ class WritableNestedSerializerTest(testing.APITestCase):
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
 
+    def test_create_with_specified_id(self):
+        data = {
+            "id": str(uuid.uuid4()),
+            "vid": 400,
+            "name": "Test VLAN 400",
+            "status": self.statuses.first().pk,
+            "vlan_group": self.vlan_group1.pk,
+        }
+        url = reverse("ipam-api:vlan-list")
+        self.add_permissions("ipam.add_vlan")
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(str(response.data["vlan_group"]["url"]), self.absolute_api_url(self.vlan_group1))
+        self.assertEqual(str(response.data["id"]), data["id"])
+        vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
+        self.assertEqual(vlan.status, self.statuses.first())
+        self.assertEqual(vlan.vlan_group, self.vlan_group1)
+
 
 class APIOrderingTestCase(testing.APITestCase):
     """
@@ -886,114 +917,103 @@ class SettingsJSONSchemaViewTestCase(testing.APITestCase):
         self.assertEqual(response.data, expected_schema_data)
 
 
-class NewUIGetMenuAPIViewTestCase(testing.APITestCase):
-    def test_get_menu(self):
-        """Asset response from new ui nav menu api returns a well formatted registry["new_ui_nav_menu"] expected by nautobot-ui."""
-        self.user.is_superuser = True
-        self.user.save()
+class NautobotGetViewNameTest(TestCase):
+    """
+    Some unit tests for the get_view_name() functionality.
+    """
 
-        url = reverse("ui-api:get-menu")
-        response = self.client.get(url, **self.header)
-        expected_response = {
-            "Inventory": {
-                "Devices": {
-                    "Devices": "/dcim/devices/",
-                    "Device Types": "/dcim/device-types/",
-                    "Platforms": "/dcim/platforms/",
-                    "Manufacturers": "/dcim/manufacturers/",
-                    "Virtual Chassis": "/dcim/virtual-chassis/",
-                    "Device Redundancy Groups": "/dcim/device-redundancy-groups/",
-                    "Connections": {
-                        "Cables": "/dcim/cables/",
-                        "Console Connections": "/dcim/console-connections/",
-                        "Power Connections": "/dcim/power-connections/",
-                        "Interface Connections": "/dcim/interface-connections/",
-                    },
-                    "Components": {
-                        "Interfaces": "/dcim/interfaces/",
-                        "Front Ports": "/dcim/front-ports/",
-                        "Rear Ports": "/dcim/rear-ports/",
-                        "Console Ports": "/dcim/console-ports/",
-                        "Console Server Ports": "/dcim/console-server-ports/",
-                        "Power Ports": "/dcim/power-ports/",
-                        "Power Outlets": "/dcim/power-outlets/",
-                        "Device Bays": "/dcim/device-bays/",
-                        "Inventory Items": "/dcim/inventory-items/",
-                    },
-                    "Dynamic Groups": "/extras/dynamic-groups/",
-                    "Racks": "/dcim/racks/",
-                    "Rack Groups": "/dcim/rack-groups/",
-                    "Rack Reservations": "/dcim/rack-reservations/",
-                    "Rack Elevations": "/dcim/rack-elevations/",
-                },
-                "Organization": {"Locations": "/dcim/locations/", "Location Types": "/dcim/location-types/"},
-                "Tenancy": {"Tenants": "/tenancy/tenants/", "Tenant Groups": "/tenancy/tenant-groups/"},
-                "Circuits": {
-                    "Circuits": "/circuits/circuits/",
-                    "Circuit Terminations": "/circuits/circuit-terminations/",
-                    "Circuit Types": "/circuits/circuit-types/",
-                    "Providers": "/circuits/providers/",
-                    "Provider Networks": "/circuits/provider-networks/",
-                },
-                "Power": {"Power Feeds": "/dcim/power-feeds/", "Power Panels": "/dcim/power-panels/"},
-                "Virtualization": {
-                    "Virtual Machines": "/virtualization/virtual-machines/",
-                    "VM Interfaces": "/virtualization/interfaces/",
-                    "Clusters": "/virtualization/clusters/",
-                    "Cluster Types": "/virtualization/cluster-types/",
-                    "Cluster Groups": "/virtualization/cluster-groups/",
-                },
-            },
-            "Networks": {
-                "IP Management": {
-                    "IP Addresses": "/ipam/ip-addresses/",
-                    "Prefixes": "/ipam/prefixes/",
-                    "RIRs": "/ipam/rirs/",
-                },
-                "Layer 2 / Switching": {"VLANs": "/ipam/vlans/", "VLAN Groups": "/ipam/vlan-groups/"},
-                "Layer 3 / Routing": {
-                    "Namespaces": "/ipam/namespaces/",
-                    "VRFs": "/ipam/vrfs/",
-                    "Route Targets": "/ipam/route-targets/",
-                },
-                "Services": {"Services": "/ipam/services/"},
-                "Config Contexts": {
-                    "Config Contexts": "/extras/config-contexts/",
-                    "Config Context Schemas": "/extras/config-context-schemas/",
-                },
-            },
-            "Security": {"Secrets": {"Secrets": "/extras/secrets/", "Secret Groups": "/extras/secrets-groups/"}},
-            "Automation": {
-                "Jobs": {
-                    "Jobs": "/extras/jobs/",
-                    "Job Approval Queue": "/extras/jobs/scheduled-jobs/approval-queue/",
-                    "Scheduled Jobs": "/extras/jobs/scheduled-jobs/",
-                    "Job Results": "/extras/job-results/",
-                    "Job Hooks": "/extras/job-hooks/",
-                    "Job Buttons": "/extras/job-buttons/",
-                },
-                "Extensibility": {
-                    "Webhooks": "/extras/webhooks/",
-                    "GraphQL Queries": "/extras/graphql-queries/",
-                    "Export Templates": "/extras/export-templates/",
-                },
-            },
-            "Platform": {
-                "Platform": {
-                    "Installed Apps": "/apps/installed-apps/",
-                    "Git Repositories": "/extras/git-repositories/",
-                },
-                "Governance": {"Change Log": "/extras/object-changes/"},
-                "Reference Data": {"Tags": "/extras/tags/", "Statuses": "/extras/statuses/", "Roles": "/extras/roles/"},
-                "Data Management": {
-                    "Relationships": "/extras/relationships/",
-                    "Computed Fields": "/extras/computed-fields/",
-                    "Custom Fields": "/extras/custom-fields/",
-                    "Custom Links": "/extras/custom-links/",
-                    "Notes": "/extras/notes/",
-                },
-            },
+    @override_settings(ALLOWED_HOSTS=["*"])
+    def test_get(self):
+        """Assert that the proper view name is displayed for the correct view."""
+        viewset = ipam_api_views.PrefixViewSet
+        # We need to get a specific view, so we need to set the class kwargs
+        view_kwargs = {
+            "Prefixes": {"suffix": "List", "basename": "prefix", "detail": False},
+            "Prefix": {"suffix": "Instance", "basename": "prefix", "detail": True},
+            "Available IPs": {"name": "Available IPs"},
+            "Available Prefixes": {"name": "Available Prefixes"},
+            "Notes": {"name": "Notes"},
         }
+        for view_name, view_kwarg in view_kwargs.items():
+            self.assertEqual(view_name, get_view_name(viewset(**view_kwarg)))
 
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, expected_response)
+
+class RenderJinjaViewTest(testing.APITestCase):
+    """Test case for the RenderJinjaView API view."""
+
+    def test_render_jinja_template(self):
+        """
+        Test rendering a valid Jinja template.
+        """
+        interfaces = ["Ethernet1/1", "Ethernet1/2", "Ethernet1/3"]
+
+        template_code = "\n".join(
+            [
+                r"{% for int in interfaces -%}",
+                r"interface {{ int }}",
+                r"  speed {{ 1000000000|humanize_speed }}",
+                r"  duplex full",
+                r"{% endfor %}",
+            ]
+        )
+
+        expected_response = "\n".join(
+            [
+                "\n".join(
+                    [
+                        f"interface {int}",
+                        f"  speed {humanize_speed(1000000000)}",
+                        r"  duplex full",
+                    ]
+                )
+                for int in interfaces
+            ]
+            + [""]  # Add an extra newline at the end because jinja whitespace control is "fun"
+        )
+
+        response = self.client.post(
+            reverse("core-api:render_jinja_template"),
+            {
+                "template_code": template_code,
+                "context": {"interfaces": interfaces},
+            },
+            format="json",
+            **self.header,
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertSequenceEqual(
+            list(response.data.keys()),
+            ["rendered_template", "rendered_template_lines", "template_code", "context"],
+        )
+        self.assertEqual(response.data["rendered_template"], expected_response)
+        self.assertEqual(response.data["rendered_template_lines"], expected_response.split("\n"))
+
+    def test_render_jinja_template_failures(self):
+        """
+        Test rendering invalid Jinja templates.
+        """
+        test_data = [
+            {
+                "template_code": r"{% hello world %}",
+                "error_msg": "Encountered unknown tag 'hello'.",
+            },
+            {
+                "template_code": r"{{ hello world %}",
+                "error_msg": "expected token 'end of print statement', got 'world'",
+            },
+        ]
+
+        for data in test_data:
+            with self.subTest(data):
+                response = self.client.post(
+                    reverse("core-api:render_jinja_template"),
+                    {
+                        "template_code": data["template_code"],
+                        "context": {"foo": "bar"},
+                    },
+                    format="json",
+                    **self.header,
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertSequenceEqual(list(response.data.keys()), ["detail"])
+                self.assertEqual(response.data["detail"], f"Failed to render Jinja template: {data['error_msg']}")

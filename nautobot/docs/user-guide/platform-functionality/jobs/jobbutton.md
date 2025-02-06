@@ -14,13 +14,14 @@ The buttons appear at the top right corner of an object's individual detail page
 * **Object type(s)** - The type or types of Nautobot object that the button will be associated to.
 * **Text** - The text that will be displayed on the button.
 * **Job** - The [Job Button Receiver](../../../development/jobs/index.md#job-button-receivers) that this button will run.
+* **Enabled** - Whether this Job Button will appear in relevant UI. A Job Button may be disabled if, for example, the underlying Job Button Receiver is uninstalled or temporarily disabled.
 * **Weight** - The number used for determining the order the buttons will appear.
 * **Group** - The name of the dropdown group to add this button into (optional).
 * **Button Class** - The button CSS class, which dictates the color.
 * **Confirmation** - Should the button pop up a confirmation dialog before running.
 
-!!! warning
-    As you can see, there is no `commit` option for a Job Button like there is for a normal Job. All Job Buttons will run with `commit=True` **implicitly**.
++++ 2.2.6
+    The `enabled` field was added to Job Buttons to allow them to be temporarily disabled.
 
 ![Job Button Form](../../../media/models/jobbutton_form.png "Job Button Form")
 

@@ -57,10 +57,10 @@ def register_secrets_provider(provider):
 
 
 __all__ = (
-    "register_secrets_provider",
     "SecretError",
     "SecretParametersError",
     "SecretProviderError",
-    "SecretsProvider",
     "SecretValueNotFoundError",
+    "SecretsProvider",
+    "register_secrets_provider",
 )

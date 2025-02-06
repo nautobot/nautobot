@@ -1,3 +1,4 @@
+import datetime
 import os
 import os.path
 import platform
@@ -10,7 +11,11 @@ import django.forms
 from django.utils.safestring import mark_safe
 
 from nautobot import __version__
-from nautobot.core.constants import CONFIG_SETTING_SEPARATOR as _CONFIG_SETTING_SEPARATOR
+from nautobot.core.constants import (
+    CONFIG_SETTING_SEPARATOR as _CONFIG_SETTING_SEPARATOR,
+    MAX_PAGE_SIZE_DEFAULT as _MAX_PAGE_SIZE_DEFAULT,
+    PAGINATE_COUNT_DEFAULT as _PAGINATE_COUNT_DEFAULT,
+)
 from nautobot.core.settings_funcs import ConstanceConfigItem, is_truthy, parse_redis_connection
 
 #
@@ -69,7 +74,7 @@ ALLOWED_URL_SCHEMES = [
     "xmpp",
 ]
 
-# Banners to display to users. HTML is allowed.
+# Banners to display to users. Markdown and limited HTML are allowed.
 if "NAUTOBOT_BANNER_BOTTOM" in os.environ and os.environ["NAUTOBOT_BANNER_BOTTOM"] != "":
     BANNER_BOTTOM = os.environ["NAUTOBOT_BANNER_BOTTOM"]
 if "NAUTOBOT_BANNER_LOGIN" in os.environ and os.environ["NAUTOBOT_BANNER_LOGIN"] != "":
@@ -96,12 +101,8 @@ if "NAUTOBOT_DEPLOYMENT_ID" in os.environ and os.environ["NAUTOBOT_DEPLOYMENT_ID
 if "NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY" in os.environ and os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"] != "":
     DEVICE_NAME_AS_NATURAL_KEY = is_truthy(os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"])
 
-# The number of seconds to cache the member list of dynamic groups. Set this to `0` to disable caching.
-if (
-    "NAUTOBOT_DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT" in os.environ
-    and os.environ["NAUTOBOT_DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"] != ""
-):
-    DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT = int(os.environ["NAUTOBOT_DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"])
+# Event Brokers
+EVENT_BROKERS = {}
 
 # Exclude potentially sensitive models from wildcard view exemption. These may still be exempted
 # by specifying the model individually in the EXEMPT_VIEW_PERMISSIONS configuration parameter.
@@ -163,6 +164,16 @@ NAPALM_PASSWORD = os.getenv("NAUTOBOT_NAPALM_PASSWORD", "")
 NAPALM_TIMEOUT = int(os.getenv("NAUTOBOT_NAPALM_TIMEOUT", "30"))
 NAPALM_USERNAME = os.getenv("NAUTOBOT_NAPALM_USERNAME", "")
 
+# Expiration date (YYYY-MM-DD) for an active Nautobot support contract with Network to Code.
+# Displayed in the About page.
+if (
+    "NAUTOBOT_NTC_SUPPORT_CONTRACT_EXPIRATION_DATE" in os.environ
+    and os.environ["NAUTOBOT_NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"] != ""
+):
+    NTC_SUPPORT_CONTRACT_EXPIRATION_DATE = datetime.date.fromisoformat(
+        os.environ["NAUTOBOT_NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"]
+    )
+
 # Default number of objects to display per page of the UI and REST API. Default is 50
 if "NAUTOBOT_PAGINATE_COUNT" in os.environ and os.environ["NAUTOBOT_PAGINATE_COUNT"] != "":
     PAGINATE_COUNT = int(os.environ["NAUTOBOT_PAGINATE_COUNT"])
@@ -179,6 +190,9 @@ PLUGINS_CONFIG = {}
 # Prefer IPv6 addresses or IPv4 addresses in selecting a device's primary IP address? Default False
 if "NAUTOBOT_PREFER_IPV4" in os.environ and os.environ["NAUTOBOT_PREFER_IPV4"] != "":
     PREFER_IPV4 = is_truthy(os.environ["NAUTOBOT_PREFER_IPV4"])
+
+# Publish a simple "no-index" robots.txt for Nautobot?
+PUBLISH_ROBOTS_TXT = is_truthy(os.getenv("NAUTOBOT_PUBLISH_ROBOTS_TXT", "True"))
 
 # Default height and width in pixels of a single rack unit in rendered rack elevations. Defaults are 22 and 220
 if (
@@ -218,6 +232,32 @@ REMOTE_AUTH_HEADER = "HTTP_REMOTE_USER"
 SOCIAL_AUTH_POSTGRES_JSONFIELD = False
 # Nautobot related - May be overridden if using custom social auth backend
 SOCIAL_AUTH_BACKEND_PREFIX = "social_core.backends"
+
+# Enables adding the OAuth2/OIDC group sync module to the authentication pipeline
+SSO_ENABLE_GROUP_SYNC = is_truthy(os.getenv("NAUTOBOT_SSO_ENABLE_GROUP_SYNC", "false"))
+if SSO_ENABLE_GROUP_SYNC:
+    SOCIAL_AUTH_PIPELINE = (
+        "social_core.pipeline.social_auth.social_details",
+        "social_core.pipeline.social_auth.social_uid",
+        "social_core.pipeline.social_auth.auth_allowed",
+        "social_core.pipeline.social_auth.social_user",
+        "social_core.pipeline.user.get_username",
+        "social_core.pipeline.user.create_user",
+        "social_core.pipeline.social_auth.associate_user",
+        "social_core.pipeline.social_auth.load_extra_data",
+        "social_core.pipeline.user.user_details",
+        "nautobot.extras.group_sync.group_sync",
+    )
+# OAuth2/OIDC claim where the list of groups the authenticating user is a part of
+SSO_CLAIMS_GROUP = os.getenv("NAUTOBOT_SSO_CLAIMS_GROUP", "groups")
+# list of groups that an authenticating user can be a part of to get the Django staff permission
+SSO_STAFF_GROUPS = [
+    group for group in os.getenv("NAUTOBOT_SSO_STAFF_GROUPS", "").split(_CONFIG_SETTING_SEPARATOR) if group != ""
+]
+# list of groups that an authenticating user can be a part of to be a Django super user
+SSO_SUPERUSER_GROUPS = [
+    group for group in os.getenv("NAUTOBOT_SSO_SUPERUSER_GROUPS", "").split(_CONFIG_SETTING_SEPARATOR) if group != ""
+]
 
 # Job log entry sanitization and similar
 SANITIZER_PATTERNS = [
@@ -382,6 +422,11 @@ SPECTACULAR_SETTINGS = {
         #    enum naming encountered a non-optimally resolvable collision for fields named "protocol".
         "InterfaceRedundancyGroupProtocolChoices": "nautobot.dcim.choices.InterfaceRedundancyGroupProtocolChoices",
         "ServiceProtocolChoices": "nautobot.ipam.choices.ServiceProtocolChoices",
+        # These choice enums need to be overridden because they get assigned to the `mode` field and
+        # result in this error:
+        #    enum naming encountered a non-optimally resolvable collision for fields named "mode".
+        "InterfaceModeChoices": "nautobot.dcim.choices.InterfaceModeChoices",
+        "WirelessNetworkModeChoices": "nautobot.wireless.choices.WirelessNetworkModeChoices",
     },
     # Create separate schema components for PATCH requests (fields generally are not `required` on PATCH)
     "COMPONENT_SPLIT_PATCH": True,
@@ -425,7 +470,14 @@ if "NAUTOBOT_ALLOWED_HOSTS" in os.environ and os.environ["NAUTOBOT_ALLOWED_HOSTS
     ALLOWED_HOSTS = os.environ["NAUTOBOT_ALLOWED_HOSTS"].split(" ")
 else:
     ALLOWED_HOSTS = []
+
+# Allow CSRF trusted origins to be set via an environment variable
+# This allows Nautobot to be run behind a reverse proxy that terminates TLS
+# and fix potential issues with CSRF validation
 CSRF_TRUSTED_ORIGINS = []
+if "NAUTOBOT_CSRF_TRUSTED_ORIGINS" in os.environ and os.environ["NAUTOBOT_CSRF_TRUSTED_ORIGINS"] != "":
+    CSRF_TRUSTED_ORIGINS = os.getenv("NAUTOBOT_CSRF_TRUSTED_ORIGINS", "").split(_CONFIG_SETTING_SEPARATOR)
+
 CSRF_FAILURE_VIEW = "nautobot.core.views.csrf_failure"
 DATE_FORMAT = os.getenv("NAUTOBOT_DATE_FORMAT", "N j, Y")
 DATETIME_FORMAT = os.getenv("NAUTOBOT_DATETIME_FORMAT", "N j, Y g:i a")
@@ -517,12 +569,14 @@ INSTALLED_APPS = [
     "rest_framework",  # Must be after `nautobot.core` for template overrides
     "db_file_storage",
     "nautobot.circuits",
+    "nautobot.cloud",
     "nautobot.dcim",
     "nautobot.ipam",
     "nautobot.extras",
     "nautobot.tenancy",
     "nautobot.users",
     "nautobot.virtualization",
+    "nautobot.wireless",
     "drf_spectacular",
     "drf_spectacular_sidecar",
     "graphene_django",
@@ -533,7 +587,6 @@ INSTALLED_APPS = [
     # "health_check.contrib.migrations",
     # "health_check.contrib.redis",
     "django_extensions",
-    "constance.backends.database",
     "django_ajax_tables",
     "silk",
 ]
@@ -554,6 +607,7 @@ MIDDLEWARE = [
     "nautobot.core.middleware.RemoteUserMiddleware",
     "nautobot.core.middleware.ExternalAuthMiddleware",
     "nautobot.core.middleware.ObjectChangeMiddleware",
+    "nautobot.core.middleware.UserDefinedTimeZoneMiddleware",
     "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
 
@@ -648,6 +702,8 @@ LOGIN_REDIRECT_URL = "home"
 CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
 CONSTANCE_DATABASE_PREFIX = "constance:nautobot:"
 CONSTANCE_DATABASE_CACHE_BACKEND = "default"
+# Constance defaults to a 24-hour timeout when autofilling its cache, which is undesirable in many cases.
+CONSTANCE_DATABASE_CACHE_AUTOFILL_TIMEOUT = int(os.getenv("NAUTOBOT_CACHES_TIMEOUT", "300"))
 CONSTANCE_IGNORE_ADMIN_VERSION_CHECK = True  # avoid potential errors in a multi-node deployment
 
 CONSTANCE_ADDITIONAL_FIELDS = {
@@ -676,6 +732,13 @@ CONSTANCE_ADDITIONAL_FIELDS = {
             "required": False,
         },
     ],
+    "optional_date_field": [
+        "django.forms.DateField",
+        {
+            "widget": "nautobot.core.forms.widgets.DatePicker",
+            "required": False,
+        },
+    ],
 }
 
 CONSTANCE_CONFIG = {
@@ -686,15 +749,15 @@ CONSTANCE_CONFIG = {
     ),
     "BANNER_BOTTOM": ConstanceConfigItem(
         default="",
-        help_text="Custom HTML to display in a banner at the bottom of all pages.",
+        help_text="Custom Markdown or limited HTML to display in a banner at the bottom of all pages.",
     ),
     "BANNER_LOGIN": ConstanceConfigItem(
         default="",
-        help_text="Custom HTML to display in a banner at the top of the login page.",
+        help_text="Custom Markdown or limited HTML to display in a banner at the top of the login page.",
     ),
     "BANNER_TOP": ConstanceConfigItem(
         default="",
-        help_text="Custom HTML to display in a banner at the top of all pages.",
+        help_text="Custom Markdown or limited HTML to display in a banner at the top of all pages.",
     ),
     "CHANGELOG_RETENTION": ConstanceConfigItem(
         default=90,
@@ -714,14 +777,6 @@ CONSTANCE_CONFIG = {
         "Used for sending anonymous installation metrics, when settings.INSTALLATION_METRICS_ENABLED is set to True.",
         field_type=str,
     ),
-    "DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT": ConstanceConfigItem(
-        default=0,
-        help_text="Dynamic Group member cache timeout in seconds. This is the amount of time that a Dynamic Group's member list "
-        "will be cached in Django cache backend. Since retrieving the member list of a Dynamic Group can be a very "
-        "expensive operation, especially in reverse, this cache is used to speed up the process of retrieving the "
-        "member list. This cache is invalidated when a Dynamic Group is saved. Set to 0 to disable caching.",
-        field_type=int,
-    ),
     "JOB_CREATE_FILE_MAX_SIZE": ConstanceConfigItem(
         default=10 << 20,
         help_text=mark_safe(  # noqa: S308  # suspicious-mark-safe-usage, but this is a static string so it's safe
@@ -738,13 +793,13 @@ CONSTANCE_CONFIG = {
         field_type=bool,
     ),
     "MAX_PAGE_SIZE": ConstanceConfigItem(
-        default=1000,
+        default=_MAX_PAGE_SIZE_DEFAULT,
         help_text="Maximum number of objects that a user can list in one UI page or one API call.\n"
         "If set to 0, a user can retrieve an unlimited number of objects.",
         field_type=int,
     ),
     "PAGINATE_COUNT": ConstanceConfigItem(
-        default=50,
+        default=_PAGINATE_COUNT_DEFAULT,
         help_text="Default number of objects to display per page when listing objects in the UI and/or REST API.",
         field_type=int,
     ),
@@ -768,6 +823,12 @@ CONSTANCE_CONFIG = {
         ),
         # Use custom field type defined above
         field_type="optional_json_field",
+    ),
+    "NTC_SUPPORT_CONTRACT_EXPIRATION_DATE": ConstanceConfigItem(
+        default="",
+        help_text="Expiration date for an active Nautobot support contract with Network to Code. "
+        "This value is displayed in the About page to provide additional support information.",
+        field_type="optional_date_field",
     ),
     "PREFER_IPV4": ConstanceConfigItem(
         default=False,
@@ -815,14 +876,14 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Installation Metrics": ["DEPLOYMENT_ID"],
     "Natural Keys": ["DEVICE_NAME_AS_NATURAL_KEY", "LOCATION_NAME_AS_NATURAL_KEY"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
-    "Performance": ["DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT", "JOB_CREATE_FILE_MAX_SIZE"],
+    "Performance": ["JOB_CREATE_FILE_MAX_SIZE"],
     "Rack Elevation Rendering": [
         "RACK_ELEVATION_DEFAULT_UNIT_HEIGHT",
         "RACK_ELEVATION_DEFAULT_UNIT_WIDTH",
         "RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT",
     ],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
-    "User Interface": ["SUPPORT_MESSAGE"],
+    "User Interface": ["SUPPORT_MESSAGE", "NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"],
     "Debugging": ["ALLOW_REQUEST_PROFILING"],
 }
 
@@ -868,7 +929,7 @@ CACHES = {
             "django_prometheus.cache.backends.redis.RedisCache" if METRICS_ENABLED else "django_redis.cache.RedisCache",
         ),
         "LOCATION": parse_redis_connection(redis_database=1),
-        "TIMEOUT": 300,
+        "TIMEOUT": int(os.getenv("NAUTOBOT_CACHES_TIMEOUT", "300")),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             "PASSWORD": "",
@@ -907,13 +968,24 @@ CELERY_TASK_TRACK_STARTED = True
 # If enabled, a `task-sent` event will be sent for every task so tasks can be tracked before they're consumed by a worker.
 CELERY_TASK_SEND_SENT_EVENT = True
 
+# How many tasks a worker is allowed to reserve for its own consumption and execution.
+# If set to zero (not recommended) a single worker can reserve all tasks even if other workers are free.
+# For short running tasks (such as webhooks) you may want to set this to a larger number to increase throughput.
+# Conversely, for long running tasks (such as SSoT or Golden-Config Jobs at scale) you may want to set this to 1
+# so that a worker executing a long-running task will not prefetch other tasks, which would block their execution
+# until the long-running task completes.
+# https://docs.celeryq.dev/en/stable/userguide/optimizing.html#prefetch-limits
+CELERY_WORKER_PREFETCH_MULTIPLIER = int(os.getenv("NAUTOBOT_CELERY_WORKER_PREFETCH_MULTIPLIER", "4"))
+
 # If enabled stdout and stderr of running jobs will be redirected to the task logger.
 CELERY_WORKER_REDIRECT_STDOUTS = is_truthy(os.getenv("NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS", "True"))
 
-# The log level of log messages generated by redirected job stdout and stderr. Can be one of `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`.
+# The log level of log messages generated by redirected job stdout and stderr.
+# Can be one of `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`.
 CELERY_WORKER_REDIRECT_STDOUTS_LEVEL = os.getenv("NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS_LEVEL", "WARNING")
 
-# Send task-related events so that tasks can be monitored using tools like flower. Sets the default value for the workers -E argument.
+# Send task-related events so that tasks can be monitored using tools like flower.
+# Sets the default value for the workers -E argument.
 CELERY_WORKER_SEND_TASK_EVENTS = True
 
 # Default celery queue name that will be used by workers and tasks if no queue is specified
@@ -972,6 +1044,8 @@ BRANDING_FILEPATHS = {
         "NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET", None
     ),  # bullet image used for various view headers
     "nav_bullet": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET", None),  # bullet image used for nav menu headers
+    "css": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_CSS", None),  # Custom global CSS
+    "javascript": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_JAVASCRIPT", None),  # Custom global JavaScript
 }
 
 # Title to use in place of "Nautobot"
@@ -1077,3 +1151,29 @@ def silk_request_logging_intercept_logic(request):
 
 
 SILKY_INTERCEPT_FUNC = silk_request_logging_intercept_logic
+
+#
+# Kubernetes settings variables
+#
+
+# Host of the kubernetes pod created in the kubernetes cluster
+KUBERNETES_DEFAULT_SERVICE_ADDRESS = os.getenv("NAUTOBOT_KUBERNETES_DEFAULT_SERVICE_ADDRESS", "")
+
+# A dictionary that stores the kubernetes pod manifest used to create a job pod in the kubernetes cluster
+KUBERNETES_JOB_MANIFEST = {}
+
+# Name of the kubernetes pod created in the kubernetes cluster
+KUBERNETES_JOB_POD_NAME = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_NAME", "")
+
+# Namespace of the kubernetes pod created in the kubernetes cluster
+KUBERNETES_JOB_POD_NAMESPACE = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_NAMESPACE", "")
+
+# File path to the SSL CA CERT used for authentication to create the job and job pod
+KUBERNETES_SSL_CA_CERT_PATH = os.getenv(
+    "NAUTOBOT_KUBERNETES_SSL_CA_CERT_PATH", "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+)
+
+# File path to the Bearer token used for authentication to create the job and job pod
+KUBERNETES_TOKEN_PATH = os.getenv(
+    "NAUTOBOT_KUBERNETES_TOKEN_PATH", "/var/run/secrets/kubernetes.io/serviceaccount/token"
+)

@@ -13,11 +13,11 @@ from nautobot.core.factory import (
 
 __all__ = (
     "BaseModelFactory",
-    "get_random_instances",
     "NautobotBoolIterator",
     "NautobotFakerProvider",
     "OrganizationalModelFactory",
     "PrimaryModelFactory",
-    "random_instance",
     "UniqueFaker",
+    "get_random_instances",
+    "random_instance",
 )

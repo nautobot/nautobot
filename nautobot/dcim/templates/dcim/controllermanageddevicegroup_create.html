@@ -12,9 +12,65 @@
             {% render_field form.name %}
             {% render_field form.devices %}
             {% render_field form.parent %}
+            {% render_field form.capabilities %}
             {% render_field form.weight %}
+            {% render_field form.radio_profiles %}
+            {% render_field form.description %}
         </div>
     </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Wireless Network Assignment</strong></div>
+        <div class="panel-body">
+            {% if wireless_networks.errors %}
+                <div class="text-danger">
+                    Please correct the error(s) below:
+
+                    {% for wireless_network in wireless_networks.forms %}
+                        {% if wireless_network.errors %}
+                            {% for error in wireless_network.errors.values %}{{ error }}{% endfor %}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+            {{ wireless_networks.non_field_errors }}
+            <table class="table" id="wireless_networks">
+                {{ wireless_networks.management_form }}
+                {% for wireless_network_form in wireless_networks.forms %}
+                    {% if forloop.first %}
+                        <thead>
+                            <tr>
+                                {% for field in wireless_network_form.visible_fields %}
+                                    <th>{{ field.label|capfirst }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                    {% endif %}
+                    <tr class="formset_row-{{ wireless_networks.prefix }}">
+                        {% for field in wireless_network_form.visible_fields %}
+                            <td>
+                                {% if forloop.first %}
+                                    {% for hidden in wireless_network_form.hidden_fields %}
+                                        {{ hidden }}
+                                    {% endfor %}
+                                {% endif %}
+                                {{ field }}
+                                {% if field.errors %}
+                                    <ul>
+                                        {% for error in field.errors %}
+                                            {# Embed an HTML comment indicating the error for extraction by tests #}
+                                            <!-- FORM-ERROR {{ field.name }}: {{ error }} -->
+                                            <li class="text-danger">{{ error }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+    {% include 'inc/tenancy_form_panel.html' %}
     {% include 'inc/extras_features_edit_form_fields.html' %}
 {% endblock form %}
 
@@ -84,5 +140,17 @@
     controllerInput.on('select2:unselect', onControllerInput);
 
     onParentInput();
+</script>
+<script src="{% static 'jquery/jquery.formset.js' %}"></script>
+<script type="text/javascript">
+    $('.formset_row-{{ wireless_networks.prefix }}').formset({
+        addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Wireless Network',
+        addCssClass: 'btn btn-primary add-row',
+        deleteText: '<span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>',
+        deleteCssClass: 'btn btn-danger delete-row',
+        prefix: '{{ wireless_networks.prefix }}',
+        formCssClass: 'dynamic-formset-{{ wireless_networks.prefix }}',
+        added: jsify_form
+    });
 </script>
 {% endblock %}

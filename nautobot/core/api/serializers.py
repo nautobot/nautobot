@@ -1,5 +1,4 @@
 import contextlib
-from copy import deepcopy
 import logging
 import uuid
 
@@ -18,7 +17,7 @@ from django.db.models.functions import Cast
 from django.urls import NoReverseMatch
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field, PolymorphicProxySerializer as _PolymorphicProxySerializer
-from rest_framework import relations as drf_relations, serializers
+from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.fields import CreateOnlyDefault
 from rest_framework.reverse import reverse
@@ -26,15 +25,15 @@ from rest_framework.serializers import SerializerMethodField
 from rest_framework.utils.model_meta import _get_to_field, RelationInfo
 
 from nautobot.core import constants
-from nautobot.core.api.fields import NautobotHyperlinkedRelatedField, ObjectTypeField
+from nautobot.core.api.fields import LaxURLField, NautobotHyperlinkedRelatedField, ObjectTypeField
 from nautobot.core.api.utils import (
     dict_to_filter_params,
     nested_serializer_factory,
 )
-from nautobot.core.exceptions import ViewConfigException
+from nautobot.core.models.fields import LaxURLField as LaxURLModelField
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import construct_composite_key, construct_natural_slug
-from nautobot.core.templatetags.helpers import bettertitle
+from nautobot.core.settings_funcs import is_truthy
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.extras.api.customfields import CustomFieldDefaultValues, CustomFieldsDataField
@@ -48,8 +47,9 @@ logger = logging.getLogger(__name__)
 
 class OptInFieldsMixin:
     """
-    A serializer mixin that takes an additional `opt_in_fields` argument that controls
-    which fields should be displayed.
+    Serializer mixin that adjusts its fields based on the `include` and `exclude_m2m` query parameters in a request.
+
+    The serializer's `Meta.opt_in_fields` controls which fields are influenced by `include`.
     """
 
     def __init__(self, *args, **kwargs):
@@ -59,8 +59,11 @@ class OptInFieldsMixin:
     @property
     def fields(self):
         """
-        Removes all serializer fields specified in a serializers `opt_in_fields` list that aren't specified in the
-        `include` query parameter.
+        Dynamically adjust the dictionary of fields attributed to this serializer instance.
+
+        - Removes all serializer fields specified in `Meta.opt_in_fields` list that aren't specified in the
+          `include` query parameter. (applies to GET requests only)
+        - If the `exclude_m2m` query parameter is truthy, remove all many-to-many serializer fields for performance.
 
         As an example, if the serializer specifies that `opt_in_fields = ["computed_fields"]`
         but `computed_fields` is not specified in the `?include` query parameter, `computed_fields` will be popped
@@ -68,12 +71,7 @@ class OptInFieldsMixin:
         """
         if self.__pruned_fields is None:
             fields = dict(super().fields)
-            serializer_opt_in_fields = getattr(self.Meta, "opt_in_fields", None)
-
-            if not serializer_opt_in_fields:
-                # This serializer has no defined opt_in_fields, so we never need to go further than this
-                self.__pruned_fields = fields
-                return self.__pruned_fields
+            serializer_opt_in_fields = getattr(self.Meta, "opt_in_fields", [])
 
             if not hasattr(self, "_context"):
                 # We are being called before a request cycle
@@ -85,24 +83,29 @@ class OptInFieldsMixin:
                 # No available request?
                 return fields
 
-            # opt-in fields only applies on GET requests, for other methods we support these fields regardless
-            if request is not None and request.method != "GET":
-                return fields
-
             # NOTE: drf test framework builds a request object where the query
             # parameters are found under the GET attribute.
             params = normalize_querydict(getattr(request, "query_params", getattr(request, "GET", None)))
 
-            try:
-                user_opt_in_fields = params.get("include", [])
-            except AttributeError:
-                # include parameter was not specified
-                user_opt_in_fields = []
+            # opt-in fields only applies on GET requests, for other methods we support these fields regardless
+            if request is None or request.method == "GET":
+                try:
+                    user_opt_in_fields = params.get("include", [])
+                except AttributeError:
+                    # include parameter was not specified
+                    user_opt_in_fields = []
 
-            # Drop any fields that are not specified in the users opt in fields
-            for field in serializer_opt_in_fields:
-                if field not in user_opt_in_fields:
-                    fields.pop(field, None)
+                # Drop any fields that are not specified in the users opt in fields
+                for field in serializer_opt_in_fields:
+                    if field not in user_opt_in_fields:
+                        fields.pop(field, None)
+
+            # If exclude_m2m is present and truthy, mark any many-to-many fields as write-only so they
+            # don't get included in the response.
+            if is_truthy(params.get("exclude_m2m", "false")):
+                for field_instance in fields.values():
+                    if isinstance(field_instance, (serializers.ManyRelatedField, serializers.ListSerializer)):
+                        field_instance.write_only = True
 
             self.__pruned_fields = fields
 
@@ -126,8 +129,14 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
       to enable the dynamic generation of nested serializers.
     """
 
+    serializer_field_mapping = {
+        **serializers.ModelSerializer.serializer_field_mapping,
+        LaxURLModelField: LaxURLField,
+    }
+
     serializer_related_field = NautobotHyperlinkedRelatedField
 
+    id = serializers.UUIDField(read_only=False, default=serializers.CreateOnlyDefault(uuid.uuid4))
     display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
     object_type = ObjectTypeField()
     # composite_key = serializers.SerializerMethodField()  # TODO: Revisit if we reintroduce composite keys
@@ -290,21 +299,6 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         """Return whether this is a nested serializer."""
         return getattr(self.Meta, "is_nested", False)
 
-    @property
-    def list_display_fields(self):
-        return list(getattr(self.Meta, "list_display_fields", []))
-
-    @property
-    def advanced_tab_fields(self):
-        advanced_fields = list(
-            getattr(
-                self.Meta,
-                "advanced_tab_fields",
-                ["id", "url", "object_type", "created", "last_updated", "natural_slug"],
-            )
-        )
-        return [field for field in advanced_fields if field in self.fields]
-
     @extend_schema_field(serializers.CharField)
     def get_display(self, instance):
         """
@@ -397,221 +391,6 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
 
         fields = [field for field in fields if filter_field(field)]
         return fields
-
-    def determine_view_options(self, request=None):
-        """
-        Determine view options to use for rendering the list and detail views associated with this serializer.
-        """
-        list_display = []
-        fields = []
-
-        from nautobot.core.api.metadata import NautobotColumnProcessor  # avoid circular import
-
-        processor = NautobotColumnProcessor(self, request.parser_context if request else {})
-        field_map = dict(self.fields)
-        all_fields = list(field_map)
-
-        # Explicitly order the "big ugly" fields to the bottom
-        processor.order_fields(all_fields)
-        list_display_fields = self.list_display_fields
-
-        # Process the list_display_fields first.
-        for field_name in list_display_fields:
-            try:
-                field = field_map[field_name]
-            except KeyError:
-                continue  # Ignore unknown fields.
-            column_data = processor._get_column_properties(field, field_name)
-            list_display.append(column_data)
-            fields.append(column_data)
-
-        # Process the rest of the fields second.
-        for field_name in all_fields:
-            # Don't process list display fields twice.
-            if field_name in list_display_fields:
-                continue
-            try:
-                field = field_map[field_name]
-            except KeyError:
-                continue  # Ignore unknown fields.
-            column_data = processor._get_column_properties(field, field_name)
-            fields.append(column_data)
-
-        return {
-            "retrieve": {
-                "tabs": self._determine_detail_view_tabs(),
-            },
-            "list": {
-                "default_fields": list_display,
-                "all_fields": fields,
-            },
-        }
-
-    def _determine_detail_view_tabs(self):
-        """Determine the layout for the detail view tabs that are intrinsic to this serializer."""
-        tabs = self.get_additional_detail_view_tabs()
-
-        if hasattr(self.Meta, "detail_view_config"):
-            detail_view_config = self._validate_view_config(self.Meta.detail_view_config)
-        else:
-            detail_view_config = self._get_default_detail_view_config()
-        detail_view_config = self._refine_detail_view_config(detail_view_config, tabs)
-
-        return {
-            bettertitle(self.Meta.model._meta.verbose_name): detail_view_config,
-            **tabs,
-        }
-
-    def get_additional_detail_view_tabs(self):
-        """
-        Retrieve definitions of non-default detail view tabs.
-
-        By default provides an "Advanced" tab containing `self.advanced_tab_fields`, but subclasses
-        can override this to move additional serializer fields to this or other tabs.
-
-        Returns:
-            (dict): `{<tab label>: [{<panel label>: {"fields": [<list of fields>]}, ...}, ...], ...}`
-        """
-        return {
-            "Advanced": [{"Object Details": {"fields": self.advanced_tab_fields}}],
-        }
-
-    def _get_default_detail_view_config(self):
-        """
-        Generate detail view config for the view based on the serializer's fields.
-
-        Examples:
-            >>> DeviceSerializer._get_default_detail_view_config().
-            {
-                "layout":[
-                    {
-                        Device: {
-                            "fields": ["name", "subdevice_role", "height", "comments"...]
-                        }
-                    },
-                    {
-                        Tags: {
-                            "fields": ["tags"]
-                        }
-                    }
-                ]
-            }
-
-        Returns:
-            (list): A list representing the view config.
-        """
-        m2m_fields, other_fields = self._get_m2m_and_non_m2m_fields()
-        # TODO(timizuo): How do we get verbose_name of not model serializers?
-        model_verbose_name = self.Meta.model._meta.verbose_name
-        return {
-            "layout": [
-                {
-                    bettertitle(model_verbose_name): {
-                        "fields": [field["name"] for field in other_fields],
-                    }
-                },
-                {field["label"]: {"fields": [field["name"]]} for field in m2m_fields},
-            ]
-        }
-
-    def _get_m2m_and_non_m2m_fields(self):
-        """
-        Retrieve the many-to-many (m2m) fields and other non-m2m fields from the serializer.
-
-        Returns:
-            A tuple containing two lists: m2m_fields and non m2m fields.
-                - m2m_fields: A list of dictionaries, each containing the name and label of an m2m field.
-                - non_m2m_fields: A list of dictionaries, each containing the name and label of a non m2m field.
-        """
-        m2m_fields = []
-        non_m2m_fields = []
-
-        for field_name, field in self.fields.items():
-            if isinstance(field, drf_relations.ManyRelatedField):
-                m2m_fields.append({"name": field_name, "label": field.label or field_name})
-            else:
-                non_m2m_fields.append({"name": field_name, "label": field.label or field_name})
-
-        return m2m_fields, non_m2m_fields
-
-    def _refine_detail_view_config(self, detail_view_config, other_tabs):
-        """
-        Refine the detail view config for the default tab (auto-generated, or as defined by Meta.detail_view_config).
-
-        - Remove fields that should never be present in the detail view config (e.g. `notes_url`).
-        - Ensure that fields that are already present in `other_tabs` aren't included in the detail view config.
-        - Ensure that certain fields such as `tags` are always included in the detail view config if applicable.
-
-        Args:
-            detail_view_config (dict): `{"layout": [{<left-column>}, {<right-column}], "include_others": False}`
-
-        Returns:
-            (list): `[{"Panel 1 Name": {"fields": ["field1", "field2", ...]}, "Panel 2 Name": ...}, {...}]`
-        """
-        fields_to_always_move_to_right_column = [
-            "comments",
-            "tags",
-        ]
-        fields_to_always_remove = [
-            # always handled explicitly by the UI
-            "display",
-            "status",
-            # not yet supported in the UI
-            "custom_fields",
-            "relationships",
-            "computed_fields",
-            # irrelevant to the UI
-            "notes_url",
-        ]
-        fields_to_remove = fields_to_always_remove + fields_to_always_move_to_right_column
-        # Any field that's already present in another tab
-        for tab_layout in other_tabs.values():
-            for column in tab_layout:
-                for grouping in column.values():
-                    fields_to_remove += grouping["fields"]
-
-        # Make a deepcopy to avoid altering view_config
-        view_config_layout = deepcopy(detail_view_config.get("layout"))
-
-        # Remove fields_to_remove from the view_config_layout
-        for column in view_config_layout:
-            for section in column.values():
-                for field in fields_to_remove:
-                    if field in section["fields"]:
-                        section["fields"].remove(field)
-
-        serializer_fields = list(self.fields)
-
-        # Add special-cased fields to right column
-        for field in fields_to_always_move_to_right_column:
-            if field in serializer_fields:
-                if len(view_config_layout) < 2:
-                    view_config_layout.append({})
-                view_config_layout[1].setdefault(bettertitle(field), {}).setdefault("fields", []).append(field)
-
-        # Add fields not otherwise included in another tab, only if include_others is set to True.
-        if detail_view_config.get("include_others", False):
-            view_config_fields = [
-                field for column in view_config_layout for section in column.values() for field in section["fields"]
-            ]
-            missing_fields = sorted(set(serializer_fields) - set(view_config_fields) - set(fields_to_remove))
-            view_config_layout[0]["Other Fields"] = {"fields": missing_fields}
-
-        return view_config_layout
-
-    def _validate_view_config(self, view_config):
-        """Validate view config."""
-        # 1. Validate key `layout` is in view_config; as this is a required key is creating a view config
-        if not view_config["layout"]:
-            raise ViewConfigException("`layout` is a required key in creating a custom view_config")
-
-        # 2. Validate `Other Fields` is not part of a layout group name, as this is a reserved keyword for group names
-        for col in view_config["layout"]:
-            for group_name in col.keys():
-                if group_name in constants.RESERVED_NAMES_FOR_OBJECT_DETAIL_VIEW_SCHEMA:
-                    raise ViewConfigException(f"`{group_name}` is a reserved group name keyword.")
-
-        return view_config
 
     def build_field(self, field_name, info, model_class, nested_depth):
         """
@@ -752,27 +531,27 @@ class ValidatedModelSerializer(BaseModelSerializer):
     validation. (DRF does not do this by default; see https://github.com/encode/django-rest-framework/issues/3144)
     """
 
-    def validate(self, data):
+    def validate(self, attrs):
         # Remove custom fields data and tags (if any) prior to model validation
-        attrs = data.copy()
-        attrs.pop("custom_fields", None)
-        attrs.pop("relationships", None)
-        attrs.pop("tags", None)
+        local_attrs = attrs.copy()
+        local_attrs.pop("custom_fields", None)
+        local_attrs.pop("relationships", None)
+        local_attrs.pop("tags", None)
 
         # Skip ManyToManyFields
         for field in self.Meta.model._meta.get_fields():
             if isinstance(field, models.ManyToManyField):
-                attrs.pop(field.name, None)
+                local_attrs.pop(field.name, None)
 
         # Run clean() on an instance of the model
         if self.instance is None:
-            instance = self.Meta.model(**attrs)
+            instance = self.Meta.model(**local_attrs)
         else:
             instance = self.instance
-            for k, v in attrs.items():
+            for k, v in local_attrs.items():
                 setattr(instance, k, v)
         instance.full_clean()
-        return data
+        return attrs
 
 
 class WritableNestedSerializer(BaseModelSerializer):
@@ -818,7 +597,7 @@ class WritableNestedSerializer(BaseModelSerializer):
         pk = None
 
         if isinstance(self.Meta.model._meta.pk, models.AutoField):
-            # PK is an int for this model. This is usually the User model
+            # PK is an int for this model. This is usually the Group or Content-Type model
             try:
                 pk = int(data)
             except (TypeError, ValueError):
@@ -1099,3 +878,17 @@ class NautobotModelSerializer(
 
     Can also be used for models derived from BaseModel, so long as they support custom fields, notes, and relationships.
     """
+
+
+#
+# Tools
+#
+
+
+class RenderJinjaSerializer(serializers.Serializer):  # pylint: disable=abstract-method
+    """Serializer for RenderJinjaView."""
+
+    template_code = serializers.CharField(required=True)
+    context = serializers.DictField(default=dict)
+    rendered_template = serializers.CharField(read_only=True)
+    rendered_template_lines = serializers.ListField(read_only=True, child=serializers.CharField())

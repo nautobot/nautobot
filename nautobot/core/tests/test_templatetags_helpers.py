@@ -22,14 +22,14 @@ class NautobotTemplatetagsHelperTest(TestCase):
         location.description = ""
         location.save()
         self.assertEqual(
-            helpers.hyperlinked_object(location), f'<a href="/dcim/locations/{location.pk}/">{location.name}</a>'
+            helpers.hyperlinked_object(location), f'<a href="/dcim/locations/{location.pk}/">{location.display}</a>'
         )
         # An object with get_absolute_url and a description gives a titled hyperlink
         location.description = "An important location"
         location.save()
         self.assertEqual(
             helpers.hyperlinked_object(location),
-            f'<a href="/dcim/locations/{location.pk}/" title="An important location">{location.name}</a>',
+            f'<a href="/dcim/locations/{location.pk}/" title="An important location">{location.display}</a>',
         )
         # Optionally you can request a field other than the object's display string
         self.assertEqual(
@@ -56,6 +56,11 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(helpers.placeholder(None), '<span class="text-muted">&mdash;</span>')
         self.assertEqual(helpers.placeholder([]), '<span class="text-muted">&mdash;</span>')
         self.assertEqual(helpers.placeholder("something"), "something")
+
+    def test_pre_tag(self):
+        self.assertEqual(helpers.pre_tag(None), "<pre>None</pre>")
+        self.assertEqual(helpers.pre_tag([]), "<pre>[]</pre>")
+        self.assertEqual(helpers.pre_tag("something"), "<pre>something</pre>")
 
     def test_add_html_id(self):
         # Case where what we have isn't actually a HTML element but just a bare string
@@ -113,6 +118,13 @@ class NautobotTemplatetagsHelperTest(TestCase):
             '{\n    "first": [\n        1,\n        2,\n        3\n    ]\n}',
         )
         self.assertEqual('"I am UTF-8! 😀"', helpers.render_json("I am UTF-8! 😀", False))
+
+    def test_render_uptime(self):
+        self.assertEqual(helpers.render_uptime(1024768), "11 days 20 hours 39 minutes")
+        self.assertEqual(helpers.render_uptime(""), helpers.placeholder(""))
+        self.assertEqual(helpers.render_uptime("123456"), "1 day 10 hours 17 minutes")
+        self.assertEqual(helpers.render_uptime(0), "0 days 0 hours 0 minutes")
+        self.assertEqual(helpers.render_uptime("foo bar"), helpers.placeholder("foo bar"))
 
     def test_render_yaml(self):
         self.assertEqual(
@@ -251,7 +263,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
             f'<span class="label" style="color: {fbcolor}; background-color: #{color}">{display}</span>',
         )
         # Assert when obj is None
-        self.assertEqual(helpers.hyperlinked_object_with_color(obj=None), "—")
+        self.assertEqual(helpers.hyperlinked_object_with_color(obj=None), '<span class="text-muted">&mdash;</span>')
 
     @override_settings(BANNER_TOP="¡Hola, mundo!")
     @override_config(example_app__SAMPLE_VARIABLE="Testing")
@@ -283,3 +295,46 @@ class NautobotTemplatetagsHelperTest(TestCase):
                     helpers.support_message(),
                     "<p>Settings <strong>support</strong> message:</p><ul><li>Item 1</li><li>Item 2</li></ul>",
                 )
+
+    def test_hyperlinked_object_target_new_tab(self):
+        # None gives a placeholder
+        self.assertEqual(helpers.hyperlinked_object_target_new_tab(None), helpers.placeholder(None))
+        # An object without get_absolute_url gives a string
+        self.assertEqual(helpers.hyperlinked_object_target_new_tab("hello"), "hello")
+        # An object with get_absolute_url gives a hyperlink
+        location = models.Location.objects.first()
+        # Initially remove description if any
+        location.description = ""
+        location.save()
+        self.assertEqual(
+            helpers.hyperlinked_object_target_new_tab(location),
+            f'<a href="/dcim/locations/{location.pk}/" target="_blank" rel="noreferrer">{location.display}</a>',
+        )
+        # An object with get_absolute_url and a description gives a titled hyperlink
+        location.description = "An important location"
+        location.save()
+        self.assertEqual(
+            helpers.hyperlinked_object_target_new_tab(location),
+            f'<a href="/dcim/locations/{location.pk}/" title="An important location" target="_blank" rel="noreferrer">{location.display}</a>',
+        )
+        # Optionally you can request a field other than the object's display string
+        self.assertEqual(
+            helpers.hyperlinked_object_target_new_tab(location, "name"),
+            f'<a href="/dcim/locations/{location.pk}/" title="An important location" target="_blank" rel="noreferrer">{location.name}</a>',
+        )
+        # If you request a nonexistent field, it defaults to the string representation
+        self.assertEqual(
+            helpers.hyperlinked_object_target_new_tab(location, "foo"),
+            f'<a href="/dcim/locations/{location.pk}/" title="An important location" target="_blank" rel="noreferrer">{location!s}</a>',
+        )
+
+    def test_dbm(self):
+        self.assertEqual(
+            helpers.dbm(12),
+            "12 dBm",
+        )
+        self.assertEqual(
+            helpers.dbm(-85),
+            "-85 dBm",
+        )
+        self.assertEqual(helpers.dbm(None), helpers.placeholder(None))

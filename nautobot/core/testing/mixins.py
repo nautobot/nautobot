@@ -6,13 +6,16 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import FieldDoesNotExist
+from django.db import connections, DEFAULT_DB_ALIAS
 from django.db.models import JSONField, ManyToManyField, ManyToManyRel
 from django.forms.models import model_to_dict
+from django.test.testcases import assert_and_parse_html
+from django.test.utils import CaptureQueriesContext
 from netaddr import IPNetwork
 from rest_framework.test import APIClient, APIRequestFactory
 
-from nautobot.core import testing
 from nautobot.core.models import fields as core_fields
+from nautobot.core.testing import utils
 from nautobot.core.utils import permissions
 from nautobot.extras import management, models as extras_models
 from nautobot.users import models as users_models
@@ -44,6 +47,7 @@ class NautobotTestCaseMixin:
 
     user_permissions = ()
     client_class = NautobotTestClient
+    maxDiff = None
 
     def setUpNautobot(self, client=True, populate_status=False):
         """Setup shared testuser, statuses and client."""
@@ -140,13 +144,18 @@ class NautobotTestCaseMixin:
     # Permissions management
     #
 
-    def add_permissions(self, *names):
+    def add_permissions(self, *names, **kwargs):
         """
         Assign a set of permissions to the test user. Accepts permission names in the form <app>.<action>_<model>.
+        Additional keyword arguments will be passed to the ObjectPermission constructor to allow creating more detailed permissions.
+
+        Examples:
+            >>> add_permissions("ipam.add_vlangroup", "ipam.view_vlangroup")
+            >>> add_permissions("ipam.add_vlangroup", "ipam.view_vlangroup", constraints={"pk": "uuid-1234"})
         """
         for name in names:
             ct, action = permissions.resolve_permission_ct(name)
-            obj_perm = users_models.ObjectPermission(name=name, actions=[action])
+            obj_perm = users_models.ObjectPermission(name=name, actions=[action], **kwargs)
             obj_perm.save()
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ct)
@@ -169,8 +178,12 @@ class NautobotTestCaseMixin:
                 # REST API response; pass the response data through directly
                 err_message += f"\n{response.data}"
             # Attempt to extract form validation errors from the response HTML
-            form_errors = testing.extract_form_failures(response.content.decode(response.charset))
-            err_message += "\n" + str(form_errors or response.content.decode(response.charset) or "No data")
+            elif form_errors := utils.extract_form_failures(response.content.decode(response.charset)):
+                err_message += f"\n{form_errors}"
+            elif body_content := utils.extract_page_body(response.content.decode(response.charset)):
+                err_message += f"\n{body_content}"
+            else:
+                err_message += "No data"
             if msg:
                 err_message = f"{msg}\n{err_message}"
         self.assertIn(response.status_code, expected_status, err_message)
@@ -230,6 +243,101 @@ class NautobotTestCaseMixin:
         self.assertNotEqual(len(values), 0, "Values cannot be empty")
 
         return self.assertQuerysetEqual(qs, values, *args, **kwargs)
+
+    class _AssertApproximateNumQueriesContext(CaptureQueriesContext):
+        """Implementation class underlying the assertApproximateNumQueries decorator/context manager."""
+
+        def __init__(self, test_case, minimum, maximum, connection):
+            self.test_case = test_case
+            self.minimum = minimum
+            self.maximum = maximum
+            super().__init__(connection)
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            super().__exit__(exc_type, exc_value, traceback)
+            if exc_type is not None:
+                return
+            num_queries = len(self)
+            captured_queries_string = "\n".join(
+                f"{i}. {query['sql']}" for i, query in enumerate(self.captured_queries, start=1)
+            )
+            self.test_case.assertGreaterEqual(
+                num_queries,
+                self.minimum,
+                f"{num_queries} queries executed, but expected at least {self.minimum}.\n"
+                f"Captured queries were:\n{captured_queries_string}",
+            )
+            self.test_case.assertLessEqual(
+                num_queries,
+                self.maximum,
+                f"{num_queries} queries executed, but expected no more than {self.maximum}.\n"
+                f"Captured queries were:\n{captured_queries_string}",
+            )
+
+    def assertApproximateNumQueries(self, minimum, maximum, func=None, *args, using=DEFAULT_DB_ALIAS, **kwargs):
+        """Like assertNumQueries, but fuzzier. Assert that the number of queries falls within an acceptable range."""
+        conn = connections[using]
+
+        context = self._AssertApproximateNumQueriesContext(self, minimum, maximum, conn)
+        if func is None:
+            return context
+
+        with context:
+            func(*args, **kwargs)
+
+        return None
+
+    def assertBodyContains(self, response, text, count=None, status_code=200, msg_prefix="", html=False):
+        """
+        Like Django's `assertContains`, but uses `extract_page_body` utility function to scope the check more narrowly.
+
+        Args:
+            response (HttpResponse): The response to inspect
+            text (str): Plaintext or HTML to check for in the response body
+            count (int, optional): Number of times the `text` should occur, or None if we don't care as long as
+                it's present at all.
+            status_code (int): HTTP status code expected
+            html (bool): If True, handle `text` as HTML, ignoring whitespace etc, as in Django's `assertHTMLEqual()`.
+        """
+        # The below is copied from SimpleTestCase._assert_contains and SimpleTestCase.assertContains
+        # If the response supports deferred rendering and hasn't been rendered
+        # yet, then ensure that it does get rendered before proceeding further.
+        if hasattr(response, "render") and callable(response.render) and not response.is_rendered:
+            response.render()
+
+        if msg_prefix:
+            msg_prefix += ": "
+
+        self.assertHttpStatus(  # Nautobot-specific, original uses simple assertEqual()
+            response, status_code, msg_prefix
+        )
+
+        if response.streaming:
+            content = b"".join(response.streaming_content)
+        else:
+            content = response.content
+
+        if not isinstance(text, bytes) or html:
+            text = str(text)
+            content = content.decode(response.charset)
+            content = utils.extract_page_body(content)  # Nautobot-specific
+            text_repr = f"'{text}'"
+        else:
+            text_repr = repr(text)
+
+        if html:
+            content = assert_and_parse_html(self, content, None, "Response's content is not valid HTML:")
+            text = assert_and_parse_html(self, text, None, "Second argument is not valid HTML:")
+        real_count = content.count(text)
+
+        if count is not None:
+            self.assertEqual(
+                real_count,
+                count,
+                msg_prefix + f"Found {real_count} instances of {text_repr} in response (expected {count}):\n{content}",
+            )
+        else:
+            self.assertTrue(real_count != 0, msg_prefix + f"Couldn't find {text_repr} in response:\n{content}")
 
     #
     # Convenience methods

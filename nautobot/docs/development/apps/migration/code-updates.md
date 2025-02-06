@@ -72,7 +72,7 @@ items = [
 menu_items = (
     NavMenuTab(
         name="Apps",
-        groups=(NavMenuGroup(name="Your App", weight=1000, items=tuple(items)),),
+        groups=(NavMenuGroup(weight=1000, name="Your App", items=tuple(items)),),
     ),
 )
 

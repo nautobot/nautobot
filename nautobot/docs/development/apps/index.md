@@ -60,7 +60,7 @@ The Nautobot App architecture allows for Apps to do any or all of the following:
 
 ### Declare dependencies and requirements
 
-* **Declare configuration parameters.** An App can define required, optional, and default configuration parameters within its unique namespace. App configuration parameters are configurable under [`PLUGINS_CONFIG`](../../user-guide/administration/configuration/optional-settings.md#plugins_config) in `nautobot_config.py`.
+* **Declare configuration parameters.** An App can define required, optional, and default configuration parameters within its unique namespace. App configuration parameters are configurable under [`PLUGINS_CONFIG`](../../user-guide/administration/configuration/settings.md#plugins_config) in `nautobot_config.py`.
 * **Limit installation by Nautobot version.** An App can specify a minimum and/or maximum Nautobot version with which it is compatible.
 * **Add additional Django dependencies.** An App can define additional Django application dependencies to require when the App is enabled.
 

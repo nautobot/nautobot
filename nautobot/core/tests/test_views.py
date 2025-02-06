@@ -1,8 +1,10 @@
+import json
 import re
-from unittest import mock
+from unittest import mock, skipIf
 import urllib.parse
 
 from django.apps import apps
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings, RequestFactory
@@ -10,18 +12,22 @@ from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
 from prometheus_client.parser import text_string_to_metric_families
 
+from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.api import APITestCase
+from nautobot.core.testing.context import load_event_broker_override_settings
+from nautobot.core.testing.utils import extract_page_body
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
 from nautobot.dcim.models.locations import Location
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.extras.models import FileProxy
+from nautobot.extras.models import FileProxy, Status
 from nautobot.extras.models.customfields import CustomField, CustomFieldChoice
 from nautobot.extras.registry import registry
 from nautobot.users.models import ObjectPermission
+from nautobot.users.utils import serialize_user_without_config_and_views
 
 
 class GetReturnURLMixinTestCase(TestCase):
@@ -146,6 +152,38 @@ class HomeViewTestCase(TestCase):
         response_content = response.content.decode(response.charset).replace("\n", "")
         self.assertNotRegex(response_content, footer_hostname_version_pattern)
 
+    def test_banners_markdown(self):
+        url = reverse("home")
+        with override_settings(
+            BANNER_TOP="# Hello world",
+            BANNER_BOTTOM="[info](https://nautobot.com)",
+        ):
+            response = self.client.get(url)
+        self.assertBodyContains(response, "<h1>Hello world</h1>", html=True)
+        self.assertBodyContains(
+            response, '<a href="https://nautobot.com" rel="noopener noreferrer">info</a>', html=True
+        )
+
+        with override_settings(BANNER_LOGIN="_Welcome to Nautobot!_"):
+            self.client.logout()
+            response = self.client.get(reverse("login"))
+        self.assertBodyContains(response, "<em>Welcome to Nautobot!</em>", html=True)
+
+    def test_banners_no_xss(self):
+        url = reverse("home")
+        with override_settings(
+            BANNER_TOP='<script>alert("Hello from above!");</script>',
+            BANNER_BOTTOM='<script>alert("Hello from below!");</script>',
+        ):
+            response = self.client.get(url)
+        self.assertNotIn("Hello from above", response.content.decode(response.charset))
+        self.assertNotIn("Hello from below", response.content.decode(response.charset))
+
+        with override_settings(BANNER_LOGIN='<script>alert("Welcome to Nautobot!");</script>'):
+            self.client.logout()
+            response = self.client.get(reverse("login"))
+        self.assertNotIn("Welcome to Nautobot!", response.content.decode(response.charset))
+
 
 @override_settings(BRANDING_TITLE="Nautobot")
 class SearchFieldsTestCase(TestCase):
@@ -161,21 +199,24 @@ class SearchFieldsTestCase(TestCase):
 
         # Assert model search bar present in list UI
         response = self.client.get(reverse("dcim:location_list"))
-        self.assertInHTML(
+        self.assertBodyContains(
+            response,
             '<input type="text" name="q" class="form-control" required placeholder="Search Locations" id="id_q">',
-            response.content.decode(response.charset),
+            html=True,
         )
 
         response = self.client.get(reverse("dcim:device_list"))
-        self.assertInHTML(
+        self.assertBodyContains(
+            response,
             '<input type="text" name="q" class="form-control" required placeholder="Search Devices" id="id_q">',
-            response.content.decode(response.charset),
+            html=True,
         )
 
         # Assert global search bar present in UI
-        self.assertInHTML(
+        self.assertContains(  # not using assertBodyContains because this is in the nav
+            response,
             '<input type="text" name="q" class="form-control" placeholder="Search Nautobot">',
-            response.content.decode(response.charset),
+            html=True,
         )
 
 
@@ -199,16 +240,10 @@ class FilterFormsTestCase(TestCase):
             """
 
         response = self.client.get(reverse("dcim:location_list"))
-        self.assertInHTML(
-            filter_tabs,
-            response.content.decode(response.charset),
-        )
+        self.assertBodyContains(response, filter_tabs, html=True)
 
         response = self.client.get(reverse("circuits:circuit_list"))
-        self.assertInHTML(
-            filter_tabs,
-            response.content.decode(response.charset),
-        )
+        self.assertBodyContains(response, filter_tabs, html=True)
 
     def test_filtering_on_custom_select_filter_field(self):
         """Assert CustomField select and multiple select fields can be filtered using multiple entries"""
@@ -237,10 +272,26 @@ class FilterFormsTestCase(TestCase):
         )
         url = reverse("dcim:location_list") + query_param
         response = self.client.get(url)
-        self.assertHttpStatus(response, 200)
-        response_content = response.content.decode(response.charset).replace("\n", "")
-        self.assertInHTML(locations[0].name, response_content)
-        self.assertInHTML(locations[1].name, response_content)
+        self.assertBodyContains(response, locations[0].name, html=True)
+        self.assertBodyContains(response, locations[1].name, html=True)
+
+    def test_filtering_crafted_query_params(self):
+        """Test for reflected-XSS vulnerability GHSA-jxgr-gcj5-cqqg."""
+        self.add_permissions("dcim.view_location")
+        query_param = "?location_type=1 onmouseover=alert('hi') foo=bar"
+        url = reverse("dcim:location_list") + query_param
+        response = self.client.get(url)
+        # The important thing here is that the data-field-parent and data-field-value are correctly quoted
+        self.assertBodyContains(
+            response,
+            """
+<span class="filter-selection-choice-remove remove-filter-param"
+      data-field-type="child"
+      data-field-parent="location_type"
+      data-field-value="1 onmouseover=alert(&#x27;hi&#x27;) foo=bar"
+>×</span>""",  # noqa: RUF001 - ambiguous-unicode-character-string
+            html=True,
+        )
 
 
 class ForceScriptNameTestcase(TestCase):
@@ -271,24 +322,42 @@ class NavAppsUITestCase(TestCase):
     def setUp(self):
         super().setUp()
 
-        self.url = reverse("apps:apps_list")
-        self.item_weight = 100  # TODO: not easy to introspect from the nav menu struct, so hard-code it here for now
+        self.apps_marketplace_url = reverse("apps:apps_marketplace")
+        self.apps_marketplace_item_weight = (
+            100  # TODO: not easy to introspect from the nav menu struct, so hard-code it here for now
+        )
 
-    def make_request(self):
+        self.apps_list_url = reverse("apps:apps_list")
+        self.apps_list_item_weight = (
+            200  # TODO: not easy to introspect from the nav menu struct, so hard-code it here for now
+        )
+
+    def test_apps_marketplace_visible(self):
+        """The "Apps Marketplace" menu item should be available to an authenticated user regardless of permissions."""
         response = self.client.get(reverse("home"))
-        return response.content.decode(response.charset)
+        self.assertContains(
+            response,
+            f"""
+            <a href="{self.apps_marketplace_url}"
+                data-item-weight="{self.apps_marketplace_item_weight}">
+                Apps Marketplace
+            </a>
+            """,
+            html=True,
+        )
 
     def test_installed_apps_visible(self):
         """The "Installed Apps" menu item should be available to an authenticated user regardless of permissions."""
-        response_content = self.make_request()
-        self.assertInHTML(
+        response = self.client.get(reverse("home"))
+        self.assertContains(
+            response,
             f"""
-            <a href="{self.url}"
-                data-item-weight="{self.item_weight}">
+            <a href="{self.apps_list_url}"
+                data-item-weight="{self.apps_list_item_weight}">
                 Installed Apps
             </a>
             """,
-            response_content,
+            html=True,
         )
 
 
@@ -308,7 +377,7 @@ class LoginUITestCase(TestCase):
     def make_request(self):
         response = self.client.get(reverse("login"))
         sso_login_pattern = re.compile('<a href=".*">Continue with SSO</a>')
-        return sso_login_pattern.search(response.content.decode(response.charset))
+        return sso_login_pattern.search(extract_page_body(response.content.decode(response.charset)))
 
     def test_sso_login_button_not_visible(self):
         """Test Continue with SSO button not visible if SSO is enabled"""
@@ -353,6 +422,52 @@ class LoginUITestCase(TestCase):
         for url in urls:
             response = self.client.get(url)
             self.assertHttpStatus(response, 403)
+
+    @load_event_broker_override_settings(
+        EVENT_BROKERS={
+            "SyslogEventBroker": {
+                "CLASS": "nautobot.core.events.SyslogEventBroker",
+                "TOPICS": {
+                    "INCLUDE": ["*"],
+                },
+            }
+        }
+    )
+    def test_login_logout(self):
+        self.client.logout()
+        self.user.set_password("pass")
+        self.user.save()
+
+        with self.assertLogs("nautobot.events") as cm:
+            self.client.post(
+                reverse("login"),
+                data={
+                    "username": self.user.username,
+                    "password": "pass",
+                },
+            )
+        self.user.refresh_from_db()
+        payload = serialize_user_without_config_and_views(self.user)
+        self.assertEqual(
+            cm.output,
+            [f"INFO:nautobot.events.nautobot.users.user.login:{json.dumps(payload, indent=4)}"],
+        )
+        self.assertTrue(self.user.is_authenticated)
+        self.assertNotIn("password", cm.output)
+        self.assertNotIn("pass", cm.output)
+
+        with self.assertLogs("nautobot.events") as cm:
+            self.client.get(
+                reverse("logout"),
+            )
+        self.user.refresh_from_db()
+        payload = serialize_user_without_config_and_views(self.user)
+        self.assertEqual(
+            cm.output,
+            [f"INFO:nautobot.events.nautobot.users.user.logout:{json.dumps(payload, indent=4)}"],
+        )
+        self.assertNotIn("password", cm.output)
+        self.assertNotIn("pass", cm.output)
 
 
 class MetricsViewTestCase(TestCase):
@@ -405,13 +520,13 @@ class ErrorPagesTestCase(TestCase):
         """Nautobot's custom 404 page should be used and should include a default support message."""
         with self.assertTemplateUsed("404.html"):
             response = self.client.get("/foo/bar")
-        self.assertContains(response, "Network to Code", status_code=404)
-        response_content = response.content.decode(response.charset)
-        self.assertInHTML(
+        self.assertBodyContains(
+            response,
             "If further assistance is required, please join the <code>#nautobot</code> channel on "
             '<a href="https://slack.networktocode.com/" rel="noopener noreferrer">Network to Code\'s '
             "Slack community</a> and post your question.",
-            response_content,
+            html=True,
+            status_code=404,
         )
 
     @override_settings(DEBUG=False, SUPPORT_MESSAGE="Hello world!")
@@ -420,24 +535,23 @@ class ErrorPagesTestCase(TestCase):
         with self.assertTemplateUsed("404.html"):
             response = self.client.get("/foo/bar")
         self.assertNotContains(response, "Network to Code", status_code=404)
-        response_content = response.content.decode(response.charset)
-        self.assertInHTML("Hello world!", response_content)
+        self.assertBodyContains(response, "Hello world!", status_code=404)
 
     @override_settings(DEBUG=False)
     @mock.patch("nautobot.core.views.HomeView.get", side_effect=Exception)
     def test_500_default_support_message(self, mock_get):
         """Nautobot's custom 500 page should be used and should include a default support message."""
         url = reverse("home")
-        with self.assertTemplateUsed("500.html"):
-            self.client.raise_request_exception = False
-            response = self.client.get(url)
-        self.assertContains(response, "Network to Code", status_code=500)
-        response_content = response.content.decode(response.charset)
-        self.assertInHTML(
+        self.client.raise_request_exception = False
+        response = self.client.get(url)
+        self.assertTemplateUsed(response, "500.html")
+        self.assertBodyContains(
+            response,
             "If further assistance is required, please join the <code>#nautobot</code> channel on "
             '<a href="https://slack.networktocode.com/" rel="noopener noreferrer">Network to Code\'s '
             "Slack community</a> and post your question.",
-            response_content,
+            html=True,
+            status_code=500,
         )
 
     @override_settings(DEBUG=False, SUPPORT_MESSAGE="Hello world!")
@@ -445,12 +559,11 @@ class ErrorPagesTestCase(TestCase):
     def test_500_custom_support_message(self, mock_get):
         """Nautobot's custom 500 page should be used and should include a custom support message if defined."""
         url = reverse("home")
-        with self.assertTemplateUsed("500.html"):
-            self.client.raise_request_exception = False
-            response = self.client.get(url)
+        self.client.raise_request_exception = False
+        response = self.client.get(url)
+        self.assertTemplateUsed(response, "500.html")
         self.assertNotContains(response, "Network to Code", status_code=500)
-        response_content = response.content.decode(response.charset)
-        self.assertInHTML("Hello world!", response_content)
+        self.assertBodyContains(response, "Hello world!", status_code=500)
 
 
 class DBFileStorageViewTestCase(TestCase):
@@ -520,3 +633,112 @@ class SilkUIAccessTestCase(TestCase):
 
         # Check for success status code (e.g., 200)
         self.assertEqual(response.status_code, 200)
+
+
+class ExampleViewWithCustomPermissionsTest(TestCase):
+    @skipIf(
+        "example_app" not in settings.PLUGINS,
+        "example_app not in settings.PLUGINS",
+    )
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_permission_classes_attribute_is_enforced(self):
+        """
+        If example app is installed, check if the ViewWithCustomPermissions
+        is enforcing the permissions specified in its `permission_classes` attribute.
+        """
+        # Test IsAuthenticated permission
+        self.add_permissions("example_app.view_examplemodel")
+        self.client.logout()
+        url = reverse("plugins:example_app:view_with_custom_permissions")
+        response = self.client.get(url, follow=True)
+        # check if the user is redirected to the login page
+        self.assertBodyContains(response, f'<input type="hidden" name="next" value="{url}" />', html=True)
+
+        # Test IsAdmin permission
+        self.client.force_login(self.user)
+        response = self.client.get(url, follow=True)
+        # check if the users have to have the permission to access the page
+        self.assertBodyContains(response, "You do not have permission to access this page", status_code=403)
+
+        # View should be successfully accessed
+        self.user.is_staff = True
+        self.user.save()
+        response = self.client.get(url)
+        self.assertBodyContains(response, "You are viewing a table of example models")
+
+
+class TestObjectDetailView(TestCase):
+    @override_settings(PAGINATE_COUNT=5)
+    def test_object_table_panel(self):
+        provider = Provider.objects.create(name="A Test Provider 1")
+        circuit_type = CircuitType.objects.create(
+            name="A Test Circuit Type",
+        )
+        circuit_status = Status.objects.get_for_model(Circuit).first()
+
+        circuits = [
+            Circuit(
+                provider=provider,
+                cid=f"00121{x}",
+                circuit_type=circuit_type,
+                status=circuit_status,
+            )
+            for x in range(10)
+        ]
+        Circuit.objects.bulk_create(circuits)
+
+        self.add_permissions("circuits.view_provider", "circuits.view_circuit")
+        url = reverse("circuits:provider", args=(provider.pk,))
+        response = self.client.get(f"{url}?tab=main")
+        self.assertHttpStatus(response, 200)
+        response_data = response.content.decode(response.charset)
+        view_move_url = reverse("circuits:circuit_list") + f"?provider={provider.id}"
+
+        # Assert Badge Count in table panel header
+        panel_header = f"""<div class="panel-heading"><strong>Circuits</strong> <a href="{view_move_url}" class="badge badge-primary">10</a></div>"""
+        self.assertInHTML(panel_header, response_data)
+
+        # Assert view X more btn
+        view_more_btn = f"""<a href="{view_move_url}"><span class="mdi mdi-dots-horizontal" aria-hidden="true"></span>View 5 more circuits</a>"""
+        self.assertInHTML(view_more_btn, response_data)
+
+        # Validate Copy btn on all rows excluding empty rows
+        name_copy = f"""
+        <span class="hover_copy">
+            <span id="_value_name">{provider.name}</span>
+            <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#_value_name">
+                <span class="mdi mdi-content-copy"></span>
+            </button>
+        </span>"""
+        self.assertInHTML(name_copy, response_data)
+        # ASN do not have a value, therefore no copy btn
+        self.assertNotIn("#asn_copy", response_data)
+
+
+class SearchRobotsTestCase(TestCase):
+    def test_robots_disallowed(self):
+        """
+        Test that the robots.txt file is accessible to all users and defaults to disallowing all bots.
+        """
+        url = reverse("robots_txt")
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "User-Agent: *")
+        self.assertBodyContains(response, "Disallow: /")
+
+        url = reverse("home")
+        response = self.client.get(url)
+        self.assertContains(response, '<meta name="robots" content="noindex, nofollow">', html=True)
+
+    @override_settings(PUBLISH_ROBOTS_TXT=False)
+    def test_robots_allowed(self):
+        """
+        Test that the robots.txt file is not published if PUBLISH_ROBOTS_TXT is set to False.
+        """
+        url = reverse("robots_txt")
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 404)
+
+        url = reverse("home")
+        response = self.client.get(url)
+        self.assertNotContains(response, '<meta name="robots" content="noindex, nofollow">', html=True)

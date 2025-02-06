@@ -116,6 +116,23 @@ class ContentTypeSelect(StaticSelect2):
     option_template_name = "widgets/select_contenttype.html"
 
 
+class MinimalModelChoiceIterator(ModelChoiceIterator):
+    """
+    Helper class for APISelect and APISelectMultiple.
+
+    Allows the widget to keep a full `queryset` for data validation, but, for performance reasons, returns a minimal
+    subset of choices at render time derived from the widget's `data_queryset`.
+    """
+
+    @property
+    def queryset(self):
+        return self.field.data_queryset
+
+    @queryset.setter
+    def queryset(self, value):
+        return self.field.data_queryset
+
+
 class APISelect(SelectWithDisabled):
     """
     A select widget populated via an API call
@@ -173,7 +190,7 @@ class APISelect(SelectWithDisabled):
             and isinstance(self.choices, Iterable)
         ):
 
-            class ModelChoiceIteratorWithNullOption(ModelChoiceIterator):
+            class ModelChoiceIteratorWithNullOption(MinimalModelChoiceIterator):
                 def __init__(self, *args, **kwargs):
                     self.null_options = kwargs.pop("null_option", None)
                     super().__init__(*args, **kwargs)

@@ -1,3 +1,4 @@
+from itertools import groupby
 import re
 
 from django import forms as django_forms
@@ -18,24 +19,32 @@ __all__ = (
 )
 
 
-def parse_numeric_range(string, base=10):
+def parse_numeric_range(input_string, base=10):
     """
-    Expand a numeric range (continuous or not) into a decimal or
+    Expand a numeric range (continuous or not) into a sorted decimal or
     hexadecimal list, as specified by the base parameter
       '0-3,5' => [0, 1, 2, 3, 5]
       '2,8-b,d,f' => [2, 8, 9, a, b, d, f]
     """
+    if base not in [10, 16]:
+        raise TypeError("Invalid base value.")
+
+    if not isinstance(input_string, str) or not input_string:
+        raise TypeError("Input value must be a string using a range format.")
+
     values = []
-    if not string:
-        return values
-    for dash_range in string.split(","):
+
+    for dash_range in input_string.split(","):
         try:
             begin, end = dash_range.split("-")
+            if begin == "" or end == "":
+                raise TypeError("Input value must be a string using a range format.")
         except ValueError:
             begin, end = dash_range, dash_range
         begin, end = int(begin.strip(), base=base), int(end.strip(), base=base) + 1
         values.extend(range(begin, end))
-    return list(set(values))
+    # Remove duplicates and sort
+    return sorted(set(values))
 
 
 def parse_alphanumeric_range(string):
@@ -150,3 +159,20 @@ def add_field_to_filter_form_class(form_class, field_name, field_obj):
             f"There was a conflict with filter form field `{field_name}`, the custom filter form field was ignored."
         )
     form_class.base_fields[field_name] = field_obj
+
+
+def compress_range(iterable):
+    """
+    Generates compressed range from an un-sorted expanded range.
+    For example:
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 101, 102, 103, 104, 105, 1000, 1100, 1101, 1102, 1103, 1104, 1105, 1106]
+        =>
+        iter1: (1, 10)
+        iter2: (100, 105)
+        iter3: (1000, 1000)
+        iter4: (1100, 1106)
+    """
+    iterable = sorted(set(iterable))
+    for _, grp in groupby(enumerate(iterable), lambda t: t[1] - t[0]):
+        grp = list(grp)
+        yield grp[0][1], grp[-1][1]

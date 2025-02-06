@@ -155,7 +155,7 @@ celery@worker1 v5.1.1 (sun-harmonics)
 
 `nautobot-server collectstatic`
 
-Collect static files into [`STATIC_ROOT`](../configuration/optional-settings.md#static_root).
+Collect static files into [`STATIC_ROOT`](../configuration/settings.md#static_root).
 
 ```no-highlight
 nautobot-server collectstatic
@@ -292,7 +292,7 @@ Processing ContentType dcim | location
 
 `nautobot-server generate_secret_key`
 
-Generates a new [`SECRET_KEY`](../configuration/required-settings.md#secret_key) that can be used in your `nautobot_config.py`:
+Generates a new [`SECRET_KEY`](../configuration/settings.md#secret_key) that can be used in your `nautobot_config.py`:
 
 ```no-highlight
 nautobot-server generate_secret_key
@@ -360,13 +360,13 @@ DefaultFileStorageHealthCheck ... working
 RedisBackend             ... working
 ```
 
-Please see the [healthcheck documentation](../guides/healthcheck.md) for more information.
+Please see the [health-checks documentation](../guides/health-checks.md) for more information.
 
 ### `init`
 
 `nautobot-server init [--disable-installation-metrics] [config_path]`
 
-Generates a new configuration with all of the default settings provided for you, and will also generate a unique [`SECRET_KEY`](../configuration/required-settings.md#secret_key).
+Generates a new configuration with all of the default settings provided for you, and will also generate a unique [`SECRET_KEY`](../configuration/settings.md#secret_key).
 
 By default the file will be created at `$HOME/.nautobot/nautobot_config.py`:
 
@@ -385,7 +385,7 @@ Configuration file created at /home/example/.nautobot/nautobot_config.py
 ```
 
 +++ 1.6.0
-    The `nautobot-server init` command will now prompt you to set the initial value for the [`INSTALLATION_METRICS_ENABLED`](../configuration/optional-settings.md#installation_metrics_enabled) setting. See the [send_installation_metrics](#send_installation_metrics) command for more information about the feature that this setting toggles.
+    The `nautobot-server init` command will now prompt you to set the initial value for the [`INSTALLATION_METRICS_ENABLED`](../configuration/settings.md#installation_metrics_enabled) setting. See the [`send_installation_metrics`](#send_installation_metrics) command for more information about the feature that this setting toggles.
 
 For more information on configuring Nautobot for the first time or on more advanced configuration patterns, please see the guide on [Nautobot Configuration](../configuration/index.md).
 
@@ -442,52 +442,19 @@ Prompt provided:
 
 ```no-highlight
 # Shell Plus Model Imports
-from constance.backends.database.models import Constance
+from constance.models import Constance
 from django.contrib.admin.models import LogEntry
 from django.contrib.auth.models import Group, Permission
-from django.contrib.contenttypes.models import ContentType
-from django.contrib.sessions.models import Session
-from django_celery_beat.models import ClockedSchedule, CrontabSchedule, IntervalSchedule, PeriodicTask, PeriodicTasks, SolarSchedule
-from django_celery_results.models import ChordCounter, GroupResult, TaskResult
-from example_app.models import AnotherExampleModel, ExampleModel
-from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
-from nautobot.dcim.models.cables import Cable, CablePath
-from nautobot.dcim.models.device_component_templates import ConsolePortTemplate, ConsoleServerPortTemplate, DeviceBayTemplate, FrontPortTemplate, InterfaceTemplate, PowerOutletTemplate, PowerPortTemplate, RearPortTemplate
-from nautobot.dcim.models.device_components import ConsolePort, ConsoleServerPort, DeviceBay, FrontPort, Interface, InventoryItem, PowerOutlet, PowerPort, RearPort
-from nautobot.dcim.models.devices import Device, DeviceRedundancyGroup, DeviceType, Manufacturer, Platform, VirtualChassis
-from nautobot.dcim.models.locations import Location, LocationType
-from nautobot.dcim.models.power import PowerFeed, PowerPanel
-from nautobot.dcim.models.racks import Rack, RackGroup, RackReservation
-from nautobot.extras.models.change_logging import ObjectChange
-from nautobot.extras.models.customfields import ComputedField, CustomField, CustomFieldChoice
-from nautobot.extras.models.datasources import GitRepository
-from nautobot.extras.models.groups import DynamicGroup, DynamicGroupMembership
-from nautobot.extras.models.jobs import Job, JobHook, JobLogEntry, JobResult, ScheduledJob, ScheduledJobs
-from nautobot.extras.models.models import ConfigContext, ConfigContextSchema, CustomLink, ExportTemplate, FileAttachment, FileProxy, GraphQLQuery, HealthCheckTestModel, ImageAttachment, Note, Webhook
-from nautobot.extras.models.relationships import Relationship, RelationshipAssociation
-from nautobot.extras.models.roles import Role
-from nautobot.extras.models.secrets import Secret, SecretsGroup, SecretsGroupAssociation
-from nautobot.extras.models.statuses import Status
-from nautobot.extras.models.tags import Tag, TaggedItem
-from nautobot.ipam.models import IPAddress, Prefix, RIR, RouteTarget, Service, VLAN, VLANGroup, VRF
-from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.users.models import AdminGroup, ObjectPermission, Token, User
-from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType, VMInterface, VirtualMachine
-from social_django.models import Association, Code, Nonce, Partial, UserSocialAuth
+...
 # Shell Plus Django Imports
 from django.core.cache import cache
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.db import transaction
-from django.db.models import Avg, Case, Count, F, Max, Min, Prefetch, Q, Sum, When
-from django.utils import timezone
-from django.urls import reverse
-from django.db.models import Exists, OuterRef, Subquery
-# Django version 3.2.18
-# Nautobot version 2.0.0a2
-# Example Nautobot App version 1.0.0
-Python 3.8.16 (default, Mar 23 2023, 04:48:11)
-[GCC 10.2.1 20210110] on linux
+...
+# Django version 4.2.15
+# Nautobot version 2.3.3b1
+...
+Python 3.12.6 (main, Sep 12 2024, 21:12:08) [GCC 12.2.0] on linux
 Type "help", "copyright", "credits" or "license" for more information.
 (InteractiveConsole)
 >>>
@@ -600,7 +567,7 @@ Removing expired sessions...
 
 `nautobot-server refresh_dynamic_group_member_caches`
 
-Refresh the cached members of all Dynamic Groups. This is useful to periodically update the cached list of members of a Dynamic Group without having to wait for caches to expire, which defaults to one hour.
+Refresh the cached members of all Dynamic Groups. This can also be achieved by running the `Refresh Dynamic Group Caches` system Job.
 
 ### `refresh_content_type_caches`
 
@@ -704,7 +671,7 @@ Please see the [guide on Jobs](../../platform-functionality/jobs/index.md) for m
 
 Send anonymized installation metrics to the Nautobot maintainers. This management command is called by [`post_upgrade`](#post_upgrade) and is not intended to be run manually.
 
-If the [`INSTALLATION_METRICS_ENABLED`](../configuration/optional-settings.md#installation_metrics_enabled) setting is `True`, this command will send a list of all installed [Apps](../../../development/apps/index.md) and their versions, as well as the currently installed Nautobot and Python versions, to the Nautobot maintainers. A randomized UUID will be generated and saved in the [`DEPLOYMENT_ID`](../configuration/optional-settings.md#deployment_id) setting to anonymously but uniquely identify this installation. The App names will be one-way hashed with SHA256 to further anonymize the data sent. This enables tracking the installation metrics of publicly released apps without disclosing the names of any private apps.
+If the [`INSTALLATION_METRICS_ENABLED`](../configuration/settings.md#installation_metrics_enabled) setting is `True`, this command will send a list of all installed [Apps](../../../development/apps/index.md) and their versions, as well as the currently installed Nautobot and Python versions, to the Nautobot maintainers. A randomized UUID will be generated and saved in the [`DEPLOYMENT_ID`](../configuration/settings.md#deployment_id) setting to anonymously but uniquely identify this installation. The App names will be one-way hashed with SHA256 to further anonymize the data sent. This enables tracking the installation metrics of publicly released apps without disclosing the names of any private apps.
 
 The following is an example of the data that is sent:
 
@@ -807,6 +774,53 @@ Finished.
 
 !!! note
     This command is safe to run at any time. If it does not detect any changes, it will exit cleanly.
+
+### `validate_models`
+
+`nautobot-server validate_models`
+
+Validate all instances of a given model(s) by running a 'full_clean()' or 'validated_save()' on each object.
+
+!!! warning
+    Depending on the number of records in your database, this may take a long time to run.
+
+```no-highlight
+nautobot-server validate_models
+```
+
+Example output:
+
+```no-highlight
+Validating 171 models.
+auth.Permission
+circuits.ProviderNetwork
+circuits.Provider
+circuits.CircuitType
+circuits.Circuit
+circuits.CircuitTermination
+dcim.Interface
+dcim.Manufacturer
+dcim.DeviceFamily
+dcim.DeviceTypeToSoftwareImageFile
+dcim.DeviceType
+dcim.Platform
+<omitted for brevity>
+```
+
+You can validate a specific subset of models by providing a space separated list of models as shown here:
+
+```no-highlight
+nautobot-server validate_models dcim.Manufacturer dcim.Device
+```
+
+```no-highlight
+Validating 2 models.
+dcim.Manufacturer
+dcim.Device
+```
+
+`--save`  
+Run `validated_save()` instead of `full_clean()` for slower but more thorough data validation.
 
 ### `version`
 

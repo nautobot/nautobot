@@ -112,37 +112,27 @@ class UserTestCase(FilterTestCases.FilterTestCase):
 
     def test_is_staff(self):
         params = {"is_staff": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(is_staff=True)
+        )
 
     def test_is_active(self):
         params = {"is_active": True}
-        # 4 created active users in setUpTestData, plus one created active user in TestCase.setUp
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
-
-    def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
-        params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(is_active=True)
+        )
 
 
 class GroupTestCase(FilterTestCases.FilterTestCase):
     queryset = Group.objects.all()
     filterset = GroupFilterSet
+    generic_filter_tests = (("name",),)
 
     @classmethod
     def setUpTestData(cls):
         Group.objects.create(name="Group 1")
         Group.objects.create(name="Group 2")
         Group.objects.create(name="Group 3")
-
-    def test_name(self):
-        params = {"name": ["Group 1", "Group 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
-        params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
 class ObjectPermissionTestCase(FilterTestCases.FilterTestCase):
@@ -258,8 +248,3 @@ class TokenTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"write_enabled": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-    def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
-        params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)

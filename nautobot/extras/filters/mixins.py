@@ -1,6 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Q
+from django.db.models import Model, Q
 import django_filters
+from django_filters.constants import EMPTY_VALUES
 from django_filters.utils import verbose_lookup_expr
 
 from nautobot.core.constants import (
@@ -33,7 +34,6 @@ from nautobot.extras.models import (
     ConfigContextSchema,
     CustomField,
     Relationship,
-    RelationshipAssociation,
     Role,
     Status,
 )
@@ -177,49 +177,32 @@ class RelationshipFilter(django_filters.ModelMultipleChoiceFilter):
         self.side = side
         super().__init__(queryset=queryset, *args, **kwargs)
 
+    def generate_query(self, value, **kwargs):
+        query = Q()
+
+        value = [v.pk if isinstance(v, Model) else v for v in value]
+
+        if self.side in (RelationshipSideChoices.SIDE_SOURCE, RelationshipSideChoices.SIDE_PEER):
+            query |= Q(
+                source_for_associations__relationship=self.relationship.id,
+                source_for_associations__destination_id__in=value,
+            )
+        if self.side in (RelationshipSideChoices.SIDE_DESTINATION, RelationshipSideChoices.SIDE_PEER):
+            query |= Q(
+                destination_for_associations__relationship=self.relationship.id,
+                destination_for_associations__source_id__in=value,
+            )
+        return query
+
     def filter(self, qs, value):
-        value = [entry.id for entry in value]
-        # Check if value is empty or a DynamicChoiceField that is empty.
-        if not value or "" in value:
-            # if value is empty we return the entire unmodified queryset
+        if not value or any(v in EMPTY_VALUES for v in value):
             return qs
-        else:
-            if self.side == "source":
-                values = RelationshipAssociation.objects.filter(
-                    destination_id__in=value,
-                    source_type=self.relationship.source_type,
-                    relationship=self.relationship,
-                ).values_list("source_id", flat=True)
-            elif self.side == "destination":
-                values = RelationshipAssociation.objects.filter(
-                    source_id__in=value,
-                    destination_type=self.relationship.destination_type,
-                    relationship=self.relationship,
-                ).values_list("destination_id", flat=True)
-            else:
-                destinations = RelationshipAssociation.objects.filter(
-                    source_id__in=value,
-                    destination_type=self.relationship.destination_type,
-                    relationship=self.relationship,
-                ).values_list("destination_id", flat=True)
 
-                sources = RelationshipAssociation.objects.filter(
-                    destination_id__in=value,
-                    source_type=self.relationship.source_type,
-                    relationship=self.relationship,
-                ).values_list("source_id", flat=True)
-
-                values = list(destinations) + list(sources)
-
-            # ModelMultipleChoiceFilters always have `distinct=True` so we must make sure that the
-            # unioned queryset is also distinct. We also need to conditionally check if the incoming
-            # `qs` is distinct in the case that a caller is manually passing in a queryset that may
-            # not be distinct. (Ref: https://github.com/nautobot/nautobot/issues/2963)
-            union_qs = self.get_method(self.qs)(Q(id__in=values))
-            if qs.query.distinct:
-                union_qs = union_qs.distinct()
-
-            return qs & union_qs
+        query = self.generate_query(value)
+        result = self.get_method(qs)(query)
+        if self.distinct:
+            result = result.distinct()
+        return result
 
 
 class RelationshipModelFilterSetMixin(django_filters.FilterSet):
@@ -303,7 +286,17 @@ class RoleModelFilterSetMixin(django_filters.FilterSet):
     Mixin to add a `role` filter field to a FilterSet.
     """
 
-    role = RoleFilter()
+    @classmethod
+    def get_filters(cls):
+        filters = super().get_filters()
+
+        if cls._meta.model is not None:
+            filters["role"] = RoleFilter(
+                field_name="role",
+                query_params={"content_types": [cls._meta.model._meta.label_lower]},
+            )
+
+        return filters
 
 
 class StatusFilter(NaturalKeyOrPKMultipleChoiceFilter):
@@ -322,4 +315,14 @@ class StatusModelFilterSetMixin(django_filters.FilterSet):
     Mixin to add a `status` filter field to a FilterSet.
     """
 
-    status = StatusFilter()
+    @classmethod
+    def get_filters(cls):
+        filters = super().get_filters()
+
+        if cls._meta.model is not None:
+            filters["status"] = StatusFilter(
+                field_name="status",
+                query_params={"content_types": [cls._meta.model._meta.label_lower]},
+            )
+
+        return filters

@@ -20,7 +20,7 @@
             </ul>
         </nav>
     {% endif %}
-    <form method="get">
+    <form method="get" class="form-inline">
         {% for k, v_list in request.GET.lists %}
             {% if k != 'per_page' %}
                 {% for v in v_list %}
@@ -28,15 +28,18 @@
                 {% endfor %}
             {% endif %}
         {% endfor %}
-        <select name="per_page" id="per_page">
+        <select name="per_page" id="per_page" class="form-control">
+            {% if page.paginator.per_page not in "PER_PAGE_DEFAULTS"|settings_or_config %}
+                <option value="{{ page.paginator.per_page }}" selected="selected">{{ page.paginator.per_page }}</option>
+            {% endif %}
             {% for n in "PER_PAGE_DEFAULTS"|settings_or_config %}
                 <option value="{{ n }}"{% if page.paginator.per_page == n %} selected="selected"{% endif %}>{{ n }}</option>
             {% endfor %}
         </select> per page
+        {% if page %}
+            <div class="text-right text-muted">
+                Showing {{ page.start_index }}-{{ page.end_index }} of {{ page.paginator.count }}
+            </div>
+        {% endif %}
     </form>
-    {% if page %}
-        <div class="text-right text-muted">
-            Showing {{ page.start_index }}-{{ page.end_index }} of {{ page.paginator.count }}
-        </div>
-    {% endif %}
 </div>

@@ -2,10 +2,14 @@ import logging
 
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
+from django.template import engines, loader
+from django.urls import resolve
 from django_tables2 import RequestConfig
 from rest_framework import renderers
 
+from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
 from nautobot.core.forms import (
     restrict_form_fields,
     SearchForm,
@@ -14,17 +18,20 @@ from nautobot.core.forms import (
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.core.utils.lookup import get_created_and_last_updated_usernames_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
     convert_querydict_to_factory_formset_acceptable_querydict,
     normalize_querydict,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.views.utils import check_filter_for_display, get_csv_form_fields_from_serializer_class
+from nautobot.core.views.utils import (
+    check_filter_for_display,
+    common_detail_view_context,
+    get_csv_form_fields_from_serializer_class,
+    view_changes_not_saved,
+)
+from nautobot.extras.models import SavedView
 from nautobot.extras.models.change_logging import ObjectChange
-from nautobot.extras.tables import AssociatedContactsTable
-from nautobot.extras.utils import get_base_template
 
 
 class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
@@ -34,6 +41,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
     # Log error messages within NautobotHTMLRenderer
     logger = logging.getLogger(__name__)
+    saved_view = None
+
+    exception_template_names = ["%(status_code)s.html"]
 
     def get_dynamic_filter_form(self, view, request, *args, filterset_class=None, **kwargs):
         """
@@ -44,7 +54,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         filterset = None
         if filterset_class:
             filterset = filterset_class()
-            factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(request.GET, filterset)
+            factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
+                view.filter_params if view.filter_params is not None else request.GET, filterset
+            )
         return DynamicFilterFormSet(filterset=filterset, data=factory_formset_params)
 
     def construct_user_permissions(self, request, model):
@@ -64,14 +76,32 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         """
         table_class = view.get_table_class()
         request = kwargs.get("request", view.request)
+        saved_view_pk = request.GET.get("saved_view", None)
+        table_changes_pending = request.GET.get("table_changes_pending", False)
         queryset = view.alter_queryset(request)
 
         if view.action in ["list", "notes", "changelog"]:
             if view.action == "list":
                 permissions = kwargs.get("permissions", {})
-                if view.request.GET.getlist("sort"):
+                self.saved_view = None
+                if saved_view_pk is not None:
+                    try:
+                        # We are not using .restrict(request.user, "view") here
+                        # User should be able to see any saved view that he has the list view access to.
+                        self.saved_view = SavedView.objects.get(pk=saved_view_pk)
+                    except ObjectDoesNotExist:
+                        pass
+                if view.request.GET.getlist("sort") or (
+                    self.saved_view is not None and self.saved_view.config.get("sort_order")
+                ):
                     view.hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
-                table = table_class(queryset, user=request.user, hide_hierarchy_ui=view.hide_hierarchy_ui)
+                table = table_class(
+                    queryset,
+                    table_changes_pending=table_changes_pending,
+                    saved_view=self.saved_view,
+                    user=request.user,
+                    hide_hierarchy_ui=view.hide_hierarchy_ui,
+                )
                 if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                     table.columns.show("pk")
             elif view.action == "notes":
@@ -93,9 +123,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             # Apply the request context
             paginate = {
                 "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
+                "per_page": get_paginate_count(request, self.saved_view),
             }
-            max_page_size = get_settings_or_config("MAX_PAGE_SIZE")
+            max_page_size = get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT)
             if max_page_size and paginate["per_page"] > max_page_size:
                 messages.warning(
                     request,
@@ -129,6 +159,30 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             messages.error(request, f"Missing views for action(s) {', '.join(invalid_actions)}")
         return valid_actions
 
+    def get_template_context(self, data, renderer_context):
+        # borrowed from rest_framework's TemplateHTMLRenderer - should our html renderer be based on that class?
+        response = renderer_context["response"]
+        if response.exception:
+            data["status_code"] = response.status_code
+        return data
+
+    def get_exception_template(self, response):
+        # borrowed from rest_framework's TemplateHTMLRenderer - remove if switching base class
+        template_names = [name % {"status_code": response.status_code} for name in self.exception_template_names]
+
+        try:
+            # Try to find an appropriate error template
+            return self.resolve_template(template_names)
+        except Exception:
+            # Fall back to using eg '404 Not Found'
+            body = f"{response.status_code} {response.status_text.title()}"
+            template = engines["django"].from_string(body)
+            return template
+
+    def resolve_template(self, template_names):
+        # borrowed from rest_framework's TemplateHTMLRenderer - remove if switching base class
+        return loader.select_template(template_names)
+
     def get_context(self, data, accepted_media_type, renderer_context):
         """
         Override get_context() from BrowsableAPIRenderer to obtain the context data we need to render our templates.
@@ -157,7 +211,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         display_filter_params = []
         # Compile a dictionary indicating which permissions are available to the current user for this model
         permissions = self.construct_user_permissions(request, model)
-        if view.action in ["create", "retrieve", "update", "destroy", "changelog", "notes"]:
+        if view.detail or view.action == "create":
             instance = view.get_object()
             return_url = view.get_return_url(request, instance)
         else:
@@ -179,9 +233,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                         for field_name, values in view.filter_params.items()
                     ]
                     if view.filterset_form_class is not None:
-                        filter_form = view.filterset_form_class(request.GET, label_suffix="")
+                        filter_form = view.filterset_form_class(view.filter_params, label_suffix="")
                 table = self.construct_table(view, request=request, permissions=permissions)
-                search_form = SearchForm(data=request.GET)
+                search_form = SearchForm(data=view.filter_params)
             elif view.action == "destroy":
                 form = form_class(initial=request.GET)
             elif view.action in ["create", "update"]:
@@ -190,25 +244,27 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 restrict_form_fields(form, request.user)
             elif view.action == "bulk_destroy":
                 pk_list = getattr(view, "pk_list", [])
-                if pk_list:
-                    initial = {
-                        "pk": pk_list,
-                        "return_url": return_url,
-                    }
-                    form = form_class(initial=initial)
-                table = self.construct_table(view, pk_list=pk_list)
+                initial = {
+                    "pk": pk_list,
+                    "return_url": return_url,
+                }
+                form = form_class(initial=initial)
+                delete_all = request.POST.get("_all")
+                if not delete_all:
+                    table = self.construct_table(view, pk_list=pk_list)
             elif view.action == "bulk_create":  # 3.0 TODO: remove, replaced by ImportObjects system Job
                 form = view.get_form()
                 if request.data:
                     table = data.get("table")
             elif view.action == "bulk_update":
+                edit_all = request.POST.get("_all")
                 pk_list = getattr(view, "pk_list", [])
-                if pk_list:
+                if pk_list or edit_all:
                     initial_data = {"pk": pk_list}
-                    form = form_class(model, initial=initial_data)
-
+                    form = form_class(model, initial=initial_data, edit_all=edit_all)
                     restrict_form_fields(form, request.user)
-                table = self.construct_table(view, pk_list=pk_list)
+                if not edit_all:
+                    table = self.construct_table(view, pk_list=pk_list)
             elif view.action == "notes":
                 initial_data = {
                     "assigned_object_type": content_type,
@@ -238,52 +294,59 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "verbose_name_plural": queryset.model._meta.verbose_name_plural,
         }
         if view.action == "retrieve":
-            created_by, last_updated_by = get_created_and_last_updated_usernames_for_model(instance)
+            context["object_detail_content"] = view.object_detail_content
+            context.update(common_detail_view_context(request, instance))
+        elif view.action == "list":
+            # Construct valid actions for list view.
+            valid_actions = self.validate_action_buttons(view, request)
+            # Query SavedViews for dropdown button
+            resolved_path = resolve(request.path)
+            list_url = f"{resolved_path.app_name}:{resolved_path.url_name}"
+            saved_views = None
+            if model.is_saved_view_model:
+                # We are not using .restrict(request.user, "view") here
+                # User should be able to see any saved view that he has the list view access to.
+                if request.user.has_perms(["extras.view_savedview"]):
+                    saved_views = SavedView.objects.filter(view=list_url).order_by("name").only("pk", "name")
+                else:
+                    shared_saved_views = (
+                        SavedView.objects.filter(view=list_url, is_shared=True).order_by("name").only("pk", "name")
+                    )
+                    user_owned_saved_views = (
+                        SavedView.objects.filter(view=list_url, owner=request.user).order_by("name").only("pk", "name")
+                    )
+                    saved_views = shared_saved_views | user_owned_saved_views
 
-            context["created_by"] = created_by
-            context["last_updated_by"] = last_updated_by
-            if instance.is_contact_associable_model:
-                paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-                associations = instance.associated_contacts.restrict(request.user, "view").order_by("role__name")
-                associations_table = AssociatedContactsTable(associations, orderable=False)
-                RequestConfig(request, paginate).configure(associations_table)
-                associations_table.columns.show("pk")
-                context["associated_contacts_table"] = associations_table
-            else:
-                context["associated_contacts_table"] = None
-            context.update(view.get_extra_context(request, instance))
-        else:
-            if view.action == "list":
-                # Construct valid actions for list view.
-                valid_actions = self.validate_action_buttons(view, request)
-                context.update(
-                    {
-                        "action_buttons": valid_actions,
-                        "list_url": validated_viewname(model, "list"),
-                        "title": bettertitle(model._meta.verbose_name_plural),
-                    }
-                )
-            elif view.action in ["create", "update"]:
-                context.update(
-                    {
-                        "editing": instance.present_in_database,
-                    }
-                )
-            elif view.action == "bulk_create":  # 3.0 TODO: remove, replaced by ImportObjects system Job
-                context.update(
-                    {
-                        "active_tab": view.bulk_create_active_tab if view.bulk_create_active_tab else "csv-data",
-                        "fields": get_csv_form_fields_from_serializer_class(view.serializer_class),
-                    }
-                )
-            elif view.action in ["changelog", "notes"]:
-                context.update(
-                    {
-                        "base_template": get_base_template(data.get("base_template"), model),
-                        "active_tab": view.action,
-                    }
-                )
-            context.update(view.get_extra_context(request, instance=None))
+            new_changes_not_applied = view_changes_not_saved(request, view, self.saved_view)
+            context.update(
+                {
+                    "model": model,
+                    "current_saved_view": self.saved_view,
+                    "new_changes_not_applied": new_changes_not_applied,
+                    "action_buttons": valid_actions,
+                    "list_url": list_url,
+                    "saved_views": saved_views,
+                    "title": bettertitle(model._meta.verbose_name_plural),
+                }
+            )
+        elif view.action in ["create", "update"]:
+            context.update(
+                {
+                    "editing": instance.present_in_database,
+                }
+            )
+        elif view.action == "bulk_create":  # 3.0 TODO: remove, replaced by ImportObjects system Job
+            context.update(
+                {
+                    "active_tab": view.bulk_create_active_tab if view.bulk_create_active_tab else "csv-data",
+                    "fields": get_csv_form_fields_from_serializer_class(view.serializer_class),
+                }
+            )
+
+        # Ensure the proper inheritance of context variables is applied: the view's returned data takes priority over the viewset's get_extra_context
+        context.update(view.get_extra_context(request, instance))
+        context.update(self.get_template_context(data, renderer_context))
+
         return context
 
     def render(self, data, accepted_media_type=None, renderer_context=None):
@@ -291,10 +354,17 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         Overrode render() from BrowsableAPIRenderer to set self.template with NautobotViewSet's get_template_name() before it is rendered.
         """
         view = renderer_context["view"]
+        request = renderer_context["request"]
+        response = renderer_context["response"]
+
+        # TODO: borrowed from TemplateHTMLRenderer. Remove when switching base class
+        if response.exception:
+            template = self.get_exception_template(response)
+            context = self.get_context(data, accepted_media_type, renderer_context)
+            return template.render(context, request=request)
+
         # Get the corresponding template based on self.action in view.get_template_name() unless it is already specified in the Response() data.
         # See form_valid() for self.action == "bulk_create".
         self.template = data.get("template", view.get_template_name())
 
-        # NautobotUIViewSets pass "use_new_ui" in context as they share the same class and are just different methods
-        self.use_new_ui = data.get("use_new_ui", False)
         return super().render(data, accepted_media_type=accepted_media_type, renderer_context=renderer_context)

@@ -1,11 +1,13 @@
 import re
 
 from django.core.exceptions import ValidationError
+from django.core.validators import validate_ipv46_address
 from django.db.models import ProtectedError, Q
 import netaddr
 
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.data import merge_dicts_without_collision
+from nautobot.ipam.mixins import LocationToLocationsQuerySetMixin
 
 
 class RIRQuerySet(RestrictedQuerySet):
@@ -55,7 +57,7 @@ class BaseNetworkQuerySet(RestrictedQuerySet):
             return call_map[version](search)
 
         except netaddr.core.AddrFormatError:
-            ver_map = {4: "0/32", 6: "::/128"}
+            ver_map = {4: "0.0.0.0/32", 6: "::/128"}
             return netaddr.IPNetwork(ver_map[version])
 
     def _check_and_prep_ipv6(self, search):
@@ -194,7 +196,7 @@ class BaseNetworkQuerySet(RestrictedQuerySet):
         return ip, last_ip
 
 
-class PrefixQuerySet(BaseNetworkQuerySet):
+class PrefixQuerySet(LocationToLocationsQuerySetMixin, BaseNetworkQuerySet):
     """Queryset for `Prefix` objects."""
 
     def net_equals(self, *prefixes):
@@ -396,6 +398,31 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
         """
         return super().order_by("host")
 
+    def get_or_create(self, defaults=None, **kwargs):
+        from nautobot.ipam.models import get_default_namespace, Prefix
+
+        parent = kwargs.get("parent")
+        namespace = kwargs.pop("namespace", None)
+        host = kwargs.get("host")
+        mask_length = kwargs.get("mask_length")
+        # If `host` or `mask_length` is None skip; then there is no way of getting the closest parent;
+        if parent is None and host is not None and mask_length is not None:
+            if namespace is None:
+                namespace = get_default_namespace()
+            cidr = f"{host}/{mask_length}"
+
+            try:
+                validate_ipv46_address(host)
+            except ValidationError as err:
+                raise ValidationError({"host": err.error_list}) from err
+            try:
+                netaddr.IPNetwork(cidr)
+            except netaddr.AddrFormatError as err:
+                raise ValidationError(f"{cidr} does not appear to be an IPv4 or IPv6 network.") from err
+            parent = Prefix.objects.filter(namespace=namespace).get_closest_parent(cidr=cidr, include_self=True)
+            kwargs["parent"] = parent
+        return super().get_or_create(defaults=defaults, **kwargs)
+
     def string_search(self, search):
         """
         Interpret a search string and return useful results.
@@ -474,3 +501,7 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
             q |= Q(pk__in=pk_values)
 
         return super().filter(q)
+
+
+class VLANQuerySet(LocationToLocationsQuerySetMixin, RestrictedQuerySet):
+    """Queryset for `VLAN` objects."""

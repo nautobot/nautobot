@@ -29,7 +29,7 @@ class PowerPanelTable(BaseTable):
     location = tables.Column(linkify=True)
     power_feed_count = LinkedCountColumn(
         viewname="dcim:powerfeed_list",
-        url_params={"power_panel_id": "pk"},
+        url_params={"power_panel": "pk"},
         verbose_name="Feeds",
     )
     tags = TagColumn(url_name="dcim:powerpanel_list")

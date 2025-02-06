@@ -38,7 +38,7 @@ from nautobot.core.templatetags.helpers import render_markdown
 from nautobot.core.utils.data import render_jinja2
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.models.mixins import NotesMixin
+from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
 from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
 from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features, FeatureQuery
 
@@ -65,7 +65,14 @@ class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
 
 
 @extras_features("graphql")
-class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
+class ComputedField(
+    ContactMixin,
+    ChangeLoggedModel,
+    DynamicGroupsModelMixin,
+    NotesMixin,
+    SavedViewMixin,
+    BaseModel,
+):
     """
     Read-only rendered fields driven by a Jinja2 template that are applied to objects within a ContentType.
     """
@@ -80,6 +87,11 @@ class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
         populate_from="label",
         help_text="Internal field name. Please use underscores rather than dashes in this key.",
         slugify_function=slugify_dashes_to_underscores,
+    )
+    grouping = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        blank=True,
+        help_text="Human-readable grouping that this computed field belongs to.",
     )
     label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, help_text="Name of the field as displayed to users")
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
@@ -288,6 +300,55 @@ class CustomFieldModel(models.Model):
             return computed_field.render(context={"obj": self})
         return computed_field.template
 
+    def get_computed_fields_grouping_basic(self):
+        """
+        This method exists to help call get_computed_field_groupings() in templates where a function argument (advanced_ui) cannot be specified.
+        Return a dictonary of computed fields grouped by the same grouping in the form
+        {
+            <grouping_1>: [(cf1, <value for cf1>), (cf2, <value for cf2>), ...],
+            ...
+            <grouping_5>: [(cf8, <value for cf8>), (cf9, <value for cf9>), ...],
+            ...
+        }
+        which have advanced_ui set to False
+        """
+        return self.get_computed_fields_grouping(advanced_ui=False)
+
+    def get_computed_fields_grouping_advanced(self):
+        """
+        This method exists to help call get_computed_field_groupings() in templates where a function argument (advanced_ui) cannot be specified.
+        Return a dictonary of computed fields grouped by the same grouping in the form
+        {
+            <grouping_1>: [(cf1, <value for cf1>), (cf2, <value for cf2>), ...],
+            ...
+            <grouping_5>: [(cf8, <value for cf8>), (cf9, <value for cf9>), ...],
+            ...
+        }
+        which have advanced_ui set to True
+        """
+        return self.get_computed_fields_grouping(advanced_ui=True)
+
+    def get_computed_fields_grouping(self, advanced_ui=None):
+        """
+        Return a dictonary of computed fields grouped by the same grouping in the form
+        {
+            <grouping_1>: [(cf1, <value for cf1>), (cf2, <value for cf2>), ...],
+            ...
+            <grouping_5>: [(cf8, <value for cf8>), (cf9, <value for cf9>), ...],
+            ...
+        }
+        """
+        record = {}
+        computed_fields = ComputedField.objects.get_for_model(self)
+        if advanced_ui is not None:
+            computed_fields = computed_fields.filter(advanced_ui=advanced_ui)
+
+        for field in computed_fields:
+            data = (field, field.render(context={"obj": self}))
+            record.setdefault(field.grouping, []).append(data)
+        record = dict(sorted(record.items()))
+        return record
+
     def get_computed_fields(self, label_as_key=False, advanced_ui=None):
         """
         Return a dictionary of all computed fields and their rendered values for this model.
@@ -309,11 +370,11 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
 
     def get_for_model(self, model, exclude_filter_disabled=False):
         """
-        Return all CustomFields assigned to the given model.
+        Return (and cache) all CustomFields assigned to the given model.
 
         Args:
-            model: The django model to which custom fields are registered
-            exclude_filter_disabled: Exclude any custom fields which have filter logic disabled
+            model (Model): The django model to which custom fields are registered
+            exclude_filter_disabled (bool): Exclude any custom fields which have filter logic disabled
         """
         concrete_model = model._meta.concrete_model
         cache_key = (
@@ -330,9 +391,28 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
 
     get_for_model.cache_key_prefix = "nautobot.extras.customfield.get_for_model"
 
+    def keys_for_model(self, model):
+        """Return list of all keys for CustomFields assigned to the given model."""
+        concrete_model = model._meta.concrete_model
+        cache_key = f"{self.keys_for_model.cache_key_prefix}.{concrete_model._meta.label_lower}"
+        keys = cache.get(cache_key)
+        if keys is None:
+            keys = list(self.get_for_model(model).values_list("key", flat=True))
+            cache.set(cache_key, keys)
+        return keys
+
+    keys_for_model.cache_key_prefix = "nautobot.extras.customfield.keys_for_model"
+
 
 @extras_features("webhooks")
-class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
+class CustomField(
+    ContactMixin,
+    ChangeLoggedModel,
+    DynamicGroupsModelMixin,
+    NotesMixin,
+    SavedViewMixin,
+    BaseModel,
+):
     content_types = models.ManyToManyField(
         to=ContentType,
         related_name="custom_fields",
@@ -441,6 +521,26 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
     def __str__(self):
         return self.label
 
+    @property
+    def choices_cache_key(self):
+        return f"nautobot.extras.customfield.choices.{self.pk}"
+
+    @property
+    def choices(self) -> list[str]:
+        """
+        Cacheable shorthand for retrieving custom_field_choices values associated with this model.
+
+        Returns:
+            list[str]: List of choice values, ordered by weight.
+        """
+        if self.type not in [CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT]:
+            return []
+        choices = cache.get(self.choices_cache_key)
+        if choices is None:
+            choices = list(self.custom_field_choices.order_by("weight", "value").values_list("value", flat=True))
+            cache.set(self.choices_cache_key, choices)
+        return choices
+
     def save(self, *args, **kwargs):
         self.clean()
         super().save(*args, **kwargs)
@@ -498,7 +598,13 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
             )
 
     def to_form_field(
-        self, set_initial=True, enforce_required=True, for_csv_import=False, simple_json_filter=False, label=None
+        self,
+        set_initial=True,
+        enforce_required=True,
+        for_csv_import=False,
+        simple_json_filter=False,
+        label=None,
+        for_filter_form=False,
     ):
         """
         Return a form field suitable for setting a CustomField's value for an object.
@@ -510,6 +616,7 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                 this is *not* used for CSV imports since 2.0, but it *is* used for JSON/YAML import of DeviceTypes.
             simple_json_filter: Return a TextInput widget for JSON filtering instead of the default TextArea widget.
             label: Set the input label manually (if required); otherwise, defaults to field's __str__() implementation.
+            for_filter_form: If True return the relevant form field for filter form
         """
         initial = self.default if set_initial else None
         required = self.required if enforce_required else False
@@ -592,12 +699,11 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
 
         # Select or Multi-select
         else:
-            choices = [(cfc.value, cfc.value) for cfc in self.custom_field_choices.all()]
-            default_choice = self.custom_field_choices.filter(value=self.default).first()
+            choices = [(value, value) for value in self.choices]
 
             # Set the initial value to the first available choice (if any)
-            if self.type == CustomFieldTypeChoices.TYPE_SELECT:
-                if not required or default_choice is None:
+            if self.type == CustomFieldTypeChoices.TYPE_SELECT and not for_filter_form:
+                if not required or self.default not in self.choices:
                     choices = add_blank_choice(choices)
                 field_class = CSVChoiceField if for_csv_import else forms.ChoiceField
                 field = field_class(
@@ -624,16 +730,10 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
 
     def to_filter_form_field(self, lookup_expr="exact", *args, **kwargs):
         """Return a filter form field suitable for filtering a CustomField's value for an object."""
-        form_field = self.to_form_field(*args, **kwargs)
-        # We would handle type selection differently because:
-        # 1. We'd need to use StaticSelect2Multiple for lookup_type 'exact' because self.type `select` uses StaticSelect2 by default.
-        # 2. Remove the blank choice since StaticSelect2Multiple is always blank and interprets the blank choice as an extra option.
-        # 3. If lookup_type is not the same as exact, use MultiValueCharInput
+        form_field = self.to_form_field(*args, **kwargs, for_filter_form=True)
+        # We would handle type selection differently because: If lookup_type is not the same as exact, use MultiValueCharInput
         if self.type == CustomFieldTypeChoices.TYPE_SELECT:
-            if lookup_expr in ["exact", "contains"]:
-                choices = form_field.choices[1:]
-                form_field.widget = StaticSelect2Multiple(choices=choices)
-            else:
+            if lookup_expr not in ["exact", "contains"]:
                 form_field.widget = MultiValueCharInput()
         return form_field
 
@@ -698,17 +798,15 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
 
             # Validate selected choice
             elif self.type == CustomFieldTypeChoices.TYPE_SELECT:
-                if value not in self.custom_field_choices.values_list("value", flat=True):
-                    raise ValidationError(
-                        f"Invalid choice ({value}). Available choices are: {', '.join(self.custom_field_choices.values_list('value', flat=True))}"
-                    )
+                if value not in self.choices:
+                    raise ValidationError(f"Invalid choice ({value}). Available choices are: {', '.join(self.choices)}")
 
             elif self.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
                 if isinstance(value, str):
                     value = value.split(",")
-                if not set(value).issubset(self.custom_field_choices.values_list("value", flat=True)):
+                if not set(value).issubset(self.choices):
                     raise ValidationError(
-                        f"Invalid choice(s) ({value}). Available choices are: {', '.join(self.custom_field_choices.values_list('value', flat=True))}"
+                        f"Invalid choice(s) ({value}). Available choices are: {', '.join(self.choices)}"
                     )
 
         elif self.required:
@@ -760,6 +858,7 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
     weight = models.PositiveSmallIntegerField(default=100, help_text="Higher weights appear later in the list")
 
     documentation_static_path = "docs/user-guide/platform-functionality/customfield.html"
+    is_metadata_associable_model = False
 
     class Meta:
         ordering = ["custom_field", "weight", "value"]

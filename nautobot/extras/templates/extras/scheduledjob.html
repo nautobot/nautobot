@@ -1,9 +1,10 @@
-{% extends 'generic/object_detail.html' %}
+{% extends 'generic/object_retrieve.html' %}
 {% load buttons %}
 {% load custom_links %}
 {% load helpers %}
 {% load perms %}
 {% load plugins %}
+{% load tz %}
 
 {% block buttons %}
     {% plugin_buttons object %}
@@ -94,13 +95,23 @@
               <tr>
                   <td>Start Time</td>
                   <td>
-                      {{ object.start_time }}
+                      {{ object.start_time|timezone:object.time_zone|date:'Y-m-d H:i:s T' }}
+                      {% if default_time_zone != object.time_zone %}
+                          <br>{{ object.start_time|timezone:default_time_zone|date:'Y-m-d H:i:s T' }}
+                      {% endif %}
                   </td>
               </tr>
               <tr>
                   <td>Last Run At</td>
                   <td>
-                      {{ object.last_run_at|placeholder }}
+                      {% if object.last_run_at %}
+                          {{ object.last_run_at|timezone:object.time_zone|date:'Y-m-d H:i:s T' }}
+                          {% if default_time_zone != object.time_zone %}
+                              <br>{{ object.last_run_at|timezone:default_time_zone|date:'Y-m-d H:i:s T' }}
+                          {% endif %}
+                      {% else %}
+                          {{ object.last_run_at|placeholder }}
+                      {% endif %}
                   </td>
               </tr>
               <tr>

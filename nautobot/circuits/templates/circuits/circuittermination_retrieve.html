@@ -24,6 +24,12 @@
                             {{ object.provider_network|hyperlinked_object }}
                         </td>
                     {% endif %}
+                    {% if object.cloud_network %}
+                        <td>Cloud Network</td>
+                        <td>
+                            {{ object.cloud_network|hyperlinked_object }}
+                        </td>
+                    {% endif %}
                 </tr>
                 {% if object.location %}
                 <tr>

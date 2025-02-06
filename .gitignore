@@ -30,5 +30,7 @@ jobs/*
 htmlcov/*
 /nautobot/project-static/docs/
 /examples/example_*/**/static/example_*/docs/
-development/factory_dump.json
+development/factory_dump*.json
+development/kind-kube-config
+development/pod.yaml
 node_modules

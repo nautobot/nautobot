@@ -10,6 +10,7 @@
             {% render_field form.role %}
             {% render_field form.location %}
             {% render_field form.platform %}
+            {% render_field form.capabilities %}
             {% render_field form.description %}
         </div>
     </div>
@@ -33,13 +34,7 @@
         {% endwith %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Tenancy</strong></div>
-        <div class="panel-body">
-            {% render_field form.tenant_group %}
-            {% render_field form.tenant %}
-        </div>
-    </div>
+    {% include 'inc/tenancy_form_panel.html' %}
     {% include 'inc/extras_features_edit_form_fields.html' %}
 {% endblock form %}
 

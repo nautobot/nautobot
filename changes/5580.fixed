@@ -1,1 +1,0 @@
-Fixed bugs when assigning a VLAN to an Interface related to the recently introduced many-to-many relationship between VLANs and Locations.

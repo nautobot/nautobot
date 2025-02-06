@@ -1,0 +1,68 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block extra_breadcrumbs %}
+    <li><a href="{% url 'dcim:device' pk=object.device.pk %}">{{ object.device }}</a></li>
+{% endblock extra_breadcrumbs %}
+
+
+{% block content_left_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Virtual Device Context</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>Name</td>
+                <td>
+                    {{ object.name }}
+                </td>
+            </tr>
+            <tr>
+                <td>Identifier</td>
+                <td>
+                    {{ object.identifier }}
+                </td>
+            </tr>
+            <tr>
+                <td>Role</td>
+                <td>
+                    {{ object.role| hyperlinked_object_with_color }}
+                </td>
+            </tr>
+            <tr>
+                <td>Status</td>
+                <td>
+                    {{ object.status| hyperlinked_object_with_color }}
+                </td>
+            </tr>
+            <tr>
+                <td>Device</td>
+                <td>
+                    {{ object.device|hyperlinked_object }}
+                </td>
+            </tr>
+            <tr>
+                <td>Primary IPv4</td>
+                <td>
+                    {{ object.primary_ip4|hyperlinked_object }}
+                </td>
+            </tr>
+            <tr>
+                <td>Primary IPv6</td>
+                <td>
+                    {{ object.primary_ip6|hyperlinked_object }}
+                </td>
+            </tr>
+            {% include 'inc/tenant_table_row.html' %}
+            <tr>
+                <td>Description</td>
+                <td>{{ object.description|placeholder }}</td>
+            </tr>
+        </table>
+    </div>
+{% endblock content_left_page %}
+
+{% block content_full_width_page %}
+    {% include 'panel_table.html' with table=interfaces_table heading="Interfaces" %}
+{% endblock content_full_width_page %}

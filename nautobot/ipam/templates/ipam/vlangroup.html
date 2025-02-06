@@ -1,4 +1,4 @@
-{% extends 'generic/object_detail.html' %}
+{% extends 'generic/object_retrieve.html' %}
 {% load buttons %}
 {% load helpers %}
 {% load plugins %}
@@ -16,6 +16,10 @@
                 <tr>
                     <td>Location</td>
                     <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
+                </tr>
+                <tr>
+                    <td>Range</td>
+                    <td>{{ object.range }}</td>
                 </tr>
                 <tr>
                     <td>VLANs</td>

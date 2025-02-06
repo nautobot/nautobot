@@ -8,6 +8,7 @@ from django.urls import reverse
 
 from nautobot.circuits import models as circuits_models
 from nautobot.core import testing
+from nautobot.core.testing.utils import extract_page_body
 from nautobot.core.views import paginator
 from nautobot.dcim import models as dcim_models
 from nautobot.extras import models as extras_models
@@ -75,7 +76,7 @@ class PaginatorTestCase(testing.TestCase):
             warning_message = (
                 "Requested &quot;per_page&quot; is too large. No more than 10 items may be displayed at a time."
             )
-            self.assertIn(warning_message, response.content.decode(response.charset))
+            self.assertIn(warning_message, extract_page_body(response.content.decode(response.charset)))
         with self.subTest("query parameter per_page=5 returns 5 rows"):
             response = self.client.get(url, {"per_page": 5})
             self.assertHttpStatus(response, 200)
@@ -97,7 +98,7 @@ class PaginatorTestCase(testing.TestCase):
             warning_message = (
                 "Requested &quot;per_page&quot; is too large. No more than 10 items may be displayed at a time."
             )
-            self.assertIn(warning_message, response.content.decode(response.charset).replace("\n", ""))
+            self.assertIn(warning_message, extract_page_body(response.content.decode(response.charset)))
 
     @override_settings(MAX_PAGE_SIZE=0)
     def test_error_warning_not_shown_when_max_page_size_is_0(self):
@@ -118,4 +119,4 @@ class PaginatorTestCase(testing.TestCase):
             self.assertEqual(response.context["paginator"].per_page, 20)
             self.assertEqual(len(response.context["table"].page), 20)
             warning_message = "Requested &quot;per_page&quot; is too large."
-            self.assertNotIn(warning_message, response.content.decode(response.charset))
+            self.assertNotIn(warning_message, extract_page_body(response.content.decode(response.charset)))

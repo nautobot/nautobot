@@ -10,8 +10,9 @@ from django.utils.functional import cached_property
 import netaddr
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.forms.utils import parse_numeric_range
 from nautobot.core.models import BaseManager, BaseModel
-from nautobot.core.models.fields import JSONArrayField
+from nautobot.core.models.fields import JSONArrayField, PositiveRangeNumberTextField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.utils import array_to_string
 from nautobot.core.utils.data import UtilizationData
@@ -22,18 +23,24 @@ from nautobot.ipam import choices, constants
 from nautobot.virtualization.models import VMInterface
 
 from .fields import VarbinaryIPField
-from .querysets import IPAddressQuerySet, PrefixQuerySet, RIRQuerySet
+from .querysets import IPAddressQuerySet, PrefixQuerySet, RIRQuerySet, VLANQuerySet
 from .validators import DNSValidator
 
 __all__ = (
-    "IPAddress",
-    "Prefix",
     "RIR",
+    "VLAN",
+    "VRF",
+    "IPAddress",
+    "IPAddressToInterface",
+    "Namespace",
+    "Prefix",
+    "PrefixLocationAssignment",
     "RouteTarget",
     "Service",
-    "VLAN",
     "VLANGroup",
-    "VRF",
+    "VLANLocationAssignment",
+    "VRFDeviceAssignment",
+    "VRFPrefixAssignment",
 )
 
 
@@ -43,7 +50,6 @@ logger = logging.getLogger(__name__)
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
@@ -92,6 +98,7 @@ def get_default_namespace_pk():
     "custom_validators",
     "export_templates",
     "graphql",
+    "statuses",
     "webhooks",
 )
 class VRF(PrimaryModel):
@@ -109,6 +116,7 @@ class VRF(PrimaryModel):
         verbose_name="Route distinguisher",
         help_text="Unique route distinguisher (as defined in RFC 4364)",
     )
+    status = StatusField(blank=True, null=True)
     namespace = models.ForeignKey(
         "ipam.Namespace",
         on_delete=models.PROTECT,
@@ -275,6 +283,7 @@ class VRFDeviceAssignment(BaseModel):
         help_text="Unique route distinguisher (as defined in RFC 4364)",
     )
     name = models.CharField(blank=True, max_length=CHARFIELD_MAX_LENGTH)
+    is_metadata_associable_model = False
 
     class Meta:
         unique_together = [
@@ -312,6 +321,7 @@ class VRFDeviceAssignment(BaseModel):
 class VRFPrefixAssignment(BaseModel):
     vrf = models.ForeignKey("ipam.VRF", on_delete=models.CASCADE, related_name="+")
     prefix = models.ForeignKey("ipam.Prefix", on_delete=models.CASCADE, related_name="vrf_assignments")
+    is_metadata_associable_model = False
 
     class Meta:
         unique_together = ["vrf", "prefix"]
@@ -391,7 +401,6 @@ class RIR(OrganizationalModel):
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
@@ -493,11 +502,6 @@ class Prefix(PrimaryModel):
         "type",
         "vlan",
     ]
-    """
-    dynamic_group_filter_fields = {
-        "vrf": "vrf_id",  # Duplicate filter fields that will be collapsed in 2.0
-    }
-    """
 
     class Meta:
         ordering = (
@@ -527,10 +531,38 @@ class Prefix(PrimaryModel):
         prefix = kwargs.pop("prefix", None)
         self._location = kwargs.pop("location", None)
         super().__init__(*args, **kwargs)
+
+        # Initialize cached fields
+        self._parent = None
+        self._network = None
+        self._prefix_length = None
+        self._namespace_id = None
+
         self._deconstruct_prefix(prefix)
+
+    @staticmethod
+    def _extract_field_value(field_name, field_names, values):
+        for current_field, field_value in zip(field_names, values):
+            if field_name == current_field:
+                return field_value
+        return None
+
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        instance = super().from_db(db, field_names, values)
+        # These cached values are used to detect changes during save,
+        # avoiding unnecessary re-parenting of subnets and IPs if these fields have not been updated.
+        instance._network = cls._extract_field_value("network", field_names, values)
+        instance._prefix_length = cls._extract_field_value("prefix_length", field_names, values)
+        instance._namespace_id = cls._extract_field_value("namespace_id", field_names, values)
+        return instance
 
     def __str__(self):
         return str(self.prefix)
+
+    @property
+    def display(self):
+        return f"{self.prefix}: {self.namespace}"
 
     def _deconstruct_prefix(self, prefix):
         if prefix:
@@ -604,18 +636,30 @@ class Prefix(PrimaryModel):
             protected_objects.update(parent=self.parent)
             return super().delete(*args, **kwargs)
 
-    def save(self, *args, **kwargs):
-        if isinstance(self.prefix, netaddr.IPNetwork):
+    def get_parent(self):
+        # Determine if a parent exists and set it to the closest ancestor by `prefix_length`.
+        if self._parent is not None:
+            return self._parent
+
+        if supernets := self.supernets():
+            parent = max(supernets, key=operator.attrgetter("prefix_length"))
+            self._parent = parent
+            return parent
+        return None
+
+    def clean(self):
+        if self.prefix is not None:  # missing network/prefix_length will be caught by super().clean()
             # Clear host bits from prefix
             # This also has the subtle side effect of calling self._deconstruct_prefix(),
             # which will (re)set the broadcast and ip_version values of this instance to their correct values.
             self.prefix = self.prefix.cidr
 
-        # Determine if a parent exists and set it to the closest ancestor by `prefix_length`.
-        supernets = self.supernets()
-        if supernets:
-            parent = max(supernets, key=operator.attrgetter("prefix_length"))
-            self.parent = parent
+            self.parent = self.get_parent()
+
+        super().clean()
+
+    def save(self, *args, **kwargs):
+        self.clean()
 
         # Validate that creation of this prefix does not create an invalid parent/child relationship
         # 3.0 TODO: uncomment this to enforce this constraint
@@ -647,15 +691,26 @@ class Prefix(PrimaryModel):
         #     )
         #     raise ValidationError({"__all__": err_msg})
 
+        # cache the value of present_in_database; because after `super().save()`
+        # `self.present_in_database` would always return True`
+        present_in_database = self.present_in_database
+
         with transaction.atomic():
             super().save(*args, **kwargs)
             if self._location is not None:
                 self.location = self._location
 
-        # Determine the subnets and reparent them to this prefix.
-        self.reparent_subnets()
-        # Determine the child IPs and reparent them to this prefix.
-        self.reparent_ips()
+        # Only reparent subnets and ips if any of these fields has been updated.
+        if (
+            not present_in_database
+            or self._network != self.network
+            or self._namespace_id != self.namespace_id
+            or self._prefix_length != self.prefix_length
+        ):
+            # Determine the subnets and reparent them to this prefix.
+            self.reparent_subnets()
+            # Determine the child IPs and reparent them to this prefix.
+            self.reparent_ips()
 
     @property
     def cidr_str(self):
@@ -731,6 +786,7 @@ class Prefix(PrimaryModel):
         Returns:
             QuerySet
         """
+
         query = Prefix.objects.all()
 
         if for_update:
@@ -742,13 +798,15 @@ class Prefix(PrimaryModel):
         if not include_self:
             query = query.exclude(id=self.id)
 
-        return query.filter(
+        supernets = query.filter(
             ip_version=self.ip_version,
             prefix_length__lte=self.prefix_length,
             network__lte=self.network,
             broadcast__gte=self.broadcast,
             namespace=self.namespace,
         )
+
+        return supernets
 
     def subnets(self, direct=False, include_self=False, for_update=False):
         """
@@ -859,7 +917,7 @@ class Prefix(PrimaryModel):
         Return all available IPs within this prefix as an IPSet.
         """
         prefix = netaddr.IPSet(self.prefix)
-        child_ips = netaddr.IPSet([ip.address.ip for ip in self.ip_addresses.all()])
+        child_ips = netaddr.IPSet([ip.address.ip for ip in self.get_all_ips()])
         available_ips = prefix - child_ips
 
         # IPv6, pool, or IPv4 /31-32 sets are fully usable
@@ -884,20 +942,44 @@ class Prefix(PrimaryModel):
 
     def get_child_ips(self):
         """
-        Return IP addresses with this prefix as parent.
+        Return IP addresses with this prefix as their *direct* parent.
 
-        In a future release, if this prefix is a pool, it will return IP addresses within the pool's address space.
+        Does *not* include IPs that descend from a descendant prefix; if those are desired, use get_all_ips() instead.
 
-        Returns:
-            IPAddress QuerySet
+        ```
+        Prefix 10.0.0.0/16
+            IPAddress 10.0.0.1/24
+            Prefix 10.0.1.0/24
+                IPAddress 10.0.1.1/24
+        ```
+
+        In the above example, `<Prefix 10.0.0.0/16>.get_child_ips()` will *only* return 10.0.0.1/24,
+        while `<Prefix 10.0.0.0/16>.get_all_ips()` will return *both* 10.0.0.1.24 and 10.0.1.1/24.
         """
-        # 3.0 TODO: uncomment this to enable this logic
-        # if self.type == choices.PrefixTypeChoices.TYPE_POOL:
-        #     return IPAddress.objects.filter(
-        #         parent__namespace=self.namespace, host__gte=self.network, host__lte=self.broadcast
-        #     )
-        # else:
         return self.ip_addresses.all()
+
+    def get_all_ips(self):
+        """
+        Return all IP addresses contained within this prefix, including child prefixes' IP addresses.
+
+        This is distinct from the behavior of `get_child_ips()` and in *most* cases is probably preferred.
+
+        ```
+        Prefix 10.0.0.0/16
+            IPAddress 10.0.0.1/24
+            Prefix 10.0.1.0/24
+                IPAddress 10.0.1.1/24
+        ```
+
+        In the above example, `<Prefix 10.0.0.0/16>.get_child_ips()` will *only* return 10.0.0.1/24,
+        while `<Prefix 10.0.0.0/16>.get_all_ips()` will return *both* 10.0.0.1.24 and 10.0.1.1/24.
+        """
+        return IPAddress.objects.filter(
+            parent__namespace=self.namespace,
+            ip_version=self.ip_version,
+            host__gte=self.network,
+            host__lte=self.broadcast,
+        )
 
     def get_first_available_prefix(self):
         """
@@ -937,7 +1019,10 @@ class Prefix(PrimaryModel):
         # change this when that is the case, see #3873 for historical context.
         if self.type != choices.PrefixTypeChoices.TYPE_CONTAINER:
             pool_ips = IPAddress.objects.filter(
-                parent__namespace=self.namespace, host__gte=self.network, host__lte=self.broadcast
+                parent__namespace=self.namespace,
+                ip_version=self.ip_version,
+                host__gte=self.network,
+                host__lte=self.broadcast,
             ).values_list("host", flat=True)
             child_ips = netaddr.IPSet(pool_ips)
 
@@ -965,6 +1050,7 @@ class Prefix(PrimaryModel):
 class PrefixLocationAssignment(BaseModel):
     prefix = models.ForeignKey("ipam.Prefix", on_delete=models.CASCADE, related_name="location_assignments")
     location = models.ForeignKey("dcim.Location", on_delete=models.CASCADE, related_name="prefix_assignments")
+    is_metadata_associable_model = False
 
     class Meta:
         unique_together = ["prefix", "location"]
@@ -977,7 +1063,6 @@ class PrefixLocationAssignment(BaseModel):
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "statuses",
@@ -1011,7 +1096,7 @@ class IPAddress(PrimaryModel):
     parent = models.ForeignKey(
         "ipam.Prefix",
         blank=True,
-        null=True,
+        null=True,  # TODO remove this, it shouldn't be permitted for the database!
         related_name="ip_addresses",  # `IPAddress` to use `related_name="ip_addresses"`
         on_delete=models.PROTECT,
         help_text="The parent Prefix of this IPAddress.",
@@ -1108,7 +1193,7 @@ class IPAddress(PrimaryModel):
             raise ValidationError({"namespace": "No suitable parent Prefix exists in this Namespace"}) from e
 
     def clean(self):
-        super().clean()
+        self.address = self.address  # not a no-op - forces re-calling of self._deconstruct_address()
 
         # Validate that host is not being modified
         if self.present_in_database:
@@ -1122,8 +1207,8 @@ class IPAddress(PrimaryModel):
 
         closest_parent = self._get_closest_parent()
         # Validate `parent` can be used as the parent for this ipaddress
-        if self.parent and closest_parent:
-            if self.parent != closest_parent:
+        if closest_parent is not None:
+            if self.parent is not None and self.parent != closest_parent:
                 raise ValidationError(
                     {
                         "parent": (
@@ -1135,23 +1220,20 @@ class IPAddress(PrimaryModel):
             self.parent = closest_parent
             self._namespace = None
 
-    def save(self, *args, **kwargs):
         # 3.0 TODO: uncomment the below to enforce this constraint
         # if self.parent.type != choices.PrefixTypeChoices.TYPE_NETWORK:
         #     err_msg = f"IP addresses cannot be created in {self.parent.type} prefixes. You must create a network prefix first."
         #     raise ValidationError({"address": err_msg})
 
-        self.address = self.address  # not a no-op - forces re-calling of self._deconstruct_address()
-
         # Force dns_name to lowercase
         if not self.dns_name.islower:
             self.dns_name = self.dns_name.lower()
 
-        # Host and mask_length are required to get closest parent
-        closest_parent = self._get_closest_parent()
-        if closest_parent is not None:
-            self.parent = closest_parent
-            self._namespace = None
+        super().clean()
+
+    def save(self, *args, **kwargs):
+        self.clean()  # MUST do data fixup as above
+
         super().save(*args, **kwargs)
 
     @property
@@ -1247,6 +1329,7 @@ class IPAddressToInterface(BaseModel):
     is_primary = models.BooleanField(default=False, help_text="Is primary address on interface")
     is_secondary = models.BooleanField(default=False, help_text="Is secondary address on interface")
     is_standby = models.BooleanField(default=False, help_text="Is standby address on interface")
+    is_metadata_associable_model = False
 
     class Meta:
         unique_together = [
@@ -1269,17 +1352,21 @@ class IPAddressToInterface(BaseModel):
 
     def __str__(self):
         if self.interface:
-            return f"{self.ip_address!s} {self.interface.device.name} {self.interface.name}"
+            parent_name = self.interface.parent.name if self.interface.parent else "No Parent"
+            return f"{self.ip_address!s} {parent_name} {self.interface.name}"
         else:
             return f"{self.ip_address!s} {self.vm_interface.virtual_machine.name} {self.vm_interface.name}"
 
 
 @extras_features(
+    "custom_links",
     "custom_validators",
+    "export_templates",
     "graphql",
     "locations",
+    "webhooks",
 )
-class VLANGroup(OrganizationalModel):
+class VLANGroup(PrimaryModel):
     """
     A VLAN group is an arbitrary collection of VLANs within which VLAN IDs and names must be unique.
     """
@@ -1294,14 +1381,38 @@ class VLANGroup(OrganizationalModel):
     )
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
+    range = PositiveRangeNumberTextField(
+        blank=False,
+        default="1-4094",
+        help_text="Permitted VID range(s) as comma-separated list, default '1-4094' if left blank.",
+        min_boundary=constants.VLAN_VID_MIN,
+        max_boundary=constants.VLAN_VID_MAX,
+    )
+
     class Meta:
         ordering = ("name",)
         verbose_name = "VLAN group"
         verbose_name_plural = "VLAN groups"
 
+    @property
+    def expanded_range(self):
+        """
+        Expand VLAN's range into a list of integers (VLAN IDs).
+        """
+        return parse_numeric_range(self.range)
+
+    @property
+    def available_vids(self):
+        """
+        Return all available VLAN IDs within this VLANGroup as a list.
+        """
+        used_ids = self.vlans.all().values_list("vid", flat=True)
+        available = sorted([vid for vid in self.expanded_range if vid not in used_ids])
+
+        return available
+
     def clean(self):
         super().clean()
-
         # Validate location
         if self.location is not None:
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
@@ -1309,18 +1420,25 @@ class VLANGroup(OrganizationalModel):
                     {"location": f'VLAN groups may not associate to locations of type "{self.location.location_type}".'}
                 )
 
+        # Validate ranges for related VLANs.
+        _expanded_range = self.expanded_range
+        out_of_range_vids = [_vlan.vid for _vlan in self.vlans.all() if _vlan.vid not in _expanded_range]
+        if out_of_range_vids:
+            raise ValidationError(
+                {
+                    "range": f"VLAN group range may not be re-sized due to existing VLANs (IDs: {','.join(map(str, out_of_range_vids))})."
+                }
+            )
+
     def __str__(self):
         return self.name
 
     def get_next_available_vid(self):
         """
-        Return the first available VLAN ID (1-4094) in the group.
+        Return the first available VLAN ID in the group's range.
         """
-        vlan_ids = VLAN.objects.filter(vlan_group=self).values_list("vid", flat=True)
-        for i in range(1, 4095):
-            if i not in vlan_ids:
-                return i
-        return None
+        _available_vids = self.available_vids
+        return _available_vids[0] if _available_vids else None
 
 
 @extras_features(
@@ -1380,6 +1498,7 @@ class VLAN(PrimaryModel):
     ]
 
     natural_key_field_names = ["pk"]
+    objects = BaseManager.from_queryset(VLANQuerySet)()
 
     class Meta:
         ordering = (
@@ -1438,11 +1557,19 @@ class VLAN(PrimaryModel):
         # Return all VM interfaces assigned to this VLAN
         return VMInterface.objects.filter(Q(untagged_vlan_id=self.pk) | Q(tagged_vlans=self.pk)).distinct()
 
+    def clean(self):
+        super().clean()
+
+        # Validate Vlan Group Range
+        if self.vlan_group and self.vid not in self.vlan_group.expanded_range:
+            raise ValidationError({"vid": f"VLAN ID is not contained in VLAN Group range ({self.vlan_group.range})"})
+
 
 @extras_features("graphql")
 class VLANLocationAssignment(BaseModel):
     vlan = models.ForeignKey("ipam.VLAN", on_delete=models.CASCADE, related_name="location_assignments")
     location = models.ForeignKey("dcim.Location", on_delete=models.CASCADE, related_name="vlan_assignments")
+    is_metadata_associable_model = False
 
     class Meta:
         unique_together = ["vlan", "location"]

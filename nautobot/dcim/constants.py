@@ -27,19 +27,12 @@ REARPORT_POSITIONS_MAX = 1024
 INTERFACE_MTU_MIN = 1
 INTERFACE_MTU_MAX = 32767  # Max value of a signed 16-bit integer
 
-VIRTUAL_IFACE_TYPES = [
-    InterfaceTypeChoices.TYPE_VIRTUAL,
-    InterfaceTypeChoices.TYPE_BRIDGE,
-    InterfaceTypeChoices.TYPE_LAG,
-]
+interface_type_by_category = {}
+for category_name, category_item_tuples in InterfaceTypeChoices.CHOICES:
+    interface_type_by_category[category_name] = [item_tuple[0] for item_tuple in category_item_tuples]
 
-WIRELESS_IFACE_TYPES = [
-    InterfaceTypeChoices.TYPE_80211A,
-    InterfaceTypeChoices.TYPE_80211G,
-    InterfaceTypeChoices.TYPE_80211N,
-    InterfaceTypeChoices.TYPE_80211AC,
-    InterfaceTypeChoices.TYPE_80211AD,
-]
+WIRELESS_IFACE_TYPES = interface_type_by_category["Wireless"]
+VIRTUAL_IFACE_TYPES = interface_type_by_category["Virtual interfaces"]
 
 NONCONNECTABLE_IFACE_TYPES = VIRTUAL_IFACE_TYPES + WIRELESS_IFACE_TYPES
 
@@ -118,3 +111,10 @@ NETUTILS_NETWORK_DRIVER_MAPPING_NAMES = {
     "pyntc",
     "scrapli",
 }
+
+#
+# Modules
+#
+
+# Limit of 4 allows recursion depth of Device->ModuleBay->Module->ModuleBay->Module->ModuleBay->Module->ModuleBay->Module
+MODULE_RECURSION_DEPTH_LIMIT = 4

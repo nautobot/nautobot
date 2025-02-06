@@ -5,16 +5,17 @@ HTTP_CONTENT_TYPE_JSON = "application/json"
 EXTRAS_FEATURES = [
     "cable_terminations",
     "config_context_owners",
-    "custom_fields",
+    "custom_fields",  # Deprecated - see nautobot.extras.utils.populate_model_features_registry
     "custom_links",
     "custom_validators",
     "dynamic_groups",
     "export_template_owners",
     "export_templates",
+    "graphql_query_owners",
     "graphql",
-    "job_results",
+    "job_results",  # No longer used
     "locations",
-    "relationships",
+    "relationships",  # Deprecated - see nautobot.extras.utils.populate_model_features_registry
     "statuses",
     "webhooks",
 ]
@@ -30,7 +31,7 @@ JOB_OVERRIDABLE_FIELDS = (
     "soft_time_limit",
     "time_limit",
     "has_sensitive_variables",
-    "task_queues",
+    "is_singleton",
 )
 
 
@@ -53,4 +54,5 @@ JOB_RESULT_CUSTOM_CELERY_KWARGS = (
     "nautobot_job_job_model_id",
     "nautobot_job_scheduled_job_id",
     "nautobot_job_user_id",
+    "nautobot_job_ignore_singleton_lock",
 )

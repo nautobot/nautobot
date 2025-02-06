@@ -21,6 +21,20 @@ class LocationStatusChoices(ChoiceSet):
     )
 
 
+class LocationDataToContactActionChoices(ChoiceSet):
+    ASSOCIATE_EXISTING_CONTACT = "associate existing contact"
+    ASSOCIATE_EXISTING_TEAM = "associate existing team"
+    CREATE_AND_ASSIGN_NEW_CONTACT = "create and assign new contact"
+    CREATE_AND_ASSIGN_NEW_TEAM = "create and assign new team"
+
+    CHOICES = (
+        (ASSOCIATE_EXISTING_CONTACT, "Associate to existing contact"),
+        (ASSOCIATE_EXISTING_TEAM, "Associate to existing team"),
+        (CREATE_AND_ASSIGN_NEW_CONTACT, "Create and assign new contact"),
+        (CREATE_AND_ASSIGN_NEW_TEAM, "Create and assign new team"),
+    )
+
+
 #
 # Racks
 #
@@ -790,6 +804,9 @@ class InterfaceTypeChoices(ChoiceSet):
     TYPE_400GE_CFP8 = "400gbase-x-cfp8"
     TYPE_800GE_QSFP_DD = "800gbase-x-qsfpdd"
     TYPE_800GE_OSFP = "800gbase-x-osfp"
+    TYPE_800GE_OSFP_XD = "800gbase-x-osfp-xd"
+    TYPE_1600GE_OSFP = "1600gbase-x-osfp"
+    TYPE_1600GE_OSFP_XD = "1600gbase-x-osfp-xd"
 
     # Ethernet Backplane
     TYPE_1GE_KX = "1000base-kx"
@@ -963,6 +980,9 @@ class InterfaceTypeChoices(ChoiceSet):
                 (TYPE_400GE_CFP8, "CPF8 (400GE)"),
                 (TYPE_800GE_QSFP_DD, "QSFP-DD (800GE)"),
                 (TYPE_800GE_OSFP, "OSFP (800GE)"),
+                (TYPE_800GE_OSFP_XD, "OSFP-XD (800GE)"),
+                (TYPE_1600GE_OSFP, "OSFP (1600GE)"),
+                (TYPE_1600GE_OSFP_XD, "OSFP-XD (1600GE)"),
             ),
         ),
         (
@@ -1522,3 +1542,56 @@ class SoftwareVersionStatusChoices(ChoiceSet):
         (STATUS_EXTENDED_SUPPORT, "Extended Support"),
         (STATUS_END_OF_LIFE, "End-of-Life"),
     )
+
+
+#
+# Modules
+#
+
+
+class ModuleStatusChoices(ChoiceSet):
+    STATUS_OFFLINE = "offline"
+    STATUS_ACTIVE = "active"
+    STATUS_PLANNED = "planned"
+    STATUS_STAGED = "staged"
+    STATUS_FAILED = "failed"
+    STATUS_INVENTORY = "inventory"
+    STATUS_DECOMMISSIONING = "decommissioning"
+
+    CHOICES = (
+        (STATUS_OFFLINE, "Offline"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_PLANNED, "Planned"),
+        (STATUS_STAGED, "Staged"),
+        (STATUS_FAILED, "Failed"),
+        (STATUS_INVENTORY, "Inventory"),
+        (STATUS_DECOMMISSIONING, "Decommissioning"),
+    )
+
+
+#
+# Virtual Device Context
+#
+
+
+class VirtualDeviceContextStatusChoices(ChoiceSet):
+    STATUS_OFFLINE = "offline"
+    STATUS_ACTIVE = "active"
+    STATUS_PLANNED = "planned"
+
+    CHOICES = (
+        (STATUS_OFFLINE, "Offline"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_PLANNED, "Planned"),
+    )
+
+
+#
+# Controllers
+#
+
+
+class ControllerCapabilitiesChoices(ChoiceSet):
+    WIRELESS = "wireless"
+
+    CHOICES = ((WIRELESS, "Wireless"),)

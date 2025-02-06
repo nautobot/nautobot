@@ -14,12 +14,12 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.8", "3.9", "3.10", "3.11" ]
+        python-version: [ "3.9", "3.10", "3.11", "3.12" ]
     env:
       INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
     steps:
       - name: "Check out repository code"
-        uses: "actions/checkout@v3"
+        uses: "actions/checkout@v4"
       - name: "Get Git Branch/Tag Name" # For tagging dependencies image, supports branch or tag reference
         run: echo "branch=$(echo $GITHUB_REF | awk -F '/' '{print $NF}')" >> $GITHUB_OUTPUT
         id: "gitbranch"

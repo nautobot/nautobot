@@ -1,6 +1,7 @@
-from django.apps import AppConfig
+from nautobot.core.apps import NautobotConfig
 
 
-class UsersConfig(AppConfig):
+class UsersConfig(NautobotConfig):
+    default = True
     name = "nautobot.users"
     verbose_name = "Users"

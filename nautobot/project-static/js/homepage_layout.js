@@ -9,6 +9,9 @@ document.addEventListener("DOMContentLoaded", function() {
         // Toggle the collapsed class
         var isCollapsed = collapsibleDiv.classList.toggle("collapsed")
 
+        // Rotate glyphicon
+        collapsibleDiv.classList.toggle("rotated180");
+
         // Update the state in localStorage
         var isCollapsed = collapsibleDiv.classList.contains("in");
         localStorage.setItem(elementId, isCollapsed ? "collapsed" : "expanded");

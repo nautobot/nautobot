@@ -1,4 +1,4 @@
-{% extends 'generic/object_detail.html' %}
+{% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
 
 {% block content_left_page %}
@@ -61,6 +61,22 @@
             {% endif %}
         </div>
     {% include 'inc/paginator.html' with paginator=device_table.paginator page=device_table.page %}
+    {% endif %}
+    {% if interface_table %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Interfaces</strong>
+            </div>
+            {% include 'inc/table.html' with table=interface_table %}
+            {% if perms.dcim.add_interface %}
+                <div class="panel-footer text-right noprint">
+                    <a href="{% url 'dcim:interface_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Interface
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    {% include 'inc/paginator.html' with paginator=interface_table.paginator page=interface_table.page %}
     {% endif %}
     {% if rack_table %}
         <div class="panel panel-default">
@@ -126,6 +142,22 @@
         </div>
     {% include 'inc/paginator.html' with paginator=virtual_machine_table.paginator page=virtual_machine_table.page %}
     {% endif %}
+    {% if vminterface_table %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>VM Interfaces</strong>
+            </div>
+            {% include 'inc/table.html' with table=vminterface_table %}
+            {% if perms.virtualization.add_vminterface %}
+                <div class="panel-footer text-right noprint">
+                    <a href="{% url 'virtualization:vminterface_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add VM Interface
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    {% include 'inc/paginator.html' with paginator=vminterface_table.paginator page=vminterface_table.page %}
+    {% endif %}
     {% if vlan_table %}
         <div class="panel panel-default">
             <div class="panel-heading">
@@ -158,5 +190,37 @@
             {% endif %}
         </div>
     {% include 'inc/paginator.html' with paginator=controller_table.paginator page=controller_table.page %}
+    {% endif %}
+    {% if module_table %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Modules</strong>
+            </div>
+            {% include 'inc/table.html' with table=module_table %}
+            {% if perms.dcim.add_module %}
+                <div class="panel-footer text-right noprint">
+                    <a href="{% url 'dcim:module_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Module
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    {% include 'inc/paginator.html' with paginator=module_table.paginator page=module_table.page %}
+    {% endif %}
+    {% if vdc_table %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Virtual Device Contexts</strong>
+            </div>
+            {% include 'inc/table.html' with table=vdc_table %}
+            {% if perms.dcim.add_virtualdevicecontext %}
+                <div class="panel-footer text-right noprint">
+                    <a href="{% url 'dcim:virtualdevicecontext_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Virtual Device Context
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    {% include 'inc/paginator.html' with paginator=vdc_table.paginator page=vdc_table.page %}
     {% endif %}
  {% endblock content_full_width_page %}

@@ -637,11 +637,14 @@ class DynamicFilterFormTest(TestCase):
                 form._get_lookup_field_choices(),
                 [
                     ("color", "Color"),
+                    ("contacts", "Contacts (name or ID)"),
                     ("content_types", "Content type(s)"),
                     ("created", "Created"),
+                    ("dynamic_groups", "Dynamic groups (name or ID)"),
                     ("id", "Id"),
                     ("last_updated", "Last updated"),
                     ("name", "Name"),
+                    ("teams", "Teams (name or ID)"),
                 ],
             )
             self.assertEqual(
@@ -655,9 +658,11 @@ class DynamicFilterFormTest(TestCase):
                     ("contact_email", "Contact E-mail"),
                     ("contact_name", "Contact name"),
                     ("contact_phone", "Contact phone"),
+                    ("contacts", "Contacts (name or ID)"),
                     ("created", "Created"),
                     ("description", "Description"),
                     ("devices", "Devices (name or ID)"),
+                    ("dynamic_groups", "Dynamic groups (name or ID)"),
                     ("cf_example_app_auto_custom_field", "Example App Automatically Added Custom Field"),
                     ("facility", "Facility"),
                     ("has_vlan_groups", "Has VLAN groups"),
@@ -687,6 +692,7 @@ class DynamicFilterFormTest(TestCase):
                     ("status", "Status (name or ID)"),
                     ("vlans", "Tagged VLANs (VID or ID)"),
                     ("tags", "Tags"),
+                    ("teams", "Teams (name or ID)"),
                     ("tenant_id", 'Tenant (ID) (deprecated, use "tenant" filter instead)'),
                     ("tenant", "Tenant (name or ID)"),
                     ("tenant_group", "Tenant Group (name or ID)"),
@@ -723,11 +729,14 @@ class DynamicFilterFormTest(TestCase):
                 [
                     (None, "---------"),
                     ("color", "Color"),
+                    ("contacts", "Contacts (name or ID)"),
                     ("content_types", "Content type(s)"),
                     ("created", "Created"),
+                    ("dynamic_groups", "Dynamic groups (name or ID)"),
                     ("id", "Id"),
                     ("last_updated", "Last updated"),
                     ("name", "Name"),
+                    ("teams", "Teams (name or ID)"),
                 ],
             )
             self.assertEqual(
@@ -797,6 +806,7 @@ class DynamicFilterFormTest(TestCase):
                     "data-depth": 0,
                     "data-multiple": 1,
                     "data-query-param-content_types": '["dcim.location"]',
+                    "data-query-param-exclude_m2m": '["true"]',
                     "display-field": "display",
                     "value-field": "name",
                 },

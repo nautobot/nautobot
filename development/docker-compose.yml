@@ -1,5 +1,4 @@
 ---
-version: "3.9"
 volumes:
   media_root:
 services:
@@ -10,7 +9,9 @@ services:
       context: ../
       dockerfile: docker/Dockerfile
       target: dev
-    image: "local/nautobot-dev:local-py${PYTHON_VER}"
+    healthcheck:
+      start_period: 10m
+    image: "local/nautobot-dev:local-${NAUTOBOT_VER}-py${PYTHON_VER}"
     ports:
       - "8080:8080"
     volumes:
@@ -26,7 +27,7 @@ services:
       - dev.env
     tty: true
   celery_worker:
-    image: "local/nautobot-dev:local-py${PYTHON_VER}"
+    image: "local/nautobot-dev:local-${NAUTOBOT_VER}-py${PYTHON_VER}"
     ports:
       - "8081:8080"
     volumes:
@@ -47,8 +48,8 @@ services:
       - ./dev.env
     tty: true
   celery_beat:
-    image: "local/nautobot-dev:local-py${PYTHON_VER}"
-    entrypoint: "nautobot-server celery beat -l INFO"
+    image: "local/nautobot-dev:local-${NAUTOBOT_VER}-py${PYTHON_VER}"
+    entrypoint: "watchmedo auto-restart --directory './' --pattern '*.py' --recursive -- nautobot-server celery beat -l INFO"
     healthcheck:
       interval: 5s
       timeout: 5s
@@ -78,7 +79,7 @@ services:
     env_file:
       - ./dev.env
   selenium:
-    image: selenium/standalone-firefox:4.19
+    image: selenium/standalone-firefox:4.27
     ports:
         - "4444:4444"
         - "15900:5900"
@@ -86,7 +87,7 @@ services:
   mkdocs:
     profiles:
       - mkdocs
-    image: "local/nautobot-dev:local-py${PYTHON_VER}"
+    image: "local/nautobot-dev:local-${NAUTOBOT_VER}-py${PYTHON_VER}"
     entrypoint: "mkdocs serve -a '0.0.0.0:8001'"
     healthcheck:
       disable: true

@@ -1,5 +1,6 @@
 from django.test import tag, TestCase
 
+from nautobot.core.api.constants import NON_FILTER_QUERY_PARAMS
 from nautobot.core.forms.fields import DynamicModelChoiceMixin
 from nautobot.core.utils.lookup import get_filterset_for_model
 
@@ -18,6 +19,7 @@ class FormTestCases:
                     continue
                 with self.subTest(f"Assert {self.form_class.__name__}.{field_name} query_params are valid."):
                     query_params_fields = set(field_class.query_params.keys())
+                    query_params_fields = query_params_fields - set(NON_FILTER_QUERY_PARAMS)
                     if not query_params_fields:
                         self.skipTest(f"{self.form_class.__name__}.{field_name} has no query_params")
                     field_model = field_class.queryset.model

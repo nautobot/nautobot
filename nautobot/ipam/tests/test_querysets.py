@@ -1,13 +1,15 @@
 import re
 from unittest import skipIf
 
-from django.db import connection
+from django.contrib.contenttypes.models import ContentType
+from django.db import connection, transaction
 import netaddr
 
 from nautobot.core.testing import TestCase
 from nautobot.extras.models import Status
 from nautobot.ipam import choices
 from nautobot.ipam.models import IPAddress, Namespace, Prefix
+from nautobot.users.models import ObjectPermission
 
 
 class IPAddressQuerySet(TestCase):
@@ -97,7 +99,7 @@ class IPAddressQuerySet(TestCase):
         self.assertFalse(self.queryset._is_ambiguous_network_string("b2a"))
 
     def test__safe_parse_network_string(self):
-        fallback_ipv4 = netaddr.IPNetwork("0/32")
+        fallback_ipv4 = netaddr.IPNetwork("0.0.0.0/32")
         fallback_ipv6 = netaddr.IPNetwork("::/128")
 
         self.assertEqual(self.queryset._safe_parse_network_string("taco", 4), fallback_ipv4)
@@ -265,6 +267,28 @@ class IPAddressQuerySet(TestCase):
             IPAddress.objects.select_related("nat_inside").filter(host__net_in=["10.0.0.0/24"]),
             [instance for ip, instance in self.ips.items() if "10.0.0" in ip],
         )
+
+    def test_lookup_not_ambiguous(self):
+        """Check for issues like https://github.com/nautobot/nautobot/issues/5166."""
+        obj_perm = ObjectPermission.objects.create(name="Test Permission", constraints={}, actions=["view"])
+        obj_perm.object_types.add(ContentType.objects.get_for_model(IPAddress))
+        obj_perm.users.add(self.user)
+        queryset = IPAddress.objects.select_related("parent", "nat_inside", "status")
+
+        for permission_constraint in (
+            {"host__family": 4},
+            {"host__net_host": "10.0.0.1"},
+            {"host__net_host_contained": "10.0.0.0/24"},
+            {"host__net_in": ["10.0.0.0/24"]},
+        ):
+            with self.subTest(permission_type=next(iter(permission_constraint.keys()))):
+                try:
+                    with transaction.atomic():
+                        obj_perm.constraints = permission_constraint
+                        obj_perm.save()
+                        list(queryset.restrict(self.user, "view"))
+                finally:
+                    delattr(self.user, "_object_perm_cache")
 
     @skipIf(
         connection.vendor == "postgresql",
@@ -453,6 +477,20 @@ class IPAddressQuerySet(TestCase):
             IPAddress.objects.select_related("nat_inside").filter(host__iregex=r"2001(.*)1"),
             [instance for ip, instance in self.ips.items() if re.match(r"2001(.*)1", ip)],
         )
+
+    def test_get_or_create(self):
+        # https://github.com/nautobot/nautobot/issues/6676
+        ip_obj, created = IPAddress.objects.update_or_create(
+            defaults={
+                "status": self.ipaddr_status,
+            },
+            host="10.0.0.1",
+            mask_length="24",
+            namespace=self.namespace,
+        )
+        self.assertFalse(created)
+        self.assertEqual(str(ip_obj.address), "10.0.0.1/24")
+        self.assertEqual(ip_obj.parent.namespace, self.namespace)
 
 
 class PrefixQuerysetTestCase(TestCase):
@@ -647,6 +685,30 @@ class PrefixQuerysetTestCase(TestCase):
     def test_network_filter_by_prefix(self):
         prefix = Prefix.objects.filter(network__net_equals="192.168.0.0/16")[0]
         self.assertEqual(Prefix.objects.filter(prefix="192.168.0.0/16")[0], prefix)
+
+    def test_lookup_not_ambiguous(self):
+        """Check for issues like https://github.com/nautobot/nautobot/issues/5166."""
+        obj_perm = ObjectPermission.objects.create(name="Test Permission", constraints={}, actions=["view"])
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Prefix))
+        obj_perm.users.add(self.user)
+        queryset = Prefix.objects.select_related("parent", "rir", "role", "status", "namespace")
+
+        for permission_constraint in (
+            {"network__family": 4},
+            {"network__net_equals": "192.168.0.0/16"},
+            {"network__net_contained": "192.0.0.0/8"},
+            {"network__net_contained_or_equal": "192.0.0.0/8"},
+            {"network__net_contains": "192.168.3.192/32"},
+            {"network__net_contains_or_equals": "192.168.3.192/32"},
+        ):
+            with self.subTest(permission_type=next(iter(permission_constraint.keys()))):
+                try:
+                    with transaction.atomic():
+                        obj_perm.constraints = permission_constraint
+                        obj_perm.save()
+                        list(queryset.restrict(self.user, "view"))
+                finally:
+                    delattr(self.user, "_object_perm_cache")
 
     @skipIf(
         connection.vendor == "postgresql",

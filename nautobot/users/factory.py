@@ -3,7 +3,7 @@ from datetime import timezone
 from django.contrib.auth import get_user_model
 import factory
 
-from nautobot.core.factory import BaseModelFactory, NautobotBoolIterator
+from nautobot.core.factory import BaseModelFactory, NautobotBoolIterator, UniqueFaker
 
 User = get_user_model()
 
@@ -13,9 +13,9 @@ class UserFactory(BaseModelFactory):
         model = User
         exclude = "has_email"
 
-    first_name = factory.Faker("first_name")
+    first_name = UniqueFaker("first_name")
 
-    last_name = factory.Faker("last_name")
+    last_name = UniqueFaker("last_name")
 
     username = factory.LazyAttribute(lambda u: f"{u.first_name[0].lower()}{u.last_name.lower()}")
 

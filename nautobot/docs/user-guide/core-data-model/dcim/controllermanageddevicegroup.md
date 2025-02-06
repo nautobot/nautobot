@@ -29,3 +29,9 @@ controller_managed_device_group:
       - nyc-fw99
       - jcy-fw99
 ```
+
+## Capabilities
+
++++ 2.4.0
+
+The capabilities field will be used to track the features that will be displayed on the ControllerManagedDeviceGroup. As an example, the `wireless` choice will add the ControllerManagedDeviceGroup to the Access Point Groups link on the Navbar, and enable the Wireless Networks and Radio Profiles tab on the ControllerManagedDeviceGroup object.

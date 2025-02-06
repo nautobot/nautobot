@@ -1,9 +1,12 @@
 import collections
+import contextlib
+import copy
 import hashlib
 import hmac
 import logging
 import re
 import sys
+from typing import Optional
 
 from django.apps import apps
 from django.conf import settings
@@ -11,15 +14,18 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.validators import ValidationError
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Model, Q
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
+import kubernetes.client
+import redis.exceptions
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import find_models_with_matching_fields
-from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.core.utils.data import is_uuid
+from nautobot.extras.choices import DynamicGroupTypeChoices, JobQueueTypeChoices, ObjectChangeActionChoices
 from nautobot.extras.constants import (
     CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL,
     EXTRAS_FEATURES,
@@ -31,16 +37,24 @@ from nautobot.extras.registry import registry
 logger = logging.getLogger(__name__)
 
 
-def get_base_template(base_template, model):
+def get_base_template(base_template: Optional[str], model: type[Model]) -> str:
     """
-    Returns the name of the base template, if the base_template is not None
-    Otherwise, default to using "<app>/<model>.html" as the base template, if it exists.
-    Otherwise, check if "<app>/<model>_retrieve.html" used in `NautobotUIViewSet` exists.
-    If both templates do not exist, fall back to "base.html".
+    Attempt to locate the correct base template for an object detail view and related views, if one was not specified.
+
+    Args:
+        base_template (str, optional): If not None, this explicitly specified template will be preferred.
+        model (Model): The model to identify a base template for, if base_template is None.
+
+    Returns the specified `base_template`, if not `None`.
+    Otherwise, if `"<app>/<model_name>.html"` exists (legacy ObjectView pattern), returns that string.
+    Otherwise, if `"<app>/<model_name>_retrieve.html"` exists (as used in `NautobotUIViewSet`), returns that string.
+    If all else fails, returns `"generic/object_retrieve.html"`.
+
+    Note: before Nautobot 2.4.2, this API would default to "base.html" rather than "generic/object_retrieve.html".
+    This behavior was changed to the current behavior to address issue #6550 and similar incorrect behavior.
     """
     if base_template is None:
         base_template = f"{model._meta.app_label}/{model._meta.model_name}.html"
-        # 2.0 TODO(Hanlin): This can be removed once an object view has been established for every model.
         try:
             get_template(base_template)
         except TemplateDoesNotExist:
@@ -48,7 +62,7 @@ def get_base_template(base_template, model):
             try:
                 get_template(base_template)
             except TemplateDoesNotExist:
-                base_template = "base.html"
+                base_template = "generic/object_retrieve.html"
     return base_template
 
 
@@ -109,12 +123,17 @@ class ChangeLoggedModelsQuery(FeaturedQueryMixin):
 def change_logged_models_queryset():
     """
     Cacheable function for cases where we need this queryset many times, such as when saving multiple objects.
+
+    Cache is cleared by post_migrate signal (nautobot.extras.signals.post_migrate_clear_content_type_caches).
     """
+    queryset = None
     cache_key = "nautobot.extras.utils.change_logged_models_queryset"
-    queryset = cache.get(cache_key)
+    with contextlib.suppress(redis.exceptions.ConnectionError):
+        queryset = cache.get(cache_key)
     if queryset is None:
         queryset = ChangeLoggedModelsQuery().as_queryset()
-        cache.set(cache_key, queryset)
+        with contextlib.suppress(redis.exceptions.ConnectionError):
+            cache.set(cache_key, queryset)
     return queryset
 
 
@@ -144,15 +163,25 @@ class FeatureQuery:
         # `registry` record being used by `FeatureQuery`.
 
         populate_model_features_registry()
-        query = Q()
-        for app_label, models in self.as_dict():
-            query |= Q(app_label=app_label, model__in=models)
+        try:
+            query = Q()
+            if not self.as_dict():  # no registered models??
+                raise KeyError
+            else:
+                for app_label, models in self.as_dict():
+                    query |= Q(app_label=app_label, model__in=models)
+        except KeyError:
+            query = Q(pk__in=[])
 
         return query
 
     def as_dict(self):
         """
-        Given an extras feature, return a dict of app_label: [models] for content type lookup
+        Given an extras feature, return a iterable of app_label: [models] for content type lookup.
+
+        Misnamed, as it returns an iterable of (key, value) (i.e. dict.items()) rather than an actual dict.
+
+        Raises a KeyError if the given feature doesn't exist.
         """
         return registry["model_features"][self.feature].items()
 
@@ -163,12 +192,34 @@ class FeatureQuery:
 
             >>> FeatureQuery('statuses').get_choices()
             [('dcim.device', 13), ('dcim.rack', 34)]
+
+        Cache is cleared by post_migrate signal (nautobot.extras.signals.post_migrate_clear_content_type_caches).
         """
-        return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in ContentType.objects.filter(self.get_query())]
+        choices = None
+        cache_key = f"nautobot.extras.utils.FeatureQuery.choices.{self.feature}"
+        with contextlib.suppress(redis.exceptions.ConnectionError):
+            choices = cache.get(cache_key)
+        if choices is None:
+            choices = [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in ContentType.objects.filter(self.get_query())]
+            with contextlib.suppress(redis.exceptions.ConnectionError):
+                cache.set(cache_key, choices)
+        return choices
 
     def list_subclasses(self):
-        """Return a list of model classes that declare this feature."""
-        return [ct.model_class() for ct in ContentType.objects.filter(self.get_query())]
+        """
+        Return a list of model classes that declare this feature.
+
+        Cache is cleared by post_migrate signal (nautobot.extras.signals.post_migrate_clear_content_type_caches).
+        """
+        subclasses = None
+        cache_key = f"nautobot.extras.utils.FeatureQuery.subclasses.{self.feature}"
+        with contextlib.suppress(redis.exceptions.ConnectionError):
+            subclasses = cache.get(cache_key)
+        if subclasses is None:
+            subclasses = [ct.model_class() for ct in ContentType.objects.filter(self.get_query())]
+            with contextlib.suppress(redis.exceptions.ConnectionError):
+                cache.set(cache_key, subclasses)
+        return subclasses
 
 
 @deconstructible
@@ -248,8 +299,10 @@ def populate_model_features_registry(refresh=False):
                             useful to narrow down the search for fields that match certain criteria. For example, if
                             `field_attributes` is set to {"related_model": RelationshipAssociation}, only fields with
                             a related model of RelationshipAssociation will be considered.
+        - 'additional_constraints': Optional dictionary of additional `{field: value}` constraints that can be checked.
     - Looks up all the models in the installed apps.
-    - For each dictionary in lookup_confs, calls lookup_by_field() function to look for all models that have fields with the names given in the dictionary.
+    - For each dictionary in lookup_confs, calls lookup_by_field() function to look for all models that have
+      fields with the names given in the dictionary.
     - Groups the results by app and updates the registry model features for each app.
     """
     if registry.get("populate_model_features_registry_called", False) and not refresh:
@@ -259,13 +312,39 @@ def populate_model_features_registry(refresh=False):
 
     lookup_confs = [
         {
+            "feature_name": "cloud_resource_types",
+            "field_names": [],
+            "additional_constraints": {"is_cloud_resource_type_model": True},
+        },
+        {
+            "feature_name": "contacts",
+            "field_names": ["associated_contacts"],
+            "additional_constraints": {"is_contact_associable_model": True},
+        },
+        {
             "feature_name": "custom_fields",
             "field_names": ["_custom_field_data"],
+        },
+        {
+            "feature_name": "metadata",
+            "field_names": [],  # TODO: add "associated_metadata" ReverseRelation here when implemented
+            "additional_constraints": {"is_metadata_associable_model": True},
         },
         {
             "feature_name": "relationships",
             "field_names": ["source_for_associations", "destination_for_associations"],
             "field_attributes": {"related_model": RelationshipAssociation},
+        },
+        {
+            "feature_name": "saved_views",
+            "field_names": [],
+            "additional_constraints": {"is_saved_view_model": True},
+        },
+        {
+            "feature_name": "dynamic_groups",
+            # models using DynamicGroupMixin but not DynamicGroupsModelMixin will lack a static_group_association_set
+            "field_names": [],
+            "additional_constraints": {"is_dynamic_group_associable_model": True},
         },
     ]
 
@@ -275,6 +354,7 @@ def populate_model_features_registry(refresh=False):
             app_models=app_models,
             field_names=lookup_conf["field_names"],
             field_attributes=lookup_conf.get("field_attributes"),
+            additional_constraints=lookup_conf.get("additional_constraints"),
         )
         feature_name = lookup_conf["feature_name"]
         registry["model_features"][feature_name] = registry_items
@@ -298,29 +378,95 @@ def get_celery_queues():
     """
     from nautobot.core.celery import app  # prevent circular import
 
-    celery_queues = {}
+    celery_queues = None
+    with contextlib.suppress(redis.exceptions.ConnectionError):
+        celery_queues = cache.get("nautobot.extras.utils.get_celery_queues")
 
-    celery_inspect = app.control.inspect()
-    active_queues = celery_inspect.active_queues()
-    if active_queues is None:
-        return celery_queues
-    for task_queue_list in active_queues.values():
-        distinct_queues = {q["name"] for q in task_queue_list}
-        for queue in distinct_queues:
-            celery_queues.setdefault(queue, 0)
-            celery_queues[queue] += 1
+    if celery_queues is None:
+        celery_queues = {}
+        celery_inspect = app.control.inspect()
+        try:
+            active_queues = celery_inspect.active_queues()
+        except redis.exceptions.ConnectionError:
+            # Celery seems to be not smart enough to auto-retry on intermittent failures, so let's do it ourselves:
+            try:
+                active_queues = celery_inspect.active_queues()
+            except redis.exceptions.ConnectionError as err:
+                logger.error("Repeated ConnectionError from Celery/Redis: %s", err)
+                active_queues = None
+        if active_queues is None:
+            return celery_queues
+        for task_queue_list in active_queues.values():
+            distinct_queues = {q["name"] for q in task_queue_list}
+            for queue in distinct_queues:
+                celery_queues[queue] = celery_queues.get(queue, 0) + 1
+        with contextlib.suppress(redis.exceptions.ConnectionError):
+            cache.set("nautobot.extras.utils.get_celery_queues", celery_queues, timeout=5)
 
     return celery_queues
 
 
 def get_worker_count(request=None, queue=None):
     """
-    Return a count of the active Celery workers in a specified queue. Defaults to the `CELERY_TASK_DEFAULT_QUEUE` setting.
+    Return a count of the active Celery workers in a specified queue (Could be a JobQueue instance, instance pk or instance name).
+    Defaults to the `CELERY_TASK_DEFAULT_QUEUE` setting.
     """
+    from nautobot.extras.models import JobQueue
+
     celery_queues = get_celery_queues()
-    if not queue:
+    if isinstance(queue, str):
+        if is_uuid(queue):
+            try:
+                # check if the string passed in is a valid UUID
+                queue = JobQueue.objects.get(pk=queue).name
+            except JobQueue.DoesNotExist:
+                return 0
+        else:
+            return celery_queues.get(queue, 0)
+    elif isinstance(queue, JobQueue):
+        queue = queue.name
+    else:
         queue = settings.CELERY_TASK_DEFAULT_QUEUE
+
     return celery_queues.get(queue, 0)
+
+
+def get_job_queue_worker_count(request=None, job_queue=None):
+    """
+    Return a count of the active Celery workers in a specified queue. Defaults to the `CELERY_TASK_DEFAULT_QUEUE` setting.
+    Same as get_worker_count() method above, but job_queue is an actual JobQueue model instance.
+    """
+    # TODO currently this method is only retrieve celery specific queues and their respective worker counts
+    # Refactor it to support retrieving kubernetes queues as well.
+    celery_queues = get_celery_queues()
+    if not job_queue:
+        queue = settings.CELERY_TASK_DEFAULT_QUEUE
+    else:
+        queue = job_queue.name
+    return celery_queues.get(queue, 0)
+
+
+def get_job_queue(job_queue):
+    """
+    Search for a JobQueue instance based on the str job_queue.
+    If no existing Job Queue not found, return None
+    """
+    from nautobot.extras.models import JobQueue
+
+    queue = None
+    if is_uuid(job_queue):
+        try:
+            # check if the string passed in is a valid UUID
+            queue = JobQueue.objects.get(pk=job_queue)
+        except JobQueue.DoesNotExist:
+            queue = None
+    else:
+        try:
+            # check if the string passed in is a valid name
+            queue = JobQueue.objects.get(name=job_queue)
+        except JobQueue.DoesNotExist:
+            queue = None
+    return queue
 
 
 def task_queues_as_choices(task_queues):
@@ -343,13 +489,17 @@ def task_queues_as_choices(task_queues):
     return choices
 
 
-def refresh_job_model_from_job_class(job_model_class, job_class):
+def refresh_job_model_from_job_class(job_model_class, job_class, job_queue_class=None):
     """
     Create or update a job_model record based on the metadata of the provided job_class.
 
-    Note that job_model_class is a parameter (rather than doing a "from nautobot.extras.models import Job") because
+    Note that `job_model_class` and `job_queue_class` are parameters rather than local imports because
     this function may be called from various initialization processes (such as the "nautobot_database_ready" signal)
     and in that case we need to not import models ourselves.
+
+    The `job_queue_class` parameter really should be required, but for some reason we decided to make this function
+    part of the `nautobot.apps.utils` API surface and so we need it to stay backwards-compatible with Apps that might
+    be calling the two-argument form of this function.
     """
     from nautobot.extras.jobs import (
         JobButtonReceiver,
@@ -421,6 +571,10 @@ def refresh_job_model_from_job_class(job_model_class, job_class):
 
     try:
         with transaction.atomic():
+            default_job_queue, _ = job_queue_class.objects.get_or_create(
+                name=job_class.task_queues[0] if job_class.task_queues else settings.CELERY_TASK_DEFAULT_QUEUE,
+                defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY},
+            )
             job_model, created = job_model_class.objects.get_or_create(
                 module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
                 job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
@@ -433,6 +587,8 @@ def refresh_job_model_from_job_class(job_model_class, job_class):
                     "supports_dryrun": job_class.supports_dryrun,
                     "installed": True,
                     "enabled": False,
+                    "default_job_queue": default_job_queue,
+                    "is_singleton": job_class.is_singleton,
                 },
             )
 
@@ -448,6 +604,19 @@ def refresh_job_model_from_job_class(job_model_class, job_class):
                 if not getattr(job_model, f"{field_name}_override", False):
                     # It was inherited and not overridden
                     setattr(job_model, field_name, getattr(job_class, field_name))
+
+            # Special case for backward compatibility
+            # Note that the `job_model.task_queues` setter does NOT auto-create Celery JobQueue records;
+            # this is a special case where we DO want to do so.
+            if job_queue_class is not None and not job_model.job_queues_override:
+                job_queues = []
+                task_queues = job_class.task_queues or [settings.CELERY_TASK_DEFAULT_QUEUE]
+                for task_queue in task_queues:
+                    job_queue, _ = job_queue_class.objects.get_or_create(
+                        name=task_queue, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+                    )
+                    job_queues.append(job_queue)
+                job_model.job_queues.set(job_queues)
 
             if not created:
                 # Mark it as installed regardless
@@ -475,6 +644,42 @@ def refresh_job_model_from_job_class(job_model_class, job_class):
     )
 
     return (job_model, created)
+
+
+def run_kubernetes_job_and_return_job_result(job_queue, job_result, job_kwargs):
+    """
+    Pass the job to a kubernetes pod and execute it there.
+    """
+    pod_name = settings.KUBERNETES_JOB_POD_NAME
+    pod_namespace = settings.KUBERNETES_JOB_POD_NAMESPACE
+    pod_manifest = copy.deepcopy(settings.KUBERNETES_JOB_MANIFEST)
+    pod_ssl_ca_cert = settings.KUBERNETES_SSL_CA_CERT_PATH
+    pod_token = settings.KUBERNETES_TOKEN_PATH
+
+    configuration = kubernetes.client.Configuration()
+    configuration.host = settings.KUBERNETES_DEFAULT_SERVICE_ADDRESS
+    configuration.ssl_ca_cert = pod_ssl_ca_cert
+    with open(pod_token, "r") as token_file:
+        token = token_file.read().strip()
+    # configure API Key authorization: BearerToken
+    configuration.api_key_prefix["authorization"] = "Bearer"
+    configuration.api_key["authorization"] = token
+    with kubernetes.client.ApiClient(configuration) as api_client:
+        api_instance = kubernetes.client.BatchV1Api(api_client)
+
+    job_result.task_kwargs = job_kwargs
+    job_result.save()
+    pod_manifest["metadata"]["name"] = "nautobot-job-" + str(job_result.pk)
+    pod_manifest["spec"]["template"]["spec"]["containers"][0]["command"] = [
+        "nautobot-server",
+        "runjob_with_job_result",
+        f"{job_result.pk}",
+    ]
+    job_result.log(f"Creating job pod {pod_name} in namespace {pod_namespace}")
+    api_instance.create_namespaced_job(body=pod_manifest, namespace=pod_namespace)
+    job_result.log(f"Reading job pod {pod_name} in namespace {pod_namespace}")
+    api_instance.read_namespaced_job(name="nautobot-job-" + str(job_result.pk), namespace=pod_namespace)
+    return job_result
 
 
 def remove_prefix_from_cf_key(field_name):
@@ -514,6 +719,32 @@ def fixup_null_statuses(*, model, model_contenttype, status_model):
         null_status.content_types.add(model_contenttype)
         updated_count = instances_to_fixup.update(status=null_status)
         print(f"    Found and fixed {updated_count} instances of {model.__name__} that had null 'status' fields.")
+
+
+def fixup_dynamic_group_group_types(apps, *args, **kwargs):  # pylint: disable=redefined-outer-name
+    """Set dynamic group group_type values correctly."""
+    DynamicGroup = apps.get_model("extras", "DynamicGroup")
+    DynamicGroupMembership = apps.get_model("extras", "DynamicGroupMembership")
+    count_1 = count_2 = 0
+    # See note in migration 0112 - for some reason, if we were to do the "intuitive" thing, and call
+    # `DynamicGroup.objects.filter(children__isnull=False)`, we would unexpectedly get those groups for which their
+    # *parent* is non-null. The below is an alternate approach that should remain correct even if that issue gets fixed.
+    parent_group_names = set(DynamicGroupMembership.objects.values_list("parent_group__name", flat=True))
+    parent_groups_with_wrong_type = DynamicGroup.objects.filter(name__in=parent_group_names).exclude(
+        group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET
+    )
+    if parent_groups_with_wrong_type.exists():
+        count_1 = parent_groups_with_wrong_type.update(group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET)
+        print(f'\n    Found and fixed {count_1} DynamicGroup(s) that should be typed as "Group of groups".')
+
+    filter_groups_with_wrong_type = DynamicGroup.objects.exclude(filter__exact={}).exclude(
+        group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER
+    )
+    if filter_groups_with_wrong_type.exists():
+        count_2 = filter_groups_with_wrong_type.update(group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER)
+        print(f'\n    Found and fixed {count_2} DynamicGroup(s) that should be typed as "Filter-defined".')
+
+    return count_1, count_2
 
 
 def migrate_role_data(
@@ -637,11 +868,13 @@ def bulk_delete_with_bulk_change_logging(qs, batch_size=1000):
                     ObjectChange.objects.bulk_create(queued_object_changes)
                     queued_object_changes = []
                 oc = obj.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
-                oc.user = change_context.user
-                oc.request_id = change_context.change_id
-                oc.change_context = change_context.context
-                oc.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
-                queued_object_changes.append(oc)
+                if oc is not None:
+                    oc.user = change_context.get_user()
+                    oc.user_name = oc.user.username
+                    oc.request_id = change_context.change_id
+                    oc.change_context = change_context.context
+                    oc.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
+                    queued_object_changes.append(oc)
             ObjectChange.objects.bulk_create(queued_object_changes)
             return qs.delete()
         finally:

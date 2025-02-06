@@ -6,54 +6,57 @@ import inspect
 import json
 import logging
 import os
+import sys
 import tempfile
 from textwrap import dedent
 from typing import final
 import warnings
 
-from billiard.einfo import ExceptionInfo, ExceptionWithTraceback
-from celery import states
-from celery.exceptions import NotRegistered, Retry
-from celery.result import EagerResult
-from celery.utils.functional import maybe_list
+from billiard.einfo import ExceptionInfo
 from celery.utils.log import get_task_logger
-from celery.utils.nodenames import gethostname
 from db_file_storage.form_widgets import DBClearableFileInput
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.base import ContentFile
-from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.core.files.uploadedfile import UploadedFile
 from django.core.validators import RegexValidator
 from django.db.models import Model
 from django.db.models.query import QuerySet
 from django.forms import ValidationError
 from django.utils.functional import classproperty
-from kombu.utils.uuid import uuid
 import netaddr
 import yaml
 
-from nautobot.core.celery import app as celery_app
-from nautobot.core.celery.task import Task
+from nautobot.core.celery import import_jobs, nautobot_task
+from nautobot.core.events import publish_event
 from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     JSONField,
 )
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.logging import sanitize
 from nautobot.core.utils.lookup import get_model_from_name
-from nautobot.extras.choices import JobResultStatusChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
+from nautobot.extras.choices import (
+    JobResultStatusChoices,
+    ObjectChangeActionChoices,
+    ObjectChangeEventContextChoices,
+)
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.forms import JobForm
 from nautobot.extras.models import (
     FileProxy,
     Job as JobModel,
     JobHook,
+    JobQueue,
     JobResult,
     ObjectChange,
 )
-from nautobot.extras.utils import change_logged_models_queryset, task_queues_as_choices
+from nautobot.extras.registry import registry
+from nautobot.extras.utils import change_logged_models_queryset
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import (
     MaxPrefixLengthValidator,
@@ -65,15 +68,15 @@ User = get_user_model()
 
 
 __all__ = [
-    "Job",
     "BooleanVar",
     "ChoiceVar",
     "FileVar",
-    "IntegerVar",
     "IPAddressVar",
     "IPAddressWithMaskVar",
     "IPNetworkVar",
+    "IntegerVar",
     "JSONVar",
+    "Job",
     "MultiChoiceVar",
     "MultiObjectVar",
     "ObjectVar",
@@ -88,7 +91,7 @@ class RunJobTaskFailed(Exception):
     """Celery task failed for some reason."""
 
 
-class BaseJob(Task):
+class BaseJob:
     """Base model for jobs.
 
     Users can subclass this directly if they want to provide their own base class for implementing multiple jobs
@@ -103,13 +106,16 @@ class BaseJob(Task):
 
         - name (str)
         - description (str)
-        - hidden (bool)
-        - field_order (list)
         - approval_required (bool)
-        - soft_time_limit (int)
-        - time_limit (int)
+        - dryrun_default (bool)
+        - field_order (list)
         - has_sensitive_variables (bool)
+        - hidden (bool)
+        - soft_time_limit (int)
         - task_queues (list)
+        - template_name (str)
+        - time_limit (int)
+        - is_singleton (bool)
         """
 
     def __init__(self):
@@ -158,38 +164,6 @@ class BaseJob(Task):
 
     # See https://github.com/PyCQA/pylint-django/issues/240 for why we have a pylint disable on each classproperty below
 
-    # TODO(jathan): Could be interesting for custom stuff when the Job is
-    # enabled in the database and then therefore registered in Celery
-    @classmethod
-    def on_bound(cls, app):
-        """Called when the task is bound to an app.
-
-        Note:
-            This class method can be defined to do additional actions when
-            the task class is bound to an app.
-        """
-
-    # TODO(jathan): Could be interesting for showing the Job's class path as the
-    # shadow name vs. the Celery task_name?
-    def shadow_name(self, args, kwargs, options):
-        """Override for custom task name in worker logs/monitoring.
-
-        Example:
-                from celery.utils.imports import qualname
-
-                def shadow_name(task, args, kwargs, options):
-                    return qualname(args[0])
-
-                @app.task(shadow_name=shadow_name, serializer='pickle')
-                def apply_function_async(fun, *args, **kwargs):
-                    return fun(*args, **kwargs)
-
-        Arguments:
-            args (Tuple): Task positional arguments.
-            kwargs (Dict): Task keyword arguments.
-            options (Dict): Task execution options.
-        """
-
     def before_start(self, task_id, args, kwargs):
         """Handler called before the task starts.
 
@@ -201,8 +175,6 @@ class BaseJob(Task):
         Returns:
             (None): The return value of this handler is ignored.
         """
-        self.clear_cache()
-
         try:
             self.job_result
         except ObjectDoesNotExist as err:
@@ -221,6 +193,31 @@ class BaseJob(Task):
             )
             raise RunJobTaskFailed(f"Job {self.job_model} is not enabled to be run!")
 
+        ignore_singleton_lock = self.celery_kwargs.get("nautobot_job_ignore_singleton_lock", False)
+        if self.job_model.is_singleton:
+            is_running = cache.get(self.singleton_cache_key)
+            if is_running:
+                if ignore_singleton_lock:
+                    self.logger.info(
+                        "Job %s is a singleton and already running, but singleton will be ignored because"
+                        " `ignore_singleton_lock` is set.",
+                        self.job_model,
+                        extra={"object": self.job_model, "grouping": "initialization"},
+                    )
+                else:
+                    self.logger.error(
+                        "Job %s is a singleton and already running.",
+                        self.job_model,
+                        extra={"object": self.job_model, "grouping": "initialization"},
+                    )
+                    raise RunJobTaskFailed(f"Job '{self.job_model}' is a singleton and already running.")
+            cache_parameters = {
+                "key": self.singleton_cache_key,
+                "value": 1,
+                "timeout": self.job_model.time_limit or settings.CELERY_TASK_TIME_LIMIT,
+            }
+            cache.set(**cache_parameters)
+
         soft_time_limit = self.job_model.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
         time_limit = self.job_model.time_limit or settings.CELERY_TASK_TIME_LIMIT
         if time_limit <= soft_time_limit:
@@ -234,7 +231,7 @@ class BaseJob(Task):
                 extra={"grouping": "initialization"},
             )
 
-        self.logger.info("Running job", extra={"grouping": "initialization"})
+        self.logger.info("Running job", extra={"grouping": "initialization", "object": self.job_model})
 
     def run(self, *args, **kwargs):
         """
@@ -312,86 +309,20 @@ class BaseJob(Task):
             self._delete_file_proxies(*file_ids)
 
         if status == JobResultStatusChoices.STATUS_SUCCESS:
-            self.logger.info("Job completed", extra={"grouping": "post_run"})
+            self.logger.success("Job completed", extra={"grouping": "post_run"})
 
-        # TODO(gary): document this in job author docs
-        # Super.after_return must be called for chords to function properly
-        super().after_return(status, retval, task_id, args, kwargs, einfo=einfo)
+        cache.delete(self.singleton_cache_key)
 
-    def apply(
-        self,
-        args=None,
-        kwargs=None,
-        link=None,
-        link_error=None,
-        task_id=None,
-        retries=None,
-        throw=None,
-        logfile=None,
-        loglevel=None,
-        headers=None,
-        **options,
-    ):
-        """Fix celery's apply method to propagate options to the task result"""
-        # trace imports Task, so need to import inline.
-        from celery.app.trace import build_tracer
-
-        app = self._get_app()
-        args = args or ()
-        kwargs = kwargs or {}
-        task_id = task_id or uuid()
-        retries = retries or 0
-        if throw is None:
-            throw = app.conf.task_eager_propagates
-
-        # Make sure we get the task instance, not class.
-        task = app._tasks[self.name]
-
-        request = {
-            "id": task_id,
-            "retries": retries,
-            "is_eager": True,
-            "logfile": logfile,
-            "loglevel": loglevel or 0,
-            "hostname": gethostname(),
-            "callbacks": maybe_list(link),
-            "errbacks": maybe_list(link_error),
-            "headers": headers,
-            "ignore_result": options.get("ignore_result", False),
-            "delivery_info": {
-                "is_eager": True,
-                "exchange": options.get("exchange"),
-                "routing_key": options.get("routing_key"),
-                "priority": options.get("priority"),
-            },
-            "properties": options,  # one line fix to overloaded method
-        }
-        if "stamped_headers" in options:
-            request["stamped_headers"] = maybe_list(options["stamped_headers"])
-            request["stamps"] = {header: maybe_list(options.get(header, [])) for header in request["stamped_headers"]}
-
-        tb = None
-        tracer = build_tracer(
-            task.name,
-            task,
-            eager=True,
-            propagate=throw,
-            app=self._get_app(),
-        )
-        ret = tracer(task_id, args, kwargs, request)
-        retval = ret.retval
-        if isinstance(retval, ExceptionInfo):
-            retval, tb = retval.exception, retval.traceback
-            if isinstance(retval, ExceptionWithTraceback):
-                retval = retval.exc
-        if isinstance(retval, Retry) and retval.sig is not None:
-            return retval.sig.apply(retries=retries + 1)
-        state = states.SUCCESS if ret.info is None else ret.info.state
-        return EagerResult(task_id, retval, state, traceback=tb)
+    @final
+    @classproperty
+    def singleton_cache_key(cls) -> str:  # pylint: disable=no-self-argument
+        """Cache key for singleton jobs."""
+        return f"nautobot.extras.jobs.running.{cls.class_path}"
 
     @final
     @classproperty
     def file_path(cls) -> str:  # pylint: disable=no-self-argument
+        """Deprecated as of Nautobot 2.2.3."""
         return inspect.getfile(cls)
 
     @final
@@ -406,7 +337,7 @@ class BaseJob(Task):
         - my_plugin.jobs.MyPluginJob - App-provided Job
         - git_repository.jobs.myjob.MyJob - GitRepository Job
         """
-        return f"{cls.__module__}.{cls.__name__}"
+        return f"{cls.__module__}.{cls.__name__}"  # pylint: disable=no-member
 
     @final
     @classproperty
@@ -430,7 +361,7 @@ class BaseJob(Task):
     @classproperty
     def grouping(cls) -> str:  # pylint: disable=no-self-argument
         module = inspect.getmodule(cls)
-        return getattr(module, "name", module.__name__)
+        return getattr(module, "name", cls.__module__)
 
     @final
     @classmethod
@@ -443,7 +374,7 @@ class BaseJob(Task):
     @final
     @classproperty
     def name(cls) -> str:  # pylint: disable=no-self-argument
-        return cls._get_meta_attr_and_assert_type("name", cls.__name__, expected_type=str)
+        return cls._get_meta_attr_and_assert_type("name", cls.__name__, expected_type=str)  # pylint: disable=no-member
 
     @final
     @classproperty
@@ -509,6 +440,11 @@ class BaseJob(Task):
 
     @final
     @classproperty
+    def is_singleton(cls) -> bool:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("is_singleton", False, expected_type=bool)
+
+    @final
+    @classproperty
     def properties_dict(cls) -> dict:  # pylint: disable=no-self-argument
         """
         Return all relevant classproperties as a dict.
@@ -525,12 +461,14 @@ class BaseJob(Task):
             "time_limit": cls.time_limit,
             "has_sensitive_variables": cls.has_sensitive_variables,
             "task_queues": cls.task_queues,
+            "is_singleton": cls.is_singleton,
         }
 
     @final
     @classproperty
     def registered_name(cls) -> str:  # pylint: disable=no-self-argument
-        return f"{cls.__module__}.{cls.__name__}"
+        """Deprecated - use class_path classproperty instead."""
+        return f"{cls.__module__}.{cls.__name__}"  # pylint: disable=no-member
 
     @classmethod
     def _get_vars(cls):
@@ -545,7 +483,10 @@ class BaseJob(Task):
         base_classes = reversed(inspect.getmro(cls))
         attr_names = [name for base in base_classes for name in base.__dict__.keys()]
         for name in attr_names:
-            attr_class = getattr(cls, name, None).__class__
+            try:
+                attr_class = getattr(cls, name, None).__class__
+            except TypeError:
+                pass
             if name not in cls_vars and issubclass(attr_class, ScriptVariable):
                 cls_vars[name] = getattr(cls, name)
 
@@ -582,18 +523,50 @@ class BaseJob(Task):
         """
 
         form = cls.as_form_class()(data, files, initial=initial)
-
+        form.fields["_profile"] = forms.BooleanField(
+            required=False,
+            initial=False,
+            label="Profile job execution",
+            help_text="Profiles the job execution using cProfile and outputs a report to /tmp/",
+        )
+        # If the class already exists there may be overrides, so we have to check this.
         try:
-            job_model = JobModel.objects.get_for_class_path(cls.class_path)
-            dryrun_default = job_model.dryrun_default if job_model.dryrun_default_override else cls.dryrun_default
-            task_queues = job_model.task_queues if job_model.task_queues_override else cls.task_queues
+            job_model = JobModel.objects.get(module_name=cls.__module__, job_class_name=cls.__name__)
+            is_singleton = job_model.is_singleton
         except JobModel.DoesNotExist:
-            logger.error("No Job instance found in the database corresponding to %s", cls.class_path)
-            dryrun_default = cls.dryrun_default
-            task_queues = cls.task_queues
+            logger.warning("No Job instance found in the database corresponding to %s", cls.class_path)
+            job_model = None
+            is_singleton = cls.is_singleton
 
-        # Update task queue choices
-        form.fields["_task_queue"].choices = task_queues_as_choices(task_queues)
+        if is_singleton:
+            form.fields["_ignore_singleton_lock"] = forms.BooleanField(
+                required=False,
+                initial=False,
+                label="Ignore singleton lock",
+                help_text="Allow this singleton job to run even when another instance is already running",
+            )
+
+        if job_model is not None:
+            job_queue_queryset = JobQueue.objects.filter(jobs=job_model)
+            job_queue_params = {"jobs": [job_model.pk]}
+        else:
+            job_queue_queryset = JobQueue.objects.all()
+            job_queue_params = {}
+
+        # Initialize job_queue choices
+        form.fields["_job_queue"] = DynamicModelChoiceField(
+            queryset=job_queue_queryset,
+            query_params=job_queue_params,
+            required=False,
+            help_text="The job queue to route this job to",
+            label="Job queue",
+        )
+
+        dryrun_default = cls.dryrun_default
+        if job_model is not None:
+            form.fields["_job_queue"].initial = job_model.default_job_queue.pk
+            if job_model.dryrun_default_override:
+                dryrun_default = job_model.dryrun_default
 
         if cls.supports_dryrun and (not initial or "dryrun" not in initial):
             # Set initial "dryrun" checkbox state based on the Meta parameter
@@ -610,29 +583,18 @@ class BaseJob(Task):
             for _, field in form.fields.items():
                 field.disabled = True
 
-        return form
+        # Ensure non-Job-specific fields are still last after applying field_order
+        for field in ["_job_queue", "_profile", "_ignore_singleton_lock"]:
+            if field not in form.fields:
+                continue
+            value = form.fields.pop(field)
+            form.fields[field] = value
 
-    def clear_cache(self):
-        """
-        Clear all cached properties on this instance without accessing them. This is required because
-        celery reuses task instances for multiple runs.
-        """
-        try:
-            del self.celery_kwargs
-        except AttributeError:
-            pass
-        try:
-            del self.job_result
-        except AttributeError:
-            pass
-        try:
-            del self.job_model
-        except AttributeError:
-            pass
+        return form
 
     @functools.cached_property
     def job_model(self):
-        return JobModel.objects.get(module_name=self.__module__, job_class_name=self.__name__)
+        return JobModel.objects.get(module_name=self.__module__, job_class_name=self.__class__.__name__)
 
     @functools.cached_property
     def job_result(self):
@@ -666,7 +628,7 @@ class BaseJob(Task):
             elif isinstance(value, Model):
                 return_data[field_name] = value.pk
             # FileVar (Save each FileVar as a FileProxy)
-            elif isinstance(value, InMemoryUploadedFile):
+            elif isinstance(value, UploadedFile):
                 return_data[field_name] = BaseJob._save_file_to_proxy(value)
             # IPAddressVar, IPAddressWithMaskVar, IPNetworkVar
             elif isinstance(value, netaddr.ip.BaseIP):
@@ -846,7 +808,7 @@ class BaseJob(Task):
         """
         if isinstance(content, str):
             content = content.encode("utf-8")
-        max_size = get_settings_or_config("JOB_CREATE_FILE_MAX_SIZE")
+        max_size = get_settings_or_config("JOB_CREATE_FILE_MAX_SIZE", fallback=10 << 20)
         actual_size = len(content)
         if actual_size > max_size:
             raise ValueError(f"Provided {actual_size} bytes of content, but JOB_CREATE_FILE_MAX_SIZE is {max_size}")
@@ -1136,7 +1098,7 @@ class JobHookReceiver(Job):
 
     object_change = ObjectVar(model=ObjectChange)
 
-    def run(self, object_change):
+    def run(self, object_change):  # pylint: disable=arguments-differ
         """JobHookReceiver subclasses generally shouldn't need to override this method."""
         self.receive_job_hook(
             change=object_change,
@@ -1165,7 +1127,7 @@ class JobButtonReceiver(Job):
     object_pk = StringVar()
     object_model_name = StringVar()
 
-    def run(self, object_pk, object_model_name):
+    def run(self, object_pk, object_model_name):  # pylint: disable=arguments-differ
         """JobButtonReceiver subclasses generally shouldn't need to override this method."""
         model = get_model_from_name(object_model_name)
         obj = model.objects.get(pk=object_pk)
@@ -1199,42 +1161,143 @@ def is_variable(obj):
     return isinstance(obj, ScriptVariable)
 
 
-def get_job(class_path):
+def get_jobs(*, reload=False):
+    """
+    Compile a dictionary of all Job classes available at this time.
+
+    Args:
+        reload (bool): If True, reimport Jobs from `JOBS_ROOT` and all applicable GitRepositories.
+
+    Returns:
+        (dict): `{"class_path.Job1": <job_class>, "class_path.Job2": <job_class>, ...}`
+    """
+    if reload:
+        import_jobs()
+
+    return registry["jobs"]
+
+
+def get_job(class_path, reload=False):
     """
     Retrieve a specific job class by its class_path (`<module_name>.<JobClassName>`).
 
-    May return None if the job isn't properly registered with Celery at this time.
+    May return None if the job can't be imported.
+
+    Args:
+        reload (bool): If True, **and** the given class_path describes a JOBS_ROOT or GitRepository Job,
+            then refresh **all** such Jobs before retrieving the job class.
     """
+    if reload:
+        if class_path.startswith("nautobot."):
+            # System job - not reloadable
+            reload = False
+        if any(class_path.startswith(f"{app_name}.") for app_name in settings.PLUGINS):
+            # App provided job - not reloadable
+            reload = False
+    jobs = get_jobs(reload=reload)
+    return jobs.get(class_path, None)
+
+
+@nautobot_task(bind=True)
+def run_job(self, job_class_path, *args, **kwargs):
+    """
+    "Runner" function for execution of any Job class by a worker.
+
+    This calls the following Job APIs in the following order:
+
+    - `__init__()`
+    - `before_start()`
+    - `__call__()` (which calls `run()`)
+    - If no exceptions have been raised, `on_success()`, else `on_failure()`
+    - `after_return()`
+
+    Finally, it either returns the data returned from `run()` or re-raises any exception encountered.
+    """
+    logger.debug("Running job %s", job_class_path)
+
+    job_class = get_job(job_class_path, reload=True)
+    if job_class is None:
+        raise KeyError(f"Job class not found for class path {job_class_path}")
+    job = job_class()
+    job.request = self.request
+    job_result = JobResult.objects.get(id=self.request.id)
+    payload = {
+        "job_result_id": self.request.id,
+        "job_name": job.name,
+        "user_name": job_result.user.username,
+    }
+    if not job.job_model.has_sensitive_variables:
+        payload["job_kwargs"] = kwargs
     try:
-        return celery_app.tasks[class_path].__class__
-    except NotRegistered:
-        return None
+        publish_event(topic="nautobot.jobs.job.started", payload=payload)
+        job.before_start(self.request.id, args, kwargs)
+        result = job(*args, **kwargs)
+        job.on_success(result, self.request.id, args, kwargs)
+        job.after_return(JobResultStatusChoices.STATUS_SUCCESS, result, self.request.id, args, kwargs, None)
+        payload["job_output"] = result
+        publish_event(topic="nautobot.jobs.job.completed", payload=payload)
+        return result
+    except Exception as exc:
+        einfo = ExceptionInfo(sys.exc_info())
+        job.on_failure(exc, self.request.id, args, kwargs, einfo)
+        job.after_return(JobResultStatusChoices.STATUS_FAILURE, exc, self.request.id, args, kwargs, einfo)
+        payload["einfo"] = {
+            "exc_type": type(exc).__name__,
+            "exc_message": sanitize(str(exc)),
+        }
+        publish_event(topic="nautobot.jobs.job.completed", payload=payload)
+        raise
 
 
-def enqueue_job_hooks(object_change):
+def enqueue_job_hooks(object_change, may_reload_jobs=True, jobhook_queryset=None):
     """
-    Find job hook(s) assigned to this changed object type + action and enqueue them
-    to be processed
+    Find job hook(s) assigned to this changed object type + action and enqueue them to be processed.
+
+    Args:
+        object_change (ObjectChange): The change that may trigger JobHooks to execute.
+        may_reload_jobs (bool): Whether to reload JobHook source code from disk to guarantee up-to-date code.
+        jobhook_queryset (QuerySet): Previously retrieved set of JobHooks to potentially enqueue
+
+    Returns:
+        result (tuple[bool, QuerySet]): whether Jobs were reloaded here, and the jobhooks that were considered
     """
+    jobs_reloaded = False
 
     # Job hooks cannot trigger other job hooks
     if object_change.change_context == ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK:
-        return
+        return jobs_reloaded, jobhook_queryset
 
     # Determine whether this type of object supports job hooks
     content_type = object_change.changed_object_type
     if content_type not in change_logged_models_queryset():
-        return
+        return jobs_reloaded, jobhook_queryset
 
     # Retrieve any applicable job hooks
-    action_flag = {
-        ObjectChangeActionChoices.ACTION_CREATE: "type_create",
-        ObjectChangeActionChoices.ACTION_UPDATE: "type_update",
-        ObjectChangeActionChoices.ACTION_DELETE: "type_delete",
-    }[object_change.action]
-    job_hooks = JobHook.objects.filter(content_types=content_type, enabled=True, **{action_flag: True})
+    if jobhook_queryset is None:
+        action_flag = {
+            ObjectChangeActionChoices.ACTION_CREATE: "type_create",
+            ObjectChangeActionChoices.ACTION_UPDATE: "type_update",
+            ObjectChangeActionChoices.ACTION_DELETE: "type_delete",
+        }[object_change.action]
+        jobhook_queryset = JobHook.objects.filter(content_types=content_type, enabled=True, **{action_flag: True})
+
+    if not jobhook_queryset:  # not .exists() as we *want* to populate the queryset cache
+        return jobs_reloaded, jobhook_queryset
 
     # Enqueue the jobs related to the job_hooks
-    for job_hook in job_hooks:
+    if may_reload_jobs:
+        get_jobs(reload=True)
+        jobs_reloaded = True
+
+    for job_hook in jobhook_queryset:
         job_model = job_hook.job
-        JobResult.enqueue_job(job_model, object_change.user, object_change=object_change.pk)
+        if not job_model.installed or not job_model.enabled:
+            logger.warning(
+                "JobHook %s is enabled, but the underlying Job %s is not installed and enabled", job_hook, job_model
+            )
+        elif get_job(job_model.class_path) is None:
+            logger.error("JobHook %s is enabled, but the underlying Job implementation is missing", job_hook)
+        else:
+            JobResult.enqueue_job(job_model, object_change.user, object_change=object_change.pk)
+
+    return jobs_reloaded, jobhook_queryset

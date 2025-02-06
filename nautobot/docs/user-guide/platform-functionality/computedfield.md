@@ -63,7 +63,7 @@ See the documentation on [built-in filters](./template-filters.md) or [registeri
 
 ## Computed Fields and the REST API
 
-When retrieving an object via the REST API, computed field data is not included by default in order to prevent potentially computationally expensive rendering operations that degrade the user experience. In order to retrieve computed field data, you must use the `include` query parameter.
+When retrieving an object via the REST API, computed field data is not included by default in order to prevent potentially computationally expensive rendering operations that degrade the user experience. In order to retrieve computed field data, you must use the [`include` query parameter](rest-api/filtering.md#filtering-included-fields).
 
 Take a look at an example URL that includes computed field data:
 
@@ -75,9 +75,9 @@ When explicitly requested as such, computed field data will be included in the `
 
 ```json
 {
-    "id": 123,
-    "url": "http://localhost:8080/api/dcim/locations/123/",
-    "name": "Raleigh 42",
+    "id": "9cd6092d-a4df-4708-94a5-349e845e2f79",
+    "url": "http://localhost:8080/api/dcim/locations/9cd6092d-a4df-4708-94a5-349e845e2f79/",
+    "name": "Raleigh",
     ...
     "computed_fields": {
         "location_name_uppercase": "RALEIGH"

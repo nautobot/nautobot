@@ -7,12 +7,13 @@ from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import ColorField
 from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.extras.models.mixins import SavedViewMixin
 from nautobot.extras.utils import extras_features, TaggableClassesQuery
 
 # These imports are in this particular order because of circular import problems
 from .change_logging import ChangeLoggedModel
 from .customfields import CustomFieldModel
-from .mixins import NotesMixin
+from .mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin
 from .relationships import RelationshipModel
 
 #
@@ -34,7 +35,16 @@ class TagQuerySet(RestrictedQuerySet):
 @extras_features(
     "custom_validators",
 )
-class Tag(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, NotesMixin):
+class Tag(
+    ChangeLoggedModel,
+    ContactMixin,
+    CustomFieldModel,
+    DynamicGroupsModelMixin,
+    NotesMixin,
+    RelationshipModel,
+    SavedViewMixin,
+    BaseModel,
+):
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     content_types = models.ManyToManyField(
         to=ContentType,
@@ -76,6 +86,7 @@ class TaggedItem(BaseModel, GenericUUIDTaggedItemBase):
     tag = models.ForeignKey(to=Tag, related_name="%(app_label)s_%(class)s_items", on_delete=models.CASCADE)
 
     documentation_static_path = "docs/user-guide/platform-functionality/tag.html"
+    is_metadata_associable_model = False
 
     natural_key_field_names = ["pk"]
 

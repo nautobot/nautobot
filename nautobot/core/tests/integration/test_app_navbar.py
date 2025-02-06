@@ -5,7 +5,6 @@ from nautobot.core.testing.integration import SeleniumTestCase
 class AppNavBarTestCase(SeleniumTestCase):
     """Integration test the navigation menu."""
 
-    fixtures = ["user-data.json"]
     navbar = {
         "Circuits": {
             "Circuits": {
@@ -61,7 +60,7 @@ class AppNavBarTestCase(SeleniumTestCase):
         tab_xpath = "//*[@id='navbar']//span[normalize-space()='Example Menu']/.."
         tab = self.browser.find_by_xpath(tab_xpath)
         tab.click()
-        self.assertTrue(bool(tab["aria-expanded"]))
+        self.assertEqual(tab["aria-expanded"], "true")
 
         group = tab.find_by_xpath(f"{tab_xpath}/following-sibling::ul//li[normalize-space()='Example Group 1']")
 
@@ -82,7 +81,7 @@ class AppNavBarTestCase(SeleniumTestCase):
         tab_xpath = "//*[@id='navbar']//*[normalize-space()='Circuits']"
         tab = self.browser.find_by_xpath(tab_xpath)
         tab.click()
-        self.assertTrue(bool(tab["aria-expanded"]))
+        self.assertEqual(tab["aria-expanded"], "true")
 
         for group_name, items in self.navbar["Circuits"].items():
             group = tab.find_by_xpath(f"{tab_xpath}/following-sibling::ul//li[normalize-space()='{group_name}']")
@@ -114,7 +113,7 @@ class AppNavBarTestCase(SeleniumTestCase):
         tab_xpath = "//*[@id='navbar']//*[normalize-space()='Apps']"
         tab = self.browser.find_by_xpath(tab_xpath)
         tab.click()
-        self.assertTrue(bool(tab["aria-expanded"]))
+        self.assertEqual(tab["aria-expanded"], "true")
 
         for group_name, items in self.navbar["Apps"].items():
             group = tab.find_by_xpath(f"{tab_xpath}/following-sibling::ul//li[normalize-space()='{group_name}']")

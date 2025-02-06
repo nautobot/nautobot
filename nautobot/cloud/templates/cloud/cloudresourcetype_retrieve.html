@@ -1,0 +1,111 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block extra_breadcrumbs %}
+    <li><a href="{% url 'cloud:cloudresourcetype_list' %}?provider={{ object.provider.pk }}">{{ object.provider }}</a></li>
+{% endblock extra_breadcrumbs %}
+
+{% block extra_nav_tabs %}
+    {% if networks_count %}
+        <li role="presentation"{% if request.GET.tab == 'networks' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#networks" onclick="switch_tab(this.href, reload=false)" aria-controls="networks" role="tab" data-toggle="tab">
+                Cloud Networks {% badge networks_count %}
+            </a>
+        </li>
+    {% endif %}
+    {% if services_count %}
+        <li role="presentation"{% if request.GET.tab == 'services' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#services" onclick="switch_tab(this.href, reload=false)" aria-controls="services" role="tab" data-toggle="tab">
+                Cloud Services {% badge services_count %}
+            </a>
+        </li>
+    {% endif %}
+{% endblock extra_nav_tabs %}
+
+{% block content_left_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Cloud Resource Type</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>Name</td>
+                <td>
+                    {{ object.name }}
+                </td>
+            </tr>
+            <tr>
+                <td>Provider</td>
+                <td>{{ object.provider|hyperlinked_object }}</td>
+            </tr>
+            <tr>
+                <td>Content Type(s)</td>
+                <td>
+                    {% if object.content_types.all %}
+                        <ul>
+                            {% for content_type in object.content_types.all %}
+                                <li>{{ content_type }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        {{ None|placeholder }}
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Description</td>
+                <td>{{ object.description|placeholder }}</td>
+            </tr>
+        </table>
+    </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Config Schema</strong>
+        </div>
+        <div class="panel-body">
+            <pre>{{ object.config_schema|render_json }}</pre>
+        </div>
+    </div>
+{% endblock content_right_page %}
+
+{% block extra_tab_content %}
+    {% if networks_count %}
+        <div id="networks" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "networks" %}active{% else %}fade{% endif %}">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Cloud Networks</strong>
+                </div>
+                {% include 'inc/table.html' with table=networks_table %}
+                {% if perms.cloud.add_cloudnetwork %}
+                    <div class="panel-footer text-right noprint">
+                        <a href="{% url 'cloud:cloudnetwork_add' %}?cloud_resource_type={{ object.pk }}" class="btn btn-xs btn-primary">
+                            <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add cloud network
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+            {% include 'inc/paginator.html' with paginator=networks_table.paginator page=networks_table.page %}
+        </div>
+    {% endif %}
+    {% if services_count %}
+        <div id="services" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "services" %}active{% else %}fade{% endif %}">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Cloud Services</strong>
+                </div>
+                {% include 'inc/table.html' with table=services_table %}
+                {% if perms.cloud.add_cloudservice %}
+                    <div class="panel-footer text-right noprint">
+                        <a href="{% url 'cloud:cloudservice_add' %}?cloud_resource_type={{ object.pk }}" class="btn btn-xs btn-primary">
+                            <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add cloud service
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+            {% include 'inc/paginator.html' with paginator=services_table.paginator page=services_table.page %}
+        </div>
+    {% endif %}
+{% endblock extra_tab_content %}

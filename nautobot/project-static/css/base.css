@@ -97,6 +97,7 @@ table.attr-table td:nth-child(1) {
 }
 .table-headings th {
     background-color: #f5f5f5;
+    white-space: nowrap;
 }
 td.min-width {
     width: 1%;
@@ -299,6 +300,7 @@ table.report th a {
 }
 .panel table {
     margin-bottom: 0;
+    overflow: hidden;
 }
 .panel .table th {
     border-bottom-width: 1px;
@@ -341,6 +343,15 @@ ul.nav-tabs li a:hover,
     color: inherit;
 }
 ul.software-image-hierarchy {
+    list-style-type: "↳ ";
+    padding-left: 18px;
+}
+
+ul.tree-hierarchy {
+    list-style-type: none;
+    padding-left: 0px;
+}
+ul.tree-hierarchy ul {
     list-style-type: "↳ ";
     padding-left: 18px;
 }
@@ -579,7 +590,8 @@ td span.hover_copy:hover .hover_copy_button {
 .accordion-toggle {
     border: 0;
     color: black;
-    font-size: 24px;
+    font-size: 14px;
+    font-weight: 700;
     padding: 0;
     text-decoration: none;
 }
@@ -590,7 +602,7 @@ td span.hover_copy:hover .hover_copy_button {
     padding: 0;
     text-decoration: none;
 }
-#accordion-toggle-all {
+.accordion-toggle-all {
     display: inline;
 }
 
@@ -860,6 +872,12 @@ td span.hover_copy:hover .hover_copy_button {
 .collapse-icon {
     float: right;
     cursor: pointer !important;
+    transition: transform 0.3s ease;
+}
+
+/* Rotates element 180 degrees */
+.rotated180 {
+    transform: rotate(180deg);
 }
 
 /* Draggable homepage panels fade in effect on page load */
@@ -895,6 +913,7 @@ pre:has(code.hljs) {
 }
 pre code.hljs {
     padding: 11.5px; /* Same as Bootstrap 3 `pre` padding */
+    background-color: #f4f4f4; /* Reset Bootstrap 3 `pre` background-color in case it contains a `code` element already formatted by highlight.js */
 }
 code.hljs {
     padding: 2px 4px; /* Same as Bootstrap 3 `code` padding */
@@ -915,7 +934,7 @@ code.hljs {
 .tiles {
     display: grid;
     grid-gap: 20px;
-    grid-template-columns: repeat(auto-fit, minmax(445px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(445px, 1fr));
 }
 @media (max-width: 1007px) {
     .tiles {
@@ -931,6 +950,24 @@ code.hljs {
     display: flex;
     flex-direction: column;
     padding: 20px;
+}
+.tile.clickable {
+    cursor: pointer;
+    outline: none;
+    transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+.tile.clickable:active,
+.tile.clickable:focus-visible,
+.tile.clickable:hover {
+    border-color: #007dff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+a.tile.clickable,
+a.tile.clickable:hover,
+a.tile.clickable:focus,
+a.tile.clickable:visited {
+    color: inherit;
+    text-decoration: none;
 }
 .tile.disabled {
     background: #f4f4f4;
@@ -952,11 +989,36 @@ code.hljs {
     font-weight: 400;
     margin: 0;
 }
+.tile-header img {
+    float: left;
+    margin-right: 20px;
+}
 .tile-description {
     flex: 1;
 }
 .tile-footer {
     border-top: 1px solid #d8d8d8;
+    column-gap: 10px;
     display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
     padding-top: 10px;
+}
+
+/* Buttons inside dropdown menus */
+.dropdown-menu button {
+    background: none;
+    border: none;
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 3px 20px;
+    cursor: pointer;
+    text-wrap: nowrap;
+}
+.dropdown-menu button:focus,
+.dropdown-menu button:hover {
+    color: #ffffff;
+    text-decoration: none;
+    background-color: #646464;
 }

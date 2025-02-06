@@ -1,9 +1,11 @@
 from ipaddress import IPv6Address, IPV6LENGTH, IPv6Network
 import itertools
 
+from django.core.exceptions import ValidationError
 from django.db.models import Model
 import factory
 from factory.django import DjangoModelFactory
+from factory.errors import FactoryError
 import factory.random
 from faker.providers import BaseProvider
 
@@ -31,9 +33,38 @@ class BaseModelFactory(DjangoModelFactory):
     @classmethod
     def _create(cls, model_class, *args, **kwargs):
         """Override default DjangoModelFactory behavior to call validated_save() instead of just save()."""
+        if cls._meta.django_get_or_create:
+            return cls._get_or_create(model_class, *args, **kwargs)
+
         using = kwargs.pop("using", cls._meta.database)
         obj = model_class(*args, **kwargs)
-        obj.validated_save(using=using)
+        try:
+            obj.validated_save(using=using)
+        except ValidationError as err:
+            print(f"Got a ValidationError for {obj}: {err}")
+            raise
+        return obj
+
+    @classmethod
+    def _get_or_create(cls, model_class, *args, **kwargs):
+        """Simplified form of DjangoModelFactory._get_or_create() that also calls validated_save() if needed."""
+        using = kwargs.pop("using", cls._meta.database)
+        key_fields = {}
+        for field in cls._meta.django_get_or_create:
+            if field not in kwargs:
+                raise FactoryError(f"no value provided for field {field}")
+            key_fields[field] = kwargs.pop(field)
+
+        try:
+            obj = model_class.objects.using(using).get(*args, **key_fields)
+        except model_class.DoesNotExist:
+            obj = model_class(*args, **key_fields, **kwargs)
+            try:
+                obj.validated_save(using=using)
+            except ValidationError as err:
+                print(f"Got a ValidationError for {obj}: {err}")
+                raise
+
         return obj
 
 

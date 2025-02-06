@@ -1,0 +1,122 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block extra_breadcrumbs %}
+    {% if object.parent %}
+        <li>{{ object.parent|hyperlinked_object:"name" }}</li>
+    {% endif %}
+{% endblock extra_breadcrumbs %}
+
+
+{% block extra_nav_tabs %}
+    {% if children_count %}
+            <li role="presentation"{% if request.GET.tab == 'children' %} class="active"{% endif %}>
+                <a href="{{ object.get_absolute_url }}#children" onclick="switch_tab(this.href, reload=false)" aria-controls="children" role="tab" data-toggle="tab">
+                    Children {% badge children_count %}
+                </a>
+            </li>
+    {% endif %}
+    {% if prefix_count %}
+        <li role="presentation"{% if request.GET.tab == 'prefixes' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#prefixes" onclick="switch_tab(this.href, reload=false)" aria-controls="prefixes" role="tab" data-toggle="tab">
+                Prefixes {% badge prefix_count %}
+            </a>
+        </li>
+    {% endif %}
+    {% if circuit_count %}
+        <li role="presentation"{% if request.GET.tab == 'circuits' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#circuits" onclick="switch_tab(this.href, reload=false)" aria-controls="circuits" role="tab" data-toggle="tab">
+                Circuits {% badge circuit_count %}
+            </a>
+        </li>
+    {% endif %}
+    {% if cloud_service_count %}
+        <li role="presentation"{% if request.GET.tab == 'cloud_services' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#cloud_services" onclick="switch_tab(this.href, reload=false)" aria-controls="cloud_services" role="tab" data-toggle="tab">
+                Cloud Services {% badge cloud_service_count %}
+            </a>
+        </li>
+    {% endif %}
+{% endblock extra_nav_tabs %}
+
+{% block extra_tab_content %}
+    {% if children_count %}
+        <div id="children" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "children" %}active{% else %}fade{% endif %}">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Children</strong>
+                </div>
+                {% include 'inc/table.html' with table=children_table %}
+                {% if perms.cloud.add_cloudnetwork %}
+                    <div class="panel-footer text-right noprint">
+                        <a href="{% url 'cloud:cloudnetwork_add' %}?parent={{ object.pk }}" class="btn btn-xs btn-primary">
+                            <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add child
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+            {% include 'inc/paginator.html' with paginator=children_table.paginator page=children_table.page %}
+        </div>
+    {% endif %}
+    {% if prefix_count %}
+        <div id="prefixes" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "prefixes" %}active{% else %}fade{% endif %}">
+            {% include 'panel_table.html' with table=prefixes_table heading="Assigned Prefixes" %}
+            {% include 'inc/paginator.html' with paginator=prefixes_table.paginator page=prefixes_table.page %}
+        </div>
+    {% endif %}
+    {% if circuit_count %}
+        <div id="circuits" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "circuits" %}active{% else %}fade{% endif %}">
+            {% include 'panel_table.html' with table=circuits_table heading="Circuits" %}
+            {% include 'inc/paginator.html' with paginator=circuits_table.paginator page=circuits_table.page %}
+        </div>
+    {% endif %}
+    {% if cloud_service_count %}
+        <div id="cloud_services" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "cloud_services" %}active{% else %}fade{% endif %}">
+            {% include 'panel_table.html' with table=cloud_services_table heading="Cloud Services" %}
+            {% include 'inc/paginator.html' with paginator=cloud_services_table.paginator page=cloud_services_table.page %}
+        </div>
+    {% endif %}
+{% endblock extra_tab_content %}
+
+{% block content_left_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Cloud Network</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Name</td>
+                    <td>
+                        {{ object.name }}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Cloud Resource Type</td>
+                    <td>{{ object.cloud_resource_type|hyperlinked_object }}</td>
+                </tr>
+                <tr>
+                    <td>Cloud Account</td>
+                    <td>{{ object.cloud_account|hyperlinked_object }}</td>
+                </tr>
+                <tr>
+                    <td>Parent</td>
+                    <td>{{ object.parent|hyperlinked_object }}</td>
+                </tr>
+                <tr>
+                    <td>Description</td>
+                    <td>{{ object.description|placeholder }}</td>
+                </tr>
+            </table>
+        </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Extra Config</strong>
+        </div>
+        <div class="panel-body">
+            <pre>{{ object.extra_config|render_json }}</pre>
+        </div>
+    </div>
+{% endblock content_right_page %}

@@ -61,7 +61,7 @@ class Contact(ContactTeamSharedBase):
 class Team(ContactTeamSharedBase):
     """A group of Contacts, usable interchangeably with a single Contact in most cases."""
 
-    contacts = models.ManyToManyField(to=Contact, related_name="teams")
+    contacts = models.ManyToManyField(to=Contact, related_name="teams", blank=True)
 
     class Meta(ContactTeamSharedBase.Meta):
         abstract = False
@@ -90,6 +90,10 @@ class ContactAssociation(OrganizationalModel):
 
     role = RoleField(blank=False, null=False)
     status = StatusField(blank=False, null=False)
+
+    is_contact_associable_model = False
+    is_dynamic_group_associable_model = False
+    is_saved_view_model = False
 
     class Meta:
         unique_together = (

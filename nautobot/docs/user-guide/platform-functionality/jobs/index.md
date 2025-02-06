@@ -21,6 +21,16 @@ Jobs are a way for users to execute custom logic on demand from within the Nauto
 
 As of Nautobot 1.3, each Job class installed in Nautobot is represented by a corresponding Job data record in the Nautobot database. These data records are refreshed when the `nautobot-server migrate` or `nautobot-server post_upgrade` command is run, or (for Jobs from a Git repository) when a Git repository is enabled or re-synced in Nautobot. These data records make it possible for an administrative user (or other user with appropriate access privileges) to exert a level of administrative control over the Jobs created and updated by Job authors.
 
+!!! tip
+    A "Job" can refer to one of two different constructs. There are both the actual Python code that implements the logic of a Job as a Python class, and the Nautobot database model that represents a given Job class in the database. In cases where the distinction between these objects is important, we refer to the first as a "Job class", and the second as a "Job model" or "Job record".
+
+    It's important to understand this dichotomy, as actions that change one may not necessarily update the other. For example:
+
+    * Editing or replacing a Python file in your `JOBS_ROOT` directory will update the Job *class* on disk, but will not automatically refresh the Job *record* corresponding to this class - you must run `nautobot-server post_upgrade` to make this happen.
+    * Changing the metadata of a Job *record* (e.g., assigning it a different categorical `grouping`) is recorded as an override of the default grouping defined by the Job *class* source code; it does not in any way change the source code of the Job class.
+
+    The Job *model* is used to enforce user permissions, present information about the Job to the user, and so forth, while actually executing the Job makes use of the Job *class* only.
+
 ### Enabling Jobs for Running
 
 When a new Job record is created for a newly discovered Job class, it defaults to `enabled = False`, which prevents the Job from being run by any user. This is intended to provide a level of security and oversight regarding the installation of new Jobs into Nautobot.
@@ -33,19 +43,6 @@ An administrator or user with `extras.change_job` permission can edit the Job to
  By default when a Job is installed into Nautobot it is installed in a disabled state. In order to enable a Job:
 
 * Navigate to Jobs > Jobs menu
-* Select a job that has been installed
-* Select **Edit** button
-* In the second section titled **Job**, select the **Enabled** checkbox
-* Select **Update** button at the bottom
-
-#### Enabling Job Hooks
-
- Job hooks are enabled in a similar fashion, but by using the **default** filters when navigating to the Jobs page the Job Hooks will not be visible. To enable job hooks:
-
-* Navigate to Jobs > Jobs menu
-* Select the **Filter** button to bring up the Filter Jobs context
-* Look for **Is job hook receiver** and change the drop down to **Yes**
-* Select **Apply** button
 * Select a job that has been installed
 * Select **Edit** button
 * In the second section titled **Job**, select the **Enabled** checkbox
@@ -64,13 +61,20 @@ An administrator or user with `extras.change_job` permission can also edit a Job
 * `hidden`
 * `soft_time_limit`
 * `time_limit`
-* `task_queues`
+* `job_queues`
+* `is_singleton`
 
 This is done by setting the corresponding "override" flag (`grouping_override`, `name_override`, etc.) to `True` then providing a new value for the attribute in question. An overridden attribute will remain set to its overridden value even if the underlying Job class definition changes and `nautobot-server <migrate|post_upgrade>` gets run again. Conversely, clearing the "override" flag for an attribute and saving the database record will revert the attribute to the underlying value defined within the Job class source code.
 
++/- 2.4.0 "Job queues"
+    In Nautobot v2.4 and later, the `task_queues` attribute is deprecated and replaced with `job_queues`, which instead of a list of strings is now a set of [Job Queues](./jobqueue.md) specifying the eligible queues for running a Job. Note that as a consequence, per-Job ordering of queues is no longer possible; Job Queues are always sorted alphabetically and cannot be reordered.
+
 ### Deleting Jobs
 
-When a previously installed Job class is removed, after running `nautobot-server <migrate|post_upgrade>` or refreshing the providing Git repository, the Job database record will *not* be automatically deleted, but *will* be flagged as `installed = False` and can no longer be run or scheduled.
+When a previously installed Job class is removed, after running `nautobot-server <migrate|post_upgrade>` or refreshing the providing Git repository, the Job database record will *not* be automatically deleted, but *will* be flagged as `installed = False` and can no longer be run or scheduled. Any [Job Buttons](jobbutton.md), [Job Hooks](jobhook.md), and [scheduled Jobs](job-scheduling-and-approvals.md) corresponding to the no-longer-installed Job will automatically be disabled as well.
+
+!!! note
+    The Job list view hides by default any Jobs that are not installed. To view non-installed Job records, you need to select the "Filter" button in the list view and explicitly specify the filter "Installed: No".
 
 An administrator or user with `extras.delete_job` permissions *may* delete such a Job database record if desired, but be aware that doing so will result in any existing JobResult or ScheduledJob records that originated from this Job losing their association to the Job; this association will not be automatically restored even if the Job is later reinstalled or reintroduced.
 
@@ -90,7 +94,7 @@ An administrator or user with `extras.delete_job` permissions *may* delete such 
 
 It is a key concept to understand the 2 `class_path` elements:
 
-* `module_name`: which is the importable Python path to the job definition (with `.` in place of `/` in the directory path, and not including the `.py` file extension, as per Python syntax standards).
+* `module_name`: which is the importable Python path to the job class definition (with `.` in place of `/` in the directory path, and not including the `.py` file extension, as per Python syntax standards).
     * For an App-provided job, this might be something like `my_app_name.jobs.my_job_filename` or `nautobot_golden_config.jobs`
     * For a locally installed job, this would match the file name, such as `my_job_filename`
     * For a Git-provided job, this includes the repository's defined `slug`, such as `my_repository.jobs.my_job_filename`

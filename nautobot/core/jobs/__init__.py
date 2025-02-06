@@ -1,9 +1,12 @@
+import codecs
 import contextlib
 from io import BytesIO
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import (
+    PermissionDenied,
+)
 from django.db import transaction
 from django.http import QueryDict
 from rest_framework import exceptions as drf_exceptions
@@ -14,10 +17,27 @@ from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app, register_jobs
 from nautobot.core.exceptions import AbortTransaction
+from nautobot.core.jobs.bulk_actions import BulkDeleteObjects, BulkEditObjects
+from nautobot.core.jobs.cleanup import LogsCleanup
+from nautobot.core.jobs.groups import RefreshDynamicGroupCaches
 from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
-from nautobot.extras.datasources import ensure_git_repository, git_repository_dry_run, refresh_datasource_content
-from nautobot.extras.jobs import BooleanVar, ChoiceVar, FileVar, Job, ObjectVar, RunJobTaskFailed, StringVar, TextVar
+from nautobot.extras.datasources import (
+    ensure_git_repository,
+    git_repository_dry_run,
+    refresh_datasource_content,
+    refresh_job_code_from_repository,
+)
+from nautobot.extras.jobs import (
+    BooleanVar,
+    ChoiceVar,
+    FileVar,
+    Job,
+    ObjectVar,
+    RunJobTaskFailed,
+    StringVar,
+    TextVar,
+)
 from nautobot.extras.models import ExportTemplate, GitRepository
 
 name = "System Jobs"
@@ -36,21 +56,34 @@ class GitRepositorySync(Job):
 
     class Meta:
         name = "Git Repository: Sync"
+        description = "Clone and/or pull a Git repository, then refresh data sourced from this repository."
         has_sensitive_variables = False
 
-    def run(self, repository):
+    def run(self, repository):  # pylint:disable=arguments-differ
         job_result = self.job_result
         user = job_result.user
 
         self.logger.info(f'Creating/refreshing local copy of Git repository "{repository.name}"...')
 
         try:
-            ensure_git_repository(repository, logger=self.logger)
-            refresh_datasource_content("extras.gitrepository", repository, user, job_result, delete=False)
-            # Given that the above succeeded, tell all workers (including ourself) to call ensure_git_repository()
-            app.control.broadcast("refresh_git_repository", repository_pk=repository.pk, head=repository.current_head)
-        finally:
-            self.logger.info(f"Repository synchronization completed in {job_result.duration}")
+            with transaction.atomic():
+                ensure_git_repository(repository, logger=self.logger)
+                refresh_datasource_content("extras.gitrepository", repository, user, job_result, delete=False)
+                # Given that the above succeeded, tell all workers (including ourself) to call ensure_git_repository()
+                app.control.broadcast(
+                    "refresh_git_repository", repository_pk=repository.pk, head=repository.current_head
+                )
+                if job_result.duration:
+                    self.logger.info("Repository synchronization completed in %s", job_result.duration)
+        except Exception:
+            job_result.log("Changes to database records have been reverted.")
+            # Re-check-out previous commit if any
+            repository.refresh_from_db()
+            if repository.current_head:
+                job_result.log(f"Attempting to revert local repository clone to commit {repository.current_head}")
+                ensure_git_repository(repository, logger=self.logger, head=repository.current_head)
+                refresh_job_code_from_repository(repository.slug, ignore_import_errors=True)
+            raise
 
 
 class GitRepositoryDryRun(Job):
@@ -64,9 +97,10 @@ class GitRepositoryDryRun(Job):
 
     class Meta:
         name = "Git Repository: Dry-Run"
+        description = "Dry run of Git repository sync - will not update data sourced from this repository."
         has_sensitive_variables = False
 
-    def run(self, repository):
+    def run(self, repository):  # pylint:disable=arguments-differ
         job_result = self.job_result
         self.logger.info(f'Performing a Dry Run on Git repository "{repository.name}"...')
 
@@ -110,12 +144,13 @@ class ExportObjectList(Job):
 
     class Meta:
         name = "Export Object List"
+        description = "Export a list of objects to CSV or YAML, or render a specified Export Template."
         has_sensitive_variables = False
         # Exporting large querysets may take substantial processing time
         soft_time_limit = 1800
         time_limit = 2000
 
-    def run(self, *, content_type, query_string="", export_format="csv", export_template=None):
+    def run(self, *, content_type, query_string="", export_format="csv", export_template=None):  # pylint:disable=arguments-differ
         if not self.user.has_perm(f"{content_type.app_label}.view_{content_type.model}"):
             self.logger.error('User "%s" does not have permission to view %s objects', self.user, content_type.model)
             raise PermissionDenied("User does not have view permissions on the requested content-type")
@@ -134,7 +169,15 @@ class ExportObjectList(Job):
         #       such that they never are even seen here.
         query_params = QueryDict(query_string)
         self.logger.debug("Parsed query_params: `%s`", query_params.dict())
-        default_non_filter_params = ("export", "page", "per_page", "sort")
+        default_non_filter_params = (
+            "all_filters_removed",
+            "export",
+            "page",
+            "per_page",
+            "saved_view",
+            "sort",
+            "table_changes_pending",
+        )
         filter_params = get_filterable_params_from_filter_params(
             query_params, default_non_filter_params, filterset_class()
         )
@@ -211,6 +254,7 @@ class ImportObjects(Job):
 
     class Meta:
         name = "Import Objects"
+        description = "Import objects from CSV-formatted data."
         has_sensitive_variables = False
         # Importing large files may take substantial processing time
         soft_time_limit = 1800
@@ -254,7 +298,7 @@ class ImportObjects(Job):
                     self.logger.error("Row %d: `%s`: `%s`", row, field, err[0])
         return new_objs, validation_failed
 
-    def run(self, *, content_type, csv_data=None, csv_file=None, roll_back_if_error=False):
+    def run(self, *, content_type, csv_data=None, csv_file=None, roll_back_if_error=False):  # pylint:disable=arguments-differ
         if not self.user.has_perm(f"{content_type.app_label}.add_{content_type.model}"):
             self.logger.error('User "%s" does not have permission to create %s objects', self.user, content_type.model)
             raise PermissionDenied("User does not have create permissions on the requested content-type")
@@ -281,7 +325,9 @@ class ImportObjects(Job):
         if not csv_data and not csv_file:
             raise RunJobTaskFailed("Either csv_data or csv_file must be provided")
         if csv_file:
-            csv_bytes = csv_file
+            # data_encoding is utf-8 and file_encoding is utf-8-sig
+            # Bytes read from the original file are decoded according to file_encoding, and the result is encoded using data_encoding.
+            csv_bytes = codecs.EncodedFile(csv_file, "utf-8", "utf-8-sig")
         else:
             csv_bytes = BytesIO(csv_data.encode("utf-8"))
 
@@ -313,5 +359,14 @@ class ImportObjects(Job):
             raise RunJobTaskFailed("CSV import not fully successful, see logs")
 
 
-jobs = [ExportObjectList, GitRepositorySync, GitRepositoryDryRun, ImportObjects]
+jobs = [
+    BulkDeleteObjects,
+    BulkEditObjects,
+    ExportObjectList,
+    GitRepositorySync,
+    GitRepositoryDryRun,
+    ImportObjects,
+    LogsCleanup,
+    RefreshDynamicGroupCaches,
+]
 register_jobs(*jobs)

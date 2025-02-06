@@ -1,11 +1,6 @@
-from django.apps import apps
-from django.core.cache import cache
 from django.core.management.base import BaseCommand
 
-from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.models import DynamicGroup
-from nautobot.extras.querysets import DynamicGroupQuerySet
-from nautobot.extras.registry import registry
 
 
 class Command(BaseCommand):
@@ -14,17 +9,7 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         """Run through all Dynamic Groups and ensure their member caches are up to date."""
 
-        if get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT") == 0:
-            self.stdout.write(
-                self.style.NOTICE("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT is set to 0; skipping cache refresh")
-            )
-        else:
-            self.stdout.write(self.style.NOTICE("Refreshing DynamicGroup member caches..."))
-
-        for app_label in registry["model_features"]["dynamic_groups"]:
-            for model_name in registry["model_features"]["dynamic_groups"][app_label]:
-                model = apps.get_model(app_label=app_label, model_name=model_name)
-                cache.delete(DynamicGroupQuerySet._get_eligible_dynamic_groups_cache_key(model))
+        self.stdout.write(self.style.NOTICE("Refreshing DynamicGroup member caches..."))
 
         dynamic_groups = DynamicGroup.objects.all()
 

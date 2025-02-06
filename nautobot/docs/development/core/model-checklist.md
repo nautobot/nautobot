@@ -2,7 +2,7 @@
 
 A general best-practices checklist to follow when adding a new data model in Nautobot or adding new fields to an existing model.
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 9 no-inline-html -->
 <style>
 article ul li:before {
     content: '□';
@@ -12,7 +12,6 @@ article ul li {
     list-style-type: none;
 }
 </style>
-<!-- markdownlint-enable no-inline-html -->
 
 ## Bootstrapping a new Model
 
@@ -20,12 +19,18 @@ article ul li {
 
 - Implement model in `nautobot.<app>.models` module
     - Use appropriate [base class](best-practices.md#base-classes) and mixin(s)
-    - Use appropriate `@extras_features` decorator values
+    - Use appropriate [`@extras_features`](#extras-features) decorator values
+    - Unless there is a strong reason not to, all models should have a ForeignKey to `tenancy.Tenant` named `tenant`
     - Define appropriate uniqueness constraint(s)
     - Define appropriate `__str__()` logic
     - _optional_ Define appropriate additional [`clean()`](best-practices.md#model-validation) logic
         - Be sure to always call `super().clean()` as well!
     - _optional_ Define appropriate `verbose_name`/`verbose_name_plural` if defaults aren't optimal
+    - _optional_ Opt out of specific model features **if and only if** there is a strong justification for doing so:
+        - Contact/team association (`is_contact_associable_model = False`, OrganizationalModel/PrimaryModel only)
+        - Dynamic-group association (`is_dynamic_group_associable_model = False`, OrganizationalModel/PrimaryModel only)
+        - Object-metadata association (`is_metadata_associable_model = False`, any base class)
+        - Saved-view support (`is_saved_view_model = False`, OrganizationalModel/PrimaryModel only)
 - Generate database schema migration(s) with `invoke makemigrations <app> -n <migration_name>`
 - _optional_ Add [data migration(s)](https://docs.djangoproject.com/en/stable/topics/migrations/#data-migrations) to populate default records, migrate data from existing models, etc.
     - Remember: data migrations must not share a file with schema migrations or vice versa!
@@ -33,6 +38,25 @@ article ul li {
 - _optional_ Enhance `ConfigContext` if the new model can be used as a filter criteria for assigning Devices or Virtual Machines to Config Contexts
     - Update ConfigContextQuerySet, ConfigContextFilterSet, ConfigContext forms, edit and detail views and HTML templates
 - _optional_ Expose any new relevant Python APIs in `nautobot.apps` namespace for App consumption
+
+#### Extras Features
+
+- `cable_terminations`: Models that can be connected to another model with a `Cable`
+- `config_context_owners`: Models that can be assigned to the `owner` GenericForeignKey field on a `ConfigContext`
+- `custom_fields`: (DEPRECATED - Uses `nautobot.extras.utils.populate_model_features_registry` to populate [Model Features Registry](model-features.md)) Models that support ComputedFields and CustomFields, used for limiting the choices for the `CustomField.content_types` and `ComputedField.content_type` fields
+- `custom_links`: Models that can display `CustomLinks` on the object's detail view (by default, all models that use `generic/object_retrieve.html` as a base template support custom links)
+- `custom_validators`: Models that can support custom `clean` logic by implementing a [`CustomValidator`](../apps/api/platform-features/custom-validators.md)
+- `dynamic_groups`: Models that can be assigned to a `DynamicGroup`, used for limiting the choices for the `DynamicGroup.content_type` form field (DEPRECATED - Use the `DynamicGroupsModelMixin` class mixin instead)
+- `export_template_owners`: Models that can be assigned to the `owner` GenericForeignKey field on an `ExportTemplate`
+- `export_templates`: Models that can be exported using an `ExportTemplate`, used for limiting the choices for the `ExportTemplate.content_type` field
+- `graphql`: Models that should be exposed through the [GraphQL API](../apps/api/models/graphql.md), used to build the list of registered models to build the GraphQL schema
+- `job_results`: No longer used.
+- `locations`: Models that support a foreign key to `Location`, used for limiting the choices for the `LocationType.content_types` field
+- `relationships`: (DEPRECATED - Uses `nautobot.extras.utils.populate_model_features_registry` to populate [Model Features Registry](model-features.md)) Models that support custom relationships
+- `statuses`: Models that support a foreign key to `Status`, used for limiting the choices for the `Status.content_types` field
+- `webhooks`: Models that can be used to trigger webhooks, used for limiting the choices for the `Webhook.content_types` field
+
+Most new models should use the `custom_links`, `custom_validators`, `export_templates`, `graphql`, and `webhooks` features at minimum.
 
 ### REST API
 
@@ -43,7 +67,7 @@ article ul li {
     - Use appropriate [base class](best-practices.md#base-classes) and mixin(s)
 - Implement API `<Model>ViewSet` class in `nautobot.<app>.api.views` module
     - Use appropriate [base class](best-practices.md#base-classes) and mixin(s)
-    - Use appropriate `select_related`/`prefetch_related` for performance
+    - Use appropriate `select_related`/`prefetch_related` for performance (bearing in mind that in Nautobot 2.4.0 and later, the viewset can perform many of these optimizations automatically)
 - Add API viewset to `nautobot.<app>.api.urls` module
 
 ### UI
@@ -57,10 +81,11 @@ article ul li {
     - Use appropriate [base class](best-practices.md#base-classes) and mixin(s)
 - Implement `<Model>BulkEditForm` class in `nautobot.<app>.forms` module
     - Use appropriate [base class](best-practices.md#base-classes) and mixin(s)
-- Implement `nautobot/<app>/templates/<app>/<model>_retrieve.html` detail template
 - Implement `NautobotUIViewSet` subclass in `nautobot.<app>.views` module
     - Use appropriate [base class](best-practices.md#base-classes) and mixin(s)
-    - Use appropriate `select_related`/`prefetch_related` for performance
+    - Use appropriate `select_related`/`prefetch_related` for performance (bearing in mind that in the list view, the table class can perform many of these optimizations automatically)
+    - Implement `object_detail_content` using the UI Component Framework
+        - (only if strictly necessary) Implement `nautobot/<app>/templates/<app>/<model>_retrieve.html` detail template
 - Add UI viewset to `nautobot.<app>.urls` module
 - Add menu item in `nautobot.<app>.navigation` module
 - _optional_ Add model link and counter to home page panel in `nautobot.<app>.homepage` module

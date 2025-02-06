@@ -8,6 +8,7 @@
 {% load plugins %}
 {% load static %}
 {% load tz %}
+{% load ui_framework %}
 
 {% block header %}
     <div class="row noprint">
@@ -38,23 +39,16 @@
                 </div>
             </form>
         </div>
-        {% endif%}
+        {% endif %}
         {% endwith %}
     </div>
 
     <div class="pull-right noprint">
     {% block buttons %}
         {% plugin_buttons object %}
+        {% render_detail_view_extra_buttons %}
         {% block extra_buttons %}{% endblock extra_buttons %}
-        {% if object.clone_fields and user|can_add:object %}
-            {% clone_button object %}
-        {% endif %}
-        {% if user|can_change:object %}
-            {% edit_button object %}
-        {% endif %}
-        {% if user|can_delete:object %}
-            {% delete_button object %}
-        {% endif %}
+        {% consolidate_detail_view_action_buttons %}
     {% endblock buttons %}
     </div>
 
@@ -62,7 +56,7 @@
         <h1>
             <span class="hover_copy">
                 <span id="copy_title">{% block title %}{{object.display|default:object}}{% endblock %}</span>
-                <button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_title">
+                <button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-text="{{ object.display | default:object }}">
                     <span class="mdi mdi-content-copy"></span>
                 </button>
             </span>
@@ -77,6 +71,9 @@
 
     <ul id="tabs" class="nav nav-tabs">
     {% block nav_tabs %}
+      {% if object_detail_content %}
+        {% render_tabs_labels object_detail_content.tabs %}
+      {% else %}
         <li role="presentation"{% if active_tab == "main" or request.GET.tab == "main" %} class="active"{% endif %}>
             <a href="{{ object.get_absolute_url }}#main" onclick="switch_tab(this.href)" aria-controls="main" role="tab" data-toggle="tab">
                 {{ verbose_name|bettertitle }}
@@ -94,18 +91,33 @@
                 </a>
             </li>
         {% endif %}
-        {% block extra_nav_tabs %}{% endblock extra_nav_tabs %}
+        {% if object.is_dynamic_group_associable_model and perms.extras.view_dynamicgroup %}
+            {% with object.dynamic_groups.count as dg_count %}
+                {% if dg_count %}
+                    <li role="presentation"{% if request.GET.tab == 'dynamic_groups' %} class="active"{% endif %}>
+                        <a href="{{ object.get_absolute_url }}#dynamic_groups" onclick="switch_tab(this.href)" aria-controls="dynamic_groups" role="tab" data-toggle="tab">
+                            Dynamic Groups {% badge dg_count %}
+                        </a>
+                    </li>
+                {% endif %}
+            {% endwith %}
+        {% endif %}
+        {% if object.is_metadata_associable_model and perms.extras.view_objectmetadata %}
+            {% with object.associated_object_metadata.count as om_count %}
+                {% if om_count %}
+                    <li role="presentation"{% if request.GET.tab == 'object_metadata' %} class="active"{% endif %}>
+                        <a href="{{ object.get_absolute_url }}#object_metadata" onclick="switch_tab(this.href)" aria-controls="object_metadata" role="tab" data-toggle="tab">
+                            Object Metadata {% badge om_count %}
+                        </a>
+                    </li>
+                {% endif %}
+            {% endwith %}
+        {% endif %}
+      {% endif %}
         {% if perms.extras.view_note %}
             {% if active_tab != 'notes' and object.get_notes_url or active_tab == 'notes' %}
                 <li role="presentation"{% if active_tab == 'notes' %} class="active"{% endif %}>
                     <a href="{{ object.get_notes_url }}">Notes</a>
-                </li>
-            {% endif %}
-        {% endif %}
-        {% if perms.extras.view_dynamicgroup and object.get_dynamic_groups_url %}
-            {% if active_tab != 'dynamic-groups' and object.get_dynamic_groups_url or active_tab == 'dynamic-groups' %}
-                <li role="presentation"{% if active_tab == 'dynamic-groups' %} class="active"{% endif %}>
-                    <a href="{{ object.get_dynamic_groups_url }}">Dynamic Groups</a>
                 </li>
             {% endif %}
         {% endif %}
@@ -116,6 +128,7 @@
                 </li>
             {% endif %}
         {% endif %}
+        {% block extra_nav_tabs %}{% endblock extra_nav_tabs %}
     {% endblock nav_tabs %}
     {% plugin_object_detail_tabs object %}
     </ul>
@@ -123,11 +136,14 @@
 
 {% block content %}
     <div class="tab-content">
+      {% if object_detail_content %}
+        {% render_components object_detail_content.tabs %}
+      {% else %}
         <div id="main" role="tabpanel" class="tab-pane {% if active_tab == "main" or request.GET.tab == "main" %}active{% else %}fade{% endif %}">
             <div class="row">
                 <div class="col-md-6">
                     {% block content_left_page %}{% endblock content_left_page %}
-                    {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_field_groupings_basic computed_fields_advanced_ui=False %}
+                    {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_field_groupings_basic custom_fields_advanced_ui=False computed_fields=object.get_computed_fields_grouping_basic computed_fields_advanced_ui=False %}
                     {% include 'inc/relationships_panel.html' %}
                     {% include 'extras/inc/tags_panel.html' %}
                     {% plugin_left_page object %}
@@ -148,6 +164,7 @@
             <div class="row">
                 <div class="col-md-6">
                     {% include 'inc/object_details_advanced_panel.html' %}
+                    {% block advanced_content_left_page %}{% endblock advanced_content_left_page %}
                 </div>
                 <div class="col-md-6">
                     {% block advanced_content_right_page %}{% endblock advanced_content_right_page %}
@@ -203,6 +220,64 @@
                 </div>
             </div>
         {% endif %}
+        {% if object.is_dynamic_group_associable_model and perms.extras.view_dynamicgroup %}
+            <div id="dynamic_groups" role="tabpanel" class="tab-pane {% if request.GET.tab == 'dynamic_groups' %}active{% else %}fade{% endif %}">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="alert alert-warning">
+                            Dynamic group membership is cached for performance reasons,
+                            therefore this table may not always be up-to-date.
+                            <br>You can refresh the membership of any specific group by navigating to it from the list below
+                            or from the <a href="{% url 'extras:dynamicgroup_list' %}">Dynamic Groups list view</a>.
+                            <br>You can also refresh the membership of all groups by running the
+                            <a href="{% url 'extras:job_run_by_class_path' class_path='nautobot.core.jobs.groups.RefreshDynamicGroupCaches' %}">Refresh Dynamic Group Caches job</a>.
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="panel panel-default">
+                                <div class="panel-heading">
+                                    <strong>Dynamic Groups</strong>
+                                    <div class="pull-right noprint">
+                                        <!-- Insert table config button here -->
+                                    </div>
+                                </div>
+                                <div class="table-responsive">
+                                    {% render_table associated_dynamic_groups_table 'inc/table.html' %}
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        {% if object.is_metadata_associable_model and perms.extras.view_objectmetadata %}
+            <div id="object_metadata" role="tabpanel" class="tab-pane {% if request.GET.tab == 'object_metadata' %}active{% else %}fade{% endif %}">
+                <div class="row">
+                    <div class="col-md-12">
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="panel panel-default">
+                                <div class="panel-heading">
+                                    <strong>Object Metadata</strong>
+                                    <div class="pull-right noprint">
+                                        <!-- Insert table config button here -->
+                                    </div>
+                                </div>
+                                <div class="table-responsive">
+                                    {% render_table associated_object_metadata_table 'inc/table.html' %}
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+      {% endif %}
+        {% plugin_object_detail_tab_content object %}
         {% block extra_tab_content %}{% endblock extra_tab_content %}
     </div>
 {% endblock content %}
@@ -216,7 +291,7 @@
 
     clipboard.on('error', function (e) {});
 
-    
+
     // Set initial history state
     if (location.pathname == "{{ object.get_absolute_url }}"){
         var tab_id = "main";
@@ -261,28 +336,28 @@
             $(`#tabs a[href="{{ object.get_absolute_url }}#${event.state.id}"]`).tab('show');
     }
     // Toggle v -. >
-    $("#accordion .accordion-toggle").click(function () {
+    $(".accordion-toggle").click(function () {
         $(this).toggleClass("mdi-chevron-down mdi-chevron-right");
     });
     // Dynamically collapse/expand all when clicking the "Collapse All" button, and then update the button text.
-    $('#accordion-toggle-all').click(function () {
+    $('.accordion-toggle-all').click(function () {
 
         if ($(this).data("lastState") === null || $(this).data("lastState") === 1) {
-            $('.collapse').collapse('show');
+            $($(this).data("target") + ' .collapse').collapse('show');
             $(this).data("lastState", 0);
 
-            $("#accordion .accordion-toggle").addClass("mdi-chevron-down").removeClass("mdi-chevron-right");
+            $($(this).data("target") + " .accordion-toggle").addClass("mdi-chevron-down").removeClass("mdi-chevron-right");
 
             $(this).text("Collapse All");
         }
         else {
-            $('[class^=collapseme]').removeData('bs.collapse').collapse({parent: false, toggle: false})
+            $($(this).data("target") + ' [class^=collapseme]').removeData('bs.collapse').collapse({parent: false, toggle: false})
             .collapse('hide')
             .removeData('bs.collapse')
-            .collapse({parent: '#accordion', toggle: false});
+            .collapse({parent: $(this).data("target"), toggle: false});
 
             $(this).data("lastState", 1);
-            $("#accordion .accordion-toggle").addClass("mdi-chevron-right").removeClass("mdi-chevron-down");
+            $($(this).data("target") + " .accordion-toggle").addClass("mdi-chevron-right").removeClass("mdi-chevron-down");
 
             $(this).text("Expand All");
         }

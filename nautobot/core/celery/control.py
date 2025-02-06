@@ -13,14 +13,14 @@ def refresh_git_repository(state, repository_pk, head):
     """
     Celery worker control event to ensure that all active workers have the correct head for a given Git repository.
     """
-    from nautobot.extras.datasources.git import ensure_git_repository, refresh_code_from_repository
+    from nautobot.extras.datasources.git import ensure_git_repository, refresh_job_code_from_repository
     from nautobot.extras.models import GitRepository
 
     try:
         repository = GitRepository.objects.get(pk=repository_pk)
         # Refresh the repository on disk
         ensure_git_repository(repository, head=head, logger=logger)
-        refresh_code_from_repository(repository.slug, consumer=state.consumer if state is not None else None)
+        refresh_job_code_from_repository(repository.slug, ignore_import_errors=False)
 
         return {"ok": {"head": repository.current_head}}
     except Exception as exc:
@@ -33,12 +33,9 @@ def discard_git_repository(state, repository_slug):
     """
     Celery worker control even to ensure that all active workers unload a given Git repository and delete it from disk.
     """
-    from nautobot.extras.datasources.git import refresh_code_from_repository
+    from nautobot.extras.datasources.git import refresh_job_code_from_repository
 
     filesystem_path = os.path.join(settings.GIT_ROOT, repository_slug)
     if os.path.isdir(filesystem_path):
         shutil.rmtree(filesystem_path)
-    # Unload any code from this repository
-    refresh_code_from_repository(
-        repository_slug, consumer=state.consumer if state is not None else None, skip_reimport=True
-    )
+    refresh_job_code_from_repository(repository_slug, skip_reimport=True)

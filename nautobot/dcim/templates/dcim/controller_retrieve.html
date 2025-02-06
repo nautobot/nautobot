@@ -1,4 +1,4 @@
-{% extends 'generic/object_retrieve.html' %}
+{% extends 'dcim/controller/base.html' %}
 {% load helpers %}
 
 {% block content_left_page %}
@@ -20,7 +20,11 @@
                         </tr>
                         <tr>
                             <td>Role</td>
-                            <td>{{ object.role|hyperlinked_object }}</td>
+                            <td>{{ object.role|hyperlinked_object_with_color }}</td>
+                        </tr>
+                        <tr>
+                            <td>Capabilities</td>
+                            <td>{{ object.get_capabilities_display }}</td>
                         </tr>
                         <tr>
                             <td>Location</td>
@@ -30,15 +34,7 @@
                             <td>Platform</td>
                             <td>{{ object.platform|hyperlinked_object }}</td>
                         </tr>
-                        <tr>
-                            <td>Tenant</td>
-                            <td>
-                                {% if object.tenant and object.tenant.tenant_group %}
-                                    {{ object.tenant.tenant_group|hyperlinked_object }} /
-                                {% endif %}
-                                {{ object.tenant|hyperlinked_object }}
-                            </td>
-                        </tr>
+                        {% include 'inc/tenant_table_row.html' %}
                         <tr>
                             <td>Description</td>
                             <td>{{ object.description|placeholder }}</td>

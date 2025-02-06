@@ -1,4 +1,4 @@
-{% extends 'generic/object_detail.html' %}
+{% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
 {% load perms %}
 {% load plugins %}
@@ -48,12 +48,10 @@
             <tr>
                 <td>Is Job Hook Receiver</td>
                 <td>{{ object.is_job_hook_receiver | render_boolean }}</td>
-                <td></td>
             </tr>
             <tr>
                 <td>Is Job Button Receiver</td>
                 <td>{{ object.is_job_button_receiver | render_boolean }}</td>
-                <td></td>
             </tr>
         </table>
     </div>
@@ -113,6 +111,17 @@
             <tr>
                 <td>Enabled</td>
                 <td>{{ object.enabled | render_boolean }}</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>Job Results</td>
+                <td>
+                    {% if object.job_results.exists %}
+                        <a href="{% url 'extras:jobresult_list' %}?job_model={{ object.name | urlencode }}">{{ object.job_results.count }}</a>
+                    {% else %}
+                        {{ None|placeholder }}
+                    {% endif %}
+                </td>
                 <td></td>
             </tr>
         </table>
@@ -198,6 +207,22 @@
                 </td>
             </tr>
             <tr>
+                <td>Is Singleton</td>
+                <td>{{ object.is_singleton | render_boolean }}</td>
+                <td>
+                    {% if object.is_singleton_override %}
+                        <span class="text-muted">
+                            overridden; default is
+                            {% if object.installed %}
+                                {{ object.job_class.is_singleton | render_boolean }}
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
                 <td>Execution Soft Time Limit</td>
                 <td>
                     {% if object.soft_time_limit > 0 %}
@@ -250,14 +275,46 @@
                 </td>
             </tr>
             <tr>
-                <td>Task Queues</td>
-                <td colspan="2">
-                    {% include 'extras/inc/json_data.html' with data=object.task_queues format="json" %}
-                    {% if object.task_queues_override %}
+                <td>Job Queues</td>
+                <td>
+                    {% if object.job_queues.exists %}
+                        <ul>
+                            {% for queue in object.job_queues.all %}
+                                <li>{{ queue|hyperlinked_object }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        {{ None|placeholder }}
+                    {% endif %}
+                </td>
+                <td>
+                    {% if object.job_queues_override %}
                         <span class="text-muted">
                             overridden; default is:<br>
                             {% if object.installed %}
                                 {% include 'extras/inc/json_data.html' with data=object.job_class.task_queues format="json" %}
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Default Job Queue</td>
+                <td>
+                    {{ object.default_job_queue|hyperlinked_object }}
+                </td>
+                <td>
+                    {% if object.default_job_queue_override %}
+                        <span class="text-muted">
+                            overridden; default is:
+                            {% if object.installed %}
+                                {% if object.job_class.task_queues|length > 1 %}
+                                    {{ object.job_class.task_queues.0 }}
+                                {% else %}
+                                    {{ None|placeholder }}
+                                {% endif %}
                             {% else %}
                                 unknown (not currently installed)
                             {% endif %}

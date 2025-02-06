@@ -1,6 +1,7 @@
 from importlib import metadata
 import logging
 import os
+import sys
 
 import django
 
@@ -10,6 +11,21 @@ __version__ = metadata.version(__name__)
 # Sentinel to make sure we only initialize once.
 __initialized = False
 
+
+def add_success_logger():
+    """Add a custom log level for success messages."""
+    SUCCESS = 25
+    logging.addLevelName(SUCCESS, "SUCCESS")
+
+    def success(self, message, *args, **kws):
+        if self.isEnabledFor(SUCCESS):
+            self._log(SUCCESS, message, args, **kws)
+
+    logging.Logger.success = success
+    return success
+
+
+add_success_logger()
 logger = logging.getLogger(__name__)
 
 
@@ -28,8 +44,9 @@ def setup(config_path=None):
     # Point Django to our 'nautobot_config' pseudo-module that we'll load from the provided config path
     os.environ["DJANGO_SETTINGS_MODULE"] = "nautobot_config"
 
-    load_settings(config_path)
+    if "nautobot_config" not in sys.modules:
+        load_settings(config_path)
     django.setup()
 
-    logger.info("Nautobot initialized!")
+    logger.info("Nautobot %s initialized!", __version__)
     __initialized = True

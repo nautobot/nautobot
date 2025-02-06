@@ -31,14 +31,18 @@ jobs:
           - "5432:5432"
     steps:
       - name: "Check out repository code"
-        uses: "actions/checkout@v3"
+        uses: "actions/checkout@v4"
       - name: "Setup environment"
-        uses: "networktocode/gh-action-setup-poetry-environment@v2"
+        uses: "networktocode/gh-action-setup-poetry-environment@v6"
+        with:
+          poetry-install-options: ""  # override default "--only dev"
+          poetry-version: "1.8.2"
+          python-version: "3.12"
       - name: "Run check-schema"
         # REST API schema generation currently includes GraphQL schema generation, which is dependent on the DB :-(
         run: "poetry run invoke migrate check-schema"
   tests-postgres:
-    name: "Unit tests (PostgreSQL and Python 3.11)"
+    name: "Unit tests (PostgreSQL and Python 3.12)"
     runs-on: "ubuntu-22.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -60,19 +64,17 @@ jobs:
           - "6379:6379"
     steps:
       - name: "Check out repository code"
-        uses: "actions/checkout@v3"
+        uses: "actions/checkout@v4"
       - name: "Setup environment"
-        uses: "networktocode/gh-action-setup-poetry-environment@v2"
+        uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
-          python-version: "3.11"
-      - name: "Remove Installed Nautobots (Poetry Workaround)" # Workaround for https://github.com/python-poetry/poetry/issues/2918
-        run: "for i in $(ls -d1 ~/.cache/pypoetry/virtualenvs/*/lib/*/site-packages/nautobot-*.dist-info); do poetry run pip uninstall -y nautobot; done"
-      - name: "Reinstall Nautobot Local"
-        run: "poetry install"
+          poetry-install-options: ""  # override default "--only dev"
+          poetry-version: "1.8.2"
+          python-version: "3.12"
       - name: "Run unittest"
-        run: "poetry run invoke unittest --failfast --keepdb --parallel"
+        run: "poetry run invoke unittest --failfast --no-keepdb --no-cache-test-fixtures --parallel"
   tests-mysql:
-    name: "Unit tests (MySQL and Python 3.8)"
+    name: "Unit tests (MySQL and Python 3.9)"
     runs-on: "ubuntu-22.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -96,23 +98,19 @@ jobs:
           - "6379:6379"
     steps:
       - name: "Check out repository code"
-        uses: "actions/checkout@v3"
-      - name: "Setup environment"
-        uses: "networktocode/gh-action-setup-poetry-environment@v2"
-        with:
-          python-version: "3.8"
-      - name: "Remove Installed Nautobots (Poetry Workaround)" # Workaround for https://github.com/python-poetry/poetry/issues/2918
-        run: "for i in $(ls -d1 ~/.cache/pypoetry/virtualenvs/*/lib/*/site-packages/nautobot-*.dist-info); do poetry run pip uninstall -y nautobot; done"
-      - name: "Reinstall Nautobot Local"
-        run: "poetry install"
-      - name: "Install Required Dependencies for MySql Client"
+        uses: "actions/checkout@v4"
+      - name: "Install Required Dependencies for MySQL Client"
         run: "sudo apt-get update && sudo apt-get install --no-install-recommends -y default-libmysqlclient-dev gcc"
-      - name: "Install MySql Dependencies"
-        run: "poetry install --no-interaction --no-root --extras mysql"
+      - name: "Setup environment"
+        uses: "networktocode/gh-action-setup-poetry-environment@v6"
+        with:
+          poetry-install-options: "--extras mysql"
+          poetry-version: "1.8.2"
+          python-version: "3.9"
       - name: "Run unittest"
-        run: "poetry run invoke unittest --failfast --keepdb --parallel"
+        run: "poetry run invoke unittest --failfast --no-keepdb --no-cache-test-fixtures --parallel"
   migration-tests-mysql:
-    name: "Run migrations against test dataset (MySQL and Python 3.8)"
+    name: "Run migrations against test dataset (MySQL and Python 3.9)"
     runs-on: "ubuntu-20.04"
     env:
       MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_mysql.tar.gz"
@@ -134,23 +132,19 @@ jobs:
           - "3306:3306"
     steps:
       - name: "Check out repository code"
-        uses: "actions/checkout@v2"
-      - name: "Setup environment"
-        uses: "networktocode/gh-action-setup-poetry-environment@v2"
-        with:
-          python-version: "3.8"
-      - name: "Remove Installed Nautobots (Poetry Workaround)" # Workaround for https://github.com/python-poetry/poetry/issues/2918
-        run: "for i in $(ls -d1 ~/.cache/pypoetry/virtualenvs/*/lib/*/site-packages/nautobot-*.dist-info); do poetry run pip uninstall -y nautobot; done"
-      - name: "Reinstall Nautobot Local"
-        run: "poetry install"
-      - name: "Install Required Dependencies for MySql Client"
+        uses: "actions/checkout@v4"
+      - name: "Install Required Dependencies for MySQL Client"
         run: "sudo apt-get update && sudo apt-get install --no-install-recommends -y default-libmysqlclient-dev gcc"
-      - name: "Install MySql Dependencies"
-        run: "poetry install --no-interaction --no-root --extras mysql"
+      - name: "Setup environment"
+        uses: "networktocode/gh-action-setup-poetry-environment@v6"
+        with:
+          poetry-install-options: "--extras mysql"
+          poetry-version: "1.8.2"
+          python-version: "3.9"
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine mysql --dataset $MIGRATION_TEST_DATASET"
   migration-tests-postgres:
-    name: "Run migrations against test dataset (PostgreSQL and Python 3.11)"
+    name: "Run migrations against test dataset (PostgreSQL and Python 3.12)"
     runs-on: "ubuntu-20.04"
     env:
       MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_postgres.tar.gz"
@@ -171,15 +165,13 @@ jobs:
           - "5432:5432"
     steps:
       - name: "Check out repository code"
-        uses: "actions/checkout@v2"
+        uses: "actions/checkout@v4"
       - name: "Setup environment"
-        uses: "networktocode/gh-action-setup-poetry-environment@v2"
+        uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
-          python-version: "3.11"
-      - name: "Remove Installed Nautobots (Poetry Workaround)" # Workaround for https://github.com/python-poetry/poetry/issues/2918
-        run: "for i in $(ls -d1 ~/.cache/pypoetry/virtualenvs/*/lib/*/site-packages/nautobot-*.dist-info); do poetry run pip uninstall -y nautobot; done"
-      - name: "Reinstall Nautobot Local"
-        run: "poetry install"
+          poetry-install-options: ""  # override default "--only dev"
+          poetry-version: "1.8.2"
+          python-version: "3.12"
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine postgres --dataset $MIGRATION_TEST_DATASET"
   integration-test:
@@ -204,18 +196,18 @@ jobs:
         ports:
           - "6379:6379"
       selenium:
-        image: "selenium/standalone-firefox:4.19"
+        image: "selenium/standalone-firefox:4.27"
         ports:
           - "4444:4444"
     steps:
       - name: "Check out repository code"
-        uses: "actions/checkout@v3"
+        uses: "actions/checkout@v4"
       - name: "Setup environment"
-        uses: "networktocode/gh-action-setup-poetry-environment@v2"
-      - name: "Remove Installed Nautobots (Poetry Workaround)" # Workaround for https://github.com/python-poetry/poetry/issues/2918
-        run: "for i in $(ls -d1 ~/.cache/pypoetry/virtualenvs/*/lib/*/site-packages/nautobot-*.dist-info); do poetry run pip uninstall -y nautobot; done"
-      - name: "Reinstall Nautobot Local"
-        run: "poetry install"
+        uses: "networktocode/gh-action-setup-poetry-environment@v6"
+        with:
+          poetry-install-options: ""  # override default "--only dev"
+          poetry-version: "1.8.2"
+          python-version: "3.12"
       - name: "Run Integration Tests"
         # If NAUTOBOT_SELENIUM_HOST is set to 'localhost' or '127.0.0.1' the connection does not work
         run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke integration-test --keepdb"
@@ -235,7 +227,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.8", "3.9", "3.10", "3.11" ]
+        python-version: [ "3.9", "3.10", "3.11", "3.12" ]
     steps:
       - name: "Configuration"
         id: "config"
@@ -246,7 +238,7 @@ jobs:
           export TAG_LATEST_FOR_BRANCH="false"
           export TAG_LATEST_FOR_PY="false"
 
-          if [[ "${{ matrix.python-version }}" == "3.11" ]]; then
+          if [[ "${{ matrix.python-version }}" == "3.12" ]]; then
             export TAG_LATEST_FOR_BRANCH="true"
           fi
 
@@ -255,7 +247,7 @@ jobs:
           echo "tag-latest-for-branch=$TAG_LATEST_FOR_BRANCH" >> $GITHUB_OUTPUT
           echo "tag-latest-for-py=$TAG_LATEST_FOR_PY" >> $GITHUB_OUTPUT
       - name: "Check out repository code"
-        uses: "actions/checkout@v3"
+        uses: "actions/checkout@v4"
       - name: "Set up QEMU"
         uses: "docker/setup-qemu-action@v2"
       - name: "Set up Docker Buildx"

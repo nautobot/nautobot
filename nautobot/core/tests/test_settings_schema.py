@@ -1,3 +1,4 @@
+import datetime
 import os
 import sys
 from unittest import mock, TestCase
@@ -35,10 +36,13 @@ SETTINGS_DOCUMENTATION_SCHEMA = {
         "environment_variable": {
             "type": "string",
         },
-        "is_constance_config": {
-            "type": "boolean",
+        "environment_variables": {
+            "type": "array",
+            "items": {
+                "type": "string",
+            },
         },
-        "is_required_setting": {
+        "is_constance_config": {
             "type": "boolean",
         },
         "see_also": {
@@ -122,6 +126,7 @@ class SettingsJSONSchemaTestCase(TestCase):
             "CONSTANCE_BACKEND",
             "CONSTANCE_CONFIG",
             "CONSTANCE_CONFIG_FIELDSETS",
+            "CONSTANCE_DATABASE_CACHE_AUTOFILL_TIMEOUT",
             "CONSTANCE_DATABASE_CACHE_BACKEND",
             "CONSTANCE_DATABASE_PREFIX",
             "CSRF_FAILURE_VIEW",
@@ -236,6 +241,8 @@ class SettingsJSONSchemaTestCase(TestCase):
         fake = faker.Faker()
         if value_type == "boolean":
             return str(fake.boolean())
+        elif value_type == "date":
+            return datetime.date.today().isoformat()
         elif value_type == "integer":
             return str(fake.random_int())
         return f"FAKE_ENV_{fake.word()}"
@@ -248,6 +255,8 @@ class SettingsJSONSchemaTestCase(TestCase):
         # ALLOWED_HOSTS is a special case (space separated instead of commas)
         if setting_name == "ALLOWED_HOSTS":
             return os.environ[env_var].split(" ")
+        elif setting_name == "NTC_SUPPORT_CONTRACT_EXPIRATION_DATE":
+            return datetime.date.fromisoformat(os.environ[env_var])
         elif setting_type == "array":
             children_type = setting_schema.get("items", {}).get("type", "string")
             if children_type == "integer":
@@ -269,6 +278,8 @@ class SettingsJSONSchemaTestCase(TestCase):
         # ALLOWED_HOSTS is a special case (space separated instead of commas)
         if setting_name == "ALLOWED_HOSTS":
             os.environ[env_var] = " ".join(self._get_fake_env_value("string") for _ in range(3))
+        elif setting_name == "NTC_SUPPORT_CONTRACT_EXPIRATION_DATE":
+            os.environ[env_var] = self._get_fake_env_value("date")
         elif setting_type == "array":
             children_type = setting_schema.get("items", {}).get("type", "string")
             os.environ[env_var] = ",".join(self._get_fake_env_value(children_type) for _ in range(3))

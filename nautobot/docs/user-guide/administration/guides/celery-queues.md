@@ -28,6 +28,9 @@ This will create a worker that will only process tasks sent to the `job_queue` c
 !!! warning
     If a job is sent to a queue that no workers are listening to, that job will remain in pending status until it's purged or a worker starts listening to that queue and processes the job. Be sure that the queue name on the worker and jobs match.
 
++/- 2.3.0
+    In Nautobot 2.3.0, `staff` accounts can access a new worker status page at `/worker-status/` to view the status of the Celery worker(s) and the configured queues. The link to this page appears in the "User" dropdown at the bottom of the navigation menu, under the link to the "Profile" page. Use this page with caution as it runs a live query against the Celery worker(s) and may impact performance of your web service.
+
 ## Concurrency Setting
 
 If you have long running jobs that use little CPU resources you may want to increase your [`--concurrency`](https://docs.celeryq.dev/en/stable/reference/cli.html#cmdoption-celery-worker-c) setting on your worker to increase the number of jobs that run in parallel. For example, you may have a job that logs into a device over ssh and collects some information from the command line. This task could take a long time to run but consume minimal CPU so your system may be able to run many more of these tasks in parallel than the default concurrency setting allows. The `--concurrency` setting can be modified by adding the command line option in the `ExecStart` line in your systemd service:
@@ -40,3 +43,6 @@ You may have to change this setting multiple times to find what works best in yo
 
 !!! warning
     Modifying your concurrency setting may increase the CPU and will increase the memory load on your celery worker by at least 175MB per concurrent thread. Only change this setting if you have monitoring systems in place to monitor the system resources on your worker.
+
+!!! tip
+    If you have long-running Jobs in general, you may also want to adjust the [`CELERY_WORKER_PREFETCH_MULTIPLIER` setting](../configuration/settings.md#celery_worker_prefetch_multiplier) so that a worker executing one long-running Job doesn't prefetch and reserve other tasks, preventing those tasks from executing until the current Job is completed.

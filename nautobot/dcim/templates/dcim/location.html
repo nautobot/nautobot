@@ -1,4 +1,4 @@
-{% extends 'generic/object_detail.html' %}
+{% extends 'generic/object_retrieve.html' %}
 {% load buttons %}
 {% load plugins %}
 {% load helpers %}
@@ -32,15 +32,7 @@
                     {% include 'dcim/inc/location_hierarchy.html' with location=object %}
                 </td>
             </tr>
-            <tr>
-                <td>Tenant</td>
-                <td>
-                    {% if object.tenant and object.tenant.tenant_group %}
-                        {{ object.tenant.tenant_group|hyperlinked_object }} /
-                    {% endif %}
-                    {{ object.tenant|hyperlinked_object }}
-                </td>
-            </tr>
+            {% include 'inc/tenant_table_row.html' %}
             <tr>
                 <td>Facility</td>
                 <td>{{ object.facility|placeholder }}</td>
@@ -78,7 +70,7 @@
     </div>
     <div class="panel panel-default">
         <div class="panel-heading">
-            <strong>Contact Info</strong>
+            <strong>Geographical Info</strong>
         </div>
         <table class="table table-hover panel-body attr-table">
             <tr>
@@ -115,20 +107,39 @@
                     {% endif %}
                 </td>
             </tr>
-            <tr>
-                <td>Contact Name</td>
-                <td>{{ object.contact_name|placeholder }}</td>
-            </tr>
-            <tr>
-                <td>Contact Phone</td>
-                <td>{{ object.contact_phone|hyperlinked_phone_number }}</td>
-            </tr>
-            <tr>
-                <td>Contact E-Mail</td>
-                <td>{{ object.contact_email|hyperlinked_email }}</td>
-            </tr>
         </table>
     </div>
+    {% if show_convert_to_contact_button %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Contact Info</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Contact Name</td>
+                    <td>{{ object.contact_name|placeholder }}</td>
+                </tr>
+                <tr>
+                    <td>Contact Phone</td>
+                    <td>{{ object.contact_phone|hyperlinked_phone_number }}</td>
+                </tr>
+                <tr>
+                    <td>Contact E-Mail</td>
+                    <td>{{ object.contact_email|hyperlinked_email }}</td>
+                </tr>
+            </table>
+            {% if request.user|has_perms:contact_association_permission %}
+                {% with request.path|add:"?tab=contacts"|urlencode as return_url %}
+                    <div class="panel-footer text-right noprint">
+                        <a href="{% url 'dcim:location_migrate_data_to_contact' pk=object.pk %}?return_url={{return_url}}" class="btn btn-primary btn-xs">
+                            <span class="mdi mdi-account-edit" aria-hidden="true"></span>
+                            Convert to contact/team record
+                        </a>
+                    </div>
+                {% endwith %}
+            {% endif %}
+        </div>
+    {% endif %}
     <div class="panel panel-default">
         <div class="panel-heading">
             <strong>Comments</strong>

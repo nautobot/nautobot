@@ -66,6 +66,7 @@ def migrate_history(apps, schema_editor):
         for log_entry in LogEntry.objects.filter(content_type=custom_field_type, object_id=custom_field.id).order_by(
             "action_time"
         ):
+            action = None
             if log_entry.action_flag == ADDITION:
                 action = ObjectChangeActionChoices.ACTION_CREATE
             if log_entry.action_flag == CHANGE:

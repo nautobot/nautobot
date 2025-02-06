@@ -6,11 +6,7 @@
         <strong>Tags</strong>
     </div>
     <div class="panel-body">
-        {% for tag in tags.all %}
-            {% tag tag url %}
-        {% empty %}
-            <span class="text-muted">No tags assigned</span>
-        {% endfor %}
+        {% include "components/panel/body_content_tags.html" with tags=tags.all list_url_name=url %}
     </div>
 </div>
 {% endif %}

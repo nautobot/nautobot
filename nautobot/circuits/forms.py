@@ -1,5 +1,6 @@
 from django import forms
 
+from nautobot.cloud.models import CloudNetwork
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
     CommentField,
@@ -145,6 +146,12 @@ class CircuitTypeForm(NautobotModelForm):
         ]
 
 
+class CircuitTypeFilterForm(NautobotFilterForm):
+    model = CircuitType
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(required=False)
+
+
 #
 # Circuits
 #
@@ -209,6 +216,7 @@ class CircuitFilterForm(
         "circuit_type",
         "provider",
         "provider_network",
+        "cloud_network",
         "status",
         "location",
         "tenant_group",
@@ -227,6 +235,12 @@ class CircuitFilterForm(
         to_field_name="name",
         label="Provider Network",
     )
+    cloud_network = DynamicModelMultipleChoiceField(
+        queryset=CloudNetwork.objects.all(),
+        required=False,
+        to_field_name="name",
+        label="Cloud Network",
+    )
     commit_rate = forms.IntegerField(required=False, min_value=0, label="Commit rate (Kbps)")
     tags = TagFilterField(model)
 
@@ -240,6 +254,7 @@ class CircuitTerminationForm(LocatableModelFormMixin, NautobotModelForm):
     provider_network = DynamicModelChoiceField(
         queryset=ProviderNetwork.objects.all(), required=False, label="Provider Network"
     )
+    cloud_network = DynamicModelChoiceField(queryset=CloudNetwork.objects.all(), required=False, label="Cloud Network")
 
     class Meta:
         model = CircuitTermination
@@ -247,6 +262,7 @@ class CircuitTerminationForm(LocatableModelFormMixin, NautobotModelForm):
             "term_side",
             "location",
             "provider_network",
+            "cloud_network",
             "port_speed",
             "upstream_speed",
             "xconnect_id",
@@ -262,3 +278,15 @@ class CircuitTerminationForm(LocatableModelFormMixin, NautobotModelForm):
         widgets = {
             "term_side": forms.HiddenInput(),
         }
+
+
+class CircuitTerminationFilterForm(LocatableModelFilterFormMixin, NautobotFilterForm):
+    model = CircuitTermination
+    q = forms.CharField(required=False, label="Search")
+    circuit = DynamicModelMultipleChoiceField(queryset=Circuit.objects.all(), to_field_name="cid", required=False)
+    provider_network = DynamicModelMultipleChoiceField(
+        queryset=ProviderNetwork.objects.all(), to_field_name="name", required=False
+    )
+    cloud_network = DynamicModelMultipleChoiceField(
+        queryset=CloudNetwork.objects.all(), to_field_name="name", required=False
+    )

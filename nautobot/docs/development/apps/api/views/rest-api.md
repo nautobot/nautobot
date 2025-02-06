@@ -16,7 +16,7 @@ class AnimalSerializer(ValidatedModelSerializer):
 
     class Meta:
         model = Animal
-        fields = ('id', 'name', 'sound')
+        fields = "__all__"
 ```
 
 !!! tip
@@ -26,7 +26,7 @@ Next, create a generic API view set that allows basic CRUD (create, read, update
 
 ```python
 # api/views.py
-from rest_framework.viewsets import ModelViewSet
+from nautobot.apps.api import ModelViewSet
 
 from nautobot_animal_sounds.models import Animal
 from .serializers import AnimalSerializer
@@ -41,6 +41,9 @@ class AnimalViewSet(ModelViewSet):
 
 !!! tip
     For more full-featured models, you should probably use `nautobot.apps.api.NautobotModelViewSet` as a base class.
+
+!!! tip
+    As of Nautobot v2.4.0, Nautobot's `ModelViewSet` and related classes attempt to automatically optimize the provided `queryset` with calls to `select_related()` for foreign keys and `prefetch_related()` for many-to-many relations, so in most cases you do **not** need to explicitly call those methods on the `queryset` in your viewset definition. You may still need to add explicit queryset optimization if your serializer class needs to perform nested attribute lookups, as the automatic logic currently only understands how to optimize directly related lookups.
 
 Finally, register a URL for our endpoint in `api/urls.py`. This file **must** define a variable named `urlpatterns`.
 

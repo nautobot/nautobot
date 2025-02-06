@@ -3,11 +3,6 @@
 
 {% block extra_styles %}
     <style>
-        .accordion-toggle {
-            font-size: 14px;
-            font-weight: 700;
-        }
-
         tr a.job_run .btn {
             margin: -4px 10px 0 0;
         }
@@ -37,7 +32,7 @@
         </a>
     </div>
 
-    <button type="button" class="btn btn-default" id="accordion-toggle-all"{% if display == "tiles" %} disabled="disabled"{% endif %}>Collapse All</button>
+    <button type="button" class="btn btn-default accordion-toggle-all"{% if display == "tiles" %} disabled="disabled"{% endif %}>Collapse All</button>
 {% endblock %}
 
 {% block table_config_button %}
@@ -55,7 +50,7 @@
             $(this).toggleClass("mdi-chevron-down mdi-chevron-right");
         });
         // Dynamically collapse/expand all when clicking the "Collapse All" button, and then update the button text.
-        $('#accordion-toggle-all').on('click', function () {
+        $('.accordion-toggle-all').on('click', function () {
 
            if ($(this).data("lastState") === null || $(this).data("lastState") === 1) {
                 $('.collapse').collapse('show');

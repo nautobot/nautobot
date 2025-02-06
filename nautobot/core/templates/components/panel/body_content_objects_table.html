@@ -1,0 +1,4 @@
+{% load render_table from django_tables2 %}
+{% with table=body_content_table %}
+    {% render_table table 'inc/table.html' %}
+{% endwith %}

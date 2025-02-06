@@ -8,8 +8,17 @@
                 </div>
                 <table class="table table-hover panel-body attr-table">
                     <tr>
-                        <td>Device</td>
-                        <td>{{ object.device|hyperlinked_object }}</td>
+                        {% if object.device %}
+                            <td>Device</td>
+                            <td>
+                                {{ object.device|hyperlinked_object }}
+                            </td>
+                        {% else %}
+                            <td>Module</td>
+                            <td>
+                                {{ object.module|hyperlinked_object }}
+                            </td>
+                        {% endif %}
                     </tr>
                     <tr>
                         <td>Name</td>
@@ -19,6 +28,12 @@
                         <td>Status</td>
                         <td>
                             {{ object.status| hyperlinked_object_with_color }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Role</td>
+                        <td>
+                            {{ object.role| hyperlinked_object_with_color }}
                         </td>
                     </tr>
                     <tr>
@@ -208,4 +223,5 @@
     {% include 'panel_table.html' with table=vlan_table heading="VLANs" %}
     {% include 'panel_table.html' with table=redundancy_table heading="Interface Redundancy Groups" %}
     {% include 'panel_table.html' with table=child_interfaces_table heading="Child Interfaces" %}
+    {% include 'panel_table.html' with table=virtual_device_contexts_table heading="Virtual Device Contexts" %}
 {% endblock content_full_width_page %}

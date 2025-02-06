@@ -7,7 +7,7 @@ from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Device, Location, LocationType, Platform, SoftwareVersion
 from nautobot.extras.models import ConfigContextSchema, CustomField, Role, Status, Tag
 from nautobot.ipam.factory import VLANGroupFactory
-from nautobot.ipam.models import VLAN
+from nautobot.ipam.models import VLAN, VRF
 from nautobot.virtualization.factory import ClusterGroupFactory, ClusterTypeFactory
 from nautobot.virtualization.models import (
     Cluster,
@@ -239,11 +239,9 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.add_permissions("virtualization.view_virtualmachine")
         url = self._get_url("list") + "?sort=primary_ip"
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        response = response.content.decode(response.charset)
-        self.assertInHTML("Virtual Machine 1", response)
-        self.assertInHTML("Virtual Machine 2", response)
-        self.assertInHTML("Virtual Machine 3", response)
+        self.assertBodyContains(response, "Virtual Machine 1")
+        self.assertBodyContains(response, "Virtual Machine 2")
+        self.assertBodyContains(response, "Virtual Machine 3")
 
 
 class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
@@ -262,14 +260,20 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster, role=devicerole, status=vm_status),
             VirtualMachine.objects.create(name="Virtual Machine 2", cluster=cluster, role=devicerole, status=vm_status),
         )
-
+        vrf = VRF.objects.first()
+        vrf.virtual_machines.set([virtualmachines[0].pk, virtualmachines[1].pk])
+        vrf.save()
         statuses = Status.objects.get_for_model(VMInterface)
         status = statuses.first()
-
+        role = Role.objects.get_for_model(VMInterface).first()
         interfaces = (
-            VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 1", status=status),
+            VMInterface.objects.create(
+                virtual_machine=virtualmachines[0], name="Interface 1", status=status, role=role
+            ),
             VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 2", status=status),
-            VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 3", status=status),
+            VMInterface.objects.create(
+                virtual_machine=virtualmachines[0], name="Interface 3", status=status, role=role
+            ),
             VMInterface.objects.create(virtual_machine=virtualmachines[1], name="BRIDGE", status=status),
         )
         # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
@@ -304,6 +308,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "custom_field_1": "Custom Field Data",
             "tags": [t.pk for t in Tag.objects.get_for_model(VMInterface)],
+            "vrf": vrf.pk,
         }
 
         cls.bulk_create_data = {
@@ -320,6 +325,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "custom_field_1": "Custom Field Data",
             "tags": [t.pk for t in Tag.objects.get_for_model(VMInterface)],
+            "vrf": vrf.pk,
         }
 
         cls.bulk_add_data = {
@@ -332,15 +338,28 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "custom_field_1": "Custom field data",
             "tags": [],
+            "role": role.pk,
         }
 
         cls.bulk_edit_data = {
             "enabled": False,
             "mtu": 2000,
             "status": status.pk,
+            "role": role.pk,
             "description": "New description",
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "custom_field_1": "New Custom Field Data",
+            "vrf": vrf.pk,
+        }
+
+    def _edit_object_test_setup(self):
+        test_instance = self._get_queryset().first()
+        self.update_data = {
+            "name": test_instance.name,
+            "virtual_machine": test_instance.virtual_machine.pk,
+            "status": test_instance.status.pk,
+            "label": "new test label",
+            "description": "new test description",
         }

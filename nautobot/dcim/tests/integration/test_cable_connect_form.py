@@ -49,7 +49,7 @@ class CableConnectFormTestCase(SeleniumTestCase):
         # Trigger Select2 drop-down loading by clicking it
         self.browser.driver.switch_to.active_element.click()
         # Wait for Select2 to load choices
-        time.sleep(0.2)
+        time.sleep(1)
         # Find 'Device 1' in drop-down and click it
         self.browser.find_by_xpath(
             "//ul[@id='select2-id_termination_b_device-results']/li[contains(@class,'select2-results__option') and contains(text(),'Device 1')]"
@@ -58,7 +58,7 @@ class CableConnectFormTestCase(SeleniumTestCase):
         # Similar to Device drop-down, find and trigger Interface Select2 drop-down
         self.browser.find_by_xpath("//label[@for='id_termination_b_id']").click()
         self.browser.driver.switch_to.active_element.click()
-        time.sleep(0.2)
+        time.sleep(1)
 
         # Find the drop-down choices and confirm expected filtered output
         select2_results = self.browser.find_by_xpath(
@@ -80,7 +80,7 @@ class CableConnectFormTestCase(SeleniumTestCase):
         # Change Device selection to "Device 2"
         self.browser.find_by_xpath("//label[@for='id_termination_b_device']").click()
         self.browser.driver.switch_to.active_element.click()
-        time.sleep(0.2)
+        time.sleep(1)
         self.browser.find_by_xpath(
             "//ul[@id='select2-id_termination_b_device-results']/li[contains(@class,'select2-results__option') and contains(text(),'Device 2')]"
         ).click()
@@ -91,5 +91,5 @@ class CableConnectFormTestCase(SeleniumTestCase):
         self.assertIn("no elements could be found", str(context.exception))
 
         # check the correct css query is present in the HTML
-        js_query = '"select#id_termination_b_location, select#id_termination_b_rack, select#id_termination_b_device"'
+        js_query = '"select#id_termination_b_location, select#id_termination_b_rack, select#id_termination_b_device, select#id_termination_b_module"'
         self.assertIn(js_query, self.browser.html)

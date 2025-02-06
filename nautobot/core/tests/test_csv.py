@@ -1,3 +1,6 @@
+import csv
+import io
+
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings, RequestFactory, TestCase
 from django.urls import reverse
@@ -261,12 +264,34 @@ class CSVParsingRelatedTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         response_data = response.content.decode(response.charset)
 
-        # Replace Device Name
-        import_data = response_data.replace("TestDevice1", "TestDevice3").replace("TestDevice2", "")
-        data = {"csv_data": import_data}
+        # parse the csv data
+        csv_reader = csv.DictReader(response_data.splitlines())
+        # remove the 'id' column so that all the items are imported new
+        fieldnames = [field for field in csv_reader.fieldnames if field != "id"]
+        # read all entries into a list
+        response_csv = list(csv_reader)
+
+        # mutate our data for testing purposes
+        for row in response_csv:
+            if row["name"] == "TestDevice1":
+                row["name"] = "TestDevice3"
+            elif row["name"] == "TestDevice2":
+                row["name"] = ""
+
+        # prep our data to write out
+        with io.StringIO() as import_csv:
+            writer = csv.DictWriter(import_csv, fieldnames=fieldnames)
+            writer.writeheader()
+            for row in response_csv:
+                filtered_row = {key: row[key] for key in fieldnames}
+                writer.writerow(filtered_row)
+            data = {"csv_data": import_csv.getvalue()}
         url = reverse("dcim:device_import")
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 200)
+        # uploading the CSV always returns a 200 code with a page with an error message on it
+        # ensure we don't have that error message
+        self.assertNotIn("FORM-ERROR", response.content.decode(response.charset))
         self.assertEqual(Device.objects.count(), 4)
 
         # Assert TestDevice3 got created with the right fields

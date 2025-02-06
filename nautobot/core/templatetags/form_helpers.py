@@ -45,7 +45,7 @@ def render_form(form, excluded_fields=None):
     https://github.com/nautobot/nautobot/issues/4503
     """
     if excluded_fields is None:
-        excluded_fields = ["tags", "object_note"]
+        excluded_fields = ["tags", "dynamic_groups", "object_note"]
 
     return {
         "form": form,

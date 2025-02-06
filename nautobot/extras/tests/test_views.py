@@ -1,25 +1,30 @@
 from datetime import timedelta
+import json
 from unittest import mock
 import urllib.parse
 import uuid
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.html import format_html
+from django.utils.html import escape, format_html
 
 from nautobot.circuits.models import Circuit
+from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
-from nautobot.core.testing import extract_form_failures, extract_page_body, TestCase, ViewTestCases
-from nautobot.core.testing.utils import disable_warnings, post_data
+from nautobot.core.models.utils import serialize_object_v2
+from nautobot.core.templatetags.helpers import bettertitle
+from nautobot.core.testing import extract_form_failures, extract_page_body, ModelViewTestCase, TestCase, ViewTestCases
+from nautobot.core.testing.context import load_event_broker_override_settings
+from nautobot.core.testing.utils import disable_warnings, get_deletable_objects, post_data
+from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.models import (
     ConsolePort,
-    Controller,
     Device,
     DeviceType,
     Interface,
@@ -27,11 +32,13 @@ from nautobot.dcim.models import (
     LocationType,
     Manufacturer,
 )
-from nautobot.dcim.tests import test_views
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
+    DynamicGroupTypeChoices,
     JobExecutionType,
+    JobQueueTypeChoices,
     LogLevelChoices,
+    MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
@@ -54,26 +61,33 @@ from nautobot.extras.models import (
     Job,
     JobButton,
     JobLogEntry,
+    JobQueue,
     JobResult,
+    MetadataType,
     Note,
     ObjectChange,
+    ObjectMetadata,
     Relationship,
     RelationshipAssociation,
     Role,
+    SavedView,
     ScheduledJob,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
+    StaticGroupAssociation,
     Status,
     Tag,
     Team,
+    UserSavedViewAssociation,
     Webhook,
 )
 from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import RoleModelsQuery, TaggableClassesQuery
-from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
+from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup, VRF
+from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
 
 # Use the proper swappable User model
@@ -363,6 +377,11 @@ class ContactTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        # Contacts associated with ObjectMetadata objects are protected, create some deletable contacts
+        Contact.objects.create(name="Deletable contact 1")
+        Contact.objects.create(name="Deletable contact 2")
+        Contact.objects.create(name="Deletable contact 3")
+
         cls.form_data = {
             "name": "new contact",
             "phone": "555-0121",
@@ -777,20 +796,60 @@ class DynamicGroupTestCase(
         content_type = ContentType.objects.get_for_model(Device)
 
         # DynamicGroup objects to test.
-        DynamicGroup.objects.create(name="DG 1", content_type=content_type)
-        DynamicGroup.objects.create(name="DG 2", content_type=content_type)
-        DynamicGroup.objects.create(name="DG 3", content_type=content_type)
+        cls.dynamic_groups = [
+            DynamicGroup.objects.create(name="DG 1", content_type=content_type),
+            DynamicGroup.objects.create(name="DG 2", content_type=content_type),
+            DynamicGroup.objects.create(name="DG 3", content_type=content_type),
+        ]
 
         cls.form_data = {
             "name": "new_dynamic_group",
             "description": "I am a new dynamic group object.",
             "content_type": content_type.pk,
+            "group_type": DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
+            "tenant": Tenant.objects.first().pk,
+            "tags": [t.pk for t in Tag.objects.get_for_model(DynamicGroup)],
             # Management form fields required for the dynamic formset
             "dynamic_group_memberships-TOTAL_FORMS": "0",
             "dynamic_group_memberships-INITIAL_FORMS": "1",
             "dynamic_group_memberships-MIN_NUM_FORMS": "0",
             "dynamic_group_memberships-MAX_NUM_FORMS": "1000",
         }
+
+    def _get_queryset(self):
+        return super()._get_queryset().filter(group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER)  # TODO
+
+    def test_get_object_with_permission(self):
+        instance = self._get_queryset().first()
+        # Add view permissions for the group's members:
+        self.add_permissions(get_permission_for_model(instance.content_type.model_class(), "view"))
+
+        response = super().test_get_object_with_permission()
+
+        response_body = extract_page_body(response.content.decode(response.charset))
+        # Check that the "members" table in the detail view includes all appropriate member objects
+        for member in instance.members:
+            self.assertIn(str(member.pk), response_body)
+
+    def test_get_object_with_constrained_permission(self):
+        instance = self._get_queryset().first()
+        # Add view permission for one of the group's members but not the others:
+        member1, member2 = instance.members[:2]
+        obj_perm = ObjectPermission(
+            name="Members permission",
+            constraints={"pk": member1.pk},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(instance.content_type)
+
+        response = super().test_get_object_with_constrained_permission()
+
+        response_body = extract_page_body(response.content.decode(response.charset))
+        # Check that the "members" table in the detail view includes all permitted member objects
+        self.assertIn(str(member1.pk), response_body)
+        self.assertNotIn(str(member2.pk), response_body)
 
     def test_get_object_dynamic_groups_anonymous(self):
         url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.first().pk})
@@ -808,14 +867,11 @@ class DynamicGroupTestCase(
         url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.first().pk})
         self.add_permissions("dcim.view_device", "extras.view_dynamicgroup")
         response = self.client.get(url)
-        self.assertHttpStatus(response, 200)
-        response_body = response.content.decode(response.charset)
-        self.assertIn("DG 1", response_body, msg=response_body)
-        self.assertIn("DG 2", response_body, msg=response_body)
-        self.assertIn("DG 3", response_body, msg=response_body)
+        self.assertBodyContains(response, "DG 1")
+        self.assertBodyContains(response, "DG 2")
+        self.assertBodyContains(response, "DG 3")
 
     def test_get_object_dynamic_groups_with_constrained_permission(self):
-        self.add_permissions("extras.view_dynamicgroup")
         obj_perm = ObjectPermission(
             name="View a device",
             constraints={"pk": Device.objects.first().pk},
@@ -824,16 +880,60 @@ class DynamicGroupTestCase(
         obj_perm.save()
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(Device))
+        obj_perm_2 = ObjectPermission(
+            name="View a Dynamic Group",
+            constraints={"pk": self.dynamic_groups[0].pk},
+            actions=["view"],
+        )
+        obj_perm_2.save()
+        obj_perm_2.users.add(self.user)
+        obj_perm_2.object_types.add(ContentType.objects.get_for_model(DynamicGroup))
 
         url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.first().pk})
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
-        response_body = response.content.decode(response.charset)
+        response_body = extract_page_body(response.content.decode(response.charset))
         self.assertIn("DG 1", response_body, msg=response_body)
+        self.assertNotIn("DG 2", response_body, msg=response_body)
+        self.assertNotIn("DG 3", response_body, msg=response_body)
 
         url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.last().pk})
         response = self.client.get(url)
         self.assertHttpStatus(response, 404)
+
+    def test_edit_object_with_permission(self):
+        instance = self._get_queryset().first()
+        self.form_data["content_type"] = instance.content_type.pk  # Content-type is not editable after creation
+        super().test_edit_object_with_permission()
+
+    def test_edit_object_with_constrained_permission(self):
+        instance = self._get_queryset().first()
+        self.form_data["content_type"] = instance.content_type.pk  # Content-type is not editable after creation
+        super().test_edit_object_with_constrained_permission()
+
+    def test_edit_object_with_content_type_ipam_prefix(self):
+        """Assert bug fix #6526: `Error when defining Dynamic Group of Prefixes using `present_in_vrf_id` filter`"""
+        content_type = ContentType.objects.get_for_model(Prefix)
+        instance = DynamicGroup.objects.create(name="DG Ipam|Prefix", content_type=content_type)
+        vrf_instance = VRF.objects.first()
+        data = self.form_data.copy()
+        data.update(
+            {
+                "name": "DG Ipam|Prefix",
+                "content_type": content_type.pk,
+                "filter-present_in_vrf_id": vrf_instance.id,
+                "tenant": None,
+                "tags": [],
+            }
+        )
+        self.add_permissions("extras.change_dynamicgroup")
+        request = {
+            "path": self._get_url("edit", instance),
+            "data": post_data(data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        instance.refresh_from_db()
+        self.assertEqual(instance.filter["present_in_vrf_id"], str(vrf_instance.id))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_edit_saved_filter(self):
@@ -870,6 +970,80 @@ class DynamicGroupTestCase(
         path = self._get_url("list")
         response = self.client.get(path + "?content_type=dcim.device")
         self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_assign_successful(self):
+        location_ct = ContentType.objects.get_for_model(Location)
+        group_1 = DynamicGroup.objects.create(
+            content_type=location_ct, name="Group 1", group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        )
+        group_2 = DynamicGroup.objects.create(
+            content_type=location_ct, name="Group 2", group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        )
+        group_2.add_members(Location.objects.filter(name__startswith="Root"))
+
+        self.add_permissions(
+            "extras.add_staticgroupassociation", "extras.delete_staticgroupassociation", "extras.add_dynamicgroup"
+        )
+
+        url = reverse("extras:dynamicgroup_bulk_assign")
+        request = {
+            "path": url,
+            "data": post_data(
+                {
+                    "content_type": location_ct.pk,
+                    "pk": list(Location.objects.filter(parent__isnull=True).values_list("pk", flat=True)),
+                    "create_and_assign_to_new_group_name": "Root Locations",
+                    "add_to_groups": [group_1.pk],
+                    "remove_from_groups": [group_2.pk],
+                }
+            ),
+        }
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        new_group = DynamicGroup.objects.get(name="Root Locations")
+        self.assertEqual(new_group.content_type, location_ct)
+        self.assertEqual(new_group.group_type, DynamicGroupTypeChoices.TYPE_STATIC)
+        self.assertQuerysetEqualAndNotEmpty(Location.objects.filter(parent__isnull=True), new_group.members)
+        self.assertQuerysetEqualAndNotEmpty(Location.objects.filter(parent__isnull=True), group_1.members)
+        self.assertQuerysetEqualAndNotEmpty(
+            Location.objects.filter(name__startswith="Root").exclude(parent__isnull=True), group_2.members
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_assign_non_static_groups_forbidden(self):
+        location_ct = ContentType.objects.get_for_model(Location)
+        group_1 = DynamicGroup.objects.create(content_type=location_ct, name="Group 1")
+        group_2 = DynamicGroup.objects.create(
+            content_type=location_ct, name="Group 2", group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET
+        )
+
+        self.add_permissions(
+            "extras.add_staticgroupassociation", "extras.delete_staticgroupassociation", "extras.add_dynamicgroup"
+        )
+
+        url = reverse("extras:dynamicgroup_bulk_assign")
+        request = {
+            "path": url,
+            "data": post_data(
+                {
+                    "content_type": location_ct.pk,
+                    "pk": list(Location.objects.filter(parent__isnull=True).distinct().values_list("pk", flat=True)),
+                    "add_to_groups": [group_1.pk],
+                },
+            ),
+        }
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        # TODO check for specific form validation error?
+
+        del request["data"]["add_to_groups"]
+        request["data"]["remove_from_groups"] = [group_2.pk]
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        # TODO check for specific form validation error?
+
+    # TODO: negative tests for bulk assign - global and object-level permission violations, invalid data, etc.
 
 
 class ExportTemplateTestCase(
@@ -952,7 +1126,7 @@ class GitRepositoryTestCase(
         # Create four GitRepository records
         repos = (
             GitRepository(name="Repo 1", slug="repo_1", remote_url="https://example.com/repo1.git"),
-            GitRepository(name="Repo 2", slug="repo_2", remote_url="https://example.com/repo2.git"),
+            GitRepository(name="Repo 2", slug="repo_2", remote_url="https://some-local-host/repo2.git"),
             GitRepository(name="Repo 3", slug="repo_3", remote_url="https://example.com/repo3.git"),
             GitRepository(name="Repo 4", remote_url="https://example.com/repo4.git", secrets_group=secrets_groups[0]),
         )
@@ -962,7 +1136,7 @@ class GitRepositoryTestCase(
         cls.form_data = {
             "name": "A new Git repository",
             "slug": "a_new_git_repository",
-            "remote_url": "http://example.com/a_new_git_repository.git",
+            "remote_url": "http://another-local-host/a_new_git_repository.git",
             "branch": "develop",
             "_token": "1234567890abcdef1234567890abcdef",
             "secrets_group": secrets_groups[1].pk,
@@ -1017,6 +1191,50 @@ class GitRepositoryTestCase(
         self.assertHttpStatus(response, [403, 404])
 
     # TODO: mock/stub out `enqueue_git_repository_diff_origin_and_local` and test successful POST with permissions
+
+
+class MetadataTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = MetadataType
+    bulk_edit_data = {"description": "A new description"}
+
+    def setUp(self):
+        super().setUp()
+        self.form_data = {
+            "name": "New Metadata Type",
+            "description": "A new type of metadata",
+            "data_type": MetadataTypeDataTypeChoices.TYPE_DATETIME,
+            "content_types": [
+                ContentType.objects.get_for_model(Device).pk,
+                ContentType.objects.get_for_model(ContactAssociation).pk,
+            ],
+            "choices-TOTAL_FORMS": "0",
+            "choices-INITIAL_FORMS": "5",
+            "choices-MIN_NUM_FORMS": "0",
+            "choices-MAX_NUM_FORMS": "1000",
+        }
+
+    def get_deletable_object(self):
+        return MetadataType.objects.create(name="Delete Me", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT)
+
+    def get_deletable_object_pks(self):
+        mdts = [
+            MetadataType.objects.create(name="SoR", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT),
+            MetadataType.objects.create(name="Colors", data_type=MetadataTypeDataTypeChoices.TYPE_MULTISELECT),
+            MetadataType.objects.create(
+                name="Location Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT
+            ),
+        ]
+        return [mdt.pk for mdt in mdts]
+
+    def test_edit_object_with_constrained_permission(self):
+        # Can't change data_type once set
+        self.form_data["data_type"] = self.model.objects.first().data_type
+        return super().test_edit_object_with_constrained_permission()
+
+    def test_edit_object_with_permission(self):
+        # Can't change data_type once set
+        self.form_data["data_type"] = self.model.objects.first().data_type
+        return super().test_edit_object_with_permission()
 
 
 class NoteTestCase(
@@ -1079,6 +1297,276 @@ class NoteTestCase(
         self.add_permissions("dcim.change_location")
         response = self.client.post(reverse("dcim:location_bulk_edit"), data={"pk": self.location.pk})
         self.assertNotContains(response, self.expected_object_note, html=True)
+
+
+class SavedViewTest(ModelViewTestCase):
+    """
+    Tests for Saved Views
+    """
+
+    model = SavedView
+
+    def get_view_url_for_saved_view(self, saved_view, action="detail"):
+        """
+        Since saved view detail url redirects, we need to manually construct its detail url
+        to test the content of its response.
+        """
+        view = saved_view.view
+        pk = saved_view.pk
+
+        if action == "detail":
+            url = reverse(view) + f"?saved_view={pk}"
+        elif action == "edit":
+            url = saved_view.get_absolute_url() + "update-config/"
+        else:
+            url = reverse("extras:savedview_add")
+
+        return url
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_get_object_anonymous(self):
+        # Make the request as an unauthenticated user
+        self.client.logout()
+        instance = self._get_queryset().first()
+        response = self.client.get(instance.get_absolute_url(), follow=True)
+        self.assertHttpStatus(response, 200)
+        # This view should redirect to /login/?next={saved_view's absolute url}
+        self.assertRedirects(response, f"/login/?next={instance.get_absolute_url()}")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_object_without_permission(self):
+        instance = self._get_queryset().first()
+        view = instance.view
+        app_label = view.split(":")[0]
+        model_name = view.split(":")[1].split("_")[0]
+        # SavedView detail view should only require the model's view permission
+        self.add_permissions(f"{app_label}.view_{model_name}")
+
+        # Try GET with model-level permission
+        response = self.client.get(instance.get_absolute_url(), follow=True)
+        self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_object_with_permission(self):
+        instance = self._get_queryset().first()
+        view = instance.view
+        app_label = view.split(":")[0]
+        model_name = view.split(":")[1].split("_")[0]
+        # Add model-level permission
+        self.add_permissions("extras.view_savedview")
+        self.add_permissions(f"{app_label}.view_{model_name}")
+
+        # Try GET with model-level permission
+        # SavedView detail view should redirect to the View from which it is derived
+        response = self.client.get(instance.get_absolute_url(), follow=True)
+        self.assertBodyContains(response, escape(instance.name))
+
+        query_strings = ["&table_changes_pending=true", "&per_page=1234", "&status=active", "&sort=name"]
+        for string in query_strings:
+            view_url = self.get_view_url_for_saved_view(instance) + string
+            response = self.client.get(view_url)
+            # Assert that the star sign is rendered on the page since there are unsaved changes
+            self.assertBodyContains(response, '<i title="Pending changes not saved">')
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_object_with_constrained_permission(self):
+        instance1, instance2 = self._get_queryset().all()[:2]
+
+        # Add object-level permission
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": instance1.pk},
+            actions=["view", "add", "change", "delete"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+        app_label = instance1.view.split(":")[0]
+        model_name = instance1.view.split(":")[1].split("_")[0]
+        self.add_permissions(f"{app_label}.view_{model_name}")
+
+        # Try GET to permitted object
+        self.assertHttpStatus(self.client.get(instance1.get_absolute_url()), 302)
+
+        # Try GET to non-permitted object
+        # Should be able to get to any SavedView instance as long as the user has "{app_label}.view_{model_name}" permission
+        app_label = instance2.view.split(":")[0]
+        model_name = instance2.view.split(":")[1].split("_")[0]
+        self.add_permissions(f"{app_label}.view_{model_name}")
+        self.assertHttpStatus(self.client.get(instance2.get_absolute_url()), 302)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_update_saved_view_as_different_user(self):
+        instance = self._get_queryset().first()
+        update_query_strings = ["per_page=12", "&status=active", "&name=new_name_filter", "&sort=name"]
+        update_url = self.get_view_url_for_saved_view(instance, "edit") + "?" + "".join(update_query_strings)
+        different_user = User.objects.create(username="User 1", is_active=True)
+        # Try update the saved view with a different user from the owner of the saved view
+        self.client.force_login(different_user)
+        response = self.client.get(update_url, follow=True)
+        self.assertBodyContains(
+            response,
+            f"You do not have the required permission to modify this Saved View owned by {instance.owner}",
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_update_saved_view_as_owner(self):
+        instance = self._get_queryset().first()
+        update_query_strings = ["per_page=12", "&status=active", "&name=new_name_filter", "&sort=name"]
+        update_url = self.get_view_url_for_saved_view(instance, "edit") + "?" + "".join(update_query_strings)
+        # Try update the saved view with the same user as the owner of the saved view
+        instance.owner.is_active = True
+        instance.owner.save()
+        self.client.force_login(instance.owner)
+        response = self.client.get(update_url)
+        self.assertHttpStatus(response, 302)
+        instance.refresh_from_db()
+        self.assertEqual(instance.config["pagination_count"], 12)
+        self.assertEqual(instance.config["filter_params"]["status"], ["active"])
+        self.assertEqual(instance.config["filter_params"]["name"], ["new_name_filter"])
+        self.assertEqual(instance.config["sort_order"], ["name"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_delete_saved_view_as_different_user(self):
+        instance = self._get_queryset().first()
+        instance.config = {
+            "filter_params": {
+                "location_type": ["Campus", "Building", "Floor", "Elevator"],
+                "tenant": ["Krause, Welch and Fuentes"],
+            },
+            "table_config": {"LocationTable": {"columns": ["name", "status", "location_type", "tags"]}},
+        }
+        instance.validated_save()
+        delete_url = reverse("extras:savedview_delete", kwargs={"pk": instance.pk})
+        different_user = User.objects.create(username="User 2", is_active=True)
+        # Try delete the saved view with a different user from the owner of the saved view
+        self.client.force_login(different_user)
+        response = self.client.post(delete_url, follow=True)
+        self.assertBodyContains(
+            response,
+            f"You do not have the required permission to delete this Saved View owned by {instance.owner}",
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_delete_saved_view_as_owner(self):
+        instance = self._get_queryset().first()
+        instance.config = {
+            "filter_params": {
+                "location_type": ["Campus", "Building", "Floor", "Elevator"],
+                "tenant": ["Krause, Welch and Fuentes"],
+            },
+            "table_config": {"LocationTable": {"columns": ["name", "status", "location_type", "tags"]}},
+        }
+        instance.validated_save()
+        delete_url = reverse("extras:savedview_delete", kwargs={"pk": instance.pk})
+        # Delete functionality should work even without "extras.delete_savedview" permissions
+        # if the saved view belongs to the user.
+        instance.owner.is_active = True
+        instance.owner.save()
+        self.client.force_login(instance.owner)
+        response = self.client.post(delete_url, follow=True)
+        self.assertBodyContains(response, "Are you sure you want to delete saved view")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_saved_view(self):
+        instance = self._get_queryset().first()
+        # User should be able to create saved view with only "{app_label}.view_{model_name}" permission
+        # self.add_permissions("extras.add_savedview")
+        view = instance.view
+        app_label = view.split(":")[0]
+        model_name = view.split(":")[1].split("_")[0]
+        self.add_permissions(f"{app_label}.view_{model_name}")
+        create_query_strings = [
+            f"saved_view={instance.pk}",
+            "&per_page=12",
+            "&status=active",
+            "&name=new_name_filter",
+            "&sort=name",
+        ]
+        create_url = self.get_view_url_for_saved_view(instance, "create")
+        request = {
+            "path": create_url,
+            "data": post_data(
+                {"name": "New Test View", "view": f"{instance.view}", "params": "".join(create_query_strings)}
+            ),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        instance = SavedView.objects.get(name="New Test View")
+        self.assertEqual(instance.config["pagination_count"], 12)
+        self.assertEqual(instance.config["filter_params"]["status"], ["active"])
+        self.assertEqual(instance.config["filter_params"]["name"], ["new_name_filter"])
+        self.assertEqual(instance.config["sort_order"], ["name"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_is_global_default(self):
+        view_name = "dcim:location_list"
+        SavedView.objects.create(
+            name="Global Location Default View",
+            owner=self.user,
+            view=view_name,
+            is_global_default=True,
+        )
+        response = self.client.get(reverse(view_name), follow=True)
+        # Assert that Location List View got redirected to Saved View set as global default
+        self.assertBodyContains(response, "<strong>Global Location Default View</strong>", html=True)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_user_default(self):
+        view_name = "dcim:location_list"
+        sv = SavedView.objects.create(
+            name="User Location Default View",
+            owner=self.user,
+            view=view_name,
+            is_global_default=True,
+        )
+        UserSavedViewAssociation.objects.create(user=self.user, saved_view=sv, view_name=sv.view)
+        response = self.client.get(reverse(view_name), follow=True)
+        # Assert that Location List View got redirected to Saved View set as user default
+        self.assertBodyContains(response, "<strong>User Location Default View</strong>", html=True)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_user_default_precedes_global_default(self):
+        view_name = "dcim:location_list"
+        SavedView.objects.create(
+            name="Global Location Default View",
+            owner=self.user,
+            view=view_name,
+            is_global_default=True,
+        )
+        sv = SavedView.objects.create(
+            name="User Location Default View",
+            owner=self.user,
+            view=view_name,
+        )
+        UserSavedViewAssociation.objects.create(user=self.user, saved_view=sv, view_name=sv.view)
+        response = self.client.get(reverse(view_name), follow=True)
+        # Assert that Location List View got redirected to Saved View set as user default
+        self.assertBodyContains(response, "<strong>User Location Default View</strong>", html=True)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_is_shared(self):
+        view_name = "dcim:location_list"
+        new_user = User.objects.create(username="Different User", is_active=True)
+        sv_shared = SavedView.objects.create(
+            name="Shared Location Saved View",
+            owner=new_user,
+            view=view_name,
+        )
+        sv_not_shared = SavedView.objects.create(
+            name="Private Location Saved View",
+            owner=new_user,
+            view=view_name,
+            is_shared=False,
+        )
+        app_label = view_name.split(":")[0]
+        model_name = view_name.split(":")[1].split("_")[0]
+        self.add_permissions(f"{app_label}.view_{model_name}")
+        response = self.client.get(reverse(view_name), follow=True)
+        # Assert that Location List View got redirected to Saved View set as user default
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(str(sv_shared.pk), response_body, msg=response_body)
+        self.assertNotIn(str(sv_not_shared.pk), response_body, msg=response_body)
 
 
 # Not a full-fledged PrimaryObjectViewTestCase as there's no BulkEditView for Secrets
@@ -1230,24 +1718,25 @@ class ScheduledJobTestCase(
         user = User.objects.create(username="user1", is_active=True)
         ScheduledJob.objects.create(
             name="test1",
-            task="pass.TestPass",
+            task="pass.TestPassJob",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test2",
-            task="pass.TestPass",
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            task="pass.TestPassJob",
+            interval=JobExecutionType.TYPE_DAILY,
             user=user,
             start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test3",
-            task="pass.TestPass",
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            task="pass.TestPassJob",
+            interval=JobExecutionType.TYPE_CUSTOM,
             user=user,
             start_time=timezone.now(),
+            crontab="15 10 * * *",
         )
 
     def test_only_enabled_is_listed(self):
@@ -1257,7 +1746,7 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             enabled=False,
             name="test4",
-            task="pass.TestPass",
+            task="pass.TestPassJob",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             start_time=timezone.now(),
@@ -1274,7 +1763,7 @@ class ScheduledJobTestCase(
             ScheduledJob.objects.create(
                 enabled=True,
                 name=name,
-                task="pass.TestPass",
+                task="pass.TestPassJob",
                 interval=JobExecutionType.TYPE_CUSTOM,
                 user=self.user,
                 start_time=timezone.now(),
@@ -1305,7 +1794,7 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             enabled=True,
             name="test11",
-            task="pass.TestPass",
+            task="pass.TestPassJob",
             interval=JobExecutionType.TYPE_CUSTOM,
             user=self.user,
             start_time=timezone.now(),
@@ -1333,10 +1822,13 @@ class ApprovalQueueTestCase(
             return reverse("extras:scheduledjob_approval_request_view", kwargs={"pk": instance.pk})
         raise ValueError("This override is only valid for list and view test cases")
 
+    def get_list_url(self):
+        return reverse("extras:scheduledjob_approval_queue_list")
+
     def setUp(self):
         super().setUp()
         self.job_model = Job.objects.get_for_class_path("dry_run.TestDryRun")
-        self.job_model_2 = Job.objects.get_for_class_path("fail.TestFail")
+        self.job_model_2 = Job.objects.get_for_class_path("fail.TestFailJob")
 
         ScheduledJob.objects.create(
             name="test1",
@@ -1349,7 +1841,7 @@ class ApprovalQueueTestCase(
         )
         ScheduledJob.objects.create(
             name="test2",
-            task="fail.TestFail",
+            task="fail.TestFailJob",
             job_model=self.job_model_2,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
@@ -1362,7 +1854,7 @@ class ApprovalQueueTestCase(
 
         ScheduledJob.objects.create(
             name="test4",
-            task="pass.TestPass",
+            task="pass.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
@@ -1404,12 +1896,8 @@ class ApprovalQueueTestCase(
 
         # Try GET with model-level permission
         response = self.client.get(self._get_url("view", instance))
-        self.assertHttpStatus(response, 200)
-
-        response_body = extract_page_body(response.content.decode(response.charset))
-
         # The object's display name or string representation should appear in the response
-        self.assertIn(getattr(instance, "display", str(instance)), response_body, msg=response_body)
+        self.assertBodyContains(response, getattr(instance, "display", str(instance)))
 
         # skip GetObjectViewTestCase checks for Relationships and Custom Fields since this isn't actually a detail view
 
@@ -1444,9 +1932,7 @@ class ApprovalQueueTestCase(
         """Anonymous users may not take any action with regard to job approval requests."""
         self.client.logout()
         response = self.client.post(self._get_url("view", self._get_queryset().first()))
-        self.assertHttpStatus(response, 200)
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("You do not have permission to run jobs", response_body)
+        self.assertBodyContains(response, "You do not have permission to run jobs")
         # No job was submitted
         self.assertFalse(JobResult.objects.filter(name=self.job_model.name).exists())
 
@@ -1458,9 +1944,7 @@ class ApprovalQueueTestCase(
         data = {"_dry_run": True}
 
         response = self.client.post(self._get_url("view", instance), data)
-        self.assertHttpStatus(response, 200)
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("This job cannot be run at this time", response_body)
+        self.assertBodyContains(response, "This job cannot be run at this time")
         # No job was submitted
         self.assertFalse(JobResult.objects.filter(name=instance.job_model.name).exists())
 
@@ -1474,9 +1958,7 @@ class ApprovalQueueTestCase(
         data = {"_dry_run": True}
 
         response = self.client.post(self._get_url("view", instance), data)
-        self.assertHttpStatus(response, 200)
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("You do not have permission to run this job", response_body)
+        self.assertBodyContains(response, "You do not have permission to run this job")
         # No job was submitted
         self.assertFalse(JobResult.objects.filter(name=instance.job_model.name).exists())
 
@@ -1496,9 +1978,7 @@ class ApprovalQueueTestCase(
         instance2.job_model.save()
 
         response = self.client.post(self._get_url("view", instance2), data)
-        self.assertHttpStatus(response, 200)
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("You do not have permission to run this job", response_body)
+        self.assertBodyContains(response, "You do not have permission to run this job")
         # No job was submitted
         job_names = [instance1.job_model.name, instance2.job_model.name]
         self.assertFalse(JobResult.objects.filter(name__in=job_names).exists())
@@ -1575,13 +2055,21 @@ class ApprovalQueueTestCase(
         for user in (user1, user2):
             self.client.force_login(user)
             response = self.client.post(self._get_url("view", instance), data)
-            self.assertHttpStatus(response, 200, msg=str(user))
-            response_body = extract_page_body(response.content.decode(response.charset))
-            self.assertIn("You do not have permission", response_body, msg=str(user))
+            self.assertBodyContains(response, "You do not have permission")
             # Request was not deleted
             self.assertEqual(1, len(ScheduledJob.objects.filter(pk=instance.pk)), msg=str(user))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @load_event_broker_override_settings(
+        EVENT_BROKERS={
+            "SyslogEventBroker": {
+                "CLASS": "nautobot.core.events.SyslogEventBroker",
+                "TOPICS": {
+                    "INCLUDE": ["*"],
+                },
+            }
+        }
+    )
     def test_post_deny_different_user_permitted(self):
         """A user with appropriate permissions can deny a job request."""
         user = User.objects.create_user(username="testuser1")
@@ -1602,17 +2090,24 @@ class ApprovalQueueTestCase(
         data = {"_deny": True}
 
         self.client.force_login(user)
-        response = self.client.post(self._get_url("view", instance), data)
+        with self.assertLogs("nautobot.events") as cm:
+            response = self.client.post(self._get_url("view", instance), data)
         self.assertRedirects(response, reverse("extras:scheduledjob_approval_queue_list"))
         # Request was deleted
         self.assertEqual(0, len(ScheduledJob.objects.filter(pk=instance.pk)))
+        # Event was published
+        expected_payload = {"data": serialize_object_v2(instance)}
+        self.assertEqual(
+            cm.output,
+            [
+                f"INFO:nautobot.events.nautobot.jobs.approval.denied:{json.dumps(expected_payload, cls=NautobotKombuJSONEncoder, indent=4)}"
+            ],
+        )
 
         # Check object-based permissions are enforced for a different instance
         instance = self._get_queryset().first()
         response = self.client.post(self._get_url("view", instance), data)
-        self.assertHttpStatus(response, 200, msg=str(user))
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("You do not have permission", response_body, msg=str(user))
+        self.assertBodyContains(response, "You do not have permission")
         # Request was not deleted
         self.assertEqual(1, len(ScheduledJob.objects.filter(pk=instance.pk)), msg=str(user))
 
@@ -1624,9 +2119,7 @@ class ApprovalQueueTestCase(
         data = {"_approve": True}
 
         response = self.client.post(self._get_url("view", instance), data)
-        self.assertHttpStatus(response, 200)
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("You cannot approve your own job request", response_body)
+        self.assertBodyContains(response, "You cannot approve your own job request")
         # Job was not approved
         instance.refresh_from_db()
         self.assertIsNone(instance.approved_by_user)
@@ -1661,14 +2154,22 @@ class ApprovalQueueTestCase(
         for user in (user1, user2):
             self.client.force_login(user)
             response = self.client.post(self._get_url("view", instance), data)
-            self.assertHttpStatus(response, 200, msg=str(user))
-            response_body = extract_page_body(response.content.decode(response.charset))
-            self.assertIn("You do not have permission", response_body, msg=str(user))
+            self.assertBodyContains(response, "You do not have permission")
             # Job was not approved
             instance.refresh_from_db()
             self.assertIsNone(instance.approved_by_user)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @load_event_broker_override_settings(
+        EVENT_BROKERS={
+            "SyslogEventBroker": {
+                "CLASS": "nautobot.core.events.SyslogEventBroker",
+                "TOPICS": {
+                    "INCLUDE": ["*"],
+                },
+            }
+        }
+    )
     def test_post_approve_different_user_permitted(self):
         """A user with appropriate permissions can approve a job request."""
         user = User.objects.create_user(username="testuser1")
@@ -1689,21 +2190,49 @@ class ApprovalQueueTestCase(
         data = {"_approve": True}
 
         self.client.force_login(user)
-        response = self.client.post(self._get_url("view", instance), data)
+        with self.assertLogs("nautobot.events") as cm:
+            response = self.client.post(self._get_url("view", instance), data)
+
         self.assertRedirects(response, reverse("extras:scheduledjob_approval_queue_list"))
         # Job was scheduled
         instance.refresh_from_db()
         self.assertEqual(instance.approved_by_user, user)
+        # Event was published
+        expected_payload = {"data": serialize_object_v2(instance)}
+        self.assertEqual(
+            cm.output,
+            [
+                f"INFO:nautobot.events.nautobot.jobs.approval.approved:{json.dumps(expected_payload, cls=NautobotKombuJSONEncoder, indent=4)}"
+            ],
+        )
 
         # Check object-based permissions are enforced for a different instance
         instance = self._get_queryset().last()
         response = self.client.post(self._get_url("view", instance), data)
-        self.assertHttpStatus(response, 200, msg=str(user))
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("You do not have permission", response_body, msg=str(user))
+        self.assertBodyContains(response, "You do not have permission")
         # Job was not scheduled
         instance.refresh_from_db()
         self.assertIsNone(instance.approved_by_user)
+
+
+class JobQueueTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = JobQueue
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.form_data = {
+            "name": "Test Job Queue",
+            "queue_type": JobQueueTypeChoices.TYPE_CELERY,
+            "description": "This is a very detailed description",
+            "tenant": Tenant.objects.first().pk,
+            "tags": [t.pk for t in Tag.objects.get_for_model(JobQueue)],
+        }
+        cls.bulk_edit_data = {
+            "queue_type": JobQueueTypeChoices.TYPE_KUBERNETES,
+            "description": "This is a very detailed new description",
+            "tenant": Tenant.objects.last().pk,
+            # TODO add tests for add_tags/remove_tags fields in TagsBulkEditFormMixin
+        }
 
 
 class JobResultTestCase(
@@ -1716,8 +2245,8 @@ class JobResultTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        JobResult.objects.create(name="pass.TestPass")
-        JobResult.objects.create(name="fail.TestFail")
+        JobResult.objects.create(name="pass.TestPassJob")
+        JobResult.objects.create(name="fail.TestFailJob")
         JobLogEntry.objects.create(
             log_level=LogLevelChoices.LOG_INFO,
             job_result=JobResult.objects.first(),
@@ -1741,9 +2270,7 @@ class JobResultTestCase(
         url = reverse("extras:jobresult_log-table", kwargs={"pk": JobResult.objects.first().pk})
         self.add_permissions("extras.view_jobresult", "extras.view_joblogentry")
         response = self.client.get(url)
-        self.assertHttpStatus(response, 200)
-        response_body = response.content.decode(response.charset)
-        self.assertIn("This is a test", response_body)
+        self.assertBodyContains(response, "This is a test")
 
     # TODO test with constrained permissions on both JobResult and JobLogEntry records
 
@@ -1765,17 +2292,17 @@ class JobTestCase(
     model = Job
 
     def _get_queryset(self):
-        """Don't include hidden Jobs, non-installed Jobs, JobHookReceivers or JobButtonReceivers as they won't appear in the UI by default."""
-        return self.model.objects.filter(
-            installed=True, hidden=False, is_job_hook_receiver=False, is_job_button_receiver=False
-        )
+        """Don't include hidden Jobs or non-installed Jobs, as they won't appear in the UI by default."""
+        return self.model.objects.filter(installed=True, hidden=False)
 
     @classmethod
     def setUpTestData(cls):
         # Job model objects are automatically created during database migrations
 
         # But we do need to make sure the ones we're testing are flagged appropriately
-        cls.test_pass = Job.objects.get(job_class_name="TestPass")
+        cls.test_pass = Job.objects.get(job_class_name="TestPassJob")
+        default_job_queue = JobQueue.objects.get(name="default", queue_type=JobQueueTypeChoices.TYPE_CELERY)
+        cls.test_pass.default_job_queue = default_job_queue
         cls.test_pass.enabled = True
         cls.test_pass.save()
 
@@ -1788,6 +2315,7 @@ class JobTestCase(
 
         cls.test_required_args = Job.objects.get(job_class_name="TestRequired")
         cls.test_required_args.enabled = True
+        cls.test_pass.default_job_queue = default_job_queue
         cls.test_required_args.save()
 
         cls.extra_run_urls = (
@@ -1806,12 +2334,16 @@ class JobTestCase(
             enabled=True,
             installed=False,
         )
+        cls.test_not_installed.default_job_queue = default_job_queue
         cls.test_not_installed.validated_save()
 
         cls.data_run_immediately = {
             "_schedule_type": "immediately",
         }
-
+        job_queues = JobQueue.objects.all()[:3]
+        pk_list = [queue.pk for queue in job_queues]
+        pk_list += [default_job_queue.pk]
+        job_queues = JobQueue.objects.filter(pk__in=pk_list)
         cls.form_data = {
             "enabled": True,
             "grouping_override": True,
@@ -1832,8 +2364,9 @@ class JobTestCase(
             "time_limit": 650,
             "has_sensitive_variables": False,
             "has_sensitive_variables_override": True,
-            "task_queues": "overridden,priority",
-            "task_queues_override": True,
+            "job_queues": [queue.pk for queue in job_queues],
+            "job_queues_override": True,
+            "default_job_queue": default_job_queue.pk,
         }
         # This form is emulating the non-conventional JobBulkEditForm
         cls.bulk_edit_data = {
@@ -1854,9 +2387,54 @@ class JobTestCase(
             "time_limit": "",
             "has_sensitive_variables": False,
             "clear_has_sensitive_variables_override": False,
-            "task_queues": "overridden,priority",
-            "clear_task_queues_override": False,
+            "job_queues": [queue.pk for queue in job_queues],
+            "clear_job_queues_override": False,
+            "clear_default_job_queue_override": False,
+            "default_job_queue": default_job_queue.pk,
         }
+
+    def get_deletable_object(self):
+        """
+        Get an instance that can be deleted.
+        Exclude system jobs
+        """
+        # filter out the system jobs:
+        queryset = self._get_queryset().exclude(module_name__startswith="nautobot.")
+        return get_deletable_objects(self.model, queryset).first()
+
+    def get_deletable_object_pks(self):
+        """
+        Get a list of PKs corresponding to jobs that can be safely bulk-deleted.
+        Excluding system jobs
+        """
+        queryset = self._get_queryset().exclude(module_name__startswith="nautobot.")
+        return get_deletable_objects(self.model, queryset).values_list("pk", flat=True)[:3]
+
+    def test_delete_system_jobs_fail(self):
+        instance = self._get_queryset().filter(module_name__startswith="nautobot.").first()
+        job_name = instance.name
+        request = {
+            "path": self._get_url("delete", instance),
+            "data": post_data({"confirm": True}),
+        }
+
+        # Try delete with delete job permission
+        self.add_permissions("extras.delete_job")
+        response = self.client.post(**request, follow=True)
+        self.assertBodyContains(
+            response, f"Unable to delete Job {instance}. System Job cannot be deleted", status_code=403
+        )
+        # assert Job still exists
+        self.assertTrue(self._get_queryset().filter(name=job_name).exists())
+
+        # Try delete as a superuser
+        self.user.is_superuser = True
+        response = self.client.post(**request, follow=True)
+        self.assertBodyContains(
+            response, f"Unable to delete Job {instance}. System Job cannot be deleted", status_code=403
+        )
+        # assert Job still exists
+        self.assertTrue(self._get_queryset().filter(name=job_name).exists())
 
     def validate_job_data_after_bulk_edit(self, pk_list, old_data):
         # Name is bulk-editable
@@ -1889,6 +2467,10 @@ class JobTestCase(
                     else:
                         self.assertEqual(getattr(instance, overridable_field), old_data[instance.pk][overridable_field])
                         self.assertEqual(getattr(instance, override_field), old_data[instance.pk][overridable_field])
+                # Special case for task queues/job queues
+                override_value = self.bulk_edit_data.get("job_queues")
+                self.assertEqual(list(instance.job_queues.values_list("pk", flat=True)), override_value)
+                self.assertEqual(instance.job_queues_override, True)
 
     def validate_object_data_after_bulk_edit(self, pk_list):
         instances = self._get_queryset().filter(pk__in=pk_list)
@@ -1922,10 +2504,7 @@ class JobTestCase(
         self.add_permissions("extras.run_job")
         for run_url in self.run_urls:
             response = self.client.get(run_url)
-            self.assertHttpStatus(response, 200, msg=run_url)
-
-            response_body = extract_page_body(response.content.decode(response.charset))
-            self.assertIn("TestPass", response_body)
+            self.assertBodyContains(response, "TestPassJob")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_get_run_with_constrained_permission(self):
@@ -1968,10 +2547,7 @@ class JobTestCase(
 
         for run_url in self.run_urls:
             response = self.client.post(run_url, self.data_run_immediately)
-            self.assertHttpStatus(response, 200, msg=run_url)
-
-            content = extract_page_body(response.content.decode(response.charset))
-            self.assertIn("Celery worker process not running.", content)
+            self.assertBodyContains(response, "Celery worker process not running.")
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_now(self, _):
@@ -2018,9 +2594,7 @@ class JobTestCase(
             reverse("extras:job_run", kwargs={"pk": self.test_not_installed.pk}),
         ):
             response = self.client.post(run_url, self.data_run_immediately)
-            self.assertEqual(response.status_code, 200, msg=run_url)
-            response_body = extract_page_body(response.content.decode(response.charset))
-            self.assertIn("Job is not presently installed", response_body)
+            self.assertBodyContains(response, "Job is not presently installed")
 
             self.assertFalse(JobResult.objects.filter(name=self.test_not_installed.name).exists())
 
@@ -2029,14 +2603,12 @@ class JobTestCase(
         self.add_permissions("extras.run_job")
 
         for run_url in (
-            reverse("extras:job_run_by_class_path", kwargs={"class_path": "fail.TestFail"}),
-            reverse("extras:job_run", kwargs={"pk": Job.objects.get(job_class_name="TestFail").pk}),
+            reverse("extras:job_run_by_class_path", kwargs={"class_path": "fail.TestFailJob"}),
+            reverse("extras:job_run", kwargs={"pk": Job.objects.get(job_class_name="TestFailJob").pk}),
         ):
             response = self.client.post(run_url, self.data_run_immediately)
-            self.assertEqual(response.status_code, 200, msg=run_url)
-            response_body = extract_page_body(response.content.decode(response.charset))
-            self.assertIn("Job is not enabled to be run", response_body)
-            self.assertFalse(JobResult.objects.filter(name="fail.TestFail").exists())
+            self.assertBodyContains(response, "Job is not enabled to be run")
+            self.assertFalse(JobResult.objects.filter(name="fail.TestFailJob").exists())
 
     def test_run_now_missing_args(self):
         self.add_permissions("extras.run_job")
@@ -2064,19 +2636,24 @@ class JobTestCase(
             result = JobResult.objects.latest()
             self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
 
-    @mock.patch("nautobot.extras.jobs.task_queues_as_choices")
-    def test_rerun_job(self, mock_task_queues_as_choices):
+    def test_rerun_job(self):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_jobresult")
 
-        mock_task_queues_as_choices.return_value = [("default", ""), ("queue1", ""), ("uniquequeue", "")]
+        job_queue = JobQueue.objects.create(name="uniquequeue", queue_type=JobQueueTypeChoices.TYPE_CELERY)
         job_celery_kwargs = {
             "nautobot_job_job_model_id": self.test_required_args.id,
             "nautobot_job_profile": True,
+            "nautobot_job_ignore_singleton_lock": True,
             "nautobot_job_user_id": self.user.id,
-            "queue": "uniquequeue",
+            "queue": job_queue.name,
         }
-
+        self.test_required_args.job_queues.set([job_queue])
+        self.test_required_args.is_singleton_override = True
+        self.test_required_args.has_sensitive_variables_override = True
+        self.test_required_args.is_singleton = True
+        self.test_required_args.has_sensitive_variables = False
+        self.test_required_args.validated_save()
         previous_result = JobResult.objects.create(
             job_model=self.test_required_args,
             user=self.user,
@@ -2087,13 +2664,15 @@ class JobTestCase(
         run_url = reverse("extras:job_run", kwargs={"pk": self.test_required_args.pk})
         response = self.client.get(f"{run_url}?kwargs_from_job_result={previous_result.pk!s}")
         content = extract_page_body(response.content.decode(response.charset))
-
-        self.assertInHTML('<option value="uniquequeue" selected>', content)
+        self.assertInHTML(f'<option value="{job_queue.pk}" selected>{job_queue}</option>', content)
         self.assertInHTML(
-            '<input type="text" name="var" value="456" class="form-control form-control" required placeholder="None" id="id_var">',
+            '<input type="text" name="var" value="456" class="form-control" required placeholder="None" id="id_var">',
             content,
         )
         self.assertInHTML('<input type="hidden" name="_profile" value="True" id="id__profile">', content)
+        self.assertInHTML(
+            '<input type="checkbox" name="_ignore_singleton_lock" id="id__ignore_singleton_lock" checked>', content
+        )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_later_missing_name(self, _):
@@ -2193,10 +2772,7 @@ class JobTestCase(
         for i, run_url in enumerate(self.run_urls):
             data["_schedule_name"] = f"test {i}"
             response = self.client.post(run_url, data)
-            self.assertHttpStatus(response, 200, msg=self.run_urls[1])
-
-            content = extract_page_body(response.content.decode(response.charset))
-            self.assertIn("Unable to schedule job: Job may have sensitive input variables.", content)
+            self.assertBodyContains(response, "Unable to schedule job: Job may have sensitive input variables.")
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_job_with_invalid_task_queue(self, _):
@@ -2204,12 +2780,12 @@ class JobTestCase(
         self.add_permissions("extras.view_jobresult")
 
         self.test_pass.task_queues = []
-        self.test_pass.task_queues_override = True
+        self.test_pass.job_queues_override = True
         self.test_pass.validated_save()
-
+        job_queue = JobQueue.objects.create(name="invalid", queue_type=JobQueueTypeChoices.TYPE_CELERY)
         data = {
             "_schedule_type": "immediately",
-            "_task_queue": "invalid",
+            "_job_queue": job_queue.pk,
         }
 
         for run_url in self.run_urls:
@@ -2219,7 +2795,7 @@ class JobTestCase(
             errors = extract_form_failures(response.content.decode(response.charset))
             self.assertEqual(
                 errors,
-                ["_task_queue: Select a valid choice. invalid is not one of the available choices."],
+                ["_job_queue: Select a valid choice. That choice is not one of the available choices."],
             )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
@@ -2237,31 +2813,28 @@ class JobTestCase(
         for run_url in self.run_urls:
             # Assert warning message shows in get
             response = self.client.get(run_url)
-            content = extract_page_body(response.content.decode(response.charset))
-            self.assertIn(
+            self.assertBodyContains(
+                response,
                 "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval.",
-                content,
             )
 
             # Assert run button is disabled
-            self.assertInHTML(
+            self.assertBodyContains(
+                response,
                 """
                 <button type="submit" name="_run" id="id__run" class="btn btn-primary" disabled="disabled">
                     <i class="mdi mdi-play"></i> Run Job Now
                 </button>
                 """,
-                content,
+                html=True,
             )
             # Assert error message shows after post
             response = self.client.post(run_url, data)
-            self.assertHttpStatus(response, 200, msg=self.run_urls[1])
-
-            content = extract_page_body(response.content.decode(response.charset))
-            self.assertIn(
+            self.assertBodyContains(
+                response,
                 "Unable to run or schedule job: "
                 "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
                 "One of these two flags must be removed before this job can be scheduled or run.",
-                content,
             )
 
     def test_job_object_change_log_view(self):
@@ -2269,10 +2842,7 @@ class JobTestCase(
         instance = self.test_pass
         self.add_permissions("extras.view_objectchange", "extras.view_job")
         response = self.client.get(instance.get_changelog_url())
-        content = extract_page_body(response.content.decode(response.charset))
-
-        self.assertHttpStatus(response, 200)
-        self.assertIn(f"{instance.name} - Change Log", content)
+        self.assertBodyContains(response, f"{instance.name} - Change Log")
 
 
 class JobButtonTestCase(
@@ -2287,23 +2857,30 @@ class JobButtonTestCase(
 
     @classmethod
     def setUpTestData(cls):
+        jbr_simple = Job.objects.get(job_class_name="TestJobButtonReceiverSimple")
+        jbr_simple.enabled = True
+        jbr_simple.save()
+        jbr_complex = Job.objects.get(job_class_name="TestJobButtonReceiverComplex")
+        jbr_complex.enabled = True
+        jbr_complex.save()
+
         job_buttons = (
             JobButton.objects.create(
                 name="JobButton1",
                 text="JobButton1",
-                job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+                job=jbr_simple,
                 confirmation=True,
             ),
             JobButton.objects.create(
                 name="JobButton2",
                 text="JobButton2",
-                job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+                job=jbr_simple,
                 confirmation=False,
             ),
             JobButton.objects.create(
                 name="JobButton3",
                 text="JobButton3",
-                job=Job.objects.get(job_class_name="TestJobButtonReceiverComplex"),
+                job=jbr_complex,
                 confirmation=True,
                 weight=50,
             ),
@@ -2317,7 +2894,7 @@ class JobButtonTestCase(
             "content_types": [location_ct.pk],
             "name": "jobbutton-4",
             "text": "jobbutton text 4",
-            "job": Job.objects.get(job_class_name="TestJobButtonReceiverComplex").pk,
+            "job": jbr_complex.pk,
             "weight": 100,
             "button_class": "default",
             "confirmation": False,
@@ -2332,6 +2909,9 @@ class JobButtonRenderingTestCase(TestCase):
     def setUp(self):
         super().setUp()
         self.job = Job.objects.get(job_class_name="TestJobButtonReceiverSimple")
+        self.job.enabled = True
+        self.job.save()
+
         self.job_button_1 = JobButton(
             name="JobButton 1",
             text="JobButton {{ obj.name }}",
@@ -2341,10 +2921,14 @@ class JobButtonRenderingTestCase(TestCase):
         self.job_button_1.validated_save()
         self.job_button_1.content_types.add(ContentType.objects.get_for_model(LocationType))
 
+        job_2 = Job.objects.get(job_class_name="TestJobButtonReceiverComplex")
+        job_2.enabled = True
+        job_2.save()
+
         self.job_button_2 = JobButton(
             name="JobButton 2",
             text="Click me!",
-            job=Job.objects.get(job_class_name="TestJobButtonReceiverComplex"),
+            job=job_2,
             confirmation=False,
         )
         self.job_button_2.validated_save()
@@ -2355,29 +2939,34 @@ class JobButtonRenderingTestCase(TestCase):
     def test_view_object_with_job_button(self):
         """Ensure that the job button is rendered."""
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
-        self.assertEqual(response.status_code, 200)
-        content = extract_page_body(response.content.decode(response.charset))
-        self.assertIn(f"JobButton {self.location_type.name}", content, content)
-        self.assertIn("Click me!", content, content)
+        self.assertBodyContains(response, f"JobButton {self.location_type.name}")
+        self.assertBodyContains(response, "Click me!")
 
     def test_task_queue_hidden_input_is_present(self):
         """
-        Ensure that the job button respects the job class' task_queues and the job class task_queues[0]/default is passed as a hidden form input.
+        Ensure that the job button respects the job class' task_queues and the job class default job queue is passed as a hidden form input.
         """
-        self.job.task_queues_override = True
+        self.job.job_queues_override = True
+        task_queues = ["overriden_queue", "default", "priority"]
+        for queue in task_queues:
+            JobQueue.objects.get_or_create(name=queue, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY})
         self.job.task_queues = ["overriden_queue", "default", "priority"]
         self.job.save()
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
-        self.assertIn(f'<input type="hidden" name="_task_queue" value="{self.job.task_queues[0]}">', content, content)
-        self.job.task_queues_override = False
+        job_queues = self.job.job_queues.all()
+        _job_queue = job_queues[0]
+        self.assertIn(f'<input type="hidden" name="_job_queue" value="{_job_queue.pk}">', content, content)
+
+        self.job.job_queues_override = False
         self.job.save()
+        self.job.job_queues.set([])
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
         self.assertIn(
-            f'<input type="hidden" name="_task_queue" value="{settings.CELERY_TASK_DEFAULT_QUEUE}">', content, content
+            f'<input type="hidden" name="_job_queue" value="{self.job.default_job_queue.pk}">', content, content
         )
 
     def test_view_object_with_unsafe_text(self):
@@ -2476,6 +3065,28 @@ class JobButtonRenderingTestCase(TestCase):
             )
 
 
+class JobCustomTemplateTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        # Job model objects are automatically created during database migrations
+
+        # But we do need to make sure the ones we're testing are flagged appropriately
+        cls.example_job = Job.objects.get(job_class_name="ExampleCustomFormJob")
+        cls.example_job.enabled = True
+        cls.example_job.save()
+
+        cls.run_url = reverse("extras:job_run", kwargs={"pk": cls.example_job.pk})
+
+    def test_rendering_custom_template(self):
+        self.assertIsNotNone(self.example_job.job_class)
+        obj_perm = ObjectPermission(name="Test permission", actions=["view", "run"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
+        with self.assertTemplateUsed("example_app/custom_job_form.html"):
+            self.client.get(self.run_url)
+
+
 # TODO: Convert to StandardTestCases.Views
 class ObjectChangeTestCase(TestCase):
     user_permissions = ("extras.view_objectchange",)
@@ -2508,6 +3119,54 @@ class ObjectChangeTestCase(TestCase):
         objectchange = ObjectChange.objects.first()
         response = self.client.get(objectchange.get_absolute_url())
         self.assertHttpStatus(response, 200)
+
+
+class ObjectMetadataTestCase(
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = ObjectMetadata
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_value_column_in_list_view_rendered_correctly(self):
+        """
+        GET a list of objects as an authenticated user with permission to view the objects.
+        """
+        instance1 = self._get_queryset().filter(contact__isnull=False).first()
+        instance2 = self._get_queryset().filter(team__isnull=False).first()
+
+        # Try GET to permitted objects
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        # Check if the contact or team absolute url is rendered in the ObjectListView table
+        self.assertIn(instance1.contact.get_absolute_url(), content, msg=content)
+        self.assertIn(instance2.team.get_absolute_url(), content, msg=content)
+        # TODO check if other types of values are rendered correctly
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_list_objects_with_constrained_permission(self):
+        instance1 = self._get_queryset().first()
+        instance2 = self._get_queryset().filter(~Q(assigned_object_id=instance1.assigned_object_id)).first()
+        self._get_queryset().filter(~Q(pk=instance1.pk) & ~Q(pk=instance2.pk)).delete()
+
+        # Add object-level permission
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": instance1.pk},
+            actions=["view", "add"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        # Try GET with object-level permission
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        # Since we do not render the absolute url in ObjectListView of ObjectMetadata, we need to check assigned_object
+        # fields and if they are rendered.
+        self.assertIn(instance1.assigned_object.get_absolute_url(), content, msg=content)
+        self.assertNotIn(instance2.assigned_object.get_absolute_url(), content, msg=content)
 
 
 class RelationshipTestCase(
@@ -2567,93 +3226,6 @@ class RelationshipTestCase(
         }
 
         cls.slug_test_object = "Primary Interface"
-
-    def test_required_relationships(self):
-        """
-        1. Try creating an object when no required target object exists
-        2. Try creating an object without specifying required target object(s)
-        3. Try creating an object when all required data is present
-        4. Test bulk edit
-        """
-
-        # Delete existing factory generated objects that may interfere with this test
-        IPAddress.objects.all().delete()
-        Prefix.objects.update(parent=None)
-        Prefix.objects.all().delete()
-        VLAN.objects.all().delete()
-
-        # Parameterized tests (for creating and updating single objects):
-        self.required_relationships_test(interact_with="ui")
-
-        # 4. Bulk create/edit tests:
-
-        vlan_status = Status.objects.get_for_model(VLAN).first()
-        vlans = (
-            VLAN.objects.create(name="test_required_relationships1", vid=1, status=vlan_status),
-            VLAN.objects.create(name="test_required_relationships2", vid=2, status=vlan_status),
-            VLAN.objects.create(name="test_required_relationships3", vid=3, status=vlan_status),
-            VLAN.objects.create(name="test_required_relationships4", vid=4, status=vlan_status),
-            VLAN.objects.create(name="test_required_relationships5", vid=5, status=vlan_status),
-            VLAN.objects.create(name="test_required_relationships6", vid=6, status=vlan_status),
-        )
-
-        # Try deleting all devices and then editing the 6 VLANs (fails):
-        Controller.objects.filter(controller_device__isnull=False).delete()
-        Device.objects.all().delete()
-        response = self.client.post(
-            reverse("ipam:vlan_bulk_edit"), data={"pk": [str(vlan.id) for vlan in vlans], "_apply": [""]}
-        )
-        self.assertContains(response, "VLANs require at least one device, but no devices exist yet.")
-
-        # Create test device for association
-        device_for_association = test_views.create_test_device("VLAN Required Device")
-
-        # Try editing all 6 VLANs without adding the required device(fails):
-        response = self.client.post(
-            reverse("ipam:vlan_bulk_edit"), data={"pk": [str(vlan.id) for vlan in vlans], "_apply": [""]}
-        )
-        self.assertContains(
-            response,
-            "6 VLANs require a device for the required relationship &quot;VLANs require at least one Device&quot;",
-        )
-
-        # Try editing 3 VLANs without adding the required device(fails):
-        response = self.client.post(
-            reverse("ipam:vlan_bulk_edit"), data={"pk": [str(vlan.id) for vlan in vlans[:3]], "_apply": [""]}
-        )
-        self.assertContains(
-            response,
-            "These VLANs require a device for the required "
-            "relationship &quot;VLANs require at least one Device&quot;",
-        )
-        for vlan in vlans[:3]:
-            self.assertContains(response, str(vlan))
-
-        # Try editing 6 VLANs and adding the required device (succeeds):
-        response = self.client.post(
-            reverse("ipam:vlan_bulk_edit"),
-            data={
-                "pk": [str(vlan.id) for vlan in vlans],
-                "add_cr_vlans_devices_m2m__source": [str(device_for_association.id)],
-                "_apply": [""],
-            },
-            follow=True,
-        )
-        self.assertContains(response, "Updated 6 VLANs")
-
-        # Try editing 6 VLANs and removing the required device (fails):
-        response = self.client.post(
-            reverse("ipam:vlan_bulk_edit"),
-            data={
-                "pk": [str(vlan.id) for vlan in vlans],
-                "remove_cr_vlans_devices_m2m__source": [str(device_for_association.id)],
-                "_apply": [""],
-            },
-        )
-        self.assertContains(
-            response,
-            "6 VLANs require a device for the required relationship &quot;VLANs require at least one Device&quot;",
-        )
 
 
 class RelationshipAssociationTestCase(
@@ -2760,14 +3332,54 @@ class RelationshipAssociationTestCase(
         response = self.client.get(self._get_url("list"))
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
-        # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
         self.assertIn(instance1.source.name, content, msg=content)
         self.assertIn(instance1.destination.name, content, msg=content)
         self.assertNotIn(instance2.source.name, content, msg=content)
         self.assertNotIn(instance2.destination.name, content, msg=content)
 
 
+class StaticGroupAssociationTestCase(
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = StaticGroupAssociation
+
+    def test_list_objects_omits_hidden_by_default(self):
+        """The list view should not by default include associations for hidden groups."""
+        sga1 = StaticGroupAssociation.all_objects.filter(
+            dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        ).first()
+        self.assertIsNotNone(sga1)
+        sga2 = StaticGroupAssociation.all_objects.exclude(
+            dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        ).first()
+        self.assertIsNotNone(sga2)
+
+        self.add_permissions("extras.view_staticgroupassociation")
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        self.assertIn(sga1.get_absolute_url(), content, msg=content)
+        self.assertNotIn(sga2.get_absolute_url(), content, msg=content)
+
+    def test_list_objects_can_explicitly_include_hidden(self):
+        """The list view can include hidden groups' associations with the correct query parameter."""
+        sga1 = StaticGroupAssociation.all_objects.exclude(
+            dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        ).first()
+        self.assertIsNotNone(sga1)
+
+        self.add_permissions("extras.view_staticgroupassociation")
+        response = self.client.get(f"{self._get_url('list')}?dynamic_group={sga1.dynamic_group.pk}")
+        self.assertBodyContains(response, sga1.get_absolute_url())
+
+
 class StatusTestCase(
+    # TODO? ViewTestCases.BulkDeleteObjectsViewTestCase,
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
@@ -2799,6 +3411,11 @@ class TeamTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        # Teams associated with ObjectMetadata objects are protected, create some deletable teams
+        Team.objects.create(name="Deletable team 1")
+        Team.objects.create(name="Deletable team 2")
+        Team.objects.create(name="Deletable team 3")
+
         cls.form_data = {
             "name": "new team",
             "phone": "555-0122",
@@ -2880,11 +3497,11 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     def test_create_tags_with_invalid_content_types(self):
         self.add_permissions("extras.add_tag")
-        vlangroup_content_type = ContentType.objects.get_for_model(VLANGroup)
+        manufacturer_content_type = ContentType.objects.get_for_model(Manufacturer)
 
         form_data = {
             **self.form_data,
-            "content_types": [vlangroup_content_type.id],
+            "content_types": [manufacturer_content_type.id],
         }
 
         request = {
@@ -2895,7 +3512,7 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         response = self.client.post(**request)
         tag = Tag.objects.filter(name=self.form_data["name"])
         self.assertFalse(tag.exists())
-        self.assertIn("content_types: Select a valid choice", str(response.content))
+        self.assertBodyContains(response, "content_types: Select a valid choice")
 
     def test_update_tags_remove_content_type(self):
         """Test removing a tag content_type that is been tagged to a model"""
@@ -2992,6 +3609,8 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         cls.bulk_edit_data = {
             "color": "000000",
+            "description": "I used to be a new role object.",
+            "weight": 255,
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -3007,11 +3626,7 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             for model_class in eligible_ct_model_classes:
                 verbose_name_plural = model_class._meta.verbose_name_plural
                 content_type = ContentType.objects.get_for_model(model_class)
-                result = " ".join(elem.capitalize() for elem in verbose_name_plural.split())
-                if result == "Ip Addresses":
-                    result = "IP Addresses"
-                elif result == "Vlans":
-                    result = "VLANs"
+                result = " ".join(bettertitle(elem) for elem in verbose_name_plural.split())
                 # Assert tables are correctly rendered
                 if content_type not in role_content_types:
                     if result == "Contact Associations":

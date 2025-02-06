@@ -1,0 +1,88 @@
+{% extends 'generic/object_create.html' %}
+{% load static %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Wireless Network</strong></div>
+        <div class="panel-body">
+            {% render_field form.name %}
+            {% render_field form.ssid %}
+            {% render_field form.description %}
+            {% render_field form.mode %}
+            {% render_field form.authentication %}
+            {% render_field form.secrets_group %}
+            {% render_field form.hidden %}
+            {% render_field form.enabled %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Controller Managed Device Group Assignment</strong></div>
+        <div class="panel-body">
+            {% if controller_managed_device_groups.errors %}
+                <div class="text-danger">
+                    Please correct the error(s) below:
+
+                    {% for controller_managed_device_group in controller_managed_device_groups.forms %}
+                        {% if controller_managed_device_group.errors %}
+                            {% for error in controller_managed_device_group.errors.values %}{{ error }}{% endfor %}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+            {{ controller_managed_device_groups.non_field_errors }}
+            <table class="table" id="controller_managed_device_groups">
+                {{ controller_managed_device_groups.management_form }}
+                {% for controller_managed_device_group_form in controller_managed_device_groups.forms %}
+                    {% if forloop.first %}
+                        <thead>
+                            <tr>
+                                {% for field in controller_managed_device_group_form.visible_fields %}
+                                    <th>{{ field.label|capfirst }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                    {% endif %}
+                    <tr class="formset_row-{{ controller_managed_device_groups.prefix }}">
+                        {% for field in controller_managed_device_group_form.visible_fields %}
+                            <td>
+                                {% if forloop.first %}
+                                    {% for hidden in controller_managed_device_group_form.hidden_fields %}
+                                        {{ hidden }}
+                                    {% endfor %}
+                                {% endif %}
+                                {{ field }}
+                                {% if field.errors %}
+                                    <ul>
+                                        {% for error in field.errors %}
+                                            {# Embed an HTML comment indicating the error for extraction by tests #}
+                                            <!-- FORM-ERROR {{ field.name }}: {{ error }} -->
+                                            <li class="text-danger">{{ error }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+    {% include "inc/extras_features_edit_form_fields.html" %}
+{% endblock form %}
+
+{% block javascript %}
+{{ block.super }}
+<script src="{% static 'jquery/jquery.formset.js' %}"></script>
+<script type="text/javascript">
+    $('.formset_row-{{ controller_managed_device_groups.prefix }}').formset({
+        addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Controller Managed Device Group',
+        addCssClass: 'btn btn-primary add-row',
+        deleteText: '<span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>',
+        deleteCssClass: 'btn btn-danger delete-row',
+        prefix: '{{ controller_managed_device_groups.prefix }}',
+        formCssClass: 'dynamic-formset-{{ controller_managed_device_groups.prefix }}',
+        added: jsify_form
+    });
+</script>
+{% endblock javascript %}

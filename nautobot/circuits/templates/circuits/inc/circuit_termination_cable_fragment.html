@@ -1,0 +1,40 @@
+{% load helpers %}
+{% if termination.cable %}
+    {% if perms.dcim.delete_cable %}
+        <div class="pull-right">
+            <a href="{% url 'dcim:cable_delete' pk=termination.cable.pk %}?return_url={{ termination.circuit.get_absolute_url }}" title="Remove cable" class="btn btn-danger btn-xs">
+                <i class="mdi mdi-ethernet-cable-off" aria-hidden="true"></i> Disconnect
+            </a>
+        </div>
+    {% endif %}
+    {{ termination.cable|hyperlinked_object }}
+    <a href="{% url 'circuits:circuittermination_trace' pk=termination.pk %}" class="btn btn-primary btn-xs" title="Trace">
+        <i class="mdi mdi-transit-connection-variant" aria-hidden="true"></i>
+    </a>
+    {% with peer=termination.get_cable_peer %}
+        to
+        {% if peer.device %}
+            {{ peer.device|hyperlinked_object }}
+        {% elif peer.circuit %}
+            {{ peer.circuit|hyperlinked_object }}
+        {% endif %}
+        ({{ peer }})
+    {% endwith %}
+{% else %}
+    {% if perms.dcim.add_cable %}
+        <div class="pull-right">
+            <span class="dropdown">
+                <button type="button" class="btn btn-success btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect
+                </button>
+                <ul class="dropdown-menu dropdown-menu-right">
+                    <li><a href="{% url 'circuits:circuittermination_connect' termination_a_id=termination.pk termination_b_type='interface' %}?termination_b_location={{ termination.location.pk }}&return_url={{ object.get_absolute_url }}">Interface</a></li>
+                    <li><a href="{% url 'circuits:circuittermination_connect' termination_a_id=termination.pk termination_b_type='front-port' %}?termination_b_location={{ termination.location.pk }}&return_url={{ object.get_absolute_url }}">Front Port</a></li>
+                    <li><a href="{% url 'circuits:circuittermination_connect' termination_a_id=termination.pk termination_b_type='rear-port' %}?termination_b_location={{ termination.location.pk }}&return_url={{ object.get_absolute_url }}">Rear Port</a></li>
+                    <li><a href="{% url 'circuits:circuittermination_connect' termination_a_id=termination.pk termination_b_type='circuit-termination' %}?termination_b_location={{ termination.location.pk }}&return_url={{ object.get_absolute_url }}">Circuit Termination</a></li>
+                </ul>
+            </span>
+        </div>
+    {% endif %}
+    <span class="text-muted">Not defined</span>
+{% endif %}

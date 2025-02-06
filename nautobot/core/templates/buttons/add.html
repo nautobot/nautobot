@@ -1,5 +1,13 @@
 {% if add_url %}
-    <a href="{{ add_url }}" class="btn btn-primary" id="add-button">
-        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add
-    </a>
+    {% if list_element %}
+        <li>
+            <a href="{{ add_url }}" id="add-button">
+                <span class="mdi mdi-plus-thick text-muted" aria-hidden="true"></span> Add {{ verbose_name }}
+            </a>
+        </li>
+    {% else %}
+        <a href="{{ add_url }}" class="btn btn-primary" id="add-button">
+            <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add {{ verbose_name }}
+        </a>
+    {% endif %}
 {% endif %}

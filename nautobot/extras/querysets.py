@@ -1,12 +1,10 @@
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.core.cache import cache
-from django.db.models import F, Model, OuterRef, Q, Subquery
+from django.db.models import F, Model, OuterRef, ProtectedError, Q, Subquery
 from django.db.models.functions import JSONObject
 
 from nautobot.core.models.query_functions import EmptyGroupByJSONBAgg
 from nautobot.core.models.querysets import RestrictedQuerySet
-from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.models.tags import TaggedItem
 
 
@@ -85,10 +83,10 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
         """
         Attach the subquery annotation to the base queryset.
 
-        Order By clause in Subquery is not guaranteed to be respected within the aggregated JSON array, which is why
-        we include "weight" and "name" into the result so that we can sort it within Python to ensure correctness.
+        Note that the underlying function of our JSONBAgg in MySQL, `JSONARRAY_AGG`, does not support an `ordering`,
+        unlike PostgreSQL's implementation. This is why we include "weight" and "name" into the result so that we can
+        sort it within Python to ensure correctness.
 
-        TODO This method does not accurately reflect location inheritance because of the reasons stated in _get_config_context_filters()
         Do not use this method by itself, use get_config_context() method directly on ConfigContextModel instead.
         """
         from nautobot.extras.models import ConfigContext
@@ -96,7 +94,6 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
         return self.annotate(
             config_context_data=Subquery(
                 ConfigContext.objects.filter(self._get_config_context_filters())
-                .order_by("weight", "name")
                 .annotate(
                     _data=EmptyGroupByJSONBAgg(
                         JSONObject(
@@ -107,15 +104,13 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
                     )
                 )
                 .values("_data")
+                .order_by()
             )
         ).distinct()
 
     def _get_config_context_filters(self):
         """
         This method is constructing the set of Q objects for the specific object types.
-        Note that locations filters are not included in the method because the filter needs the
-        ability to query the ancestors for a particular tree node for subquery and we lost it since
-        moving from mptt to django-tree-queries https://github.com/matthiask/django-tree-queries/issues/54.
         """
         tag_query_filters = {
             "object_id": OuterRef(OuterRef("pk")),
@@ -163,80 +158,49 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
 
 
 class DynamicGroupQuerySet(RestrictedQuerySet):
-    """Queryset for `DynamicGroup` objects that provides a `get_for_object` method."""
+    """Queryset for `DynamicGroup` objects that provides `get_for_object` and `get_for_model` methods."""
+
+    def get_for_model(self, model):
+        """
+        Return all DynamicGroups assignable to the given model class.
+        """
+        concrete_model = model._meta.concrete_model
+        content_type = ContentType.objects.get_for_model(concrete_model)
+        return self.filter(content_type=content_type)
 
     def get_list_for_object(self, obj, use_cache=False):
         """
-        Return a list of `DynamicGroup` assigned to the given object. As opposed to `get_for_object`
-        which will return a queryset but that is an additional query to the DB when you may just
-        want a list.
+        Return a (cached) list of `DynamicGroup` objects assigned to the given object.
 
         Args:
             obj: The object to seek dynamic groups membership by.
-            use_cache: If True, use the cache and query the database directly.
+            use_cache: Obsolete; cache is always used. If truly necessary to get up-to-the-minute accuracy, you should
+                call `[dg.update_cached_members() for dg in DynamicGroup.objects.filter(content_type=...)]` beforehand,
+                but be aware that that's potentially quite expensive computationally.
+        """
+        return list(self.get_for_object(obj))
+
+    def get_for_object(self, obj, use_cache=False):
+        """
+        Return a (cached) queryset of `DynamicGroup` objects that are assigned to the given object.
+
+        Args:
+            obj: The object to seek dynamic groups membership by.
+            use_cache: Obsolete; cache is always used. If truly necessary to get up-to-the-minute accuracy, you should
+                call `[dg.update_cached_members() for dg in DynamicGroup.objects.filter(content_type=...)]` beforehand,
+                but be aware that's potentially quite expensive computationally.
         """
         if not isinstance(obj, Model):
             raise TypeError(f"{obj} is not an instance of Django Model class")
 
-        # Get dynamic groups for this content_type using the discrete content_type fields to
-        # optimize the query.
-        eligible_groups = self._get_eligible_dynamic_groups(obj, use_cache=use_cache)
-
-        # Filter down to matching groups.
-        my_groups = []
-        for dynamic_group in list(eligible_groups):
-            if dynamic_group.has_member(obj, use_cache=use_cache):
-                my_groups.append(dynamic_group)
-
-        return my_groups
-
-    def get_for_object(self, obj, use_cache=False):
-        """
-        Return a queryset of `DynamicGroup` objects that are assigned to the given object.
-
-        Args:
-            obj: The object to seek dynamic groups membership by.
-            use_cache: If True, use the cache and query the database directly.
-        """
-        return self.filter(pk__in=[dg.pk for dg in self.get_list_for_object(obj, use_cache=use_cache)])
+        return self.filter(
+            content_type__app_label=obj._meta.app_label,
+            content_type__model=obj._meta.model_name,
+            static_group_associations__associated_object_id=obj.id,
+        )
 
     def get_by_natural_key(self, slug):
         return self.get(slug=slug)
-
-    @classmethod
-    def _get_eligible_dynamic_groups_cache_key(cls, obj):
-        """
-        Return the cache key for the queryset of `DynamicGroup` objects that are eligible to potentially contain the
-        given object.
-        """
-        return f"nautobot.{obj._meta.label_lower}._get_eligible_dynamic_groups"
-
-    def _get_eligible_dynamic_groups(self, obj, use_cache=False):
-        """
-        Return a queryset of `DynamicGroup` objects that are eligible to potentially contain the given object.
-        """
-        cache_key = self.__class__._get_eligible_dynamic_groups_cache_key(obj)
-
-        def _query_eligible_dynamic_groups():
-            """
-            A callable to be used as the default value for the cache of which dynamic groups are
-            eligible for a given object.
-            """
-            # Save a DB query if we can by using the _content_type field on the model which is a cached instance of the ContentType
-            if use_cache and hasattr(type(obj), "_content_type"):
-                return self.filter(content_type_id=type(obj)._content_type.id)
-            return self.filter(
-                content_type__app_label=obj._meta.app_label, content_type__model=obj._meta.model_name
-            ).select_related("content_type")
-
-        if not use_cache:
-            eligible_dynamic_groups = _query_eligible_dynamic_groups()
-            cache.set(cache_key, eligible_dynamic_groups, get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"))
-            return eligible_dynamic_groups
-
-        return cache.get_or_set(
-            cache_key, _query_eligible_dynamic_groups, get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT")
-        )
 
 
 class DynamicGroupMembershipQuerySet(RestrictedQuerySet):
@@ -259,6 +223,15 @@ class JobQuerySet(RestrictedQuerySet):
     """
     Extend the standard queryset with a get_for_class_path method.
     """
+
+    def delete(self):
+        for job in self:
+            if job.module_name.startswith("nautobot."):
+                raise ProtectedError(
+                    f"Unable to delete Job {job}. System Job cannot be deleted",
+                    [],
+                )
+        return super().delete()
 
     def get_for_class_path(self, class_path):
         try:

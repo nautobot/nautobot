@@ -54,10 +54,20 @@ class User(BaseModel, AbstractUser):
     """
 
     config_data = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
+    default_saved_views = models.ManyToManyField(
+        to="extras.SavedView",
+        related_name="users",
+        through="extras.UserSavedViewAssociation",
+        through_fields=("user", "saved_view"),
+        blank=True,
+        verbose_name="user-specific default saved views",
+        help_text="User specific default saved views",
+    )
 
     # TODO: we don't currently have a general "Users" guide.
     documentation_static_path = "docs/development/core/user-preferences.html"
     objects = UserManager()
+    is_metadata_associable_model = False
 
     class Meta:
         db_table = "auth_user"
@@ -192,6 +202,7 @@ class Token(BaseModel):
 
     documentation_static_path = "docs/user-guide/platform-functionality/users/token.html"
     natural_key_field_names = ["pk"]  # default would be `["key"]`, which is obviously not ideal!
+    is_metadata_associable_model = False
 
     class Meta:
         ordering = ["created"]
@@ -267,6 +278,7 @@ class ObjectPermission(BaseModel, ChangeLoggedModel):
     )
 
     documentation_static_path = "docs/user-guide/platform-functionality/users/objectpermission.html"
+    is_metadata_associable_model = False
 
     class Meta:
         ordering = ["name"]

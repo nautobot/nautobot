@@ -43,9 +43,9 @@ layout = (
         name="Organization",
         items=(
             HomePageItem(
+                weight=150,
                 name="Example Models",
                 model=ExampleModel,
-                weight=150,
                 link="plugins:example_app:examplemodel_list",
                 description="List Example App models.",
                 permissions=["example_app.view_examplemodel"],
@@ -53,11 +53,11 @@ layout = (
         ),
     ),
     HomePagePanel(
+        weight=350,
         name="Example App Custom Panel",
         custom_template="panel_example.html",
         custom_data={"example_data": get_example_data},
         permissions=["example_app.view_examplemodel"],
-        weight=350,
     ),
 )
 ```

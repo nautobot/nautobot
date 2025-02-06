@@ -55,17 +55,17 @@ def generate_null_choices_resolver(name, resolver_name):
 
 def generate_filter_resolver(schema_type, resolver_name, field_name):
     """
-    Generate function to resolve OneToMany filtering.
+    Generate function to resolve filtering of ManyToOne and ManyToMany related objects.
 
     Args:
         schema_type (DjangoObjectType): DjangoObjectType for a given model
         resolver_name (str): name of the resolver
-        field_name (str): name of OneToMany field to filter
+        field_name (str): name of ManyToOneField, ManyToManyRel, or ManyToOneRel field to filter
     """
     filterset_class = schema_type._meta.filterset_class
 
-    def resolve_filter(self, *args, **kwargs):
-        if not filterset_class:
+    def resolve_filter(self, info, **kwargs):
+        if not filterset_class or not kwargs:
             return getattr(self, field_name).all()
 
         # Inverse of substitution logic from get_filtering_args_from_filterset() - transform "_type" back to "type"

@@ -156,6 +156,9 @@ class NautobotCSVRenderer(BaseRenderer):
                     #     value = [v["composite_key"] for v in value]
                     else:
                         value = [v["id"] for v in value]
+                if value and isinstance(value[0], dict) and ("value" in value[0]) and ("label" in value[0]):
+                    # Multiple enum types
+                    value = [v["value"] for v in value]
                 # The below makes for better UX than `json.dump()` for most current cases.
                 value = ",".join([str(v) if v is not None else "" for v in value])
             elif not isinstance(value, (str, int)):

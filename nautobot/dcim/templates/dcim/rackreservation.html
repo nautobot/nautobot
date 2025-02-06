@@ -1,4 +1,4 @@
-{% extends 'generic/object_detail.html' %}
+{% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
 {% load static %}
 
@@ -15,7 +15,7 @@
                 {% with rack=object.rack %}
                     <tr>
                         <td>Location</td>
-                        <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
+                        <td>{% include 'dcim/inc/location_hierarchy.html' with location=rack.location %}</td>
                     </tr>
                     <tr>
                         <td>Group</td>
@@ -43,15 +43,7 @@
                     <td>Units</td>
                     <td>{{ object.unit_list }}</td>
                 </tr>
-                <tr>
-                    <td>Tenant</td>
-                    <td>
-                        {% if object.tenant and object.tenant.tenant_group %}
-                            {{ object.tenant.tenant_group|hyperlinked_object }} /
-                        {% endif %}
-                        {{ object.tenant|hyperlinked_object }}
-                    </td>
-                </tr>
+                {% include 'inc/tenant_table_row.html' %}
                 <tr>
                     <td>User</td>
                     <td>{{ object.user }}</td>

@@ -15,7 +15,7 @@ from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.tables import CustomFieldColumn
 from nautobot.core.testing import APITestCase, TestCase, TransactionTestCase
 from nautobot.core.testing.models import ModelTestCases
-from nautobot.core.testing.utils import post_data
+from nautobot.core.testing.utils import extract_page_body, post_data
 from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.filters import LocationFilterSet
 from nautobot.dcim.forms import RackFilterForm
@@ -53,12 +53,12 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
 
         instance.refresh_from_db()
         instance.key = "custom_field_2"
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "Key cannot be changed once created"):
             instance.validated_save()
 
         instance.refresh_from_db()
         instance.type = CustomFieldTypeChoices.TYPE_SELECT
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "Type cannot be changed once created"):
             instance.validated_save()
 
     def test_simple_fields(self):
@@ -165,9 +165,14 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
-        CustomFieldChoice.objects.create(custom_field=cf, value="Option A")
-        CustomFieldChoice.objects.create(custom_field=cf, value="Option B")
-        CustomFieldChoice.objects.create(custom_field=cf, value="Option C")
+        CustomFieldChoice.objects.create(custom_field=cf, value="Option A", weight=100)
+        self.assertEqual(["Option A"], cf.choices)
+        CustomFieldChoice.objects.create(custom_field=cf, value="Option B", weight=200)
+        self.assertEqual(["Option A", "Option B"], cf.choices)
+        CustomFieldChoice.objects.create(custom_field=cf, value="Option C", weight=300)
+        self.assertEqual(["Option A", "Option B", "Option C"], cf.choices)
+        with self.assertNumQueries(0):  # verify caching
+            self.assertEqual(["Option A", "Option B", "Option C"], cf.choices)
 
         # Assign a value to the first Location
         location = Location.objects.get(name="Location A")
@@ -199,9 +204,14 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
-        CustomFieldChoice.objects.create(custom_field=cf, value="Option A")
-        CustomFieldChoice.objects.create(custom_field=cf, value="Option B")
-        CustomFieldChoice.objects.create(custom_field=cf, value="Option C")
+        CustomFieldChoice.objects.create(custom_field=cf, value="Option A", weight=100)
+        self.assertEqual(["Option A"], cf.choices)
+        CustomFieldChoice.objects.create(custom_field=cf, value="Option B", weight=200)
+        self.assertEqual(["Option A", "Option B"], cf.choices)
+        CustomFieldChoice.objects.create(custom_field=cf, value="Option C", weight=300)
+        self.assertEqual(["Option A", "Option B", "Option C"], cf.choices)
+        with self.assertNumQueries(0):  # verify caching
+            self.assertEqual(["Option A", "Option B", "Option C"], cf.choices)
 
         # Assign a value to the first Location
         location = Location.objects.get(name="Location A")
@@ -293,21 +303,18 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         # Assign a disallowed value (list) to the first Location
         location = Location.objects.get(name="Location A")
         location.cf[cf.key] = ["I", "am", "a", "list"]
-        with self.assertRaises(ValidationError) as context:
+        with self.assertRaisesRegex(ValidationError, "Value must be a string"):
             location.validated_save()
-        self.assertIn("Value must be a string", str(context.exception))
 
         # Assign another disallowed value (int) to the first Location
         location.cf[cf.key] = 2
-        with self.assertRaises(ValidationError) as context:
+        with self.assertRaisesRegex(ValidationError, "Value must be a string"):
             location.validated_save()
-        self.assertIn("Value must be a string", str(context.exception))
 
         # Assign another disallowed value (bool) to the first Location
         location.cf[cf.key] = True
-        with self.assertRaises(ValidationError) as context:
+        with self.assertRaisesRegex(ValidationError, "Value must be a string"):
             location.validated_save()
-        self.assertIn("Value must be a string", str(context.exception))
 
         # Delete the stored value
         location.cf.pop(cf.key)
@@ -995,18 +1002,15 @@ class CustomFieldDataAPITest(APITestCase):
             },
         }
         response = self.client.post(self.list_url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Value must be a string", str(response.content))
+        self.assertContains(response, "Value must be a string", status_code=status.HTTP_400_BAD_REQUEST)
 
         data["custom_fields"].update({self.cf_text.key: 2})
         response = self.client.post(self.list_url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Value must be a string", str(response.content))
+        self.assertContains(response, "Value must be a string", status_code=status.HTTP_400_BAD_REQUEST)
 
         data["custom_fields"].update({self.cf_text.key: True})
         response = self.client.post(self.list_url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Value must be a string", str(response.content))
+        self.assertContains(response, "Value must be a string", status_code=status.HTTP_400_BAD_REQUEST)
 
     def test_create_without_required_field(self):
         self.cf_text.default = None
@@ -1019,8 +1023,7 @@ class CustomFieldDataAPITest(APITestCase):
             "status": self.statuses[0].pk,
         }
         response = self.client.post(self.list_url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Required field cannot be empty", str(response.content))
+        self.assertContains(response, "Required field cannot be empty", status_code=status.HTTP_400_BAD_REQUEST)
 
         # Try in CSV format too
         csvdata = "\n".join(
@@ -1030,8 +1033,7 @@ class CustomFieldDataAPITest(APITestCase):
             ]
         )
         response = self.client.post(self.list_url, csvdata, content_type="text/csv", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Required field cannot be empty", str(response.content))
+        self.assertContains(response, "Required field cannot be empty", status_code=status.HTTP_400_BAD_REQUEST)
 
     def test_create_invalid_select_choice(self):
         data = {
@@ -1043,8 +1045,7 @@ class CustomFieldDataAPITest(APITestCase):
             },
         }
         response = self.client.post(self.list_url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Invalid choice", str(response.content))
+        self.assertContains(response, "Invalid choice", status_code=status.HTTP_400_BAD_REQUEST)
 
         # Try in CSV format too
         csvdata = "\n".join(
@@ -1054,8 +1055,7 @@ class CustomFieldDataAPITest(APITestCase):
             ]
         )
         response = self.client.post(self.list_url, csvdata, content_type="text/csv", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Invalid choice", str(response.content))
+        self.assertContains(response, "Invalid choice", status_code=status.HTTP_400_BAD_REQUEST)
 
 
 class CustomFieldImportTest(TestCase):
@@ -1157,7 +1157,7 @@ class CustomFieldImportTest(TestCase):
         try:
             location1 = Location.objects.get(name="Location 1")
         except Location.DoesNotExist:
-            self.fail(str(response.content))
+            self.fail(extract_page_body(response.content.decode(response.charset)))
         self.assertEqual(len(location1.cf), 8)
         self.assertEqual(location1.cf["text"], "ABC")
         self.assertEqual(location1.cf["integer"], 123)
@@ -1301,7 +1301,7 @@ class CustomFieldModelTest(TestCase):
         custom_field.content_types.set([ContentType.objects.get_for_model(Provider)])
 
         provider = Provider.objects.create(name="Test")
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "Missing required custom field 'custom_field'"):
             provider.validated_save()
 
     def test_custom_field_required_on_update(self):
@@ -1319,7 +1319,7 @@ class CustomFieldModelTest(TestCase):
         provider = Provider.objects.create(name="Test", _custom_field_data={"custom_field": "Value"})
         provider.validated_save()
         provider._custom_field_data.pop("custom_field")
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "Missing required custom field 'custom_field'"):
             provider.validated_save()
 
     def test_update_removed_custom_field(self):
@@ -1380,7 +1380,7 @@ class CustomFieldModelTest(TestCase):
         """
         Check that a ValidationError is raised if any required custom fields are not present.
         """
-        cf3 = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="Baz", required=True)
+        cf3 = CustomField(key="baz", type=CustomFieldTypeChoices.TYPE_TEXT, label="Baz", required=True)
         cf3.save()
         cf3.content_types.set([ContentType.objects.get_for_model(Location)])
 
@@ -1388,7 +1388,7 @@ class CustomFieldModelTest(TestCase):
 
         # Set custom field data with a required field omitted
         location.cf["foo"] = "abc"
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "Missing required custom field 'baz'"):
             location.clean()
 
         location.cf["baz"] = "def"
@@ -1434,38 +1434,20 @@ class CustomFieldModelTest(TestCase):
         """
         Check the GraphQL validation method on CustomField Key Attribute.
         """
-        # Check if it catches the cf.key starting with a digit.
-        cf1 = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="Test 1", key="12_test_1")
-        with self.assertRaises(ValidationError) as error:
-            cf1.validated_save()
-        self.assertIn(
-            "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
-            str(error.exception),
-        )
-        # Check if it catches the cf.key with whitespace.
-        cf1.key = "test 1"
-        with self.assertRaises(ValidationError) as error:
-            cf1.validated_save()
-        self.assertIn(
-            "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
-            str(error.exception),
-        )
-        # Check if it catches the cf.key with hyphens.
-        cf1.key = "test-1-custom-field"
-        with self.assertRaises(ValidationError) as error:
-            cf1.validated_save()
-        self.assertIn(
-            "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
-            str(error.exception),
-        )
-        # Check if it catches the cf.key with special characters
-        cf1.key = "test_1_custom_f)(&d"
-        with self.assertRaises(ValidationError) as error:
-            cf1.validated_save()
-        self.assertIn(
-            "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
-            str(error.exception),
-        )
+        cf1 = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="Test 1")
+        for invalid_key in [
+            "12_test_1",  # Check if it catches the cf.key starting with a digit.
+            "test 1",  # Check if it catches the cf.key with whitespace.
+            "test-1-custom-field",  # Check if it catches the cf.key with hyphens.
+            "test_1_custom_f)(&d",  # Check if it catches the cf.key with special characters
+        ]:
+            with self.assertRaisesRegex(
+                ValidationError,
+                "This key is not Python/GraphQL safe. "
+                "Please do not start the key with a digit and do not use hyphens or whitespace",
+            ):
+                cf1.key = invalid_key
+                cf1.validated_save()
 
 
 class CustomFieldFilterTest(TestCase):
@@ -1941,9 +1923,11 @@ class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
         )
         self.cf.save()
         self.cf.content_types.set([obj_type])
+        self.assertEqual(self.cf.choices, [])
 
         self.choice = CustomFieldChoice(custom_field=self.cf, value="Foo")
         self.choice.save()
+        self.assertEqual(self.cf.choices, ["Foo"])
 
         location_status = Status.objects.get_for_model(Location).first()
         self.location_type = LocationType.objects.get(name="Campus")
@@ -1959,7 +1943,7 @@ class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
 
     def test_default_value_must_be_valid_choice_sad_path(self):
         self.cf.default = "invalid value"
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, 'Invalid default value "invalid value"'):
             self.cf.full_clean()
 
     def test_default_value_must_be_valid_choice_happy_path(self):
@@ -1971,6 +1955,13 @@ class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
     def test_active_choice_cannot_be_deleted(self):
         with self.assertRaises(ProtectedError):
             self.choice.delete()
+
+    def test_inactive_choice_can_be_deleted(self):
+        self.location._custom_field_data.pop("cf1")
+        self.location.validated_save()
+        self.assertEqual(self.cf.choices, ["Foo"])
+        self.choice.delete()
+        self.assertEqual(self.cf.choices, [])
 
     def test_custom_choice_deleted_with_field(self):
         self.cf.delete()
@@ -2247,7 +2238,7 @@ class CustomFieldTableTest(TestCase):
             self.assertIsNotNone(custom_column, internal_col_name)
             self.assertIsInstance(custom_column, CustomFieldColumn)
 
-            rendered_value = bound_row.get_cell(internal_col_name)
+            rendered_value = bound_row.get_cell(internal_col_name)  # pylint: disable=no-member
             self.assertEqual(rendered_value, col_expected_value)
 
 

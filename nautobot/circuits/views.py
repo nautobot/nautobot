@@ -2,10 +2,18 @@ from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.html import format_html
 from django_tables2 import RequestConfig
 
 from nautobot.core.forms import ConfirmationForm
-from nautobot.core.models.querysets import count_related
+from nautobot.core.templatetags.helpers import bettertitle, humanize_speed, placeholder
+from nautobot.core.ui.choices import SectionChoices
+from nautobot.core.ui.object_detail import (
+    ObjectDetailContent,
+    ObjectFieldsPanel,
+    ObjectsTablePanel,
+)
+from nautobot.core.ui.utils import render_component_template
 from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
@@ -27,8 +35,9 @@ class CircuitTypeUIViewSet(
     view_mixins.ObjectNotesViewMixin,
 ):
     filterset_class = filters.CircuitTypeFilterSet
+    filterset_form_class = forms.CircuitTypeFilterForm
     form_class = forms.CircuitTypeForm
-    queryset = CircuitType.objects.annotate(circuit_count=count_related(Circuit, "circuit_type"))
+    queryset = CircuitType.objects.all()
     serializer_class = serializers.CircuitTypeSerializer
     table_class = tables.CircuitTypeTable
 
@@ -67,6 +76,7 @@ class CircuitTerminationUIViewSet(
 ):
     action_buttons = ("import", "export")
     filterset_class = filters.CircuitTerminationFilterSet
+    filterset_form_class = forms.CircuitTerminationFilterForm
     form_class = forms.CircuitTerminationForm
     queryset = CircuitTermination.objects.all()
     serializer_class = serializers.CircuitTerminationSerializer
@@ -78,11 +88,11 @@ class CircuitTerminationUIViewSet(
             obj.circuit = get_object_or_404(Circuit, pk=self.kwargs["circuit"])
         return obj
 
-    def get_return_url(self, request, obj=None):
+    def get_return_url(self, request, obj=None, default_return_url=None):
         if obj is not None and obj.present_in_database and obj.pk:
-            return super().get_return_url(request, obj=obj.circuit)
+            return super().get_return_url(request, obj=obj.circuit, default_return_url=default_return_url)
 
-        return super().get_return_url(request, obj=obj)
+        return super().get_return_url(request, obj=obj, default_return_url=default_return_url)
 
 
 class ProviderUIViewSet(NautobotUIViewSet):
@@ -90,30 +100,25 @@ class ProviderUIViewSet(NautobotUIViewSet):
     filterset_class = filters.ProviderFilterSet
     filterset_form_class = forms.ProviderFilterForm
     form_class = forms.ProviderForm
-    queryset = Provider.objects.annotate(count_circuits=count_related(Circuit, "provider"))
+    queryset = Provider.objects.all()
     serializer_class = serializers.ProviderSerializer
     table_class = tables.ProviderTable
-
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            circuits = (
-                Circuit.objects.restrict(request.user, "view")
-                .filter(provider=instance)
-                .select_related("circuit_type", "tenant")
-                .prefetch_related("circuit_terminations__location")
-            )
-            circuits_table = tables.CircuitTable(circuits)
-            circuits_table.columns.hide("provider")
-
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(circuits_table)
-
-            context["circuits_table"] = circuits_table
-        return context
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+            ObjectsTablePanel(
+                weight=200,
+                table_class=tables.CircuitTable,
+                table_filter="provider",
+                section=SectionChoices.FULL_WIDTH,
+                exclude_columns=["provider"],
+            ),
+        ),
+    )
 
 
 class CircuitUIViewSet(NautobotUIViewSet):
@@ -126,8 +131,121 @@ class CircuitUIViewSet(NautobotUIViewSet):
     queryset = Circuit.objects.all()
     serializer_class = serializers.CircuitSerializer
     table_class = tables.CircuitTable
-    # NOTE: This is how `NautobotUIViewSet` would define use_new_ui attr
-    # use_new_ui = ["list", "retrieve"]
+
+    class CircuitTerminationPanel(ObjectFieldsPanel):
+        def __init__(self, **kwargs):
+            super().__init__(
+                fields=(
+                    "location",  # TODO: render location hierarchy
+                    "cable",
+                    "provider_network",
+                    "cloud_network",
+                    "port_speed",
+                    "upstream_speed",
+                    "ip_addresses",
+                    "xconnect_id",
+                    "pp_info",
+                    "description",
+                ),
+                value_transforms={
+                    "port_speed": [humanize_speed, placeholder],
+                    "upstream_speed": [humanize_speed],
+                },
+                hide_if_unset=("location", "provider_network", "cloud_network", "upstream_speed"),
+                ignore_nonexistent_fields=True,  # ip_addresses may be undefined
+                header_extra_content_template_path="circuits/inc/circuit_termination_header_extra_content.html",
+                **kwargs,
+            )
+
+        def should_render(self, context):
+            return True
+
+        def get_extra_context(self, context):
+            return {"termination": context[self.context_object_key]}
+
+        def get_data(self, context):
+            """
+            Extend the panel data to include custom relationships on the termination.
+
+            This is done for feature parity with the existing UI, and is not a pattern we *generally* should emulate.
+            """
+            data = super().get_data(context)
+            termination = context["termination"]
+            if termination is not None:
+                for side, relationships in termination.get_relationships_with_related_objects(
+                    include_hidden=False
+                ).items():
+                    for relationship, value in relationships.items():
+                        key = (relationship, side)
+                        data[key] = value
+
+            return data
+
+        def render_key(self, key, value, context):
+            """
+            Extend the panel rendering to render custom relationship information.
+
+            This is done for feature parity with the existing UI, and is not a pattern we *generally* should emulate.
+            """
+            if isinstance(key, tuple):
+                # Copied from _ObjectRelationshipsPanel.render_key()
+                relationship, side = key
+                return format_html(
+                    '<span title="{} ({})">{}</span>',
+                    relationship.label,
+                    relationship.key,
+                    bettertitle(relationship.get_label(side)),
+                )
+            return super().render_key(key, value, context)
+
+        def render_value(self, key, value, context):
+            """
+            Add custom rendering of connected cables.
+
+            TODO: this might make sense to move into the base class to handle Cable objects in general?
+            """
+            if key == "cable":
+                if not context["termination"].location:
+                    return ""
+                return render_component_template("circuits/inc/circuit_termination_cable_fragment.html", context)
+            return super().render_value(key, value, context)
+
+        def queryset_list_url_filter(self, key, value, context):
+            """
+            Extend the panel rendering to render custom relationship information.
+
+            This is done for feature parity with the existing UI, and is not a pattern we *generally* should emulate.
+            """
+            if isinstance(key, tuple):
+                # Copied from _ObjectRelationshipsPanel.queryset_list_url_filter()
+                relationship, side = key
+                termination = context["termination"]
+                return f"cr_{relationship.key}__{side}={termination.pk}"
+            return super().queryset_list_url_filter(key, value, context)
+
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+                exclude_fields=["comments", "circuit_termination_a", "circuit_termination_z"],
+                value_transforms={"commit_rate": [humanize_speed, placeholder]},
+            ),
+            CircuitTerminationPanel(
+                label="Termination - A Side",
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                context_object_key="circuit_termination_a",
+            ),
+            CircuitTerminationPanel(
+                label="Termination - Z Side",
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                context_object_key="circuit_termination_z",
+            ),
+        ),
+    )
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)

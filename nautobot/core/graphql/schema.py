@@ -4,9 +4,11 @@ from collections import OrderedDict
 import logging
 
 from django.conf import settings
+from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.validators import ValidationError
-from django.db.models.fields.reverse_related import ManyToOneRel, OneToOneRel
+from django.db.models import ManyToManyField
+from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel, OneToOneRel
 import graphene
 from graphene.types import generic
 
@@ -41,11 +43,11 @@ from nautobot.dcim.graphql.types import (
     RearPortType,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
-from nautobot.extras.graphql.types import DynamicGroupType, TagType
+from nautobot.extras.graphql.types import ContactAssociationType, DynamicGroupType, JobType, ScheduledJobType, TagType
 from nautobot.extras.models import ComputedField, CustomField, Relationship
 from nautobot.extras.registry import registry
 from nautobot.extras.utils import check_if_key_is_graphql_safe
-from nautobot.ipam.graphql.types import IPAddressType, PrefixType
+from nautobot.ipam.graphql.types import IPAddressType, PrefixType, VLANType
 from nautobot.virtualization.graphql.types import VirtualMachineType, VMInterfaceType
 
 logger = logging.getLogger(__name__)
@@ -67,10 +69,14 @@ registry["graphql_types"]["dcim.powerport"] = PowerPortType
 registry["graphql_types"]["dcim.rack"] = RackType
 registry["graphql_types"]["dcim.rearport"] = RearPortType
 registry["graphql_types"]["dcim.location"] = LocationType
-registry["graphql_types"]["extras.tag"] = TagType
+registry["graphql_types"]["extras.contactassociation"] = ContactAssociationType
 registry["graphql_types"]["extras.dynamicgroup"] = DynamicGroupType
+registry["graphql_types"]["extras.job"] = JobType
+registry["graphql_types"]["extras.scheduledjob"] = ScheduledJobType
+registry["graphql_types"]["extras.tag"] = TagType
 registry["graphql_types"]["ipam.ipaddress"] = IPAddressType
 registry["graphql_types"]["ipam.prefix"] = PrefixType
+registry["graphql_types"]["ipam.vlan"] = VLANType
 registry["graphql_types"]["virtualization.virtualmachine"] = VirtualMachineType
 registry["graphql_types"]["virtualization.vminterface"] = VMInterfaceType
 
@@ -124,6 +130,11 @@ def extend_schema_type(schema_type):
     # Config Context
     #
     schema_type = extend_schema_type_config_context(schema_type, model)
+
+    #
+    # Global features (contacts, teams, dynamic groups)
+    #
+    schema_type = extend_schema_type_global_features(schema_type, model)
 
     #
     # Relationships
@@ -197,9 +208,10 @@ def extend_schema_type_filter(schema_type, model):
         (DjangoObjectType): The extended schema_type object
     """
     for field in model._meta.get_fields():
-        # Check attribute is a ManyToOne field
-        # OneToOneRel is a subclass of ManyToOneRel, but we don't want to treat is as a list
-        if not isinstance(field, ManyToOneRel) or isinstance(field, OneToOneRel):
+        if not isinstance(field, (ManyToManyField, ManyToManyRel, ManyToOneRel, GenericRelation)):
+            continue
+        # OneToOneRel is a subclass of ManyToOneRel, but we don't want to treat it as a list
+        if isinstance(field, OneToOneRel):
             continue
         child_schema_type = registry["graphql_types"].get(field.related_model._meta.label_lower)
         if child_schema_type:
@@ -362,14 +374,29 @@ def extend_schema_type_config_context(schema_type, model):
     return schema_type
 
 
+def extend_schema_type_global_features(schema_type, model):
+    """
+    Extend schema_type object to have attributes and resolvers for global features (dynamic groups, etc.).
+    """
+    # associated_contacts and associated_object_metadata are handled elsewhere by extend_schema_type_filter()
+    if getattr(model, "is_dynamic_group_associable_model", False):
+
+        def resolve_dynamic_groups(self, args):
+            return self.dynamic_groups
+
+        setattr(schema_type, "resolve_dynamic_groups", resolve_dynamic_groups)
+        schema_type._meta.fields["dynamic_groups"] = graphene.Field.mounted(graphene.List(DynamicGroupType))
+
+    return schema_type
+
+
 def extend_schema_type_relationships(schema_type, model):
     """Extend the schema type with attributes and resolvers corresponding
     to the relationships associated with this model."""
 
-    ct = ContentType.objects.get_for_model(model)
     relationships_by_side = {
-        "source": Relationship.objects.filter(source_type=ct),
-        "destination": Relationship.objects.filter(destination_type=ct),
+        "source": Relationship.objects.get_for_model_source(model),
+        "destination": Relationship.objects.get_for_model_destination(model),
     }
 
     prefix = ""

@@ -51,19 +51,10 @@
                                             {% endif %}
                                         </td>
                                     </tr>
-                                    <tr>
-                                        <td>Tenant</td>
-                                        <td>
-                                            {% if object.tenant and object.tenant.tenant_group %}
-                                                {{ object.tenant.tenant_group|hyperlinked_object }} /
-                                            {% endif %}
-                                            {{ object.tenant|hyperlinked_object }}
-                                        </td>
-                                    </tr>
+                                    {% include 'inc/tenant_table_row.html' %}
                                     <tr>
                                         <td>Device Family</td>
                                         <td>{{ object.device_type.device_family|hyperlinked_object }}</td>
-                                        </td>
                                     </tr>
                                     <tr>
                                         <td>Device Type</td>
@@ -223,8 +214,8 @@
                                         <tr>
                                             <td>Cluster</td>
                                             <td>
-                                                {% if object.cluster.group %}
-                                                    {{ object.cluster.group|hyperlinked_object }} /
+                                                {% if object.cluster.cluster_group %}
+                                                    {{ object.cluster.cluster_group|hyperlinked_object }} /
                                                 {% endif %}
                                                 {{ object.cluster|hyperlinked_object }}
                                             </td>
@@ -233,7 +224,7 @@
                                     {% include 'dcim/inc/detail_softwareversion_softwareimagefile_rows.html' %}
                                 </table>
                             </div>
-                            {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_field_groupings_basic computed_fields_advanced_ui=False %}
+                            {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_field_groupings_basic computed_fields=object.get_computed_fields_grouping_basic computed_fields_advanced_ui=False %}
                             {% include 'inc/relationships/panel_override.html' with relationships_fields_override=object.get_relationships_data_basic_fields %}
                             {% include 'extras/inc/tags_panel.html' with tags=object.tags.all url='dcim:device_list' %}
                             <div class="panel panel-default">
@@ -335,6 +326,9 @@
                             {% plugin_right_page object %}
                         </div>
                     </div>
+                    {% block content_full_width_page %}
+                        {% include 'panel_table.html' with table=vdcs_table heading="Virtual Device Contexts" add_obj_url=vdcs_table_add_url %}
+                    {% endblock content_full_width_page %}
                     <div class="row">
                         <div class="col-md-12">
                             {% plugin_full_width_page object %}
@@ -403,6 +397,62 @@
             </div>
         </div>
     </div>
-</div>
 {% endif %}
+{% if object.is_dynamic_group_associable_model and perms.extras.view_dynamicgroup %}
+    <div id="dynamic_groups" role="tabpanel" class="tab-pane {% if request.GET.tab == 'dynamic_groups' %}active{% else %}fade{% endif %}">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="alert alert-warning">
+                    Dynamic group membership is cached for performance reasons,
+                    therefore this table may not always be up-to-date.
+                    <br>You can refresh the membership of any specific group by navigating to it from the list below
+                    or from the <a href="{% url 'extras:dynamicgroup_list' %}">Dynamic Groups list view</a>.
+                    <br>You can also refresh the membership of all groups by running the
+                    <a href="{% url 'extras:job_run_by_class_path' class_path='nautobot.core.jobs.groups.RefreshDynamicGroupCaches' %}">Refresh Dynamic Group Caches job</a>.
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <strong>Dynamic Groups</strong>
+                            <div class="pull-right noprint">
+                                <!-- Insert table config button here -->
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            {% render_table associated_dynamic_groups_table 'inc/table.html' %}
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% if object.is_metadata_associable_model and perms.extras.view_objectmetadata %}
+    <div id="object_metadata" role="tabpanel" class="tab-pane {% if request.GET.tab == 'object_metadata' %}active{% else %}fade{% endif %}">
+        <div class="row">
+            <div class="col-md-12">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <strong>Object Metadata</strong>
+                            <div class="pull-right noprint">
+                                <!-- Insert table config button here -->
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            {% render_table associated_object_metadata_table 'inc/table.html' %}
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endif %}
+</div>
 {% endblock content %}

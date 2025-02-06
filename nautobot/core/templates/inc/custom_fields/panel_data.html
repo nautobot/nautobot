@@ -1,16 +1,13 @@
 {% load helpers %}
 {% if custom_fields %}
-<style>
-    .accordion-toggle {
-        font-size: 14px;
-    }
-</style>
     <div class="panel panel-default">
         <div class="panel-heading">
             <strong>Custom Fields</strong>
-            <button type="button" class="btn-xs btn-primary pull-right" id="accordion-toggle-all">Collapse All</button>
+            <button type="button"
+                    class="btn-xs btn-primary pull-right accordion-toggle-all"
+                    data-target="#custom_fields_accordion_{{ advanced_ui }}">Collapse All</button>
         </div>
-        <table id="accordion" class="table table-hover panel-body attr-table">
+        <table id="custom_fields_accordion_{{ advanced_ui }}" class="table table-hover panel-body attr-table">
             {% for grouping, fields in custom_fields.items %}
             {% with forloop.counter0 as count %}
                 {% if grouping != "" %}

@@ -10,7 +10,7 @@ class TestModifyDB(Job):
     Job that modifies the database.
     """
 
-    def run(self):
+    def run(self):  # pylint: disable=arguments-differ
         """
         Job function.
         """

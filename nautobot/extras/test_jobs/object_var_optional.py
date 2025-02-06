@@ -12,7 +12,7 @@ class TestOptionalObjectVar(Job):
         required=False,
     )
 
-    def run(self, location=None):
+    def run(self, location=None):  # pylint: disable=arguments-differ
         logger.info("The Location if any that the user provided.", extra={"object": location})
         return "Nice Location (or not)!"
 

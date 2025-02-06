@@ -359,3 +359,7 @@ The change summary is added to the file in plain text. Change summaries should b
     ```plaintext title="changes/1234.changed"
     Changed release notes generation.
     ```
+
+### Documentation Updates
+
+The main landing page needs to remain at `docs/index.md` to prevent 404 errors when switching documentation versions on readthedocs.

@@ -8,86 +8,20 @@ from .models import (
     IPAddress,
     Prefix,
     RIR,
-    RouteTarget,
     Service,
     VLAN,
     VLANGroup,
-    VRF,
 )
 
 app_name = "ipam"
 
 router = NautobotUIViewSetRouter()
-router.register("namespaces", views.NamespaceUIViewSet)
 router.register("ip-address-to-interface", views.IPAddressToInterfaceUIViewSet)
+router.register("namespaces", views.NamespaceUIViewSet)
+router.register("route-targets", views.RouteTargetUIViewSet)
+router.register("vrfs", views.VRFUIViewSet)
 
 urlpatterns = [
-    # VRFs
-    path("vrfs/", views.VRFListView.as_view(), name="vrf_list"),
-    path("vrfs/add/", views.VRFEditView.as_view(), name="vrf_add"),
-    path("vrfs/import/", views.VRFBulkImportView.as_view(), name="vrf_import"),  # 3.0 TODO: remove, unused
-    path("vrfs/edit/", views.VRFBulkEditView.as_view(), name="vrf_bulk_edit"),
-    path("vrfs/delete/", views.VRFBulkDeleteView.as_view(), name="vrf_bulk_delete"),
-    path("vrfs/<uuid:pk>/", views.VRFView.as_view(), name="vrf"),
-    path("vrfs/<uuid:pk>/edit/", views.VRFEditView.as_view(), name="vrf_edit"),
-    path("vrfs/<uuid:pk>/delete/", views.VRFDeleteView.as_view(), name="vrf_delete"),
-    path(
-        "vrfs/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="vrf_changelog",
-        kwargs={"model": VRF},
-    ),
-    path(
-        "vrfs/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="vrf_notes",
-        kwargs={"model": VRF},
-    ),
-    # Route targets
-    path("route-targets/", views.RouteTargetListView.as_view(), name="routetarget_list"),
-    path(
-        "route-targets/add/",
-        views.RouteTargetEditView.as_view(),
-        name="routetarget_add",
-    ),
-    path(
-        "route-targets/import/",
-        views.RouteTargetBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="routetarget_import",
-    ),
-    path(
-        "route-targets/edit/",
-        views.RouteTargetBulkEditView.as_view(),
-        name="routetarget_bulk_edit",
-    ),
-    path(
-        "route-targets/delete/",
-        views.RouteTargetBulkDeleteView.as_view(),
-        name="routetarget_bulk_delete",
-    ),
-    path("route-targets/<uuid:pk>/", views.RouteTargetView.as_view(), name="routetarget"),
-    path(
-        "route-targets/<uuid:pk>/edit/",
-        views.RouteTargetEditView.as_view(),
-        name="routetarget_edit",
-    ),
-    path(
-        "route-targets/<uuid:pk>/delete/",
-        views.RouteTargetDeleteView.as_view(),
-        name="routetarget_delete",
-    ),
-    path(
-        "route-targets/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="routetarget_changelog",
-        kwargs={"model": RouteTarget},
-    ),
-    path(
-        "route-targets/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="routetarget_notes",
-        kwargs={"model": RouteTarget},
-    ),
     # RIRs
     path("rirs/", views.RIRListView.as_view(), name="rir_list"),
     path("rirs/add/", views.RIREditView.as_view(), name="rir_add"),
@@ -147,7 +81,7 @@ urlpatterns = [
         name="prefix_changelog",
         kwargs={"model": Prefix},
     ),
-    path(
+    path(  # 3.0 TODO: remove, no longer needed/used since 2.3
         "prefixes/<uuid:pk>/dynamic-groups/",
         ObjectDynamicGroupsView.as_view(),
         name="prefix_dynamicgroups",
@@ -203,7 +137,7 @@ urlpatterns = [
         name="ipaddress_changelog",
         kwargs={"model": IPAddress},
     ),
-    path(
+    path(  # 3.0 TODO: remove, no longer needed/used since 2.3
         "ip-addresses/<uuid:pk>/dynamic-groups/",
         ObjectDynamicGroupsView.as_view(),
         name="ipaddress_dynamicgroups",

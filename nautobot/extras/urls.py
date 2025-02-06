@@ -16,7 +16,6 @@ from nautobot.extras.models import (
     JobHook,
     Note,
     Relationship,
-    Secret,
     SecretsGroup,
     Status,
     Tag,
@@ -30,7 +29,13 @@ router.register("contacts", views.ContactUIViewSet)
 router.register("contact-associations", views.ContactAssociationUIViewSet)
 router.register("external-integrations", views.ExternalIntegrationUIViewSet)
 router.register("job-buttons", views.JobButtonUIViewSet)
+router.register("job-queues", views.JobQueueUIViewSet)
+router.register("metadata-types", views.MetadataTypeUIViewSet)
+router.register("object-metadata", views.ObjectMetadataUIViewSet)
 router.register("roles", views.RoleUIViewSet)
+router.register("saved-views", views.SavedViewUIViewSet)
+router.register("secrets", views.SecretUIViewSet)
+router.register("static-group-associations", views.StaticGroupAssociationUIViewSet)
 router.register("teams", views.TeamUIViewSet)
 
 urlpatterns = [
@@ -242,6 +247,7 @@ urlpatterns = [
     # Dynamic Groups
     path("dynamic-groups/", views.DynamicGroupListView.as_view(), name="dynamicgroup_list"),
     path("dynamic-groups/add/", views.DynamicGroupEditView.as_view(), name="dynamicgroup_add"),
+    path("dynamic-groups/assign-members/", views.DynamicGroupBulkAssignView.as_view(), name="dynamicgroup_bulk_assign"),
     path(
         "dynamic-groups/delete/",
         views.DynamicGroupBulkDeleteView.as_view(),
@@ -560,29 +566,10 @@ urlpatterns = [
         name="relationshipassociation_delete",
     ),
     # Secrets
-    path("secrets/", views.SecretListView.as_view(), name="secret_list"),
-    path("secrets/add/", views.SecretEditView.as_view(), name="secret_add"),
-    path("secrets/delete/", views.SecretBulkDeleteView.as_view(), name="secret_bulk_delete"),
-    path("secrets/import/", views.SecretBulkImportView.as_view(), name="secret_import"),  # 3.0 TODO: remove, unused
     path(
         "secrets/provider/<str:provider_slug>/form/",
         views.SecretProviderParametersFormView.as_view(),
         name="secret_provider_parameters_form",
-    ),
-    path("secrets/<uuid:pk>/", views.SecretView.as_view(), name="secret"),
-    path("secrets/<uuid:pk>/edit/", views.SecretEditView.as_view(), name="secret_edit"),
-    path("secrets/<uuid:pk>/delete/", views.SecretDeleteView.as_view(), name="secret_delete"),
-    path(
-        "secrets/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="secret_changelog",
-        kwargs={"model": Secret},
-    ),
-    path(
-        "secrets/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="secret_notes",
-        kwargs={"model": Secret},
     ),
     path("secrets-groups/", views.SecretsGroupListView.as_view(), name="secretsgroup_list"),
     path("secrets-groups/add/", views.SecretsGroupEditView.as_view(), name="secretsgroup_add"),

@@ -1,0 +1,11 @@
+{% extends 'generic/object_list.html' %}
+{% load buttons %}
+
+{% block import_list_element %}
+    <li><a href="{% url 'dcim:moduletype_import' %}">
+        <span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> Import from JSON/YAML (single record)
+    </a></li>
+    <li><a href="{% job_import_url content_type %}">
+        <span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> Import from CSV (multiple records)
+    </a></li>
+{% endblock import_list_element %}

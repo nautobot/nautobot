@@ -17,13 +17,13 @@ jobs:
     runs-on: "ubuntu-20.04"
     steps:
       - name: "Check out repository code"
-        uses: "actions/checkout@v2"
+        uses: "actions/checkout@v4"
       - name: "Set up Python"
         uses: "actions/setup-python@v2"
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - name: "Install Python Packages"
-        run: "pip install poetry"
+        run: "pip install poetry==1.8.2"
       - name: "Configure Poetry"
         run: "poetry config virtualenvs.create false && poetry config installer.parallel false"
       - name: "Install Dependencies (needed for mkdocs)"
@@ -54,12 +54,12 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.8", "3.9", "3.10", "3.11" ]
+        python-version: [ "3.9", "3.10", "3.11", "3.12" ]
     env:
       INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
     steps:
       - name: "Check out repository code"
-        uses: "actions/checkout@v3"
+        uses: "actions/checkout@v4"
       - run: echo "branch=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_OUTPUT
         id: "gitbranch"
       - name: "Set up QEMU"
@@ -83,14 +83,14 @@ jobs:
         with:
           images: "networktocode/nautobot,ghcr.io/nautobot/nautobot"
           flavor: |
-            latest=${{ matrix.python-version == 3.11 }}
+            latest=${{ matrix.python-version == 3.12 }}
           tags: |
             type=semver,pattern={{version}}-py${{ matrix.python-version }}
-            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.11 }}
+            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.12 }}
             type=semver,pattern={{major}}.{{minor}}-py${{ matrix.python-version }}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ matrix.python-version == 3.11 }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ matrix.python-version == 3.12 }}
             type=raw,value=latest-py${{ matrix.python-version }}
-            type=raw,value=stable,enable=${{ matrix.python-version == 3.11 }}
+            type=raw,value=stable,enable=${{ matrix.python-version == 3.12 }}
             type=raw,value=stable-py${{ matrix.python-version }}
           labels: |
             org.opencontainers.image.title=Nautobot
@@ -108,21 +108,21 @@ jobs:
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
-            POETRY_INSTALLER_PARALLEL=true
+            POETRY_INSTALLER_PARALLEL=false
       - name: "Docker Dev Metadata"
         id: "dockerdevmeta"
         uses: "docker/metadata-action@v4"
         with:
           images: "networktocode/nautobot-dev,ghcr.io/nautobot/nautobot-dev"
           flavor: |
-            latest=${{ matrix.python-version == 3.11 }}
+            latest=${{ matrix.python-version == 3.12 }}
           tags: |
             type=semver,pattern={{version}}-py${{ matrix.python-version }}
-            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.11 }}
+            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.12 }}
             type=semver,pattern={{major}}.{{minor}}-py${{ matrix.python-version }}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ matrix.python-version == 3.11 }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ matrix.python-version == 3.12 }}
             type=raw,value=latest-py${{ matrix.python-version }}
-            type=raw,value=stable,enable=${{ matrix.python-version == 3.11 }}
+            type=raw,value=stable,enable=${{ matrix.python-version == 3.12 }}
             type=raw,value=stable-py${{ matrix.python-version }}
           labels: |
             org.opencontainers.image.title=Nautobot
@@ -140,7 +140,7 @@ jobs:
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
-            POETRY_INSTALLER_PARALLEL=true
+            POETRY_INSTALLER_PARALLEL=false
 
   slack-notify:
     needs:
@@ -177,3 +177,15 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: "${{ secrets.SLACK_WEBHOOK_URL }}"
           SLACK_WEBHOOK_TYPE: "INCOMING_WEBHOOK"
+
+  deploy-sandbox:
+    if: startsWith(github.event.release.tag_name, 'v2.')
+    needs:
+      - "publish_python"
+      - "publish_containers"
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Call deploy sandbox workflow for demo.nautobot.com
+        run: gh workflow run deploy_sandbox.yml -R nautobot/sandboxes -f sandbox_environment=demo
+        env:
+          GH_TOKEN: ${{ secrets.GH_NAUTOBOT_BOT_TOKEN }}

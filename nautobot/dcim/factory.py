@@ -5,10 +5,11 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 import factory
 from faker import Faker
-import pytz
+from timezone_field import TimeZoneFormField
 
 from nautobot.circuits.models import CircuitTermination
 from nautobot.core.factory import (
+    BaseModelFactory,
     get_random_instances,
     NautobotBoolIterator,
     OrganizationalModelFactory,
@@ -17,7 +18,13 @@ from nautobot.core.factory import (
     UniqueFaker,
 )
 from nautobot.dcim.choices import (
+    ConsolePortTypeChoices,
+    ControllerCapabilitiesChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
+    InterfaceTypeChoices,
+    PortTypeChoices,
+    PowerOutletTypeChoices,
+    PowerPortTypeChoices,
     RackDimensionUnitChoices,
     RackTypeChoices,
     RackWidthChoices,
@@ -25,22 +32,35 @@ from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.models import (
+    ConsolePortTemplate,
+    ConsoleServerPortTemplate,
     Controller,
     ControllerManagedDeviceGroup,
     Device,
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
+    FrontPortTemplate,
+    Interface,
+    InterfaceTemplate,
     Location,
     LocationType,
     Manufacturer,
+    Module,
+    ModuleBay,
+    ModuleBayTemplate,
+    ModuleType,
     Platform,
+    PowerOutletTemplate,
     PowerPanel,
+    PowerPortTemplate,
     Rack,
     RackGroup,
     RackReservation,
+    RearPortTemplate,
     SoftwareImageFile,
     SoftwareVersion,
+    VirtualDeviceContext,
 )
 from nautobot.extras.models import ExternalIntegration, Role, Status
 from nautobot.extras.utils import FeatureQuery
@@ -93,6 +113,8 @@ NETWORK_DRIVERS = {
     "Palo Alto": ["paloalto_panos"],
 }
 
+TIME_ZONES = sorted(timezone for timezone, _ in TimeZoneFormField().choices)
+
 
 # Retrieve correct rack reservation units
 def get_rack_reservation_units(obj):
@@ -122,8 +144,6 @@ class DeviceFactory(PrimaryModelFactory):
             "has_device_redundancy_group",
             "has_platform",
             "has_serial",
-            "has_software_image_files",
-            "has_software_version",
             "has_tenant",
         )
 
@@ -140,7 +160,7 @@ class DeviceFactory(PrimaryModelFactory):
         lambda: Location.objects.filter(location_type__content_types=ContentType.objects.get_for_model(Device)),
         allow_null=False,
     )
-    name = factory.LazyAttributeSequence(lambda o, n: f"{o.device_type.model} Device - {o.location} - {n + 1}")
+    name = factory.LazyAttributeSequence(lambda o, n: f"{o.device_type.model}-{n + 1}")
 
     has_tenant = NautobotBoolIterator()
     tenant = factory.Maybe("has_tenant", random_instance(Tenant))
@@ -172,12 +192,7 @@ class DeviceFactory(PrimaryModelFactory):
     has_comments = NautobotBoolIterator()
     comments = factory.Maybe("has_comments", factory.Faker("bs"))
 
-    has_software_version = NautobotBoolIterator()
-    software_version = factory.Maybe(
-        "has_software_version",
-        factory.LazyAttribute(lambda o: get_random_software_version_for_device_type(o.device_type)),
-        None,
-    )
+    software_version = factory.LazyAttribute(lambda o: get_random_software_version_for_device_type(o.device_type))
 
     @factory.post_generation
     def software_image_files(self, create, extracted, **kwargs):
@@ -186,7 +201,12 @@ class DeviceFactory(PrimaryModelFactory):
         if extracted:
             self.software_image_files.set(extracted)
         else:
-            self.software_image_files.set(get_random_instances(SoftwareImageFile))
+            self.software_image_files.set(
+                get_random_instances(
+                    SoftwareImageFile.objects.filter(default_image=True)
+                    | SoftwareImageFile.objects.filter(device_types=self.device_type)
+                )
+            )
 
     # TODO to be done after these model factories are done.
     # has_cluster = NautobotBoolIterator()
@@ -243,6 +263,18 @@ class DeviceFactory(PrimaryModelFactory):
     # )
 
 
+device_types = (
+    "Router",
+    "Switch",
+    "Firewall",
+    "Load Balancer",
+    "WLAN Controller",
+    "Access Point",
+    "SAN Fabric",
+    "Console Server",
+)
+
+
 class DeviceTypeFactory(PrimaryModelFactory):
     class Meta:
         model = DeviceType
@@ -250,7 +282,6 @@ class DeviceTypeFactory(PrimaryModelFactory):
             "has_comments",
             "has_device_family",
             "has_part_number",
-            "has_software_image_files",
             "is_subdevice_child",
         )
 
@@ -259,7 +290,21 @@ class DeviceTypeFactory(PrimaryModelFactory):
 
     manufacturer = random_instance(Manufacturer)
 
-    model = factory.LazyAttributeSequence(lambda o, n: f"{o.manufacturer.name} DeviceType {n + 1}")
+    @factory.lazy_attribute
+    def model(self):
+        """
+        Use a random unused-for-this-manufacturer element from `device_types` if any.
+
+        If all are already used, append " 2" to all device-type strings and try again, and so forth.
+        """
+        possible_device_types = set(device_types)
+        count = 2
+        current_models = set(DeviceType.objects.filter(manufacturer=self.manufacturer).values_list("model", flat=True))
+        unused_models = possible_device_types.difference(current_models)
+        while not unused_models:
+            unused_models = {f"{device_type} {count}" for device_type in device_types}.difference(current_models)
+            count += 1
+        return factory.random.randgen.choice(sorted(unused_models))
 
     has_part_number = NautobotBoolIterator()
     part_number = factory.Maybe("has_part_number", factory.Faker("ean", length=8), "")
@@ -280,16 +325,14 @@ class DeviceTypeFactory(PrimaryModelFactory):
     has_comments = NautobotBoolIterator()
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
 
-    has_software_image_files = NautobotBoolIterator()
-
     @factory.post_generation
     def software_image_files(self, create, extracted, **kwargs):
-        if not create or not DeviceTypeFactory.has_software_image_files.evaluate(None, None, None):
+        if not create:
             return
         if extracted:
             self.software_image_files.set(extracted)
         else:
-            self.software_image_files.set(get_random_instances(SoftwareImageFile, minimum=1))
+            self.software_image_files.set(get_random_instances(SoftwareImageFile))
 
 
 class DeviceRedundancyGroupFactory(PrimaryModelFactory):
@@ -401,6 +444,7 @@ class LocationTypeFactory(OrganizationalModelFactory):
     def content_types(self, create, extract, **kwargs):
         """Assign some contenttypes to a location after generation"""
         if self.name in ["Root", "Campus", "Building"]:
+            # All appropriate content-types
             self.content_types.set(ContentType.objects.filter(FeatureQuery("locations").get_query()))
         elif self.name in ["Floor"]:
             self.content_types.set(
@@ -438,6 +482,7 @@ class LocationTypeFactory(OrganizationalModelFactory):
                     ContentType.objects.get_for_model(Controller),
                     ContentType.objects.get_for_model(CircuitTermination),
                     ContentType.objects.get_for_model(Device),
+                    ContentType.objects.get_for_model(Module),
                     ContentType.objects.get_for_model(PowerPanel),
                     ContentType.objects.get_for_model(Rack),
                     ContentType.objects.get_for_model(RackGroup),
@@ -478,7 +523,7 @@ class LocationFactory(PrimaryModelFactory):
     facility = factory.Maybe("has_facility", factory.Faker("building_number"), "")
 
     has_time_zone = NautobotBoolIterator()
-    time_zone = factory.Maybe("has_time_zone", factory.Faker("random_element", elements=pytz.common_timezones))
+    time_zone = factory.Maybe("has_time_zone", factory.Faker("random_element", elements=TIME_ZONES))
 
     has_physical_address = NautobotBoolIterator()
     physical_address = factory.Maybe("has_physical_address", factory.Faker("address"))
@@ -641,7 +686,7 @@ class SoftwareImageFileFactory(PrimaryModelFactory):
         allow_null=False,
     )
     software_version = random_instance(SoftwareVersion, allow_null=False)
-    image_file_name = factory.Faker("file_name", extension="bin")
+    image_file_name = UniqueFaker("file_name", extension="bin")
     image_file_checksum = factory.Maybe("has_image_file_checksum", factory.Faker("md5"), "")
     hashing_algorithm = factory.Maybe(
         "has_hashing_algorithm",
@@ -682,6 +727,7 @@ class SoftwareVersionFactory(PrimaryModelFactory):
 class ControllerFactory(PrimaryModelFactory):
     class Meta:
         model = Controller
+        exclude = ("has_capabilities",)
 
     class Params:
         has_device = NautobotBoolIterator()
@@ -690,6 +736,12 @@ class ControllerFactory(PrimaryModelFactory):
     description = factory.Faker("sentence")
     status = random_instance(lambda: Status.objects.get_for_model(Controller), allow_null=False)
     role = random_instance(lambda: Role.objects.get_for_model(Controller))
+    has_capabilities = NautobotBoolIterator()
+    capabilities = factory.Maybe(
+        "has_capabilities",
+        factory.Faker("random_elements", elements=ControllerCapabilitiesChoices.values(), unique=True),
+        [],
+    )
     platform = random_instance(Platform)
     location = random_instance(lambda: Location.objects.get_for_model(Controller), allow_null=False)
     tenant = random_instance(Tenant)
@@ -701,6 +753,7 @@ class ControllerFactory(PrimaryModelFactory):
 class ControllerManagedDeviceGroupFactory(PrimaryModelFactory):
     class Meta:
         model = ControllerManagedDeviceGroup
+        exclude = ("has_capabilities",)
 
     class Params:
         has_parent = NautobotBoolIterator()
@@ -708,6 +761,250 @@ class ControllerManagedDeviceGroupFactory(PrimaryModelFactory):
     name = UniqueFaker("word")
     parent = factory.Maybe("has_parent", random_instance(ControllerManagedDeviceGroup), None)
     controller = factory.LazyAttribute(
-        lambda o: o.parent.controller if o.parent else Controller.objects.order_by("?").first()
+        lambda o: o.parent.controller if o.parent else factory.random.randgen.choice(Controller.objects.all())
+    )
+    has_capabilities = NautobotBoolIterator()
+    capabilities = factory.Maybe(
+        "has_capabilities",
+        factory.Faker("random_elements", elements=ControllerCapabilitiesChoices.values(), unique=True),
+        [],
     )
     weight = factory.Faker("pyint", min_value=1, max_value=1000)
+
+
+module_types = (
+    "Supervisor",
+    "Line Card",
+    "Fabric",
+)
+
+
+class ModuleTypeFactory(PrimaryModelFactory):
+    class Meta:
+        model = ModuleType
+        exclude = ("has_part_number", "has_comments")
+
+    manufacturer = random_instance(Manufacturer, allow_null=False)
+
+    has_part_number = NautobotBoolIterator()
+    part_number = factory.Maybe("has_part_number", factory.Faker("ean", length=8), "")
+
+    has_comments = NautobotBoolIterator()
+    comments = factory.Maybe("has_comments", factory.Faker("bs"))
+
+    @factory.lazy_attribute
+    def model(self):
+        """
+        Use a random unused-for-this-manufacturer element from `module_types` if any.
+
+        If all are already used, append " 2" to all module-type strings and try again, and so forth.
+        """
+        possible_module_types = set(module_types)
+        count = 2
+        current_models = set(ModuleType.objects.filter(manufacturer=self.manufacturer).values_list("model", flat=True))
+        unused_models = possible_module_types.difference(current_models)
+        while not unused_models:
+            unused_models = {f"{module_type} {count}" for module_type in module_types}.difference(current_models)
+            count += 1
+        return factory.random.randgen.choice(sorted(unused_models))
+
+
+class ModuleFactory(PrimaryModelFactory):
+    class Meta:
+        model = Module
+        exclude = (
+            "has_asset_tag",
+            "has_parent_module_bay",
+            "has_role",
+            "has_serial",
+            "has_tenant",
+        )
+
+    module_type = random_instance(ModuleType, allow_null=False)
+    status = random_instance(
+        lambda: Status.objects.get_for_model(Module),
+        allow_null=False,
+    )
+    has_parent_module_bay = NautobotBoolIterator()
+    parent_module_bay = factory.Maybe(
+        "has_parent_module_bay",
+        random_instance(lambda: ModuleBay.objects.filter(installed_module__isnull=True), allow_null=False),
+        None,
+    )
+    location = factory.Maybe(
+        "has_parent_module_bay",
+        None,
+        random_instance(
+            lambda: Location.objects.filter(location_type__content_types=ContentType.objects.get_for_model(Module)),
+            allow_null=False,
+        ),
+    )
+    has_role = NautobotBoolIterator()
+    role = factory.Maybe(
+        "has_role",
+        random_instance(lambda: Role.objects.get_for_model(Module)),
+        None,
+    )
+    has_asset_tag = NautobotBoolIterator()
+    asset_tag = factory.Maybe("has_asset_tag", UniqueFaker("uuid4"), None)
+    has_serial = NautobotBoolIterator()
+    serial = factory.Maybe("has_serial", factory.Faker("ean", length=8), "")
+    has_tenant = NautobotBoolIterator()
+    tenant = factory.Maybe("has_tenant", random_instance(Tenant, allow_null=False), None)
+
+
+class DeviceComponentTemplateFactory(BaseModelFactory):
+    class Params:
+        has_label = NautobotBoolIterator()
+        has_description = NautobotBoolIterator()
+
+    device_type = random_instance(DeviceType.objects.all(), allow_null=False)
+    label = factory.Maybe(
+        "has_label",
+        factory.Faker("word"),
+        "",
+    )
+    description = factory.Maybe(
+        "has_description",
+        factory.Faker("sentence"),
+        "",
+    )
+
+
+class ModularDeviceComponentTemplateFactory(DeviceComponentTemplateFactory):
+    class Params:
+        has_device_type = NautobotBoolIterator()
+
+    device_type = factory.Maybe("has_device_type", random_instance(DeviceType, allow_null=False), None)
+    module_type = factory.Maybe("has_device_type", None, random_instance(ModuleType, allow_null=False))
+
+
+class ConsolePortTemplateFactory(ModularDeviceComponentTemplateFactory):
+    class Meta:
+        model = ConsolePortTemplate
+
+    type = factory.Faker("random_element", elements=ConsolePortTypeChoices.values())
+    name = factory.Sequence(lambda n: f"ConsolePort {n}")
+
+
+class ConsoleServerPortTemplateFactory(ModularDeviceComponentTemplateFactory):
+    class Meta:
+        model = ConsoleServerPortTemplate
+
+    type = factory.Faker("random_element", elements=ConsolePortTypeChoices.values())
+    name = factory.Sequence(lambda n: f"ConsoleServerPort {n}")
+
+
+class PowerPortTemplateFactory(ModularDeviceComponentTemplateFactory):
+    class Meta:
+        model = PowerPortTemplate
+
+    type = factory.Faker("random_element", elements=PowerPortTypeChoices.values())
+    name = factory.Sequence(lambda n: f"PowerPort {n}")
+
+
+class PowerOutletTemplateFactory(ModularDeviceComponentTemplateFactory):
+    class Meta:
+        model = PowerOutletTemplate
+
+    type = factory.Faker("random_element", elements=PowerOutletTypeChoices.values())
+    name = factory.Sequence(lambda n: f"PowerOutlet {n}")
+
+
+class InterfaceTemplateFactory(ModularDeviceComponentTemplateFactory):
+    class Meta:
+        model = InterfaceTemplate
+
+    type = factory.Faker("random_element", elements=InterfaceTypeChoices.values())
+    name = factory.Sequence(lambda n: f"Interface {n}")
+
+
+class FrontPortTemplateFactory(ModularDeviceComponentTemplateFactory):
+    class Meta:
+        model = FrontPortTemplate
+
+    device_type = factory.Maybe(
+        "has_device_type",
+        random_instance(DeviceType.objects.filter(rear_port_templates__isnull=False), allow_null=False),
+        None,
+    )
+    module_type = factory.Maybe(
+        "has_device_type",
+        None,
+        random_instance(ModuleType.objects.filter(rear_port_templates__isnull=False), allow_null=False),
+    )
+    type = factory.Faker("random_element", elements=PortTypeChoices.values())
+    name = factory.Sequence(lambda n: f"FrontPort {n}")
+
+    @factory.lazy_attribute
+    def rear_port_template(self):
+        if self.module_type:
+            return factory.random.randgen.choice(self.module_type.rear_port_templates.all())
+        else:
+            return factory.random.randgen.choice(self.device_type.rear_port_templates.all())
+
+    @factory.lazy_attribute
+    def rear_port_position(self):
+        return self.rear_port_template.front_port_templates.count() + 1
+
+
+class RearPortTemplateFactory(ModularDeviceComponentTemplateFactory):
+    class Meta:
+        model = RearPortTemplate
+
+    type = factory.Faker("random_element", elements=PortTypeChoices.values())
+    name = factory.Sequence(lambda n: f"RearPort {n}")
+    positions = factory.Sequence(lambda n: n + 100)
+
+
+class ModuleBayTemplateFactory(ModularDeviceComponentTemplateFactory):
+    class Meta:
+        model = ModuleBayTemplate
+
+    name = factory.Sequence(lambda n: f"ModuleBay {n}")
+    position = factory.Maybe(
+        "has_device_type",
+        factory.LazyAttribute(lambda o: o.device_type.module_bay_templates.count() + 1),
+        factory.LazyAttribute(lambda o: o.module_type.module_bay_templates.count() + 1),
+    )
+
+
+class VirtualDeviceContextFactory(PrimaryModelFactory):
+    class Meta:
+        model = VirtualDeviceContext
+        exclude = ("has_role", "has_tenant", "has_description")
+
+    status = random_instance(
+        lambda: Status.objects.get_for_model(VirtualDeviceContext),
+        allow_null=False,
+    )
+    has_role = NautobotBoolIterator()
+    role = factory.Maybe(
+        "has_role",
+        random_instance(
+            lambda: Role.objects.get_for_model(VirtualDeviceContext),
+            allow_null=False,
+        ),
+        None,
+    )
+    identifier = factory.Sequence(
+        lambda n: n + 101
+    )  # Start at 101 to avoid conflicts VirtualDeviceContexts API test cases.
+    name = factory.Sequence(lambda n: f"VirtualDeviceContext {n}")
+    device = random_instance(Device, allow_null=False)
+    has_tenant = NautobotBoolIterator()
+    tenant = factory.Maybe(
+        "has_tenant",
+        random_instance(Tenant, allow_null=False),
+        None,
+    )
+    has_description = NautobotBoolIterator()
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+
+    @factory.post_generation
+    def interfaces(self, create, extracted, **kwargs):
+        if create:
+            if extracted:
+                self.interfaces.set(extracted)
+            else:
+                self.interfaces.set(get_random_instances(Interface.objects.filter(device=self.device)))

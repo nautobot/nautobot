@@ -1,50 +1,29 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
-from django.db.models import Q
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
-from nautobot.core.models import BaseManager, BaseModel
+from nautobot.core.models import BaseManager, BaseModel, ContentTypeRelatedQuerySet
 from nautobot.core.models.fields import ColorField
-from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 
 # Importing CustomFieldModel, ChangeLoggedModel, RelationshipModel from  nautobot.extras.models
 # caused circular import error
 from nautobot.extras.models.customfields import CustomFieldModel
-from nautobot.extras.models.mixins import DynamicGroupMixin, NotesMixin
+from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
 from nautobot.extras.models.relationships import RelationshipModel
-
-
-class ContentTypeRelatedQuerySet(RestrictedQuerySet):
-    def get_for_model(self, model):
-        """
-        Return all `self.model` instances assigned to the given model.
-        """
-        content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
-        return self.filter(content_types=content_type)
-
-    # TODO(timizuo): Merge into get_for_model; Cant do this now cause it would require alot
-    #  of refactoring
-    def get_for_models(self, models_):
-        """
-        Return all `self.model` instances assigned to the given `_models`.
-        """
-        q = Q()
-        for model in models_:
-            q |= Q(app_label=model._meta.app_label, model=model._meta.model_name)
-        content_types = ContentType.objects.filter(q)
-        return self.filter(content_types__in=content_types)
 
 
 # TODO(timizuo): Inheriting from OrganizationalModel here causes partial import error
 class NameColorContentTypesModel(
-    BaseModel,
     ChangeLoggedModel,
+    ContactMixin,
     CustomFieldModel,
-    RelationshipModel,
+    DynamicGroupsModelMixin,
     NotesMixin,
-    DynamicGroupMixin,
+    RelationshipModel,
+    SavedViewMixin,
+    BaseModel,
 ):
     """
     This abstract base properties model contains fields and functionality that are

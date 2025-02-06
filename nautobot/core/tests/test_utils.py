@@ -1,24 +1,29 @@
+from unittest import mock
 import uuid
 
 from django import forms as django_forms
 from django.apps import apps
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.http import QueryDict
-from django.test import TestCase
 
 from nautobot.circuits import models as circuits_models
 from nautobot.core import exceptions, forms, settings_funcs
 from nautobot.core.api import utils as api_utils
-from nautobot.core.models import fields as core_fields, utils as models_utils
-from nautobot.core.utils import data as data_utils, filtering, lookup, requests
+from nautobot.core.forms.utils import compress_range
+from nautobot.core.models import fields as core_fields, utils as models_utils, validators
+from nautobot.core.testing import TestCase
+from nautobot.core.utils import data as data_utils, filtering, lookup, querysets, requests
 from nautobot.core.utils.migrations import update_object_change_ct_for_replaced_models
 from nautobot.dcim import filters as dcim_filters, forms as dcim_forms, models as dcim_models, tables
 from nautobot.extras import models as extras_models, utils as extras_utils
 from nautobot.extras.choices import ObjectChangeActionChoices, RelationshipTypeChoices
+from nautobot.extras.filters import StatusFilterSet
+from nautobot.extras.forms import StatusForm
 from nautobot.extras.models import ObjectChange
-from nautobot.extras.registry import registry
+from nautobot.ipam import models as ipam_models
 
 from example_app.models import ExampleModel
 
@@ -61,6 +66,18 @@ class NormalizeQueryDictTest(TestCase):
         self.assertDictEqual(
             requests.normalize_querydict(QueryDict("foo=1&bar=2&bar=3&baz=")),
             {"foo": "1", "bar": ["2", "3"], "baz": ""},
+        )
+
+        self.assertDictEqual(
+            requests.normalize_querydict(QueryDict("name=Sample Status&content_types=1"), form_class=StatusForm),
+            {"name": "Sample Status", "content_types": ["1"]},
+        )
+
+        self.assertDictEqual(
+            requests.normalize_querydict(
+                QueryDict("name=Sample Status&content_types=dcim.device"), filterset=StatusFilterSet()
+            ),
+            {"name": ["Sample Status"], "content_types": ["dcim.device"]},
         )
 
 
@@ -162,7 +179,7 @@ class GetFooForModelTest(TestCase):
 
     def test_get_filterset_for_model(self):
         """
-        Test the util function `get_filterset_for_model` returns the appropriate FilterSet, if model (as dotted string or class) provided.
+        Test that `get_filterset_for_model` returns the right FilterSet for various inputs.
         """
         self.assertEqual(lookup.get_filterset_for_model("dcim.device"), dcim_filters.DeviceFilterSet)
         self.assertEqual(lookup.get_filterset_for_model(dcim_models.Device), dcim_filters.DeviceFilterSet)
@@ -171,7 +188,7 @@ class GetFooForModelTest(TestCase):
 
     def test_get_form_for_model(self):
         """
-        Test the util function `get_form_for_model` returns the appropriate Form, if form type and model (as dotted string or class) provided.
+        Test that `get_form_for_model` returns the right Form for various inputs.
         """
         self.assertEqual(lookup.get_form_for_model("dcim.device", "Filter"), dcim_forms.DeviceFilterForm)
         self.assertEqual(lookup.get_form_for_model(dcim_models.Device, "Filter"), dcim_forms.DeviceFilterForm)
@@ -182,9 +199,28 @@ class GetFooForModelTest(TestCase):
         self.assertEqual(lookup.get_form_for_model("dcim.location"), dcim_forms.LocationForm)
         self.assertEqual(lookup.get_form_for_model(dcim_models.Location), dcim_forms.LocationForm)
 
+    def test_get_related_field_for_models(self):
+        """
+        Test that `get_related_field_for_models` returns the appropriate field for various inputs.
+        """
+        # No direct relation found
+        self.assertIsNone(lookup.get_related_field_for_models(dcim_models.Device, dcim_models.LocationType))
+        # ForeignKey and reverse
+        self.assertEqual(lookup.get_related_field_for_models(dcim_models.Device, dcim_models.Location).name, "location")
+        self.assertEqual(lookup.get_related_field_for_models(dcim_models.Location, dcim_models.Device).name, "devices")
+        # ManyToMany and reverse
+        self.assertEqual(
+            lookup.get_related_field_for_models(ipam_models.Prefix, dcim_models.Location).name, "locations"
+        )
+        self.assertEqual(lookup.get_related_field_for_models(dcim_models.Location, ipam_models.Prefix).name, "prefixes")
+        # Multiple candidate fields
+        with self.assertRaises(AttributeError):
+            # both primary_ip4 and primary_ip6 are candidates
+            lookup.get_related_field_for_models(dcim_models.Device, ipam_models.IPAddress)
+
     def test_get_route_for_model(self):
         """
-        Test the util function `get_route_for_model` returns the appropriate URL route name, if model (as dotted string or class) provided.
+        Test that `get_route_for_model` returns the appropriate URL route name for various inputs.
         """
         # UI
         self.assertEqual(lookup.get_route_for_model("dcim.device", "list"), "dcim:device_list")
@@ -219,7 +255,7 @@ class GetFooForModelTest(TestCase):
 
     def test_get_table_for_model(self):
         """
-        Test the util function `get_table_for_model` returns the appropriate Table, if model (as dotted string or class) provided.
+        Test that `get_table_for_model` returns the appropriate Table for various inputs.
         """
         self.assertEqual(lookup.get_table_for_model("dcim.device"), tables.DeviceTable)
         self.assertEqual(lookup.get_table_for_model(dcim_models.Device), tables.DeviceTable)
@@ -232,6 +268,42 @@ class GetFooForModelTest(TestCase):
         """
         self.assertEqual(lookup.get_model_from_name("dcim.device"), dcim_models.Device)
         self.assertEqual(lookup.get_model_from_name("dcim.location"), dcim_models.Location)
+
+    def test_get_model_for_view_name(self):
+        """
+        Test that `get_model_for_view_name` returns the appropriate Model, if the colon separated view name provided.
+        """
+        with self.subTest("Test core UI view."):
+            self.assertEqual(lookup.get_model_for_view_name("dcim:device_list"), dcim_models.Device)
+            self.assertEqual(lookup.get_model_for_view_name("dcim:device"), dcim_models.Device)
+        with self.subTest("Test app UI view."):
+            self.assertEqual(lookup.get_model_for_view_name("plugins:example_app:examplemodel_list"), ExampleModel)
+            self.assertEqual(lookup.get_model_for_view_name("plugins:example_app:examplemodel"), ExampleModel)
+        with self.subTest("Test core API view."):
+            self.assertEqual(lookup.get_model_for_view_name("dcim-api:device-list"), dcim_models.Device)
+            self.assertEqual(lookup.get_model_for_view_name("dcim-api:device-detail"), dcim_models.Device)
+        with self.subTest("Test app API view."):
+            self.assertEqual(
+                lookup.get_model_for_view_name("plugins-api:example_app-api:examplemodel-detail"), ExampleModel
+            )
+            self.assertEqual(
+                lookup.get_model_for_view_name("plugins-api:example_app-api:examplemodel-list"), ExampleModel
+            )
+        with self.subTest("Test unconventional model views."):
+            self.assertEqual(lookup.get_model_for_view_name("extras-api:contenttype-detail"), ContentType)
+            self.assertEqual(lookup.get_model_for_view_name("users-api:group-detail"), Group)
+        with self.subTest("Test unexpected view."):
+            with self.assertRaises(ValueError) as err:
+                lookup.get_model_for_view_name("unknown:plugins:example_app:examplemodel_list")
+            self.assertEqual(str(err.exception), "Unexpected View Name: unknown:plugins:example_app:examplemodel_list")
+
+    def test_get_table_class_string_from_view_name(self):
+        # Testing UIViewSet
+        self.assertEqual(lookup.get_table_class_string_from_view_name("circuits:circuit_list"), "CircuitTable")
+        # Testing Legacy View
+        self.assertEqual(lookup.get_table_class_string_from_view_name("dcim:location_list"), "LocationTable")
+        # Testing unconventional table name
+        self.assertEqual(lookup.get_table_class_string_from_view_name("ipam:prefix_list"), "PrefixDetailTable")
 
 
 class IsTaggableTest(TestCase):
@@ -351,6 +423,88 @@ class PrettyPrintQueryTest(TestCase):
                 self.assertEqual(models_utils.pretty_print_query(query), expected)
 
 
+class CompressRangeTest(TestCase):
+    """Tests for compress_range()."""
+
+    def test_compress_range_sparse(self):
+        values = [1500, 200, 10, 2222, 3000, 4096]
+        self.assertEqual(
+            list(compress_range(values)),
+            [
+                (10, 10),
+                (200, 200),
+                (1500, 1500),
+                (2222, 2222),
+                (3000, 3000),
+                (4096, 4096),
+            ],
+        )
+
+    def test_compress_range_dense(self):
+        values = [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            100,
+            101,
+            102,
+            103,
+            104,
+            105,
+            1100,
+            1101,
+            1102,
+            1103,
+            1104,
+            1105,
+            1106,
+        ]
+        self.assertEqual(
+            list(compress_range(values)),
+            [(1, 10), (100, 105), (1100, 1106)],
+        )
+
+    def test_compress_range_complex(self):
+        values = [
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            100,
+            200,
+            210,
+            211,
+            212,
+            222,
+            500,
+            501,
+            502,
+            503,
+            600,
+        ]
+        self.assertEqual(
+            list(compress_range(values)),
+            [
+                (10, 15),
+                (100, 100),
+                (200, 200),
+                (210, 212),
+                (222, 222),
+                (500, 503),
+                (600, 600),
+            ],
+        )
+
+
 class SlugifyFunctionsTest(TestCase):
     """Test custom slugify functions."""
 
@@ -370,6 +524,52 @@ class SlugifyFunctionsTest(TestCase):
             (" 123 main st", "a_123_main_st"),
         ):
             self.assertEqual(core_fields.slugify_dashes_to_underscores(content), expected)
+
+
+class LaxURLFieldTest(TestCase):
+    """Test LaxURLField and related functionality."""
+
+    VALID_URLS = [
+        "http://example.com",
+        "https://local-dns/foo/bar.git",  # not supported out-of-the-box by Django, hence our custom classes
+        "https://1.1.1.1:8080/",
+        "https://[2001:db8::]/",
+    ]
+    INVALID_URLS = [
+        "unknown://example.com/",
+        "foo:/",
+        "http://file://",
+    ]
+
+    def test_enhanced_url_validator(self):
+        for valid in self.VALID_URLS:
+            with self.subTest(valid=valid):
+                validators.EnhancedURLValidator()(valid)
+
+        for invalid in self.INVALID_URLS:
+            with self.subTest(invalid=invalid):
+                with self.assertRaises(django_forms.ValidationError):
+                    validators.EnhancedURLValidator()(invalid)
+
+    def test_forms_lax_url_field(self):
+        for valid in self.VALID_URLS:
+            with self.subTest(valid=valid):
+                forms.LaxURLField().clean(valid)
+
+        for invalid in self.INVALID_URLS:
+            with self.subTest(invalid=invalid):
+                with self.assertRaises(django_forms.ValidationError):
+                    forms.LaxURLField().clean(invalid)
+
+    def test_models_lax_url_field(self):
+        for valid in self.VALID_URLS:
+            with self.subTest(valid=valid):
+                core_fields.LaxURLField().run_validators(valid)
+
+        for invalid in self.INVALID_URLS:
+            with self.subTest(invalid=invalid):
+                with self.assertRaises(ValidationError):
+                    core_fields.LaxURLField().run_validators(invalid)
 
 
 class LookupRelatedFunctionTest(TestCase):
@@ -438,61 +638,61 @@ class LookupRelatedFunctionTest(TestCase):
             location_fields = ["comments", "name", "contact_email", "physical_address", "shipping_address"]
             for field_name in location_fields:
                 form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, field_name)
-                self.assertIs(type(form_field), forms.MultiValueCharField)
+                self.assertIsInstance(form_field, forms.MultiValueCharField)
 
             device_fields = ["serial", "name"]
             for field_name in device_fields:
                 form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, field_name)
-                self.assertIs(type(form_field), forms.MultiValueCharField)
+                self.assertIsInstance(form_field, forms.MultiValueCharField)
 
         with self.subTest("Test IntegerField"):
             form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, "asn")
-            self.assertIs(type(form_field), django_forms.IntegerField)
+            self.assertIsInstance(form_field, django_forms.IntegerField)
 
             device_fields = ["vc_position", "vc_priority"]
             for field_name in device_fields:
                 form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, field_name)
-                self.assertIs(type(form_field), django_forms.IntegerField)
+                self.assertIsInstance(form_field, django_forms.IntegerField)
 
         with self.subTest("Test DynamicModelMultipleChoiceField"):
             location_fields = ["tenant", "status"]
             for field_name in location_fields:
                 form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, field_name)
-                self.assertIs(type(form_field), forms.DynamicModelMultipleChoiceField)
+                self.assertIsInstance(form_field, forms.DynamicModelMultipleChoiceField)
 
             device_fields = ["cluster", "device_type", "location"]
             for field_name in device_fields:
                 form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, field_name)
-                self.assertIs(type(form_field), forms.DynamicModelMultipleChoiceField)
+                self.assertIsInstance(form_field, forms.DynamicModelMultipleChoiceField)
 
             location_fields = ["has_circuit_terminations", "has_devices"]
             for field_name in location_fields:
                 with self.subTest("Test ChoiceField", model=dcim_models.Location, field_name=field_name):
                     form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, field_name)
-                    self.assertIs(type(form_field), django_forms.ChoiceField)
-                    self.assertIs(type(form_field.widget), forms.StaticSelect2)
+                    self.assertIsInstance(form_field, django_forms.ChoiceField)
+                    self.assertIsInstance(form_field.widget, forms.StaticSelect2)
 
             device_fields = ["has_console_ports", "has_interfaces", "local_config_context_data"]
             for field_name in device_fields:
                 with self.subTest("Test ChoiceField", model=dcim_models.Device, field_name=field_name):
                     form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, field_name)
-                    self.assertIs(type(form_field), django_forms.ChoiceField)
-                    self.assertIs(type(form_field.widget), forms.StaticSelect2)
+                    self.assertIsInstance(form_field, django_forms.ChoiceField)
+                    self.assertIsInstance(form_field.widget, forms.StaticSelect2)
 
         with self.subTest("Test MultipleChoiceField"):
             form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, "face")
-            self.assertIs(type(form_field), django_forms.MultipleChoiceField)
+            self.assertIsInstance(form_field, django_forms.MultipleChoiceField)
 
         with self.subTest("Test DateTimePicker"):
             form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, "last_updated")
-            self.assertIs(type(form_field.widget), forms.DateTimePicker)
+            self.assertIsInstance(form_field.widget, forms.DateTimePicker)
 
             form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, "last_updated")
-            self.assertIs(type(form_field.widget), forms.DateTimePicker)
+            self.assertIsInstance(form_field.widget, forms.DateTimePicker)
 
         with self.subTest("Test DatePicker"):
             form_field = filtering.get_filterset_parameter_form_field(circuits_models.Circuit, "install_date")
-            self.assertIs(type(form_field.widget), forms.DatePicker)
+            self.assertIsInstance(form_field.widget, forms.DatePicker)
 
         with self.subTest("Test Invalid parameter"):
             with self.assertRaises(exceptions.FilterSetFieldNotFound) as err:
@@ -501,16 +701,27 @@ class LookupRelatedFunctionTest(TestCase):
 
         with self.subTest("Test Content types"):
             form_field = filtering.get_filterset_parameter_form_field(extras_models.Status, "content_types")
-            self.assertIs(type(form_field), forms.MultipleContentTypeField)
+            self.assertIsInstance(form_field, forms.MultipleContentTypeField)
 
             # Assert total ContentTypes generated by form_field is == total `content_types` generated by TaggableClassesQuery
             form_field = filtering.get_filterset_parameter_form_field(extras_models.Tag, "content_types")
-            self.assertIs(type(form_field), forms.MultipleContentTypeField)
-            self.assertEqual(form_field.queryset.count(), extras_utils.TaggableClassesQuery().as_queryset().count())
+            self.assertIsInstance(form_field, forms.MultipleContentTypeField)
+            self.assertQuerysetEqualAndNotEmpty(form_field.queryset, extras_utils.TaggableClassesQuery().as_queryset())
 
             form_field = filtering.get_filterset_parameter_form_field(extras_models.JobHook, "content_types")
-            self.assertIs(type(form_field), forms.MultipleContentTypeField)
-            self.assertEqual(form_field.queryset.count(), extras_utils.ChangeLoggedModelsQuery().as_queryset().count())
+            self.assertIsInstance(form_field, forms.MultipleContentTypeField)
+            self.assertQuerysetEqualAndNotEmpty(
+                form_field.queryset, extras_utils.ChangeLoggedModelsQuery().as_queryset()
+            )
+
+        with self.subTest("Test prefers_id"):
+            form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, "location")
+            self.assertEqual("id", form_field.to_field_name)
+            form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, "vlans")
+            self.assertEqual("id", form_field.to_field_name)
+            # Test prefers_id=False (default)
+            form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, "racks")
+            self.assertEqual("name", form_field.to_field_name)
 
     def test_convert_querydict_to_factory_formset_dict(self):
         location_filter_set = dcim_filters.LocationFilterSet()
@@ -700,22 +911,6 @@ class MergeDictsWithoutCollisionTest(TestCase):
         self.assertEqual(str(err.exception), 'Conflicting values for key "a": (1, 2)')
 
 
-class NavigationRelatedUtils(TestCase):
-    def get_all_new_ui_ready_route(self):
-        ui_ready_routes = [
-            "^\\Z",
-            "^dcim/device\\-types/(?P<pk>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/\\Z",
-            "^dcim/device\\-types/\\Z",
-            "^dcim/devices/(?P<pk>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/\\Z",
-            "^dcim/devices/\\Z",
-            "^dcim/locations/(?P<pk>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/\\Z",
-            "^dcim/locations/\\Z",
-            "^ipam/ip\\-addresses/(?P<pk>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/\\Z",
-            "^ipam/ip\\-addresses/\\Z",
-        ]
-        self.assertEqual(sorted(ui_ready_routes), sorted(list(registry["new_ui_ready_routes"])))
-
-
 class TestMigrationUtils(TestCase):
     def test_update_object_change_ct_for_replaced_models(self):
         """Assert update and update reverse of ObjectChange"""
@@ -751,3 +946,42 @@ class TestMigrationUtils(TestCase):
             )
             self.assertEqual(ObjectChange.objects.get(request_id=request_id).changed_object_type, location_ct)
             self.assertEqual(ObjectChange.objects.get(request_id=request_id).related_object_type, location_ct)
+
+
+class TestQuerySetUtils(TestCase):
+    def test_maybe_select_related(self):
+        # If possible, select_related should be called
+        queryset = ipam_models.IPAddress.objects.all()
+        with mock.patch.object(queryset, "select_related", wraps=queryset.select_related) as mock_select_related:
+            new_queryset = querysets.maybe_select_related(queryset, ["parent", "status"])
+            mock_select_related.assert_called_with("parent", "status")
+            self.assertIsNot(new_queryset, queryset)
+
+        # Case where it shouldn't be called
+        queryset = ipam_models.IPAddress.objects.values_list("host", flat=True)
+        with mock.patch.object(queryset, "select_related", wraps=queryset.select_related) as mock_select_related:
+            new_queryset = querysets.maybe_select_related(queryset, ["parent", "status"])
+            mock_select_related.assert_not_called()
+            self.assertIs(new_queryset, queryset)
+
+        # Another case where it shouldn't be called
+        queryset = ipam_models.IPAddress.objects.difference(ipam_models.IPAddress.objects.filter(ip_version=4))
+        with mock.patch.object(queryset, "select_related", wraps=queryset.select_related) as mock_select_related:
+            new_queryset = querysets.maybe_select_related(queryset, ["parent", "status"])
+            mock_select_related.assert_not_called()
+            self.assertIs(new_queryset, queryset)
+
+    def test_maybe_prefetch_related(self):
+        # If possible, prefetch_related should be called
+        queryset = ipam_models.IPAddress.objects.all()
+        with mock.patch.object(queryset, "prefetch_related", wraps=queryset.prefetch_related) as mock_prefetch_related:
+            new_queryset = querysets.maybe_prefetch_related(queryset, ["nat_outside_list"])
+            mock_prefetch_related.assert_called_with("nat_outside_list")
+            self.assertIsNot(new_queryset, queryset)
+
+        # Case where it shouldn't be called
+        queryset = ipam_models.IPAddress.objects.difference(ipam_models.IPAddress.objects.filter(ip_version=4))
+        with mock.patch.object(queryset, "prefetch_related", wraps=queryset.prefetch_related) as mock_prefetch_related:
+            new_queryset = querysets.maybe_prefetch_related(queryset, ["nat_outside_list"])
+            mock_prefetch_related.assert_not_called()
+            self.assertIs(new_queryset, queryset)

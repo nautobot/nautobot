@@ -31,6 +31,13 @@ router.register("custom-links", views.CustomLinkViewSet)
 router.register("dynamic-groups", views.DynamicGroupViewSet)
 router.register("dynamic-group-memberships", views.DynamicGroupMembershipViewSet)
 
+# Saved Views
+router.register("saved-views", views.SavedViewViewSet)
+router.register("user-saved-view-associations", views.UserSavedViewAssociationViewSet)
+
+# Static Groups
+router.register("static-group-associations", views.StaticGroupAssociationViewSet)
+
 # Export templates
 router.register("export-templates", views.ExportTemplateViewSet)
 
@@ -62,11 +69,20 @@ router.register("job-hooks", views.JobHooksViewSet)
 # Job Log Entries
 router.register("job-logs", views.JobLogEntryViewSet)
 
+# Job Queues
+router.register("job-queues", views.JobQueueViewSet)
+router.register("job-queue-assignments", views.JobQueueAssignmentViewSet)
+
 # Job Results
 router.register("job-results", views.JobResultViewSet)
 
 # Scheduled Jobs
 router.register("scheduled-jobs", views.ScheduledJobViewSet)
+
+# Metadata
+router.register("metadata-types", views.MetadataTypeViewSet)
+router.register("metadata-choices", views.MetadataChoiceViewSet)
+router.register("object-metadata", views.ObjectMetadataViewSet)
 
 # Notes
 router.register("notes", views.NoteViewSet)

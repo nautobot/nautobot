@@ -17,7 +17,7 @@ class IPAddressType(OptimizedNautobotObjectType):
         filterset_class = filters.IPAddressFilterSet
 
     def resolve_dynamic_groups(self, args):
-        return DynamicGroup.objects.get_for_object(self, use_cache=True)
+        return DynamicGroup.objects.get_for_object(self)
 
 
 class PrefixType(OptimizedNautobotObjectType):
@@ -26,10 +26,21 @@ class PrefixType(OptimizedNautobotObjectType):
     prefix = graphene.String()
     ip_version = graphene.Int()
     dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
+    location = graphene.Field("nautobot.dcim.graphql.types.LocationType")
 
     class Meta:
         model = models.Prefix
         filterset_class = filters.PrefixFilterSet
 
     def resolve_dynamic_groups(self, args):
-        return DynamicGroup.objects.get_for_object(self, use_cache=True)
+        return DynamicGroup.objects.get_for_object(self)
+
+
+class VLANType(OptimizedNautobotObjectType):
+    """Graphql Type Object for VLAN model."""
+
+    location = graphene.Field("nautobot.dcim.graphql.types.LocationType")
+
+    class Meta:
+        model = models.VLAN
+        filterset_class = filters.VLANFilterSet

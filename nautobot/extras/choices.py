@@ -161,6 +161,18 @@ class CustomLinkButtonClassChoices(ButtonClassChoices):
 #
 
 
+class DynamicGroupTypeChoices(ChoiceSet):
+    TYPE_DYNAMIC_FILTER = "dynamic-filter"
+    TYPE_DYNAMIC_SET = "dynamic-set"
+    TYPE_STATIC = "static"
+
+    CHOICES = (
+        (TYPE_DYNAMIC_FILTER, "Filter-defined"),
+        (TYPE_DYNAMIC_SET, "Group of groups"),
+        (TYPE_STATIC, "Static assignment"),
+    )
+
+
 class DynamicGroupOperatorChoices(ChoiceSet):
     OPERATOR_UNION = "union"
     OPERATOR_INTERSECTION = "intersection"
@@ -215,6 +227,16 @@ class JobExecutionType(ChoiceSet):
         TYPE_DAILY: "days",
         TYPE_WEEKLY: "days",  # a week is expressed as 7 days
     }
+
+
+class JobQueueTypeChoices(ChoiceSet):
+    TYPE_CELERY = "celery"
+    TYPE_KUBERNETES = "kubernetes"
+
+    CHOICES = (
+        (TYPE_CELERY, "Celery"),
+        (TYPE_KUBERNETES, "Kubernetes"),
+    )
 
 
 #
@@ -283,6 +305,7 @@ class LogLevelChoices(ChoiceSet):
     LOG_WARNING = "warning"
     LOG_ERROR = "error"
     LOG_CRITICAL = "critical"
+    LOG_SUCCESS = "success"
 
     CHOICES = (
         (LOG_DEBUG, "Debug"),
@@ -290,6 +313,7 @@ class LogLevelChoices(ChoiceSet):
         (LOG_WARNING, "Warning"),
         (LOG_ERROR, "Error"),
         (LOG_CRITICAL, "Critical"),
+        (LOG_SUCCESS, "Success"),
     )
 
     CSS_CLASSES = {
@@ -298,7 +322,39 @@ class LogLevelChoices(ChoiceSet):
         LOG_WARNING: "warning",
         LOG_ERROR: "error",
         LOG_CRITICAL: "critical",
+        LOG_SUCCESS: "success",
     }
+
+
+#
+# Metadata
+#
+
+
+class MetadataTypeDataTypeChoices(CustomFieldTypeChoices):
+    """
+    Values for the MetadataType.data_type field.
+
+    Generally equivalent to CustomFieldTypeChoices, but adds TYPE_CONTACT_OR_TEAM.
+    """
+
+    TYPE_CONTACT_TEAM = "contact-or-team"
+    # TODO: these should be migrated to CustomFieldTypeChoices and support added in CustomField data
+    TYPE_DATETIME = "datetime"
+    TYPE_FLOAT = "float"
+
+    CHOICES = (
+        *CustomFieldTypeChoices.CHOICES,
+        (TYPE_CONTACT_TEAM, "Contact or Team"),
+        # TODO: these should be migrated to CustomFieldTypeChoices and support added in CustomField data
+        (TYPE_DATETIME, "Date/time"),
+        (TYPE_FLOAT, "Floating point number"),
+    )
+
+    MIN_MAX_TYPES = (
+        *CustomFieldTypeChoices.MIN_MAX_TYPES,
+        TYPE_FLOAT,
+    )
 
 
 #

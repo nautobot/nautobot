@@ -1,0 +1,20 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block content_left_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Static Group Association</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>Dynamic Group</td>
+                <td>{{ object.dynamic_group|hyperlinked_object }}</td>
+            </tr>
+            <tr>
+                <td>Associated Object</td>
+                <td>{{ object.associated_object|hyperlinked_object }}</td>
+            </tr>
+        </table>
+    </div>
+{% endblock content_left_page %}

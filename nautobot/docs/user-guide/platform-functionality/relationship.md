@@ -121,7 +121,7 @@ From our many to many example above, we would use the following data to create t
 
 +++ 1.4.0
 
-To get object relationships and associations from the REST API, you can query any object endpoint with the `?include=relationships` query parameter included, for example `GET /api/dcim/devices/f472bb77-7f56-4e79-ac25-2dc73eb63924/?include=relationships`. The API response will include a nested dictionary of relationships and associations applicable to the object(s) retrieved.
+To get object relationships and associations from the REST API, you can query any object endpoint with the [`?include=relationships` query parameter](rest-api/filtering.md#filtering-included-fields) included, for example `GET /api/dcim/devices/f472bb77-7f56-4e79-ac25-2dc73eb63924/?include=relationships`. The API response will include a nested dictionary of relationships and associations applicable to the object(s) retrieved.
 
 Similarly, you can update the relationship associations for a given object via an HTTP `POST` or `PATCH` request, generally by including the nested key `["relationships"][<relationship_key>]["source"|"destination"|"peer"]["objects"]` with a list of objects to associate.
 

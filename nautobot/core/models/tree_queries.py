@@ -1,9 +1,11 @@
 from django.core.cache import cache
 from django.db.models import Case, When
+from django.db.models.signals import post_delete, post_save
 from tree_queries.models import TreeNode
 from tree_queries.query import TreeManager as TreeManager_, TreeQuerySet as TreeQuerySet_
 
 from nautobot.core.models import BaseManager, querysets
+from nautobot.core.signals import invalidate_max_depth_cache
 
 
 class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):
@@ -65,7 +67,7 @@ class TreeManager(TreeManager_, BaseManager.from_queryset(TreeQuerySet)):
     Extend django-tree-queries' TreeManager to incorporate RestrictedQuerySet.
     """
 
-    _with_tree_fields = True
+    _with_tree_fields = False
     use_in_migrations = True
 
     @property
@@ -109,11 +111,20 @@ class TreeModel(TreeNode):
         if display_str:
             return display_str
         try:
-            if self.parent is not None:
-                display_str = self.parent.display + " → "
+            if self.parent_id is not None:
+                parent_display_str = cache.get(cache_key.replace(str(self.id), str(self.parent_id)), "")
+                if not parent_display_str:
+                    parent_display_str = self.parent.display  # pylint: disable=no-member
+                display_str = parent_display_str + " → "
         except self.DoesNotExist:
             # Expected to occur at times during bulk-delete operations
             pass
-        display_str += self.name
+        display_str += self.name  # pylint: disable=no-member  # we checked with hasattr() above
         cache.set(cache_key, display_str, 5)
         return display_str
+
+    @classmethod
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        post_save.connect(invalidate_max_depth_cache, sender=cls)
+        post_delete.connect(invalidate_max_depth_cache, sender=cls)

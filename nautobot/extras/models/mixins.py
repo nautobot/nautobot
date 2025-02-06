@@ -2,95 +2,79 @@
 Class-modifying mixins that need to be standalone to avoid circular imports.
 """
 
+from django.contrib.contenttypes.fields import GenericRelation
+from django.db import models
 from django.urls import NoReverseMatch, reverse
 
+from nautobot.core.utils.deprecation import method_deprecated_in_favor_of
 from nautobot.core.utils.lookup import get_route_for_model
+
+
+class ContactMixin(models.Model):
+    """Abstract mixin for enabling Contact/Team association to a given model class."""
+
+    class Meta:
+        abstract = True
+
+    is_contact_associable_model = True
+
+    # Reverse relation so that deleting a ContactMixin automatically deletes any ContactAssociations related to it.
+    associated_contacts = GenericRelation(
+        "extras.ContactAssociation",
+        content_type_field="associated_object_type",
+        object_id_field="associated_object_id",
+        related_query_name="associated_contacts_%(app_label)s_%(class)s",  # e.g. 'associated_contacts_dcim_device'
+    )
 
 
 class DynamicGroupMixin:
     """
-    Adds properties to a model to facilitate reversing DynamicGroup membership:
+    DEPRECATED - use DynamicGroupsModelMixin instead if you need to mark a model as supporting Dynamic Groups.
 
-    - `dynamic_groups` - A QuerySet of `DynamicGroup` objects this instance is a member of, performs the most database queries.
-    - `dynamic_groups_cached` - A QuerySet of `DynamicGroup` objects this instance is a member of, uses cached member list if available. Ideal for most use cases.
-    - `dynamic_groups_list` - A list of `DynamicGroup` objects this instance is a member of, performs one less database query than `dynamic_groups`.
-    - `dynamic_groups_list_cached` - A list of `DynamicGroup` objects this instance is a member of, uses cached member list if available. Performs no database queries in optimal conditions.
+    This is necessary because DynamicGroupMixin was incorrectly not implemented as a subclass of models.Model,
+    and so it cannot properly implement Model behaviors like the `static_group_association_set` ReverseRelation.
+    However, adding this inheritance to DynamicGroupMixin itself would negatively impact existing migrations.
+    So unfortunately our best option is to deprecate this class and gradually convert core and app models alike
+    to the new DynamicGroupsModelMixin in its place.
 
-    All properties are cached on the instance after the first call. To clear the instance cache without re-instantiating the object, call `delattr(instance, "_[the_property_name]")`.
-        EX: `delattr(instance, "_dynamic_groups")`
+    Adds `dynamic_groups` property to a model to facilitate reversing (cached) DynamicGroup membership.
+
+    If up-to-the-minute accuracy is necessary for your use case, it's up to you to call the
+    `DynamicGroup.update_cached_members()` API on any relevant DynamicGroups before accessing this property.
+
+    Other related properties added by this mixin should be considered obsolete.
     """
+
+    is_dynamic_group_associable_model = True
 
     @property
     def dynamic_groups(self):
         """
-        Return a queryset of `DynamicGroup` objects this instance is a member of.
-
-        This will NOT use the cached member lists of the dynamic groups and will always query the database for each DynamicGroup.
-
-        Additionally, this performs a final database query to turn the internal list into a queryset.
+        Return a queryset of (cached) `DynamicGroup` objects this instance is a member of.
         """
         from nautobot.extras.models.groups import DynamicGroup
 
-        if not hasattr(self, "_dynamic_groups"):
-            queryset = DynamicGroup.objects.get_for_object(self)
-            self._dynamic_groups = queryset
-
-        return self._dynamic_groups
+        return DynamicGroup.objects.get_for_object(self)
 
     @property
+    @method_deprecated_in_favor_of(dynamic_groups.fget)
     def dynamic_groups_cached(self):
-        """
-        Return a queryset of `DynamicGroup` objects this instance is a member of.
-
-        This will use the cached member lists of the dynamic groups if available.
-
-        In optimal conditions this will incur a single database query to convert internal list into a queryset which is reasonably performant.
-
-        This is the ideal property to use for most use cases.
-        """
-        from nautobot.extras.models.groups import DynamicGroup
-
-        if not hasattr(self, "_dynamic_groups_cached"):
-            queryset = DynamicGroup.objects.get_for_object(self, use_cache=True)
-            self._dynamic_groups_cached = queryset
-
-        return self._dynamic_groups_cached
+        """Deprecated - use `self.dynamic_groups` instead."""
+        return self.dynamic_groups
 
     @property
+    @method_deprecated_in_favor_of(dynamic_groups.fget)
     def dynamic_groups_list(self):
-        """
-        Return a list of `DynamicGroup` objects this instance is a member of.
-
-        This will NOT use the cached member lists of the dynamic groups and will always query the database for each DynamicGroup.
-
-        This saves a final query to turn the list into a queryset.
-        """
-        from nautobot.extras.models.groups import DynamicGroup
-
-        if not hasattr(self, "_dynamic_groups_list"):
-            dg_list = DynamicGroup.objects.get_list_for_object(self)
-            self._dynamic_groups_list = dg_list
-
-        return self._dynamic_groups_list
+        """Deprecated - use `list(self.dynamic_groups)` instead."""
+        return list(self.dynamic_groups)
 
     @property
+    @method_deprecated_in_favor_of(dynamic_groups.fget)
     def dynamic_groups_list_cached(self):
-        """
-        Return a list of `DynamicGroup` objects this instance is a member of.
+        """Deprecated - use `list(self.dynamic_groups)` instead."""
+        return self.dynamic_groups_list
 
-        This will use the cached member lists of the dynamic groups if available.
-
-        In optimal conditions this will incur no database queries.
-        """
-
-        from nautobot.extras.models.groups import DynamicGroup
-
-        if not hasattr(self, "_dynamic_groups_list_cached"):
-            dg_list = DynamicGroup.objects.get_list_for_object(self, use_cache=True)
-            self._dynamic_groups_list_cached = dg_list
-
-        return self._dynamic_groups_list_cached
-
+    # TODO may be able to remove this entirely???
     def get_dynamic_groups_url(self):
         """Return the dynamic groups URL for a given instance."""
         route = get_route_for_model(self, "dynamicgroups")
@@ -107,6 +91,23 @@ class DynamicGroupMixin:
                 continue
 
         return None
+
+
+class DynamicGroupsModelMixin(DynamicGroupMixin, models.Model):
+    """
+    Add this to models to make them fully support Dynamic Groups.
+    """
+
+    class Meta:
+        abstract = True
+
+    # Reverse relation so that deleting a DynamicGroupMixin automatically deletes any related StaticGroupAssociations
+    static_group_association_set = GenericRelation(  # not "static_group_associations" as that'd collide on DynamicGroup
+        "extras.StaticGroupAssociation",
+        content_type_field="associated_object_type",
+        object_id_field="associated_object_id",
+        related_query_name="static_group_association_set_%(app_label)s_%(class)s",
+    )
 
 
 class NotesMixin:
@@ -141,3 +142,12 @@ class NotesMixin:
                 continue
 
         return None
+
+
+class SavedViewMixin(models.Model):
+    """Abstract mixin for enabling Saved View functionality to a given model class."""
+
+    class Meta:
+        abstract = True
+
+    is_saved_view_model = True

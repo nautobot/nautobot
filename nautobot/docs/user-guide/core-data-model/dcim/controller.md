@@ -54,7 +54,13 @@ devices.count()
 
 ## Base Fields
 
-A controller is identified by a unique `name` and can include a `description`.
+A controller is identified by a unique `name` and can include a `description` and optionally one or more `capabilities`.
+
+### Capabilities
+
++++ 2.4.0
+
+The capabilities field will be used to track the features that will be displayed on the Controller. As an example, the `wireless` choice will add the Controller to the Wireless Controllers link on the Navbar, and enable the Wireless tab on the Controller object.
 
 ## Related Models
 

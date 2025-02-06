@@ -13,8 +13,13 @@ theme:
   hljs_languages:
     - "django"
     - "yaml"
+  icon:
+    admonition:
+      example: "fontawesome/solid/flask"
   features:
+    - "content.code.annotate"
     - "content.code.copy"
+    - "content.tabs.link"
     - "navigation.footer"
     - "navigation.tabs"
     - "navigation.tabs.sticky"
@@ -48,6 +53,7 @@ exclude_docs: |
 
 validation:
   absolute_links: warn
+  anchors: warn
   omitted_files: warn
   unrecognized_links: warn
 
@@ -80,6 +86,8 @@ extra:
       link: "https://twitter.com/networktocode"
       name: "Network to Code Twitter"
 markdown_extensions:
+  - "markdown_version_annotations":
+      admonition_tag: "???"
   - "admonition"
   - "toc":
       permalink: true
@@ -88,6 +96,10 @@ markdown_extensions:
       base_path: "docs"
   - "md_in_html"
   - "pymdownx.details"
+    # Need pymdownx.emoji for Grid icon search
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - "pymdownx.highlight":
       anchor_linenums: true
   - "pymdownx.inlinehilite"
@@ -99,18 +111,20 @@ markdown_extensions:
           format: !!python/name:pymdownx.superfences.fence_code_format
   - "pymdownx.tabbed":
       "alternate_style": true
+  - "pymdownx.tilde"
 
 plugins:
   - "search"
   - "gen-files":
       scripts:
         - docs/generate_code_reference_pages.py
+  - "glightbox":
+      manual: true # See https://blueswen.github.io/mkdocs-glightbox/flexibility/enable-by-image-or-page/
   - "macros":
       module_name: "docs/macros"
       on_error_fail: true
       on_undefined: "strict"
-      render_by_default: false  # Only enable macros and Jinja2 rendering on specific pages
-  - "mkdocs-version-annotations"
+      render_by_default: false # Only enable macros and Jinja2 rendering on specific pages
   - "section-index"
   - "mkdocstrings":
       default_handler: "python"
@@ -125,471 +139,565 @@ plugins:
   - "redirects":
       redirect_maps:
         # 1.6 -> 2.x
-        'additional-features/caching.md': 'user-guide/administration/guides/caching.md'
-        'additional-features/change-logging.md': 'user-guide/platform-functionality/change-logging.md'
-        'additional-features/config-contexts.md': 'user-guide/core-data-model/extras/configcontext.md'
-        'additional-features/healthcheck.md': 'user-guide/administration/guides/healthcheck.md'
-        'additional-features/jobs.md': 'development/jobs/index.md'
-        'additional-features/prometheus-metrics.md': 'user-guide/administration/guides/prometheus-metrics.md'
-        'administration/celery-queues.md': 'user-guide/administration/guides/celery-queues.md'
-        'administration/nautobot-server.md': 'user-guide/administration/tools/nautobot-server.md'
-        'administration/nautobot-shell.md': 'user-guide/administration/tools/nautobot-shell.md'
-        'administration/permissions.md': 'user-guide/administration/guides/permissions.md'
-        'administration/replicating-nautobot.md': 'user-guide/administration/guides/replicating-nautobot.md'
-        'apps/migrating-jobs-from-nautobot-v1.md': 'development/jobs/migration/from-v1.md'
-        'configuration/authentication/ldap.md': 'user-guide/administration/configuration/authentication/ldap.md'
-        'configuration/authentication/remote.md': 'user-guide/administration/configuration/authentication/remote.md'
-        'configuration/authentication/sso.md': 'user-guide/administration/configuration/authentication/sso.md'
-        'configuration/index.md': 'user-guide/administration/configuration/index.md'
-        'configuration/optional-settings.md': 'user-guide/administration/configuration/optional-settings.md'
-        'configuration/required-settings.md': 'user-guide/administration/configuration/required-settings.md'
-        'core-functionality/circuits.md': 'user-guide/core-data-model/circuits/circuit.md'
-        'core-functionality/device-types.md': 'user-guide/core-data-model/dcim/devicetype.md'
-        'core-functionality/devices.md': 'user-guide/core-data-model/dcim/device.md'
-        'core-functionality/ipam.md': 'user-guide/core-data-model/ipam/namespace.md'
-        'core-functionality/power.md': 'user-guide/core-data-model/dcim/powerpanel.md'
-        'core-functionality/secrets.md': 'user-guide/platform-functionality/secret.md'
-        'core-functionality/services.md': 'user-guide/core-data-model/ipam/service.md'
-        'core-functionality/sites-and-racks.md': 'user-guide/core-data-model/dcim/rack.md'
-        'core-functionality/tenancy.md': 'user-guide/core-data-model/tenancy/tenant.md'
-        'core-functionality/virtualization.md': 'user-guide/core-data-model/virtualization/virtualmachine.md'
-        'core-functionality/vlans.md': 'user-guide/core-data-model/ipam/vlan.md'
-        'development/application-registry.md': 'development/core/application-registry.md'
-        'development/apps/api/ui-extensions/tabs.md': 'development/apps/api/ui-extensions/object-views.md'
-        'development/apps/api/views/view-overrides.md': 'development/apps/api/views/core-view-overrides.md'
-        'development/best-practices.md': 'development/core/best-practices.md'
-        'development/core/react-ui.md': 'development/core/index.md'
-        'development/docker-compose-advanced-use-cases.md': 'development/core/docker-compose-advanced-use-cases.md'
-        'development/extending-models.md': 'development/core/model-checklist.md'
-        'development/generic-views.md': 'development/core/generic-views.md'
-        'development/getting-started.md': 'development/core/getting-started.md'
-        'development/homepage.md': 'development/core/homepage.md'
-        'development/model-features.md': 'development/core/model-features.md'
-        'development/natural-keys.md': 'development/core/natural-keys.md'
-        'development/navigation-menu.md': 'development/core/navigation-menu.md'
-        'development/react-ui.md': 'development/core/index.md'
-        'development/release-checklist.md': 'development/core/release-checklist.md'
-        'development/role-internals.md': 'development/core/role-internals.md'
-        'development/style-guide.md': 'development/core/style-guide.md'
-        'development/templates.md': 'development/core/templates.md'
-        'development/testing.md': 'development/core/testing.md'
-        'development/user-preferences.md': 'development/core/user-preferences.md'
-        'docker/index.md': 'user-guide/administration/installation/docker.md'
-        'installation/centos.md': 'user-guide/administration/installation/install_system.md'
-        'installation/external-authentication.md': 'user-guide/administration/installation/external-authentication.md'
-        'installation/http-server.md': 'user-guide/administration/installation/http-server.md'
-        'installation/index.md': 'user-guide/administration/installation/index.md'
-        'installation/migrating-from-netbox.md': 'user-guide/administration/migration/migrating-from-netbox.md'
-        'installation/migrating-from-postgresql.md': 'user-guide/administration/migration/migrating-from-postgresql.md'
-        'installation/nautobot.md': 'user-guide/administration/installation/nautobot.md'
-        'installation/region-and-site-data-migration-guide.md': 'user-guide/administration/upgrading/from-v1/region-and-site-data-migration-guide.md'
-        'installation/selinux-troubleshooting.md': 'user-guide/administration/installation/selinux-troubleshooting.md'
-        'installation/services.md': 'user-guide/administration/installation/services.md'
-        'installation/ubuntu.md': 'user-guide/administration/installation/install_system.md'
-        'installation/upgrading-from-nautobot-v1.md': 'user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md'
-        'installation/upgrading.md': 'user-guide/administration/upgrading/upgrading.md'
-        'models/circuits/circuit.md': 'user-guide/core-data-model/circuits/circuit.md'
-        'models/circuits/circuittermination.md': 'user-guide/core-data-model/circuits/circuittermination.md'
-        'models/circuits/circuittype.md': 'user-guide/core-data-model/circuits/circuittype.md'
-        'models/circuits/provider.md': 'user-guide/core-data-model/circuits/provider.md'
-        'models/circuits/providernetwork.md': 'user-guide/core-data-model/circuits/providernetwork.md'
-        'models/dcim/cable.md': 'user-guide/core-data-model/dcim/cable.md'
-        'models/dcim/controller.md': 'user-guide/core-data-model/dcim/controller.md'
-        'models/dcim/controllermanageddevicegroup.md': 'user-guide/core-data-model/dcim/controllermanageddevicegroup.md'
-        'models/dcim/consoleport.md': 'user-guide/core-data-model/dcim/consoleport.md'
-        'models/dcim/consoleporttemplate.md': 'user-guide/core-data-model/dcim/consoleporttemplate.md'
-        'models/dcim/consoleserverport.md': 'user-guide/core-data-model/dcim/consoleserverport.md'
-        'models/dcim/consoleserverporttemplate.md': 'user-guide/core-data-model/dcim/consoleserverporttemplate.md'
-        'models/dcim/device.md': 'user-guide/core-data-model/dcim/device.md'
-        'models/dcim/devicebay.md': 'user-guide/core-data-model/dcim/devicebay.md'
-        'models/dcim/devicebaytemplate.md': 'user-guide/core-data-model/dcim/devicebaytemplate.md'
-        'models/dcim/devicefamily.md': 'user-guide/core-data-model/dcim/devicefamily.md'
-        'models/dcim/deviceredundancygroup.md': 'user-guide/core-data-model/dcim/deviceredundancygroup.md'
-        'models/dcim/devicetype.md': 'user-guide/core-data-model/dcim/devicetype.md'
-        'models/dcim/frontport.md': 'user-guide/core-data-model/dcim/frontport.md'
-        'models/dcim/frontporttemplate.md': 'user-guide/core-data-model/dcim/frontporttemplate.md'
-        'models/dcim/interface.md': 'user-guide/core-data-model/dcim/interface.md'
-        'models/dcim/interfacetemplate.md': 'user-guide/core-data-model/dcim/interfacetemplate.md'
-        'models/dcim/inventoryitem.md': 'user-guide/core-data-model/dcim/inventoryitem.md'
-        'models/dcim/location.md': 'user-guide/core-data-model/dcim/location.md'
-        'models/dcim/locationtype.md': 'user-guide/core-data-model/dcim/locationtype.md'
-        'models/dcim/manufacturer.md': 'user-guide/core-data-model/dcim/manufacturer.md'
-        'models/dcim/platform.md': 'user-guide/core-data-model/dcim/platform.md'
-        'models/dcim/powerfeed.md': 'user-guide/core-data-model/dcim/powerfeed.md'
-        'models/dcim/poweroutlet.md': 'user-guide/core-data-model/dcim/poweroutlet.md'
-        'models/dcim/poweroutlettemplate.md': 'user-guide/core-data-model/dcim/poweroutlettemplate.md'
-        'models/dcim/powerpanel.md': 'user-guide/core-data-model/dcim/powerpanel.md'
-        'models/dcim/powerport.md': 'user-guide/core-data-model/dcim/powerport.md'
-        'models/dcim/powerporttemplate.md': 'user-guide/core-data-model/dcim/powerporttemplate.md'
-        'models/dcim/rack.md': 'user-guide/core-data-model/dcim/rack.md'
-        'models/dcim/rackgroup.md': 'user-guide/core-data-model/dcim/rackgroup.md'
-        'models/dcim/rackreservation.md': 'user-guide/core-data-model/dcim/rackreservation.md'
-        'models/dcim/rearport.md': 'user-guide/core-data-model/dcim/rearport.md'
-        'models/dcim/rearporttemplate.md': 'user-guide/core-data-model/dcim/rearporttemplate.md'
-        'models/dcim/softwareimagefile.md': 'user-guide/core-data-model/dcim/softwareimagefile.md'
-        'models/dcim/softwareversion.md': 'user-guide/core-data-model/dcim/softwareversion.md'
-        'models/dcim/virtualchassis.md': 'user-guide/core-data-model/dcim/virtualchassis.md'
-        'models/extras/computedfield.md': 'user-guide/platform-functionality/computedfield.md'
-        'models/extras/contact.md': 'user-guide/core-data-model/extras/contact.md'
-        'models/extras/configcontext.md': 'user-guide/core-data-model/extras/configcontext.md'
-        'models/extras/configcontextschema.md': 'user-guide/core-data-model/extras/configcontextschema.md'
-        'models/extras/customfield.md': 'user-guide/platform-functionality/customfield.md'
-        'models/extras/customlink.md': 'user-guide/platform-functionality/customlink.md'
-        'models/extras/dynamicgroup.md': 'user-guide/platform-functionality/dynamicgroup.md'
-        'models/extras/exporttemplate.md': 'user-guide/platform-functionality/exporttemplate.md'
-        'models/extras/gitrepository.md': 'user-guide/platform-functionality/gitrepository.md'
-        'models/extras/jobhook.md': 'user-guide/platform-functionality/jobs/jobhook.md'
-        'models/extras/joblogentry.md': 'user-guide/platform-functionality/jobs/models.md'
-        'models/extras/jobresult.md': 'user-guide/platform-functionality/jobs/models.md'
-        'models/extras/secret.md': 'user-guide/platform-functionality/secret.md'
-        'models/extras/secretsgroup.md': 'user-guide/platform-functionality/secret.md'
-        'models/extras/team.md': 'user-guide/core-data-model/extras/team.md'
-        'models/ipam/ipaddress.md': 'user-guide/core-data-model/ipam/ipaddress.md'
-        'models/ipam/prefix.md': 'user-guide/core-data-model/ipam/prefix.md'
-        'models/ipam/rir.md': 'user-guide/core-data-model/ipam/rir.md'
-        'models/ipam/routetarget.md': 'user-guide/core-data-model/ipam/routetarget.md'
-        'models/ipam/service.md': 'user-guide/core-data-model/ipam/service.md'
-        'models/ipam/vlan.md': 'user-guide/core-data-model/ipam/vlan.md'
-        'models/ipam/vlangroup.md': 'user-guide/core-data-model/ipam/vlangroup.md'
-        'models/ipam/vrf.md': 'user-guide/core-data-model/ipam/vrf.md'
-        'models/tenancy/tenant.md': 'user-guide/core-data-model/tenancy/tenant.md'
-        'models/tenancy/tenantgroup.md': 'user-guide/core-data-model/tenancy/tenantgroup.md'
-        'models/virtualization/cluster.md': 'user-guide/core-data-model/virtualization/cluster.md'
-        'models/virtualization/clustergroup.md': 'user-guide/core-data-model/virtualization/clustergroup.md'
-        'models/virtualization/clustertype.md': 'user-guide/core-data-model/virtualization/clustertype.md'
-        'models/virtualization/virtualmachine.md': 'user-guide/core-data-model/virtualization/virtualmachine.md'
-        'models/virtualization/vminterface.md': 'user-guide/core-data-model/virtualization/vminterface.md'
-        'plugins/development.md': 'development/apps/index.md'
-        'plugins/index.md': 'development/apps/index.md'
-        'plugins/porting-from-netbox.md': 'development/apps/porting-from-netbox.md'
-        'rest-api/overview.md': 'user-guide/platform-functionality/rest-api/overview.md'
-        'user-guide/administration/configuration/node-configuration.md': 'user-guide/administration/configuration/index.md'
-        'user-guides/custom-fields.md': 'user-guide/feature-guides/custom-fields.md'
-        'user-guides/getting-started/creating-devices.md': 'user-guide/feature-guides/getting-started/creating-devices.md'
-        'user-guides/getting-started/index.md': 'user-guide/feature-guides/getting-started/index.md'
-        'user-guides/getting-started/interfaces.md': 'user-guide/feature-guides/getting-started/interfaces.md'
-        'user-guides/getting-started/ipam.md': 'user-guide/feature-guides/getting-started/ipam.md'
-        'user-guides/getting-started/platforms.md': 'user-guide/feature-guides/getting-started/platforms.md'
-        'user-guides/getting-started/search-bar.md': 'user-guide/feature-guides/getting-started/search-bar.md'
-        'user-guides/getting-started/tenants.md': 'user-guide/feature-guides/getting-started/tenants.md'
-        'user-guides/getting-started/vlans-and-vlan-groups.md': 'user-guide/feature-guides/getting-started/vlans-and-vlan-groups.md'
-        'user-guides/git-data-source.md': 'user-guide/feature-guides/git-data-source.md'
-        'user-guides/graphql.md': 'user-guide/feature-guides/graphql.md'
-        'user-guides/ip-address-merge-tool.md': 'user-guide/feature-guides/ip-address-merge-tool.md'
-        'user-guides/relationships.md': 'user-guide/feature-guides/relationships.md'
-        'user-guides/s3-django-storage.md': 'user-guide/administration/guides/s3-django-storage.md'
+        "additional-features/caching.md": "user-guide/administration/configuration/redis.md"
+        "additional-features/change-logging.md": "user-guide/platform-functionality/change-logging.md"
+        "additional-features/config-contexts.md": "user-guide/core-data-model/extras/configcontext.md"
+        "additional-features/healthcheck.md": "user-guide/administration/guides/health-checks.md"
+        "additional-features/jobs.md": "development/jobs/index.md"
+        "additional-features/prometheus-metrics.md": "user-guide/administration/guides/prometheus-metrics.md"
+        "administration/celery-queues.md": "user-guide/administration/guides/celery-queues.md"
+        "administration/nautobot-server.md": "user-guide/administration/tools/nautobot-server.md"
+        "administration/nautobot-shell.md": "user-guide/administration/tools/nautobot-shell.md"
+        "administration/permissions.md": "user-guide/administration/guides/permissions.md"
+        "administration/replicating-nautobot.md": "user-guide/administration/guides/replicating-nautobot.md"
+        "apps/migrating-jobs-from-nautobot-v1.md": "development/jobs/migration/from-v1.md"
+        "configuration/authentication/ldap.md": "user-guide/administration/configuration/authentication/ldap.md"
+        "configuration/authentication/remote.md": "user-guide/administration/configuration/authentication/remote.md"
+        "configuration/authentication/sso.md": "user-guide/administration/configuration/authentication/sso.md"
+        "configuration/index.md": "user-guide/administration/configuration/index.md"
+        "configuration/optional-settings.md": "user-guide/administration/configuration/settings.md"
+        "configuration/required-settings.md": "user-guide/administration/configuration/settings.md"
+        "core-functionality/circuits.md": "user-guide/core-data-model/circuits/circuit.md"
+        "core-functionality/device-types.md": "user-guide/core-data-model/dcim/devicetype.md"
+        "core-functionality/devices.md": "user-guide/core-data-model/dcim/device.md"
+        "core-functionality/ipam.md": "user-guide/core-data-model/ipam/namespace.md"
+        "core-functionality/power.md": "user-guide/core-data-model/dcim/powerpanel.md"
+        "core-functionality/secrets.md": "user-guide/platform-functionality/secret.md"
+        "core-functionality/services.md": "user-guide/core-data-model/ipam/service.md"
+        "core-functionality/sites-and-racks.md": "user-guide/core-data-model/dcim/rack.md"
+        "core-functionality/tenancy.md": "user-guide/core-data-model/tenancy/tenant.md"
+        "core-functionality/virtualization.md": "user-guide/core-data-model/virtualization/virtualmachine.md"
+        "core-functionality/vlans.md": "user-guide/core-data-model/ipam/vlan.md"
+        "development/application-registry.md": "development/core/application-registry.md"
+        "development/apps/api/ui-extensions/tabs.md": "development/apps/api/ui-extensions/object-views.md"
+        "development/apps/api/views/view-overrides.md": "development/apps/api/views/core-view-overrides.md"
+        "development/best-practices.md": "development/core/best-practices.md"
+        "development/core/react-ui.md": "development/core/index.md"
+        "development/docker-compose-advanced-use-cases.md": "development/core/docker-compose-advanced-use-cases.md"
+        "development/extending-models.md": "development/core/model-checklist.md"
+        "development/generic-views.md": "development/core/generic-views.md"
+        "development/getting-started.md": "development/core/getting-started.md"
+        "development/homepage.md": "development/core/homepage.md"
+        "development/model-features.md": "development/core/model-features.md"
+        "development/natural-keys.md": "development/core/natural-keys.md"
+        "development/navigation-menu.md": "development/core/navigation-menu.md"
+        "development/react-ui.md": "development/core/index.md"
+        "development/release-checklist.md": "development/core/release-checklist.md"
+        "development/role-internals.md": "development/core/role-internals.md"
+        "development/style-guide.md": "development/core/style-guide.md"
+        "development/templates.md": "development/core/templates.md"
+        "development/testing.md": "development/core/testing.md"
+        "development/user-preferences.md": "development/core/user-preferences.md"
+        "docker/index.md": "user-guide/administration/guides/docker.md"
+        "installation/centos.md": "user-guide/administration/installation/install_system.md"
+        "installation/external-authentication.md": "user-guide/administration/installation/external-authentication.md"
+        "installation/http-server.md": "user-guide/administration/installation/http-server.md"
+        "installation/index.md": "user-guide/administration/installation/index.md"
+        "installation/migrating-from-netbox.md": "user-guide/administration/migration/migrating-from-netbox.md"
+        "installation/migrating-from-postgresql.md": "user-guide/administration/migration/migrating-from-postgresql.md"
+        "installation/nautobot.md": "user-guide/administration/installation/nautobot.md"
+        "installation/region-and-site-data-migration-guide.md": "user-guide/administration/upgrading/from-v1/region-and-site-data-migration-guide.md"
+        "installation/selinux-troubleshooting.md": "user-guide/administration/guides/selinux-troubleshooting.md"
+        "installation/services.md": "user-guide/administration/installation/services.md"
+        "installation/ubuntu.md": "user-guide/administration/installation/install_system.md"
+        "installation/upgrading-from-nautobot-v1.md": "user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md"
+        "installation/upgrading.md": "user-guide/administration/upgrading/upgrading.md"
+        "models/circuits/circuit.md": "user-guide/core-data-model/circuits/circuit.md"
+        "models/circuits/circuittermination.md": "user-guide/core-data-model/circuits/circuittermination.md"
+        "models/circuits/circuittype.md": "user-guide/core-data-model/circuits/circuittype.md"
+        "models/circuits/provider.md": "user-guide/core-data-model/circuits/provider.md"
+        "models/circuits/providernetwork.md": "user-guide/core-data-model/circuits/providernetwork.md"
+        "models/dcim/cable.md": "user-guide/core-data-model/dcim/cable.md"
+        "models/dcim/consoleport.md": "user-guide/core-data-model/dcim/consoleport.md"
+        "models/dcim/consoleporttemplate.md": "user-guide/core-data-model/dcim/consoleporttemplate.md"
+        "models/dcim/consoleserverport.md": "user-guide/core-data-model/dcim/consoleserverport.md"
+        "models/dcim/consoleserverporttemplate.md": "user-guide/core-data-model/dcim/consoleserverporttemplate.md"
+        "models/dcim/controller.md": "user-guide/core-data-model/dcim/controller.md"
+        "models/dcim/controllermanageddevicegroup.md": "user-guide/core-data-model/dcim/controllermanageddevicegroup.md"
+        "models/dcim/device.md": "user-guide/core-data-model/dcim/device.md"
+        "models/dcim/devicebay.md": "user-guide/core-data-model/dcim/devicebay.md"
+        "models/dcim/devicebaytemplate.md": "user-guide/core-data-model/dcim/devicebaytemplate.md"
+        "models/dcim/devicefamily.md": "user-guide/core-data-model/dcim/devicefamily.md"
+        "models/dcim/deviceredundancygroup.md": "user-guide/core-data-model/dcim/deviceredundancygroup.md"
+        "models/dcim/devicetype.md": "user-guide/core-data-model/dcim/devicetype.md"
+        "models/dcim/frontport.md": "user-guide/core-data-model/dcim/frontport.md"
+        "models/dcim/frontporttemplate.md": "user-guide/core-data-model/dcim/frontporttemplate.md"
+        "models/dcim/interface.md": "user-guide/core-data-model/dcim/interface.md"
+        "models/dcim/interfacetemplate.md": "user-guide/core-data-model/dcim/interfacetemplate.md"
+        "models/dcim/inventoryitem.md": "user-guide/core-data-model/dcim/inventoryitem.md"
+        "models/dcim/location.md": "user-guide/core-data-model/dcim/location.md"
+        "models/dcim/locationtype.md": "user-guide/core-data-model/dcim/locationtype.md"
+        "models/dcim/manufacturer.md": "user-guide/core-data-model/dcim/manufacturer.md"
+        "models/dcim/platform.md": "user-guide/core-data-model/dcim/platform.md"
+        "models/dcim/powerfeed.md": "user-guide/core-data-model/dcim/powerfeed.md"
+        "models/dcim/poweroutlet.md": "user-guide/core-data-model/dcim/poweroutlet.md"
+        "models/dcim/poweroutlettemplate.md": "user-guide/core-data-model/dcim/poweroutlettemplate.md"
+        "models/dcim/powerpanel.md": "user-guide/core-data-model/dcim/powerpanel.md"
+        "models/dcim/powerport.md": "user-guide/core-data-model/dcim/powerport.md"
+        "models/dcim/powerporttemplate.md": "user-guide/core-data-model/dcim/powerporttemplate.md"
+        "models/dcim/rack.md": "user-guide/core-data-model/dcim/rack.md"
+        "models/dcim/rackgroup.md": "user-guide/core-data-model/dcim/rackgroup.md"
+        "models/dcim/rackreservation.md": "user-guide/core-data-model/dcim/rackreservation.md"
+        "models/dcim/rearport.md": "user-guide/core-data-model/dcim/rearport.md"
+        "models/dcim/rearporttemplate.md": "user-guide/core-data-model/dcim/rearporttemplate.md"
+        "models/dcim/softwareimagefile.md": "user-guide/core-data-model/dcim/softwareimagefile.md"
+        "models/dcim/softwareversion.md": "user-guide/core-data-model/dcim/softwareversion.md"
+        "models/dcim/virtualchassis.md": "user-guide/core-data-model/dcim/virtualchassis.md"
+        "models/dcim/virtualdevicecontext.md": "user-guide/core-data-model/dcim/virtualdevicecontext.md"
+        "models/extras/computedfield.md": "user-guide/platform-functionality/computedfield.md"
+        "models/extras/configcontext.md": "user-guide/core-data-model/extras/configcontext.md"
+        "models/extras/configcontextschema.md": "user-guide/core-data-model/extras/configcontextschema.md"
+        "models/extras/contact.md": "user-guide/core-data-model/extras/contact.md"
+        "models/extras/customfield.md": "user-guide/platform-functionality/customfield.md"
+        "models/extras/customlink.md": "user-guide/platform-functionality/customlink.md"
+        "models/extras/dynamicgroup.md": "user-guide/platform-functionality/dynamicgroup.md"
+        "models/extras/exporttemplate.md": "user-guide/platform-functionality/exporttemplate.md"
+        "models/extras/gitrepository.md": "user-guide/platform-functionality/gitrepository.md"
+        "models/extras/jobhook.md": "user-guide/platform-functionality/jobs/jobhook.md"
+        "models/extras/joblogentry.md": "user-guide/platform-functionality/jobs/models.md"
+        "models/extras/jobresult.md": "user-guide/platform-functionality/jobs/models.md"
+        "models/extras/role.md": "user-guide/platform-functionality/role.md"
+        "models/extras/secret.md": "user-guide/platform-functionality/secret.md"
+        "models/extras/secretsgroup.md": "user-guide/platform-functionality/secret.md"
+        "models/extras/status.md": "user-guide/platform-functionality/status.md"
+        "models/extras/team.md": "user-guide/core-data-model/extras/team.md"
+        "models/ipam/ipaddress.md": "user-guide/core-data-model/ipam/ipaddress.md"
+        "models/ipam/prefix.md": "user-guide/core-data-model/ipam/prefix.md"
+        "models/ipam/rir.md": "user-guide/core-data-model/ipam/rir.md"
+        "models/ipam/routetarget.md": "user-guide/core-data-model/ipam/routetarget.md"
+        "models/ipam/service.md": "user-guide/core-data-model/ipam/service.md"
+        "models/ipam/vlan.md": "user-guide/core-data-model/ipam/vlan.md"
+        "models/ipam/vlangroup.md": "user-guide/core-data-model/ipam/vlangroup.md"
+        "models/ipam/vrf.md": "user-guide/core-data-model/ipam/vrf.md"
+        "models/tenancy/tenant.md": "user-guide/core-data-model/tenancy/tenant.md"
+        "models/tenancy/tenantgroup.md": "user-guide/core-data-model/tenancy/tenantgroup.md"
+        "models/virtualization/cluster.md": "user-guide/core-data-model/virtualization/cluster.md"
+        "models/virtualization/clustergroup.md": "user-guide/core-data-model/virtualization/clustergroup.md"
+        "models/virtualization/clustertype.md": "user-guide/core-data-model/virtualization/clustertype.md"
+        "models/virtualization/virtualmachine.md": "user-guide/core-data-model/virtualization/virtualmachine.md"
+        "models/virtualization/vminterface.md": "user-guide/core-data-model/virtualization/vminterface.md"
+        "plugins/development.md": "development/apps/index.md"
+        "plugins/index.md": "development/apps/index.md"
+        "plugins/porting-from-netbox.md": "development/apps/porting-from-netbox.md"
+        "rest-api/overview.md": "user-guide/platform-functionality/rest-api/overview.md"
+        "user-guide/administration/configuration/node-configuration.md": "user-guide/administration/configuration/index.md"
+        "user-guides/custom-fields.md": "user-guide/feature-guides/custom-fields.md"
+        "user-guides/getting-started/creating-devices.md": "user-guide/feature-guides/getting-started/creating-devices.md"
+        "user-guides/getting-started/index.md": "user-guide/feature-guides/getting-started/index.md"
+        "user-guides/getting-started/interfaces.md": "user-guide/feature-guides/getting-started/interfaces.md"
+        "user-guides/getting-started/ipam.md": "user-guide/feature-guides/getting-started/ipam.md"
+        "user-guides/getting-started/platforms.md": "user-guide/feature-guides/getting-started/platforms.md"
+        "user-guides/getting-started/search-bar.md": "user-guide/feature-guides/getting-started/search-bar.md"
+        "user-guides/getting-started/tenants.md": "user-guide/feature-guides/getting-started/tenants.md"
+        "user-guides/getting-started/vlans-and-vlan-groups.md": "user-guide/feature-guides/getting-started/vlans-and-vlan-groups.md"
+        "user-guides/git-data-source.md": "user-guide/feature-guides/git-data-source.md"
+        "user-guides/graphql.md": "user-guide/feature-guides/graphql.md"
+        "user-guides/ip-address-merge-tool.md": "user-guide/feature-guides/ip-address-merge-tool.md"
+        "user-guides/relationships.md": "user-guide/feature-guides/relationships.md"
+        "user-guides/s3-django-storage.md": "user-guide/administration/guides/s3-django-storage.md"
 
         # Post 2.x redirects
-        'development/apps/api/ui-extensions/object-detail-views.md': 'development/apps/api/ui-extensions/object-views.md'
-        'development/core/extending-models.md': 'development/core/model-checklist.md'
+        "overview/index.md": "index.md"
+        "development/apps/api/ui-extensions/object-detail-views.md": "development/apps/api/ui-extensions/object-views.md"
+        "development/core/extending-models.md": "development/core/model-checklist.md"
+        "models/cloud/cloudaccount.md": "user-guide/core-data-model/cloud/cloudaccount.md"
+        "models/cloud/cloudnetwork.md": "user-guide/core-data-model/cloud/cloudnetwork.md"
+        "models/cloud/cloudnetworkprefixassignment.md": "user-guide/core-data-model/cloud/cloudnetworkprefixassignment.md"
+        "models/cloud/cloudresourcetype.md": "user-guide/core-data-model/cloud/cloudresourcetype.md"
+        "models/cloud/cloudservice.md": "user-guide/core-data-model/cloud/cloudservice.md"
+        "models/cloud/cloudservicenetworkassignment.md": "user-guide/core-data-model/cloud/cloudservicenetworkassignment.md"
+        "models/dcim/module.md": "user-guide/core-data-model/dcim/module.md"
+        "models/dcim/modulebay.md": "user-guide/core-data-model/dcim/modulebay.md"
+        "models/dcim/modulebaytemplate.md": "user-guide/core-data-model/dcim/modulebaytemplate.md"
+        "models/dcim/moduletype.md": "user-guide/core-data-model/dcim/moduletype.md"
+        "models/extras/jobqueue.md": "user-guide/platform-functionality/jobs/jobqueue.md"
+        "models/extras/metadatachoice.md": "user-guide/platform-functionality/objectmetadata.md"
+        "models/extras/metadatatype.md": "user-guide/platform-functionality/objectmetadata.md"
+        "models/extras/objectmetadata.md": "user-guide/platform-functionality/objectmetadata.md"
+        "models/extras/savedview.md": "user-guide/platform-functionality/savedview.md"
+        "models/extras/staticgroupassociation.md": "user-guide/platform-functionality/staticgroupassociation.md"
+        "models/wireless/supporteddatarate.md": "user-guide/core-data-model/wireless/supporteddatarate.md"
+        "models/wireless/radioprofile.md": "user-guide/core-data-model/wireless/radioprofile.md"
+        "models/wireless/wirelessnetwork.md": "user-guide/core-data-model/wireless/wirelessnetwork.md"
+        "user-guide/administration/configuration/optional-settings.md": "user-guide/administration/configuration/settings.md"
+        "user-guide/administration/configuration/required-settings.md": "user-guide/administration/configuration/settings.md"
+        "user-guide/administration/guides/caching.md": "user-guide/administration/configuration/redis.md"
+        "user-guide/administration/guides/healthcheck.md": "user-guide/administration/guides/health-checks.md"
+        "user-guide/administration/installation/docker.md": "user-guide/administration/guides/docker.md"
+        "user-guide/administration/installation/health-checks.md": "user-guide/administration/guides/health-checks.md"
+        "user-guide/administration/installation/selinux-troubleshooting.md": "user-guide/administration/guides/selinux-troubleshooting.md"
+        "user-guide/administration/installation-extras/docker.md": "user-guide/administration/guides/docker.md"
+        "user-guide/administration/installation-extras/health-checks.md": "user-guide/administration/guides/health-checks.md"
+        "user-guide/administration/installation-extras/selinux-troubleshooting.md": "user-guide/administration/guides/selinux-troubleshooting.md"
 
 nav:
-  - Overview: "index.md"
+  - Overview:
+      - "index.md"
+      - Design Philosophy: "overview/design_philosophy.md"
+      - Application Stack: "overview/application_stack.md"
   - User Guide:
-    - "user-guide/index.md"
-    - Administration:
-      - Installation:
-        - Prerequisites: "user-guide/administration/installation/index.md"
-        - Installing System Dependencies: "user-guide/administration/installation/install_system.md"
-        - Installing Nautobot: "user-guide/administration/installation/nautobot.md"
-        - Deploying Nautobot Services: "user-guide/administration/installation/services.md"
-        - Configuring an HTTP Server: "user-guide/administration/installation/http-server.md"
-        - External Authentication (Optional): "user-guide/administration/installation/external-authentication.md"
-        - Installing and Using Plugins: "user-guide/administration/installation/app-install.md"
-        - Nautobot Docker Images: "user-guide/administration/installation/docker.md"
-        - Health Checks: "user-guide/administration/installation/health-checks.md"
-        - SELinux Troubleshooting: "user-guide/administration/installation/selinux-troubleshooting.md"
-      - Upgrading:
-        - Database Backup: "user-guide/administration/upgrading/database-backup.md"
-        - Upgrading Nautobot: "user-guide/administration/upgrading/upgrading.md"
-        - Upgrading Nautobot from v1.X to v2.0:
-          - "user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md"
-          - Migrating from Region and Site to Location: "user-guide/administration/upgrading/from-v1/region-and-site-data-migration-guide.md"
-          - IPAM Migration Guide:
-            - "user-guide/administration/upgrading/from-v1/ipam/index.md"
-            - "user-guide/administration/upgrading/from-v1/ipam/whats-changed.md"
-            - "user-guide/administration/upgrading/from-v1/ipam/before-you-upgrade.md"
-            - "user-guide/administration/upgrading/from-v1/ipam/after-you-upgrade.md"
-            - "user-guide/administration/upgrading/from-v1/ipam/for-developers.md"
-      - Migration:
-        - Migrating from NetBox: "user-guide/administration/migration/migrating-from-netbox.md"
-        - Migrating from PostgreSQL to MySQL: "user-guide/administration/migration/migrating-from-postgresql.md"
-      - Configuration:
-        - "user-guide/administration/configuration/index.md"
-        - Required Settings: "user-guide/administration/configuration/required-settings.md"
-        - Optional Settings: "user-guide/administration/configuration/optional-settings.md"
-        - Time Zones: "user-guide/administration/configuration/time-zones.md"
-        - External Authentication:
-          - LDAP: "user-guide/administration/configuration/authentication/ldap.md"
-          - SSO: "user-guide/administration/configuration/authentication/sso.md"
-          - Remote Header: "user-guide/administration/configuration/authentication/remote.md"
-      - Tools:
-        - Nautobot Server: "user-guide/administration/tools/nautobot-server.md"
-        - Nautobot Shell: "user-guide/administration/tools/nautobot-shell.md"
-      - Guides:
-        - Caching: "user-guide/administration/guides/caching.md"
-        - Health Check: "user-guide/administration/guides/healthcheck.md"
-        - Permissions: "user-guide/administration/guides/permissions.md"
-        - Prometheus Metrics: "user-guide/administration/guides/prometheus-metrics.md"
-        - Replicating Nautobot: "user-guide/administration/guides/replicating-nautobot.md"
-        - Request Profiling: "user-guide/administration/guides/request-profiling.md"
-        - Django Storages with S3: "user-guide/administration/guides/s3-django-storage.md"
-        - Task Queues: "user-guide/administration/guides/celery-queues.md"
-    - Feature Guides:
-      - Getting Started:
-        - "user-guide/feature-guides/getting-started/index.md"
-        - Devices: "user-guide/feature-guides/getting-started/creating-devices.md"
-        - Location Types and Locations: "user-guide/feature-guides/getting-started/creating-location-types-and-locations.md"
-        - Platforms: "user-guide/feature-guides/getting-started/platforms.md"
-        - Tenants: "user-guide/feature-guides/getting-started/tenants.md"
-        - Interfaces: "user-guide/feature-guides/getting-started/interfaces.md"
-        - VLANS and VLAN Groups: "user-guide/feature-guides/getting-started/vlans-and-vlan-groups.md"
-        - IP Address Management: "user-guide/feature-guides/getting-started/ipam.md"
-        - The Search Bar: "user-guide/feature-guides/getting-started/search-bar.md"
-      - Contacts and Teams: "user-guide/feature-guides/contacts-and-teams.md"
-      - Custom Fields: "user-guide/feature-guides/custom-fields.md"
-      - Git as a Data Source: "user-guide/feature-guides/git-data-source.md"
-      - GraphQL: "user-guide/feature-guides/graphql.md"
-      - IP Address Merge Tool: "user-guide/feature-guides/ip-address-merge-tool.md"
-      - Relationships: "user-guide/feature-guides/relationships.md"
-      - Software Image Files and Versions: "user-guide/feature-guides/software-image-files-and-versions.md"
-    - Core Data Model:
-      - Overview:
-        - Introduction: "user-guide/core-data-model/overview/introduction.md"
-      - Circuits:
-        - Circuit: "user-guide/core-data-model/circuits/circuit.md"
-        - Circuit Termination: "user-guide/core-data-model/circuits/circuittermination.md"
-        - Circuit Type: "user-guide/core-data-model/circuits/circuittype.md"
-        - Circuit Provider: "user-guide/core-data-model/circuits/provider.md"
-        - Circuit Provider Network: "user-guide/core-data-model/circuits/providernetwork.md"
-      - DCIM:
-        - Location Type: "user-guide/core-data-model/dcim/locationtype.md"
-        - Location: "user-guide/core-data-model/dcim/location.md"
-        - Rack Group: "user-guide/core-data-model/dcim/rackgroup.md"
-        - Rack: "user-guide/core-data-model/dcim/rack.md"
-        - Manufacturer: "user-guide/core-data-model/dcim/manufacturer.md"
-        - Device Family: "user-guide/core-data-model/dcim/devicefamily.md"
-        - Platform: "user-guide/core-data-model/dcim/platform.md"
-        - Device Type:
-          - "user-guide/core-data-model/dcim/devicetype.md"
-          - Console Port Template: "user-guide/core-data-model/dcim/consoleporttemplate.md"
-          - Console Server Port Template: "user-guide/core-data-model/dcim/consoleserverporttemplate.md"
-          - Device Bay Template: "user-guide/core-data-model/dcim/devicebaytemplate.md"
-          - Front Port Template: "user-guide/core-data-model/dcim/frontporttemplate.md"
-          - Interface Template: "user-guide/core-data-model/dcim/interfacetemplate.md"
-          - Power Outlet Template: "user-guide/core-data-model/dcim/poweroutlettemplate.md"
-          - Power Port Template: "user-guide/core-data-model/dcim/powerporttemplate.md"
-          - Rear Port Template: "user-guide/core-data-model/dcim/rearporttemplate.md"
-        - Device:
-          - "user-guide/core-data-model/dcim/device.md"
-          - Console Port: "user-guide/core-data-model/dcim/consoleport.md"
-          - Console Server Port: "user-guide/core-data-model/dcim/consoleserverport.md"
-          - Device Bay: "user-guide/core-data-model/dcim/devicebay.md"
-          - Front Port: "user-guide/core-data-model/dcim/frontport.md"
-          - Interface: "user-guide/core-data-model/dcim/interface.md"
-          - Inventory Item: "user-guide/core-data-model/dcim/inventoryitem.md"
-          - Power Port: "user-guide/core-data-model/dcim/powerport.md"
-          - Power Outlet: "user-guide/core-data-model/dcim/poweroutlet.md"
-          - Rear Port: "user-guide/core-data-model/dcim/rearport.md"
-        - Cable: "user-guide/core-data-model/dcim/cable.md"
-        - Device Redundancy Group: "user-guide/core-data-model/dcim/deviceredundancygroup.md"
-        - Interface Redundancy Group: "user-guide/core-data-model/dcim/interfaceredundancygroup.md"
-        - Power Panel : "user-guide/core-data-model/dcim/powerpanel.md"
-        - Power Feed: "user-guide/core-data-model/dcim/powerfeed.md"
-        - Rack Reservation: "user-guide/core-data-model/dcim/rackreservation.md"
-        - Software Image File: "user-guide/core-data-model/dcim/softwareimagefile.md"
-        - Software Version: "user-guide/core-data-model/dcim/softwareversion.md"
-        - Virtual Chassis: "user-guide/core-data-model/dcim/virtualchassis.md"
-        - Controller: "user-guide/core-data-model/dcim/controller.md"
-        - Controller Managed Device Group: "user-guide/core-data-model/dcim/controllermanageddevicegroup.md"
-      - Extras:
-        - Config Context: "user-guide/core-data-model/extras/configcontext.md"
-        - Config Context Schema: "user-guide/core-data-model/extras/configcontextschema.md"
-        - Contact: "user-guide/core-data-model/extras/contact.md"
-        - Team: "user-guide/core-data-model/extras/team.md"
-      - IPAM:
-        - IP Address: "user-guide/core-data-model/ipam/ipaddress.md"
-        - Namespace: "user-guide/core-data-model/ipam/namespace.md"
-        - Prefix: "user-guide/core-data-model/ipam/prefix.md"
-        - RIR: "user-guide/core-data-model/ipam/rir.md"
-        - Route Target: "user-guide/core-data-model/ipam/routetarget.md"
-        - Service: "user-guide/core-data-model/ipam/service.md"
-        - VLAN: "user-guide/core-data-model/ipam/vlan.md"
-        - VLAN Group: "user-guide/core-data-model/ipam/vlangroup.md"
-        - VRF: "user-guide/core-data-model/ipam/vrf.md"
-      - Tenancy:
-        - Tenant: "user-guide/core-data-model/tenancy/tenant.md"
-        - Tenant Group: "user-guide/core-data-model/tenancy/tenantgroup.md"
-      - Virtualization:
-        - Cluster: "user-guide/core-data-model/virtualization/cluster.md"
-        - Cluster Group: "user-guide/core-data-model/virtualization/clustergroup.md"
-        - Cluster Type: "user-guide/core-data-model/virtualization/clustertype.md"
-        - Virtual Machine: "user-guide/core-data-model/virtualization/virtualmachine.md"
-        - VM Interface: "user-guide/core-data-model/virtualization/vminterface.md"
-    - Platform Functionality:
-      - Change Logging: "user-guide/platform-functionality/change-logging.md"
-      - Computed Fields: "user-guide/platform-functionality/computedfield.md"
-      - Custom Fields: "user-guide/platform-functionality/customfield.md"
-      - Custom Links: "user-guide/platform-functionality/customlink.md"
-      - Dynamic Groups: "user-guide/platform-functionality/dynamicgroup.md"
-      - Export Templates: "user-guide/platform-functionality/exporttemplate.md"
-      - External Integrations: "user-guide/platform-functionality/externalintegration.md"
-      - Git Repositories: "user-guide/platform-functionality/gitrepository.md"
-      - GraphQL:
-        - "user-guide/platform-functionality/graphql.md"
-        - GraphQL Queries: "user-guide/platform-functionality/graphqlquery.md"
-      - Image Attachments: "user-guide/platform-functionality/imageattachment.md"
-      - Jobs:
-        - "user-guide/platform-functionality/jobs/index.md"
-        - Job Buttons: "user-guide/platform-functionality/jobs/jobbutton.md"
-        - Job Hooks: "user-guide/platform-functionality/jobs/jobhook.md"
-        - Job Models: "user-guide/platform-functionality/jobs/models.md"
-        - Job Scheduling and Approvals: "user-guide/platform-functionality/jobs/job-scheduling-and-approvals.md"
-      - NAPALM: "user-guide/platform-functionality/napalm.md"
-      - Notes: "user-guide/platform-functionality/note.md"
-      - Relationships: "user-guide/platform-functionality/relationship.md"
-      - REST API:
-        - "user-guide/platform-functionality/rest-api/overview.md"
-        - Filtering: "user-guide/platform-functionality/rest-api/filtering.md"
-        - Authentication: "user-guide/platform-functionality/rest-api/authentication.md"
-        - UI Endpoints: "user-guide/platform-functionality/rest-api/ui-related-endpoints.md"
-      - Roles: "user-guide/platform-functionality/role.md"
-      - Secrets: "user-guide/platform-functionality/secret.md"
-      - Statuses: "user-guide/platform-functionality/status.md"
-      - Tags: "user-guide/platform-functionality/tag.md"
-      - Template Filters: "user-guide/platform-functionality/template-filters.md"
-      - Users:
-        - Object Permission: "user-guide/platform-functionality/users/objectpermission.md"
-        - Token: "user-guide/platform-functionality/users/token.md"
-      - Webhooks: "user-guide/platform-functionality/webhook.md"
+      - "user-guide/index.md"
+      - Administration:
+          - Installation:
+              - Getting Started: "user-guide/administration/installation/index.md"
+              - Installing System Dependencies: "user-guide/administration/installation/install_system.md"
+              - Installing Nautobot: "user-guide/administration/installation/nautobot.md"
+              - Deploying Nautobot Services: "user-guide/administration/installation/services.md"
+              - Configuring an HTTP Server: "user-guide/administration/installation/http-server.md"
+              - Installing and Using Apps: "user-guide/administration/installation/app-install.md"
+              - External Authentication (Optional): "user-guide/administration/installation/external-authentication.md"
+          - Upgrading:
+              - Database Backup: "user-guide/administration/upgrading/database-backup.md"
+              - Upgrading Nautobot: "user-guide/administration/upgrading/upgrading.md"
+              - Upgrading Nautobot from v1.X to v2.0:
+                  - "user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md"
+                  - Migrating from Region and Site to Location: "user-guide/administration/upgrading/from-v1/region-and-site-data-migration-guide.md"
+                  - IPAM Migration Guide:
+                      - "user-guide/administration/upgrading/from-v1/ipam/index.md"
+                      - "user-guide/administration/upgrading/from-v1/ipam/whats-changed.md"
+                      - "user-guide/administration/upgrading/from-v1/ipam/before-you-upgrade.md"
+                      - "user-guide/administration/upgrading/from-v1/ipam/after-you-upgrade.md"
+                      - "user-guide/administration/upgrading/from-v1/ipam/for-developers.md"
+          - Migration:
+              - Migrating from NetBox: "user-guide/administration/migration/migrating-from-netbox.md"
+              - Migrating from PostgreSQL to MySQL: "user-guide/administration/migration/migrating-from-postgresql.md"
+          - Configuration:
+              - "user-guide/administration/configuration/index.md"
+              - Settings: "user-guide/administration/configuration/settings.md"
+              - Redis: "user-guide/administration/configuration/redis.md"
+              - Time Zones: "user-guide/administration/configuration/time-zones.md"
+              - External Authentication:
+                  - LDAP: "user-guide/administration/configuration/authentication/ldap.md"
+                  - SSO: "user-guide/administration/configuration/authentication/sso.md"
+                  - Remote Header: "user-guide/administration/configuration/authentication/remote.md"
+          - Tools:
+              - Nautobot Server: "user-guide/administration/tools/nautobot-server.md"
+              - Nautobot Shell: "user-guide/administration/tools/nautobot-shell.md"
+          - Guides:
+              - Nautobot Docker Images: "user-guide/administration/guides/docker.md"
+              - SELinux Troubleshooting: "user-guide/administration/guides/selinux-troubleshooting.md"
+              - Health Checks: "user-guide/administration/guides/health-checks.md"
+              - Permissions: "user-guide/administration/guides/permissions.md"
+              - Prometheus Metrics: "user-guide/administration/guides/prometheus-metrics.md"
+              - Replicating Nautobot: "user-guide/administration/guides/replicating-nautobot.md"
+              - Request Profiling: "user-guide/administration/guides/request-profiling.md"
+              - Django Storages with S3: "user-guide/administration/guides/s3-django-storage.md"
+              - Task Queues: "user-guide/administration/guides/celery-queues.md"
+          - Security:
+              - "user-guide/administration/security/index.md"
+              - Notices: "user-guide/administration/security/notices.md"
+      - Feature Guides:
+          - Getting Started:
+              - "user-guide/feature-guides/getting-started/index.md"
+              - Devices: "user-guide/feature-guides/getting-started/creating-devices.md"
+              - Location Types and Locations: "user-guide/feature-guides/getting-started/creating-location-types-and-locations.md"
+              - Platforms: "user-guide/feature-guides/getting-started/platforms.md"
+              - Tenants: "user-guide/feature-guides/getting-started/tenants.md"
+              - Interfaces: "user-guide/feature-guides/getting-started/interfaces.md"
+              - VLANS and VLAN Groups: "user-guide/feature-guides/getting-started/vlans-and-vlan-groups.md"
+              - IP Address Management: "user-guide/feature-guides/getting-started/ipam.md"
+              - The Search Bar: "user-guide/feature-guides/getting-started/search-bar.md"
+          - Contacts and Teams: "user-guide/feature-guides/contacts-and-teams.md"
+          - Custom Fields: "user-guide/feature-guides/custom-fields.md"
+          - Git as a Data Source: "user-guide/feature-guides/git-data-source.md"
+          - GraphQL: "user-guide/feature-guides/graphql.md"
+          - IP Address Merge Tool: "user-guide/feature-guides/ip-address-merge-tool.md"
+          - Relationships: "user-guide/feature-guides/relationships.md"
+          - Software Image Files and Versions: "user-guide/feature-guides/software-image-files-and-versions.md"
+          - Wireless Networks and Controllers: "user-guide/feature-guides/wireless-networks-and-controllers.md"
+      - Core Data Model:
+          - Overview:
+              - Introduction: "user-guide/core-data-model/overview/introduction.md"
+          - Circuits:
+              - Circuit: "user-guide/core-data-model/circuits/circuit.md"
+              - Circuit Termination: "user-guide/core-data-model/circuits/circuittermination.md"
+              - Circuit Type: "user-guide/core-data-model/circuits/circuittype.md"
+              - Circuit Provider: "user-guide/core-data-model/circuits/provider.md"
+              - Circuit Provider Network: "user-guide/core-data-model/circuits/providernetwork.md"
+          - Cloud:
+              - "user-guide/core-data-model/cloud/cloud.md"
+              - Cloud Account: "user-guide/core-data-model/cloud/cloudaccount.md"
+              - Cloud Network: "user-guide/core-data-model/cloud/cloudnetwork.md"
+              - Cloud Network Prefix Assignment: "user-guide/core-data-model/cloud/cloudnetworkprefixassignment.md"
+              - Cloud Resource Type: "user-guide/core-data-model/cloud/cloudresourcetype.md"
+              - Cloud Service: "user-guide/core-data-model/cloud/cloudservice.md"
+              - Cloud Service Network Assignment: "user-guide/core-data-model/cloud/cloudservicenetworkassignment.md"
+          - DCIM:
+              - Location Type: "user-guide/core-data-model/dcim/locationtype.md"
+              - Location: "user-guide/core-data-model/dcim/location.md"
+              - Rack Group: "user-guide/core-data-model/dcim/rackgroup.md"
+              - Rack: "user-guide/core-data-model/dcim/rack.md"
+              - Manufacturer: "user-guide/core-data-model/dcim/manufacturer.md"
+              - Device Family: "user-guide/core-data-model/dcim/devicefamily.md"
+              - Platform: "user-guide/core-data-model/dcim/platform.md"
+              - Device Type:
+                  - "user-guide/core-data-model/dcim/devicetype.md"
+                  - Console Port Template: "user-guide/core-data-model/dcim/consoleporttemplate.md"
+                  - Console Server Port Template: "user-guide/core-data-model/dcim/consoleserverporttemplate.md"
+                  - Device Bay Template: "user-guide/core-data-model/dcim/devicebaytemplate.md"
+                  - Front Port Template: "user-guide/core-data-model/dcim/frontporttemplate.md"
+                  - Interface Template: "user-guide/core-data-model/dcim/interfacetemplate.md"
+                  - Module Bay Template: "user-guide/core-data-model/dcim/modulebaytemplate.md"
+                  - Power Outlet Template: "user-guide/core-data-model/dcim/poweroutlettemplate.md"
+                  - Power Port Template: "user-guide/core-data-model/dcim/powerporttemplate.md"
+                  - Rear Port Template: "user-guide/core-data-model/dcim/rearporttemplate.md"
+              - Device:
+                  - "user-guide/core-data-model/dcim/device.md"
+                  - Console Port: "user-guide/core-data-model/dcim/consoleport.md"
+                  - Console Server Port: "user-guide/core-data-model/dcim/consoleserverport.md"
+                  - Device Bay: "user-guide/core-data-model/dcim/devicebay.md"
+                  - Front Port: "user-guide/core-data-model/dcim/frontport.md"
+                  - Interface: "user-guide/core-data-model/dcim/interface.md"
+                  - Inventory Item: "user-guide/core-data-model/dcim/inventoryitem.md"
+                  - Module Bay: "user-guide/core-data-model/dcim/modulebay.md"
+                  - Power Port: "user-guide/core-data-model/dcim/powerport.md"
+                  - Power Outlet: "user-guide/core-data-model/dcim/poweroutlet.md"
+                  - Rear Port: "user-guide/core-data-model/dcim/rearport.md"
+              - Module Type:
+                  - "user-guide/core-data-model/dcim/moduletype.md"
+                  - Console Port Template: "user-guide/core-data-model/dcim/consoleporttemplate.md"
+                  - Console Server Port Template: "user-guide/core-data-model/dcim/consoleserverporttemplate.md"
+                  - Front Port Template: "user-guide/core-data-model/dcim/frontporttemplate.md"
+                  - Interface Template: "user-guide/core-data-model/dcim/interfacetemplate.md"
+                  - Module Bay Template: "user-guide/core-data-model/dcim/modulebaytemplate.md"
+                  - Power Outlet Template: "user-guide/core-data-model/dcim/poweroutlettemplate.md"
+                  - Power Port Template: "user-guide/core-data-model/dcim/powerporttemplate.md"
+                  - Rear Port Template: "user-guide/core-data-model/dcim/rearporttemplate.md"
+              - Module:
+                  - "user-guide/core-data-model/dcim/module.md"
+                  - Console Port: "user-guide/core-data-model/dcim/consoleport.md"
+                  - Console Server Port: "user-guide/core-data-model/dcim/consoleserverport.md"
+                  - Front Port: "user-guide/core-data-model/dcim/frontport.md"
+                  - Interface: "user-guide/core-data-model/dcim/interface.md"
+                  - Inventory Item: "user-guide/core-data-model/dcim/inventoryitem.md"
+                  - Module Bay: "user-guide/core-data-model/dcim/modulebay.md"
+                  - Power Port: "user-guide/core-data-model/dcim/powerport.md"
+                  - Power Outlet: "user-guide/core-data-model/dcim/poweroutlet.md"
+                  - Rear Port: "user-guide/core-data-model/dcim/rearport.md"
+              - Cable: "user-guide/core-data-model/dcim/cable.md"
+              - Device Redundancy Group: "user-guide/core-data-model/dcim/deviceredundancygroup.md"
+              - Interface Redundancy Group: "user-guide/core-data-model/dcim/interfaceredundancygroup.md"
+              - Power Panel: "user-guide/core-data-model/dcim/powerpanel.md"
+              - Power Feed: "user-guide/core-data-model/dcim/powerfeed.md"
+              - Rack Reservation: "user-guide/core-data-model/dcim/rackreservation.md"
+              - Software Image File: "user-guide/core-data-model/dcim/softwareimagefile.md"
+              - Software Version: "user-guide/core-data-model/dcim/softwareversion.md"
+              - Virtual Chassis: "user-guide/core-data-model/dcim/virtualchassis.md"
+              - Controller: "user-guide/core-data-model/dcim/controller.md"
+              - Controller Managed Device Group: "user-guide/core-data-model/dcim/controllermanageddevicegroup.md"
+              - Virtual Device Context: "user-guide/core-data-model/dcim/virtualdevicecontext.md"
+          - Extras:
+              - Config Context: "user-guide/core-data-model/extras/configcontext.md"
+              - Config Context Schema: "user-guide/core-data-model/extras/configcontextschema.md"
+              - Contact: "user-guide/core-data-model/extras/contact.md"
+              - Team: "user-guide/core-data-model/extras/team.md"
+          - IPAM:
+              - IP Address: "user-guide/core-data-model/ipam/ipaddress.md"
+              - Namespace: "user-guide/core-data-model/ipam/namespace.md"
+              - Prefix: "user-guide/core-data-model/ipam/prefix.md"
+              - RIR: "user-guide/core-data-model/ipam/rir.md"
+              - Route Target: "user-guide/core-data-model/ipam/routetarget.md"
+              - Service: "user-guide/core-data-model/ipam/service.md"
+              - VLAN: "user-guide/core-data-model/ipam/vlan.md"
+              - VLAN Group: "user-guide/core-data-model/ipam/vlangroup.md"
+              - VRF: "user-guide/core-data-model/ipam/vrf.md"
+          - Tenancy:
+              - Tenant: "user-guide/core-data-model/tenancy/tenant.md"
+              - Tenant Group: "user-guide/core-data-model/tenancy/tenantgroup.md"
+          - Virtualization:
+              - Cluster: "user-guide/core-data-model/virtualization/cluster.md"
+              - Cluster Group: "user-guide/core-data-model/virtualization/clustergroup.md"
+              - Cluster Type: "user-guide/core-data-model/virtualization/clustertype.md"
+              - Virtual Machine: "user-guide/core-data-model/virtualization/virtualmachine.md"
+              - VM Interface: "user-guide/core-data-model/virtualization/vminterface.md"
+          - Wireless:
+              - "user-guide/core-data-model/wireless/index.md"
+              - Supported Data Rate: "user-guide/core-data-model/wireless/supporteddatarate.md"
+              - Radio Profile: "user-guide/core-data-model/wireless/radioprofile.md"
+              - Wireless Network: "user-guide/core-data-model/wireless/wirelessnetwork.md"
+      - Platform Functionality:
+          - Change Logging: "user-guide/platform-functionality/change-logging.md"
+          - Computed Fields: "user-guide/platform-functionality/computedfield.md"
+          - Custom Fields: "user-guide/platform-functionality/customfield.md"
+          - Custom Links: "user-guide/platform-functionality/customlink.md"
+          - Dynamic Groups:
+              - "user-guide/platform-functionality/dynamicgroup.md"
+              - Static Group Associations: "user-guide/platform-functionality/staticgroupassociation.md"
+          - Event Notifications: "user-guide/platform-functionality/events.md"
+          - Export Templates: "user-guide/platform-functionality/exporttemplate.md"
+          - External Integrations: "user-guide/platform-functionality/externalintegration.md"
+          - Git Repositories: "user-guide/platform-functionality/gitrepository.md"
+          - GraphQL:
+              - "user-guide/platform-functionality/graphql.md"
+              - GraphQL Queries: "user-guide/platform-functionality/graphqlquery.md"
+          - Image Attachments: "user-guide/platform-functionality/imageattachment.md"
+          - Jobs:
+              - "user-guide/platform-functionality/jobs/index.md"
+              - Kubernetes Job Support: "user-guide/platform-functionality/jobs/kubernetes-job-support.md"
+              - Job Buttons: "user-guide/platform-functionality/jobs/jobbutton.md"
+              - Job Hooks: "user-guide/platform-functionality/jobs/jobhook.md"
+              - Job Models: "user-guide/platform-functionality/jobs/models.md"
+              - Job Queues: "user-guide/platform-functionality/jobs/jobqueue.md"
+              - Job Scheduling and Approvals: "user-guide/platform-functionality/jobs/job-scheduling-and-approvals.md"
+          - NAPALM: "user-guide/platform-functionality/napalm.md"
+          - Notes: "user-guide/platform-functionality/note.md"
+          - Object Metadata: "user-guide/platform-functionality/objectmetadata.md"
+          - Relationships: "user-guide/platform-functionality/relationship.md"
+          - Rendering Jinja Templates: "user-guide/platform-functionality/rendering-jinja-templates.md"
+          - REST API:
+              - "user-guide/platform-functionality/rest-api/overview.md"
+              - Filtering: "user-guide/platform-functionality/rest-api/filtering.md"
+              - Authentication: "user-guide/platform-functionality/rest-api/authentication.md"
+              - UI Endpoints: "user-guide/platform-functionality/rest-api/ui-related-endpoints.md"
+          - Roles: "user-guide/platform-functionality/role.md"
+          - Saved Views: "user-guide/platform-functionality/savedview.md"
+          - Secrets: "user-guide/platform-functionality/secret.md"
+          - Statuses: "user-guide/platform-functionality/status.md"
+          - Tags: "user-guide/platform-functionality/tag.md"
+          - Template Filters: "user-guide/platform-functionality/template-filters.md"
+          - Users:
+              - Object Permission: "user-guide/platform-functionality/users/objectpermission.md"
+              - Token: "user-guide/platform-functionality/users/token.md"
+          - Webhooks: "user-guide/platform-functionality/webhook.md"
   - Developer Guide:
-    - "development/index.md"
-    - Jobs Developer Guide:
-      - "development/jobs/index.md"
-      - Migration Guides:
-        - "development/jobs/migration/from-v1.md"
-    - App Developer Guide:
-      - "development/apps/index.md"
-      - Setup: "development/apps/api/setup.md"
-      - NautobotAppConfig: "development/apps/api/nautobot-app-config.md"
-      - Models:
-        - "development/apps/api/models/index.md"
-        - Global Search: "development/apps/api/models/global-search.md"
-        - GraphQL: "development/apps/api/models/graphql.md"
-        - Django Admin: "development/apps/api/models/django-admin.md"
-      - Views:
-        - "development/apps/api/views/index.md"
-        - NautobotUIViewSet: "development/apps/api/views/nautobotuiviewset.md"
-        - NautobotUIViewSetRouter: "development/apps/api/views/nautobotuiviewsetrouter.md"
-        - Nautobot Generic Views: "development/apps/api/views/nautobot-generic-views.md"
-        - URLs: "development/apps/api/views/urls.md"
-        - Base Template: "development/apps/api/views/base-template.md"
-        - Help Documentation: "development/apps/api/views/help-documentation.md"
-        - REST API: "development/apps/api/views/rest-api.md"
-        - Advanced:
-          - Django Generic Views: "development/apps/api/views/django-generic-views.md"
-          - Notes: "development/apps/api/views/notes.md"
-          - View Overrides: "development/apps/api/views/core-view-overrides.md"
-      - Platform Features:
-        - "development/apps/api/platform-features/index.md"
-        - Custom Validators: "development/apps/api/platform-features/custom-validators.md"
-        - Database Backed Config: "development/apps/api/database-backend-config.md"
-        - Filter Extensions: "development/apps/api/platform-features/filter-extensions.md"
-        - Git Repository Content: "development/apps/api/platform-features/git-repository-content.md"
-        - Jinja2 Filters: "development/apps/api/platform-features/jinja2-filters.md"
-        - Jobs: "development/apps/api/platform-features/jobs.md"
-        - Populating Extensibility Features: "development/apps/api/platform-features/populating-extensibility-features.md"
-        - Prometheus Metrics: "development/apps/api/prometheus.md"
-        - Secrets Providers: "development/apps/api/platform-features/secrets-providers.md"
-        - Uniquely Identifying a Nautobot Object: "development/apps/api/platform-features/uniquely-identify-objects.md"
-      - UI Extensions:
-        - "development/apps/api/ui-extensions/index.md"
-        - Banners: "development/apps/api/ui-extensions/banners.md"
-        - Home Page: "development/apps/api/ui-extensions/home-page.md"
-        - Links in the Installed Apps View: "development/apps/api/configuration-view.md"
-        - Navigation: "development/apps/api/ui-extensions/navigation.md"
-        - Object Detail & List Views: "development/apps/api/ui-extensions/object-views.md"
-      - Testing: "development/apps/api/testing.md"
-      - Code Reference:
-        - nautobot.apps: "code-reference/nautobot/apps/__init__.md"
-        - nautobot.apps.admin: "code-reference/nautobot/apps/admin.md"
-        - nautobot.apps.api: "code-reference/nautobot/apps/api.md"
-        - nautobot.apps.change_logging: "code-reference/nautobot/apps/change_logging.md"
-        - nautobot.apps.choices: "code-reference/nautobot/apps/choices.md"
-        - nautobot.apps.config: "code-reference/nautobot/apps/config.md"
-        - nautobot.apps.constants: "code-reference/nautobot/apps/constants.md"
-        - nautobot.apps.datasources: "code-reference/nautobot/apps/datasources.md"
-        - nautobot.apps.exceptions: "code-reference/nautobot/apps/exceptions.md"
-        - nautobot.apps.factory: "code-reference/nautobot/apps/factory.md"
-        - nautobot.apps.filters: "code-reference/nautobot/apps/filters.md"
-        - nautobot.apps.forms: "code-reference/nautobot/apps/forms.md"
-        - nautobot.apps.graphql: "code-reference/nautobot/apps/graphql.md"
-        - nautobot.apps.jobs: "code-reference/nautobot/apps/jobs.md"
-        - nautobot.apps.models: "code-reference/nautobot/apps/models.md"
-        - nautobot.apps.querysets: "code-reference/nautobot/apps/querysets.md"
-        - nautobot.apps.secrets: "code-reference/nautobot/apps/secrets.md"
-        - nautobot.apps.tables: "code-reference/nautobot/apps/tables.md"
-        - nautobot.apps.testing: "code-reference/nautobot/apps/testing.md"
-        - nautobot.apps.ui: "code-reference/nautobot/apps/ui.md"
-        - nautobot.apps.urls: "code-reference/nautobot/apps/urls.md"
-        - nautobot.apps.utils: "code-reference/nautobot/apps/utils.md"
-        - nautobot.apps.views: "code-reference/nautobot/apps/views.md"
-      - Migration Guides:
-        - From Nautobot v1: "development/apps/migration/from-v1.md"
-        - Dependency Updates: "development/apps/migration/dependency-updates.md"
-        - Code Updates: "development/apps/migration/code-updates.md"
-        - Model Updates:
-          - Global: "development/apps/migration/model-updates/global.md"
-          - DCIM: "development/apps/migration/model-updates/dcim.md"
-          - Extras: "development/apps/migration/model-updates/extras.md"
-          - IPAM: "development/apps/migration/model-updates/ipam.md"
-      - Advanced:
-        - Porting NetBox Plugins to Nautobot: "development/apps/porting-from-netbox.md"
-    - Core Developer Guide:
-      - "development/core/index.md"
-      - Getting Started: "development/core/getting-started.md"
-      - Adding and Updating Nautobot Settings: "development/core/settings.md"
-      - Advanced Docker Compose Usage: "development/core/docker-compose-advanced-use-cases.md"
-      - Application Registry: "development/core/application-registry.md"
-      - Bootstrap UI: "development/core/bootstrap-ui.md"
-      - Best Practices: "development/core/best-practices.md"
-      - Caching: "development/core/caching.md"
-      - Controllers: "development/core/controllers.md"
-      - Generic Views: "development/core/generic-views.md"
-      - Home Page Panels: "development/core/homepage.md"
-      - Model Development Checklist: "development/core/model-checklist.md"
-      - Model Features: "development/core/model-features.md"
-      - Natural Keys: "development/core/natural-keys.md"
-      - Navigation Menu: "development/core/navigation-menu.md"
-      - Page Templates: "development/core/templates.md"
-      - Role Internals: "development/core/role-internals.md"
-      - Style Guide: "development/core/style-guide.md"
-      - Testing: "development/core/testing.md"
-      - User Preferences: "development/core/user-preferences.md"
-      - Release Checklist: "development/core/release-checklist.md"
+      - "development/index.md"
+      - Jobs Developer Guide:
+          - "development/jobs/index.md"
+          - Migration Guides:
+              - "development/jobs/migration/from-v1.md"
+      - App Developer Guide:
+          - "development/apps/index.md"
+          - Setup: "development/apps/api/setup.md"
+          - NautobotAppConfig: "development/apps/api/nautobot-app-config.md"
+          - Models:
+              - "development/apps/api/models/index.md"
+              - Global Search: "development/apps/api/models/global-search.md"
+              - GraphQL: "development/apps/api/models/graphql.md"
+              - Django Admin: "development/apps/api/models/django-admin.md"
+          - Views:
+              - "development/apps/api/views/index.md"
+              - NautobotUIViewSet: "development/apps/api/views/nautobotuiviewset.md"
+              - NautobotUIViewSetRouter: "development/apps/api/views/nautobotuiviewsetrouter.md"
+              - Nautobot Generic Views: "development/apps/api/views/nautobot-generic-views.md"
+              - URLs: "development/apps/api/views/urls.md"
+              - Base Template: "development/apps/api/views/base-template.md"
+              - Help Documentation: "development/apps/api/views/help-documentation.md"
+              - REST API: "development/apps/api/views/rest-api.md"
+              - Advanced:
+                  - Django Generic Views: "development/apps/api/views/django-generic-views.md"
+                  - Notes: "development/apps/api/views/notes.md"
+                  - View Overrides: "development/apps/api/views/core-view-overrides.md"
+          - Platform Features:
+              - "development/apps/api/platform-features/index.md"
+              - Custom Validators: "development/apps/api/platform-features/custom-validators.md"
+              - Database Backed Config: "development/apps/api/database-backend-config.md"
+              - Filter Extensions: "development/apps/api/platform-features/filter-extensions.md"
+              - Git Repository Content: "development/apps/api/platform-features/git-repository-content.md"
+              - Jinja2 Filters: "development/apps/api/platform-features/jinja2-filters.md"
+              - Jobs: "development/apps/api/platform-features/jobs.md"
+              - Populating Extensibility Features: "development/apps/api/platform-features/populating-extensibility-features.md"
+              - Prometheus Metrics: "development/apps/api/prometheus.md"
+              - Secrets Providers: "development/apps/api/platform-features/secrets-providers.md"
+              - Table Extensions: "development/apps/api/platform-features/table-extensions.md"
+              - Uniquely Identifying a Nautobot Object: "development/apps/api/platform-features/uniquely-identify-objects.md"
+          - UI Extensions:
+              - "development/apps/api/ui-extensions/index.md"
+              - Banners: "development/apps/api/ui-extensions/banners.md"
+              - Home Page: "development/apps/api/ui-extensions/home-page.md"
+              - Links in the Installed Apps View: "development/apps/api/configuration-view.md"
+              - Navigation: "development/apps/api/ui-extensions/navigation.md"
+              - Object Detail & List Views: "development/apps/api/ui-extensions/object-views.md"
+          - Testing: "development/apps/api/testing.md"
+          - Code Reference:
+              - nautobot.apps: "code-reference/nautobot/apps/__init__.md"
+              - nautobot.apps.admin: "code-reference/nautobot/apps/admin.md"
+              - nautobot.apps.api: "code-reference/nautobot/apps/api.md"
+              - nautobot.apps.change_logging: "code-reference/nautobot/apps/change_logging.md"
+              - nautobot.apps.choices: "code-reference/nautobot/apps/choices.md"
+              - nautobot.apps.config: "code-reference/nautobot/apps/config.md"
+              - nautobot.apps.constants: "code-reference/nautobot/apps/constants.md"
+              - nautobot.apps.datasources: "code-reference/nautobot/apps/datasources.md"
+              - nautobot.apps.events: "code-reference/nautobot/apps/events.md"
+              - nautobot.apps.exceptions: "code-reference/nautobot/apps/exceptions.md"
+              - nautobot.apps.factory: "code-reference/nautobot/apps/factory.md"
+              - nautobot.apps.filters: "code-reference/nautobot/apps/filters.md"
+              - nautobot.apps.forms: "code-reference/nautobot/apps/forms.md"
+              - nautobot.apps.graphql: "code-reference/nautobot/apps/graphql.md"
+              - nautobot.apps.jobs: "code-reference/nautobot/apps/jobs.md"
+              - nautobot.apps.models: "code-reference/nautobot/apps/models.md"
+              - nautobot.apps.querysets: "code-reference/nautobot/apps/querysets.md"
+              - nautobot.apps.secrets: "code-reference/nautobot/apps/secrets.md"
+              - nautobot.apps.tables: "code-reference/nautobot/apps/tables.md"
+              - nautobot.apps.testing: "code-reference/nautobot/apps/testing.md"
+              - nautobot.apps.ui: "code-reference/nautobot/apps/ui.md"
+              - nautobot.apps.urls: "code-reference/nautobot/apps/urls.md"
+              - nautobot.apps.utils: "code-reference/nautobot/apps/utils.md"
+              - nautobot.apps.views: "code-reference/nautobot/apps/views.md"
+          - Migration Guides:
+              - From Nautobot v1: "development/apps/migration/from-v1.md"
+              - Dependency Updates: "development/apps/migration/dependency-updates.md"
+              - Code Updates: "development/apps/migration/code-updates.md"
+              - Model Updates:
+                  - Global: "development/apps/migration/model-updates/global.md"
+                  - DCIM: "development/apps/migration/model-updates/dcim.md"
+                  - Extras: "development/apps/migration/model-updates/extras.md"
+                  - IPAM: "development/apps/migration/model-updates/ipam.md"
+              - UI Component Framework:
+                  - "development/apps/migration/ui-component-framework/index.md"
+                  - Migration steps: "development/apps/migration/ui-component-framework/migration-steps.md"
+                  - Custom content: "development/apps/migration/ui-component-framework/custom-content.md"
+                  - Best practices: "development/apps/migration/ui-component-framework/best-practices.md"
+          - Advanced:
+              - Porting NetBox Plugins to Nautobot: "development/apps/porting-from-netbox.md"
+      - Core Developer Guide:
+          - "development/core/index.md"
+          - Getting Started: "development/core/getting-started.md"
+          - Adding and Updating Nautobot Settings: "development/core/settings.md"
+          - Advanced Docker Compose Usage: "development/core/docker-compose-advanced-use-cases.md"
+          - Application Registry: "development/core/application-registry.md"
+          - Bootstrap UI: "development/core/bootstrap-ui.md"
+          - Best Practices: "development/core/best-practices.md"
+          - Caching: "development/core/caching.md"
+          - Controllers: "development/core/controllers.md"
+          - Generic Views: "development/core/generic-views.md"
+          - Home Page Panels: "development/core/homepage.md"
+          - Minikube Dev Environment for K8s Jobs: "development/core/minikube-dev-environment-for-k8s-jobs.md"
+          - Model Development Checklist: "development/core/model-checklist.md"
+          - Model Features: "development/core/model-features.md"
+          - Natural Keys: "development/core/natural-keys.md"
+          - Navigation Menu: "development/core/navigation-menu.md"
+          - Page Templates: "development/core/templates.md"
+          - Role Internals: "development/core/role-internals.md"
+          - Style Guide: "development/core/style-guide.md"
+          - Testing: "development/core/testing.md"
+          - User Preferences: "development/core/user-preferences.md"
+          - UI Component Framework: "development/core/ui-component-framework.md"
+          - Release Checklist: "development/core/release-checklist.md"
   - Release Notes:
-    - "release-notes/index.md"
-    - Version 2.2: "release-notes/version-2.2.md"
-    - Version 2.1: "release-notes/version-2.1.md"
-    - Version 2.0: "release-notes/version-2.0.md"
-    - Version 1.6: "release-notes/version-1.6.md"
-    - Version 1.5: "release-notes/version-1.5.md"
-    - Version 1.4: "release-notes/version-1.4.md"
-    - Version 1.3: "release-notes/version-1.3.md"
-    - Version 1.2: "release-notes/version-1.2.md"
-    - Version 1.1: "release-notes/version-1.1.md"
-    - Version 1.0: "release-notes/version-1.0.md"
+      - "release-notes/index.md"
+      - Version 2.4: "release-notes/version-2.4.md"
+      - Version 2.3: "release-notes/version-2.3.md"
+      - Version 2.2: "release-notes/version-2.2.md"
+      - Version 2.1: "release-notes/version-2.1.md"
+      - Version 2.0: "release-notes/version-2.0.md"
+      - Version 1.6: "release-notes/version-1.6.md"
+      - Version 1.5: "release-notes/version-1.5.md"
+      - Version 1.4: "release-notes/version-1.4.md"
+      - Version 1.3: "release-notes/version-1.3.md"
+      - Version 1.2: "release-notes/version-1.2.md"
+      - Version 1.1: "release-notes/version-1.1.md"
+      - Version 1.0: "release-notes/version-1.0.md"
   - Nautobot Apps:
-    - "apps/index.md"
-    - Network to Code App Docs:
-      - Nautobot ChatOps: "https://docs.nautobot.com/projects/chatops/en/latest/"
-      - Nautobot Circuit Maintenance: "https://docs.nautobot.com/projects/circuit-maintenance/en/latest/"
-      - Nautobot Data Validation Engine: "https://docs.nautobot.com/projects/data-validation/en/latest/"
-      - Nautobot Device LifeCycle Management: "https://docs.nautobot.com/projects/device-lifecycle/en/latest/"
-      - Nautobot Device Onboarding: "https://docs.nautobot.com/projects/device-onboarding/en/latest/"
-      - Nautobot Firewall Models: "https://docs.nautobot.com/projects/firewall-models/en/latest/"
-      - Nautobot Golden Configuration: "https://docs.nautobot.com/projects/golden-config/"
-      - Nautobot Plugin Nornir: "https://docs.nautobot.com/projects/plugin-nornir/en/latest/"
-      - Nautobot Single Source of Truth: "https://docs.nautobot.com/projects/ssot/en/latest/"
-    - Community Apps: "apps/nautobot-apps.md"
+      - "apps/index.md"
+      - Network to Code App Docs:
+          - Nautobot ChatOps: "https://docs.nautobot.com/projects/chatops/en/latest/"
+          - Nautobot Circuit Maintenance: "https://docs.nautobot.com/projects/circuit-maintenance/en/latest/"
+          - Nautobot Data Validation Engine: "https://docs.nautobot.com/projects/data-validation/en/latest/"
+          - Nautobot Device LifeCycle Management: "https://docs.nautobot.com/projects/device-lifecycle/en/latest/"
+          - Nautobot Device Onboarding: "https://docs.nautobot.com/projects/device-onboarding/en/latest/"
+          - Nautobot Firewall Models: "https://docs.nautobot.com/projects/firewall-models/en/latest/"
+          - Nautobot Golden Configuration: "https://docs.nautobot.com/projects/golden-config/"
+          - Nautobot Plugin Nornir: "https://docs.nautobot.com/projects/plugin-nornir/en/latest/"
+          - Nautobot Single Source of Truth: "https://docs.nautobot.com/projects/ssot/en/latest/"
+      - Community Apps: "apps/nautobot-apps.md"
   - Nautobot Docs Home ↗︎: "https://docs.nautobot.com/"

@@ -67,8 +67,8 @@ menu_items = (
         weight=150,
         groups=(
             NavMenuGroup(
-                name="Example Group 1",
                 weight=100,
+                name="Example Group 1",
                 items=(
                     NavMenuItem(
                         link="plugins:example_app:examplemodel_list",
@@ -90,6 +90,14 @@ menu_items = (
                                 ],
                             ),
                         ),
+                    ),
+                    NavMenuItem(
+                        link="plugins:example_app:examplemodel_list",
+                        link_text="Example Model filtered",
+                        permissions=[
+                            "example_app.view_examplemodel"
+                        ],
+                        query_params={"number": "100"},
                     ),
                 ),
             ),
@@ -121,6 +129,7 @@ A `NavMenuItem` has the following attributes:
 * `weight` - Defines the position the object should be displayed at (optional)
 * `permissions` - A list of permissions required to display this link (optional)
 * `buttons` - An iterable of NavMenuButton (or subclasses of NavMenuButton) instances to display (optional)
+* `query_params` - A dictionary of query parameters to add to the URL (optional)
 
 !!! note
     Any buttons associated within a menu item will be hidden if the user does not have permission to access the menu item, regardless of what permissions are set on the buttons.
@@ -133,6 +142,7 @@ A `NavMenuButton` has the following attributes:
 * `icon_class` - Button icon CSS classes (Nautobot currently supports [Material Design Icons](https://materialdesignicons.com) or one of the choices provided by `ButtonActionIconChoices`)
 * `button_class` - One of the choices provided by `ButtonActionColorChoices` (optional)
 * `permissions` - A list of permissions required to display this button (optional)
+* `query_params` - A dictionary of query parameters to add to the URL (optional)
 
 !!! note
     `NavMenuAddButton` and `NavMenuImportButton` are subclasses of `NavMenuButton` that can be used to provide the commonly used "Add" and "Import" buttons with appropriate defaults for `title`, `icon_class`, `button_class`, and `weight`.
