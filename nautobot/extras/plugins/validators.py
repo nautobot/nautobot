@@ -29,7 +29,7 @@ def custom_validator_clean(model_clean_func):
 
         # Add the BaseValidator from data validation engine to the list of custom validators
         dve_base_validator = type(
-            f"{model_name.split(".")[0].capitalize()}{model_name.split(".")[1].capitalize()}CustomValidator",
+            f"{model_name.split('.')[0].capitalize()}{model_name.split('.')[1].capitalize()}CustomValidator",
             (BaseValidator,),
             {"model": model_name},
         )
