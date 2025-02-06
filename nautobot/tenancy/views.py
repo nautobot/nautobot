@@ -37,8 +37,7 @@ class TenantGroupUIViewSet(NautobotUIViewSet):
             ObjectsTablePanel(
                 weight=100,
                 section=SectionChoices.RIGHT_HALF,
-                table_class=tables.TenantTable,
-                table_filter="tenant_group",
+                context_table_key="tenant_table",
                 exclude_columns=["tenant_group"],
             ),
         )
