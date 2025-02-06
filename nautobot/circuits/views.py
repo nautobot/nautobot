@@ -134,6 +134,7 @@ class CircuitUIViewSet(NautobotUIViewSet):
 
     class CircuitTerminationPanel(ObjectFieldsPanel):
         def __init__(self, **kwargs):
+            self.side = kwargs.pop("side")
             super().__init__(
                 fields=(
                     "location",  # TODO: render location hierarchy
@@ -161,7 +162,7 @@ class CircuitUIViewSet(NautobotUIViewSet):
             return True
 
         def get_extra_context(self, context):
-            return {"termination": context[self.context_object_key]}
+            return {"termination": context[self.context_object_key], "side": self.side}
 
         def get_data(self, context):
             """
@@ -237,12 +238,14 @@ class CircuitUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.RIGHT_HALF,
                 weight=100,
                 context_object_key="circuit_termination_a",
+                side=CircuitTerminationSideChoices.SIDE_A,
             ),
             CircuitTerminationPanel(
                 label="Termination - Z Side",
                 section=SectionChoices.RIGHT_HALF,
                 weight=200,
                 context_object_key="circuit_termination_z",
+                side=CircuitTerminationSideChoices.SIDE_Z,
             ),
         ),
     )
