@@ -1306,19 +1306,18 @@ class SavedViewTest(ModelViewTestCase):
 
     model = SavedView
 
-    def get_view_url_for_saved_view(self, saved_view, action="detail"):
+    def get_view_url_for_saved_view(self, saved_view=None, action="detail"):
         """
         Since saved view detail url redirects, we need to manually construct its detail url
         to test the content of its response.
         """
-        view = saved_view.view
-        pk = saved_view.pk
+        url = ""
 
-        if action == "detail":
-            url = reverse(view) + f"?saved_view={pk}"
-        elif action == "edit":
+        if action == "detail" and saved_view:
+            url = reverse(saved_view.view) + f"?saved_view={saved_view.pk}"
+        elif action == "edit" and saved_view:
             url = saved_view.get_absolute_url() + "update-config/"
-        else:
+        elif action == "create":
             url = reverse("extras:savedview_add")
 
         return url
@@ -1411,7 +1410,14 @@ class SavedViewTest(ModelViewTestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_update_saved_view_as_owner(self):
-        instance = self._get_queryset().first()
+        view_name = "dcim:location_list"
+        instance = SavedView.objects.create(
+            name="Location Saved View",
+            owner=self.user,
+            view=view_name,
+            is_global_default=True,
+        )
+
         update_query_strings = ["per_page=12", "&status=active", "&name=new_name_filter", "&sort=name"]
         update_url = self.get_view_url_for_saved_view(instance, "edit") + "?" + "".join(update_query_strings)
         # Try update the saved view with the same user as the owner of the saved view
@@ -1543,6 +1549,62 @@ class SavedViewTest(ModelViewTestCase):
         # Assert that Location List View got redirected to Saved View set as user default
         self.assertBodyContains(response, "<strong>User Location Default View</strong>", html=True)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_filtered_view_precedes_global_default(self):
+        view_name = "dcim:location_list"
+        # Global saved view that will show Floor type locations only.
+        SavedView.objects.create(
+            name="Global Location Default View",
+            owner=self.user,
+            view=view_name,
+            is_global_default=True,
+            config={
+                "filter_params": {
+                    "location_type": ["Floor"],
+                }
+            },
+        )
+        response = self.client.get(reverse(view_name) + "?location_type=Campus", follow=True)
+        # Assert that the user is not redirected to the global default view
+        # But instead redirected to the filtered view
+        self.assertNotIn(
+            "<strong>Global Location Default View</strong>",
+            extract_page_body(response.content.decode(response.charset)),
+        )
+
+        # Floor type locations (Floor-<number>) should not be visible in the response
+        self.assertNotIn(
+            "Floor-",
+            extract_page_body(response.content.decode(response.charset)),
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_filtered_view_precedes_user_default(self):
+        view_name = "dcim:location_list"
+        # User saved view that will show Floor type locations only.
+        sv = SavedView.objects.create(
+            name="User Location Default View",
+            owner=self.user,
+            view=view_name,
+            config={
+                "filter_params": {
+                    "location_type": ["Floor"],
+                }
+            },
+        )
+        UserSavedViewAssociation.objects.create(user=self.user, saved_view=sv, view_name=sv.view)
+        response = self.client.get(reverse(view_name) + "?location_type=Campus", follow=True)
+        # Assert that the user is not redirected to the user default view
+        # But instead redirected to the filtered view
+        self.assertNotIn(
+            "<strong>User Location Default View</strong>", extract_page_body(response.content.decode(response.charset))
+        )
+        # Floor type locations (Floor-<number>) should not be visible in the response
+        self.assertNotIn(
+            "Floor-",
+            extract_page_body(response.content.decode(response.charset)),
+        )
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_is_shared(self):
         view_name = "dcim:location_list"
@@ -1567,6 +1629,119 @@ class SavedViewTest(ModelViewTestCase):
         response_body = extract_page_body(response.content.decode(response.charset))
         self.assertIn(str(sv_shared.pk), response_body, msg=response_body)
         self.assertNotIn(str(sv_not_shared.pk), response_body, msg=response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_saved_views_contain_boolean_filter_params(self):
+        """
+        Test the entire Save View workflow from creating a Saved View to rendering the View with boolean filter parameters.
+        """
+        with self.subTest("Create job Saved View with boolean filter parameters"):
+            view_name = "extras:job_list"
+            app_label = view_name.split(":")[0]
+            model_name = view_name.split(":")[1].split("_")[0]
+            self.add_permissions(f"{app_label}.view_{model_name}")
+            create_query_strings = [
+                "&hidden=True",
+            ]
+            create_url = self.get_view_url_for_saved_view(action="create")
+            sv_name = "Hidden Jobs"
+            request = {
+                "path": create_url,
+                "data": post_data({"name": sv_name, "view": f"{view_name}", "params": "".join(create_query_strings)}),
+            }
+            self.assertHttpStatus(self.client.post(**request), 302)
+            instance = SavedView.objects.get(name=sv_name)
+            hidden_job = Job.objects.get(name="Example hidden job")
+            hidden_job.description = "I should not show in the UI!"
+            hidden_job.save()
+            self.assertEqual(instance.config["filter_params"]["hidden"], "True")
+            response = self.client.get(reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True)
+            # Assert that Job List View rendered with the boolean filter parameter without error
+            self.assertHttpStatus(response, 200)
+            response_body = extract_page_body(response.content.decode(response.charset))
+            self.assertIn(str(instance.pk), response_body, msg=response_body)
+            self.assertBodyContains(response, f"<strong>{sv_name}</strong>", html=True)
+            # This is the description
+            self.assertBodyContains(response, "I should not show in the UI!", html=True)
+
+        with self.subTest("Create device Saved View with boolean filter parameters"):
+            view_name = "dcim:device_list"
+            app_label = view_name.split(":")[0]
+            model_name = view_name.split(":")[1].split("_")[0]
+            self.add_permissions(f"{app_label}.view_{model_name}")
+            create_query_strings = [
+                "&per_page=12",
+                "&has_primary_ip=True",
+                "&sort=name",
+            ]
+            create_url = self.get_view_url_for_saved_view(action="create")
+            sv_name = "Devices with primary ips"
+            request = {
+                "path": create_url,
+                "data": post_data({"name": sv_name, "view": f"{view_name}", "params": "".join(create_query_strings)}),
+            }
+            self.assertHttpStatus(self.client.post(**request), 302)
+            instance = SavedView.objects.get(name=sv_name)
+            self.assertEqual(instance.config["pagination_count"], 12)
+            self.assertEqual(instance.config["filter_params"]["has_primary_ip"], "True")
+            self.assertEqual(instance.config["sort_order"], ["name"])
+            response = self.client.get(reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True)
+            # Assert that Job List View rendered with the boolean filter parameter without error
+            self.assertHttpStatus(response, 200)
+            response_body = extract_page_body(response.content.decode(response.charset))
+            self.assertIn(str(instance.pk), response_body, msg=response_body)
+            self.assertBodyContains(response, f"<strong>{sv_name}</strong>", html=True)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_update_saved_view_contain_boolean_filter_params(self):
+        with self.subTest("Update job Saved View with boolean filter parameters"):
+            view_name = "extras:job_list"
+            sv_name = "Non-hidden jobs"
+            instance = SavedView.objects.create(
+                name=sv_name,
+                owner=self.user,
+                view=view_name,
+            )
+            update_query_strings = ["hidden=False"]
+            update_url = self.get_view_url_for_saved_view(instance, "edit") + "?" + "".join(update_query_strings)
+            # Try update the saved view with the same user as the owner of the saved view
+            instance.owner.is_active = True
+            instance.owner.save()
+            self.client.force_login(instance.owner)
+            response = self.client.get(update_url)
+            self.assertHttpStatus(response, 302)
+            instance.refresh_from_db()
+            self.assertEqual(instance.config["filter_params"]["hidden"], "False")
+            response = self.client.get(reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True)
+            # Assert that Job List View rendered with the boolean filter parameter without error
+            self.assertHttpStatus(response, 200)
+            response_body = extract_page_body(response.content.decode(response.charset))
+            self.assertNotIn("Example hidden job", response_body, msg=response_body)
+            self.assertBodyContains(response, f"<strong>{sv_name}</strong>", html=True)
+
+        with self.subTest("Update device Saved View with boolean filter parameters"):
+            view_name = "dcim:device_list"
+            sv_name = "Devices with no primary ips"
+            instance = SavedView.objects.create(
+                name=sv_name,
+                owner=self.user,
+                view=view_name,
+            )
+            update_query_strings = ["has_primary_ip=False"]
+            update_url = self.get_view_url_for_saved_view(instance, "edit") + "?" + "".join(update_query_strings)
+            # Try update the saved view with the same user as the owner of the saved view
+            instance.owner.is_active = True
+            instance.owner.save()
+            self.client.force_login(instance.owner)
+            response = self.client.get(update_url)
+            self.assertHttpStatus(response, 302)
+            instance.refresh_from_db()
+            self.assertEqual(instance.config["filter_params"]["has_primary_ip"], "False")
+            response = self.client.get(reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True)
+            # Assert that Job List View rendered with the boolean filter parameter without error
+            self.assertHttpStatus(response, 200)
+            response_body = extract_page_body(response.content.decode(response.charset))
+            self.assertBodyContains(response, f"<strong>{sv_name}</strong>", html=True)
 
 
 # Not a full-fledged PrimaryObjectViewTestCase as there's no BulkEditView for Secrets

@@ -1,0 +1,1 @@
+Fixed Saved Views throwing an unexpected error when they contain boolean filter parameters.
