@@ -1410,7 +1410,14 @@ class SavedViewTest(ModelViewTestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_update_saved_view_as_owner(self):
-        instance = self._get_queryset().first()
+        view_name = "dcim:location_list"
+        instance = SavedView.objects.create(
+            name="Location Saved View",
+            owner=self.user,
+            view=view_name,
+            is_global_default=True,
+        )
+
         update_query_strings = ["per_page=12", "&status=active", "&name=new_name_filter", "&sort=name"]
         update_url = self.get_view_url_for_saved_view(instance, "edit") + "?" + "".join(update_query_strings)
         # Try update the saved view with the same user as the owner of the saved view
