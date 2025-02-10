@@ -80,20 +80,37 @@
           return new Editor(host);
       }
 
-      /** Loads Monaco Editor assets and initializes the environment. */
+      /** 
+       * Load Monaco Editor with S3/CORS compatibility.
+       * Safe for multiple calls; uses singleton promise.
+       */
       static async loadMonaco() {
-          // Return immediately if Monaco is already loaded
-          if (window.monaco) return;
+          if (window.monaco) return; // Already loaded
 
-          // Use existing loader promise or create new one
-          window._monacoLoaderPromise = window._monacoLoaderPromise || new Promise((resolve, reject) => {
+          // Create worker environment with blob URL wrapper for CORS
+          const createWorkerEnv = () => {
+              const workerPath = `${MONACO_BASE}/vs/base/worker/workerMain.js`;
+              
+              // Single blob URL for all workers (cached)
+              if (!window._monacoWorkerUrl) {
+                  window._monacoWorkerUrl = URL.createObjectURL(
+                      new Blob([`
+                          self.MonacoEnvironment = { baseUrl: '${MONACO_BASE}' };
+                          importScripts('${workerPath}');
+                      `], { type: 'text/javascript' })
+                  );
+              }
+
+              return { getWorkerUrl: () => window._monacoWorkerUrl };
+          };
+
+          // Load Monaco via AMD, reusing existing promise if pending
+          window._monacoLoaderPromise ||= new Promise((resolve, reject) => {
               const script = document.createElement('script');
               script.src = `${MONACO_BASE}/vs/loader.js`;
               script.onload = () => {
-                  require.config({ paths: { vs: `${MONACO_BASE}/vs` }});
-                  window.MonacoEnvironment = {
-                      getWorkerUrl: () => `${MONACO_BASE}/vs/base/worker/workerMain.js`
-                  };
+                  require.config({ paths: { vs: MONACO_BASE + '/vs' } });
+                  window.MonacoEnvironment = createWorkerEnv();
                   require(['vs/editor/editor.main'], resolve, reject);
               };
               script.onerror = reject;
