@@ -1,2 +1,2 @@
-Updated `Django` dependency to `4.2.19`.
-Updated `django-structlog` dependency to `9.0.1`.
+Updated `Django` dependency to `~4.2.19`.
+Updated `django-structlog` dependency to `^9.0.1`.
