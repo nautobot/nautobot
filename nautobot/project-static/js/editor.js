@@ -74,16 +74,13 @@
           useInlineViewWhenSpaceIsLimited: false
       };
 
-      /** Creates a new Editor instance for the given host element. */
+      /** Creates a new Editor instance, ensuring Monaco is loaded before initialization. */
       static async create(host) {
           await Editor.loadMonaco();
           return new Editor(host);
       }
 
-      /** 
-       * Load Monaco Editor with S3/CORS compatibility.
-       * Safe for multiple calls; uses singleton promise.
-       */
+      /** Initializes shared Monaco Editor environment, ensuring only one initialization occurs. */
       static async loadMonaco() {
           if (window.monaco) return;
 
@@ -92,7 +89,7 @@
               const workerPath = `${MONACO_BASE}/vs/base/worker/workerMain.js`;
               const absoluteWorkerPath = new URL(workerPath, window.location.origin).href;
 
-              // Single blob URL for all workers (cached)
+              // Create cached blob URL for all workers
               if (!window._monacoWorkerUrl) {
                   const workerCode = `
                       self.MonacoEnvironment = { 
@@ -159,7 +156,7 @@
           this.init();
       }
 
-      /** Initializes the editor based on configuration */
+      /** Initializes editor with configured options and sets up event listeners. */
       init() {
           const { theme, language, isDiff, options } = this._config;
           
@@ -179,7 +176,7 @@
           this._setupContentHeightListener();
       }
 
-      /** Creates a standard Monaco editor */
+      /** Creates a standard Monaco editor with the configured value and options. */
       _createStandardEditor(options) {
           this._editor = monaco.editor.create(this._host, {
               ...options,
@@ -187,7 +184,7 @@
           });
       }
 
-      /** Creates a diff editor */
+      /** Creates a Monaco diff editor with original and modified content models. */
       _createDiffEditor(options) {
           this._editor = monaco.editor.createDiffEditor(this._host, options);
           const { language, original, modified } = this._config;
@@ -197,7 +194,7 @@
           });
       }
 
-      /** Sets up resize observer */
+      /** Sets up a debounced resize observer to update editor layout. */
       _setupResize() {
           let resizeTimeout;
           this._resizeObserver = new ResizeObserver(() => {
@@ -211,7 +208,7 @@
           this._resizeObserver.observe(this._host);
       }
 
-      /** Registers content height listeners */
+      /** Registers listeners to update editor height when content size changes. */
       _setupContentHeightListener() {
           // Store listeners for cleanup
           this._contentListeners = [];
@@ -229,7 +226,7 @@
           }
       }
 
-      /** Updates editor height */
+      /** Updates editor container height based on content and max-height constraints. */
       _updateEditorHeight() {
           if (!this._editor) return;
 
@@ -255,7 +252,7 @@
           this._editor.layout();
       }
 
-      /** Cleanup resources */
+      /** Cleans up editor instance, models, and event listeners. */
       dispose() {
           if (!this._editor) return;
 
