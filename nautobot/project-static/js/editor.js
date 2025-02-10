@@ -85,35 +85,49 @@
        * Safe for multiple calls; uses singleton promise.
        */
       static async loadMonaco() {
-          if (window.monaco) return; // Already loaded
+          if (window.monaco) return;
 
           // Create worker environment with blob URL wrapper for CORS
           const createWorkerEnv = () => {
               const workerPath = `${MONACO_BASE}/vs/base/worker/workerMain.js`;
-              const absoluteWorkerPath = `${window.location.origin}${workerPath}`;
+              const absoluteWorkerPath = new URL(workerPath, window.location.origin).href;
 
               // Single blob URL for all workers (cached)
               if (!window._monacoWorkerUrl) {
+                  const workerCode = `
+                      self.MonacoEnvironment = { 
+                          baseUrl: '${new URL(MONACO_BASE, window.location.origin).href}'
+                      };
+                      importScripts('${absoluteWorkerPath}');
+                  `;
+                  
                   window._monacoWorkerUrl = URL.createObjectURL(
-                      new Blob([`
-                          self.MonacoEnvironment = { baseUrl: '${window.location.origin}${MONACO_BASE}' };
-                          importScripts('${absoluteWorkerPath}');
-                      `], { type: 'text/javascript' })
+                      new Blob([workerCode], { type: 'text/javascript' })
                   );
               }
 
-              return { getWorkerUrl: () => window._monacoWorkerUrl };
+              return { 
+                  getWorkerUrl: () => window._monacoWorkerUrl
+              };
           };
 
           // Load Monaco via AMD, reusing existing promise if pending
           window._monacoLoaderPromise ||= new Promise((resolve, reject) => {
               const script = document.createElement('script');
               script.src = `${MONACO_BASE}/vs/loader.js`;
+              script.crossOrigin = 'anonymous';
+              
               script.onload = () => {
-                  require.config({ paths: { vs: MONACO_BASE + '/vs' } });
+                  require.config({
+                      paths: { 
+                          vs: `${MONACO_BASE}/vs`
+                      }
+                  });
+                  
                   window.MonacoEnvironment = createWorkerEnv();
                   require(['vs/editor/editor.main'], resolve, reject);
               };
+              
               script.onerror = reject;
               document.head.appendChild(script);
           });
