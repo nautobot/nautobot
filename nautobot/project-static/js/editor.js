@@ -90,13 +90,14 @@
           // Create worker environment with blob URL wrapper for CORS
           const createWorkerEnv = () => {
               const workerPath = `${MONACO_BASE}/vs/base/worker/workerMain.js`;
-              
+              const absoluteWorkerPath = `${window.location.origin}${workerPath}`;
+
               // Single blob URL for all workers (cached)
               if (!window._monacoWorkerUrl) {
                   window._monacoWorkerUrl = URL.createObjectURL(
                       new Blob([`
-                          self.MonacoEnvironment = { baseUrl: '${MONACO_BASE}' };
-                          importScripts('${workerPath}');
+                          self.MonacoEnvironment = { baseUrl: '${window.location.origin}${MONACO_BASE}' };
+                          importScripts('${absoluteWorkerPath}');
                       `], { type: 'text/javascript' })
                   );
               }
