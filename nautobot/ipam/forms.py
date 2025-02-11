@@ -674,7 +674,7 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         "has_nat_inside",
     ]
     q = forms.CharField(required=False, label="Search")
-    parent  = DynamicModelMultipleChoiceField(
+    parent = DynamicModelMultipleChoiceField(
         queryset=Prefix.objects.all(),
         required=False,
         label="Parent Prefix",
