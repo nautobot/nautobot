@@ -29,7 +29,6 @@ from nautobot.core.events import publish_event
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.forms import restrict_form_fields
 from nautobot.core.models.querysets import count_related
-from nautobot.core.models.tree_queries import TreeQuerySet
 from nautobot.core.models.utils import pretty_print_query, serialize_object_v2
 from nautobot.core.tables import ButtonsColumn
 from nautobot.core.ui import object_detail
