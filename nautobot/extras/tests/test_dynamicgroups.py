@@ -667,7 +667,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         # Cleanup because we're using class-based fixtures in `setUpTestData()`
         group.refresh_from_db()
 
-    def test_set_filter_on_ipaddress_dp(self):
+    def test_set_filter_on_ipaddress_dynamic_group(self):
         """
         Test `DynamicGroup.set_filter()` for an IPAddress Dynamic Group.
         https://github.com/nautobot/nautobot/issues/6805
