@@ -10,7 +10,7 @@ on:  # yamllint disable
 
 jobs:
   ruff:
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
     steps:
@@ -25,7 +25,7 @@ jobs:
       - name: "Linting: ruff"
         run: "poetry run invoke ruff --output-format github"
   yamllint:
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
     steps:
@@ -40,7 +40,7 @@ jobs:
       - name: "Linting: yamllint"
         run: "poetry run invoke yamllint"
   markdownlint:
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
     steps:
@@ -55,7 +55,7 @@ jobs:
       - name: "Linting: pymarkdownlnt"
         run: "poetry run invoke markdownlint"
   hadolint:
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
     steps:
@@ -67,7 +67,7 @@ jobs:
           dockerfile: "docker/Dockerfile"
   check-migrations:
     name: "Run 'nautobot-server makemigrations --dry-run --check'"
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -95,7 +95,7 @@ jobs:
         run: "poetry run invoke check-migrations"
   check-schema:
     name: "Run REST API schema checks"
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -124,7 +124,7 @@ jobs:
         # REST API schema generation currently includes GraphQL schema generation, which is dependent on the DB :-(
         run: "poetry run invoke migrate check-schema"
   pylint:
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -153,7 +153,7 @@ jobs:
         run: "poetry run invoke pylint"
   tests-postgres:
     name: "Unit tests (PostgreSQL and Python 3.9)"
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -192,7 +192,7 @@ jobs:
       - "yamllint"
   tests-mysql:
     name: "Unit tests (MySQL and Python 3.12)"
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "root"
@@ -235,7 +235,7 @@ jobs:
       - "yamllint"
   migration-tests-mysql:
     name: "Run migrations against test dataset (MySQL and Python 3.9)"
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_mysql.tar.gz"
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -276,7 +276,7 @@ jobs:
       - "yamllint"
   migration-tests-postgres:
     name: "Run migrations against test dataset (PostgreSQL and Python 3.12)"
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_postgres.tar.gz"
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -313,7 +313,7 @@ jobs:
       - "ruff"
       - "yamllint"
   integration-test:
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -358,7 +358,7 @@ jobs:
       - "yamllint"
   changelog:
     if: ${{ (contains(fromJson('["develop","next"]'), github.base_ref)) || (startsWith(github.base_ref, 'ltm')) }}
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     steps:
       - name: "Check out repository code"
         uses: "actions/checkout@v4"
@@ -410,7 +410,7 @@ jobs:
           tag-latest-for-py: "false"
           target: "final"
   all-tests-passed:
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     steps:
       - run: "echo 'All tests succeeded'"
     needs:

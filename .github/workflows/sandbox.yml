@@ -9,7 +9,7 @@ on:
 
 jobs:
   webhook:
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     steps:
       - run: "echo branch_name=$(echo ${{ github.ref }} | sed 's@refs/heads/@@') >> $GITHUB_OUTPUT"
         id: "git"

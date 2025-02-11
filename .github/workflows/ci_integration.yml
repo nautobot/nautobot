@@ -111,7 +111,7 @@ jobs:
         run: "poetry run invoke unittest --failfast --no-keepdb --no-cache-test-fixtures --parallel"
   migration-tests-mysql:
     name: "Run migrations against test dataset (MySQL and Python 3.9)"
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_mysql.tar.gz"
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -145,7 +145,7 @@ jobs:
         run: "poetry run invoke migration-test --db-engine mysql --dataset $MIGRATION_TEST_DATASET"
   migration-tests-postgres:
     name: "Run migrations against test dataset (PostgreSQL and Python 3.12)"
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_postgres.tar.gz"
       INVOKE_NAUTOBOT_LOCAL: "True"
