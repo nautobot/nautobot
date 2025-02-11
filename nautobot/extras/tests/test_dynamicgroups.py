@@ -672,14 +672,14 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         Test `DynamicGroup.set_filter()` for an IPAddress Dynamic Group.
         https://github.com/nautobot/nautobot/issues/6805
         """
-        ipaddress_dp = DynamicGroup.objects.create(
+        ipaddress_dg = DynamicGroup.objects.create(
             name="IP Address Dynamic Group",
             content_type=ContentType.objects.get_for_model(IPAddress),
             description="IP Address Dynamic Group",
         )
         # Test the fact that set_filter correctly discard an empty PrefixQuerySet
-        ipaddress_dp.set_filter({"parent": Prefix.objects.none()})
-        self.assertEqual(ipaddress_dp.filter, {})
+        ipaddress_dg.set_filter({"parent": Prefix.objects.none()})
+        self.assertEqual(ipaddress_dg.filter, {})
 
     def test_add_child(self):
         """Test `DynamicGroup.add_child()`."""
