@@ -67,6 +67,7 @@
                                 <div class="trace-end">
                                     <button type="button" id="download-btn" class="btn btn-default">Download SVG</button>
                                     <script>
+                                        //Download SVG of generated trace diagram
                                         document.getElementById("download-btn").addEventListener("click", function () {
                                             const traceElement = document.getElementById("cable-trace");
                                             const downloadButton = document.getElementById("download-btn");
@@ -145,13 +146,11 @@
                                             foreignObject.setAttribute("height", "100%");
                                             foreignObject.appendChild(clonedTrace);
                                             svgElement.appendChild(foreignObject);
-                                        
-                                            // Serialize SVG
+                                    
                                             const svgData = serializer.serializeToString(svgElement);
                                             const blob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
                                             const url = URL.createObjectURL(blob);
                                         
-                                            // Download SVG
                                             const link = document.createElement("a");
                                             link.href = url;
                                             link.download = "cable_trace.svg";
