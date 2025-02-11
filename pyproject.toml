@@ -37,7 +37,7 @@ python = ">=3.9,<3.13"
 # Background task processing
 celery = "~5.3.6"
 # Fundamental web framework for Nautobot
-Django = "~4.2.18"
+Django = "~4.2.19"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -71,7 +71,7 @@ django-silk = "~5.3.2"
 # Pinned temporarily to 1.14.3 due to https://github.com/revsys/django-health-check/issues/434
 django-storages = {version = "1.14.3", optional = true}
 # Structured logging for Django
-django-structlog = {version = "^9.0.0", extras = ["celery"]}
+django-structlog = {version = "^9.0.1", extras = ["celery"]}
 # Advanced HTML tables
 django-tables2 = "~2.7.5"
 # Tags
@@ -165,7 +165,7 @@ example-app = {path = "examples/example_app", develop = true}
 # Nautobot test App used for testing core view overrides
 example-app-with-view-override = {path = "examples/example_app_with_view_override", develop = true}
 # Random data generation
-factory-boy = "~3.3.1"
+factory-boy = "~3.3.3"
 # Factory Boy dependency.
 faker = "~33.3.1"
 # Alternative to Make, CLI based on `tasks.py`
