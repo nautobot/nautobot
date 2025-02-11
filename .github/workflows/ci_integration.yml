@@ -12,7 +12,7 @@ on:  # yamllint disable
 
 jobs:
   black:
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
     steps:
@@ -23,7 +23,7 @@ jobs:
       - name: "Linting: black"
         run: "poetry run invoke black"
   flake8:
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
     steps:
@@ -34,7 +34,7 @@ jobs:
       - name: "Linting: flake8"
         run: "poetry run invoke flake8"
   markdownlint:
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
     steps:
@@ -48,7 +48,7 @@ jobs:
           ignore_files: "nautobot/project-static"
           rules: "scripts/use-relative-md-links.js"
   hadolint:
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
     steps:
@@ -59,7 +59,7 @@ jobs:
         with:
           dockerfile: "docker/Dockerfile"
   check-migrations:
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -87,7 +87,7 @@ jobs:
       - "markdownlint"
       - "hadolint"
   check-schema:
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -118,7 +118,7 @@ jobs:
       - "hadolint"
 
   pylint:
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -146,7 +146,7 @@ jobs:
       - "check-schema"
 
   tests-postgres:
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     strategy:
       fail-fast: true
       matrix:
@@ -189,7 +189,7 @@ jobs:
       - "check-schema"
 
   tests-mysql:
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     strategy:
       fail-fast: true
       matrix:
@@ -238,7 +238,7 @@ jobs:
       - "check-schema"
 
   integration-test:
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -283,7 +283,7 @@ jobs:
 
   container-build:
     name: "Build Container Images (GHCR Only)"
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     if: |
       github.event_name == 'push' &&
       (github.ref_name == 'develop' || github.ref_name == 'next' || github.ref_name == 'ltm-1.6')

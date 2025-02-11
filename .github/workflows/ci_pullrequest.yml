@@ -10,7 +10,7 @@ on:  # yamllint disable
 
 jobs:
   black:
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
     steps:
@@ -21,7 +21,7 @@ jobs:
       - name: "Linting: black"
         run: "poetry run invoke black"
   flake8:
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
     steps:
@@ -32,7 +32,7 @@ jobs:
       - name: "Linting: flake8"
         run: "poetry run invoke flake8"
   ruff:
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
     steps:
@@ -43,7 +43,7 @@ jobs:
       - name: "Linting: ruff"
         run: "poetry run invoke ruff --output-format github"
   markdownlint:
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
     steps:
@@ -57,7 +57,7 @@ jobs:
           ignore_files: "nautobot/project-static"
           rules: "scripts/use-relative-md-links.js"
   hadolint:
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
     steps:
@@ -68,7 +68,7 @@ jobs:
         with:
           dockerfile: "docker/Dockerfile"
   check-migrations:
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -97,7 +97,7 @@ jobs:
       - "ruff"
       - "hadolint"
   check-schema:
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -129,7 +129,7 @@ jobs:
       - "hadolint"
 
   pylint:
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -157,7 +157,7 @@ jobs:
       - "check-schema"
 
   tests-postgres:
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     strategy:
       fail-fast: true
       matrix:
@@ -200,7 +200,7 @@ jobs:
       - "check-schema"
 
   tests-mysql:
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     strategy:
       fail-fast: true
       matrix:
@@ -249,7 +249,7 @@ jobs:
       - "check-schema"
 
   performance-test:
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     strategy:
       fail-fast: true
       matrix:
@@ -291,7 +291,7 @@ jobs:
       - "tests-mysql"
 
   integration-test:
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -336,7 +336,7 @@ jobs:
 
   changelog:
     if: ${{ (contains(fromJson('["develop","next"]'), github.base_ref)) || (startsWith(github.base_ref, 'ltm')) }}
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     steps:
       - name: "Check out repository code"
         uses: "actions/checkout@v2"
