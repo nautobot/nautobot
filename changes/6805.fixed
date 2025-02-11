@@ -1,1 +1,1 @@
-Fixed updating Dynamic Groups of type IP Address throws unexpected error.
+Fixed an exception when saving a Dynamic Group of IP Addresses.
