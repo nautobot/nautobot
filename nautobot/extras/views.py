@@ -723,7 +723,10 @@ class DynamicGroupView(generic.ObjectView):
         if table_class is not None:
             # Members table (for display on Members nav tab)
             members_table = table_class(
-                members.restrict(request.user, "view"), orderable=False, exclude=["dynamic_group_count"], hide_hierarchy_ui=True
+                members.restrict(request.user, "view"),
+                orderable=False,
+                exclude=["dynamic_group_count"],
+                hide_hierarchy_ui=True,
             )
             paginate = {
                 "paginator_class": EnhancedPaginator,
