@@ -820,7 +820,8 @@ class DynamicGroupTestCase(
         return super()._get_queryset().filter(group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER)  # TODO
 
     def test_get_object_with_permission(self):
-        instance = self._get_queryset().first()
+        location_ct = ContentType.objects.get_for_model(Location)
+        instance = self._get_queryset().exclude(content_type=location_ct).first()
         # Add view permissions for the group's members:
         self.add_permissions(get_permission_for_model(instance.content_type.model_class(), "view"))
 
@@ -829,6 +830,18 @@ class DynamicGroupTestCase(
         response_body = extract_page_body(response.content.decode(response.charset))
         # Check that the "members" table in the detail view includes all appropriate member objects
         for member in instance.members:
+            self.assertIn(str(member.pk), response_body)
+
+        # Test accessing DynamicGroup detail view with a different content type, more specifically, TreeModel
+        # https://github.com/nautobot/nautobot/issues/6806
+        tree_model_dg = DynamicGroup.objects.create(name="DG 4", content_type=location_ct)
+        # Add view permissions for the group's members:
+        self.add_permissions(get_permission_for_model(tree_model_dg.content_type.model_class(), "view"))
+        response = self.client.get(tree_model_dg.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        # Check that the "members" table in the detail view includes all appropriate member objects
+        for member in tree_model_dg.members:
             self.assertIn(str(member.pk), response_body)
 
     def test_get_object_with_constrained_permission(self):
