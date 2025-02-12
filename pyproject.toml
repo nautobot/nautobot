@@ -37,7 +37,7 @@ python = ">=3.9,<3.13"
 # Background task processing
 celery = "~5.3.6"
 # Fundamental web framework for Nautobot
-Django = "~5.1.0"
+Django = "~4.2.19"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -47,7 +47,6 @@ django-celery-beat = "~2.6.0"
 # Provides a database backend & models for Celery task results
 django-celery-results = "~2.5.1"
 # Management of app configuration via the Django admin UI
-# TODO: Do not upgrade to 4.x until https://github.com/jazzband/django-constance/issues/592 is resolved
 django-constance = "~4.3.0"
 # Permit cross-domain API requests
 django-cors-headers = "~4.4.0"
@@ -92,7 +91,7 @@ emoji = "~2.12.1"
 GitPython = "~3.1.44"
 # GraphQL support
 # NOTE: graphene-django 3.x is available but includes breaking changes. Will address in a future release.
-graphene-django = "~3.2.0"
+graphene-django = "~2.16.0"
 # Graphene Optimizer
 # NOTE: graphene-django-optimizer 0.9 and later require Graphene v3
 graphene-django-optimizer = "~0.8.0"

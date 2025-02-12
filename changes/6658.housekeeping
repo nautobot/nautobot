@@ -1,0 +1,3 @@
+Updated development dependency `faker` to `~36.1.0`.
+Updated development dependency `django-debug-toolbar` to `~5.0.1`.
+Updated documentation dependency `mkdocs-include-markdown-plugin` to `7.1.4`.
