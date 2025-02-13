@@ -21,7 +21,8 @@ html[data-theme="dark"] .color-block,                     /* Colored choices, li
 html[data-theme="dark"] .select2-selection__choice,       /* Colored choices, like statuses */
 html[data-theme="dark"] #select2-id_color-results,        /* Colored choices, like statuses */
 html[data-theme="dark"] #select2-id_color-container,      /* Colored choices, like statuses */
-html[data-theme="dark"] .hljs {                           /* highlight.js maintains its own dark theme */
+html[data-theme="dark"] .hljs,                            /* highlight.js maintains its own dark theme */
+html[data-theme="dark"] .editor-container {               /* Monaco editor maintains its own dark theme */
   filter: invert(1) hue-rotate(180deg);
 }
 
