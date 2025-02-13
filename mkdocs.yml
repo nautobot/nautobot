@@ -595,7 +595,7 @@ nav:
               - Git Repository Content: "development/apps/api/platform-features/git-repository-content.md"
               - Jinja2 Filters: "development/apps/api/platform-features/jinja2-filters.md"
               - Jobs: "development/apps/api/platform-features/jobs.md"
-              - Populating Extensibility Features: "development/apps/api/platform-features/populating-extensibility-features.md"
+              - Prepopulating Data: "development/apps/api/platform-features/prepopulating-data.md"
               - Prometheus Metrics: "development/apps/api/prometheus.md"
               - Secrets Providers: "development/apps/api/platform-features/secrets-providers.md"
               - Table Extensions: "development/apps/api/platform-features/table-extensions.md"
