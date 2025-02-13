@@ -65,6 +65,99 @@
                                 </div>
                             {% else %}
                                 <div class="trace-end">
+                                    <button type="button" id="download-btn" class="btn btn-default">Download SVG</button>
+                                    <script>
+                                        //Download SVG of generated trace diagram
+                                        document.getElementById("download-btn").addEventListener("click", function () {
+                                            const traceElement = document.getElementById("cable-trace");
+                                            const downloadButton = document.getElementById("download-btn");
+                                            const serializer = new XMLSerializer();
+                                            const svgNS = "http://www.w3.org/2000/svg";
+                                        
+                                            
+                                            downloadButton.style.visibility = "hidden";
+                                        
+                                            
+                                            const clonedTrace = traceElement.cloneNode(true);
+                                            const clonedButton = clonedTrace.querySelector("#download-btn");
+                                            if (clonedButton) {
+                                                clonedButton.remove();
+                                            }
+                                            downloadButton.style.visibility = "visible";
+                    
+                                            function inlineStyles(element) {
+                                                const computedStyles = window.getComputedStyle(element);
+                                                element.setAttribute("style", `
+                                                    font-family: ${computedStyles.fontFamily};
+                                                    font-size: ${computedStyles.fontSize};
+                                                    font-style: ${computedStyles.fontStyle};
+                                                    font-weight: ${computedStyles.fontWeight};
+                                                    line-height: ${computedStyles.lineHeight};
+                                                    letter-spacing: ${computedStyles.letterSpacing};
+                                                    text-align: ${computedStyles.textAlign};
+                                                    white-space: ${computedStyles.whiteSpace};
+                                                    word-spacing: ${computedStyles.wordSpacing};
+                                                `);
+                                        
+                                                
+                                                Array.from(element.children).forEach((child) => {
+                                                    inlineStyles(child);
+                                                    if (child.tagName.toLowerCase() === "a") {
+                                                        const href = child.getAttribute("href");
+                                                        if (href && !href.startsWith("http")) {
+                                                            child.setAttribute(
+                                                                "href",
+                                                                new URL(href, window.location.href).href 
+                                                            );
+                                                        }
+                                                        child.setAttribute("target", "_blank"); 
+                                                    }
+                                                });
+                                            }
+                                        
+                                            inlineStyles(clonedTrace);
+                                            const svgElement = document.createElementNS(svgNS, "svg");
+                                            const boundingBox = traceElement.getBoundingClientRect();
+                                        
+                                            svgElement.setAttribute("width", boundingBox.width);
+                                            svgElement.setAttribute("height", boundingBox.height);
+                                            svgElement.setAttribute("xmlns", svgNS);
+                                            svgElement.setAttribute("version", "1.1");
+                                            svgElement.setAttribute("viewBox", `0 0 ${boundingBox.width} ${boundingBox.height}`);
+                                        
+                                            const styleElement = document.createElementNS(svgNS, "style");
+                                            const cssRules = Array.from(document.styleSheets)
+                                                .filter((sheet) => sheet.cssRules)
+                                                .flatMap((sheet) => Array.from(sheet.cssRules || []))
+                                                .map((rule) => rule.cssText)
+                                                .join("\n");
+                                        
+                                            styleElement.textContent = `
+                                                ${cssRules}
+                                                svg * {
+                                                    font-family: 'YourFontFamily', sans-serif;
+                                                    font-size: 14px;
+                                                }
+                                            `;
+                                            svgElement.appendChild(styleElement);
+                    
+                                            const foreignObject = document.createElementNS(svgNS, "foreignObject");
+                                            foreignObject.setAttribute("width", "100%");
+                                            foreignObject.setAttribute("height", "100%");
+                                            foreignObject.appendChild(clonedTrace);
+                                            svgElement.appendChild(foreignObject);
+                                    
+                                            const svgData = serializer.serializeToString(svgElement);
+                                            const blob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+                                            const url = URL.createObjectURL(blob);
+                                        
+                                            const link = document.createElement("a");
+                                            link.href = url;
+                                            link.download = "cable_trace.svg";
+                                            link.click();
+                                        });                    
+                    
+                                    </script>
                                     <h3{% if far_end %} class="text-success"{% endif %}>Trace completed</h3>
                                     <h5>Total segments: {{ traced_path|length }}</h5>
                                     <h5>Total length:
