@@ -73,7 +73,7 @@ echo "export NAUTOBOT_ROOT=/opt/nautobot" | sudo tee -a ~nautobot/.bashrc
     export NAUTOBOT_ROOT=/opt/nautobot
     ```
 
-## Sudo to nautobot
+## Sudo to `nautobot` user
 
 It is critical to install Nautobot as the `nautobot` user so that we don't have to worry about fixing permissions later.
 
@@ -371,7 +371,7 @@ Checks are ran automatically when running a development server using `nautobot-s
 nautobot-server check
 ```
 
-??? example "nautobot-server check output"
+??? example "`nautobot-server check` output"
 
     ```no title="Example nautobot-server check output"
     System check identified no issues (0 silenced).

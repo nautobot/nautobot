@@ -140,11 +140,11 @@ Once all steps are completed Nautobot should now have the `Continue to SSO` butt
 
 Keycloak admin console is reachable via `http://localhost:8087/admin/` with user `admin` and password `admin`. The below users are pre-configured within Keycloak, at this time their permissions are not directly mapped to any permissions provided by default by Nautobot. This will be a later enhancement to the local development environment.
 
-| Username         | Password  |
-+------------------+-----------+
-| nautobot_unpriv  | unpriv123 |
-| nautobot_admin   | admin123  |
-| nautobot_auditor | audit123  |
+| Username           | Password    |
++--------------------+-------------+
+| `nautobot_unpriv`  | `unpriv123` |
+| `nautobot_admin`   | `admin123`  |
+| `nautobot_auditor` | `audit123`  |
 
 ## Microsoft Visual Studio Code Integration
 
@@ -158,7 +158,7 @@ For users of Microsoft Visual Studio Code, several files are included to ease de
 
 +/- 2.1.2
 
-#### PYTHON_VER Environment Variable
+#### `PYTHON_VER` Environment Variable
 
 The `PYTHON_VER` environment variable must be set in the `development/.env` file or the container build will fail.
 
@@ -224,7 +224,7 @@ Follow the steps below to configure VS Code to debug Nautobot and Celery Worker 
     If you have opened the workspace file `nautobot.code-workspace` then there are two debug
     configurations for remote debugging already available.
 
-    If you add nautobot to an existing VS Code workspace (Menu: _File > Add Folder to Workspace..._)
+    If you add `nautobot` to an existing VS Code workspace (Menu: _File > Add Folder to Workspace..._)
     then copy the `launch:` values to the `.vscode/launch.json` file.
 
     - Debug Configurations for Remote Debugging:

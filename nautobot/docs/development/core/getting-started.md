@@ -520,14 +520,14 @@ You can connect to the development server at `localhost:8080`.
 
 In order to run Nautobot Jobs or anything that requires a worker you must start a Celery worker.
 
-The worker is started in Docker Workflow with [watchdog](https://pythonhosted.org/watchdog/) and can be setup to be started with watchdog in the Virtual Environment Workflow. Watchdog provides a similar experience to the Django lightweight HTTP/WSGI for restarting your application automatically. Watchdog can watch for changes on your filesystem, this is helpful when adjusting existing Python files to not have to restart the celery worker when testing jobs.
+The worker is started in Docker Workflow with [watchdog](https://pythonhosted.org/watchdog/) and can be setup to be started with watchdog in the Virtual Environment Workflow. Watchdog provides a similar experience to the Django lightweight HTTP/WSGI for restarting your application automatically. Watchdog can watch for changes on your filesystem, this is helpful when adjusting existing Python files to not have to restart the Celery worker when testing jobs.
 
 | Docker Compose Workflow | Virtual Environment Workflow    |
 | ----------------------- | ------------------------------- |
 | `invoke start`          | `nautobot-server celery worker` |
 
 !!! tip
-    You can leverage watchdog for your celery worker as described above, with the following watchmedo command in your development environment `watchmedo auto-restart --directory './' --pattern '*.py' --recursive -- nautobot-server celery worker -l INFO --events`.
+    You can leverage watchdog for your Celery worker as described above, with the following watchmedo command in your development environment `watchmedo auto-restart --directory './' --pattern '*.py' --recursive -- nautobot-server celery worker -l INFO --events`.
 
 ### Starting the Interactive Shell
 

@@ -18,7 +18,7 @@ On CentOS:
 sudo dnf install -y openldap-devel
 ```
 
-### Install django-auth-ldap
+### Install `django-auth-ldap`
 
 !!! warning
     This and all remaining steps in this document should all be performed as the `nautobot` user!
@@ -117,7 +117,7 @@ AUTH_LDAP_CONNECTION_OPTIONS = {
 }
 ```
 
-Additional ldap connection options can be found in the [python-ldap documentation](https://www.python-ldap.org/en/python-ldap-3.3.0/reference/ldap.html?highlight=cacert#options).
+Additional LDAP connection options can be found in the [`python-ldap` documentation](https://www.python-ldap.org/en/python-ldap-3.3.0/reference/ldap.html?highlight=cacert#options).
 
 ### User Authentication
 
@@ -279,7 +279,7 @@ LOGGING = {
 }
 ```
 
-Ensure the file and path specified in logfile exist and are writable and executable by the application service account. Restart the nautobot service and attempt to log into the site to trigger log entries to this file.
+Ensure the file and path specified in logfile exist and are writable and executable by the application service account. Restart the `nautobot` service and attempt to log into the site to trigger log entries to this file.
 
 ---
 
