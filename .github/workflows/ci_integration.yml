@@ -13,7 +13,7 @@ on:  # yamllint disable
 jobs:
   check-schema:
     name: "Run REST API schema checks"
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -43,7 +43,7 @@ jobs:
         run: "poetry run invoke migrate check-schema"
   tests-postgres:
     name: "Unit tests (PostgreSQL and Python 3.12)"
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -75,7 +75,7 @@ jobs:
         run: "poetry run invoke unittest --failfast --no-keepdb --no-cache-test-fixtures --parallel"
   tests-mysql:
     name: "Unit tests (MySQL and Python 3.9)"
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "root"
@@ -111,7 +111,7 @@ jobs:
         run: "poetry run invoke unittest --failfast --no-keepdb --no-cache-test-fixtures --parallel"
   migration-tests-mysql:
     name: "Run migrations against test dataset (MySQL and Python 3.9)"
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-24.04"
     env:
       MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_mysql.tar.gz"
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -145,7 +145,7 @@ jobs:
         run: "poetry run invoke migration-test --db-engine mysql --dataset $MIGRATION_TEST_DATASET"
   migration-tests-postgres:
     name: "Run migrations against test dataset (PostgreSQL and Python 3.12)"
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-24.04"
     env:
       MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_postgres.tar.gz"
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -175,7 +175,7 @@ jobs:
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine postgres --dataset $MIGRATION_TEST_DATASET"
   integration-test:
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -213,7 +213,7 @@ jobs:
         run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke integration-test --keepdb"
   container-build:
     name: "Build Container Images (amd64 on GHCR Only)"
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     if: |
       github.event_name == 'push' &&
       (github.ref_name == 'develop' || github.ref_name == 'next' || github.ref_name == 'ltm-1.6')

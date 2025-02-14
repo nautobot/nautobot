@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 from urllib.parse import parse_qs
 
 from django.contrib import messages
@@ -25,21 +26,24 @@ from rest_framework.permissions import IsAuthenticated
 
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.events import publish_event
+from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.forms import restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query, serialize_object_v2
 from nautobot.core.tables import ButtonsColumn
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
+from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
+    get_model_for_view_name,
     get_route_for_model,
     get_table_class_string_from_view_name,
     get_table_for_model,
 )
 from nautobot.core.utils.permissions import get_permission_for_model
-from nautobot.core.utils.requests import normalize_querydict
+from nautobot.core.utils.requests import is_single_choice_field, normalize_querydict
 from nautobot.core.views import generic, viewsets
 from nautobot.core.views.mixins import (
     GetReturnURLMixin,
@@ -67,7 +71,7 @@ from nautobot.dcim.tables import (
     VirtualDeviceContextTable,
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
-from nautobot.extras.utils import get_base_template, get_job_queue, get_worker_count
+from nautobot.extras.utils import fixup_filterset_query_params, get_base_template, get_job_queue, get_worker_count
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
@@ -718,8 +722,13 @@ class DynamicGroupView(generic.ObjectView):
 
         if table_class is not None:
             # Members table (for display on Members nav tab)
+            if hasattr(members, "without_tree_fields"):
+                members = members.without_tree_fields()
             members_table = table_class(
-                members.restrict(request.user, "view"), orderable=False, exclude=["dynamic_group_count"]
+                members.restrict(request.user, "view"),
+                orderable=False,
+                exclude=["dynamic_group_count"],
+                hide_hierarchy_ui=True,
             )
             paginate = {
                 "paginator_class": EnhancedPaginator,
@@ -900,10 +909,13 @@ class DynamicGroupBulkDeleteView(generic.BulkDeleteView):
 class ObjectDynamicGroupsView(generic.GenericView):
     """
     Present a list of dynamic groups associated to a particular object.
-    base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
+
+    base_template: Specify to explicitly identify the base object detail template to render.
+        If not provided, "<app>/<model>.html", "<app>/<model>_retrieve.html", or "generic/object_retrieve.html"
+        will be used, as per `get_base_template()`.
     """
 
-    base_template = None
+    base_template: Optional[str] = None
 
     def get(self, request, model, **kwargs):
         # Handle QuerySet restriction of parent object if needed
@@ -926,7 +938,7 @@ class ObjectDynamicGroupsView(generic.GenericView):
         }
         RequestConfig(request, paginate).configure(dynamicgroups_table)
 
-        self.base_template = get_base_template(self.base_template, model)
+        base_template = get_base_template(self.base_template, model)
 
         return render(
             request,
@@ -936,7 +948,7 @@ class ObjectDynamicGroupsView(generic.GenericView):
                 "verbose_name": obj._meta.verbose_name,
                 "verbose_name_plural": obj._meta.verbose_name_plural,
                 "table": dynamicgroups_table,
-                "base_template": self.base_template,
+                "base_template": base_template,
                 "active_tab": "dynamic-groups",
             },
         )
@@ -1260,9 +1272,10 @@ class JobListView(generic.ObjectListView):
     def alter_queryset(self, request):
         queryset = super().alter_queryset(request)
         # Default to hiding "hidden" and non-installed jobs
-        if "hidden" not in request.GET:
+        filter_params = self.get_filter_params(request)
+        if "hidden" not in filter_params:
             queryset = queryset.filter(hidden=False)
-        if "installed" not in request.GET:
+        if "installed" not in filter_params:
             queryset = queryset.filter(installed=True)
         return queryset
 
@@ -1801,15 +1814,23 @@ class SavedViewUIViewSet(
         if sort_order:
             sv.config["sort_order"] = sort_order
 
+        model = get_model_for_view_name(sv.view)
+        filterset_class = get_filterset_for_model(model)
+        filterset = filterset_class()
         filter_params = {}
         for key in request.GET:
             if key in self.non_filter_params:
                 continue
-            # TODO: this is fragile, other single-value filters will also be unhappy if given a list
-            if key == "q":
-                filter_params[key] = request.GET.get(key)
-            else:
-                filter_params[key] = request.GET.getlist(key)
+            try:
+                if is_single_choice_field(filterset, key):
+                    filter_params[key] = request.GET.getlist(key)[0]
+            except FilterSetFieldNotFound:
+                continue
+            try:
+                if not is_single_choice_field(filterset, key):
+                    filter_params[key] = request.GET.getlist(key)
+            except FilterSetFieldNotFound:
+                continue
 
         if filter_params:
             sv.config["filter_params"] = filter_params
@@ -1834,14 +1855,14 @@ class SavedViewUIViewSet(
         and the name of the new SavedView from request.POST to create a new SavedView.
         """
         name = request.POST.get("name")
+        view_name = request.POST.get("view")
         is_shared = request.POST.get("is_shared", False)
         if is_shared:
             is_shared = True
         params = request.POST.get("params", "")
+        param_dict = fixup_filterset_query_params(parse_qs(params), view_name, self.non_filter_params)
 
-        param_dict = parse_qs(params)
-
-        single_value_params = ["saved_view", "table_changes_pending", "all_filters_removed", "q", "per_page"]
+        single_value_params = ["saved_view", "table_changes_pending", "all_filters_removed", "per_page"]
         for key in param_dict.keys():
             if key in single_value_params:
                 param_dict[key] = param_dict[key][0]
@@ -1850,7 +1871,6 @@ class SavedViewUIViewSet(
         derived_instance = None
         if derived_view_pk:
             derived_instance = self.get_queryset().get(pk=derived_view_pk)
-        view_name = request.POST.get("view")
         try:
             reverse(view_name)
         except NoReverseMatch:
@@ -2185,10 +2205,13 @@ class ObjectChangeView(generic.ObjectView):
 class ObjectChangeLogView(generic.GenericView):
     """
     Present a history of changes made to a particular object.
-    base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
+
+    base_template: Specify to explicitly identify the base object detail template to render.
+        If not provided, "<app>/<model>.html", "<app>/<model>_retrieve.html", or "generic/object_retrieve.html"
+        will be used, as per `get_base_template()`.
     """
 
-    base_template = None
+    base_template: Optional[str] = None
 
     def get(self, request, model, **kwargs):
         # Handle QuerySet restriction of parent object if needed
@@ -2216,7 +2239,7 @@ class ObjectChangeLogView(generic.GenericView):
         }
         RequestConfig(request, paginate).configure(objectchanges_table)
 
-        self.base_template = get_base_template(self.base_template, model)
+        base_template = get_base_template(self.base_template, model)
 
         return render(
             request,
@@ -2226,7 +2249,7 @@ class ObjectChangeLogView(generic.GenericView):
                 "verbose_name": obj._meta.verbose_name,
                 "verbose_name_plural": obj._meta.verbose_name_plural,
                 "table": objectchanges_table,
-                "base_template": self.base_template,
+                "base_template": base_template,
                 "active_tab": "changelog",
             },
         )
@@ -2319,10 +2342,13 @@ class NoteDeleteView(generic.ObjectDeleteView):
 class ObjectNotesView(generic.GenericView):
     """
     Present a list of notes associated to a particular object.
-    base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
+
+    base_template: Specify to explicitly identify the base object detail template to render.
+        If not provided, "<app>/<model>.html", "<app>/<model>_retrieve.html", or "generic/object_retrieve.html"
+        will be used, as per `get_base_template()`.
     """
 
-    base_template = None
+    base_template: Optional[str] = None
 
     def get(self, request, model, **kwargs):
         # Handle QuerySet restriction of parent object if needed
@@ -2346,7 +2372,7 @@ class ObjectNotesView(generic.GenericView):
         }
         RequestConfig(request, paginate).configure(notes_table)
 
-        self.base_template = get_base_template(self.base_template, model)
+        base_template = get_base_template(self.base_template, model)
 
         return render(
             request,
@@ -2356,7 +2382,7 @@ class ObjectNotesView(generic.GenericView):
                 "verbose_name": obj._meta.verbose_name,
                 "verbose_name_plural": obj._meta.verbose_name_plural,
                 "table": notes_table,
-                "base_template": self.base_template,
+                "base_template": base_template,
                 "active_tab": "notes",
                 "form": notes_form,
             },
@@ -2378,6 +2404,38 @@ class RelationshipListView(generic.ObjectListView):
 
 class RelationshipView(generic.ObjectView):
     queryset = Relationship.objects.all()
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            ObjectFieldsPanel(
+                label="Relationship",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+                exclude_fields=[
+                    "source_type",
+                    "source_label",
+                    "source_hidden",
+                    "source_filter",
+                    "destination_type",
+                    "destination_label",
+                    "destination_hidden",
+                    "destination_filter",
+                ],
+            ),
+            ObjectFieldsPanel(
+                label="Source Attributes",
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                fields=["source_type", "source_label", "source_hidden", "source_filter"],
+            ),
+            ObjectFieldsPanel(
+                label="Destination Attributes",
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                fields=["destination_type", "destination_label", "destination_hidden", "destination_filter"],
+            ),
+        )
+    )
 
 
 class RelationshipEditView(generic.ObjectEditView):

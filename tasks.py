@@ -198,7 +198,10 @@ def run_command(context, command, service="nautobot", **kwargs):
         if service in results.stdout:
             compose_command = f"exec {'--user=root ' if root else ''}{service} {command}"
         else:
-            compose_command = f"run {'--user=root ' if root else ''}--rm --entrypoint '{command}' {service}"
+            # Explicitly set the container name to allow network access by calling "nautobot:<port>"
+            compose_command = (
+                f"run {'--user=root ' if root else ''}--rm --name '{service}' --entrypoint '{command}' {service}"
+            )
 
         return docker_compose(context, compose_command, pty=True, **kwargs)
 
@@ -877,7 +880,7 @@ def unittest_coverage(context):
         "performance_report": "Generate Performance Testing report in the terminal. Set GENERATE_PERFORMANCE_REPORT=True in settings.py before using this flag",
         "performance_snapshot": "Generate a new performance testing report to report.yml. Set GENERATE_PERFORMANCE_REPORT=True in settings.py before using this flag",
     },
-    iterable=["tag", "exclude_tag"],
+    iterable=["tag", "exclude_tag", "pattern"],
 )
 def integration_test(
     context,
@@ -894,6 +897,7 @@ def integration_test(
     skip_docs_build=False,
     performance_report=False,
     performance_snapshot=False,
+    pattern=None,
 ):
     """Run Nautobot integration tests."""
 
@@ -916,6 +920,7 @@ def integration_test(
         performance_report=performance_report,
         performance_snapshot=performance_snapshot,
         parallel=False,
+        pattern=pattern,
     )
 
 

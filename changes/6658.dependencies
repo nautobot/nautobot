@@ -1,0 +1,2 @@
+Updated dependency `django-constance` to `~4.3.0`.
+Updated dependency `kubernetes` to `^32.0.0`.

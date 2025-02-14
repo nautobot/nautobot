@@ -13,7 +13,7 @@ from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT, PAGINATE_COUNT_DEFAUL
 from nautobot.core.models.querysets import count_related
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.models import Location
-from nautobot.extras.api.views import NautobotModelViewSet
+from nautobot.extras.api.views import ModelViewSet, NautobotModelViewSet
 from nautobot.ipam import filters
 from nautobot.ipam.api import serializers
 from nautobot.ipam.models import (
@@ -323,7 +323,7 @@ class PrefixViewSet(NautobotModelViewSet):
             return Response(serializer.data)
 
 
-class PrefixLocationAssignmentViewSet(NautobotModelViewSet):
+class PrefixLocationAssignmentViewSet(ModelViewSet):
     queryset = PrefixLocationAssignment.objects.all()
     serializer_class = serializers.PrefixLocationAssignmentSerializer
     filterset_class = filters.PrefixLocationAssignmentFilterSet
@@ -581,7 +581,7 @@ class VLANViewSet(NautobotModelViewSet):
             raise self.LocationIncompatibleLegacyBehavior from e
 
 
-class VLANLocationAssignmentViewSet(NautobotModelViewSet):
+class VLANLocationAssignmentViewSet(ModelViewSet):
     queryset = VLANLocationAssignment.objects.all()
     serializer_class = serializers.VLANLocationAssignmentSerializer
     filterset_class = filters.VLANLocationAssignmentFilterSet
