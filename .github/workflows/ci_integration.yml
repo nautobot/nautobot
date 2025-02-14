@@ -210,7 +210,7 @@ jobs:
           python-version: "3.12"
       - name: "Run Integration Tests"
         # If NAUTOBOT_SELENIUM_HOST is set to 'localhost' or '127.0.0.1' the connection does not work
-        run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke integration-test --keepdb"
+        run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke integration-test --no-keepdb"
   container-build:
     name: "Build Container Images (amd64 on GHCR Only)"
     runs-on: "ubuntu-24.04"
