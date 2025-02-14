@@ -176,7 +176,7 @@ Once CI has completed on the PR, merge it.
 
 ### Create a New Release Tag
 
-You need to create a release tag locally so that you can use it later when you draft the new release for nautobot, for example, `v1.4.3`.
+You need to create a release tag locally so that you can use it later when you draft the new release for Nautobot, for example, `v1.4.3`.
 To create the tag locally:
 
 ```bash
