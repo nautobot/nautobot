@@ -1,6 +1,6 @@
 # Nautobot
 
-<!-- pyml disable-num-lines 3 no-inline-html -->
+<!-- pyml disable-num-lines 5 no-inline-html,proper-names -->
 <figure markdown="span">
   ![Nautobot Logo](assets/nautobot_logo.svg "Welcome"){ width="400" }
 </figure>
@@ -9,6 +9,7 @@
 
 Nautobot is an open source Network Source of Truth and Network Automation Platform built as a web application atop the [Django](https://www.djangoproject.com/) Python framework with a [PostgreSQL](https://www.postgresql.org/) or [MySQL](https://www.mysql.com) database.
 
+<!-- pyml disable-next-line proper-names -->
 Try out a live demo at [https://demo.nautobot.com](https://demo.nautobot.com)
 
 ## Key Use Cases
@@ -23,7 +24,7 @@ Nautobot enables three (3) key use cases.
 
 ## Getting Started
 
-<!-- pyml disable-num-lines 30 no-inline-html -->
+<!-- pyml disable-num-lines 30 no-inline-html,proper-names -->
 <div class="grid cards" markdown>
 
 - :material-cloud-download:{ .lg .middle } **Installing Nautobot**

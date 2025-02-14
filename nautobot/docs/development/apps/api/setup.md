@@ -4,7 +4,7 @@
     You should not use your production environment for app development. For information on getting started with a development environment, check out [Nautobot development guide](../../core/getting-started.md).
 
 !!! note
-    The Nautobot organization provides a Python [CookieCutter](https://cookiecutter.readthedocs.io/en/stable/) to help get started with your applications. Get started at [https://github.com/nautobot/cookiecutter-nautobot-app](https://github.com/nautobot/cookiecutter-nautobot-app).
+    The Nautobot organization provides a Python [CookieCutter](https://cookiecutter.readthedocs.io/en/stable/) to help get started with your applications. Get started at [`https://github.com/nautobot/cookiecutter-nautobot-app`](https://github.com/nautobot/cookiecutter-nautobot-app).
 
 ## App Structure
 
