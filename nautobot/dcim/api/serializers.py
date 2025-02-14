@@ -563,7 +563,28 @@ class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         # Enforce model validation
         super().validate(attrs)
 
+        # Validate parent bay
+        if self.instance and attrs.get("parent_bay"):
+            parent_bay = attrs.get("parent_bay", None)
+            parent_bay.installed_device = self.instance
+            parent_bay.full_clean()
+
         return attrs
+
+    def create(self, validated_data):
+        instance = super().create(validated_data)
+        self.update_parent_bay(validated_data.get("parent_bay"), instance)
+        return instance
+
+    def update(self, instance, validated_data):
+        instance = super().update(instance, validated_data)
+        self.update_parent_bay(validated_data.get("parent_bay"), instance)
+        return instance
+
+    def update_parent_bay(self, parent_bay, instance):
+        if parent_bay:
+            parent_bay.installed_device = instance
+            parent_bay.save()
 
 
 class DeviceNAPALMSerializer(serializers.Serializer):

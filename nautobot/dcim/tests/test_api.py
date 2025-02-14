@@ -1716,6 +1716,126 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         )
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
+    def _parent_device_test_data(self):
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        device_role = Role.objects.get_for_model(Device).first()
+        device_type = DeviceType.objects.first()
+
+        device_type_parent = DeviceType.objects.create(
+            manufacturer=device_type.manufacturer,
+            model=f"{device_type.model} Parent",
+            u_height=device_type.u_height,
+            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT,
+        )
+        device_type_child = DeviceType.objects.create(
+            manufacturer=device_type.manufacturer,
+            model=f"{device_type.model} Child",
+            u_height=device_type.u_height,
+            subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
+        )
+
+        parent_device = Device.objects.create(
+            device_type=device_type_parent,
+            role=device_role,
+            status=device_status,
+            name="Device Parent",
+            location=location,
+        )
+        device_bay_1 = DeviceBay.objects.create(name="db1", device_id=parent_device.pk)
+        device_bay_2 = DeviceBay.objects.create(name="db2", device_id=parent_device.pk)
+
+        return parent_device, device_bay_1, device_bay_2, device_type_child
+
+    def test_creating_device_with_parent_bay(self):
+        # Create test data
+        parent_device, device_bay_1, device_bay_2, device_type_child = self._parent_device_test_data()
+
+        self.add_permissions("dcim.add_device")
+        url = reverse("dcim-api:device-list")
+
+        # Test creating device with parent bay by device bay data
+        data = {
+            "device_type": device_type_child.pk,
+            "role": parent_device.role.pk,
+            "location": parent_device.location.pk,
+            "name": "Device parent bay test #1",
+            "status": parent_device.status.pk,
+            "parent_bay": {"device": {"name": parent_device.name}, "name": device_bay_1.name},
+        }
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+
+        created_device = Device.objects.get(name="Device parent bay test #1")
+        self.assertEqual(created_device.parent_bay.pk, device_bay_1.pk)
+
+        # Test creating device with parent bay by device_bay.pk
+        data = {
+            "device_type": device_type_child.pk,
+            "role": parent_device.role.pk,
+            "location": parent_device.location.pk,
+            "name": "Device parent bay test #2",
+            "status": parent_device.status.pk,
+            "parent_bay": device_bay_2.pk,
+        }
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+
+        created_device = Device.objects.get(name="Device parent bay test #2")
+        self.assertEqual(created_device.parent_bay.pk, device_bay_2.pk)
+
+        # Test creating device with parent bay already taken
+        data = {
+            "device_type": device_type_child.pk,
+            "role": parent_device.role.pk,
+            "location": parent_device.location.pk,
+            "name": "Device parent bay test #3",
+            "status": parent_device.status.pk,
+            "parent_bay": device_bay_1.pk,
+        }
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+
+        # Assert that on the #1 device, parent bay stayed the same
+        created_device = Device.objects.get(name="Device parent bay test #3")
+        self.assertEqual(created_device.parent_bay.pk, device_bay_1.pk)
+
+        old_device = Device.objects.get(name="Device parent bay test #1")
+        self.assertNone(old_device.parent_bay)
+
+    def test_update_device_with_parent_bay(self):
+        # Create test data
+        parent_device, device_bay_1, device_bay_2, device_type_child = self._parent_device_test_data()
+
+        self.add_permissions("dcim.change_device")
+
+        child_device = Device.objects.create(
+            device_type=device_type_child,
+            role=parent_device.role,
+            location=parent_device.location,
+            name="Device parent bay test #4",
+            status=parent_device.status,
+        )
+        # Test setting parent bay during the update
+        patch_data = {"parent_bay": device_bay_1.pk}
+        response = self.client.patch(self._get_detail_url(child_device), patch_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        updated_device = Device.objects.get(name="Device parent bay test #4")
+        self.assertEqual(updated_device.parent_bay.pk, device_bay_1.pk)
+
+        # Changing the parent bay is not allowed without removing it first
+        patch_data = {"parent_bay": device_bay_2.pk}
+        response = self.client.patch(self._get_detail_url(child_device), patch_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+        # Assert that parent bay stayed the same
+        updated_device = Device.objects.get(name="Device parent bay test #4")
+        self.assertEqual(updated_device.parent_bay.pk, device_bay_1.pk)
+
 
 class ModuleTestCase(APIViewTestCases.APIViewTestCase):
     model = Module
