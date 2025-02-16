@@ -1,6 +1,5 @@
 # Interface Redundancy Groups
 
-+++ 1.6.0
 
 Interface Redundancy Groups represent groups of interfaces that share a single virtual address. This model is intended to represent redundancy protocols such as HSRP or VRRP that allow multiple devices to provide a fault-tolerant default gateway for a network.
 

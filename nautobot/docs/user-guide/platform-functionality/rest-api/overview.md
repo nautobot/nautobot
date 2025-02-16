@@ -69,8 +69,7 @@ Each attribute of the IP address is expressed as an attribute of the JSON object
 
 Comprehensive, interactive documentation of all REST API endpoints is available on a running Nautobot instance at `/api/docs/`. This interface provides a convenient sandbox for researching and experimenting with specific endpoints and request types. The API itself can also be explored using a web browser by navigating to its root at `/api/`.
 
-+++ 1.3.0
-    You can view or explore a specific REST API [version](#versioning) by adding the API version as a query parameter, for example `/api/docs/?api_version=2.0` or `/api/?api_version=2.0`
+You can view or explore a specific REST API [version](#versioning) by adding the API version as a query parameter, for example `/api/docs/?api_version=2.0` or `/api/?api_version=2.0`
 
 ## Endpoint Hierarchy
 
@@ -102,7 +101,6 @@ See the [filtering documentation](filtering.md) for more details.
 
 ## Versioning
 
-+++ 1.3.0
 
 As of Nautobot 1.3, the REST API supports multiple versions. A REST API client may request a given API version by including a `major.minor` Nautobot version number in its request in one of two ways:
 
@@ -115,8 +113,6 @@ Generally the former approach is recommended when writing automated API integrat
 
 By default, a REST API request that does not specify an API version number will default to compatibility with the current Nautobot version.
 
-+++ 1.3.0
-    For Nautobot 1.x, the default API behavior is to be compatible with the REST API of Nautobot version 1.2, in other words, for all Nautobot 1.x versions (beginning with Nautobot 1.2.0), `Accept: application/json` is functionally equivalent to `Accept: application/json; version=1.2`.
 
 +/- 2.0.0
     As of Nautobot 2.0, the default API behavior is changed to use the latest available REST API version. In other words, the default REST API version for Nautobot 2.0.y will be `2.0`, for Nautobot 2.1.y will be `2.1`, etc. This means that REST API clients that do not explicitly request a particular REST API version may encounter potentially [breaking changes](#breaking-changes) in the REST API when Nautobot is upgraded to a new minor or major version.
@@ -179,7 +175,6 @@ As an example, let us say that Nautobot 2.1 introduced a new, _non-backwards-com
 
 ### APISelect with versioning capability
 
-+++ 1.3.0
 
 The constructor for Nautobot's `APISelect`/`APISelectMultiple` UI widgets now includes an optional `api_version` argument which if set overrides the default API version of the request.
 
@@ -764,7 +759,6 @@ http://nautobot/api/dcim/locations/3b71a669-faa4-4f8d-a72a-8c94d121b793/?depth=2
 
 ### Retrieving Object Relationships and Relationship Associations
 
-+++ 1.4.0
 
 Objects that are associated with another object by a custom [Relationship](../relationship.md) are also retrievable and modifiable via the REST API. Due to the additional processing overhead involved in retrieving and representing these relationships, they are _not_ included in default REST API `GET` responses. To include relationships data, pass `include=relationships` as a query parameter; in this case an additional key, `"relationships"`, will be included in the API response, as seen below:
 
@@ -974,7 +968,6 @@ http://nautobot/api/ipam/prefixes/b484b0ac-12e3-484a-84c0-aa17955eaedc/ \
 
 #### Updating Relationship Associations
 
-+++ 1.4.0
 
 It is possible to modify the objects associated via Relationship with an object as part of a REST API `PATCH` request by specifying the `"relationships"` key, any or all of the relevant Relationships, and the list of desired related objects for each such Relationship. Since nested serializers are used for the related objects, they can be identified by ID (primary key) or by one or more attributes in a dictionary. For example, either of the following requests would be valid:
 

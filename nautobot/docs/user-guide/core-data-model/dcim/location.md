@@ -1,6 +1,5 @@
 # Locations
 
-+++ 1.4.0
 
 To locate network information more precisely than a Site defines, you can define a hierarchy of Locations within each Site. Data objects such as devices, prefixes, VLAN groups, etc. can thus be mapped or assigned to a specific building, wing, floor, room, etc. as appropriate to your needs.
 

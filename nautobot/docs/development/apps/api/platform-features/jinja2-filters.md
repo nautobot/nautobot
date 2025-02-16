@@ -1,6 +1,5 @@
 # Adding Jinja2 Filters
 
-+++ 1.1.0
 
 Apps can define custom Jinja2 filters to be used when rendering templates defined in computed fields. Check out the [official Jinja2 documentation](https://jinja.palletsprojects.com/en/3.0.x/api/#custom-filters) on how to create filter functions.
 

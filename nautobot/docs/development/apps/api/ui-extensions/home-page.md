@@ -1,6 +1,5 @@
 # Adding Home Page Content
 
-+++ 1.2.0
 
 Apps can add content to the Nautobot home page. By default, Nautobot looks for a `layout` list inside of `homepage.py`. (This can be overridden by setting `homepage_layout` to a custom value on the app's `NautobotAppConfig`.)
 

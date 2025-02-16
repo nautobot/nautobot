@@ -224,14 +224,7 @@ nautobot=> \q
 
 ### `dumpdata`
 
-+/- 1.3.0
-    - `extras.job` should now be included in the dump (removed `--exclude extras.job` from the example usage)
-    - `django_rq` should now be excluded from the dump (added `--exclude django_rq` to the example usage)
 
-+/- 1.5.23
-    - We do not recommend at this time using `--natural-primary` as this can result in inconsistent or incorrect data for data models that use GenericForeignKeys, such as `Cable`, `Note`, `ObjectChange`, and `Tag`.
-    - We also do not recommend at this time using `--natural-foreign` as it can potentially result in errors if any data models incorrectly implement their `natural_key()` and/or `get_by_natural_key()` API methods.
-    - `contenttypes` must not be excluded from the dump (it could be excluded previously due to the use of `--natural-foreign`).
 
 +/- 2.0.0
     - `django_rq` is no longer part of Nautobot's dependencies and so no longer needs to be explicitly excluded.
@@ -306,7 +299,6 @@ e!j=vrlhz-!wl8p_3+q5s5cph29nzj$xm81eap-!&n!_9^du09
 
 ### `generate_test_data`
 
-+++ 1.5.0
 
 `nautobot-server generate_test_data [--flush] --seed SEED`
 
@@ -384,8 +376,6 @@ Installation metrics will be sent when running 'nautobot-server post_upgrade'. T
 Configuration file created at /home/example/.nautobot/nautobot_config.py
 ```
 
-+++ 1.6.0
-    The `nautobot-server init` command will now prompt you to set the initial value for the [`INSTALLATION_METRICS_ENABLED`](../configuration/settings.md#installation_metrics_enabled) setting. See the [`send_installation_metrics`](#send_installation_metrics) command for more information about the feature that this setting toggles.
 
 For more information on configuring Nautobot for the first time or on more advanced configuration patterns, please see the guide on [Nautobot Configuration](../configuration/index.md).
 
@@ -478,8 +468,6 @@ Performs common server post-upgrade operations using a single entrypoint.
 
 This will run the following management commands with default settings, in order:
 
-+/- 1.6.0
-    Added the [`send_installation_metrics`](#send_installation_metrics) command to the list of commands run by `post_upgrade`.
 
 - `migrate`
 - `trace_paths`
@@ -563,7 +551,6 @@ Removing expired sessions...
 
 ### `refresh_dynamic_group_member_caches`
 
-+++ 1.6.0
 
 `nautobot-server refresh_dynamic_group_member_caches`
 
@@ -571,7 +558,6 @@ Refresh the cached members of all Dynamic Groups. This can also be achieved by r
 
 ### `refresh_content_type_caches`
 
-+++ 1.6.0
 
 `nautobot-server refresh_content_type_caches`
 
@@ -579,7 +565,6 @@ Refresh the cached ContentType object property available via `Model._content_typ
 
 ### `remove_stale_scheduled_jobs`
 
-+++ 1.3.10
 
 `nautobot-server remove_stale_scheduled_jobs [max-age of days]`
 
@@ -665,7 +650,6 @@ Please see the [guide on Jobs](../../platform-functionality/jobs/index.md) for m
 
 ### `send_installation_metrics`
 
-+++ 1.6.0
 
 `nautobot-server send_installation_metrics`
 

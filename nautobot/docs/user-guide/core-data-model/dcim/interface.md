@@ -10,10 +10,6 @@ The following operational statuses are available by default:
 * Decommissioning
 * Failed
 
-+++ 1.4.0
-    - Added `bridge` field.
-    - Added `parent_interface` field.
-    - Added `status` field.
 
 Interfaces may be physical or virtual in nature, but only physical interfaces may be connected via cables. Cables can connect interfaces to pass-through ports, circuit terminations, or other interfaces.
 
@@ -27,11 +23,7 @@ IP addresses can be assigned to interfaces. VLANs can also be assigned to each i
 !!! note
     Although devices and virtual machines both can have interfaces, a separate model is used for each. Thus, device interfaces have some properties that are not present on virtual machine interfaces and vice versa.
 
-+++ 1.4.5
-    The fields `created` and `last_updated` were added to all device component models. If you upgraded from Nautobot 1.4.4 or earlier, the values for these fields will default to `None` (null).
 
-+++ 1.6.0
-    Interfaces can now be assigned to an [Interface Redundancy Group](./interfaceredundancygroup.md) to represent redundancy protocols such as HSRP or VRRP.
 
 +++ 2.3.0
     Interfaces now have an optional `role` field and can be assigned [Role](../../platform-functionality/role.md) instances to track common configurations.

@@ -9,7 +9,6 @@ Certain REST API fields can be expensive to look up or render, so Nautobot provi
 - `?include=computed_fields` - Any object supporting [Computed Fields](../computedfield.md). Computed field values are not included by default, but can be added by specifying this query parameter.
 - `?exclude_m2m=true` - Any object with many-to-many relations to another type of object. These related objects are included by default, but can be excluded (in many cases improving the REST API performance) by specifying this query parameter.
 
-+++ 1.4.0 "Added `include=relationships` and `include=computed_fields` support"
 
 +/- 2.0.0 "Changed config contexts to excluded by default, added `include=config_context` support"
 
@@ -23,8 +22,6 @@ Multiple parameters can be joined to further narrow results. For example, `GET /
 
 Generally, passing multiple values for a single parameter will result in a logical OR operation. For example, `GET /api/dcim/locations/?parent=north-america&parent=south-america&location_type=country` will return "country" type locations in North America _or_ South America. However, a logical AND operation will be used in instances where a field may have multiple values, such as tags. For example, `GET /api/dcim/locations/?tag=foo&tag=bar` will return only locations which have both the "foo" _and_ "bar" tags applied.
 
-+/- 1.4.0 "`STRICT_FILTERING` by default"
-    If [`STRICT_FILTERING`](../../administration/configuration/settings.md#strict_filtering) is True (its default value), unrecognized filter parameters now result in a 400 Bad Request response instead of being silently ignored.
 
 ### Filtering by Choice Field
 
@@ -80,8 +77,6 @@ GET /api/dcim/locations/?cf_foo=123
 
 Custom fields can be mixed with built-in fields to further narrow results. When creating a custom string field, the type of filtering selected (loose versus exact) determines whether partial or full matching is used.
 
-+++ 1.4.0 "Custom field support for lookup expressions"
-    Custom fields can now use the [lookup expressions](#lookup-expressions) listed in the next section.
 
 +/- 2.0.0 "Custom field filters changed from `name` to `key` based"
     Custom field filters are now based on the custom field `key` string (in 1.x they used the field's `name`).
@@ -132,7 +127,6 @@ String-based (char) fields (Name, Address, etc.) support these lookup expression
 - `__nire` - negated case-insensitive regular expression match
 - `__isnull` - is null (only if this field is nullable, which most string fields in Nautobot are not)
 
-+++ 1.3.0 "Added regular expression lookup expressions"
 
 +++ 2.1.0 "Added `__isnull` lookup expression"
 

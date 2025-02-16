@@ -10,8 +10,6 @@ Some text-based content is more conveniently stored in a separate Git repository
 !!! important
     Nautobot's Git integration depends on the availability of the `git` program. If `git` is not installed, Nautobot will be unable to pull data from Git repositories.
 
-+/- 1.6.2
-    To proactively avoid conflicts in data, it is no longer possible to configure multiple Git repository entries that both have the same `remote_url` and also provide the same data type(s). Configuration of multiple entries with the same `remote_url` is still permitted if they are configured to provide entirely distinct types of data.
 
 ## Repository Configuration
 
@@ -63,8 +61,6 @@ Config contexts may be provided as JSON or YAML files located in `/config_contex
 * **Implicit**: They're defined using a specific folder and file structure to apply the config context to a specific scope.
 * **Local**: Defined at the device/virtual machine level and only being applied to the specific device/virtual machine.
 
-+++ 1.5.6
-    Config contexts provided in a Git repository can now be filtered by `locations` in addition to all previously supported filters.
 
 #### Metadata
 

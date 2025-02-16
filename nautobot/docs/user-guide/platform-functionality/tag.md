@@ -2,8 +2,6 @@
 
 Tags are user-defined labels which can be applied to a variety of objects within Nautobot. They can be used to establish dimensions of organization beyond the relationships built into Nautobot. For example, you might create a tag to identify a particular ownership or condition across several types of objects.
 
-+++ 1.3.0
-    When created, a `Tag` can be associated to one or more model content-types using a many-to-many relationship. The tag will then apply only to models belonging to those associated content-types.
 
 Each tag has a name, label, color, and permitted content-types. Each tag can also be assigned a description indicating its purpose.
 

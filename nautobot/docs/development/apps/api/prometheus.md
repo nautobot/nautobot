@@ -1,6 +1,5 @@
 # Prometheus Metrics
 
-+++ 1.5.13
 
 It is possible for Nautobot apps to provide their own [Prometheus metrics](../../../user-guide/administration/guides/prometheus-metrics.md). There are two general ways to achieve this:
 

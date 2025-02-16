@@ -10,10 +10,6 @@ The following operational statuses are available by default:
 * Decommissioning
 * Failed
 
-+++ 1.4.0
-    - Added `bridge` field.
-    - Added `parent_interface` field.
-    - Added `status` field.
 
 +/- 2.0.0
     The relationship to IP addresses has been changed to a many-to-many relationship. This allows an IP address to be assigned to multiple VM interfaces, and a VM interface to have multiple IP addresses assigned to it.

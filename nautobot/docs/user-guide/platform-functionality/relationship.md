@@ -13,18 +13,16 @@ To create a relationship, from the left sidebar menu select **Extensibility > Da
 * **One-to-many** - where one side of the connection can only have one object. For example, where a controller has many supplicants like FEX and parent switch. A FEX can be uplinked to one parent switch (in most cases), but the parent switch can have many FEX.
 * **One-to-one** - where there can be only one object on either side of the relationship. For example, an IP address serving as a router-id for a device. Each device has at most one router-id, and each IP address can be a router-id for at most one device.
 
-+++ 1.2.0
-    Additionally, there are two _symmetric_ relationship types that can be used when defining a relationship between objects of the same type. These relationship types treat the two _sides_ of a relationship as interchangeable (much like the A/Z sides of a circuit, or the endpoints of a cable) rather than distinguishing between the _source_ and _destination_ of a relationship as the non-symmetric relationship types above do.
+Additionally, there are two _symmetric_ relationship types that can be used when defining a relationship between objects of the same type. These relationship types treat the two _sides_ of a relationship as interchangeable (much like the A/Z sides of a circuit, or the endpoints of a cable) rather than distinguishing between the _source_ and _destination_ of a relationship as the non-symmetric relationship types above do.
 
-    * **Symmetric Many-to-many** - as in Many-to-many, but acting more as an _undirected graph_ of similar objects. For example, this could be used to define a set of devices participating in a routing topology, where each device has some number of peers and there's no distinction between _source_ and _destination_ peers.
-    * **Symmetric One-to-one** - as in One-to-one, but defining a relationship between exactly two objects of the same type. For example, a HSRP/VRRP pair of redundant devices, where each device has exactly one peer device.
+* **Symmetric Many-to-many** - as in Many-to-many, but acting more as an _undirected graph_ of similar objects. For example, this could be used to define a set of devices participating in a routing topology, where each device has some number of peers and there's no distinction between _source_ and _destination_ peers.
+* **Symmetric One-to-one** - as in One-to-one, but defining a relationship between exactly two objects of the same type. For example, a HSRP/VRRP pair of redundant devices, where each device has exactly one peer device.
 
 !!! note
     A symmetric many-to-many relationship can be, but is not necessarily, a _complete graph_ or _full mesh_. For example, in the routing topology example above, if Device _A_ and Device _B_ are peers, and Device _B_ and Device _C_ are peers, this does not automatically imply a relationship between Devices _A_ and _C_ -- they **might or might not** also be peers, depending on how you define and populate the specific associations for this relationship.
 
 ## Required Relationships
 
-+++ 1.5.0
 
 Relationships can be marked as being required. By default, relationships are not marked as being required.
 
@@ -119,7 +117,6 @@ From our many to many example above, we would use the following data to create t
 
 #### Via Object Endpoints
 
-+++ 1.4.0
 
 To get object relationships and associations from the REST API, you can query any object endpoint with the [`?include=relationships` query parameter](rest-api/filtering.md#filtering-included-fields) included, for example `GET /api/dcim/devices/f472bb77-7f56-4e79-ac25-2dc73eb63924/?include=relationships`. The API response will include a nested dictionary of relationships and associations applicable to the object(s) retrieved.
 

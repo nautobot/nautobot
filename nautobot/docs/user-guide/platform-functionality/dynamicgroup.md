@@ -1,6 +1,5 @@
 # Dynamic Groups
 
-+++ 1.3.0
 
 Dynamic Groups provide a general-purpose way to collect related objects of a given Content Type, such as Devices associated with a given Location(s) and Status(es), Circuits attached to a given set of Devices, and so forth. A given Dynamic Group may contain any number of objects of the appropriate type as members, and an object may belong to any number of Dynamic Groups of the appropriate content-type as a member of each. It is possible both to query the members of a given Dynamic Group, and also to query which Dynamic Groups a given object is a member of.
 
@@ -10,8 +9,6 @@ There are currently three ways to define the object members of a Dynamic group:
 2. Set-based assignment from other defined groups (for example, "All devices in Group A or Group B but not Group C")
 3. Static assignment directly to the group (for example, "Device XYZ01, Device XYZ02, and Device XYZ04")
 
-+++ 1.4.0 "Set-based group assignment"
-    Support for set-based assignment to groups was added.
 
 +++ 2.3.0 "Static group assignment"
     Support for static assignment to groups was added, and the distinction between filter-based and set-based assignment was formally established.
@@ -65,16 +62,11 @@ A filter-based Dynamic Group defines a `filter` field, which is stored in the da
 
 For example, for a Dynamic Group with Content Type of `dcim.device` and an empty filter, the list of members would be equivalent to the default Device list view, which in turn is equivalent to the queryset for `Device.objects.all()` from the database ORM.
 
-+/- 1.4.0 "Change in empty filter behavior"
-    In Nautobot v1.3.0 the default for a Dynamic Group with an empty filter was to "fail closed" and have zero members.
-
-    As of v1.4.0, this behavior has been inverted to default to include all objects matching the Content Type, instead of matching no objects as was previously the case. This was necessary to implement the progressive layering of child filters similarly to how we use filters to reduce desired objects from basic list view filters. This will be described in more detail below.
 
 When editing a filter-based Dynamic Group, under the **Filter Options** section, you will find a **Filter Fields** tab that allows you to select filter criteria. The filter fields available for a given Content Type are backed and validated by underlying FilterSet classes (for example `nautobot.dcim.filters.DeviceFilterSet`) and are represented in the web interface as a dynamically-generated filter form that corresponds to each eligible filter field.
 
 ### Set-Based Dynamic Groups
 
-+++ 1.4.0
 
 Set-based Dynamic Groups do not directly define a filter for identifying member objects; instead, they define their members based on set operations (AND, OR, and NOT, or Union, Intersection, and Difference if you prefer) involving _other_ Dynamic Groups.
 
@@ -132,7 +124,6 @@ A key to understand here is that generally, within a single Dynamic Group, addit
 
 ### Advanced Filtering: Defining a Set-Based Dynamic Group to Combine Two Others
 
-+++ 1.4.0
 
 Now, let's say that you add a third location to your network. This location is currently being built out, and you don't care about Devices from this location that are Offline status at present. What you want for your "Devices of Interest" Dynamic Group is logic similar to:
 
@@ -190,7 +181,6 @@ The "Devices of Interest" Dynamic Group now contains the filtered Devices from b
 
 ### Advanced Filtering: Nested Groups and Negation
 
-+++ 1.4.0
 
 Next, let's say you add a fourth location to your network. This location is in bad shape, and has Devices in a wide range of statuses. You want your "Devices of Interest" group to include all Devices from this location, _except for those in Decommissioning status_. To express this logic and add these devices to our parent group, we will need to use a combination of groups and the "Exclude (NOT)" operator.
 
@@ -429,10 +419,7 @@ Any invalid field values for valid field names will also result in a `Validation
 !!! note
     Please refer to either the source code definition of the `{model_name}FilterSet` (e.g. for `Device` it would be `nautobot.dcim.filters.DeviceFilterSet`) or the API documentation for the list endpoint (e.g. `/api/dcim/devices/`) for a given model object, to view the available filter fields and their expectations.
 
-+/- 1.4.0
-    Prior to v1.4.0, any invalid field names that are not eligible for filtering objects will be discarded upon validation.
 
-    As of v1.4.0, [strict filtering is enabled by default](../administration/configuration/settings.md#strict_filtering), which causes any invalid field names to result in a `ValidationError`.
 
 ### Managing Dynamic Groups in the REST API
 

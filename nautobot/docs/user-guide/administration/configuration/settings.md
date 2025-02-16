@@ -10,7 +10,6 @@ The [official Django documentation](https://docs.djangoproject.com/en/stable/ref
 
 ## Administratively Configurable Settings
 
-+++ 1.2.0
 
 A number of settings can alternatively be configured via the Nautobot Admin UI. To do so, these settings must **not** be defined in your `nautobot_config.py`, as any settings defined there will take precedence over any values defined in the Admin UI. Settings that are currently configurable via the Admin UI include:
 
@@ -156,11 +155,8 @@ in order for the repository to sync.
 ---
 
 ### `NAUTOBOT_LOG_DEPRECATION_WARNINGS`
+https://docs.nautobot.com/projects/core/en/latest/release-notes/version-1.5/?h=nautobot+v1.5#nautobot-apps-api-2723
 
-+++ 1.5.2
-
-+/- 1.5.3
-    This was previously available as a config file setting but changed to environment-variable only. Also `DEBUG = True` will no longer work to log deprecation warnings.
 
 Default: `False`
 

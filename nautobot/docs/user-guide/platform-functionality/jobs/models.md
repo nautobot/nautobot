@@ -2,7 +2,6 @@
 
 ## Job
 
-+++ 1.3.0
 
 The Job data model provides a database representation of metadata describing a specific installed Job class. It also serves as an anchor point for other data models (JobResult and ScheduledJob in particular) to link against.
 
@@ -32,7 +31,6 @@ For any Job that is loaded into Nautobot, the Job must be enabled to run. See [E
 
 ## Job Log Entry
 
-+++ 1.2.0
 
 Log messages from [Jobs](./index.md) are stored in as `JobLogEntry` objects. This allows more performant querying of log messages and even allows viewing of logs while the job is still running.
 
@@ -44,8 +42,6 @@ Records of this type store the following data:
 * The log message.
 * If provided, the string format of the logged object and it's absolute url.
 
-+++ 1.2.2
-    REST API and GraphQL support for querying `JobLogEntry` records were added.
 
 ## Job Results
 
@@ -61,8 +57,6 @@ Records of this type store the following data:
 * An overall status such as "pending", "running", "errored", or "completed".
 * A block of structured data representing the return value from the `.run()` method (often rendered as JSON).
 
-+/- 1.2.0
-    Note that prior to Nautobot 1.2, job log records were stored in the `data` field; they are now stored as distinct [`JobLogEntry`](#job-log-entry) records instead.
 
 +/- 2.3.0
     The Additional Data tab has been removed, you can now find the data in the Advanced Tab.

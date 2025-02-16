@@ -14,9 +14,6 @@ Sometimes it is desirable to associate additional data with a group of devices o
 * Tag
 * Dynamic group - Need to set `settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED` to `True`. [See notes here](../../administration/configuration/settings.md#config_context_dynamic_groups_enabled)
 
-+++ 1.5.0 "Added support for filtering by device redundancy group"
-
-+++ 1.5.12 "Added support for filtering by dynamic group"
 
 Context data not specifically assigned to one or more of the above groups is by default associated with **all** devices and virtual machines.
 

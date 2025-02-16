@@ -1,6 +1,5 @@
 # Provider Network
 
-+++ 1.3.0
 
 A provider network represents an abstract portion of network topology, just like in a topology diagram. For example, a provider network may be used to represent a provider's MPLS network.
 

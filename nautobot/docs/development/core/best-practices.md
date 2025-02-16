@@ -142,8 +142,6 @@ from nautobot.core.utils.lookup import get_route_for_model
 
 This utility function supports both UI and API views for both Nautobot core apps and Nautobot Apps.
 
-+++ 1.4.3
-    Support for generating API routes was added to `get_route_for_model()` by passing the argument `api=True`.
 
 ### UI Routes
 
@@ -472,5 +470,3 @@ filterset.qs.filter(query).count()  # 339
 
 ## Using NautobotUIViewSet for App Development
 
-+++ 1.4.0
-    Using `NautobotUIViewSet` for [App development](../apps/api/views/nautobotuiviewset.md) is strongly recommended.

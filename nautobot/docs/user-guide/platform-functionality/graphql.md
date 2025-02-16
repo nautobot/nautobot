@@ -248,7 +248,6 @@ Result
 
 ## Saved Queries
 
-+++ 1.1.0
 
 Queries can now be stored inside of Nautobot, allowing the user to easily rerun previously defined queries.
 

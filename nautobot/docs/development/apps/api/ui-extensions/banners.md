@@ -1,6 +1,5 @@
 # Adding a Banner
 
-+++ 1.2.0
 
 An app can provide a function that renders a custom banner on any number of Nautobot views. By default Nautobot looks for a function `banner()` inside of `banner.py`. (This can be overridden by setting `banner_function` to a custom value on the app's `NautobotAppConfig`.)
 

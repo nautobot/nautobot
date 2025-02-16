@@ -1,6 +1,5 @@
 # Replacing Views
 
-+++ 1.4.0
 
 You may override any of the core or app views by providing an `override_views` `dict` in an app's `views.py` file.
 

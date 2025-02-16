@@ -44,8 +44,6 @@ An IP address can be assigned to device or virtual machine interfaces, and an in
 
 An IP address can be designated as the network address translation (NAT) inside IP address for one or more other IP addresses. This is useful primarily to denote a translation between public and private IP addresses. This relationship is followed in both directions: For example, if 10.0.0.1 is assigned as the inside IP for 192.0.2.1, 192.0.2.1 will be displayed as the outside IP for 10.0.0.1.
 
-+++ 1.3.0
-    Support for multiple outside NAT IP addresses was added.
 
 ## IPAddress Parenting Concrete Relationship
 
