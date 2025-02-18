@@ -160,11 +160,11 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 ### Changed in v2.4.3
 
-- [#5568](https://github.com/nautobot/nautobot/issues/5568) - Added url link to the total device count number under device family.
+- [#5568](https://github.com/nautobot/nautobot/issues/5568) - Added hyperlink to the total device count number under device family.
 
 ### Fixed in v2.4.3
 
-- [#5539](https://github.com/nautobot/nautobot/issues/5539) - Fixed incorrect error message in Controller clean() method.
+- [#5539](https://github.com/nautobot/nautobot/issues/5539) - Fixed incorrect error message in Controller `clean()` method.
 - [#6113](https://github.com/nautobot/nautobot/issues/6113) - Menus inside responsive tables are fixed to be visible by dynamically mounting them to the body and positioning them absolutely.
 - [#6667](https://github.com/nautobot/nautobot/issues/6667) - Adds custom clearable file input form widget.
 - [#6764](https://github.com/nautobot/nautobot/issues/6764) - Fixed global and user default saved views incorrectly overriding filtered views.
@@ -182,8 +182,8 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 - [#6658](https://github.com/nautobot/nautobot/issues/6658) - Updated dependency `django-constance` to `~4.3.0`.
 - [#6658](https://github.com/nautobot/nautobot/issues/6658) - Updated dependency `kubernetes` to `^32.0.0`.
-- [#6869](https://github.com/nautobot/nautobot/issues/6869) - Updated `Django` dependency to `~4.2.19`.
-- [#6869](https://github.com/nautobot/nautobot/issues/6869) - Updated `django-structlog` dependency to `^9.0.1`.
+- [#6869](https://github.com/nautobot/nautobot/issues/6869) - Updated dependency `Django` to `~4.2.19`.
+- [#6869](https://github.com/nautobot/nautobot/issues/6869) - Updated dependency `django-structlog` to `^9.0.1`.
 - [#6894](https://github.com/nautobot/nautobot/issues/6894) - Updated dependency `social-auth-app-django` to `~5.4.3`.
 - [#6894](https://github.com/nautobot/nautobot/issues/6894) - Updated dependency `social-auth-core` to `~4.5.6`.
 
@@ -193,12 +193,12 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 ### Housekeeping in v2.4.3
 
-- [#6618](https://github.com/nautobot/nautobot/issues/6618) - Update GitHub actions *.yml file to use minimum ubuntu-24.04 since ubuntu-20.04 is deprecated.
+- [#6618](https://github.com/nautobot/nautobot/issues/6618) - Updated GitHub Actions to use ubuntu-24.04 since ubuntu-20.04 is deprecated.
 - [#6658](https://github.com/nautobot/nautobot/issues/6658) - Updated development dependency `faker` to `~36.1.0`.
 - [#6658](https://github.com/nautobot/nautobot/issues/6658) - Updated development dependency `django-debug-toolbar` to `~5.0.1`.
 - [#6846](https://github.com/nautobot/nautobot/issues/6846) - Fixed integration test task to allow passing in pattern match.
-- [#6865](https://github.com/nautobot/nautobot/issues/6865) - Refactored `tenancy` app to use `NautobotUIViewSet` and `UI component framework`.
-- [#6869](https://github.com/nautobot/nautobot/issues/6869) - Updated `factory-boy` development dependency to `~3.3.3`.
+- [#6865](https://github.com/nautobot/nautobot/issues/6865) - Refactored `tenancy` app to use `NautobotUIViewSet` and UI component framework.
+- [#6869](https://github.com/nautobot/nautobot/issues/6869) - Updated development dependency `factory-boy` to `~3.3.3`.
 - [#6894](https://github.com/nautobot/nautobot/issues/6894) - Updated development dependency `faker` to `~36.1.1`.
 - [#6894](https://github.com/nautobot/nautobot/issues/6894) - Updated linting dependency `pymarkdownlnt` to `~0.9.28`.
 
