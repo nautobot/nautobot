@@ -1,6 +1,5 @@
 # Extending Filters
 
-
 Apps can extend any model-based `FilterSet` and `FilterForm` classes that are provided by the Nautobot core.
 
 The requirements to extend a filter set or a filter form (or both) are:

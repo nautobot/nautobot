@@ -116,7 +116,6 @@ Note that a `Tab` defines its contents directly (as `panels`) while the `Distinc
 
 ### Via `detail_tabs()` (Deprecated)
 
-
 The `TemplateExtension.detail_tabs()` method should return a list of dicts, each of which has the keys `"title"` and `"url"`. In addition, in order for tabs to work properly:
 
 * The `"url"` key should typically be a URL that includes `self.context["object"].pk` in some form (so that the URL may know which object is being referenced)

@@ -1,6 +1,5 @@
 # Prometheus Metrics
 
-
 It is possible for Nautobot apps to provide their own [Prometheus metrics](../../../user-guide/administration/guides/prometheus-metrics.md). There are two general ways to achieve this:
 
 1. Use the `prometheus_client` library directly in your app code. Depending on whether that code runs in the web server or the worker context, the metric will show up in the respective `/metrics` endpoint(s) (i.e. metrics generated in the worker context show up in the worker's endpoint and those generated in the web application's context show up in the web application's endpoint).

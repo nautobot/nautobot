@@ -124,7 +124,6 @@ To reduce the time taken between multiple test runs, a new argument has been add
 
 ## Performance Tests
 
-
 ### Running Performance Tests
 
 Nautobot uses [`django-slowtests`](https://pypi.org/project/django-slowtests/) to run performance tests. To run performance tests, you need to install the `django-slowtests` package.

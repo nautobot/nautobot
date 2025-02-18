@@ -1,6 +1,5 @@
 # NautobotUIViewSet
 
-
 New in Nautobot 1.4 is the debut of `NautobotUIViewSet`: A powerful app development tool that can save app developer hundreds of lines of code compared to using legacy `generic.views`. Using it to gain access to default functionalities previous provided by `generic.views` such as `create()`, `update()`, `partial_update()`, `bulk_update()`, `destroy()`, `bulk_destroy()`, `retrieve()` and `list()` actions.
 
 Note that this ViewSet is catered specifically to the UI, not the API.
