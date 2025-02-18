@@ -1,1 +1,0 @@
-Refactored `tenancy` app to use `NautobotUIViewSet` and `UI component framework`.
