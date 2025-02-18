@@ -137,8 +137,8 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 
 ### Housekeeping in v2.3.16
 
-- [#6714](https://github.com/nautobot/nautobot/issues/6714) - Enabled and addressed pylint checkers `arguments-differ`, `arguments-renamed`, `exec-used`, `hard-coded-auth-user`, `super-init-not-called`.
-- [#6722](https://github.com/nautobot/nautobot/issues/6722) - Enabled pylint `not-callable` and `no-member` checkers and addressed issues reported thereby.
+- [#6714](https://github.com/nautobot/nautobot/issues/6714) - Enabled and addressed Pylint checkers `arguments-differ`, `arguments-renamed`, `exec-used`, `hard-coded-auth-user`, `super-init-not-called`.
+- [#6722](https://github.com/nautobot/nautobot/issues/6722) - Enabled Pylint `not-callable` and `no-member` checkers and addressed issues reported thereby.
 
 ## v2.3.15 (2025-01-02)
 
@@ -762,7 +762,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#5774](https://github.com/nautobot/nautobot/issues/5774) - Fixed the bug that required users and administrators to manage additional permission to be able to use saved views.
 - [#5814](https://github.com/nautobot/nautobot/issues/5814) - Fixed style issues with Saved Views and other language code blocks.
 - [#5818](https://github.com/nautobot/nautobot/issues/5818) - Fixed broken table configure buttons in device and module component tabs.
-- [#5842](https://github.com/nautobot/nautobot/issues/5842) - Fixed missing classes when importing `*` from nautobot.ipam.models.
+- [#5842](https://github.com/nautobot/nautobot/issues/5842) - Fixed missing classes when importing `*` from `nautobot.ipam.models`.
 - [#5877](https://github.com/nautobot/nautobot/issues/5877) - Resolved issue with tags not saving on Dynamic Groups.
 - [#5880](https://github.com/nautobot/nautobot/issues/5880) - Fixed overflowing device component tables in device and module component tabs.
 - [#5880](https://github.com/nautobot/nautobot/issues/5880) - Fixed an exception when trying to edit an IPAddress that had a NAT Inside IPAddress that was related to a component attached to a module.
@@ -787,7 +787,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#5429](https://github.com/nautobot/nautobot/issues/5429) - Updated Docker build and CI to use `poetry` `1.8.2`.
 - [#5429](https://github.com/nautobot/nautobot/issues/5429) - Removed development dependency on `mkdocs-include-markdown-plugin` as it's no longer used in Nautobot's documentation.
 - [#5518](https://github.com/nautobot/nautobot/issues/5518) - Updated `drf-spectacular` to version `0.27.2`.
-- [#5687](https://github.com/nautobot/nautobot/issues/5687) - Added [django-structlog](https://django-structlog.readthedocs.io/en/latest/) dependency.
+- [#5687](https://github.com/nautobot/nautobot/issues/5687) - Added [`django-structlog`](https://django-structlog.readthedocs.io/en/latest/) dependency.
 - [#5734](https://github.com/nautobot/nautobot/issues/5734) - Updated `django-auth-ldap` dependency to `~4.8`.
 - [#5734](https://github.com/nautobot/nautobot/issues/5734) - Updated `django-tree-queries` dependency to `~0.19`.
 - [#5734](https://github.com/nautobot/nautobot/issues/5734) - Updated `Markdown` dependency to `~3.6`.

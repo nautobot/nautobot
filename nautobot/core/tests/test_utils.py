@@ -273,10 +273,25 @@ class GetFooForModelTest(TestCase):
         """
         Test that `get_model_for_view_name` returns the appropriate Model, if the colon separated view name provided.
         """
-        with self.subTest("Test core view."):
+        with self.subTest("Test core UI view."):
             self.assertEqual(lookup.get_model_for_view_name("dcim:device_list"), dcim_models.Device)
-        with self.subTest("Test app view."):
+            self.assertEqual(lookup.get_model_for_view_name("dcim:device"), dcim_models.Device)
+        with self.subTest("Test app UI view."):
             self.assertEqual(lookup.get_model_for_view_name("plugins:example_app:examplemodel_list"), ExampleModel)
+            self.assertEqual(lookup.get_model_for_view_name("plugins:example_app:examplemodel"), ExampleModel)
+        with self.subTest("Test core API view."):
+            self.assertEqual(lookup.get_model_for_view_name("dcim-api:device-list"), dcim_models.Device)
+            self.assertEqual(lookup.get_model_for_view_name("dcim-api:device-detail"), dcim_models.Device)
+        with self.subTest("Test app API view."):
+            self.assertEqual(
+                lookup.get_model_for_view_name("plugins-api:example_app-api:examplemodel-detail"), ExampleModel
+            )
+            self.assertEqual(
+                lookup.get_model_for_view_name("plugins-api:example_app-api:examplemodel-list"), ExampleModel
+            )
+        with self.subTest("Test unconventional model views."):
+            self.assertEqual(lookup.get_model_for_view_name("extras-api:contenttype-detail"), ContentType)
+            self.assertEqual(lookup.get_model_for_view_name("users-api:group-detail"), Group)
         with self.subTest("Test unexpected view."):
             with self.assertRaises(ValueError) as err:
                 lookup.get_model_for_view_name("unknown:plugins:example_app:examplemodel_list")
