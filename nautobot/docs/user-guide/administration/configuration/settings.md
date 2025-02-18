@@ -155,7 +155,6 @@ in order for the repository to sync.
 ---
 
 ### `NAUTOBOT_LOG_DEPRECATION_WARNINGS`
-https://docs.nautobot.com/projects/core/en/latest/release-notes/version-1.5/?h=nautobot+v1.5#nautobot-apps-api-2723
 
 
 Default: `False`

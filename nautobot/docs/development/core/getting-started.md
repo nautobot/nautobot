@@ -266,6 +266,8 @@ You may install Poetry in your user environment by running:
 curl -sSL https://install.python-poetry.org | python3 -
 ```
 
+!!! tip
+    Poetry 1.3+ is required to be able to install packages against the latest lockfile.
 
 !!! danger
     Always utilize this documented method to install Poetry for use when developing Nautobot.
@@ -712,6 +714,8 @@ Integration tests are run using the `invoke integration-test` command. All integ
 !!! tip
     You may also use `invoke integration-test` in the Virtual Environment workflow given that the `selenium` container is running, and that the `INVOKE_NAUTOBOT_LOCAL=True` environment variable has been set.
 
+!!! tip
+    The `--cache-test-fixtures` argument was added to the `invoke integration-test` and `nautobot-server test` commands to allow for caching of test factory data between test runs. See the [factories documentation](./testing.md#factory-caching) for more information.
 
 ##### Customizing Integration Test Executions
 

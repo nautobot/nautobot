@@ -224,7 +224,10 @@ nautobot=> \q
 
 ### `dumpdata`
 
-
+!!! warning
+    - We do not recommend at this time using `--natural-primary` as this can result in inconsistent or incorrect data for data models that use GenericForeignKeys, such as `Cable`, `Note`, `ObjectChange`, and `Tag`.
+    - We also do not recommend at this time using `--natural-foreign` as it can potentially result in errors if any data models incorrectly implement their `natural_key()` and/or `get_by_natural_key()` API methods.
+    - `contenttypes` must not be excluded from the dump (it could be excluded previously due to the use of `--natural-foreign`).
 
 +/- 2.0.0
     - `django_rq` is no longer part of Nautobot's dependencies and so no longer needs to be explicitly excluded.
