@@ -175,6 +175,8 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#6836](https://github.com/nautobot/nautobot/issues/6836) - Fixed CloudNetworkPrefixAssignment, CloudServiceNetworkAssignment, InterfaceVDCAssignment, JobQueueAssignment, ObjectMetadata, PrefixLocationAssignment, VLANLocationAssignment, ControllerManagedDeviceGroupWirelessNetworkAssignment, and ControllerManagedDeviceGroupRadioProfileAssignment models incorrectly assume `Notes` support in the API.
 - [#6841](https://github.com/nautobot/nautobot/issues/6841) - Fixed missing termination side when creating from Circuit detail page.
 - [#6860](https://github.com/nautobot/nautobot/issues/6860) - Fixed incorrect marking of `channel_width` and `allowed_channel_list` as required fields in the Wireless Radio Profile REST API.
+- [#6901](https://github.com/nautobot/nautobot/issues/6901) - Fixed incorrect rendering of cable traces in the case where Modules are part of the hardware definition.
+- [#6901](https://github.com/nautobot/nautobot/issues/6901) - Fixed incorrect rendering of device-component (Interface, Front Port, etc.) detail views when Modules are involved.
 
 ### Dependencies in v2.4.3
 

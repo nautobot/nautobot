@@ -1,2 +1,0 @@
-Fixed incorrect rendering of cable traces in the case where Modules are part of the hardware definition.
-Fixed incorrect rendering of device-component (Interface, Front Port, etc.) detail views when Modules are involved.
