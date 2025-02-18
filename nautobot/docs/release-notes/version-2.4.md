@@ -200,7 +200,6 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#6894](https://github.com/nautobot/nautobot/issues/6894) - Updated development dependency `faker` to `~36.1.1`.
 - [#6894](https://github.com/nautobot/nautobot/issues/6894) - Updated linting dependency `pymarkdownlnt` to `~0.9.28`.
 
-
 ## v2.4.2 (2025-02-03)
 
 ### Added in v2.4.2
