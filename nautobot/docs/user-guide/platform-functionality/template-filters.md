@@ -11,7 +11,6 @@ Both Django Template and Jinja2 can be extended with a library of functions, cal
 
 ## Netutils Filters
 
-
 [Netutils](https://netutils.readthedocs.io/en/latest/) is an external library, maintained by Network to Code, that is focusing on providing a collection of functions for common network automation tasks. Please [check the netutils documentation](https://netutils.readthedocs.io/en/latest/) to see the list of available functions.
 
 These functions are available automatically in Jinja2 rendered by Nautobot. For example you could define a [computed field](./computedfield.md) on Circuit objects, using the Netutils `bits_to_name` function, to display the "Commit Rate" as a human-readable value by using the template code `{{ (obj.commit_rate * 1000) | bits_to_name }}`. (This particular example is contrived, as the Nautobot UI already humanizes the raw `commit_rate` value for display, but it demonstrates the kinds of things that these filters can be used for.)
@@ -142,7 +141,6 @@ Render an email address, if any, as a `mailto:` hyperlink, or render a placehold
 Render a phone number string, if any, as a `tel:` hyperlink, or render a placeholder if no phone number is given.
 
 ### hyperlinked_object
-
 
 Render and link to a Django model instance, if any, or render a placeholder if not.
 

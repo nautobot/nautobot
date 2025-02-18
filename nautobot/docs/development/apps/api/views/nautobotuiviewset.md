@@ -164,7 +164,6 @@ Since in many cases the `create` and `update` templates for a model will be iden
 
 ### Adding Custom Views To NautobotUIViewSet & NautobotUIViewSetRouter
 
-
 Django REST Framework provides the ability to decorate a method on a ViewSet with `@action(detail=True)` to add the method as a view to the ViewSetRouter. This method must return a fully rendered HTML view.
 
 Below is an example of adding a custom action view to an App's ViewSet. A few considerations to keep in mind:

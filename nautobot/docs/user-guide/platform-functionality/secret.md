@@ -1,6 +1,5 @@
 # Secrets
 
-
 For security reasons, Nautobot generally does not store sensitive secrets (device access credentials, systems-integration API tokens, etc.) in its own database. There are other approaches and systems better suited to this purpose, ranging from simple solutions such as process-specific environment variables or restricted-access files on disk, all the way through to dedicated systems such as Hashicorp Vault or AWS Secrets Manager.
 
 However, any number of Nautobot features (including, but not limited to, device access via NAPALM, Git repository access, custom Jobs, and various Apps seeking to integrate with third-party systems) do need the ability to retrieve and make use of such secrets. Towards that end, Nautobot provides a `Secret` database model. This model does **not** store the secret value itself, but instead defines **how** Nautobot can retrieve the secret value as and when it is needed. By using this model as an abstraction of the underlying secrets storage implementation, this makes it possible for any Nautobot feature to make use of secret values without needing to know or care where or how the secret is actually stored.
@@ -8,7 +7,6 @@ However, any number of Nautobot features (including, but not limited to, device 
 Secrets can be grouped and assigned a specific purpose as members of a Secrets Group, which can then be attached to a Git repository, device, or other data model as needed for a given purpose.
 
 ## Secrets Groups
-
 
 A Secrets Group provides a way to collect and assign a purpose to one or more Secrets. The Secrets Group can then be attached to any object that needs to reference and make use of these Secrets, such as a Git repository needing a username/token to authenticate to a private GitHub repository, or a device using a group of Secrets to drive its NAPALM integration.
 

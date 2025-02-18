@@ -142,7 +142,6 @@ from nautobot.core.utils.lookup import get_route_for_model
 
 This utility function supports both UI and API views for both Nautobot core apps and Nautobot Apps.
 
-
 ### UI Routes
 
 Instead of:
@@ -467,5 +466,3 @@ filterset.qs.filter(query).count()  # 339
 - Reversibility may not always necessarily be required, but by properly defining `field_name`, `lookup_expr`, and `exclude` on filter fields, **introspection becomes deterministic and reversible queries can be reliably generated as needed.**
 - For exceptions such as `DeviceFilterSet.has_primary_ip` where it checks for both `Device.primary_ip4` OR `Device.primary_ip6`, method filters may still be necessary, however, they would be **the exception and not the norm.**
 - The good news is that in the core there are not that many of these filter methods defined, but we also don’t want to see them continue to proliferate.
-
-

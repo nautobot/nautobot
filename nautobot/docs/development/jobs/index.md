@@ -249,7 +249,6 @@ A list of strings (field names) representing the order your Job [variables](#var
 
 #### `has_sensitive_variables`
 
-
 Default: `True`
 
 Unless set to False, it prevents the Job's input parameters from being saved to the database. This defaults to True so as to protect against inadvertent database exposure of input parameters that may include sensitive data such as passwords or other user credentials. Review whether each Job's inputs contain any such variables before setting this to False; if a Job *does* contain sensitive inputs, if possible you should consider whether the Job could be re-implemented using Nautobot's [`Secrets`](../../user-guide/platform-functionality/secret.md) feature as a way to ensure that the sensitive data is not directly provided as a Job variable at all.
@@ -292,7 +291,6 @@ Important notes about singleton jobs:
 
 #### `read_only`
 
-
 +/- 2.0.0 "No automatic functionality"
     The `read_only` flag no longer changes the behavior of Nautobot core and is up to the Job author to decide whether their Job should be considered read only.
 
@@ -301,7 +299,6 @@ Default: `False`
 A boolean that can be set by the Job author to indicate that the Job does not make any changes to the environment. What behavior makes each Job "read only" is up to the individual Job author to decide. Note that user input may still be optionally collected with read-only Jobs via Job variables, as described below.
 
 #### `soft_time_limit`
-
 
 An int or float value, in seconds, which can be used to override the default [soft time limit](../../user-guide/administration/configuration/settings.md#celery_task_soft_time_limit) for a Job task to complete.
 
@@ -328,7 +325,6 @@ class ExampleJobWithSoftTimeLimit(Job):
 
 #### `task_queues`
 
-
 Default: `[]`
 
 A list of Job Queue names that the Job can be routed to. An empty list will default to only allowing the user to select the [default Celery queue](../../user-guide/administration/configuration/settings.md#celery_task_default_queue) (`default` unless changed by an administrator). The queue specified in the Job's `default_job_queue` will be used if a queue is not specified in a Job run API call.
@@ -340,7 +336,6 @@ A list of Job Queue names that the Job can be routed to. An empty list will defa
     A worker must be listening on the requested queue or the Job will not run. See the documentation on [task queues](../../user-guide/administration/guides/celery-queues.md) for more information.
 
 #### `template_name`
-
 
 A path relative to the Job source code containing a Django template which provides additional code to customize the Job's submission form. This template should extend the existing Job template, `extras/job.html`, otherwise the base form and functionality may not be available.
 

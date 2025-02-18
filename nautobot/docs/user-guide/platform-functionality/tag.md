@@ -2,7 +2,6 @@
 
 Tags are user-defined labels which can be applied to a variety of objects within Nautobot. They can be used to establish dimensions of organization beyond the relationships built into Nautobot. For example, you might create a tag to identify a particular ownership or condition across several types of objects.
 
-
 Each tag has a name, label, color, and permitted content-types. Each tag can also be assigned a description indicating its purpose.
 
 Objects can be filtered by the tags they have applied. For example, the following API request will retrieve all devices tagged as "monitored":

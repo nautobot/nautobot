@@ -101,7 +101,6 @@ See the [filtering documentation](filtering.md) for more details.
 
 ## Versioning
 
-
 As of Nautobot 1.3, the REST API supports multiple versions. A REST API client may request a given API version by including a `major.minor` Nautobot version number in its request in one of two ways:
 
 1. A client may include a `version` in its HTTP Accept header, for example `Accept: application/json; version=2.0`
@@ -112,7 +111,6 @@ Generally the former approach is recommended when writing automated API integrat
 ### Default Versions
 
 By default, a REST API request that does not specify an API version number will default to compatibility with the current Nautobot version.
-
 
 +/- 2.0.0
     As of Nautobot 2.0, the default API behavior is changed to use the latest available REST API version. In other words, the default REST API version for Nautobot 2.0.y will be `2.0`, for Nautobot 2.1.y will be `2.1`, etc. This means that REST API clients that do not explicitly request a particular REST API version may encounter potentially [breaking changes](#breaking-changes) in the REST API when Nautobot is upgraded to a new minor or major version.
@@ -174,7 +172,6 @@ As an example, let us say that Nautobot 2.1 introduced a new, _non-backwards-com
 | `/api/dcim/racks/`  | `2.1`                 | 2.1-compatible REST API (unchanged from 2.0) |
 
 ### APISelect with versioning capability
-
 
 The constructor for Nautobot's `APISelect`/`APISelectMultiple` UI widgets now includes an optional `api_version` argument which if set overrides the default API version of the request.
 
@@ -759,7 +756,6 @@ http://nautobot/api/dcim/locations/3b71a669-faa4-4f8d-a72a-8c94d121b793/?depth=2
 
 ### Retrieving Object Relationships and Relationship Associations
 
-
 Objects that are associated with another object by a custom [Relationship](../relationship.md) are also retrievable and modifiable via the REST API. Due to the additional processing overhead involved in retrieving and representing these relationships, they are _not_ included in default REST API `GET` responses. To include relationships data, pass `include=relationships` as a query parameter; in this case an additional key, `"relationships"`, will be included in the API response, as seen below:
 
 ```no-highlight
@@ -967,7 +963,6 @@ http://nautobot/api/ipam/prefixes/b484b0ac-12e3-484a-84c0-aa17955eaedc/ \
     The Nautobot REST API support the use of either `PUT` or `PATCH` to modify an existing object. The difference is that a `PUT` request requires the user to specify a _complete_ representation of the object being modified, whereas a `PATCH` request need include only the attributes that are being updated. For most purposes, using `PATCH` is recommended.
 
 #### Updating Relationship Associations
-
 
 It is possible to modify the objects associated via Relationship with an object as part of a REST API `PATCH` request by specifying the `"relationships"` key, any or all of the relevant Relationships, and the list of desired related objects for each such Relationship. Since nested serializers are used for the related objects, they can be identified by ID (primary key) or by one or more attributes in a dictionary. For example, either of the following requests would be valid:
 

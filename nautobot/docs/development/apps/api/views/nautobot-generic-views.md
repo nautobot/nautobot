@@ -9,7 +9,6 @@ More documentation and examples can be found in [Generic Views](../../../core/ge
 
 ## Note URL Endpoint
 
-
 Models that inherit from `PrimaryModel` and `OrganizationalModel` can have notes associated. In order to utilize this new feature you will need to add the endpoint to `urls.py`. Here is an option to be able to support both 1.4+ and older versions of Nautobot:
 
 !!! tip
