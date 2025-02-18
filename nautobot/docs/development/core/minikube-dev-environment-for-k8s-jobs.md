@@ -92,7 +92,7 @@ Run the following command to point your terminal to use the docker daemon inside
 eval $(minikube docker-env)
 ```
 
-Now you can build your nautobot image locally using the `invoke build` command. After the build is complete, you are ready to build your kubernetes deployments.
+Now you can build your Nautobot image locally using the `invoke build` command. After the build is complete, you are ready to build your kubernetes deployments.
 
 ### Starting the Deployments and Services
 
@@ -318,7 +318,7 @@ You can inspect the job result and the job logs in this page. Notice the two job
 
 ### Running a Scheduled Job
 
-You can run scheduled jobs as well. In order to run scheduled jobs, you do need celery beat which should already be running from previous steps. To confirm that the celery beat is running, you need to retrieve the celery beat pod name by running the command `kubectl get pods`. You should see the following output or something similar, copy the pod name with prefix `celery-beat-*`.
+You can run scheduled jobs as well. In order to run scheduled jobs, you do need Celery Beat which should already be running from previous steps. To confirm that the Celery Beat is running, you need to retrieve the Celery Beat pod name by running the command `kubectl get pods`. You should see the following output or something similar, copy the pod name with prefix `celery-beat-*`.
 
 ```bash
 NAME                           READY   STATUS    RESTARTS   AGE
@@ -356,7 +356,7 @@ Fill in the data shown below (for the "Starting date and time" field, pick a dat
 
 ![K8s Run Scheduled Job Form](../../media/development/core/kubernetes/k8s_run_scheduled_job_form.png)
 
-To confirm that the Scheduled Job is running, you go back to the terminal that was logging celery beat. You should see the following logs or something similar:
+To confirm that the Scheduled Job is running, you go back to the terminal that was logging Celery Beat. You should see the following logs or something similar:
 
 ```bash
 [2024-11-21 02:09:57,756: INFO/MainProcess] DatabaseScheduler: Schedule changed.

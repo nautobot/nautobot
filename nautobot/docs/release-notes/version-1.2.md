@@ -227,7 +227,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ### Dependencies in v1.2.8
 
-- [#1432](https://github.com/nautobot/nautobot/issues/1432) - Update django-redis to `5.2.x` to address `5.1.x` blocking redis `4.x` versions.
+- [#1432](https://github.com/nautobot/nautobot/issues/1432) - Update `django-redis` to `5.2.x` to address `5.1.x` blocking `redis` `4.x` versions.
 
 ### Documentation in v1.2.8
 
@@ -235,8 +235,8 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ### Housekeeping in v1.2.8
 
-- [#839](https://github.com/nautobot/nautobot/issues/839) - Add CODE_OF_CONDUCT.md to repository.
-- [#1299](https://github.com/nautobot/nautobot/pull/1299) - Add SECURITY.md to repository.
+- [#839](https://github.com/nautobot/nautobot/issues/839) - Add `CODE_OF_CONDUCT.md` to repository.
+- [#1299](https://github.com/nautobot/nautobot/pull/1299) - Add `SECURITY.md` to repository.
 - [#1348](https://github.com/nautobot/nautobot/pull/1348) - Pin Selenium Grid container version to match Python Client version.
 - [#1388](https://github.com/nautobot/nautobot/pull/1388) - Added beta version of GitHub Issue Form style for feature request.
 - [#1447](https://github.com/nautobot/nautobot/pull/1447) - Minor `nit` on Github Issue Form styling.

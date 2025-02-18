@@ -37,6 +37,7 @@ from nautobot.core.forms import (
     DynamicModelMultipleChoiceField,
     JSONField,
 )
+from nautobot.core.forms.widgets import ClearableFileInput
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.logging import sanitize
 from nautobot.core.utils.lookup import get_model_from_name
@@ -1040,12 +1041,18 @@ class DatabaseFileField(forms.FileField):
     widget = DBClearableFileInput
 
 
+class BootstrapStyleFileField(forms.FileField):
+    """File picker with UX bootstrap style and clearable checkbox."""
+
+    widget = ClearableFileInput
+
+
 class FileVar(ScriptVariable):
     """
     An uploaded file.
     """
 
-    form_field = DatabaseFileField
+    form_field = BootstrapStyleFileField
 
 
 class IPAddressVar(ScriptVariable):

@@ -59,7 +59,7 @@ You can also refresh the cache for one or all Dynamic Groups by running the `Ref
 
 ### Filter-Based Dynamic Groups
 
-Assignment of objects to a filter-based Dynamic Group is powered by Nautobot **FilterSet** classes underneath the hood. The [django-filter](https://django-filter.readthedocs.io/en/stable/) documentation may be a useful reference for users wanting to develop an in-depth understanding of FilterSets, but is by no means required to understand Dynamic Groups.
+Assignment of objects to a filter-based Dynamic Group is powered by Nautobot **FilterSet** classes underneath the hood. The [`django-filter`](https://django-filter.readthedocs.io/en/stable/) documentation may be a useful reference for users wanting to develop an in-depth understanding of FilterSets, but is by no means required to understand Dynamic Groups.
 
 A filter-based Dynamic Group defines a `filter` field, which is stored in the database as a JSON dict. An object is considered to be a member of such a Dynamic Group if it has the correct Content Type and it is not excluded by the filter criteria defined by the group. By default, a freshly created Dynamic Group has an empty filter (`{}`), which means that all objects of the matching Content Type are members of this group, just as a default list view of these objects would display all such objects prior to any filter fields being selected in the web UI.
 
