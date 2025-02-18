@@ -1,6 +1,6 @@
 # Nautobot Docker Images
 
-Nautobot is packaged as a Docker image for use in a production environment; developer images are also provided for those working on App development and testing. The Docker image and deployment strategies are being actively developed, check back here or join the **#nautobot** channel on [Network to Code's Slack community](https://slack.networktocode.com/) for the most up to date information.
+Nautobot is packaged as a Docker image for use in a production environment; developer images are also provided for those working on App development and testing. The Docker image and deployment strategies are being actively developed, check back here or join the `#nautobot` channel on [Network to Code's Slack community](https://slack.networktocode.com/) for the most up to date information.
 
 ## Python Versions
 
@@ -9,7 +9,7 @@ Docker images are published for multiple supported Python versions. The default 
 +/- 1.6.1
     The Python version for the image tags that do not explicitly state a Python version changed to 3.11 for Nautobot 1.6.1. From now on, these tagged images will always contain the **latest** supported Python version (e.g., when Python 3.12 support is added, these tags will change to contain Python 3.12). This is a change from Nautobot 1.6.0 and earlier, where tags that did not state a Python version would contain the **earliest** supported Python version.
 
-Currently images are pushed for the following python versions:
+Currently images are pushed for the following Python versions:
 
 * 3.9
 * 3.10
@@ -292,4 +292,4 @@ Similarly, you can use `docker-compose.final-dev.yml` if you wish to build and t
 
 ## Docker Compose
 
-An [example library for using Docker Compose](https://github.com/nautobot/nautobot-docker-compose/) to build out all of the components for Nautobot can be found within the Nautobot community. Please see [https://github.com/nautobot/nautobot-docker-compose/](https://github.com/nautobot/nautobot-docker-compose/) for examples on the base application, LDAP integration, and using Apps.
+An [example library for using Docker Compose](https://github.com/nautobot/nautobot-docker-compose/) to build out all of the components for Nautobot can be found within the Nautobot community. Please refer to that library for examples on the base application, LDAP integration, and using Apps.

@@ -661,6 +661,7 @@ The logger accepts an `extra` kwarg that you can optionally set for the followin
 
 If a `grouping` is not provided it will default to the function name that logged the message. The `object` will default to `None`.
 
+<!-- pyml disable-num-lines 10 proper-names -->
 !!! example
     ```py
     from nautobot.apps.jobs import Job
@@ -672,6 +673,7 @@ If a `grouping` is not provided it will default to the function name that logged
 
 To skip writing a log entry to the database, set the `skip_db_logging` key in the "extra" kwarg to `True` when calling the log function. The output will still be written to the console.
 
+<!-- pyml disable-num-lines 10 proper-names -->
 !!! example
     ```py
     from nautobot.apps.jobs import Job

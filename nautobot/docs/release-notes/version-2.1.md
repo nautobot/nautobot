@@ -109,7 +109,7 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 
 ### Dependencies in v2.1.9
 
-- [#5296](https://github.com/nautobot/nautobot/issues/5296) - Fixed bug in pyproject.toml that added `coverage` as a nautobot dependency instead of a development dependency.
+- [#5296](https://github.com/nautobot/nautobot/issues/5296) - Fixed bug in `pyproject.toml` that added `coverage` as a Nautobot dependency instead of a development dependency.
 
 ### Documentation in v2.1.9
 
@@ -138,8 +138,8 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 
 ### Changed in v2.1.8
 
-- [#5403](https://github.com/nautobot/nautobot/issues/5403) - Changed uses of `functools.lru_cache` to use django-redis cache instead.
-- [#5403](https://github.com/nautobot/nautobot/issues/5403) - Standardized cache key strings used with the django-redis cache.
+- [#5403](https://github.com/nautobot/nautobot/issues/5403) - Changed uses of `functools.lru_cache` to use `django-redis` cache instead.
+- [#5403](https://github.com/nautobot/nautobot/issues/5403) - Standardized cache key strings used with the `django-redis` cache.
 
 ### Removed in v2.1.8
 
@@ -284,7 +284,7 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 
 - [#4981](https://github.com/nautobot/nautobot/issues/4981) - Add serial types to InterfaceTypeChoices.
 - [#5012](https://github.com/nautobot/nautobot/issues/5012) - Added database indexes to the ObjectChange model to improve performance when filtering by `user_name`, `changed_object`, or `related_object`, and also by `changed_object` in combination with `user` or `user_name`.
-- [#5169](https://github.com/nautobot/nautobot/issues/5169) - Added support for user session profiling via django-silk.
+- [#5169](https://github.com/nautobot/nautobot/issues/5169) - Added support for user session profiling via `django-silk`.
 - [#5178](https://github.com/nautobot/nautobot/issues/5178) - Added Navbar dropdown arrow rotation on open/close.
 - [#5178](https://github.com/nautobot/nautobot/issues/5178) - Added behavior of resetting navbar state when the "home" link is clicked.
 
@@ -370,7 +370,7 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 - [#5024](https://github.com/nautobot/nautobot/issues/5024) - Fixed a bug that caused IPAddress objects to query their parent Prefix and Namespace every time they were instantiated.
 - [#5024](https://github.com/nautobot/nautobot/issues/5024) - Improved performance of the IPAddress list view by including the namespace in the table queryset.
 - [#5024](https://github.com/nautobot/nautobot/issues/5024) - Updated bulk-edit and bulk-delete views to auto-hide any "actions" column in the table of objects being edited or deleted.
-- [#5031](https://github.com/nautobot/nautobot/issues/5031) - Updated the default sanitizer pattern to include secret(s) and to be flexible with python dictionaries.
+- [#5031](https://github.com/nautobot/nautobot/issues/5031) - Updated the default sanitizer pattern to include secret(s) and to be flexible with Python dictionaries.
 - [#5043](https://github.com/nautobot/nautobot/issues/5043) - Fixed early return conditional in `ensure_git_repository`.
 - [#5045](https://github.com/nautobot/nautobot/issues/5045) - Adjusted Bootstrap grid breakpoints to account for the space occupied by the sidebar, fixing various page rendering.
 - [#5054](https://github.com/nautobot/nautobot/issues/5054) - Fixed missing search logic on the "Assign an IP Address" view.
@@ -489,7 +489,7 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 
 ### Fixed in v2.1.0
 
-- [#4620](https://github.com/nautobot/nautobot/issues/4620) - Ensure UI build directory is created on init of nautobot-server.
+- [#4620](https://github.com/nautobot/nautobot/issues/4620) - Ensure UI build directory is created on init of `nautobot-server`.
 - [#4627](https://github.com/nautobot/nautobot/issues/4627) - Fixed JSON custom field being returned as a `repr()` string when using GraphQL.
 - [#4834](https://github.com/nautobot/nautobot/issues/4834) - Fixed display of custom field choices when editing a CustomField.
 - [#4834](https://github.com/nautobot/nautobot/issues/4834) - Fixed display of child groups when editing a DynamicGroup.
@@ -538,7 +538,7 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 
 ### Changed in v2.1.0-beta.1
 
-- [#4677](https://github.com/nautobot/nautobot/issues/4677) - Updated and customized nautobot UI bootstrap theme with LESS variables.
+- [#4677](https://github.com/nautobot/nautobot/issues/4677) - Updated and customized Nautobot UI bootstrap theme with LESS variables.
 - [#4745](https://github.com/nautobot/nautobot/issues/4745) - Changed object export (CSV, YAML, export-template) to run as a background task, avoiding HTTP timeouts when exporting thousands of objects in a single operation.
 - [#4750](https://github.com/nautobot/nautobot/issues/4750) - Refined CSS to Nautobot Bootstrap UI.
 - [#4765](https://github.com/nautobot/nautobot/issues/4765) - Moved navbar to the left.

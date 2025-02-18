@@ -4,7 +4,7 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python Web framewo
 
 ## Components
 
-<!-- pyml disable-num-lines 9 no-inline-html -->
+<!-- pyml disable-num-lines 9 no-inline-html,proper-names -->
 | Function           | Component                                                                                                                          |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
 | HTTP service       | :simple-nginx: NGINX                                                                                                               |
@@ -38,7 +38,7 @@ See the [installation guide](../user-guide/administration/installation/index.md)
     - Python 3.7 support was removed.
     - Python 3.11 support was added.
 
---- 2.0.0 "django-rq and django-cacheops"
+--- 2.0.0 "`django-rq` and `django-cacheops`"
     - `django-rq` support was removed.
     - `django-cacheops` usage was removed and replaced with Django's native caching features.
 

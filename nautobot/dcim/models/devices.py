@@ -1419,11 +1419,10 @@ class Controller(PrimaryModel):
                     "controller_device": ("Cannot assign both a device and a device redundancy group to a controller."),
                 },
             )
-
         if self.location:
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
-                    {"location": f'Devices may not associate to locations of type "{self.location.location_type}".'}
+                    {"location": f'Controllers may not associate to locations of type "{self.location.location_type}".'}
                 )
 
     def get_capabilities_display(self):

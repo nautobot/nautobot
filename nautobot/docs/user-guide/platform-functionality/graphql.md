@@ -52,9 +52,9 @@ Result
 
 It is possible to explore the Graph and create some queries in a human friendly UI at the endpoint `graphql/`. This interface (called `graphqli`) provides a great playground to build new queries as it provides full autocompletion and type validation.
 
-## Querying the GraphQL interface over the rest API
+## Querying the GraphQL interface over the REST API
 
-It is possible to query the GraphQL interface via the rest API as well, the endpoint is available at `api/graphql/` and supports the same Token based authentication as all other Nautobot APIs.
+It is possible to query the GraphQL interface via the REST API as well, the endpoint is available at `api/graphql/` and supports the same Token based authentication as all other Nautobot APIs.
 
 A GraphQL Query must be encapsulated in a JSON payload with the `query` key and sent with a POST request. Optionally it is possible to provide a list of `variables` in the same payload as presented below.
 

@@ -75,14 +75,14 @@ New dependencies can be added to the project via the `poetry add` command. This 
 
 ## Branding
 
-* When referring to Nautobot in writing, use the proper form "Nautobot," with the letter N. The lowercase form "nautobot" should be used in code, filenames, etc.
+* When referring to Nautobot in writing, use the proper form "`Nautobot`," with the letter N. The lowercase form "`nautobot`" should be used in code, filenames, etc.
 
 <!-- pyml disable-next-line NAU001 -->
-* There is an SVG form of the Nautobot logo at [nautobot/docs/nautobot_logo.svg](../../nautobot_logo.svg). It is preferred to use this logo for all purposes as it scales to arbitrary sizes without loss of resolution. If a raster image is required, the SVG logo should be converted to a PNG image of the prescribed size.
+* There is an SVG form of the Nautobot logo at [`nautobot/docs/nautobot_logo.svg`](../../nautobot_logo.svg). It is preferred to use this logo for all purposes as it scales to arbitrary sizes without loss of resolution. If a raster image is required, the SVG logo should be converted to a PNG image of the prescribed size.
 
 ## Importing Python Packages
 
-To prevent circular dependency errors and improve code readability, the following standards should be followed when importing from other python modules.
+To prevent circular dependency errors and improve code readability, the following standards should be followed when importing from other Python modules.
 
 !!! tip
     Some of the below rules will be applied automatically when running the `ruff` linter/formatter against your code. Specifically, you can run `invoke ruff --fix` to automatically reorder imports.
@@ -188,7 +188,7 @@ When using external libraries you may need to import multiple different modules 
 
 #### Convenience Imports
 
-Nautobot uses convenience imports in the same way that [django](https://docs.djangoproject.com/en/dev/internals/contributing/writing-code/coding-style/#imports) implements them. These should be leveraged whenever possible.
+Nautobot uses convenience imports in the same way that [Django](https://docs.djangoproject.com/en/dev/internals/contributing/writing-code/coding-style/#imports) implements them. These should be leveraged whenever possible.
 
 !!! example
 

@@ -723,10 +723,10 @@ def hadolint(context):
 def markdownlint(context, fix=False):
     """Lint Markdown files."""
     if fix:
-        command = "pymarkdown fix --recurse nautobot examples *.md"
+        command = "pymarkdown fix --recurse nautobot/docs examples *.md"
         run_command(context, command)
     # fix mode doesn't scan/report issues it can't fix, so always run scan even after fixing
-    command = "pymarkdown scan --recurse nautobot examples *.md"
+    command = "pymarkdown scan --recurse nautobot/docs examples *.md"
     run_command(context, command)
 
 
