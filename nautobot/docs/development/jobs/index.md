@@ -365,7 +365,6 @@ For another example checkout [the template used in the Example App](https://gith
 
 #### `time_limit`
 
-
 An int or float value, in seconds, which can be used to override the
 default [hard time limit](../../user-guide/administration/configuration/settings.md#celery_task_time_limit) (10 minutes by default) for a Job task to complete.
 
@@ -751,7 +750,6 @@ Jobs are Python code and can be tested as such, usually via [Django unit-test fe
 
 While individual methods within your Job can and should be tested in isolation, you'll likely also want to test the entire execution of the Job.
 
-
 The simplest way to test the entire execution of Jobs is via calling the `nautobot.apps.testing.run_job_for_testing()` method, which is a helper wrapper around the `JobResult.enqueue_job` function used to execute a Job via Nautobot's Celery worker process.
 
 Because of the way `run_job_for_testing` and more specifically Celery tasks work, which is somewhat complex behind the scenes, you need to inherit from `nautobot.apps.testing.TransactionTestCase` instead of `django.test.TestCase` (Refer to the [Django documentation](https://docs.djangoproject.com/en/stable/topics/testing/tools/#provided-test-case-classes) if you're interested in the differences between these classes - `TransactionTestCase` from Nautobot is a small wrapper around Django's `TransactionTestCase`).
@@ -787,7 +785,6 @@ The test files should be placed under the `tests` folder in the app's directory 
     For more advanced examples refer to the Nautobot source code, specifically `nautobot/extras/tests/test_jobs.py`.
 
 ## Debugging Job Performance
-
 
 Debugging the performance of Nautobot Jobs can be tricky, because they are executed in the worker context. In order to gain extra visibility, [cProfile](https://docs.python.org/3/library/profile.html) can be used to profile the Job execution.
 

@@ -6,4 +6,3 @@ Child devices are first-class Devices in their own right: That is, they are full
 
 +/- 2.3.0
     Device bays are **not** suitable for modeling line cards (such as those commonly found in chassis-based routers and switches), as these components depend on the control plane of the parent device to operate. Previously, it was recommended that line cards and similarly non-autonomous hardware should be modeled as inventory items within a device, but as of version 2.3.0 the [Module](module.md) model should be used instead.
-

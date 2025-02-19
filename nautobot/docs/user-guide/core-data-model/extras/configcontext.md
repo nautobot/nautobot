@@ -14,7 +14,6 @@ Sometimes it is desirable to associate additional data with a group of devices o
 * Tag
 * Dynamic group - Need to set `settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED` to `True`. [See notes here](../../administration/configuration/settings.md#config_context_dynamic_groups_enabled)
 
-
 Context data not specifically assigned to one or more of the above groups is by default associated with **all** devices and virtual machines.
 
 Configuration contexts may be managed within Nautobot via the UI and/or API; they may also be managed externally to Nautobot in a Git repository if desired.

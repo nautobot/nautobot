@@ -6,15 +6,12 @@ Nautobot is packaged as a Docker image for use in a production environment; deve
 
 Docker images are published for multiple supported Python versions. The default image, recommended for most users, is based on the `python:3.12-slim` image.
 
-
 Currently images are pushed for the following Python versions:
 
 * 3.9
 * 3.10
 * 3.11
 * 3.12
-
-
 
 +++ 2.3.0 "Added Python 3.12"
     Python 3.12 was added to the set of published images and is now the default version.
@@ -159,7 +156,6 @@ If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_create_superuser) is true, `NAUTOBOT_
 The docker container uses [uWSGI](https://uwsgi-docs.readthedocs.io/) to serve Nautobot. A default configuration is [provided](https://github.com/nautobot/nautobot/blob/main/docker/uwsgi.ini), and can be overridden by injecting a new `uwsgi.ini` file at `/opt/nautobot/uwsgi.ini`. There are a couple of environment variables provided to override some uWSGI defaults:
 
 #### `NAUTOBOT_UWSGI_BUFFER_SIZE`
-
 
 Default: `4096`
 

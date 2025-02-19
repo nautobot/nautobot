@@ -15,7 +15,6 @@ Some devices house child devices which share physical resources, like space and 
 
 ## Device Component Templates
 
-
 Each device type is assigned a number of component templates which define the physical components within a device. These are:
 
 * Console ports

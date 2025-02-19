@@ -302,7 +302,6 @@ e!j=vrlhz-!wl8p_3+q5s5cph29nzj$xm81eap-!&n!_9^du09
 
 ### `generate_test_data`
 
-
 `nautobot-server generate_test_data [--flush] --seed SEED`
 
 Populate the database with various data as a baseline for testing (automated or manual).
@@ -378,7 +377,6 @@ Allow Nautobot to send these metrics? [y/n]: y
 Installation metrics will be sent when running 'nautobot-server post_upgrade'. Thank you!
 Configuration file created at /home/example/.nautobot/nautobot_config.py
 ```
-
 
 For more information on configuring Nautobot for the first time or on more advanced configuration patterns, please see the guide on [Nautobot Configuration](../configuration/index.md).
 
@@ -471,7 +469,6 @@ Performs common server post-upgrade operations using a single entrypoint.
 
 This will run the following management commands with default settings, in order:
 
-
 - `migrate`
 - `trace_paths`
 - `collectstatic`
@@ -554,20 +551,17 @@ Removing expired sessions...
 
 ### `refresh_dynamic_group_member_caches`
 
-
 `nautobot-server refresh_dynamic_group_member_caches`
 
 Refresh the cached members of all Dynamic Groups. This can also be achieved by running the `Refresh Dynamic Group Caches` system Job.
 
 ### `refresh_content_type_caches`
 
-
 `nautobot-server refresh_content_type_caches`
 
 Refresh the cached ContentType object property available via `Model._content_type_cached`. If content types are added or removed, this command will update the cache to reflect the current state of the database, but should already be done through the `post_upgrade` command.
 
 ### `remove_stale_scheduled_jobs`
-
 
 `nautobot-server remove_stale_scheduled_jobs [max-age of days]`
 
@@ -652,7 +646,6 @@ nautobot-server runjob --username someuser --local --data '{"my_boolvar": false}
 Please see the [guide on Jobs](../../platform-functionality/jobs/index.md) for more information on working with and running jobs.
 
 ### `send_installation_metrics`
-
 
 `nautobot-server send_installation_metrics`
 

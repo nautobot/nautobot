@@ -10,7 +10,6 @@ The following operational statuses are available by default:
 * Decommissioning
 * Failed
 
-
 Interfaces may be physical or virtual in nature, but only physical interfaces may be connected via cables. Cables can connect interfaces to pass-through ports, circuit terminations, or other interfaces.
 
 Physical interfaces may be arranged into a link aggregation group (LAG) and associated with a parent LAG (virtual) interface. LAG interfaces can be recursively nested to model bonding of trunk groups. Like all virtual interfaces, LAG interfaces cannot be connected physically. Interfaces can be assigned to an [Interface Redundancy Group](./interfaceredundancygroup.md) to represent redundancy protocols such as HSRP or VRRP.
@@ -22,8 +21,6 @@ IP addresses can be assigned to interfaces. VLANs can also be assigned to each i
 
 !!! note
     Although devices and virtual machines both can have interfaces, a separate model is used for each. Thus, device interfaces have some properties that are not present on virtual machine interfaces and vice versa.
-
-
 
 +++ 2.3.0
     Interfaces now have an optional `role` field and can be assigned [Role](../../platform-functionality/role.md) instances to track common configurations.

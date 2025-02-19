@@ -1,10 +1,8 @@
 # Location Types
 
-
 Before defining individual Locations, you must first define the hierarchy of Location Types that you wish to use for the organization of your network. An example hierarchy might be `Building ← Floor ← Room`, but you might have more or fewer distinct types depending on your specific organizational requirements.
 
 Each Location Type can define a set of "content types" that are permitted to associate to Locations of this type. For example, you might permit assigning Prefixes and VLAN Groups to an entire Building or Floor, but only allow Devices and Racks to be assigned to Rooms, never to a more abstract location. Doing so can help ensure consistency of your data.
-
 
 Location Types can be marked as `nestable`. When this flag is set, Locations of this type may nest within one another, allowing for variable-depth hierarchies of Locations and reducing the number of distinct Location Types you may need to define. For example, with two Location Types, "Building Group" and "Building", by flagging "Building Group" as nestable, you could model the following hierarchy of Locations:
 

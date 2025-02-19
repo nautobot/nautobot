@@ -6,7 +6,6 @@ Platforms may optionally be limited by manufacturer: If a platform is assigned t
 
 The platform model can be used to indicate which "network driver" Nautobot (and Jobs, Apps, etc.) should use when connecting to a remote device running this platform. This is a generic string corresponding loosely to a [Netmiko](https://github.com/ktbyers/netmiko) driver name. As there are many different libraries and applications for connecting to a device, rather than having a separate model field for each such connection type, Nautobot uses [netutils](https://netutils.readthedocs.io/en/latest/) to translate the generic network driver string into a variety of library-specific driver strings (Ansible "collection name", PyATS "OS" value, Scrapli "platform", etc.) which can be accessed via the UI, REST API, and GraphQL as needed. An administrator can extend or override the default translations provided by netutils by configuring the [`NETWORK_DRIVERS`](../../administration/configuration/settings.md#network_drivers) dictionary appropriately. (If your extensions are generally applicable, please consider making a pull request against [netutils](https://github.com/networktocode/netutils) to update the package!)
 
-
 +++ 2.0.0
     Support for `netutils_parser` key was added to `network_driver_mappings`.
 

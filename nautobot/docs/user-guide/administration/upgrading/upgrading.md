@@ -61,7 +61,6 @@ Nautobot v2.4.0 and later requires the following:
 | PostgreSQL | 12.0            |
 | Redis      | 4.0             |
 
-
 --- 2.1.0
     Support for versions of PostgreSQL older than 12.0 was removed.
 

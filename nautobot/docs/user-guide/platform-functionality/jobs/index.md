@@ -102,7 +102,6 @@ It is a key concept to understand the 2 `class_path` elements:
 
 The `class_path` is often represented as a string in the format of `<module_name>.<JobClassName>`, such as `example.MyJobWithNoVars` or `nautobot_golden_config.jobs.BackupJob`. Understanding the definitions of these elements will be important in running jobs programmatically.
 
-
 +/- 2.0.0
     The Job database model `name` field is now enforced to be globally unique and so is also an option for uniquely identifying Job records.
 

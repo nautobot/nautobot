@@ -27,7 +27,6 @@ See the [installation guide](../user-guide/administration/installation/index.md)
 
 ## Dependency History
 
-
 --- 2.0.0 "`django-rq` and `django-cacheops`"
     - `django-rq` support was removed.
     - `django-cacheops` usage was removed and replaced with Django's native caching features.

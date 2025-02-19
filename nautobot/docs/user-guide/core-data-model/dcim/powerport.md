@@ -7,7 +7,6 @@ A power port represents the inlet of a device where it draws its power, i.e. the
 
 Cables can connect power ports only to power outlets or power feeds. (Pass-through ports cannot be used to model power distribution.)
 
-
 +/- 2.3.0
     This model has been updated to support being installed in [Modules](module.md). As a result, there are now two fields for assignment to a Device or Module. One of the `device` or `module` fields must be populated but not both. If a `module` is supplied, the `device` field must be null, and similarly the `module` field must be null if a `device` is supplied.
 

@@ -10,7 +10,6 @@ The [official Django documentation](https://docs.djangoproject.com/en/stable/ref
 
 ## Administratively Configurable Settings
 
-
 A number of settings can alternatively be configured via the Nautobot Admin UI. To do so, these settings must **not** be defined in your `nautobot_config.py`, as any settings defined there will take precedence over any values defined in the Admin UI. Settings that are currently configurable via the Admin UI include:
 
 <!-- pyml disable-num-lines 5 blanks-around-lists -->
@@ -155,7 +154,6 @@ in order for the repository to sync.
 ---
 
 ### `NAUTOBOT_LOG_DEPRECATION_WARNINGS`
-
 
 Default: `False`
 

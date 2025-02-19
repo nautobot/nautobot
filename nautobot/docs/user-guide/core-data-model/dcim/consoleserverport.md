@@ -4,6 +4,5 @@ A console server is a device which provides remote access to the local consoles 
 
 Cables can connect console server ports to console ports or pass-through ports.
 
-
 +/- 2.3.0
     This model has been updated to support being installed in [Modules](module.md). As a result, there are now two fields for assignment to a Device or Module. One of the `device` or `module` fields must be populated but not both. If a `module` is supplied, the `device` field must be null, and similarly the `module` field must be null if a `device` is supplied.

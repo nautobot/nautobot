@@ -5,6 +5,5 @@ Like front ports, rear ports are pass-through ports which represent the continua
 !!! note
     Front and rear ports need not necessarily reside on the actual front or rear device face. This terminology is used primarily to distinguish between the two components in a pass-through port pairing.
 
-
 +/- 2.3.0
     This model has been updated to support being installed in [Modules](module.md). As a result, there are now two fields for assignment to a Device or Module. One of the `device` or `module` fields must be populated but not both. If a `module` is supplied, the `device` field must be null, and similarly the `module` field must be null if a `device` is supplied.

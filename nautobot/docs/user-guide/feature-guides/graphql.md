@@ -219,7 +219,6 @@ query {
 }
 ```
 
-
 You can also paginate the results returned to you when the data set gets larger. To do so, use the keywords "limit" and "offset". The "limit" keyword will limit the count of results returned after the "offset". If no "offset" is specified, then the default offset is zero.
 
     ```graphql
@@ -310,7 +309,6 @@ print(json.dumps(gql.json, indent=2))
 In the updated script, we add the `variables = {"location_name": "ams"}` variable. We then update the query to let GraphQL know that we will be sending parameters to to filter by `location`. The updated output is still a JSON object. Instead of fetching all devices, we are filtering by devices in the `ams` location. The PyNautobot SDK has some [excellent GraphQL examples](https://pynautobot.readthedocs.io/en/latest/api/core/graphql.html). Be sure to check out the documentation.
 
 ### Saving Queries
-
 
 Queries can now be stored inside of Nautobot, allowing the user to easily rerun previously defined queries.
 
