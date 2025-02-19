@@ -674,13 +674,9 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         "has_nat_inside",
     ]
     q = forms.CharField(required=False, label="Search")
-    parent = forms.CharField(
+    parent = DynamicModelMultipleChoiceField(
+        queryset=Prefix.objects.all(),
         required=False,
-        widget=forms.TextInput(
-            attrs={
-                "placeholder": "Prefix",
-            }
-        ),
         label="Parent Prefix",
     )
     ip_version = forms.ChoiceField(

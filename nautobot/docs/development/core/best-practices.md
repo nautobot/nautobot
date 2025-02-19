@@ -390,7 +390,7 @@ Consider this example from `nautobot.dcim.filters.DeviceFilterSet.pass_through_p
         return queryset.exclude(frontports__isnull=value, rearports__isnull=value)
 ```
 
-The default `lookup_expr` unless otherwise specified is “exact”, as seen in [django_filters.conf](https://github.com/carltongibson/django-filter/blob/main/django_filters/conf.py#L10):
+The default `lookup_expr` unless otherwise specified is “exact”, as seen in the [`django_filters.conf`](https://github.com/carltongibson/django-filter/blob/main/django_filters/conf.py#L10) module:
 
 ```python
   'DEFAULT_LOOKUP_EXPR': 'exact',

@@ -2790,7 +2790,7 @@ class ControllerTestCase(ModelTestCases.BaseModelTestCase):
             controller.validated_save()
         self.assertEqual(
             error.exception.message_dict["location"][0],
-            f'Devices may not associate to locations of type "{location_type}".',
+            f'Controllers may not associate to locations of type "{location_type}".',
         )
 
 

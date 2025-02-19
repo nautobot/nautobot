@@ -107,6 +107,11 @@ class RadioProfileTest(APIViewTestCases.APIViewTestCase):
                 "tx_power_min": 20,
                 "allowed_channel_list": [],
             },
+            {
+                "name": "Radio Profile 7",
+                "frequency": "6GHz",
+                "regulatory_domain": "US",
+            },
         ]
         cls.bulk_update_data = {
             "frequency": "5GHz",

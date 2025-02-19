@@ -2,11 +2,11 @@
 
 ## Add User Information for Error Requests (4xx and 5xx)
 
-By default django logs [4xx and 5xx requests](https://docs.djangoproject.com/en/3.2/topics/logging/#django-request)
+By default Django logs [4xx and 5xx requests](https://docs.djangoproject.com/en/3.2/topics/logging/#django-request)
 but is missing details such as the request user name.  This can be helpful in debugging. This example
 shows how the request user can be added to the logs for 4xx and 5xx responses.
 
-Using the django-request-logging module can lead to password leaks if not configured correctly. If using in production, make sure that you capture all passwords and mask them in logs. The example below uses defines a function, `mask_password`, to manipulate the message before logged. This is just one way to mask a password. Be mindful that other places are captured as well. Here is the "before/after" example of the function `mask_password`:
+Using the `django-request-logging` module can lead to password leaks if not configured correctly. If using in production, make sure that you capture all passwords and mask them in logs. The example below uses defines a function, `mask_password`, to manipulate the message before logged. This is just one way to mask a password. Be mindful that other places are captured as well. Here is the "before/after" example of the function `mask_password`:
 
 Before:
 
@@ -100,7 +100,7 @@ LOGGING = {
 
 ## Add User Information to ALL Requests
 
-Unfortunately, when running Nautobot behind uWSGI only failed requests are logged through the django.request logger. We can get more information
+Unfortunately, when running Nautobot behind uWSGI only failed requests are logged through the `django.request` logger. We can get more information
 from all requests by installing the [`django-request-logging`](https://github.com/Rhumbix/django-request-logging) package.
 
 ```no-highlight

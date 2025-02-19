@@ -143,7 +143,7 @@ can specify additional apps with ease.  Similarly, additional `MIDDLEWARE` can b
 
 ---
 
-### GIT_SSL_NO_VERIFY
+### `GIT_SSL_NO_VERIFY`
 
 Default: Unset
 
@@ -155,7 +155,7 @@ in order for the repository to sync.
 
 ---
 
-### NAUTOBOT_LOG_DEPRECATION_WARNINGS
+### `NAUTOBOT_LOG_DEPRECATION_WARNINGS`
 
 +++ 1.5.2
 
@@ -168,7 +168,7 @@ This can be set to `True` to allow deprecation warnings raised by Nautobot to (a
 
 ---
 
-### NAUTOBOT_ROOT
+### `NAUTOBOT_ROOT`
 
 Default: `~/.nautobot/`
 
