@@ -15,7 +15,7 @@ To create a relationship, from the left sidebar menu select **Extensibility > Da
 
 Additionally, there are two _symmetric_ relationship types that can be used when defining a relationship between objects of the same type. These relationship types treat the two _sides_ of a relationship as interchangeable (much like the A/Z sides of a circuit, or the endpoints of a cable) rather than distinguishing between the _source_ and _destination_ of a relationship as the non-symmetric relationship types above do.
 
-* **Symmetric Many-to-many** - as in Many-to-many, but acting more as an _undirected graph_ of similar objects. For example, this could be used to define a set of devices participating in a routing topology, where each device has some number of peers and there's no distinction between _source_ and _destination_ peers.
+* **Symmetric Many-to-many** - as in Many-to-many, but acting more as an _undirected graph_ of several objects of the same type. For example, this could be used to define a set of devices participating in a routing topology, where each device has some number of peers and there's no distinction between _source_ and _destination_ peers.
 * **Symmetric One-to-one** - as in One-to-one, but defining a relationship between exactly two objects of the same type. For example, a HSRP/VRRP pair of redundant devices, where each device has exactly one peer device.
 
 !!! note

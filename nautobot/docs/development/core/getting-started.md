@@ -266,9 +266,6 @@ You may install Poetry in your user environment by running:
 curl -sSL https://install.python-poetry.org | python3 -
 ```
 
-!!! tip
-    Poetry 1.3+ is required to be able to install packages against the latest lockfile.
-
 !!! danger
     Always utilize this documented method to install Poetry for use when developing Nautobot.
 
