@@ -27,17 +27,6 @@ See the [installation guide](../user-guide/administration/installation/index.md)
 
 ## Dependency History
 
-+++ 1.1.0 "MySQL support"
-    MySQL support was added.
-
-+/- 1.3.0 "Python 3.6, Python 3.10"
-    - Python 3.6 support was removed.
-    - Python 3.10 support was added.
-
-+/- 1.6.0 "Python 3.7, Python 3.11"
-    - Python 3.7 support was removed.
-    - Python 3.11 support was added.
-
 --- 2.0.0 "`django-rq` and `django-cacheops`"
     - `django-rq` support was removed.
     - `django-cacheops` usage was removed and replaced with Django's native caching features.
