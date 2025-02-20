@@ -40,7 +40,7 @@ Please see the [plugin development documentation on including Jinja2 filters](..
 
 #### Read Only Jobs ([#200](https://github.com/nautobot/nautobot/issues/200))
 
-Jobs may be optionally marked as read only by setting the `read_only = True` meta attribute. This prevents the job from making any changes to nautobot data and suppresses certain log messages. Read only jobs can be a great way to safely develop new jobs, and for working with reporting use cases. Please see the [Jobs documentation](../user-guide/platform-functionality/jobs/index.md) for more details.
+Jobs may be optionally marked as read only by setting the `read_only = True` meta attribute. This prevents the job from making any changes to Nautobot data and suppresses certain log messages. Read only jobs can be a great way to safely develop new jobs, and for working with reporting use cases. Please see the [Jobs documentation](../user-guide/platform-functionality/jobs/index.md) for more details.
 
 #### Saved GraphQL Queries ([#3](https://github.com/nautobot/nautobot/issues/3))
 
@@ -257,7 +257,7 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 
 ### Fixed in v1.1.0
 
-- [#363](https://github.com/nautobot/nautobot/issues/363) - Fixed using S3 django-storages backend requires `USE_TZ=False`
+- [#363](https://github.com/nautobot/nautobot/issues/363) - Fixed using S3 `django-storages` backend requires `USE_TZ=False`.
 - [#466](https://github.com/nautobot/nautobot/issues/466) - Fixed improper GraphQL schema generation on fields that can be blank but not null (such as `Interface.mode`)
 - [#663](https://github.com/nautobot/nautobot/issues/663) - Fixed `kombu.exceptions.EncodeError` when trying to execute Jobs using `(Multi)ObjectVar` objects with nested relationships
 - [#672](https://github.com/nautobot/nautobot/issues/672) - Fixed inheritance of Celery broker/results URL settings for dev/template configs (they can now be defined using Redis env. vars)

@@ -364,7 +364,7 @@ Please see [Computed fields with fallback value that is unicode results in Opera
 
 ### SVG images not rendered
 
-When serving Nautobot directly from uWSGI on RedHat or CentOS there may be a problem rendering .svg images to include the Nautobot logo. On the RedHat based operating systems there is no file `/etc/mime.types` by default, unfortunately, uWSGI looks for this file to serve static files (see [Serving static files with uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/StaticFiles.html#mime-types)). To work around this copy the file `/etc/mime.types` from a known good system for example an Ubuntu/Debian system or even the Nautobot container to /opt/nautobot/mime.types. Then add the following line to your `uwsgi.ini` file and restart the Nautobot services:
+When serving Nautobot directly from uWSGI on RedHat or CentOS there may be a problem rendering .svg images to include the Nautobot logo. On the RedHat based operating systems there is no file `/etc/mime.types` by default, unfortunately, uWSGI looks for this file to serve static files (see [Serving static files with uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/StaticFiles.html#mime-types)). To work around this copy the file `/etc/mime.types` from a known good system for example an Ubuntu/Debian system or even the Nautobot container to `/opt/nautobot/mime.types`. Then add the following line to your `uwsgi.ini` file and restart the Nautobot services:
 
 ```no-highlight title="Add MIME file settings to uwsgi.ini"
 mime-file = /opt/nautobot/mime.types

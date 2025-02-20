@@ -151,6 +151,57 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.3 (2025-02-18)
+
+### Added in v2.4.3
+
+- [#6836](https://github.com/nautobot/nautobot/issues/6836) - Added management command `generate_performance_test_endpoints` to generate performance test endpoints.
+- [#6865](https://github.com/nautobot/nautobot/issues/6865) - Added Bulk Edit functionality for the Tenant Group model.
+
+### Changed in v2.4.3
+
+- [#5568](https://github.com/nautobot/nautobot/issues/5568) - Added hyperlink to the total device count number under device family.
+
+### Fixed in v2.4.3
+
+- [#5539](https://github.com/nautobot/nautobot/issues/5539) - Fixed incorrect error message in Controller `clean()` method.
+- [#6113](https://github.com/nautobot/nautobot/issues/6113) - Menus inside responsive tables are fixed to be visible by dynamically mounting them to the body and positioning them absolutely.
+- [#6667](https://github.com/nautobot/nautobot/issues/6667) - Adds custom clearable file input form widget.
+- [#6764](https://github.com/nautobot/nautobot/issues/6764) - Fixed global and user default saved views incorrectly overriding filtered views.
+- [#6785](https://github.com/nautobot/nautobot/issues/6785) - Fixed Saved Views throwing an unexpected error when they contain boolean filter parameters.
+- [#6805](https://github.com/nautobot/nautobot/issues/6805) - Fixed an exception when saving a Dynamic Group of IP Addresses.
+- [#6806](https://github.com/nautobot/nautobot/issues/6806) - Fixed a bug that prevented users from accessing the detail views of Location related Dynamic Groups.
+- [#6836](https://github.com/nautobot/nautobot/issues/6836) - Fixed various Component Template models incorrectly assume `Notes` support in the API.
+- [#6836](https://github.com/nautobot/nautobot/issues/6836) - Fixed CloudNetworkPrefixAssignment, CloudServiceNetworkAssignment, InterfaceVDCAssignment, JobQueueAssignment, ObjectMetadata, PrefixLocationAssignment, VLANLocationAssignment, ControllerManagedDeviceGroupWirelessNetworkAssignment, and ControllerManagedDeviceGroupRadioProfileAssignment models incorrectly assume `Notes` support in the API.
+- [#6841](https://github.com/nautobot/nautobot/issues/6841) - Fixed missing termination side when creating from Circuit detail page.
+- [#6860](https://github.com/nautobot/nautobot/issues/6860) - Fixed incorrect marking of `channel_width` and `allowed_channel_list` as required fields in the Wireless Radio Profile REST API.
+- [#6901](https://github.com/nautobot/nautobot/issues/6901) - Fixed incorrect rendering of cable traces in the case where Modules are part of the hardware definition.
+- [#6901](https://github.com/nautobot/nautobot/issues/6901) - Fixed incorrect rendering of device-component (Interface, Front Port, etc.) detail views when Modules are involved.
+
+### Dependencies in v2.4.3
+
+- [#6658](https://github.com/nautobot/nautobot/issues/6658) - Updated dependency `django-constance` to `~4.3.0`.
+- [#6658](https://github.com/nautobot/nautobot/issues/6658) - Updated dependency `kubernetes` to `^32.0.0`.
+- [#6869](https://github.com/nautobot/nautobot/issues/6869) - Updated dependency `Django` to `~4.2.19`.
+- [#6869](https://github.com/nautobot/nautobot/issues/6869) - Updated dependency `django-structlog` to `^9.0.1`.
+- [#6894](https://github.com/nautobot/nautobot/issues/6894) - Updated dependency `social-auth-app-django` to `~5.4.3`.
+- [#6894](https://github.com/nautobot/nautobot/issues/6894) - Updated dependency `social-auth-core` to `~4.5.6`.
+
+### Documentation in v2.4.3
+
+- [#6894](https://github.com/nautobot/nautobot/issues/6894) - Enabled PyMarkdown `proper-names` checking for some relevant proper nouns and corrected documentation accordingly.
+
+### Housekeeping in v2.4.3
+
+- [#6618](https://github.com/nautobot/nautobot/issues/6618) - Updated GitHub Actions to use ubuntu-24.04 since ubuntu-20.04 is deprecated.
+- [#6658](https://github.com/nautobot/nautobot/issues/6658) - Updated development dependency `faker` to `~36.1.0`.
+- [#6658](https://github.com/nautobot/nautobot/issues/6658) - Updated development dependency `django-debug-toolbar` to `~5.0.1`.
+- [#6846](https://github.com/nautobot/nautobot/issues/6846) - Fixed integration test task to allow passing in pattern match.
+- [#6865](https://github.com/nautobot/nautobot/issues/6865) - Refactored `tenancy` app to use `NautobotUIViewSet` and UI component framework.
+- [#6869](https://github.com/nautobot/nautobot/issues/6869) - Updated development dependency `factory-boy` to `~3.3.3`.
+- [#6894](https://github.com/nautobot/nautobot/issues/6894) - Updated development dependency `faker` to `~36.1.1`.
+- [#6894](https://github.com/nautobot/nautobot/issues/6894) - Updated linting dependency `pymarkdownlnt` to `~0.9.28`.
+
 ## v2.4.2 (2025-02-03)
 
 ### Added in v2.4.2
