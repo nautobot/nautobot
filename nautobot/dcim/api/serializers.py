@@ -564,8 +564,7 @@ class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         super().validate(attrs)
 
         # Validate parent bay
-        if self.instance and attrs.get("parent_bay"):
-            parent_bay = attrs.get("parent_bay", None)
+        if self.instance and parent_bay := attrs.get("parent_bay", None):
             parent_bay.installed_device = self.instance
             parent_bay.full_clean()
 
