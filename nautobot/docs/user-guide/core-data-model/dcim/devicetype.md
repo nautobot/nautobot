@@ -15,9 +15,6 @@ Some devices house child devices which share physical resources, like space and 
 
 ## Device Component Templates
 
-+++ 1.4.5
-    The fields `created` and `last_updated` were added to all device component template models. If you upgraded from Nautobot 1.4.4 or earlier, the values for these fields will default to `None` (null).
-
 Each device type is assigned a number of component templates which define the physical components within a device. These are:
 
 * Console ports
