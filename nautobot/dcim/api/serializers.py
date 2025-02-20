@@ -561,12 +561,9 @@ class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
             )
             validator(attrs, self)
 
-        # Enforce model validation
-        super().validate(attrs)
-
         # Validate parent bay
         if parent_bay := attrs.get("parent_bay", None):
-            if self.instance != parent_bay.installed_device:
+            if parent_bay.installed_device and parent_bay.installed_device != self.instance:
                 raise ValidationError(
                     {
                         "installed_device": f"Cannot install device; parent bay is already taken ({parent_bay.installed_device})"
@@ -576,6 +573,9 @@ class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
             if self.instance:
                 parent_bay.installed_device = self.instance
                 parent_bay.full_clean()
+
+        # Enforce model validation
+        super().validate(attrs)
 
         return attrs
 
