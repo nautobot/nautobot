@@ -1,7 +1,5 @@
 # Implementing Secrets Providers
 
-+++ 1.2.0
-
 An app can define and register additional providers (sources) for [Secrets](../../../../user-guide/platform-functionality/secret.md), allowing Nautobot to retrieve secret values from additional systems or data sources. By default, Nautobot looks for an iterable named `secrets_providers` within a `secrets.py` file. (This can be overridden by setting `secrets_providers` to a custom value on the app's `NautobotAppConfig`.)
 
 To define a new `SecretsProvider` subclass, we must specify the following:
