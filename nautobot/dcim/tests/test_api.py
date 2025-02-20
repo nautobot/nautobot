@@ -1798,6 +1798,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Cannot install device; parent bay is already taken", response.content.decode(response.charset))
 
         # Assert that on the #1 device, parent bay stayed the same
         old_device = Device.objects.get(name="Device parent bay test #1")
@@ -1828,6 +1829,10 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         patch_data = {"parent_bay": device_bay_2.pk}
         response = self.client.patch(self._get_detail_url(child_device), patch_data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(
+            f"Cannot install the specified device; device is already installed in {device_bay_1.name}",
+            response.content.decode(response.charset),
+        )
 
         # Assert that parent bay stayed the same
         updated_device = Device.objects.get(name="Device parent bay test #4")
