@@ -1,6 +1,7 @@
 import contextlib
 
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
@@ -564,9 +565,17 @@ class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         super().validate(attrs)
 
         # Validate parent bay
-        if self.instance and parent_bay := attrs.get("parent_bay", None):
-            parent_bay.installed_device = self.instance
-            parent_bay.full_clean()
+        if parent_bay := attrs.get("parent_bay", None):
+            if self.instance != parent_bay.installed_device:
+                raise ValidationError(
+                    {
+                        "installed_device": f"Cannot install device; parent bay is already taken ({parent_bay.installed_device})"
+                    }
+                )
+
+            if self.instance:
+                parent_bay.installed_device = self.instance
+                parent_bay.full_clean()
 
         return attrs
 

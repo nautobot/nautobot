@@ -1797,14 +1797,11 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         }
 
         response = self.client.post(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
         # Assert that on the #1 device, parent bay stayed the same
-        created_device = Device.objects.get(name="Device parent bay test #3")
-        self.assertEqual(created_device.parent_bay.pk, device_bay_1.pk)
-
         old_device = Device.objects.get(name="Device parent bay test #1")
-        self.assertNone(old_device.parent_bay)
+        self.assertEqual(old_device.parent_bay.pk, device_bay_1.pk)
 
     def test_update_device_with_parent_bay(self):
         # Create test data
