@@ -1177,6 +1177,13 @@ class GitRepositoryTestCase(
         self.form_data = form_data
         super().test_edit_object_with_constrained_permission()
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_view_when_no_sync_job_result_exists(self):
+        instance = self._get_queryset().first()
+        response = self.client.get(reverse("extras:gitrepository_result", kwargs={"pk": instance.pk}))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["result"], {})
+
     def test_post_sync_repo_anonymous(self):
         self.client.logout()
         url = reverse("extras:gitrepository_sync", kwargs={"pk": self._get_queryset().first().pk})
