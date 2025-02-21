@@ -110,7 +110,6 @@ class RackElevationSVG:
         link.set_desc(self._get_device_description(device))
         link.add(drawing.rect(start, end, style=f"fill: #{role_color}", class_="slot"))
 
-        status_end = (end[0] / 20, end[1])
         status_rect = drawing.add(
             drawing.a(
                 href=f"{self.base_url}{status_reverse_url}",
@@ -119,7 +118,8 @@ class RackElevationSVG:
             )
         )
         status_rect.set_desc(device.status.name)
-        status_rect = status_rect.add(drawing.rect(start, status_end, style=f"fill: #{status_color}"))
+        status_end = (end[0] / 20, end[1])   # width, y     
+        status_rect.add(drawing.rect(start, status_end, style=f"fill: #{status_color}"))
 
         # Embed front device type image if one exists
         if self.include_images and device.device_type.front_image:
