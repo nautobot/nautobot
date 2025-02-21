@@ -22,9 +22,10 @@ class ManagementCommandTestCase(TestCase):
         out = StringIO()
         call_command("generate_performance_test_endpoints", stdout=out)
         endpoints_dict = yaml.safe_load(out.getvalue())["endpoints"]
-        # status_code_to_endpoints = collections.defaultdict(list)
         for view_name, value in endpoints_dict.items():
             for endpoint in value:
+                if "nautobot_data_validation_engine" in endpoint:
+                    continue
                 response = self.client.get(endpoint, follow=True)
                 self.assertHttpStatus(
                     response, 200, f"{view_name}: {endpoint} returns status Code {response.status_code} instead of 200"

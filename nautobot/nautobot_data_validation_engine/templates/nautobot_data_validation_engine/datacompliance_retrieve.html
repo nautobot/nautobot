@@ -1,0 +1,57 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+{% load tz %}
+{% load static %}
+
+{% block content_left_page %}
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <strong>Data Compliance</strong>
+    </div>
+    <table class="table table-hover panel-body attr-table">
+        <tr>
+            <td>Compliance Class Name</td>
+            <td>
+                {{ object.compliance_class_name }}
+            </td>
+        </tr>
+        </tr>
+        <tr>
+            <td>Last Validation Date</td>
+            <td>
+                {{ object.last_validation_date }}
+            </td>
+        </tr>
+        <tr>
+            <td>Validated Object</td>
+            <td>
+                {{ object.validated_object|hyperlinked_object }}
+            </td>
+        </tr>
+        <tr>
+            <td>Validated Attribute</td>
+            <td>
+                {{ object.validated_attribute }}
+            </td>
+        </tr>
+        <tr>
+            <td>Validated Attribute Value</td>
+            <td>
+                {{ object.validated_attribute_value }}
+            </td>
+        </tr>
+        <tr>
+            <td>Valid</td>
+            <td>
+                {{ object.valid }}
+            </td>
+        </tr>
+        <tr>
+            <td>Message</td>
+            <td>
+                {{ object.message }}
+            </td>
+        </tr>
+    </table>
+</div>
+{% endblock %}
