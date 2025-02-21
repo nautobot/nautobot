@@ -1,1 +1,1 @@
-A validation check is added to prevent removing content types from LocationType if it's in use by any models associated with the locations
+Added a validation check to prevent removing an in-use content type from a LocationType.

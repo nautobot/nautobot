@@ -7,7 +7,6 @@ from django.db.models.signals import m2m_changed, post_save, pre_delete
 from django.dispatch import receiver
 
 from nautobot.core.signals import disable_for_loaddata
-from nautobot.extras.utils import FeatureQuery
 
 from .models import (
     Cable,
@@ -369,23 +368,16 @@ def content_type_changed(instance, action, **kwargs):
     if action != "pre_remove":
         return
 
-    related_models = FeatureQuery("locations").list_subclasses()
     removed_content_types = ContentType.objects.filter(pk__in=kwargs.get("pk_set", []))
 
     for content_type in removed_content_types:
         model_class = content_type.model_class()
 
-        if (
-            model_class in related_models
-            and model_class.objects.filter(
-                location__location_type=instance, location__location_type__content_types=content_type
-            ).exists()
-        ):
+        if model_class.objects.filter(location__location_type=instance).exists():
             raise ValidationError(
                 {
                     "content_types": (
-                        f"Cannot remove the content type {content_type} as it is currently in use by {model_class.__name__.lower()}. "
-                        "Please remove the association before proceeding."
+                        f"Cannot remove the content type {content_type} as currently at least one {model_class._meta.verbose_name} is associated to a location of this location type. "
                     )
                 }
             )
