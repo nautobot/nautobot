@@ -1864,32 +1864,33 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         response = self.client.patch(child_device_detail_url, patch_data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
-        updated_device = Device.objects.get(name=device_name)
-        self.assertFalse(hasattr(updated_device, "parent_bay"))
+        child_device.refresh_from_db()
+        with self.assertRaises(DeviceBay.DoesNotExist):
+            child_device.parent_bay
 
         # And assign it again
         patch_data = {"parent_bay": device_bay_2.pk}
         response = self.client.patch(child_device_detail_url, patch_data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
-        updated_device = Device.objects.get(name=device_name)
-        self.assertEqual(updated_device.parent_bay.pk, device_bay_2.pk)
+        child_device.refresh_from_db()
+        self.assertEqual(child_device.parent_bay.pk, device_bay_2.pk)
 
         # Unassign it through device bay
         patch_data = {"installed_device": None}
         response = self.client.patch(self._get_detail_url(device_bay_2), patch_data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
-        updated_device = Device.objects.get(name=device_name)
-        self.assertFalse(hasattr(updated_device, "parent_bay"))
+        child_device.refresh_from_db()
+        self.assertFalse(hasattr(child_device, "parent_bay"))
 
         # And assign through device bay
         patch_data = {"installed_device": child_device.pk}
         response = self.client.patch(self._get_detail_url(device_bay_1), patch_data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
-        updated_device = Device.objects.get(name=device_name)
-        self.assertEqual(updated_device.parent_bay.pk, device_bay_1.pk)
+        child_device.refresh_from_db()
+        self.assertEqual(child_device.parent_bay.pk, device_bay_1.pk)
 
 
 class ModuleTestCase(APIViewTestCases.APIViewTestCase):

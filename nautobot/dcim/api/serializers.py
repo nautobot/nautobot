@@ -599,7 +599,7 @@ class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
             elif hasattr(instance, "parent_bay"):
                 parent_bay = instance.parent_bay
                 parent_bay.installed_device = None
-                parent_bay.save()
+                parent_bay.validated_save()
 
 
 class DeviceNAPALMSerializer(serializers.Serializer):
