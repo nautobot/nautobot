@@ -61,7 +61,7 @@ from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_dri
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
-from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable
+from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable, VRFTable
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.wireless.forms import ControllerManagedDeviceGroupWirelessNetworkFormSet
 from nautobot.wireless.models import (
@@ -4519,9 +4519,14 @@ class VirtualDeviceContextUIViewSet(NautobotUIViewSet):
             interfaces_table = tables.InterfaceTable(
                 instance.interfaces.restrict(request.user, "view"), orderable=False, exclude=("device",)
             )
+            vrf_table = VRFTable(
+                instance.vrfs.restrict(request.user, "view"),
+                orderable=False,
+            )
 
             return {
                 "interfaces_table": interfaces_table,
+                "vrf_table": vrf_table,
                 **super().get_extra_context(request, instance),
             }
         return super().get_extra_context(request, instance)

@@ -135,6 +135,12 @@ class VRF(PrimaryModel):
         through="ipam.VRFDeviceAssignment",
         through_fields=("vrf", "virtual_machine"),
     )
+    virtual_device_contexts = models.ManyToManyField(
+        to="dcim.VirtualDeviceContext",
+        related_name="vrfs",
+        through="ipam.VRFDeviceAssignment",
+        through_fields=("vrf", "virtual_device_context"),
+    )
     prefixes = models.ManyToManyField(
         to="ipam.Prefix",
         related_name="vrfs",
@@ -236,6 +242,41 @@ class VRF(PrimaryModel):
             tuple (int, dict): Number of objects deleted and a dict with number of deletions.
         """
         instance = self.virtual_machines.through.objects.get(vrf=self, virtual_machine=virtual_machine)
+        return instance.delete()
+
+    def add_virtual_device_context(self, virtual_device_context, rd="", name=""):
+        """
+        Add a `virtual_device_context` to this VRF, optionally overloading `rd` and `name`.
+
+        If `rd` or `name` are not provided, the values from this VRF will be inherited.
+
+        Args:
+            virtual_device_context (VirtualDeviceContext): VirtualDeviceContext instance
+            rd (str): (Optional) RD of the VRF when associated with this VirtualDeviceContext
+            name (str): (Optional) Name of the VRF when associated with this VirtualDeviceContext
+
+        Returns:
+            VRFDeviceAssignment instance
+        """
+        instance = self.virtual_device_contexts.through(
+            vrf=self, virtual_device_context=virtual_device_context, rd=rd, name=name
+        )
+        instance.validated_save()
+        return instance
+
+    def remove_virtual_device_context(self, virtual_device_context):
+        """
+        Remove a `virtual_device_context` from this VRF.
+
+        Args:
+            virtual_device_context (VirtualDeviceContext): VirtualDeviceContext instance
+
+        Returns:
+            tuple (int, dict): Number of objects deleted and a dict with number of deletions.
+        """
+        instance = self.virtual_device_contexts.through.objects.get(
+            vrf=self, virtual_device_context=virtual_device_context
+        )
         return instance.delete()
 
     def add_prefix(self, prefix):
