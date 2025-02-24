@@ -118,7 +118,7 @@ class RackElevationSVG:
             )
         )
         status_rect.set_desc(device.status.name)
-        status_end = (end[0] / 20, end[1])   # width, y     
+        status_end = (end[0] / 20, end[1])  # width, y
         status_rect.add(drawing.rect(start, status_end, style=f"fill: #{status_color}"))
 
         # Embed front device type image if one exists
