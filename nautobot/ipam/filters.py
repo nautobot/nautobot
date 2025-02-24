@@ -21,8 +21,8 @@ from nautobot.core.filters import (
 from nautobot.dcim.filters import LocatableModelFilterSetMixin
 from nautobot.dcim.models import Device, Interface, Location
 from nautobot.extras.filters import NautobotFilterSet, RoleModelFilterSetMixin, StatusModelFilterSetMixin
-from nautobot.ipam import choices
-from nautobot.tenancy.filters import TenancyModelFilterSetMixin
+from nautobot.ipam import choices, formfields
+from nautobot.tenancy.filters.mixins import TenancyModelFilterSetMixin
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 
 from .models import (
@@ -45,6 +45,7 @@ from .models import (
 __all__ = (
     "IPAddressFilterSet",
     "NamespaceFilterSet",
+    "PrefixFilter",
     "PrefixFilterSet",
     "RIRFilterSet",
     "RouteTargetFilterSet",
@@ -53,6 +54,39 @@ __all__ = (
     "VLANGroupFilterSet",
     "VRFFilterSet",
 )
+
+
+class PrefixFilter(NaturalKeyOrPKMultipleChoiceFilter):
+    """
+    Filter that supports filtering a foreign key to Prefix by either its PK or by a literal `prefix` string.
+    """
+
+    field_class = formfields.PrefixFilterFormField
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("to_field_name", "pk")
+        kwargs.setdefault("label", "Prefix (ID or prefix string)")
+        kwargs.setdefault("queryset", Prefix.objects.all())
+        super().__init__(*args, **kwargs)
+
+    def get_filter_predicate(self, v):
+        # Null value filtering
+        if v is None:
+            return {f"{self.field_name}__isnull": True}
+
+        # If value is a model instance, stringify it to a pk.
+        if isinstance(v, Prefix):
+            v = v.pk
+
+        # Try to cast the value to a UUID to distinguish between PKs and prefix strings
+        v = str(v)
+        try:
+            uuid.UUID(v)
+            return {self.field_name: v}
+        except (AttributeError, TypeError, ValueError):
+            # It's a prefix string
+            prefixes_queryset = Prefix.objects.net_equals(v)
+            return {f"{self.field_name}__in": prefixes_queryset.values_list("pk", flat=True)}
 
 
 class NamespaceFilterSet(NautobotFilterSet):
@@ -96,12 +130,7 @@ class VRFFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyModelFil
         to_field_name="name",
         label="Virtual Machine (ID or name)",
     )
-    prefix = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="prefixes",
-        queryset=Prefix.objects.all(),
-        to_field_name="pk",  # TODO: Make this work with `prefix` "somehow"
-        label="Prefix (ID or name)",
-    )
+    prefix = PrefixFilter(field_name="prefixes")
     namespace = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Namespace.objects.all(),
         to_field_name="name",
@@ -131,11 +160,13 @@ class VRFDeviceAssignmentFilterSet(NautobotFilterSet):
 
 
 class VRFPrefixAssignmentFilterSet(NautobotFilterSet):
-    prefix = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Prefix.objects.all(),
-        to_field_name="pk",  # TODO: Make this work with `prefix` "somehow"
-        label="Prefix (ID or name)",
+    q = SearchFilter(
+        filter_predicates={
+            # "prefix__prefix": "iexact",  # TODO?
+            "vrf__name": "icontains",
+        },
     )
+    prefix = PrefixFilter()
     vrf = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VRF.objects.all(),
         to_field_name="name",
@@ -200,10 +231,7 @@ class PrefixFilterSet(
     StatusModelFilterSetMixin,
     RoleModelFilterSetMixin,
 ):
-    # Prefix doesn't have an appropriate single natural-key field for a NaturalKeyOrPKMultipleChoiceFilter
-    parent = django_filters.ModelMultipleChoiceFilter(
-        queryset=Prefix.objects.all(),
-    )
+    parent = PrefixFilter()
     prefix = MultiValueCharFilter(
         method="filter_prefix",
         label="Prefix",
@@ -343,10 +371,7 @@ class PrefixLocationAssignmentFilterSet(NautobotFilterSet):
             "location__name": "icontains",
         },
     )
-    prefix = MultiValueCharFilter(
-        method="filter_prefix",
-        label="Prefix",
-    )
+    prefix = PrefixFilter()
     location = TreeNodeMultipleChoiceFilter(
         prefers_id=True,
         queryset=Location.objects.all(),
@@ -356,13 +381,6 @@ class PrefixLocationAssignmentFilterSet(NautobotFilterSet):
 
     def _strip_values(self, values):
         return [value.strip() for value in values if value.strip()]
-
-    def filter_prefix(self, queryset, name, value):
-        prefixes = self._strip_values(value)
-        with contextlib.suppress(netaddr.AddrFormatError, ValueError):
-            prefixes_queryset = Prefix.objects.net_equals(*prefixes)
-            return queryset.filter(prefix__in=prefixes_queryset)
-        return queryset.none()
 
     class Meta:
         model = PrefixLocationAssignment
