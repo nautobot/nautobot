@@ -1166,6 +1166,19 @@ class LocationTypeTestCase(TestCase):
         child_loc.delete()
         child.validated_save()
 
+    def test_removing_content_type(self):
+        """Validation check to prevent removing an in-use content type from a LocationType."""
+
+        location_type = LocationType.objects.get(name="Campus")
+        device_ct = ContentType.objects.get_for_model(Device)
+
+        with self.assertRaises(ValidationError) as cm:
+            location_type.content_types.remove(device_ct)
+        self.assertIn(
+            f"Cannot remove the content type {device_ct} as currently at least one {device_ct.model_class()._meta.verbose_name} is associated to a location",
+            str(cm.exception),
+        )
+
 
 class LocationTestCase(ModelTestCases.BaseModelTestCase):
     model = Location
