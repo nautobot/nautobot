@@ -275,6 +275,9 @@ class VRFDeviceAssignment(BaseModel):
     virtual_machine = models.ForeignKey(
         "virtualization.VirtualMachine", null=True, blank=True, on_delete=models.CASCADE, related_name="vrf_assignments"
     )
+    virtual_device_context = models.ForeignKey(
+        "dcim.VirtualDeviceContext", null=True, blank=True, on_delete=models.CASCADE, related_name="vrf_assignments"
+    )
     rd = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field -- see below
         max_length=constants.VRF_RD_MAX_LENGTH,
         blank=True,
@@ -289,6 +292,7 @@ class VRFDeviceAssignment(BaseModel):
         unique_together = [
             ["vrf", "device"],
             ["vrf", "virtual_machine"],
+            ["vrf", "virtual_device_context"],
             # TODO: desirable in the future, but too strict for 1.x-to-2.0 data migrations,
             #       as multiple "cleanup" VRFs in different cleanup namespaces might be assigned to a single device/VM.
             # ["device", "rd", "name"],
@@ -296,7 +300,7 @@ class VRFDeviceAssignment(BaseModel):
         ]
 
     def __str__(self):
-        obj = self.device or self.virtual_machine
+        obj = self.device or self.virtual_machine or self.virtual_device_context
         return f"{self.vrf} [{obj}] (rd: {self.rd}, name: {self.name})"
 
     def clean(self):
@@ -310,11 +314,19 @@ class VRFDeviceAssignment(BaseModel):
         if not self.name:
             self.name = self.vrf.name
 
-        # A VRF must belong to a Device *or* to a VirtualMachine.
+        # A VRF must belong to a Device *or* to a VirtualMachine *or* to a Virtual Device Context.
         if all([self.device, self.virtual_machine]):
             raise ValidationError("A VRF cannot be associated with both a device and a virtual machine.")
-        if not any([self.device, self.virtual_machine]):
-            raise ValidationError("A VRF must be associated with either a device or a virtual machine.")
+        if all([self.device, self.virtual_device_context]):
+            raise ValidationError("A VRF cannot be associated with both a device and a virtual device context.")
+        if all([self.virtual_machine, self.virtual_device_context]):
+            raise ValidationError(
+                "A VRF cannot be associated with both a virtual machine and a virtual device context."
+            )
+        if not any([self.device, self.virtual_machine, self.virtual_device_context]):
+            raise ValidationError(
+                "A VRF must be associated with a device, a virtual machine, or a virtual device context."
+            )
 
 
 @extras_features("graphql")

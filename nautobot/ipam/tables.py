@@ -255,13 +255,18 @@ class VRFDeviceAssignmentTable(BaseTable):
         accessor="virtual_machine.name",
         verbose_name="Virtual Machine",
     )
+    virtual_device_context = tables.Column(
+        linkify=lambda record: record.virtual_device_context.get_absolute_url(),
+        accessor="virtual_device_context.name",
+        verbose_name="Virtual Device Context",
+    )
     rd = tables.Column(verbose_name="VRF RD")
     tenant = TenantColumn(accessor="vrf.tenant")
 
     class Meta(BaseTable.Meta):
         model = VRFDeviceAssignment
         orderable = False
-        fields = ("vrf", "namespace", "device", "virtual_machine", "rd", "tenant")
+        fields = ("vrf", "namespace", "device", "virtual_machine", "virtual_device_context", "rd", "tenant")
 
 
 class VRFPrefixAssignmentTable(BaseTable):
