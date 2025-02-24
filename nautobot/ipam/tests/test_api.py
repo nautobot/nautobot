@@ -271,8 +271,8 @@ class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
             "A VRF cannot be associated with both a virtual machine and a virtual device context.",
             "A VRF must be associated with a device, a virtual machine, or a virtual device context.",
         ]
-        for i in range(len(invalid_create_data)):
-            response = self.client.post(self._get_list_url(), invalid_create_data[i], format="json", **self.header)
+        for i, data in enumerate(invalid_create_data):
+            response = self.client.post(self._get_list_url(), data, format="json", **self.header)
             self.assertContains(response, expected_responses[i], status_code=status.HTTP_400_BAD_REQUEST)
 
 
