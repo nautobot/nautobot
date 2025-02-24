@@ -12,10 +12,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AlterUniqueTogether(
-            name="vrfdeviceassignment",
-            unique_together={("vrf", "device"), ("vrf", "virtual_machine")},
-        ),
         migrations.AddField(
             model_name="vrf",
             name="virtual_device_contexts",
