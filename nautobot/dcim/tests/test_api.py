@@ -1838,6 +1838,59 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         updated_device = Device.objects.get(name="Device parent bay test #4")
         self.assertEqual(updated_device.parent_bay.pk, device_bay_1.pk)
 
+    def test_reassign_device_to_parent_bay(self):
+        # Create test data
+        parent_device, device_bay_1, device_bay_2, device_type_child = self._parent_device_test_data()
+        device_name = "Device parent bay test #5"
+        child_device = Device.objects.create(
+            device_type=device_type_child,
+            role=parent_device.role,
+            location=parent_device.location,
+            name=device_name,
+            status=parent_device.status,
+        )
+        device_bay_1.installed_device = child_device
+        device_bay_1.save()
+
+        self.add_permissions("dcim.change_device", "dcim.view_device", "dcim.change_devicebay")
+        child_device_detail_url = self._get_detail_url(child_device)
+
+        response = self.client.get(child_device_detail_url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.json()["parent_bay"]["id"], str(device_bay_1.pk))
+
+        # Test unassigning parent bay
+        patch_data = {"parent_bay": None}
+        response = self.client.patch(child_device_detail_url, patch_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        updated_device = Device.objects.get(name=device_name)
+        self.assertFalse(hasattr(updated_device, "parent_bay"))
+
+        # And assign it again
+        patch_data = {"parent_bay": device_bay_2.pk}
+        response = self.client.patch(child_device_detail_url, patch_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        updated_device = Device.objects.get(name=device_name)
+        self.assertEqual(updated_device.parent_bay.pk, device_bay_2.pk)
+
+        # Unassign it through device bay
+        patch_data = {"installed_device": None}
+        response = self.client.patch(self._get_detail_url(device_bay_2), patch_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        updated_device = Device.objects.get(name=device_name)
+        self.assertFalse(hasattr(updated_device, "parent_bay"))
+
+        # And assign through device bay
+        patch_data = {"installed_device": child_device.pk}
+        response = self.client.patch(self._get_detail_url(device_bay_1), patch_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        updated_device = Device.objects.get(name=device_name)
+        self.assertEqual(updated_device.parent_bay.pk, device_bay_1.pk)
+
 
 class ModuleTestCase(APIViewTestCases.APIViewTestCase):
     model = Module

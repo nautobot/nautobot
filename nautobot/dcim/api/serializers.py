@@ -581,18 +581,26 @@ class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
 
     def create(self, validated_data):
         instance = super().create(validated_data)
-        self.update_parent_bay(validated_data.get("parent_bay"), instance)
+        self.update_parent_bay(validated_data, instance)
         return instance
 
     def update(self, instance, validated_data):
         instance = super().update(instance, validated_data)
-        self.update_parent_bay(validated_data.get("parent_bay"), instance)
+        self.update_parent_bay(validated_data, instance)
         return instance
 
-    def update_parent_bay(self, parent_bay, instance):
-        if parent_bay:
-            parent_bay.installed_device = instance
-            parent_bay.save()
+    def update_parent_bay(self, validated_data, instance):
+        update_parent_bay = "parent_bay" in validated_data.keys()
+        parent_bay = validated_data.get("parent_bay")
+        if update_parent_bay:
+            if parent_bay:
+                parent_bay.installed_device = instance
+                parent_bay.save()
+            elif instance.parent_bay:
+                parent_bay = instance.parent_bay
+                parent_bay.installed_device = None
+                # instance.parent_bay.installed_device = None
+                parent_bay.save()
 
 
 class DeviceNAPALMSerializer(serializers.Serializer):
