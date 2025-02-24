@@ -1797,7 +1797,7 @@ class JobTest(
         )
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertIn(
-            "task_queue and job_queue are both specified. Please specifiy only one or another.", str(response.content)
+            "task_queue and job_queue are both specified. Please specify only one or another.", str(response.content)
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
