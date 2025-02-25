@@ -80,7 +80,7 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
         tenants = Tenant.objects.all()[:2]
-        namespace = Prefix.objects.first().namespace
+        namespace = Namespace.objects.filter(prefixes__isnull=False).first()
         prefixes = Prefix.objects.filter(namespace=namespace)
         vdcs = VirtualDeviceContext.objects.all()
         vrf_statuses = Status.objects.get_for_model(VRF)

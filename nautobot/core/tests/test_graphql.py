@@ -919,8 +919,8 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
                 priority=789,
             ),
         )
-        prefixes = Prefix.objects.all()[:2]
-        cls.namespace = prefixes[0].namespace
+        cls.namespace = Namespace.objects.filter(prefixes__isnull=False).first()
+        prefixes = Prefix.objects.filter(namespace=cls.namespace)[:2]
         vrfs = (
             VRF.objects.create(name="VRF 1", rd="65000:100", namespace=cls.namespace),
             VRF.objects.create(name="VRF 2", rd="65000:200", namespace=cls.namespace),
