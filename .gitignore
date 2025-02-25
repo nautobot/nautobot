@@ -35,3 +35,4 @@ development/kind-kube-config
 development/pod.yaml
 node_modules
 .yarn
+.service_ports.json
