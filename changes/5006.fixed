@@ -1,0 +1,1 @@
+Added a validation check to prevent removing an in-use content type from a LocationType.
