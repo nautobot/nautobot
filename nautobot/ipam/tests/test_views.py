@@ -94,6 +94,7 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "prefixes": [prefixes[1].id],
             "tags": [t.pk for t in Tag.objects.get_for_model(VRF)],
             "status": vrf_statuses.first().pk,
+            "virtual_device_contexts": [vdcs[0].id, vdcs[1].id],
         }
 
         cls.bulk_edit_data = {
@@ -103,8 +104,8 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "namespace": prefixes[0].namespace.id,
             "add_prefixes": [prefixes[0].id],
             "remove_prefixes": [prefixes[1].id],
-            "add_virtual_device_contexts": [vdcs[0].id, vdcs[1].id],
-            "remove_virtual_device_contexts": [vdcs[2].id],
+            "add_virtual_device_contexts": [vdcs[2].id, vdcs[3].id],
+            "remove_virtual_device_contexts": [vdcs[0].id],
         }
 
 

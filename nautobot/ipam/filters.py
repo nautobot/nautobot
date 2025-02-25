@@ -114,6 +114,11 @@ class VRFFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyModelFil
 
 
 class VRFDeviceAssignmentFilterSet(NautobotFilterSet):
+    vrf = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VRF.objects.all(),
+        to_field_name="name",
+        label="VRF (ID or name)",
+    )
     device = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Device.objects.all(),
         to_field_name="name",
@@ -132,7 +137,7 @@ class VRFDeviceAssignmentFilterSet(NautobotFilterSet):
 
     class Meta:
         model = VRFDeviceAssignment
-        fields = ["id", "vrf", "device", "virtual_machine", "virtual_device_context"]
+        fields = ["id"]
 
 
 class VRFPrefixAssignmentFilterSet(NautobotFilterSet):

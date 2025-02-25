@@ -166,42 +166,39 @@ class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
         VRFDeviceAssignment.objects.create(
             vrf=cls.vrfs[0],
             virtual_device_context=cls.vdcs[0],
+            name="VRFDeviceAssignment 1",
             rd="65000:5",
         )
         VRFDeviceAssignment.objects.create(
             vrf=cls.vrfs[0],
             virtual_device_context=cls.vdcs[1],
-            rd="65000:6",
         )
+
+        cls.update_data = {
+            "name": "VRFDeviceAssignment 2",
+            "rd": "65000:7",
+        }
 
         cls.create_data = [
             {
                 "vrf": cls.vrfs[2].pk,
                 "device": cls.devices[4].pk,
-                "virtual_machine": None,
-                "virtual_device_context": None,
                 "rd": "65000:7",
             },
             {
                 "vrf": cls.vrfs[3].pk,
-                "device": None,
                 "virtual_machine": cls.test_vm.pk,
-                "virtual_device_context": None,
                 "rd": "65000:8",
             },
             {
                 "vrf": cls.vrfs[4].pk,
                 "device": cls.devices[6].pk,
-                "virtual_machine": None,
-                "virtual_device_context": None,
+                "name": "VRFDeviceAssignment 3",
                 "rd": "65000:9",
             },
             {
                 "vrf": cls.vrfs[4].pk,
-                "device": None,
-                "virtual_machine": None,
                 "virtual_device_context": cls.vdcs[0].pk,
-                "rd": "65000:10",
             },
         ]
         cls.bulk_update_data = {
@@ -222,29 +219,21 @@ class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
             {
                 "vrf": self.vrfs[0].pk,
                 "device": self.devices[1].pk,
-                "virtual_machine": None,
-                "virtual_device_context": None,
                 "rd": "65000:6",
             },
             {
                 "vrf": self.vrfs[1].pk,
-                "device": None,
                 "virtual_machine": self.test_vm.pk,
-                "virtual_device_context": None,
                 "rd": "65000:6",
             },
             {
                 "vrf": self.vrfs[0].pk,
-                "device": None,
-                "virtual_machine": None,
                 "virtual_device_context": self.vdcs[1].pk,
                 "rd": "65000:6",
             },
             # Test VRFDeviceAssignment model uniqueness constraint virtual_device_context, rd, name
             {
                 "vrf": self.vrfs[6].pk,
-                "device": None,
-                "virtual_machine": None,
                 "virtual_device_context": test_vrf_assignment.virtual_device_context.pk,
                 "name": test_vrf_assignment.name,
                 "rd": test_vrf_assignment.rd,
@@ -266,36 +255,30 @@ class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
                 "vrf": self.vrfs[2].pk,
                 "device": self.devices[6].pk,
                 "virtual_machine": self.test_vm.pk,
-                "virtual_device_context": None,
                 "rd": "65000:6",
             },
             {
                 "vrf": self.vrfs[2].pk,
                 "device": self.devices[6].pk,
-                "virtual_machine": None,
                 "virtual_device_context": self.vdcs[0].pk,
                 "rd": "65000:6",
             },
             {
                 "vrf": self.vrfs[2].pk,
-                "device": None,
                 "virtual_machine": self.test_vm.pk,
                 "virtual_device_context": self.vdcs[0].pk,
                 "rd": "65000:6",
             },
             {
                 "vrf": self.vrfs[2].pk,
-                "device": None,
-                "virtual_machine": None,
-                "virtual_device_context": None,
                 "rd": "65000:6",
             },
         ]
         expected_responses = [
-            "A VRF cannot be associated with both a device and a virtual machine.",
-            "A VRF cannot be associated with both a device and a virtual device context.",
-            "A VRF cannot be associated with both a virtual machine and a virtual device context.",
-            "A VRF must be associated with a device, a virtual machine, or a virtual device context.",
+            "A VRFDeviceAssignment entry cannot be associated with both a device and a virtual machine.",
+            "A VRFDeviceAssignment entry cannot be associated with both a device and a virtual device context.",
+            "A VRFDeviceAssignment entry cannot be associated with both a virtual machine and a virtual device context.",
+            "A VRFDeviceAssignment entry must be associated with a device, a virtual machine, or a virtual device context.",
         ]
         for i, data in enumerate(invalid_create_data):
             response = self.client.post(self._get_list_url(), data, format="json", **self.header)

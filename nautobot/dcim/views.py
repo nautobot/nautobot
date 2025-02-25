@@ -4522,29 +4522,16 @@ class VirtualDeviceContextUIViewSet(NautobotUIViewSet):
             ),
             object_detail.ObjectsTablePanel(
                 weight=200,
-                context_table_key="interfaces_table",
+                table_class=tables.InterfaceTable,
+                table_attribute="interfaces",
                 section=SectionChoices.FULL_WIDTH,
                 exclude_columns=["device"],
             ),
             object_detail.ObjectsTablePanel(
-                weight=200,
-                context_table_key="vrf_table",
+                weight=300,
+                table_class=VRFTable,
+                table_attribute="vrfs",
                 section=SectionChoices.FULL_WIDTH,
-                exclude_columns=["device"],
             ),
         ),
     )
-
-    def get_extra_context(self, request, instance):
-        if self.action == "retrieve":
-            interfaces_table = tables.InterfaceTable(
-                instance.interfaces.restrict(request.user, "view"), orderable=False
-            )
-            vrf_table = VRFTable(instance.vrfs.restrict(request.user, "view"), orderable=False)
-
-            return {
-                "interfaces_table": interfaces_table,
-                "vrf_table": vrf_table,
-                **super().get_extra_context(request, instance),
-            }
-        return super().get_extra_context(request, instance)
