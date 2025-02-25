@@ -229,7 +229,6 @@ class Command(BaseCommand):
         _create_batch(DeviceRedundancyGroupFactory, 20)
         _create_batch(DeviceFactory, 20)
         _create_batch(VirtualDeviceContextFactory, 30)
-        _create_batch(VRFFactory, 10, description="with Virtual Device Contexts")
         _create_batch(ModuleFactory, 20)
         _create_batch(SoftwareVersionFactory, 5, description="without Devices")
         _create_batch(SoftwareImageFileFactory, 5, description="without DeviceTypes")

@@ -34,7 +34,6 @@ class Migration(migrations.Migration):
             name="vrfdeviceassignment",
             unique_together={
                 ("vrf", "virtual_device_context"),
-                ("virtual_device_context", "rd", "name"),
                 ("vrf", "virtual_machine"),
                 ("vrf", "device"),
             },

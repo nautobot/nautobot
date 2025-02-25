@@ -2,6 +2,7 @@ import datetime
 import random
 
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Count
 from django.test import override_settings
 from django.urls import reverse
 from django.utils.html import strip_tags
@@ -80,7 +81,7 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
         tenants = Tenant.objects.all()[:2]
-        namespace = Namespace.objects.filter(prefixes__isnull=False).first()
+        namespace = Namespace.objects.annotate(prefix_count=Count('prefixes')).filter(prefix_count__gt=2).first()
         prefixes = Prefix.objects.filter(namespace=namespace)
         vdcs = VirtualDeviceContext.objects.all()
         vrf_statuses = Status.objects.get_for_model(VRF)

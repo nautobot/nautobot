@@ -208,13 +208,6 @@ class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
     def test_creating_invalid_vrf_device_assignments(self):
         # Add object-level permission
         self.add_permissions("ipam.add_vrfdeviceassignment")
-        test_vrf_assignment = VRFDeviceAssignment.objects.create(
-            vrf=self.vrfs[5],
-            virtual_device_context=self.vdcs[1],
-            name="VRFDeviceAssignment 1",
-            rd="65000:11",
-        )
-        self.vrf = VRF.objects.filter(virtual_device_contexts__isnull=True).first()
         duplicate_create_data = [
             {
                 "vrf": self.vrfs[0].pk,
@@ -231,19 +224,11 @@ class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
                 "virtual_device_context": self.vdcs[1].pk,
                 "rd": "65000:6",
             },
-            # Test VRFDeviceAssignment model uniqueness constraint virtual_device_context, rd, name
-            {
-                "vrf": self.vrfs[6].pk,
-                "virtual_device_context": test_vrf_assignment.virtual_device_context.pk,
-                "name": test_vrf_assignment.name,
-                "rd": test_vrf_assignment.rd,
-            },
         ]
         expected_responses = [
             "The fields device, vrf must make a unique set.",
             "The fields virtual_machine, vrf must make a unique set.",
             "The fields virtual_device_context, vrf must make a unique set.",
-            "Vrf device assignment with this Virtual device context, Route distinguisher and Name already exists.",
         ]
         for i, data in enumerate(duplicate_create_data):
             response = self.client.post(self._get_list_url(), data, format="json", **self.header)
