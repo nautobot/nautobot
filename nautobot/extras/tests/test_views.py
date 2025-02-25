@@ -823,9 +823,10 @@ class DynamicGroupTestCase(
         location_ct = ContentType.objects.get_for_model(Location)
         instance = self._get_queryset().exclude(content_type=location_ct).first()
         # Add view permissions for the group's members:
-        self.add_permissions(get_permission_for_model(instance.content_type.model_class(), "view"))
+        self.add_permissions(get_permission_for_model(instance.content_type.model_class(), "view"), "extras.view_dynamicgroup")
 
-        response = super().test_get_object_with_permission()
+        response = self.client.get(instance.get_absolute_url())
+        self.assertHttpStatus(response, 200)
 
         response_body = extract_page_body(response.content.decode(response.charset))
         # Check that the "members" table in the detail view includes all appropriate member objects

@@ -144,12 +144,10 @@ class VRFDeviceAssignmentFilterSet(NautobotFilterSet):
         to_field_name="name",
         label="Virtual Device Context (ID or name)",
     )
-    name = MultiValueCharFilter(label="Name")
-    rd = MultiValueCharFilter(label="Route Distinguisher")
 
     class Meta:
         model = VRFDeviceAssignment
-        fields = ["id"]
+        fields = ["id", "name", "rd"]
 
 
 class VRFPrefixAssignmentFilterSet(NautobotFilterSet):
