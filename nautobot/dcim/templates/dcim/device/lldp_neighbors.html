@@ -24,9 +24,9 @@
                 {% for iface in interfaces %}
                     <tr data-interface-name="{{ iface.name }}">
                         <td>{{ iface }}</td>
-                        {% if iface.connected_endpoint.device %}
-                            <td class="configured_device" data="{{ iface.connected_endpoint.device }}" data-chassis="{{ iface.connected_endpoint.device.virtual_chassis.name }}">
-                                {{ iface.connected_endpoint.device|hyperlinked_object }}
+                        {% if iface.connected_endpoint.device or iface.connected_endpoint.module %}
+                            <td class="configured_device" data="{{ iface.connected_endpoint.parent }}" data-chassis="{{ iface.connected_endpoint.parent.virtual_chassis.name }}">
+                                {{ iface.connected_endpoint.parent|hyperlinked_object }}
                             </td>
                             <td class="configured_interface" data-interface-name="{{ iface.connected_endpoint }}">
                                 <span title="{{ iface.connected_endpoint.get_type_display }}">{{ iface.connected_endpoint }}</span>

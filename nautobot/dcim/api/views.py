@@ -184,7 +184,7 @@ class RackGroupViewSet(NautobotModelViewSet):
 
 
 class RackViewSet(NautobotModelViewSet):
-    queryset = Rack.objects.select_related("rack_group__location").annotate(
+    queryset = Rack.objects.select_related("role", "status", "rack_group__location").annotate(
         device_count=count_related(Device, "rack"),
         power_feed_count=count_related(PowerFeed, "rack"),
     )

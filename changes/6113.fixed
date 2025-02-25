@@ -1,1 +1,0 @@
-Menus inside responsive tables are fixed to be visible by dynamically mounting them to the body and positioning them absolutely.
