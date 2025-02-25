@@ -32,6 +32,11 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterUniqueTogether(
             name="vrfdeviceassignment",
-            unique_together={("vrf", "device"), ("vrf", "virtual_machine"), ("vrf", "virtual_device_context")},
+            unique_together={
+                ("vrf", "virtual_device_context"),
+                ("virtual_device_context", "rd", "name"),
+                ("vrf", "virtual_machine"),
+                ("vrf", "device"),
+            },
         ),
     ]
