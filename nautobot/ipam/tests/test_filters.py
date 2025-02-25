@@ -91,7 +91,7 @@ class VRFTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterT
     def test_prefix_filter_by_string(self):
         """Test filtering by prefix strings as an alternative to pk."""
         prefix = self.queryset.filter(prefixes__isnull=False).first().prefixes.first()
-        params = {"prefix": [prefix.prefix]}  # Malkovich malkovich malkovich...
+        params = {"prefix": [prefix.prefix]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(prefixes__network=prefix.network, prefixes__prefix_length=prefix.prefix_length),
@@ -111,7 +111,7 @@ class VRFPrefixAssignmentTestCase(FilterTestCases.FilterTestCase):
     def test_prefix_filter_by_string(self):
         """Test filtering by prefix strings as an alternative to pk."""
         prefix = self.queryset.first().prefix
-        params = {"prefix": [prefix.prefix]}  # Malkovich malkovich malkovich...
+        params = {"prefix": [prefix.prefix]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(prefix__network=prefix.network, prefix__prefix_length=prefix.prefix_length),
