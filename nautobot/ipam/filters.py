@@ -114,6 +114,16 @@ class VRFFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyModelFil
 
 
 class VRFDeviceAssignmentFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "vrf__name": "icontains",
+            "device__name": "icontains",
+            "virtual_machine__name": "icontains",
+            "virtual_device_context__name": "icontains",
+            "rd": "icontains",
+        },
+    )
     vrf = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VRF.objects.all(),
         to_field_name="name",
@@ -134,6 +144,8 @@ class VRFDeviceAssignmentFilterSet(NautobotFilterSet):
         to_field_name="name",
         label="Virtual Device Context (ID or name)",
     )
+    name = MultiValueCharFilter(label="Name")
+    rd = MultiValueCharFilter(label="Route Distinguisher")
 
     class Meta:
         model = VRFDeviceAssignment

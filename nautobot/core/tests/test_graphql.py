@@ -919,7 +919,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
                 priority=789,
             ),
         )
-        cls.namespace = Namespace.objects.annotate(prefix_count=Count('prefixes')).filter(prefix_count__gt=2).first()
+        cls.namespace = Namespace.objects.annotate(prefix_count=Count("prefixes")).filter(prefix_count__gt=2).first()
         prefixes = Prefix.objects.filter(namespace=cls.namespace)
         vrfs = (
             VRF.objects.create(name="VRF 1", rd="65000:100", namespace=cls.namespace),
