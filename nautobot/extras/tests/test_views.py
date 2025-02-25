@@ -823,7 +823,9 @@ class DynamicGroupTestCase(
         location_ct = ContentType.objects.get_for_model(Location)
         instance = self._get_queryset().exclude(content_type=location_ct).first()
         # Add view permissions for the group's members:
-        self.add_permissions(get_permission_for_model(instance.content_type.model_class(), "view"), "extras.view_dynamicgroup")
+        self.add_permissions(
+            get_permission_for_model(instance.content_type.model_class(), "view"), "extras.view_dynamicgroup"
+        )
 
         response = self.client.get(instance.get_absolute_url())
         self.assertHttpStatus(response, 200)
