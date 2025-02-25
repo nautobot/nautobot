@@ -1,3 +1,4 @@
+import codecs
 from datetime import timedelta
 import json
 from pathlib import Path
@@ -72,7 +73,9 @@ class ExportObjectListTest(TransactionTestCase):
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
         self.assertTrue(job_result.files.exists())
         self.assertEqual(Path(job_result.files.first().file.name).name, "nautobot_statuses.csv")
-        csv_data = job_result.files.first().file.read().decode("utf-8")
+        csv_bytes = job_result.files.first().file.read()
+        self.assertTrue(csv_bytes.startswith(codecs.BOM_UTF8), csv_bytes)
+        csv_data = csv_bytes.decode("utf-8")
         self.assertIn(str(instance1.pk), csv_data)
         self.assertNotIn(str(instance2.pk), csv_data)
 

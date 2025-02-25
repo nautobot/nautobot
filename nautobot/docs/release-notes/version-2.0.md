@@ -3,7 +3,7 @@
 This document describes all new features and changes in Nautobot 2.0.
 
 !!! note
-    Please thoroughly review the release overview below to see what changes may affect you during upgrade. Our ["Upgrading from Nautobot v1.X"](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md) guide provides a lot of information around pre- and post-migration helpers we have written that should assist you in a successful 2.0 upgrade. If you have any questions, please reach out to us on the **#nautobot** channel on [Network to Code's Slack community](https://slack.networktocode.com/) or [GitHub Discussions](https://github.com/nautobot/nautobot/discussions).
+    Please thoroughly review the release overview below to see what changes may affect you during upgrade. Our ["Upgrading from Nautobot v1.X"](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md) guide provides a lot of information around pre- and post-migration helpers we have written that should assist you in a successful 2.0 upgrade. If you have any questions, please reach out to us on the `#nautobot` channel on [Network to Code's Slack community](https://slack.networktocode.com/) or [GitHub Discussions](https://github.com/nautobot/nautobot/discussions).
 
 ## Release Overview
 
@@ -272,7 +272,7 @@ Check out more `related-name` changes documented in the table [Renamed Database 
 
 Some filter fields have been renamed to reflect their functionalities better.
 
-For example in v1.X, to filter `FrontPorts` that has a cable attached in the UI or make changes to them via Rest API, you would use the `cabled` filter:
+For example in v1.X, to filter `FrontPorts` that has a cable attached in the UI or make changes to them via REST API, you would use the `cabled` filter:
 
 `/dcim/front-ports/?cabled=True`
 
@@ -401,11 +401,11 @@ A natural key interface has been provided for most models to allow for uniquely 
 - [#3488](https://github.com/nautobot/nautobot/issues/3488) - Corrected positioning and style of "Collapse All" button in Jobs list view.
 - [#4142](https://github.com/nautobot/nautobot/issues/4142) - Fixed unnecessary git operations when calling `ensure_git_repository` while the desired commit is already checked out.
 - [#4179](https://github.com/nautobot/nautobot/issues/4179) - Fixed error in creation of storage directories (`GIT_ROOT`, `JOBS_ROOT`, `MEDIA_ROOT`, etc.) when running tests in parallel.
-- [#4747](https://github.com/nautobot/nautobot/issues/4747) - Fixed an issue when appending nautobot version to a static file path with existing query parameters resulted in an invalid URL generation.
+- [#4747](https://github.com/nautobot/nautobot/issues/4747) - Fixed an issue when appending Nautobot version to a static file path with existing query parameters resulted in an invalid URL generation.
 - [#4768](https://github.com/nautobot/nautobot/issues/4768) - Fixed incorrect link in TenantGroup template.
 - [#4768](https://github.com/nautobot/nautobot/issues/4768) - Fixed ConfigContext not applied to nested TenantGroup objects.
 - [#4819](https://github.com/nautobot/nautobot/issues/4819) - Fixed empty assignment field in IPAddress detail view.
-- [#4845](https://github.com/nautobot/nautobot/issues/4845) - Fixed issues with installing an app that is nested inside a python package (e.g. `my_apps/app1/` + `my_apps/app2/`), and lookups for UI view testing.
+- [#4845](https://github.com/nautobot/nautobot/issues/4845) - Fixed issues with installing an app that is nested inside a Python package (e.g. `my_apps/app1/` + `my_apps/app2/`), and lookups for UI view testing.
 - [#4851](https://github.com/nautobot/nautobot/issues/4851) - Fixed an exception when trying to access computed fields via GraphQL.
 - [#4854](https://github.com/nautobot/nautobot/issues/4854) - Fixed GraphQL UI unable to load when some ComputedField instances have non-graphql-safe keys.
 - [#4856](https://github.com/nautobot/nautobot/issues/4856) - Fix ConfigContext application logic for Locations and TenantGroups.
@@ -594,7 +594,7 @@ A natural key interface has been provided for most models to allow for uniquely 
 
 ### Housekeeping in v2.0.2
 
-- [#4611](https://github.com/nautobot/nautobot/issues/4611) - Updated pylint to use multiple threads.
+- [#4611](https://github.com/nautobot/nautobot/issues/4611) - Updated Pylint to use multiple threads.
 
 ## v2.0.1 (2023-10-04)
 
@@ -771,7 +771,7 @@ A natural key interface has been provided for most models to allow for uniquely 
 - [#4249](https://github.com/nautobot/nautobot/issues/4249) - Added section on many-to-many relationships in the REST API overview docs.
 - [#4303](https://github.com/nautobot/nautobot/issues/4303) - Added documentation on identifying objects after the removal of slug fields.
 - [#4326](https://github.com/nautobot/nautobot/issues/4326) - Update documentation on Nautobot release workflow.
-- [#4429](https://github.com/nautobot/nautobot/issues/4429) - Updated the pylint-nautobot migration steps.
+- [#4429](https://github.com/nautobot/nautobot/issues/4429) - Updated the `pylint-nautobot` migration steps.
 
 ### Housekeeping in v2.0.0-rc.3
 
@@ -1065,7 +1065,7 @@ A natural key interface has been provided for most models to allow for uniquely 
 
 ### Dependencies in v2.0.0-beta.2
 
-- [#3883](https://github.com/nautobot/nautobot/issues/3883) - Updated nautobot-ui package in next.
+- [#3883](https://github.com/nautobot/nautobot/issues/3883) - Updated `nautobot-ui` package in `next`.
 
 ### Documentation in v2.0.0-beta.2
 
@@ -1128,7 +1128,7 @@ A natural key interface has been provided for most models to allow for uniquely 
 
 - [#1633](https://github.com/nautobot/nautobot/issues/1633) - The base class for all `tags` fields on `PrimaryModel` subclasses is now `nautobot.core.models.fields.TagsField` rather than `taggit.managers.TaggableManager`. Any apps using `PrimaryModel` as a base class will likely need to generate and run a schema migration to reflect this change.
 - [#2331](https://github.com/nautobot/nautobot/issues/2331) - Changed `JobLogEntry.log_level` choices from `default`, `info`, `success`, `warning`, `failure` to Python default logging levels `debug`, `info`, `warning`, `error` and `critical`.
-- [#2331](https://github.com/nautobot/nautobot/issues/2331) - Changed job logging from custom log methods on the `BaseJob` class to celery's `get_task_logger` logging implementation.
+- [#2331](https://github.com/nautobot/nautobot/issues/2331) - Changed job logging from custom log methods on the `BaseJob` class to Celery's `get_task_logger` logging implementation.
 - [#2569](https://github.com/nautobot/nautobot/issues/2569) - Revamped CSV export functionality to use REST API serializers for more self-consistency and reduced boilerplate.
 - [#2569](https://github.com/nautobot/nautobot/issues/2569) - Revised the natural key for `SecretsGroupAssociation` through-table model.
 - [#2569](https://github.com/nautobot/nautobot/issues/2569) - Changed behavior of `JobLogEntry.display` REST API field to match the model behavior.
@@ -1142,7 +1142,7 @@ A natural key interface has been provided for most models to allow for uniquely 
 - [#3465](https://github.com/nautobot/nautobot/issues/3465) - Renamed IPAddress `prefix_length` field to `mask_length`.
 - [#3465](https://github.com/nautobot/nautobot/issues/3465) - Made IPAddress `host` field non-modifiable.
 - [#3527](https://github.com/nautobot/nautobot/issues/3527) - Restructured navigation menus to context-centered design for 2.0.
-- [#3552](https://github.com/nautobot/nautobot/issues/3552) - Extracted data tables from upgrading-from-nautobot-v1.md into separate YAML files.
+- [#3552](https://github.com/nautobot/nautobot/issues/3552) - Extracted data tables from `upgrading-from-nautobot-v1.md` into separate YAML files.
 - [#3586](https://github.com/nautobot/nautobot/issues/3586) - Changed REST API for Device and VirtualMachine to omit `config_context` by default and only include it when requested by using the `?include=config_context` query parameter.
 - [#3607](https://github.com/nautobot/nautobot/issues/3607) - Changed the default `lookup_field` for `NautobotUIViewSet` to `"pk"` instead of `"slug"`.
 - [#3663](https://github.com/nautobot/nautobot/issues/3663) - Modified `delete_button` and `edit_button` template tags to lookup `pk` and `slug` without the need to specify the lookup key.
@@ -1447,7 +1447,7 @@ A natural key interface has been provided for most models to allow for uniquely 
 
 ### Documentation in v2.0.0-alpha.1
 
-- [#204](https://github.com/nautobot/nautobot/issues/204) - Added style guide documentation for importing python modules in Nautobot.
+- [#204](https://github.com/nautobot/nautobot/issues/204) - Added style guide documentation for importing Python modules in Nautobot.
 
 ### Housekeeping in v2.0.0-alpha.1
 

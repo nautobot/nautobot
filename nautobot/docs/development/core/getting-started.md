@@ -266,9 +266,6 @@ You may install Poetry in your user environment by running:
 curl -sSL https://install.python-poetry.org | python3 -
 ```
 
-+/- 1.5.6
-    Poetry 1.3+ is required to be able to install packages against the latest lockfile.
-
 !!! danger
     Always utilize this documented method to install Poetry for use when developing Nautobot.
 
@@ -520,14 +517,14 @@ You can connect to the development server at `localhost:8080`.
 
 In order to run Nautobot Jobs or anything that requires a worker you must start a Celery worker.
 
-The worker is started in Docker Workflow with [watchdog](https://pythonhosted.org/watchdog/) and can be setup to be started with watchdog in the Virtual Environment Workflow. Watchdog provides a similar experience to the Django lightweight HTTP/WSGI for restarting your application automatically. Watchdog can watch for changes on your filesystem, this is helpful when adjusting existing Python files to not have to restart the celery worker when testing jobs.
+The worker is started in Docker Workflow with [watchdog](https://pythonhosted.org/watchdog/) and can be setup to be started with watchdog in the Virtual Environment Workflow. Watchdog provides a similar experience to the Django lightweight HTTP/WSGI for restarting your application automatically. Watchdog can watch for changes on your filesystem, this is helpful when adjusting existing Python files to not have to restart the Celery worker when testing jobs.
 
 | Docker Compose Workflow | Virtual Environment Workflow    |
 | ----------------------- | ------------------------------- |
 | `invoke start`          | `nautobot-server celery worker` |
 
 !!! tip
-    You can leverage watchdog for your celery worker as described above, with the following watchmedo command in your development environment `watchmedo auto-restart --directory './' --pattern '*.py' --recursive -- nautobot-server celery worker -l INFO --events`.
+    You can leverage watchdog for your Celery worker as described above, with the following watchmedo command in your development environment `watchmedo auto-restart --directory './' --pattern '*.py' --recursive -- nautobot-server celery worker -l INFO --events`.
 
 ### Starting the Interactive Shell
 
@@ -714,7 +711,7 @@ Integration tests are run using the `invoke integration-test` command. All integ
 !!! tip
     You may also use `invoke integration-test` in the Virtual Environment workflow given that the `selenium` container is running, and that the `INVOKE_NAUTOBOT_LOCAL=True` environment variable has been set.
 
-+/- 1.5.11
+!!! tip
     The `--cache-test-fixtures` argument was added to the `invoke integration-test` and `nautobot-server test` commands to allow for caching of test factory data between test runs. See the [factories documentation](./testing.md#factory-caching) for more information.
 
 ##### Customizing Integration Test Executions
@@ -779,24 +776,24 @@ Some features require documentation updates or new documentation to be written. 
 
 For substantial changes to the code (including new features, removal of existing features, or significant changes in behavior) you should always make corresponding documentation updates. Nautobot's documentation pipeline includes a custom plugin for `mkdocs` that adds a few useful macros for annotating such changes:
 
-* `+++ 1.4.3`, on a line by itself, is a shorthand for `!!! version-added "Added in version 1.4.3"`
-* `+/- 1.4.3`, on a line by itself, is a shorthand for `!!! version-changed "Changed in version 1.4.3"`
-* `--- 1.4.3`, on a line by itself, is a shorthand for `!!! version-removed "Removed in version 1.4.3"`
+* `+++ 2.4.3`, on a line by itself, is a shorthand for `!!! version-added "Added in version 2.4.3"`
+* `+/- 2.4.3`, on a line by itself, is a shorthand for `!!! version-changed "Changed in version 2.4.3"`
+* `--- 2.4.3`, on a line by itself, is a shorthand for `!!! version-removed "Removed in version 2.4.3"`
 
 These admonitions in turn appear in the rendered documentation as follows:
 
-+++ 1.4.3
-+/- 1.4.3
---- 1.4.3
++++ 2.4.3
++/- 2.4.3
+--- 2.4.3
 
 You can also add text to any of these admonitions for further clarity, for example:
 
-    +++ 1.4.3
+    +++ 2.4.3
         The custom `mkdocs` plugin was added.
 
 will render as:
 
-+++ 1.4.3
++++ 2.4.3
     The custom `mkdocs` plugin was added.
 
 !!! caution

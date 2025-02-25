@@ -1,5 +1,6 @@
 from django import forms
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
     CommentField,
     DynamicModelChoiceField,
@@ -20,6 +21,14 @@ from .models import Tenant, TenantGroup
 #
 # Tenant groups
 #
+
+
+class TenantGroupBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=TenantGroup.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    class Meta:
+        nullable_fields = []
 
 
 class TenantGroupForm(NautobotModelForm):

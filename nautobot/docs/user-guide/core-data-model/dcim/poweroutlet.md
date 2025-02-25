@@ -6,9 +6,6 @@ For example, imagine a PDU with one power port which draws from a three-phase fe
 
 Cables can connect power outlets only to downstream power ports. (Pass-through ports cannot be used to model power distribution.)
 
-+++ 1.4.5
-    The fields `created` and `last_updated` were added to all device component models. If you upgraded from Nautobot 1.4.4 or earlier, the values for these fields will default to `None` (null).
-
 +/- 2.3.0
     This model has been updated to support being installed in [Modules](module.md). As a result, there are now two fields for assignment to a Device or Module. One of the `device` or `module` fields must be populated but not both. If a `module` is supplied, the `device` field must be null, and similarly the `module` field must be null if a `device` is supplied.
 

@@ -15,10 +15,15 @@ class SupportedDataRateSerializer(TaggedModelSerializerMixin, NautobotModelSeria
 
 
 class RadioProfileSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
-    channel_width = serializers.ListField(child=ChoiceField(choices=RadioProfileChannelWidthChoices), allow_empty=True)
+    channel_width = serializers.ListField(
+        child=ChoiceField(choices=RadioProfileChannelWidthChoices),
+        allow_empty=True,
+        required=False,
+    )
     allowed_channel_list = serializers.ListField(
         child=serializers.IntegerField(required=False),
         allow_empty=True,
+        required=False,
     )
 
     class Meta:

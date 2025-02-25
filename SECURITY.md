@@ -2,7 +2,7 @@
 
 ## Security Announcements
 
-Join the #nautobot channel in the Network to Code Slack for messages about security and release announcements.
+Join the `#nautobot` channel in the Network to Code Slack for messages about security and release announcements.
 
 ## Report a Vulnerability
 
@@ -10,7 +10,7 @@ We appreciate the time security researchers and users contribute to reporting vu
 
 If you feel your report is safe for public disclosure (a CVE related to a dependency, or a low-risk bug) please feel free to open a bug [issue on GitHub](https://github.com/nautobot/nautobot/issues/new/choose).
 
-If you are unsure of the severity of your report or you feel it should not be publicly disclosed until a fix has been released, you can also email [security@nautobot.com](mailto:security@nautobot.com) with the security details.
+If you are unsure of the severity of your report or you feel it should not be publicly disclosed until a fix has been released, you can also email [`security@nautobot.com`](mailto:security@nautobot.com) with the security details.
 
 You may encrypt your email with the GPG keys of the security response members below. While accepted, encryption using GPG is NOT mandatory to make a disclosure.
 

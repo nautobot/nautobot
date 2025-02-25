@@ -17,6 +17,7 @@ from nautobot.core.forms import (
     AutoPositionPatternField,
     BootstrapMixin,
     BulkEditNullBooleanSelect,
+    ClearableFileInput,
     ColorSelect,
     CommentField,
     DatePicker,
@@ -850,12 +851,8 @@ class DeviceTypeForm(NautobotModelForm):
         widgets = {
             "subdevice_role": StaticSelect2(),
             # Exclude SVG images (unsupported by PIL)
-            "front_image": forms.ClearableFileInput(
-                attrs={"accept": "image/bmp,image/gif,image/jpeg,image/png,image/tiff"}
-            ),
-            "rear_image": forms.ClearableFileInput(
-                attrs={"accept": "image/bmp,image/gif,image/jpeg,image/png,image/tiff"}
-            ),
+            "front_image": ClearableFileInput(attrs={"accept": "image/bmp,image/gif,image/jpeg,image/png,image/tiff"}),
+            "rear_image": ClearableFileInput(attrs={"accept": "image/bmp,image/gif,image/jpeg,image/png,image/tiff"}),
         }
 
 
