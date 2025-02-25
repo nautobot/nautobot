@@ -4513,16 +4513,34 @@ class VirtualDeviceContextUIViewSet(NautobotUIViewSet):
     queryset = VirtualDeviceContext.objects.all()
     serializer_class = serializers.VirtualDeviceContextSerializer
     table_class = tables.VirtualDeviceContextTable
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                context_table_key="interfaces_table",
+                section=SectionChoices.FULL_WIDTH,
+                exclude_columns=["device"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                context_table_key="vrf_table",
+                section=SectionChoices.FULL_WIDTH,
+                exclude_columns=["device"],
+            ),
+        ),
+    )
 
     def get_extra_context(self, request, instance):
         if self.action == "retrieve":
             interfaces_table = tables.InterfaceTable(
-                instance.interfaces.restrict(request.user, "view"), orderable=False, exclude=("device",)
+                instance.interfaces.restrict(request.user, "view"), orderable=False
             )
-            vrf_table = VRFTable(
-                instance.vrfs.restrict(request.user, "view"),
-                orderable=False,
-            )
+            vrf_table = VRFTable(instance.vrfs.restrict(request.user, "view"), orderable=False)
 
             return {
                 "interfaces_table": interfaces_table,

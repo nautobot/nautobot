@@ -5355,6 +5355,8 @@ class VirtualDeviceContextBulkEditForm(
     remove_interfaces = DynamicModelMultipleChoiceField(
         queryset=Interface.objects.all(), required=False, query_params={"device": "$device"}
     )
+    add_vrfs = DynamicModelMultipleChoiceField(queryset=VRF.objects.all(), required=False)
+    remove_vrfs = DynamicModelMultipleChoiceField(queryset=VRF.objects.all(), required=False)
 
     class Meta:
         model = VirtualDeviceContext

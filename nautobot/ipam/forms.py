@@ -160,6 +160,14 @@ class VRFBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, Nauto
     remove_prefixes = DynamicModelMultipleChoiceField(
         queryset=Prefix.objects.all(), required=False, query_params={"namespace": "$namespace"}
     )
+    add_virtual_device_contexts = DynamicModelMultipleChoiceField(
+        queryset=VirtualDeviceContext.objects.all(),
+        required=False,
+    )
+    remove_virtual_device_contexts = DynamicModelMultipleChoiceField(
+        queryset=VirtualDeviceContext.objects.all(),
+        required=False,
+    )
 
     class Meta:
         nullable_fields = [

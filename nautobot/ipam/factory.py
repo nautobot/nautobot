@@ -15,7 +15,7 @@ from nautobot.core.factory import (
     random_instance,
     UniqueFaker,
 )
-from nautobot.dcim.models import Location
+from nautobot.dcim.models import Location, VirtualDeviceContext
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import PrefixTypeChoices
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, RIR, RouteTarget, VLAN, VLANGroup, VRF
@@ -126,6 +126,14 @@ class VRFFactory(PrimaryModelFactory):
                 self.export_targets.set(extracted)
             else:
                 self.export_targets.set(get_random_instances(RouteTarget))
+
+    @factory.post_generation
+    def virtual_device_contexts(self, create, extracted, **kwargs):
+        if create:
+            if extracted:
+                self.virtual_device_contexts.set(extracted)
+            else:
+                self.virtual_device_contexts.set(get_random_instances(VirtualDeviceContext))
 
 
 class VLANGroupFactory(OrganizationalModelFactory):

@@ -334,6 +334,7 @@ class VRFDeviceAssignment(BaseModel):
             ["vrf", "device"],
             ["vrf", "virtual_machine"],
             ["vrf", "virtual_device_context"],
+            ["virtual_device_context", "rd", "name"],
             # TODO: desirable in the future, but too strict for 1.x-to-2.0 data migrations,
             #       as multiple "cleanup" VRFs in different cleanup namespaces might be assigned to a single device/VM.
             # ["device", "rd", "name"],
