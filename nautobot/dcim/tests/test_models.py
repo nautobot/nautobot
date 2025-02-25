@@ -1175,7 +1175,7 @@ class LocationTypeTestCase(TestCase):
         with self.assertRaises(ValidationError) as cm:
             location_type.content_types.remove(device_ct)
         self.assertIn(
-            f"Cannot remove the content type {device_ct} as currently at least one {device_ct.model_class()._meta.verbose_name} is associated to a location",
+            f"Cannot remove the content type {device_ct} as currently at least one device is associated to a location",
             str(cm.exception),
         )
 
