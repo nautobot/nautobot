@@ -237,25 +237,23 @@ class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
         # Test VRFDeviceAssignment model clean() code paths
         invalid_create_data = [
             {
-                "vrf": self.vrfs[2].pk,
+                "vrf": self.vrfs[3].pk,
                 "device": self.devices[6].pk,
                 "virtual_machine": self.test_vm.pk,
-                "rd": "65000:6",
             },
             {
-                "vrf": self.vrfs[2].pk,
-                "device": self.devices[6].pk,
-                "virtual_device_context": self.vdcs[0].pk,
-                "rd": "65000:6",
+                "vrf": self.vrfs[4].pk,
+                "device": self.devices[7].pk,
+                "virtual_device_context": self.vdcs[2].pk,
             },
             {
-                "vrf": self.vrfs[2].pk,
+                "vrf": self.vrfs[5].pk,
                 "virtual_machine": self.test_vm.pk,
-                "virtual_device_context": self.vdcs[0].pk,
-                "rd": "65000:6",
+                "virtual_device_context": self.vdcs[3].pk,
             },
             {
-                "vrf": self.vrfs[2].pk,
+                "vrf": self.vrfs[6].pk,
+                "name": "VRFDeviceAssignment 5",
                 "rd": "65000:6",
             },
         ]
