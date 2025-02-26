@@ -4188,12 +4188,13 @@ class InterfaceVDCAssignmentTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        device = Device.objects.first()
+        device_1 = Device.objects.first()
+        device_2 = Device.objects.last()
         vdc_status = Status.objects.get_for_model(VirtualDeviceContext)[0]
         interface_status = Status.objects.get_for_model(Interface)[0]
         interfaces = [
             Interface.objects.create(
-                device=device,
+                device=device_1,
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 name=f"Interface 00{idx}",
                 status=interface_status,
@@ -4202,7 +4203,7 @@ class InterfaceVDCAssignmentTestCase(FilterTestCases.FilterTestCase):
         ]
         vdcs = [
             VirtualDeviceContext.objects.create(
-                device=device,
+                device=device_1,
                 status=vdc_status,
                 identifier=200 + idx,
                 name=f"Test VDC {idx}",
@@ -4213,3 +4214,17 @@ class InterfaceVDCAssignmentTestCase(FilterTestCases.FilterTestCase):
         InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[1], interface=interfaces[0])
         InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[1], interface=interfaces[1])
         InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[2], interface=interfaces[2])
+        InterfaceVDCAssignment.objects.create(
+            virtual_device_context=VirtualDeviceContext.objects.create(
+                device=device_2,
+                status=vdc_status,
+                identifier=200,
+                name="Test VDC 0",
+            ),
+            interface=Interface.objects.create(
+                device=device_2,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                name="Interface 000",
+                status=interface_status,
+            ),
+        )

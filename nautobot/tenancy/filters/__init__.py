@@ -11,7 +11,8 @@ from nautobot.core.filters import (
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.models import Device, Location, Rack, RackReservation
 from nautobot.extras.filters import NautobotFilterSet
-from nautobot.ipam.models import IPAddress, Prefix, RouteTarget, VLAN, VRF
+from nautobot.ipam.filters import PrefixFilter
+from nautobot.ipam.models import IPAddress, RouteTarget, VLAN, VRF
 from nautobot.tenancy.filters.mixins import TenancyModelFilterSetMixin
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, VirtualMachine
@@ -112,10 +113,7 @@ class TenantFilterSet(NautobotFilterSet):
         field_name="locations",
         label="Has locations",
     )
-    prefixes = django_filters.ModelMultipleChoiceFilter(
-        queryset=Prefix.objects.all(),
-        label="Prefixes (ID)",
-    )
+    prefixes = PrefixFilter()
     has_prefixes = RelatedMembershipBooleanFilter(
         field_name="prefixes",
         label="Has prefixes",
