@@ -2,6 +2,7 @@ import datetime
 import random
 
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Count
 from django.test import override_settings
 from django.urls import reverse
 from django.utils.html import strip_tags
@@ -13,7 +14,15 @@ from nautobot.core.templatetags.helpers import hyperlinked_object, queryset_to_p
 from nautobot.core.testing import ModelViewTestCase, post_data, ViewTestCases
 from nautobot.core.testing.utils import extract_page_body
 from nautobot.core.utils.lookup import get_route_for_model
-from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
+from nautobot.dcim.models import (
+    Device,
+    DeviceType,
+    Interface,
+    Location,
+    LocationType,
+    Manufacturer,
+    VirtualDeviceContext,
+)
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
 from nautobot.extras.models import (
     CustomField,
@@ -72,8 +81,9 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
         tenants = Tenant.objects.all()[:2]
-        namespace = Prefix.objects.first().namespace
+        namespace = Namespace.objects.annotate(prefix_count=Count("prefixes")).filter(prefix_count__gt=2).first()
         prefixes = Prefix.objects.filter(namespace=namespace)
+        vdcs = VirtualDeviceContext.objects.all()
         vrf_statuses = Status.objects.get_for_model(VRF)
 
         cls.form_data = {
@@ -85,6 +95,7 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "prefixes": [prefixes[1].id],
             "tags": [t.pk for t in Tag.objects.get_for_model(VRF)],
             "status": vrf_statuses.first().pk,
+            "virtual_device_contexts": [vdcs[0].id, vdcs[1].id],
         }
 
         cls.bulk_edit_data = {
@@ -94,6 +105,8 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "namespace": prefixes[0].namespace.id,
             "add_prefixes": [prefixes[0].id],
             "remove_prefixes": [prefixes[1].id],
+            "add_virtual_device_contexts": [vdcs[2].id, vdcs[3].id],
+            "remove_virtual_device_contexts": [vdcs[0].id],
         }
 
 

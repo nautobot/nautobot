@@ -1,5 +1,3 @@
-import django_filters
-
 from nautobot.cloud import models
 from nautobot.core.filters import (
     BaseFilterSet,
@@ -11,7 +9,7 @@ from nautobot.dcim.models import Manufacturer
 from nautobot.extras.filters import NautobotFilterSet
 from nautobot.extras.models import SecretsGroup
 from nautobot.extras.utils import FeatureQuery
-from nautobot.ipam.models import Prefix
+from nautobot.ipam.filters import PrefixFilter
 
 
 class CloudAccountFilterSet(NautobotFilterSet):
@@ -98,7 +96,7 @@ class CloudNetworkFilterSet(NautobotFilterSet):
         queryset=models.CloudNetwork.objects.all(),
         label="Parent cloud network (name or ID)",
     )
-    prefixes = django_filters.ModelMultipleChoiceFilter(queryset=Prefix.objects.all())
+    prefixes = PrefixFilter()
 
     class Meta:
         model = models.CloudNetwork
@@ -117,8 +115,7 @@ class CloudNetworkPrefixAssignmentFilterSet(BaseFilterSet):
         queryset=models.CloudNetwork.objects.all(),
         label="Cloud network (name or ID)",
     )
-    # Prefix doesn't have an appropriate natural key for NaturalKeyOrPKMultipleChoiceFilter
-    prefix = django_filters.ModelMultipleChoiceFilter(queryset=Prefix.objects.all())
+    prefix = PrefixFilter()
 
     class Meta:
         model = models.CloudNetworkPrefixAssignment
