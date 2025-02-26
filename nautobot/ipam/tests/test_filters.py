@@ -10,6 +10,7 @@ from nautobot.dcim.models import (
     Location,
     LocationType,
     Manufacturer,
+    VirtualDeviceContext,
 )
 from nautobot.extras.models import Role, Status, Tag
 from nautobot.ipam.choices import PrefixTypeChoices, ServiceProtocolChoices
@@ -24,6 +25,7 @@ from nautobot.ipam.filters import (
     VLANFilterSet,
     VLANGroupFilterSet,
     VLANLocationAssignmentFilterSet,
+    VRFDeviceAssignmentFilterSet,
     VRFFilterSet,
     VRFPrefixAssignmentFilterSet,
 )
@@ -40,6 +42,7 @@ from nautobot.ipam.models import (
     VLANGroup,
     VLANLocationAssignment,
     VRF,
+    VRFDeviceAssignment,
     VRFPrefixAssignment,
 )
 from nautobot.tenancy.models import Tenant
@@ -1044,6 +1047,77 @@ class IPAddressToInterfaceTestCase(FilterTestCases.FilterTestCase):
                     self.queryset.filter(**{test_filter: False}),
                     ordered=False,
                 )
+
+
+class VRFDeviceAssignmentTestCase(FilterTestCases.FilterTestCase):
+    queryset = VRFDeviceAssignment.objects.all()
+    filterset = VRFDeviceAssignmentFilterSet
+    generic_filter_tests = (
+        ["vrf", "vrf__id"],
+        ["vrf", "vrf__name"],
+        ["device", "device__id"],
+        ["device", "device__name"],
+        ["virtual_machine", "virtual_machine__id"],
+        ["virtual_machine", "virtual_machine__name"],
+        ["virtual_device_context", "virtual_device_context__id"],
+        ["virtual_device_context", "virtual_device_context__name"],
+        ["name"],
+        ["rd"],
+    )
+
+    @classmethod
+    def setUpTestData(cls):
+        # Creating VRFDeviceAssignment instances manually until VRFFactory is enhanced to generate VRFDeviceAssignments
+        cls.vrfs = VRF.objects.all()
+        cls.devices = Device.objects.all()
+        cls.vdcs = VirtualDeviceContext.objects.all()
+        locations = Location.objects.filter(location_type__name="Campus")
+        cluster_type = ClusterType.objects.create(name="Test Cluster Type")
+        cluster = Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type, location=locations[0])
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
+        vm_role = Role.objects.get_for_model(VirtualMachine).first()
+        cls.test_vm_1 = VirtualMachine.objects.create(
+            cluster=cluster,
+            name="VM 1",
+            role=vm_role,
+            status=vm_status,
+        )
+        cls.test_vm_2 = VirtualMachine.objects.create(
+            cluster=cluster,
+            name="VM 2",
+            role=vm_role,
+            status=vm_status,
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=cls.vrfs[0],
+            device=cls.devices[0],
+            rd="65000:1",
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=cls.vrfs[0],
+            device=cls.devices[1],
+            rd="65000:2",
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=cls.vrfs[0],
+            virtual_machine=cls.test_vm_1,
+            rd="65000:3",
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=cls.vrfs[1],
+            virtual_machine=cls.test_vm_2,
+            rd="65000:4",
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=cls.vrfs[0],
+            virtual_device_context=cls.vdcs[0],
+            name="VRFDeviceAssignment 1",
+            rd="65000:5",
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=cls.vrfs[0],
+            virtual_device_context=cls.vdcs[1],
+        )
 
 
 class VLANGroupTestCase(FilterTestCases.FilterTestCase):
