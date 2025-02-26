@@ -8,91 +8,91 @@ Whether you are getting started for the first time, looking to build a local lab
 
 You can explore the [Nautobot Always-On Sandbox Environments](https://networktocode.com/nautobot/sandbox-environments/). There is sample data already prepopulated, no installation required, and several Nautobot Apps are pre-installed, with sample data. 
 
-### Bare metal / Virtual Machine
+=== "Bare metal / Virtual Machine"
 
-You can [install Nautobot](install_system.md) onto a [RHEL (Red Hat Enterprise Linux)](https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux) or [Ubuntu](https://ubuntu.com/) virtual machine. 
+    You can [install Nautobot](install_system.md) onto a [RHEL (Red Hat Enterprise Linux)](https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux) or [Ubuntu](https://ubuntu.com/) virtual machine. 
+    
+    ??? info "Supported Platforms"
 
-??? info "Supported Platforms"
+        Nautobot was designed to be a cross-platform application that can run on nearly any system that is able to run the required dependencies. *Only the operating system platforms listed below are officially supported at this time*.
 
-    Nautobot was designed to be a cross-platform application that can run on nearly any system that is able to run the required dependencies. *Only the operating system platforms listed below are officially supported at this time*.
+        * Red Hat flavors of Linux including CentOS 8.2+ and Red Hat Enterprise Linux (RHEL) 8.2+ are supported.
+        * Debian/Ubuntu flavors of Linux including Ubuntu 20.04+ and Debian 11+ are supported.
 
-    * Red Hat flavors of Linux including CentOS 8.2+ and Red Hat Enterprise Linux (RHEL) 8.2+ are supported.
-    * Debian/Ubuntu flavors of Linux including Ubuntu 20.04+ and Debian 11+ are supported.
+        Nautobot *should* work on any POSIX-compliant system including practically any flavor of Linux, BSD, or even macOS, but those are not *officially* supported at this time.
 
-    Nautobot *should* work on any POSIX-compliant system including practically any flavor of Linux, BSD, or even macOS, but those are not *officially* supported at this time.
+    <h3>Bare metal / Virtual Machine Pros</h3>
 
+    * Familiar deployment option for many administrators
+    * Performance is generally higher without the overhead of virtualization
+    * Full control over hardware and software allows for greater customization and security practices
 
-#### Bare metal / Virtual Machine Pros
+    <h3>Bare metal / Virtual Machine Cons</h3>
 
-* Familiar deployment option for many administrators
-* Performance is generally higher without the overhead of virtualization
-* Full control over hardware and software allows for greater customization and security practices
+    * Maintenance and high availability is more difficult than Docker or Cloud options
+    * Preparing server for production grade security and scaling requires additional effort 
 
-#### Bare metal / Virtual Machine Cons
+=== "Docker Compose"
 
-* Maintenance and high availability is more difficult than Docker or Cloud options
-* Preparing server for production grade security and scaling requires additional effort 
+    Nautobot can be deployed via Docker using [Nautobot Docker images](../guides/docker.md) that are available either from:
 
-### Docker Compose
+    * [Docker Hub](https://hub.docker.com/r/networktocode/nautobot)
+    * [GitHub Container Registry](https://github.com/nautobot/nautobot/pkgs/container/nautobot) 
 
-Nautobot can be deployed via Docker using [Nautobot Docker images](../guides/docker.md) that are available either:
+    For local testing and lab work you can use the Nautobot [Docker Compose](https://github.com/nautobot/nautobot-docker-compose) project which leverages the container images above. 
 
-* [Docker Hub](https://hub.docker.com/r/networktocode/nautobot)
-* [GitHub Container Registry](https://github.com/nautobot/nautobot/pkgs/container/nautobot) 
+    For more information about the Docker tags, Docker configurations, or using container images for your own development environment, see [Nautobot in Docker](../guides/docker.md).
 
-For local testing and lab work you can use the Nautobot [Docker Compose](https://github.com/nautobot/nautobot-docker-compose) project which leverages the container images above. 
+    <h3>Docker Compose Pros</h3>
 
-For more information about the Docker tags, Docker configurations, or using container images for your own development environment, see [Nautobot in Docker](../guides/docker.md).
+    * Quick to deploy for single node lab work and testing
+    * For those looking for a multi-container single-node install for Nautobot often coupled with backup & HA capabilities from their hypervisor manager
 
-#### Docker Compose Pros
+    <h3>Docker Compose Cons</h3>
 
-* Quick to deploy for single node lab work and testing
-* For those looking for a multi-container single-node install for Nautobot often coupled with backup & HA capabilities from their hypervisor manager
+    * Docker compose on its own is missing advanced features like automated rollbacks, self-healing applications, and load balancing 
+    * Limited scaling if on single host 
 
-#### Docker Compose Cons
+=== "Kubernetes Helm Charts"
 
-* Docker compose on its own is missing advanced features like automated rollbacks, self-healing applications, and load balancing 
-* Limited scaling if on single host 
+    You can [install Nautobot via Helm Charts](https://docs.nautobot.com/projects/helm-charts/en/stable/) for Kubernetes documentation. 
 
-### Docker with Kubernetes (Helm Charts)
+    If you are looking for an example of what that process looks like in a development environment using `minikube`, you can check out the three part blog series covering deploying Nautobot to Kubernetes:
+        
+    * [Part 1](https://networktocode.com/blog/deploying-nautobot-to-kubernetes-01/)
+    * [Part 2](https://networktocode.com/blog/deploying-nautobot-to-kubernetes-02/)
+    * [Part 3](https://networktocode.com/blog/deploying-nautobot-to-kubernetes-03/)
 
-You can [install Nautobot via Helm Charts](https://docs.nautobot.com/projects/helm-charts/en/stable/) for Kubernetes documentation. 
+    <h3>Helm Charts Pros</h3>
 
-If you are looking for an example of what that process looks like in a development environment using `minikube`, you can check out the three part blog series covering deploying Nautobot to Kubernetes:
-* [Part 1](https://networktocode.com/blog/deploying-nautobot-to-kubernetes-01/)
-* [Part 2](https://networktocode.com/blog/deploying-nautobot-to-kubernetes-02/)
-* [Part 3](https://networktocode.com/blog/deploying-nautobot-to-kubernetes-03/)
+    * Helm charts serves as a package manager for Kubernetes, streamlining the deployment of complex applications within Kubernetes clusters
+    * Using Kubernetes features, you can manage large-scale deployments efficiently and ensure high-availability for production grade systems
 
-#### Helm Charts Pros
+    <h3>Helm Charts Cons</h3>
 
-* Helm charts serves as a package manager for Kubernetes, streamlining the deployment of complex applications within Kubernetes clusters
-* Using Kubernetes features, you can manage large-scale deployments efficiently and ensure high-availability for production grade systems
+    * Requires knowledge of Kubernetes and has a steeper learning curve for setting up
+    * Kubernetes clusters can use a lot of resources and monitoring effort
 
-#### Helm Charts Cons
+=== "Nautobot Cloud"
 
-* Requires knowledge of Kubernetes and has a steeper learning curve for setting up
-* Kubernetes clusters can use a lot of resources and monitoring effort
+    [Nautobot Cloud](https://networktocode.com/nautobot/nautobot-cloud/) is a commercial Software as a Service (SaaS) offering from Network to Code. It offers self-service and turnkey deployment for Nautobot removing the need for infrastructure setup and maintenance for the application. 
 
-### Nautobot Cloud
+    Nautobot Cloud also streamlines the deployment and management of several other commonly used automation tools:
+    * [Ansible AWX](https://github.com/ansible/awx)
+    * [Batfish](https://github.com/batfish/batfish)
+    * Commonly used network telemetry stack (Grafana / Prometheus / Telegraf)
+    * Linux automation utilities
 
-[Nautobot Cloud](https://networktocode.com/nautobot/nautobot-cloud/) is a commercial Software as a Service (SaaS) offering from Network to Code. It offers self-service and turnkey deployment for Nautobot removing the need for infrastructure setup and maintenance for the application. 
+    <h3>Nautobot Cloud Pros</h3>
 
-Nautobot Cloud also streamlines the deployment and management of several other commonly used automation tools:
-* [Ansible AWX](https://github.com/ansible/awx)
-* [Batfish](https://github.com/batfish/batfish)
-* Commonly used network telemetry stack (Grafana / Prometheus / Telegraf)
-* Linux automation utilities
+    * Click to deploy multiple instances of Nautobot with no effort
+    * Enterprise grade dashboards to see trends of Nautobot data across all Nautobot instances
+    * Click to install apps from Nautobot Cloud Marketplace
+    * Cloud-based database snapshots
 
-#### Nautobot Cloud Pros
+    <h3>Nautobot Cloud Cons</h3>
 
-* Click to deploy multiple instances of Nautobot with no effort
-* Enterprise grade dashboards to see trends of Nautobot data across all Nautobot instances
-* Click to install apps from Nautobot Cloud Marketplace
-* Cloud-based database snapshots
-
-#### Nautobot Cloud Cons
-
-* Requires paid account with Network to Code
+    * Requires paid account with Network to Code
 
 ## About Dependencies
 
