@@ -510,7 +510,7 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
     rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
-        query_params={"location": "$location"},
+        query_params={"ancestors": "$location"},
     )
     comments = CommentField()
 
