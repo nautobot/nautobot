@@ -23,7 +23,7 @@ from nautobot.dcim.form_mixins import (
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
 )
-from nautobot.dcim.models import Device, Location, Rack
+from nautobot.dcim.models import Device, Location, Rack, VirtualDeviceContext
 from nautobot.extras.forms import (
     NautobotBulkEditForm,
     NautobotFilterForm,
@@ -111,6 +111,9 @@ class VRFForm(NautobotModelForm, TenancyForm):
     namespace = DynamicModelChoiceField(queryset=Namespace.objects.all())
     devices = DynamicModelMultipleChoiceField(queryset=Device.objects.all(), required=False)
     virtual_machines = DynamicModelMultipleChoiceField(queryset=VirtualMachine.objects.all(), required=False)
+    virtual_device_contexts = DynamicModelMultipleChoiceField(
+        queryset=VirtualDeviceContext.objects.all(), required=False
+    )
     prefixes = DynamicModelMultipleChoiceField(
         queryset=Prefix.objects.all(),
         required=False,
@@ -134,6 +137,7 @@ class VRFForm(NautobotModelForm, TenancyForm):
             "tags",
             "devices",
             "virtual_machines",
+            "virtual_device_contexts",
             "prefixes",
         ]
         labels = {
@@ -155,6 +159,14 @@ class VRFBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, Nauto
     )
     remove_prefixes = DynamicModelMultipleChoiceField(
         queryset=Prefix.objects.all(), required=False, query_params={"namespace": "$namespace"}
+    )
+    add_virtual_device_contexts = DynamicModelMultipleChoiceField(
+        queryset=VirtualDeviceContext.objects.all(),
+        required=False,
+    )
+    remove_virtual_device_contexts = DynamicModelMultipleChoiceField(
+        queryset=VirtualDeviceContext.objects.all(),
+        required=False,
     )
 
     class Meta:

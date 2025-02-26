@@ -19,7 +19,7 @@ from nautobot.core.filters import (
     TreeNodeMultipleChoiceFilter,
 )
 from nautobot.dcim.filters import LocatableModelFilterSetMixin
-from nautobot.dcim.models import Device, Interface, Location
+from nautobot.dcim.models import Device, Interface, Location, VirtualDeviceContext
 from nautobot.extras.filters import NautobotFilterSet, RoleModelFilterSetMixin, StatusModelFilterSetMixin
 from nautobot.ipam import choices, formfields
 from nautobot.tenancy.filters.mixins import TenancyModelFilterSetMixin
@@ -143,6 +143,21 @@ class VRFFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyModelFil
 
 
 class VRFDeviceAssignmentFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "vrf__name": "icontains",
+            "device__name": "icontains",
+            "virtual_machine__name": "icontains",
+            "virtual_device_context__name": "icontains",
+            "rd": "icontains",
+        },
+    )
+    vrf = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VRF.objects.all(),
+        to_field_name="name",
+        label="VRF (ID or name)",
+    )
     device = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Device.objects.all(),
         to_field_name="name",
@@ -153,10 +168,15 @@ class VRFDeviceAssignmentFilterSet(NautobotFilterSet):
         to_field_name="name",
         label="Virtual Machine (ID or name)",
     )
+    virtual_device_context = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VirtualDeviceContext.objects.all(),
+        to_field_name="name",
+        label="Virtual Device Context (ID or name)",
+    )
 
     class Meta:
         model = VRFDeviceAssignment
-        fields = ["id", "vrf", "device", "virtual_machine"]
+        fields = ["id", "name", "rd"]
 
 
 class VRFPrefixAssignmentFilterSet(NautobotFilterSet):

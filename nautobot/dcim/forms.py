@@ -5298,6 +5298,11 @@ class VirtualDeviceContextForm(NautobotModelForm):
         required=True,
         query_params={"content_types": VirtualDeviceContext._meta.label_lower},
     )
+    vrfs = DynamicModelMultipleChoiceField(
+        queryset=VRF.objects.all(),
+        required=False,
+        label="VRFs",
+    )
 
     class Meta:
         model = VirtualDeviceContext
@@ -5308,6 +5313,7 @@ class VirtualDeviceContextForm(NautobotModelForm):
             "status",
             "identifier",
             "interfaces",
+            "vrfs",
             "primary_ip4",
             "primary_ip6",
             "tenant",
@@ -5323,11 +5329,15 @@ class VirtualDeviceContextForm(NautobotModelForm):
             self.fields["device"].disabled = True
             self.fields["device"].required = False
 
+        self.initial["vrfs"] = self.instance.vrfs.values_list("id", flat=True)
+
     def save(self, commit=True):
         instance = super().save(commit)
         if commit:
             interfaces = self.cleaned_data["interfaces"]
             instance.interfaces.set(interfaces)
+            vrfs = self.cleaned_data["vrfs"]
+            instance.vrfs.set(vrfs)
         return instance
 
 
@@ -5345,6 +5355,8 @@ class VirtualDeviceContextBulkEditForm(
     remove_interfaces = DynamicModelMultipleChoiceField(
         queryset=Interface.objects.all(), required=False, query_params={"device": "$device"}
     )
+    add_vrfs = DynamicModelMultipleChoiceField(queryset=VRF.objects.all(), required=False)
+    remove_vrfs = DynamicModelMultipleChoiceField(queryset=VRF.objects.all(), required=False)
 
     class Meta:
         model = VirtualDeviceContext
