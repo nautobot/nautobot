@@ -1,0 +1,2 @@
+Fixed `VRFPrefixAssignment` REST API endpoint incorrectly advertising support for Notes.
+Fixed incorrect `Meta.model` value on `ControllerManagedDeviceGroupWirelessNetworkAssignmentTable` and `ControllerManagedDeviceGroupRadioProfileAssignmentTable`.

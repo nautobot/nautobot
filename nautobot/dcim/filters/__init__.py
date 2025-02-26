@@ -101,7 +101,7 @@ from nautobot.extras.filters import (
 from nautobot.extras.models import ExternalIntegration, SecretsGroup
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import IPAddress, VLAN, VLANGroup
-from nautobot.tenancy.filters import TenancyModelFilterSetMixin
+from nautobot.tenancy.filters.mixins import TenancyModelFilterSetMixin
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, VirtualMachine
 from nautobot.wireless.models import RadioProfile, WirelessNetwork
