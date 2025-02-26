@@ -235,24 +235,25 @@ class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
             self.assertContains(response, expected_responses[i], status_code=status.HTTP_400_BAD_REQUEST)
 
         # Test VRFDeviceAssignment model clean() code paths
+        vrf = VRF.objects.create(name="New VRF ", namespace=Namespace.objects.first())
         invalid_create_data = [
             {
-                "vrf": self.vrfs[3].pk,
+                "vrf": vrf.pk,
                 "device": self.devices[6].pk,
                 "virtual_machine": self.test_vm.pk,
             },
             {
-                "vrf": self.vrfs[4].pk,
+                "vrf": vrf.pk,
                 "device": self.devices[7].pk,
                 "virtual_device_context": self.vdcs[2].pk,
             },
             {
-                "vrf": self.vrfs[5].pk,
+                "vrf": vrf.pk,
                 "virtual_machine": self.test_vm.pk,
                 "virtual_device_context": self.vdcs[3].pk,
             },
             {
-                "vrf": self.vrfs[6].pk,
+                "vrf": vrf.pk,
                 "name": "VRFDeviceAssignment 5",
                 "rd": "65000:6",
             },
