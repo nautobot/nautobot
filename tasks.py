@@ -12,10 +12,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import concurrent.futures
 import json
 import os
 import platform
 import re
+import time
 
 from invoke import Collection, task as invoke_task
 from invoke.exceptions import Exit, Failure
@@ -386,26 +388,38 @@ def get_dependency_version(dependency_name):
 
 
 def dump_service_ports_to_disk(context):
-    """Useful for downstream utilities without direct docker access to determine ports."""
+    """Useful for downstream utilities without direct docker access to determine ports.
+
+    This function will sometimes be called asynchronously while containers are still
+    firing up, hence the `attempt` loop.
+    """
     service_ports = {}
 
-    result = docker_compose(context, "ps --format json", hide=True)
-    for line in result.stdout.splitlines():
-        try:
-            service_def = json.loads(line)
-            service_name = re.search(r"com\.docker\.compose\.service=(?P<service>\w+)", service_def["Labels"]).group(
-                "service"
-            )
+    for attempt in range(4):  # pylint: disable=unused-variable
+        result = docker_compose(context, "ps --format json", hide=True)
 
-            ports_found = {}
-            for port in service_def["Publishers"]:
-                if port.get("PublishedPort", 0):
-                    ports_found[port["TargetPort"]] = port["PublishedPort"]
+        for line in result.stdout.splitlines():
+            try:
+                service_def = json.loads(line)
+                service_name = re.search(
+                    r"com\.docker\.compose\.service=(?P<service>\w+)", service_def["Labels"]
+                ).group("service")
 
-            if ports_found:
-                service_ports[service_name] = ports_found
-        except (json.decoder.JSONDecodeError, AttributeError, IndexError, KeyError):
-            continue
+                ports_found = {}
+                for port in service_def["Publishers"]:
+                    if port.get("PublishedPort", 0):
+                        ports_found[port["TargetPort"]] = port["PublishedPort"]
+
+                if ports_found:
+                    service_ports[service_name] = ports_found
+            except (json.decoder.JSONDecodeError, AttributeError, IndexError, KeyError):
+                continue
+
+        # Confirm required services are started
+        if set(["nautobot", "celery_worker"]).issubset(service_ports.keys()):
+            break
+
+        time.sleep(15)
 
     with open(".service_ports.json", "w") as f:
         json.dump(service_ports, f, indent=4)
@@ -469,9 +483,10 @@ def docker_push(context, branch, commit="", datestamp=""):  # pylint: disable=re
 def debug(context, service=None):
     """Start Nautobot and its dependencies in debug mode."""
     print("Starting Nautobot in debug mode...")
-    docker_compose(context, "up --detach --force-recreate", service=service)
-    dump_service_ports_to_disk(context)
-    docker_compose(context, "logs --follow", service=service)
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        executor.submit(dump_service_ports_to_disk, context)
+        docker_compose(context, "up", service=service)
 
 
 @task(help={"service": "If specified, only affect this service."})
