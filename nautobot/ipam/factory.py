@@ -128,6 +128,16 @@ class VRFFactory(PrimaryModelFactory):
                 self.export_targets.set(get_random_instances(RouteTarget))
 
     @factory.post_generation
+    def prefixes(self, create, extracted, **kwargs):
+        if create:
+            if extracted:
+                self.prefixes.set(extracted)
+            else:
+                self.prefixes.set(
+                    get_random_instances(lambda: Prefix.objects.filter(namespace=self.namespace), minimum=0)
+                )
+
+    @factory.post_generation
     def virtual_device_contexts(self, create, extracted, **kwargs):
         if create:
             if extracted:
@@ -303,7 +313,6 @@ class PrefixFactory(PrimaryModelFactory):
         has_role = NautobotBoolIterator()
         has_tenant = NautobotBoolIterator()
         has_vlan = NautobotBoolIterator()
-        # has_vrf = NautobotBoolIterator()
         is_ipv6 = NautobotBoolIterator()
 
     prefix = factory.Maybe(
@@ -329,12 +338,6 @@ class PrefixFactory(PrimaryModelFactory):
         None,
     )
     namespace = random_instance(Namespace, allow_null=False)
-    # TODO: Update for M2M tests
-    # vrf = factory.Maybe(
-    #     "has_vrf",
-    #     factory.SubFactory(VRFGetOrCreateFactory, tenant=factory.SelfAttribute("..tenant")),
-    #     None,
-    # )
     rir = factory.Maybe("has_rir", random_instance(RIR, allow_null=False), None)
     date_allocated = factory.Maybe("has_date_allocated", factory.Faker("date_time", tzinfo=datetime.timezone.utc), None)
 
@@ -350,6 +353,14 @@ class PrefixFactory(PrimaryModelFactory):
                         lambda: Location.objects.filter(location_type__content_types__in=[prefix_ct]), minimum=0
                     )
                 )
+
+    @factory.post_generation
+    def vrfs(self, create, extracted, **kwargs):
+        if create:
+            if extracted:
+                self.vrfs.set(extracted)
+            else:
+                self.vrfs.set(get_random_instances(lambda: VRF.objects.filter(namespace=self.namespace), minimum=0))
 
     @factory.post_generation
     def children(self, create, extracted, **kwargs):

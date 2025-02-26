@@ -275,50 +275,38 @@ class VRFPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        cls.namespace = (
+            Namespace.objects.annotate(prefixes_count=Count("prefixes")).filter(prefixes_count__gte=3).first()
+        )
         cls.vrfs = (
-            VRF.objects.annotate(prefixes_count=Count("namespace__prefixes")).filter(prefixes_count__gte=2).distinct()
+            VRF.objects.create(name="TEST VRF 1", namespace=cls.namespace),
+            VRF.objects.create(name="TEST VRF 2", namespace=cls.namespace),
         )
-        cls.prefixes = Prefix.objects.all()
+        cls.prefixes = Prefix.objects.filter(namespace=cls.namespace)
 
-        VRFPrefixAssignment.objects.create(
-            vrf=cls.vrfs[0],
-            prefix=cls.prefixes.filter(namespace=cls.vrfs[0].namespace)[0],
-        )
-        VRFPrefixAssignment.objects.create(
-            vrf=cls.vrfs[0],
-            prefix=cls.prefixes.filter(namespace=cls.vrfs[0].namespace)[1],
-        )
-        VRFPrefixAssignment.objects.create(
-            vrf=cls.vrfs[1],
-            prefix=cls.prefixes.filter(namespace=cls.vrfs[1].namespace)[0],
-        )
-        VRFPrefixAssignment.objects.create(
-            vrf=cls.vrfs[1],
-            prefix=cls.prefixes.filter(namespace=cls.vrfs[1].namespace)[1],
-        )
         cls.create_data = [
             {
-                "vrf": cls.vrfs[2].pk,
-                "prefix": cls.prefixes.filter(namespace=cls.vrfs[2].namespace).exclude(vrfs=cls.vrfs[2])[0].pk,
+                "vrf": cls.vrfs[0].pk,
+                "prefix": cls.prefixes.first().pk,
             },
             {
-                "vrf": cls.vrfs[3].pk,
-                "prefix": cls.prefixes.filter(namespace=cls.vrfs[3].namespace).exclude(vrfs=cls.vrfs[3])[0].pk,
+                "vrf": cls.vrfs[0].pk,
+                "prefix": cls.prefixes.last().pk,
             },
             {
-                "vrf": cls.vrfs[4].pk,
-                "prefix": cls.prefixes.filter(namespace=cls.vrfs[4].namespace).exclude(vrfs=cls.vrfs[4])[0].pk,
+                "vrf": cls.vrfs[1].pk,
+                "prefix": cls.prefixes.first().pk,
             },
         ]
 
     def test_creating_invalid_vrf_prefix_assignments(self):
         duplicate_create_data = {
-            "vrf": self.vrfs[0].pk,
-            "prefix": self.prefixes.filter(namespace=self.vrfs[0].namespace)[0].pk,
+            "vrf": VRFPrefixAssignment.objects.first().vrf.pk,
+            "prefix": VRFPrefixAssignment.objects.first().prefix.pk,
         }
         wrong_namespace_create_data = {
             "vrf": self.vrfs[0].pk,
-            "prefix": self.prefixes.exclude(namespace=self.vrfs[0].namespace)[0].pk,
+            "prefix": Prefix.objects.exclude(namespace=self.namespace)[0].pk,
         }
         missing_field_create_data = {
             "vrf": self.vrfs[0].pk,
