@@ -8,7 +8,7 @@ from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.test import override_settings, TestCase
 from django.test.client import RequestFactory
 from django.urls import reverse
@@ -919,8 +919,8 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
                 priority=789,
             ),
         )
-        prefixes = Prefix.objects.all()[:2]
-        cls.namespace = prefixes[0].namespace
+        cls.namespace = Namespace.objects.annotate(prefix_count=Count("prefixes")).filter(prefix_count__gt=2).first()
+        prefixes = Prefix.objects.filter(namespace=cls.namespace)
         vrfs = (
             VRF.objects.create(name="VRF 1", rd="65000:100", namespace=cls.namespace),
             VRF.objects.create(name="VRF 2", rd="65000:200", namespace=cls.namespace),
