@@ -854,6 +854,10 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
             "description": "icontains",
         },
     )
+    job_queues = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=JobQueue.objects.all(),
+        label="Job Queue (name or ID)",
+    )
 
     class Meta:
         model = Job

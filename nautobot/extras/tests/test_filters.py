@@ -882,6 +882,8 @@ class JobFilterSetTestCase(FilterTestCases.FilterTestCase):
         ("job_class_name",),
         ("module_name",),
         ("name",),
+        ("job_queues", "job_queues__id"),
+        ("job_queues", "job_queues__name"),
     )
 
     @classmethod
