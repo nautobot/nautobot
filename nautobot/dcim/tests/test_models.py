@@ -1908,7 +1908,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         parent_device.rack = rack
         parent_device.save()
 
-        # Test assigning a rack existing in the child location as the parent device
+        # Test assigning a rack in the child location of the parent device location
         location_status = Status.objects.get_for_model(Location).first()
         child_location = Location.objects.create(
             name="Child Location 1",
@@ -1920,7 +1920,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         parent_device.rack = child_rack
         parent_device.validated_save()
 
-        # Test assigning a rack existing in the child location as the parent device
+        # Test assigning a rack outside the child locations of the parent device location
         new_location = Location.objects.create(
             name="New Location 1",
             status=location_status,
