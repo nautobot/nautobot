@@ -208,7 +208,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                         response, f'<a href="{locations_list_url}?prefixes={prefix.pk}" class="badge">{count}</a>'
                     )
                 elif count == 1:
-                    self.assertBodyContains(response, hyperlinked_object(prefix.locations.first()))
+                    self.assertBodyContains(response, hyperlinked_object(prefix.locations.first().name))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_empty_queryset(self):
