@@ -493,6 +493,9 @@ class LinkedCountColumn(django_tables2.Column):
         reverse_lookup (str, optional): The reverse lookup parameter to use to derive the count.
             If not specified, the first key in `url_params` will be implicitly used as the `reverse_lookup` value.
         distinct (bool, optional): Parameter passed through to `count_related()`.
+        display_field (str, optional): Name of the field to use when displaying an object rather than just a count.
+            This will be passed to hyperlinked_object() as the `field` parameter
+            If not specified, it will use the "display" field.
         **kwargs (dict, optional): As the parent Column class.
 
     Examples:
@@ -536,6 +539,7 @@ class LinkedCountColumn(django_tables2.Column):
         reverse_lookup=None,
         distinct=False,
         default=None,
+        display_field="display",
         **kwargs,
     ):
         self.viewname = viewname
@@ -544,6 +548,7 @@ class LinkedCountColumn(django_tables2.Column):
         self.url_params = url_params
         self.reverse_lookup = reverse_lookup or next(iter(url_params.keys()))
         self.distinct = distinct
+        self.display_field = display_field
         self.model = get_model_for_view_name(self.viewname)
         super().__init__(*args, default=default, **kwargs)
 
@@ -565,7 +570,7 @@ class LinkedCountColumn(django_tables2.Column):
         if value > 1:
             return format_html('<a href="{}" class="badge">{}</a>', url, value)
         if related_record is not None:
-            return helpers.hyperlinked_object(related_record)
+            return helpers.hyperlinked_object(related_record, self.display_field)
         if value == 1:
             return format_html('<a href="{}" class="badge">{}</a>', url, value)
         return helpers.placeholder(value)
