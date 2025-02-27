@@ -1,0 +1,1 @@
+Changed "Locations" column in Prefix table to show `location.name` instead of `location.display` to avoid verbose location hierarchy in tables
