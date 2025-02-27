@@ -1,1 +1,1 @@
-The _save_tags method now uses the 'tags' object list as it is already a list of Tag objects.
+Fixed an erroneous `ValidationError` when attempting to apply Tags to an object via the REST API.
