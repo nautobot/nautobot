@@ -72,24 +72,24 @@ Whether you are getting started for the first time, looking to build a local lab
 
 === "Nautobot Cloud"
 
-    [Nautobot Cloud](https://networktocode.com/nautobot/nautobot-cloud/) is a commercial Software as a Service (SaaS) offering from Network to Code. It offers self-service and turnkey deployment for Nautobot removing the need for infrastructure setup and maintenance for the application. 
+    [Nautobot Cloud](https://networktocode.com/nautobot/nautobot-cloud/) is a commercial Software as a Service (SaaS) offering from Network to Code. It is the _**easy**_ button for Nautobot. It offers self-service and turnkey deployment for Nautobot removing the need for infrastructure setup and maintenance including one-click upgrades, cones, backups and restores, and a marketplace to streamline Nautobot App installations.
 
-    Nautobot Cloud also streamlines the deployment and management of several other commonly used automation tools:
-
-    * [Ansible AWX](https://github.com/ansible/awx)
-    * Commonly used network telemetry stack (Grafana / Prometheus / Telegraf)
-    * Linux automation utilities
+    <!-- pyml disable-num-lines 5 no-inline-html -->
+    <div class="grid cards example-images" markdown>
+    ![Nautobot Cloud Example](../../../media/user-guide/administration/getting-started/nautobot-cloud.png){ .on-glb }
+    </div>
 
     ### Nautobot Cloud Pros
 
-    * Click to deploy multiple instances of Nautobot with no effort
+    * One-click Nautobot deployments **and** upgrades
     * Enterprise grade dashboards to see trends of Nautobot data across all Nautobot instances
     * Click to install apps from Nautobot Cloud Marketplace
     * Cloud-based database snapshots
+    * Once-click deployments of Ansible AWX too
 
     ### Nautobot Cloud Cons
 
-    * Requires paid account with Network to Code
+    * You’ll have to find something else to do with all that freed-up time now that you’re not maintaining on-prem applications and infrastructure.
 
 ## About Dependencies
 
