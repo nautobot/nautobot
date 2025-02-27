@@ -1,1 +1,1 @@
-Enabled assignment of Racks to parent Device from parent Device's location and child locations.
+Enabled assignment of a Device to a Rack that belongs to a child Location of the device's location; for example, a Device located in a "Building" can now be assigned to a Rack located in a "Room" within that building.

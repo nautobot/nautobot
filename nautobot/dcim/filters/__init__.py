@@ -399,7 +399,7 @@ class RackGroupFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet, NameSe
         fields = ["id", "name", "description", "racks"]
 
     def generate_query__ancestors(self, value):
-        """Helper method used by _ancestor() method."""
+        """Helper method used by _ancestors() method."""
         if value:
             locations = Location.objects.filter(pk__in=[v.pk for v in value])
             pk_list = []

@@ -675,7 +675,7 @@ class Device(PrimaryModel, ConfigContextModel):
                 # Rack's location must be a child location or the same location as that of the parent device.
                 # Location is a required field on rack.
                 rack_location = self.rack.location
-                if rack_location not in device_location.descendants(include_self=True):
+                if device_location not in rack_location.ancestors(include_self=True):
                     raise ValidationError(
                         {
                             "rack": f'Rack "{self.rack}" does not belong to location "{self.location}" and its descendants.'
