@@ -204,6 +204,11 @@ class NautobotTestCaseMixin:
         fields = [k for k in data.keys() if k not in exclude]
         model_dict = self.model_to_dict(instance, fields=fields, api=api)
 
+        # Creating ConfigContext with 'tags', in 'model_dict' 'tags' become [UUID]. In 'data' 'tags' become [str].
+        if isinstance(instance, extras_models.ConfigContext):
+            if model_dict.get('tags', []):
+                model_dict['tags'] = [str(pk) for pk in model_dict['tags']]
+
         new_model_dict = {}
         for k, v in model_dict.items():
             if isinstance(v, list):
