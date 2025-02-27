@@ -210,7 +210,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Config Context 4",
                 "data": {"more_foo": True},
-                "tags": [str(tag.pk) for tag in Tag.objects.get_for_model(Device)]
+                "tags": [tag.pk for tag in Tag.objects.get_for_model(Device)]
             },
             {
                 "name": "Config Context 5",
