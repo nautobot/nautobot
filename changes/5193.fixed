@@ -1,0 +1,1 @@
+Fixed an erroneous `ValidationError` when attempting to apply Tags to an object via the REST API.
