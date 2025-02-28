@@ -72,7 +72,7 @@ Whether you are getting started for the first time, looking to build a local lab
 
 === "Nautobot Cloud"
 
-    [Nautobot Cloud](https://networktocode.com/nautobot/nautobot-cloud/) is a commercial Software as a Service (SaaS) offering from Network to Code. It is the _**easy**_ button for Nautobot. It offers self-service and turnkey deployment for Nautobot removing the need for infrastructure setup and maintenance including one-click upgrades, cones, backups and restores, and a marketplace to streamline Nautobot App installations.
+    [Nautobot Cloud](https://networktocode.com/nautobot/nautobot-cloud/) is a commercial Software as a Service (SaaS) offering from Network to Code. It is the _**easy**_ button for Nautobot. It offers self-service and turnkey deployment for Nautobot removing the need for infrastructure setup and maintenance including one-click upgrades, clones, backups and restores, and a marketplace to streamline Nautobot App installations.
 
     <!-- pyml disable-num-lines 5 no-inline-html -->
     <div class="grid cards example-images" markdown>
@@ -85,7 +85,7 @@ Whether you are getting started for the first time, looking to build a local lab
     * Enterprise grade dashboards to see trends of Nautobot data across all Nautobot instances
     * Click to install apps from Nautobot Cloud Marketplace
     * Cloud-based database snapshots
-    * Once-click deployments of Ansible AWX too
+    * One-click deployments of Ansible AWX too
 
     ### Nautobot Cloud Cons
 
