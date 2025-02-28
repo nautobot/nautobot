@@ -14,18 +14,32 @@ __initialized = False
 
 def add_success_logger():
     """Add a custom log level for success messages."""
-    SUCCESS = 25
+    SUCCESS = 25  # between INFO and WARNING
     logging.addLevelName(SUCCESS, "SUCCESS")
 
-    def success(self, message, *args, **kws):
+    def success(self, message, *args, **kwargs):
         if self.isEnabledFor(SUCCESS):
-            self._log(SUCCESS, message, args, **kws)
+            self._log(SUCCESS, message, args, **kwargs)
 
     logging.Logger.success = success
     return success
 
 
+def add_failure_logger():
+    """Add a custom log level for failure messages less severe than an ERROR."""
+    FAILURE = 35  # between WARNING and ERROR
+    logging.addLevelName(FAILURE, "FAILURE")
+
+    def failure(self, message, *args, **kwargs):
+        if self.isEnabledFor(FAILURE):
+            self._log(FAILURE, message, args, **kwargs)
+
+    logging.Logger.failure = failure
+    return failure
+
+
 add_success_logger()
+add_failure_logger()
 logger = logging.getLogger(__name__)
 
 

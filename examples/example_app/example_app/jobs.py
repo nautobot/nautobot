@@ -318,6 +318,7 @@ class ExampleJob(Job):
 
             *This is italicized*
         """
+        has_sensitive_variables = False
 
     def run(self, some_json_data):  # pylint:disable=arguments-differ
         # some_json_data is passed to the run method as a Python object (e.g. dictionary)
@@ -373,6 +374,7 @@ class ExampleLoggingJob(Job):
     class Meta:
         name = "Example logging job."
         description = "I log stuff to demonstrate how UI logging works."
+        has_sensitive_variables = False
         task_queues = [
             settings.CELERY_TASK_DEFAULT_QUEUE,
             "priority",
@@ -400,6 +402,7 @@ class ExampleFileInputOutputJob(Job):
     class Meta:
         name = "Example File Input/Output job"
         description = "Takes a file as input and reverses its line order, creating a new file as output."
+        has_sensitive_variables = False
 
     def run(self, input_file):  # pylint:disable=arguments-differ
         # Note that input_file is always opened in binary mode, so we need to decode it to a str
@@ -479,6 +482,24 @@ class ExampleComplexJobButtonReceiver(JobButtonReceiver):
             self.logger.error("Unable to run Job Button for type %s.", type(obj).__name__, extra={"object": obj})
 
 
+class ExampleFailingJob(Job):
+    class Meta:
+        name = "Job that fails either cleanly or messily"
+        description = "Example job that can fail cleanly with `self.fail()` or messily by raising an exception."
+        has_sensitive_variables = False
+
+    fail_cleanly = BooleanVar(default=True)
+
+    def run(self, *args, fail_cleanly, **kwargs):
+        self.logger.info("Job is running merrily along, when suddenly...")
+        if fail_cleanly:
+            self.fail("A failure occurs but is handled cleanly, allowing the job to continue...")
+        else:
+            raise RuntimeError("A failure occurs and is not handled cleanly, aborting the job immediately!")
+        self.logger.failure("The job runs to completion (but is a failure) and returns a result")
+        return "The job ran to completion"
+
+
 class ExampleSingletonJob(Job):
     class Meta:
         name = "Example job, only one can run at any given time."
@@ -500,5 +521,6 @@ jobs = (
     ExampleSimpleJobButtonReceiver,
     ExampleComplexJobButtonReceiver,
     ExampleSingletonJob,
+    ExampleFailingJob,
 )
 register_jobs(*jobs)

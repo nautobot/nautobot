@@ -1,0 +1,2 @@
+Added `Job.logger.failure()` API for Job logging, using custom `FAILURE` log level (between `WARNING` and `ERROR`).
+Added `Job.fail()` API, which can be used to fail a Job more gracefully than by raising an uncaught exception.
