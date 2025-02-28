@@ -1,5 +1,6 @@
 from typing import Optional
 
+from django.apps import apps
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.urls import get_resolver
@@ -207,16 +208,18 @@ class Command(BaseCommand):
                 view_name = (
                     f"plugins-api:{api_app_name}:{pattern.name}"  # plugins-api:example_app-api:examplemodel-list
                 )
-                app_name = app_name.replace("_", "-")  # example_app -> example-app
-                url_pattern = f"/api/plugins/{app_name}/{pattern.pattern}"  # /api/plugins/example-app/models/
+                app_config = apps.get_app_config(app_name)
+                base_url = app_config.base_url
+                url_pattern = f"/api/plugins/{base_url}/{pattern.pattern}"  # /api/plugins/example-app/models/
         else:
             if not is_app:
                 url_pattern = f"/{app_name}/{pattern.pattern}"  # /dcim/devices/
                 view_name = f"{app_name}:{pattern.name}"  # dcim:device_list
             else:
                 view_name = f"plugins:{app_name}:{pattern.name}"  # plugins:example_app:examplemodel_list
-                app_name = app_name.replace("_", "-")  # example_app -> example-app
-                url_pattern = f"/plugins/{app_name}/{pattern.pattern}"  # /plugins/example-app/models/
+                app_config = apps.get_app_config(app_name)
+                base_url = app_config.base_url
+                url_pattern = f"/plugins/{base_url}/{pattern.pattern}"  # /plugins/example-app/models/
 
         return url_pattern, view_name, is_api_endpoint
 

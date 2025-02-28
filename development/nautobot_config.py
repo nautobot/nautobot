@@ -57,6 +57,12 @@ LOGGING["loggers"]["nautobot"]["level"] = LOG_LEVEL  # noqa: F405
 
 PLUGINS = [
     "example_app",
+    "nautobot_floor_plan",
+    "nautobot_bgp_models",
+    "nautobot_chatops",
+    "nautobot_circuit_maintenance",
+    "nautobot_device_lifecycle_mgmt",
+    "nautobot_firewall_models",
 ]
 
 CORS_ALLOWED_ORIGINS = ["http://localhost:3000"]

@@ -175,6 +175,16 @@ rich = "~13.9.4"
 towncrier = "~24.8.0"
 # Watch files for celery and mkdocs reload
 watchdog = "~6.0.0"
+# nautobot apps for endpoint testing
+nautobot-floor-plan = "~2.6.0"
+nautobot-secrets-providers = "~3.2.0"
+nautobot-capacity-metrics = "~3.1.1"
+nautobot-bgp-models = "~2.3.0"
+nautobot-chatops = "~3.1.3"
+nautobot-circuit-maintenance = "~2.3.1"
+nautobot-device-lifecycle-mgmt = "~2.2.1"
+nautobot-device-onboarding = "~4.2.2"
+nautobot-firewall-models = "~2.2.1"
 
 [tool.poetry.group.docs.dependencies]
 # Rendering docs to HTML

@@ -1,0 +1,954 @@
+endpoints:
+  about:
+  - /about/
+  api-root:
+  - /api/
+  api-status:
+  - /api/status/
+  apps-api:api-root:
+  - /api/apps/
+  apps-api:apps-list:
+  - /api/apps/installed-apps/
+  apps:apps_list:
+  - /apps/installed-apps/
+  circuits-api:circuit-list:
+  - /api/circuits/circuits/
+  - /api/circuits/circuits/?limit=0&offset=0
+  circuits-api:circuittermination-list:
+  - /api/circuits/circuit-terminations/
+  - /api/circuits/circuit-terminations/?limit=0&offset=0
+  circuits-api:circuittype-list:
+  - /api/circuits/circuit-types/
+  - /api/circuits/circuit-types/?limit=0&offset=0
+  circuits-api:provider-list:
+  - /api/circuits/providers/
+  - /api/circuits/providers/?limit=0&offset=0
+  circuits-api:providernetwork-list:
+  - /api/circuits/provider-networks/
+  - /api/circuits/provider-networks/?limit=0&offset=0
+  circuits:circuit_list:
+  - /circuits/circuits/
+  - /circuits/circuits/?per_page=0&page=5
+  circuits:circuittermination_list:
+  - /circuits/circuit-terminations/
+  - /circuits/circuit-terminations/?per_page=0&page=5
+  circuits:circuittype_list:
+  - /circuits/circuit-types/
+  - /circuits/circuit-types/?per_page=0&page=5
+  circuits:provider_list:
+  - /circuits/providers/
+  - /circuits/providers/?per_page=0&page=5
+  circuits:providernetwork_list:
+  - /circuits/provider-networks/
+  - /circuits/provider-networks/?per_page=0&page=5
+  cloud-api:cloudaccount-list:
+  - /api/cloud/cloud-accounts/
+  - /api/cloud/cloud-accounts/?limit=0&offset=0
+  cloud-api:cloudnetwork-list:
+  - /api/cloud/cloud-networks/
+  - /api/cloud/cloud-networks/?limit=0&offset=0
+  cloud-api:cloudnetworkprefixassignment-list:
+  - /api/cloud/cloud-network-prefix-assignments/
+  - /api/cloud/cloud-network-prefix-assignments/?limit=0&offset=0
+  cloud-api:cloudresourcetype-list:
+  - /api/cloud/cloud-resource-types/
+  - /api/cloud/cloud-resource-types/?limit=0&offset=0
+  cloud-api:cloudservice-list:
+  - /api/cloud/cloud-services/
+  - /api/cloud/cloud-services/?limit=0&offset=0
+  cloud-api:cloudservicenetworkassignment-list:
+  - /api/cloud/cloud-service-network-assignments/
+  - /api/cloud/cloud-service-network-assignments/?limit=0&offset=0
+  cloud:cloudaccount_list:
+  - /cloud/cloud-accounts/
+  - /cloud/cloud-accounts/?per_page=0&page=5
+  cloud:cloudnetwork_list:
+  - /cloud/cloud-networks/
+  - /cloud/cloud-networks/?per_page=0&page=5
+  cloud:cloudresourcetype_list:
+  - /cloud/cloud-resource-types/
+  - /cloud/cloud-resource-types/?per_page=0&page=5
+  cloud:cloudservice_list:
+  - /cloud/cloud-services/
+  - /cloud/cloud-services/?per_page=0&page=5
+  dcim-api:cable-list:
+  - /api/dcim/cables/
+  - /api/dcim/cables/?limit=0&offset=0
+  dcim-api:consoleconnections-list:
+  - /api/dcim/console-connections/
+  dcim-api:consoleport-list:
+  - /api/dcim/console-ports/
+  - /api/dcim/console-ports/?limit=0&offset=0
+  dcim-api:consoleporttemplate-list:
+  - /api/dcim/console-port-templates/
+  - /api/dcim/console-port-templates/?limit=0&offset=0
+  dcim-api:consoleserverport-list:
+  - /api/dcim/console-server-ports/
+  - /api/dcim/console-server-ports/?limit=0&offset=0
+  dcim-api:consoleserverporttemplate-list:
+  - /api/dcim/console-server-port-templates/
+  - /api/dcim/console-server-port-templates/?limit=0&offset=0
+  dcim-api:controller-list:
+  - /api/dcim/controllers/
+  - /api/dcim/controllers/?limit=0&offset=0
+  dcim-api:controllermanageddevicegroup-list:
+  - /api/dcim/controller-managed-device-groups/
+  - /api/dcim/controller-managed-device-groups/?limit=0&offset=0
+  dcim-api:device-list:
+  - /api/dcim/devices/
+  - /api/dcim/devices/?limit=0&offset=0
+  dcim-api:devicebay-list:
+  - /api/dcim/device-bays/
+  - /api/dcim/device-bays/?limit=0&offset=0
+  dcim-api:devicebaytemplate-list:
+  - /api/dcim/device-bay-templates/
+  - /api/dcim/device-bay-templates/?limit=0&offset=0
+  dcim-api:devicefamily-list:
+  - /api/dcim/device-families/
+  - /api/dcim/device-families/?limit=0&offset=0
+  dcim-api:deviceredundancygroup-list:
+  - /api/dcim/device-redundancy-groups/
+  - /api/dcim/device-redundancy-groups/?limit=0&offset=0
+  dcim-api:devicetype-list:
+  - /api/dcim/device-types/
+  - /api/dcim/device-types/?limit=0&offset=0
+  dcim-api:devicetypetosoftwareimagefile-list:
+  - /api/dcim/device-types-to-software-image-files/
+  - /api/dcim/device-types-to-software-image-files/?limit=0&offset=0
+  dcim-api:frontport-list:
+  - /api/dcim/front-ports/
+  - /api/dcim/front-ports/?limit=0&offset=0
+  dcim-api:frontporttemplate-list:
+  - /api/dcim/front-port-templates/
+  - /api/dcim/front-port-templates/?limit=0&offset=0
+  dcim-api:interface-list:
+  - /api/dcim/interfaces/
+  - /api/dcim/interfaces/?limit=0&offset=0
+  dcim-api:interfaceconnections-list:
+  - /api/dcim/interface-connections/
+  dcim-api:interfaceredundancygroup-list:
+  - /api/dcim/interface-redundancy-groups/
+  - /api/dcim/interface-redundancy-groups/?limit=0&offset=0
+  dcim-api:interfaceredundancygroupassociation-list:
+  - /api/dcim/interface-redundancy-group-associations/
+  - /api/dcim/interface-redundancy-group-associations/?limit=0&offset=0
+  dcim-api:interfacetemplate-list:
+  - /api/dcim/interface-templates/
+  - /api/dcim/interface-templates/?limit=0&offset=0
+  dcim-api:interfacevdcassignment-list:
+  - /api/dcim/interface-vdc-assignments/
+  - /api/dcim/interface-vdc-assignments/?limit=0&offset=0
+  dcim-api:inventoryitem-list:
+  - /api/dcim/inventory-items/
+  - /api/dcim/inventory-items/?limit=0&offset=0
+  dcim-api:location-list:
+  - /api/dcim/locations/
+  - /api/dcim/locations/?limit=0&offset=0
+  dcim-api:locationtype-list:
+  - /api/dcim/location-types/
+  - /api/dcim/location-types/?limit=0&offset=0
+  dcim-api:manufacturer-list:
+  - /api/dcim/manufacturers/
+  - /api/dcim/manufacturers/?limit=0&offset=0
+  dcim-api:module-list:
+  - /api/dcim/modules/
+  - /api/dcim/modules/?limit=0&offset=0
+  dcim-api:modulebay-list:
+  - /api/dcim/module-bays/
+  - /api/dcim/module-bays/?limit=0&offset=0
+  dcim-api:modulebaytemplate-list:
+  - /api/dcim/module-bay-templates/
+  - /api/dcim/module-bay-templates/?limit=0&offset=0
+  dcim-api:moduletype-list:
+  - /api/dcim/module-types/
+  - /api/dcim/module-types/?limit=0&offset=0
+  dcim-api:platform-list:
+  - /api/dcim/platforms/
+  - /api/dcim/platforms/?limit=0&offset=0
+  dcim-api:powerconnections-list:
+  - /api/dcim/power-connections/
+  dcim-api:powerfeed-list:
+  - /api/dcim/power-feeds/
+  - /api/dcim/power-feeds/?limit=0&offset=0
+  dcim-api:poweroutlet-list:
+  - /api/dcim/power-outlets/
+  - /api/dcim/power-outlets/?limit=0&offset=0
+  dcim-api:poweroutlettemplate-list:
+  - /api/dcim/power-outlet-templates/
+  - /api/dcim/power-outlet-templates/?limit=0&offset=0
+  dcim-api:powerpanel-list:
+  - /api/dcim/power-panels/
+  - /api/dcim/power-panels/?limit=0&offset=0
+  dcim-api:powerport-list:
+  - /api/dcim/power-ports/
+  - /api/dcim/power-ports/?limit=0&offset=0
+  dcim-api:powerporttemplate-list:
+  - /api/dcim/power-port-templates/
+  - /api/dcim/power-port-templates/?limit=0&offset=0
+  dcim-api:rack-list:
+  - /api/dcim/racks/
+  - /api/dcim/racks/?limit=0&offset=0
+  dcim-api:rackgroup-list:
+  - /api/dcim/rack-groups/
+  - /api/dcim/rack-groups/?limit=0&offset=0
+  dcim-api:rackreservation-list:
+  - /api/dcim/rack-reservations/
+  - /api/dcim/rack-reservations/?limit=0&offset=0
+  dcim-api:rearport-list:
+  - /api/dcim/rear-ports/
+  - /api/dcim/rear-ports/?limit=0&offset=0
+  dcim-api:rearporttemplate-list:
+  - /api/dcim/rear-port-templates/
+  - /api/dcim/rear-port-templates/?limit=0&offset=0
+  dcim-api:softwareimagefile-list:
+  - /api/dcim/software-image-files/
+  - /api/dcim/software-image-files/?limit=0&offset=0
+  dcim-api:softwareversion-list:
+  - /api/dcim/software-versions/
+  - /api/dcim/software-versions/?limit=0&offset=0
+  dcim-api:virtualchassis-list:
+  - /api/dcim/virtual-chassis/
+  - /api/dcim/virtual-chassis/?limit=0&offset=0
+  dcim-api:virtualdevicecontext-list:
+  - /api/dcim/virtual-device-contexts/
+  - /api/dcim/virtual-device-contexts/?limit=0&offset=0
+  dcim:cable_list:
+  - /dcim/cables/
+  - /dcim/cables/?per_page=0&page=5
+  dcim:console_connections_list:
+  - /dcim/console-connections/
+  dcim:consoleport_list:
+  - /dcim/console-ports/
+  - /dcim/console-ports/?per_page=0&page=5
+  dcim:consoleserverport_list:
+  - /dcim/console-server-ports/
+  - /dcim/console-server-ports/?per_page=0&page=5
+  dcim:controller_list:
+  - /dcim/controllers/
+  - /dcim/controllers/?per_page=0&page=5
+  dcim:controllermanageddevicegroup_list:
+  - /dcim/controller-managed-device-groups/
+  - /dcim/controller-managed-device-groups/?per_page=0&page=5
+  dcim:device_list:
+  - /dcim/devices/
+  - /dcim/devices/?per_page=0&page=5
+  dcim:devicebay_list:
+  - /dcim/device-bays/
+  - /dcim/device-bays/?per_page=0&page=5
+  dcim:devicefamily_list:
+  - /dcim/device-families/
+  - /dcim/device-families/?per_page=0&page=5
+  dcim:deviceredundancygroup_list:
+  - /dcim/device-redundancy-groups/
+  - /dcim/device-redundancy-groups/?per_page=0&page=5
+  dcim:devicetype_list:
+  - /dcim/device-types/
+  - /dcim/device-types/?per_page=0&page=5
+  dcim:frontport_list:
+  - /dcim/front-ports/
+  - /dcim/front-ports/?per_page=0&page=5
+  dcim:interface_connections_list:
+  - /dcim/interface-connections/
+  - /dcim/interface-connections/?per_page=0&page=5
+  dcim:interface_list:
+  - /dcim/interfaces/
+  - /dcim/interfaces/?per_page=0&page=5
+  dcim:interfaceredundancygroup_list:
+  - /dcim/interface-redundancy-groups/
+  - /dcim/interface-redundancy-groups/?per_page=0&page=5
+  dcim:inventoryitem_list:
+  - /dcim/inventory-items/
+  - /dcim/inventory-items/?per_page=0&page=5
+  dcim:location_list:
+  - /dcim/locations/
+  - /dcim/locations/?per_page=0&page=5
+  dcim:locationtype_list:
+  - /dcim/location-types/
+  - /dcim/location-types/?per_page=0&page=5
+  dcim:manufacturer_list:
+  - /dcim/manufacturers/
+  - /dcim/manufacturers/?per_page=0&page=5
+  dcim:module_list:
+  - /dcim/modules/
+  - /dcim/modules/?per_page=0&page=5
+  dcim:modulebay_list:
+  - /dcim/module-bays/
+  - /dcim/module-bays/?per_page=0&page=5
+  dcim:moduletype_list:
+  - /dcim/module-types/
+  - /dcim/module-types/?per_page=0&page=5
+  dcim:platform_list:
+  - /dcim/platforms/
+  - /dcim/platforms/?per_page=0&page=5
+  dcim:power_connections_list:
+  - /dcim/power-connections/
+  dcim:powerfeed_list:
+  - /dcim/power-feeds/
+  - /dcim/power-feeds/?per_page=0&page=5
+  dcim:poweroutlet_list:
+  - /dcim/power-outlets/
+  - /dcim/power-outlets/?per_page=0&page=5
+  dcim:powerpanel_list:
+  - /dcim/power-panels/
+  - /dcim/power-panels/?per_page=0&page=5
+  dcim:powerport_list:
+  - /dcim/power-ports/
+  - /dcim/power-ports/?per_page=0&page=5
+  dcim:rack_elevation_list:
+  - /dcim/rack-elevations/
+  - /dcim/rack-elevations/?per_page=0&page=5
+  dcim:rack_list:
+  - /dcim/racks/
+  - /dcim/racks/?per_page=0&page=5
+  dcim:rackgroup_list:
+  - /dcim/rack-groups/
+  - /dcim/rack-groups/?per_page=0&page=5
+  dcim:rackreservation_list:
+  - /dcim/rack-reservations/
+  - /dcim/rack-reservations/?per_page=0&page=5
+  dcim:rearport_list:
+  - /dcim/rear-ports/
+  - /dcim/rear-ports/?per_page=0&page=5
+  dcim:softwareimagefile_list:
+  - /dcim/software-image-files/
+  - /dcim/software-image-files/?per_page=0&page=5
+  dcim:softwareversion_list:
+  - /dcim/software-versions/
+  - /dcim/software-versions/?per_page=0&page=5
+  dcim:virtualchassis_list:
+  - /dcim/virtual-chassis/
+  - /dcim/virtual-chassis/?per_page=0&page=5
+  dcim:virtualdevicecontext_list:
+  - /dcim/virtual-device-contexts/
+  - /dcim/virtual-device-contexts/?per_page=0&page=5
+  extras-api:computedfield-list:
+  - /api/extras/computed-fields/
+  - /api/extras/computed-fields/?limit=0&offset=0
+  extras-api:configcontext-list:
+  - /api/extras/config-contexts/
+  - /api/extras/config-contexts/?limit=0&offset=0
+  extras-api:configcontextschema-list:
+  - /api/extras/config-context-schemas/
+  - /api/extras/config-context-schemas/?limit=0&offset=0
+  extras-api:contact-list:
+  - /api/extras/contacts/
+  - /api/extras/contacts/?limit=0&offset=0
+  extras-api:contactassociation-list:
+  - /api/extras/contact-associations/
+  - /api/extras/contact-associations/?limit=0&offset=0
+  extras-api:contenttype-detail:
+  - /api/extras/content-types/1/
+  - /api/extras/content-types/193/
+  extras-api:contenttype-list:
+  - /api/extras/content-types/
+  extras-api:customfield-detail:
+  - /api/extras/custom-fields/2a73aa14-40d4-4524-baee-982d79cd0b77/
+  - /api/extras/custom-fields/3d82b205-57b0-4a03-a749-51debcffa679/
+  extras-api:customfield-list:
+  - /api/extras/custom-fields/
+  - /api/extras/custom-fields/?limit=0&offset=0
+  extras-api:customfield-notes:
+  - /api/extras/custom-fields/2a73aa14-40d4-4524-baee-982d79cd0b77/notes/
+  - /api/extras/custom-fields/3d82b205-57b0-4a03-a749-51debcffa679/notes/
+  extras-api:customfieldchoice-list:
+  - /api/extras/custom-field-choices/
+  - /api/extras/custom-field-choices/?limit=0&offset=0
+  extras-api:customlink-list:
+  - /api/extras/custom-links/
+  - /api/extras/custom-links/?limit=0&offset=0
+  extras-api:dynamicgroup-list:
+  - /api/extras/dynamic-groups/
+  - /api/extras/dynamic-groups/?limit=0&offset=0
+  extras-api:dynamicgroupmembership-list:
+  - /api/extras/dynamic-group-memberships/
+  - /api/extras/dynamic-group-memberships/?limit=0&offset=0
+  extras-api:exporttemplate-list:
+  - /api/extras/export-templates/
+  - /api/extras/export-templates/?limit=0&offset=0
+  extras-api:externalintegration-list:
+  - /api/extras/external-integrations/
+  - /api/extras/external-integrations/?limit=0&offset=0
+  extras-api:fileproxy-list:
+  - /api/extras/file-proxies/
+  - /api/extras/file-proxies/?limit=0&offset=0
+  extras-api:gitrepository-list:
+  - /api/extras/git-repositories/
+  - /api/extras/git-repositories/?limit=0&offset=0
+  extras-api:graphqlquery-list:
+  - /api/extras/graphql-queries/
+  - /api/extras/graphql-queries/?limit=0&offset=0
+  extras-api:imageattachment-list:
+  - /api/extras/image-attachments/
+  - /api/extras/image-attachments/?limit=0&offset=0
+  extras-api:job-list:
+  - /api/extras/jobs/
+  - /api/extras/jobs/?limit=4&offset=16
+  extras-api:jobbutton-list:
+  - /api/extras/job-buttons/
+  - /api/extras/job-buttons/?limit=0&offset=0
+  extras-api:jobhook-list:
+  - /api/extras/job-hooks/
+  - /api/extras/job-hooks/?limit=0&offset=0
+  extras-api:joblogentry-list:
+  - /api/extras/job-logs/
+  - /api/extras/job-logs/?limit=0&offset=0
+  extras-api:jobqueue-detail:
+  - /api/extras/job-queues/90995200-24ea-472a-9ad6-102bce5fff82/
+  - /api/extras/job-queues/96e24edf-5ed6-48a7-bbdf-a385f8aa0030/
+  extras-api:jobqueue-list:
+  - /api/extras/job-queues/
+  - /api/extras/job-queues/?limit=0&offset=0
+  extras-api:jobqueue-notes:
+  - /api/extras/job-queues/90995200-24ea-472a-9ad6-102bce5fff82/notes/
+  - /api/extras/job-queues/96e24edf-5ed6-48a7-bbdf-a385f8aa0030/notes/
+  extras-api:jobqueueassignment-detail:
+  - /api/extras/job-queue-assignments/2195be5b-8a39-400f-8270-6e5a68b13cc9/
+  - /api/extras/job-queue-assignments/9f0fc2e8-3a78-41b1-8402-0b8d892e78a2/
+  extras-api:jobqueueassignment-list:
+  - /api/extras/job-queue-assignments/
+  - /api/extras/job-queue-assignments/?limit=4&offset=16
+  extras-api:jobresult-list:
+  - /api/extras/job-results/
+  - /api/extras/job-results/?limit=0&offset=0
+  extras-api:metadatachoice-list:
+  - /api/extras/metadata-choices/
+  - /api/extras/metadata-choices/?limit=0&offset=0
+  extras-api:metadatatype-list:
+  - /api/extras/metadata-types/
+  - /api/extras/metadata-types/?limit=0&offset=0
+  extras-api:note-list:
+  - /api/extras/notes/
+  - /api/extras/notes/?limit=0&offset=0
+  extras-api:objectchange-list:
+  - /api/extras/object-changes/
+  - /api/extras/object-changes/?limit=0&offset=0
+  extras-api:objectmetadata-list:
+  - /api/extras/object-metadata/
+  - /api/extras/object-metadata/?limit=0&offset=0
+  extras-api:relationship-list:
+  - /api/extras/relationships/
+  - /api/extras/relationships/?limit=0&offset=0
+  extras-api:relationshipassociation-list:
+  - /api/extras/relationship-associations/
+  - /api/extras/relationship-associations/?limit=0&offset=0
+  extras-api:role-detail:
+  - /api/extras/roles/86882dd1-dab6-49ce-9624-0d370f08686e/
+  - /api/extras/roles/e94c24d8-d5f9-42a1-9829-dfa69ea784fb/
+  extras-api:role-list:
+  - /api/extras/roles/
+  - /api/extras/roles/?limit=2&offset=8
+  extras-api:role-notes:
+  - /api/extras/roles/86882dd1-dab6-49ce-9624-0d370f08686e/notes/
+  - /api/extras/roles/e94c24d8-d5f9-42a1-9829-dfa69ea784fb/notes/
+  extras-api:savedview-list:
+  - /api/extras/saved-views/
+  - /api/extras/saved-views/?limit=0&offset=0
+  extras-api:scheduledjob-list:
+  - /api/extras/scheduled-jobs/
+  - /api/extras/scheduled-jobs/?limit=0&offset=0
+  extras-api:secret-list:
+  - /api/extras/secrets/
+  - /api/extras/secrets/?limit=0&offset=0
+  extras-api:secretsgroup-list:
+  - /api/extras/secrets-groups/
+  - /api/extras/secrets-groups/?limit=0&offset=0
+  extras-api:secretsgroupassociation-list:
+  - /api/extras/secrets-groups-associations/
+  - /api/extras/secrets-groups-associations/?limit=0&offset=0
+  extras-api:staticgroupassociation-list:
+  - /api/extras/static-group-associations/
+  - /api/extras/static-group-associations/?limit=0&offset=0
+  extras-api:status-detail:
+  - /api/extras/statuses/d794d68d-7cd4-4f5a-830d-67338a4f2857/
+  - /api/extras/statuses/dc8c71e8-e39b-409a-8777-fa01afcf7ea3/
+  extras-api:status-list:
+  - /api/extras/statuses/
+  - /api/extras/statuses/?limit=4&offset=16
+  extras-api:status-notes:
+  - /api/extras/statuses/d794d68d-7cd4-4f5a-830d-67338a4f2857/notes/
+  - /api/extras/statuses/dc8c71e8-e39b-409a-8777-fa01afcf7ea3/notes/
+  extras-api:tag-list:
+  - /api/extras/tags/
+  - /api/extras/tags/?limit=0&offset=0
+  extras-api:team-list:
+  - /api/extras/teams/
+  - /api/extras/teams/?limit=0&offset=0
+  extras-api:usersavedviewassociation-list:
+  - /api/extras/user-saved-view-associations/
+  - /api/extras/user-saved-view-associations/?limit=0&offset=0
+  extras-api:webhook-list:
+  - /api/extras/webhooks/
+  - /api/extras/webhooks/?limit=0&offset=0
+  extras:computedfield_list:
+  - /extras/computed-fields/
+  - /extras/computed-fields/?per_page=0&page=5
+  extras:configcontext_list:
+  - /extras/config-contexts/
+  - /extras/config-contexts/?per_page=0&page=5
+  extras:configcontextschema_list:
+  - /extras/config-context-schemas/
+  - /extras/config-context-schemas/?per_page=0&page=5
+  extras:contact_list:
+  - /extras/contacts/
+  - /extras/contacts/?per_page=0&page=5
+  extras:customfield:
+  - /extras/custom-fields/2a73aa14-40d4-4524-baee-982d79cd0b77/
+  - /extras/custom-fields/3d82b205-57b0-4a03-a749-51debcffa679/
+  extras:customfield_changelog:
+  - /extras/custom-fields/2a73aa14-40d4-4524-baee-982d79cd0b77/changelog/
+  - /extras/custom-fields/3d82b205-57b0-4a03-a749-51debcffa679/changelog/
+  extras:customfield_list:
+  - /extras/custom-fields/
+  - /extras/custom-fields/?per_page=0&page=5
+  extras:customfield_notes:
+  - /extras/custom-fields/2a73aa14-40d4-4524-baee-982d79cd0b77/notes/
+  - /extras/custom-fields/3d82b205-57b0-4a03-a749-51debcffa679/notes/
+  extras:customlink_list:
+  - /extras/custom-links/
+  - /extras/custom-links/?per_page=0&page=5
+  extras:dynamicgroup_list:
+  - /extras/dynamic-groups/
+  - /extras/dynamic-groups/?per_page=0&page=5
+  extras:exporttemplate_list:
+  - /extras/export-templates/
+  - /extras/export-templates/?per_page=0&page=5
+  extras:externalintegration_list:
+  - /extras/external-integrations/
+  - /extras/external-integrations/?per_page=0&page=5
+  extras:gitrepository_list:
+  - /extras/git-repositories/
+  - /extras/git-repositories/?per_page=0&page=5
+  extras:graphqlquery_list:
+  - /extras/graphql-queries/
+  - /extras/graphql-queries/?per_page=0&page=5
+  extras:job:
+  - /extras/jobs/30eccbc0-ff2c-4b0c-82bb-c49d72bb8443/
+  - /extras/jobs/c6dad963-144b-4b29-895f-3d0b70910df4/
+  extras:job_changelog:
+  - /extras/jobs/30eccbc0-ff2c-4b0c-82bb-c49d72bb8443/changelog/
+  - /extras/jobs/c6dad963-144b-4b29-895f-3d0b70910df4/changelog/
+  extras:job_list:
+  - /extras/jobs/
+  - /extras/jobs/?per_page=4&page=5
+  extras:job_notes:
+  - /extras/jobs/30eccbc0-ff2c-4b0c-82bb-c49d72bb8443/notes/
+  - /extras/jobs/c6dad963-144b-4b29-895f-3d0b70910df4/notes/
+  extras:jobbutton_list:
+  - /extras/job-buttons/
+  - /extras/job-buttons/?per_page=0&page=5
+  extras:jobhook_list:
+  - /extras/job-hooks/
+  - /extras/job-hooks/?per_page=0&page=5
+  extras:jobqueue:
+  - /extras/job-queues/90995200-24ea-472a-9ad6-102bce5fff82/
+  - /extras/job-queues/96e24edf-5ed6-48a7-bbdf-a385f8aa0030/
+  extras:jobqueue_changelog:
+  - /extras/job-queues/90995200-24ea-472a-9ad6-102bce5fff82/changelog/
+  - /extras/job-queues/96e24edf-5ed6-48a7-bbdf-a385f8aa0030/changelog/
+  extras:jobqueue_list:
+  - /extras/job-queues/
+  - /extras/job-queues/?per_page=0&page=5
+  extras:jobqueue_notes:
+  - /extras/job-queues/90995200-24ea-472a-9ad6-102bce5fff82/notes/
+  - /extras/job-queues/96e24edf-5ed6-48a7-bbdf-a385f8aa0030/notes/
+  extras:jobresult_list:
+  - /extras/job-results/
+  - /extras/job-results/?per_page=0&page=5
+  extras:metadatatype_list:
+  - /extras/metadata-types/
+  - /extras/metadata-types/?per_page=0&page=5
+  extras:note_list:
+  - /extras/notes/
+  - /extras/notes/?per_page=0&page=5
+  extras:objectchange_list:
+  - /extras/object-changes/
+  - /extras/object-changes/?per_page=0&page=5
+  extras:objectmetadata_list:
+  - /extras/object-metadata/
+  - /extras/object-metadata/?per_page=0&page=5
+  extras:relationship_list:
+  - /extras/relationships/
+  - /extras/relationships/?per_page=0&page=5
+  extras:relationshipassociation_list:
+  - /extras/relationship-associations/
+  - /extras/relationship-associations/?per_page=0&page=5
+  extras:role:
+  - /extras/roles/86882dd1-dab6-49ce-9624-0d370f08686e/
+  - /extras/roles/e94c24d8-d5f9-42a1-9829-dfa69ea784fb/
+  extras:role_changelog:
+  - /extras/roles/86882dd1-dab6-49ce-9624-0d370f08686e/changelog/
+  - /extras/roles/e94c24d8-d5f9-42a1-9829-dfa69ea784fb/changelog/
+  extras:role_list:
+  - /extras/roles/
+  - /extras/roles/?per_page=2&page=5
+  extras:role_notes:
+  - /extras/roles/86882dd1-dab6-49ce-9624-0d370f08686e/notes/
+  - /extras/roles/e94c24d8-d5f9-42a1-9829-dfa69ea784fb/notes/
+  extras:savedview_list:
+  - /extras/saved-views/
+  - /extras/saved-views/?per_page=0&page=5
+  extras:scheduledjob_approval_queue_list:
+  - /extras/jobs/scheduled-jobs/approval-queue/
+  - /extras/jobs/scheduled-jobs/approval-queue/?per_page=0&page=5
+  extras:scheduledjob_list:
+  - /extras/jobs/scheduled-jobs/
+  - /extras/jobs/scheduled-jobs/?per_page=0&page=5
+  extras:secret_list:
+  - /extras/secrets/
+  - /extras/secrets/?per_page=0&page=5
+  extras:secretsgroup_list:
+  - /extras/secrets-groups/
+  - /extras/secrets-groups/?per_page=0&page=5
+  extras:staticgroupassociation_list:
+  - /extras/static-group-associations/
+  - /extras/static-group-associations/?per_page=0&page=5
+  extras:status:
+  - /extras/statuses/d794d68d-7cd4-4f5a-830d-67338a4f2857/
+  - /extras/statuses/dc8c71e8-e39b-409a-8777-fa01afcf7ea3/
+  extras:status_changelog:
+  - /extras/statuses/d794d68d-7cd4-4f5a-830d-67338a4f2857/changelog/
+  - /extras/statuses/dc8c71e8-e39b-409a-8777-fa01afcf7ea3/changelog/
+  extras:status_list:
+  - /extras/statuses/
+  - /extras/statuses/?per_page=4&page=5
+  extras:status_notes:
+  - /extras/statuses/d794d68d-7cd4-4f5a-830d-67338a4f2857/notes/
+  - /extras/statuses/dc8c71e8-e39b-409a-8777-fa01afcf7ea3/notes/
+  extras:tag_list:
+  - /extras/tags/
+  - /extras/tags/?per_page=0&page=5
+  extras:team_list:
+  - /extras/teams/
+  - /extras/teams/?per_page=0&page=5
+  extras:webhook_list:
+  - /extras/webhooks/
+  - /extras/webhooks/?per_page=0&page=5
+  home:
+  - /
+  ipam-api:ipaddress-list:
+  - /api/ipam/ip-addresses/
+  - /api/ipam/ip-addresses/?limit=0&offset=0
+  ipam-api:ipaddresstointerface-list:
+  - /api/ipam/ip-address-to-interface/
+  - /api/ipam/ip-address-to-interface/?limit=0&offset=0
+  ipam-api:namespace-detail:
+  - /api/ipam/namespaces/f8963609-5451-4cbb-9039-03e0cdef83c1/
+  ipam-api:namespace-list:
+  - /api/ipam/namespaces/
+  - /api/ipam/namespaces/?limit=0&offset=0
+  ipam-api:namespace-notes:
+  - /api/ipam/namespaces/f8963609-5451-4cbb-9039-03e0cdef83c1/notes/
+  ipam-api:prefix-list:
+  - /api/ipam/prefixes/
+  - /api/ipam/prefixes/?limit=0&offset=0
+  ipam-api:prefixlocationassignment-list:
+  - /api/ipam/prefix-location-assignments/
+  - /api/ipam/prefix-location-assignments/?limit=0&offset=0
+  ipam-api:rir-list:
+  - /api/ipam/rirs/
+  - /api/ipam/rirs/?limit=0&offset=0
+  ipam-api:routetarget-list:
+  - /api/ipam/route-targets/
+  - /api/ipam/route-targets/?limit=0&offset=0
+  ipam-api:service-list:
+  - /api/ipam/services/
+  - /api/ipam/services/?limit=0&offset=0
+  ipam-api:vlan-list:
+  - /api/ipam/vlans/
+  - /api/ipam/vlans/?limit=0&offset=0
+  ipam-api:vlangroup-list:
+  - /api/ipam/vlan-groups/
+  - /api/ipam/vlan-groups/?limit=0&offset=0
+  ipam-api:vlanlocationassignment-list:
+  - /api/ipam/vlan-location-assignments/
+  - /api/ipam/vlan-location-assignments/?limit=0&offset=0
+  ipam-api:vrf-list:
+  - /api/ipam/vrfs/
+  - /api/ipam/vrfs/?limit=0&offset=0
+  ipam-api:vrfdeviceassignment-list:
+  - /api/ipam/vrf-device-assignments/
+  - /api/ipam/vrf-device-assignments/?limit=0&offset=0
+  ipam-api:vrfprefixassignment-list:
+  - /api/ipam/vrf-prefix-assignments/
+  - /api/ipam/vrf-prefix-assignments/?limit=0&offset=0
+  ipam:ipaddress_list:
+  - /ipam/ip-addresses/
+  - /ipam/ip-addresses/?per_page=0&page=5
+  ipam:ipaddresstointerface_list:
+  - /ipam/ip-address-to-interface/
+  - /ipam/ip-address-to-interface/?per_page=0&page=5
+  ipam:namespace:
+  - /ipam/namespaces/f8963609-5451-4cbb-9039-03e0cdef83c1/
+  ipam:namespace_changelog:
+  - /ipam/namespaces/f8963609-5451-4cbb-9039-03e0cdef83c1/changelog/
+  ipam:namespace_list:
+  - /ipam/namespaces/
+  - /ipam/namespaces/?per_page=0&page=5
+  ipam:namespace_notes:
+  - /ipam/namespaces/f8963609-5451-4cbb-9039-03e0cdef83c1/notes/
+  ipam:prefix_list:
+  - /ipam/prefixes/
+  - /ipam/prefixes/?per_page=0&page=5
+  ipam:rir_list:
+  - /ipam/rirs/
+  - /ipam/rirs/?per_page=0&page=5
+  ipam:routetarget_list:
+  - /ipam/route-targets/
+  - /ipam/route-targets/?per_page=0&page=5
+  ipam:service_list:
+  - /ipam/services/
+  - /ipam/services/?per_page=0&page=5
+  ipam:vlan_list:
+  - /ipam/vlans/
+  - /ipam/vlans/?per_page=0&page=5
+  ipam:vlangroup_list:
+  - /ipam/vlan-groups/
+  - /ipam/vlan-groups/?per_page=0&page=5
+  ipam:vrf_list:
+  - /ipam/vrfs/
+  - /ipam/vrfs/?per_page=0&page=5
+  metrics:
+  - /metrics/
+  plugins-api:example_app-api:anotherexamplemodel-list:
+  - /api/plugins/example-app/other-models/
+  - /api/plugins/example-app/other-models/?limit=0&offset=0
+  plugins-api:example_app-api:examplemodel-list:
+  - /api/plugins/example-app/models/
+  - /api/plugins/example-app/models/?limit=0&offset=0
+  plugins-api:nautobot_bgp_models-api:addressfamily-list:
+  - /api/plugins/bgp/address-families/
+  - /api/plugins/bgp/address-families/?limit=0&offset=0
+  plugins-api:nautobot_bgp_models-api:autonomoussystem-list:
+  - /api/plugins/bgp/autonomous-systems/
+  - /api/plugins/bgp/autonomous-systems/?limit=0&offset=0
+  plugins-api:nautobot_bgp_models-api:autonomoussystemrange-list:
+  - /api/plugins/bgp/autonomous-system-ranges/
+  - /api/plugins/bgp/autonomous-system-ranges/?limit=0&offset=0
+  plugins-api:nautobot_bgp_models-api:bgproutinginstance-list:
+  - /api/plugins/bgp/routing-instances/
+  - /api/plugins/bgp/routing-instances/?limit=0&offset=0
+  plugins-api:nautobot_bgp_models-api:peerendpoint-list:
+  - /api/plugins/bgp/peer-endpoints/
+  - /api/plugins/bgp/peer-endpoints/?limit=0&offset=0
+  plugins-api:nautobot_bgp_models-api:peerendpointaddressfamily-list:
+  - /api/plugins/bgp/peer-endpoint-address-families/
+  - /api/plugins/bgp/peer-endpoint-address-families/?limit=0&offset=0
+  plugins-api:nautobot_bgp_models-api:peergroup-list:
+  - /api/plugins/bgp/peer-groups/
+  - /api/plugins/bgp/peer-groups/?limit=0&offset=0
+  plugins-api:nautobot_bgp_models-api:peergroupaddressfamily-list:
+  - /api/plugins/bgp/peer-group-address-families/
+  - /api/plugins/bgp/peer-group-address-families/?limit=0&offset=0
+  plugins-api:nautobot_bgp_models-api:peergrouptemplate-list:
+  - /api/plugins/bgp/peer-group-templates/
+  - /api/plugins/bgp/peer-group-templates/?limit=0&offset=0
+  plugins-api:nautobot_bgp_models-api:peering-list:
+  - /api/plugins/bgp/peerings/
+  - /api/plugins/bgp/peerings/?limit=0&offset=0
+  plugins-api:nautobot_chatops-api:accessgrant-list:
+  - /api/plugins/chatops/accessgrant/
+  - /api/plugins/chatops/accessgrant/?limit=0&offset=0
+  plugins-api:nautobot_chatops-api:commandlog-list:
+  - /api/plugins/chatops/commandlog/
+  - /api/plugins/chatops/commandlog/?limit=0&offset=0
+  plugins-api:nautobot_chatops-api:commandtoken-list:
+  - /api/plugins/chatops/commandtoken/
+  - /api/plugins/chatops/commandtoken/?limit=0&offset=0
+  plugins-api:nautobot_circuit_maintenance-api:circuitimpact-list:
+  - /api/plugins/circuit-maintenance/circuitimpact/
+  - /api/plugins/circuit-maintenance/circuitimpact/?limit=0&offset=0
+  plugins-api:nautobot_circuit_maintenance-api:circuitmaintenance-list:
+  - /api/plugins/circuit-maintenance/maintenance/
+  - /api/plugins/circuit-maintenance/maintenance/?limit=0&offset=0
+  plugins-api:nautobot_circuit_maintenance-api:note-list:
+  - /api/plugins/circuit-maintenance/note/
+  - /api/plugins/circuit-maintenance/note/?limit=0&offset=0
+  plugins-api:nautobot_circuit_maintenance-api:notificationsource-list:
+  - /api/plugins/circuit-maintenance/notificationsource/
+  - /api/plugins/circuit-maintenance/notificationsource/?limit=0&offset=0
+  plugins-api:nautobot_circuit_maintenance-api:parsednotification-list:
+  - /api/plugins/circuit-maintenance/parsednotification/
+  - /api/plugins/circuit-maintenance/parsednotification/?limit=0&offset=0
+  plugins-api:nautobot_circuit_maintenance-api:rawnotification-list:
+  - /api/plugins/circuit-maintenance/rawnotification/
+  - /api/plugins/circuit-maintenance/rawnotification/?limit=0&offset=0
+  plugins-api:nautobot_floor_plan-api:floorplan-list:
+  - /api/plugins/floor-plan/floor-plans/
+  - /api/plugins/floor-plan/floor-plans/?limit=0&offset=0
+  plugins-api:nautobot_floor_plan-api:floorplantile-list:
+  - /api/plugins/floor-plan/floor-plan-tiles/
+  - /api/plugins/floor-plan/floor-plan-tiles/?limit=0&offset=0
+  plugins-api:plugins-list:
+  - /api/plugins/installed-plugins/
+  plugins:example_app:anotherexamplemodel_list:
+  - /plugins/example-app/other-models/
+  - /plugins/example-app/other-models/?per_page=0&page=5
+  plugins:example_app:examplemodel_list:
+  - /plugins/example-app/models/
+  - /plugins/example-app/models/?per_page=0&page=5
+  plugins:nautobot_bgp_models:addressfamily_list:
+  - /plugins/bgp/address-families/
+  - /plugins/bgp/address-families/?per_page=0&page=5
+  plugins:nautobot_bgp_models:autonomoussystem_list:
+  - /plugins/bgp/autonomous-systems/
+  - /plugins/bgp/autonomous-systems/?per_page=0&page=5
+  plugins:nautobot_bgp_models:autonomoussystemrange_list:
+  - /plugins/bgp/autonomous-system-ranges/
+  - /plugins/bgp/autonomous-system-ranges/?per_page=0&page=5
+  plugins:nautobot_bgp_models:bgproutinginstance_list:
+  - /plugins/bgp/routing-instances/
+  - /plugins/bgp/routing-instances/?per_page=0&page=5
+  plugins:nautobot_bgp_models:peerendpoint_list:
+  - /plugins/bgp/peer-endpoints/
+  - /plugins/bgp/peer-endpoints/?per_page=0&page=5
+  plugins:nautobot_bgp_models:peerendpointaddressfamily_list:
+  - /plugins/bgp/peer-endpoint-address-families/
+  - /plugins/bgp/peer-endpoint-address-families/?per_page=0&page=5
+  plugins:nautobot_bgp_models:peergroup_list:
+  - /plugins/bgp/peer-groups/
+  - /plugins/bgp/peer-groups/?per_page=0&page=5
+  plugins:nautobot_bgp_models:peergroupaddressfamily_list:
+  - /plugins/bgp/peer-group-address-families/
+  - /plugins/bgp/peer-group-address-families/?per_page=0&page=5
+  plugins:nautobot_bgp_models:peergrouptemplate_list:
+  - /plugins/bgp/peer-group-templates/
+  - /plugins/bgp/peer-group-templates/?per_page=0&page=5
+  plugins:nautobot_bgp_models:peering_list:
+  - /plugins/bgp/peerings/
+  - /plugins/bgp/peerings/?per_page=0&page=5
+  plugins:nautobot_chatops:accessgrant_list:
+  - /plugins/chatops/access/
+  - /plugins/chatops/access/?per_page=0&page=5
+  plugins:nautobot_chatops:chatopsaccountlink_list:
+  - /plugins/chatops/account-link/
+  - /plugins/chatops/account-link/?per_page=0&page=5
+  plugins:nautobot_chatops:commandlog_list:
+  - /plugins/chatops/
+  - /plugins/chatops/?per_page=0&page=5
+  plugins:nautobot_chatops:commandtoken_list:
+  - /plugins/chatops/tokens/
+  - /plugins/chatops/tokens/?per_page=0&page=5
+  plugins:nautobot_chatops:grafanadashboard_list:
+  - /plugins/chatops/grafana/dashboards/
+  - /plugins/chatops/grafana/dashboards/?per_page=0&page=5
+  plugins:nautobot_chatops:grafanapanel_list:
+  - /plugins/chatops/grafana/panels/
+  - /plugins/chatops/grafana/panels/?per_page=0&page=5
+  plugins:nautobot_chatops:grafanapanelvariable_list:
+  - /plugins/chatops/grafana/variables/
+  - /plugins/chatops/grafana/variables/?per_page=0&page=5
+  plugins:nautobot_circuit_maintenance:circuitimpact_list:
+  - /plugins/circuit-maintenance/impact/
+  - /plugins/circuit-maintenance/impact/?per_page=0&page=5
+  plugins:nautobot_circuit_maintenance:circuitmaintenance_list:
+  - /plugins/circuit-maintenance/maintenance/
+  - /plugins/circuit-maintenance/maintenance/?per_page=0&page=5
+  plugins:nautobot_circuit_maintenance:note_list:
+  - /plugins/circuit-maintenance/note/
+  - /plugins/circuit-maintenance/note/?per_page=0&page=5
+  plugins:nautobot_circuit_maintenance:notificationsource_list:
+  - /plugins/circuit-maintenance/source/
+  - /plugins/circuit-maintenance/source/?per_page=0&page=5
+  plugins:nautobot_circuit_maintenance:rawnotification_list:
+  - /plugins/circuit-maintenance/rawnotification/
+  - /plugins/circuit-maintenance/rawnotification/?per_page=0&page=5
+  plugins:nautobot_floor_plan:floorplan_list:
+  - /plugins/floor-plan/floor-plans/
+  - /plugins/floor-plan/floor-plans/?per_page=0&page=5
+  plugins:nautobot_floor_plan:floorplantile_list:
+  - /plugins/floor-plan/floor-plan-tiles/
+  - /plugins/floor-plan/floor-plan-tiles/?per_page=0&page=5
+  plugins:plugins_list:
+  - /plugins/installed-plugins/
+  search:
+  - /search/
+  tenancy-api:tenant-list:
+  - /api/tenancy/tenants/
+  - /api/tenancy/tenants/?limit=0&offset=0
+  tenancy-api:tenantgroup-list:
+  - /api/tenancy/tenant-groups/
+  - /api/tenancy/tenant-groups/?limit=0&offset=0
+  tenancy:tenant_list:
+  - /tenancy/tenants/
+  - /tenancy/tenants/?per_page=0&page=5
+  tenancy:tenantgroup_list:
+  - /tenancy/tenant-groups/
+  - /tenancy/tenant-groups/?per_page=0&page=5
+  users-api:group-list:
+  - /api/users/groups/
+  users-api:objectpermission-list:
+  - /api/users/permissions/
+  - /api/users/permissions/?limit=0&offset=0
+  users-api:token-detail:
+  - /api/users/tokens/9d9da8e8-9009-46d0-b711-b5d2ef075657/
+  users-api:token-list:
+  - /api/users/tokens/
+  - /api/users/tokens/?limit=0&offset=0
+  users-api:user-detail:
+  - /api/users/users/65438052-98fe-47e0-9b84-0ff4711d5849/
+  users-api:user-list:
+  - /api/users/users/
+  - /api/users/users/?limit=0&offset=0
+  users-api:userconfig-list:
+  - /api/users/config/
+  users:preferences:
+  - /users/preferences/
+  users:profile:
+  - /users/profile/
+  users:token_list:
+  - /users/api-tokens/
+  - /users/api-tokens/?per_page=0&page=5
+  virtualization-api:cluster-list:
+  - /api/virtualization/clusters/
+  - /api/virtualization/clusters/?limit=0&offset=0
+  virtualization-api:clustergroup-list:
+  - /api/virtualization/cluster-groups/
+  - /api/virtualization/cluster-groups/?limit=0&offset=0
+  virtualization-api:clustertype-list:
+  - /api/virtualization/cluster-types/
+  - /api/virtualization/cluster-types/?limit=0&offset=0
+  virtualization-api:virtualmachine-list:
+  - /api/virtualization/virtual-machines/
+  - /api/virtualization/virtual-machines/?limit=0&offset=0
+  virtualization-api:vminterface-list:
+  - /api/virtualization/interfaces/
+  - /api/virtualization/interfaces/?limit=0&offset=0
+  virtualization:cluster_list:
+  - /virtualization/clusters/
+  - /virtualization/clusters/?per_page=0&page=5
+  virtualization:clustergroup_list:
+  - /virtualization/cluster-groups/
+  - /virtualization/cluster-groups/?per_page=0&page=5
+  virtualization:clustertype_list:
+  - /virtualization/cluster-types/
+  - /virtualization/cluster-types/?per_page=0&page=5
+  virtualization:virtualmachine_list:
+  - /virtualization/virtual-machines/
+  - /virtualization/virtual-machines/?per_page=0&page=5
+  virtualization:vminterface_list:
+  - /virtualization/interfaces/
+  - /virtualization/interfaces/?per_page=0&page=5
+  wireless-api:controllermanageddevicegroupradioprofileassignment-list:
+  - /api/wireless/controller-managed-device-group-radio-profile-assignments/
+  - /api/wireless/controller-managed-device-group-radio-profile-assignments/?limit=0&offset=0
+  wireless-api:controllermanageddevicegroupwirelessnetworkassignment-list:
+  - /api/wireless/controller-managed-device-group-wireless-network-assignments/
+  - /api/wireless/controller-managed-device-group-wireless-network-assignments/?limit=0&offset=0
+  wireless-api:radioprofile-list:
+  - /api/wireless/radio-profiles/
+  - /api/wireless/radio-profiles/?limit=0&offset=0
+  wireless-api:supporteddatarate-list:
+  - /api/wireless/supported-data-rates/
+  - /api/wireless/supported-data-rates/?limit=0&offset=0
+  wireless-api:wirelessnetwork-list:
+  - /api/wireless/wireless-networks/
+  - /api/wireless/wireless-networks/?limit=0&offset=0
+  wireless:radioprofile_list:
+  - /wireless/radio-profiles/
+  - /wireless/radio-profiles/?per_page=0&page=5
+  wireless:supporteddatarate_list:
+  - /wireless/supported-data-rates/
+  - /wireless/supported-data-rates/?per_page=0&page=5
+  wireless:wirelessnetwork_list:
+  - /wireless/wireless-networks/
+  - /wireless/wireless-networks/?per_page=0&page=5
