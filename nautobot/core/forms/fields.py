@@ -801,6 +801,11 @@ class NumericArrayField(SimpleArrayField):
         try:
             if not value:
                 value = ""
+
+            elif isinstance(value, list):
+                value = ",".join([str(n) for n in value])
+                value = ",".join([str(n) for n in forms.parse_numeric_range(value)])
+
             else:
                 value = ",".join([str(n) for n in forms.parse_numeric_range(value)])
         except (TypeError, ValueError) as error:

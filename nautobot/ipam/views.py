@@ -1373,18 +1373,6 @@ class VLANBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class ServiceListView(generic.ObjectListView):
-    queryset = Service.objects.all()
-    filterset = filters.ServiceFilterSet
-    filterset_form = forms.ServiceFilterForm
-    table = tables.ServiceTable
-    action_buttons = ("add", "import", "export")
-
-
-class ServiceView(generic.ObjectView):
-    queryset = Service.objects.prefetch_related("ip_addresses")
-
-
 class ServiceEditView(generic.ObjectEditView):
     queryset = Service.objects.prefetch_related("ip_addresses")
     model_form = forms.ServiceForm
@@ -1401,23 +1389,12 @@ class ServiceEditView(generic.ObjectEditView):
         return obj
 
 
-class ServiceBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
+class ServiceUIViewSet(NautobotUIViewSet):
+    model = Service
+    bulk_update_form_class = forms.ServiceBulkEditForm
+    filterset_class = filters.ServiceFilterSet
+    filterset_form_class = forms.ServiceFilterForm
+    form_class = forms.ServiceForm
     queryset = Service.objects.all()
-    table = tables.ServiceTable
-
-
-class ServiceDeleteView(generic.ObjectDeleteView):
-    queryset = Service.objects.all()
-
-
-class ServiceBulkEditView(generic.BulkEditView):
-    queryset = Service.objects.select_related("device", "virtual_machine")
-    filterset = filters.ServiceFilterSet
-    table = tables.ServiceTable
-    form = forms.ServiceBulkEditForm
-
-
-class ServiceBulkDeleteView(generic.BulkDeleteView):
-    queryset = Service.objects.select_related("device", "virtual_machine")
-    filterset = filters.ServiceFilterSet
-    table = tables.ServiceTable
+    serializer_class = serializers.ServiceSerializer
+    table_class = tables.ServiceTable
