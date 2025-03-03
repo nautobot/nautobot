@@ -1401,7 +1401,7 @@ class ServiceUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImpor
 
     def get_queryset(self):
         if self.action in ["bulk_update", "bulk_destroy"]:
-            return Service.objects.select_related("device", "virtual_machine")
+            self.queryset = Service.objects.select_related("device", "virtual_machine")
         elif self.action == "retrieve":
-            return Service.objects.prefetch_related("ip_addresses")
+            self.queryset = Service.objects.prefetch_related("ip_addresses")
         return super().get_queryset()
