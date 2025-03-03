@@ -171,7 +171,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 ### Fixed in v2.4.4
 
-- [#3041](https://github.com/nautobot/nautobot/issues/3041) - Parent bay can be assigned via API during the creation of Device
+- [#3041](https://github.com/nautobot/nautobot/issues/3041) - Fixed inability to assign a parent bay when creating a Device via the REST API.
 - [#5006](https://github.com/nautobot/nautobot/issues/5006) - Added a validation check to prevent removing an in-use content type from a LocationType.
 - [#5193](https://github.com/nautobot/nautobot/issues/5193) - Fixed an erroneous `ValidationError` when attempting to apply Tags to an object via the REST API.
 - [#5851](https://github.com/nautobot/nautobot/issues/5851) - Fixed `VRFPrefixAssignment` REST API endpoint incorrectly advertising support for Notes.
@@ -201,8 +201,8 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#5851](https://github.com/nautobot/nautobot/issues/5851) - Enhanced `PrefixFactory` and `VRFFactory` test helpers to automatically create appropriate `VRFPrefixAssignment` records.
 - [#6857](https://github.com/nautobot/nautobot/issues/6857) - Added `.yarn` directory to `.gitignore`.
 - [#6857](https://github.com/nautobot/nautobot/issues/6857) - Changed CI for integration tests to use `--no-keepdb`.
-- [#6893](https://github.com/nautobot/nautobot/issues/6893) - Adds ephemeral ports, streamlines debug settings for VSCode developers.
-- [#6943](https://github.com/nautobot/nautobot/issues/6943) - Mimic `debug` invoke task to previous behavior.
+- [#6893](https://github.com/nautobot/nautobot/issues/6893) - Added an option for ephemeral ports, and streamlined debug settings for VSCode developers.
+- [#6943](https://github.com/nautobot/nautobot/issues/6943) - Updated `debug` invoke task to restore previous behavior.
 
 ## v2.4.3 (2025-02-18)
 
