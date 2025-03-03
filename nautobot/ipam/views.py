@@ -1389,7 +1389,7 @@ class ServiceEditView(generic.ObjectEditView):
         return obj
 
 
-class ServiceUIViewSet(NautobotUIViewSet):
+class ServiceUIViewSet(NautobotUIViewSet):   # 3.0 TODO: remove, unused BulkImportView
     model = Service
     bulk_update_form_class = forms.ServiceBulkEditForm
     filterset_class = filters.ServiceFilterSet
@@ -1398,3 +1398,10 @@ class ServiceUIViewSet(NautobotUIViewSet):
     queryset = Service.objects.all()
     serializer_class = serializers.ServiceSerializer
     table_class = tables.ServiceTable
+
+    def get_queryset(self):
+        if self.action in ["bulk_update", "bulk_destroy"]:
+            return Service.objects.select_related("device", "virtual_machine")
+        elif self.action == "retrieve":
+            return Service.objects.prefetch_related("ip_addresses")
+        return super().get_queryset()
