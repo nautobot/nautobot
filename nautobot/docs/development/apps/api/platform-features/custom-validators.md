@@ -33,11 +33,11 @@ custom_validators = [LocationValidator]
 
 +++ 2.4.4
 
-Custom validators have access to the current user via `self.context['user']` whenever the custom validator is invoked within a web request context. This is true for any Web UI, REST API request, Job execution, and anytime the `web_request_context` context manager is used in `nbshell` or a out of band script. In the event a custom validator is run outside of a web request context, `self.context['user']` will be populated with an instance of `AnonymousUser` from `django.contrib.auth`. This allows a custom validator author to write code this is durable to cases where a real user is not available.
+Custom validators have access to the current user via `self.context['user']` whenever the custom validator is invoked within a web request context. This is true for any Web UI, REST API request, Job execution, and anytime the `web_request_context` context manager is used in `nbshell` or a out of band script. In the event a custom validator is run outside of a web request context, `self.context['user']` will be populated with an instance of `AnonymousUser` from `django.contrib.auth`. This allows a custom validator author to write code that is durable to cases where a real user is not available.
 
 With the user object, you can inspect the groups and permissions that the user has, allowing more granular access related validation.
 
-This example shows a custom validator that only allows users in the group ___ to change the tenant of a location:
+This example shows a custom validator that only allows users in the group "Tenant Managers" to change the tenant of a location:
 
 ```python
 # custom_validators.py

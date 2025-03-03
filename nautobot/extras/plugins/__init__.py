@@ -744,9 +744,10 @@ class CustomValidatorContext(dict):
         from nautobot.extras.signals import change_context_state
 
         change_context = change_context_state.get()
+        user = None
         if change_context:
             user = change_context.get_user()
-        else:
+        if user is None:
             user = AnonymousUser()
 
         super().__init__(object=obj, user=user)
