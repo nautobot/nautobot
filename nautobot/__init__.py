@@ -18,6 +18,7 @@ def add_success_logger():
     logging.addLevelName(SUCCESS, "SUCCESS")
 
     def success(self, message, *args, **kwargs):
+        kwargs["stacklevel"] = kwargs.get("stacklevel", 1) + 1  # so that funcName is the caller function, not "success"
         if self.isEnabledFor(SUCCESS):
             self._log(SUCCESS, message, args, **kwargs)
 
@@ -31,6 +32,7 @@ def add_failure_logger():
     logging.addLevelName(FAILURE, "FAILURE")
 
     def failure(self, message, *args, **kwargs):
+        kwargs["stacklevel"] = kwargs.get("stacklevel", 1) + 1  # so that funcName is the caller function, not "failure"
         if self.isEnabledFor(FAILURE):
             self._log(FAILURE, message, args, **kwargs)
 

@@ -68,6 +68,8 @@ def run_job_for_testing(job, username="test-user", profile=False, **kwargs):
         username=username, defaults={"is_superuser": True, "password": "password"}
     )
     # Run the job synchronously in the current thread as if it were being executed by a worker
+    # TODO: in Nautobot core testing, we set `CELERY_TASK_ALWAYS_EAGER = True`, so we *could* use enqueue_job() instead,
+    #       but switching now would be a potentially breaking change for apps...
     job_result = JobResult.execute_job(
         job_model=job,
         user=user_instance,

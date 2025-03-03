@@ -224,15 +224,14 @@ This is a Job that demonstrates as many Job features as it can.
             "This is an info message, with an associated database object",
             extra={"object": kwargs["location_type_input"]},
         )
-        self.logger.success(
-            "You can use logger.success() to set the log level to `SUCCESS`.", extra={"grouping": "post_run"}
-        )
+        self.logger.success("You can use logger.success() to set the log level to `SUCCESS`.")
         self.logger.warning(
             "You can specify a custom grouping for messages, but do so with consideration.",
             extra={"grouping": "warning messages"},
         )
+        self.logger.failure("Note that *logging* a failure does _not_ automatically cause the job to fail.")
         self.logger.error("Note that *logging* an error does _not_ automatically cause the job to fail.")
-        self.logger.exception("Any supported Python log level can be logged but not all are automatically colorized.")
+        self.logger.critical("Any supported Python log level can be logged but not all are automatically colorized.")
 
     def on_success(self, retval, task_id, args, kwargs):
         """
@@ -246,18 +245,18 @@ This is a Job that demonstrates as many Job features as it can.
         """
         self.logger.info("Success! The retval is `%s`, kwargs were `%s`", retval, kwargs)
 
-    def on_failure(self, exc, task_id, args, kwargs, einfo):
+    def on_failure(self, retval, task_id, args, kwargs, einfo):
         """
         Called if either before_start() or run() raised an unhandled exception.
 
         Args:
-            exc (Exception): The exception that was raised.
+            retval (any): Exception that was raised, if any, otherwise value returned by `run()` or `before_start()`.
             task_id (str): Present for Celery compatibility, can be ignored in most cases.
             args (list): Present for Celery compatibility, can be ignored in most cases.
             kwargs (dict): The keyword args that were (or would have been) passed into `run()`.
             einfo (any): Present for Celery compatibility, can be ignored in most cases.
         """
-        self.logger.error("Failure! The exception is `%s`, kwargs were `%s`", exc, kwargs)
+        self.logger.error("Failure! The exception is `%s`, kwargs were `%s`", retval, kwargs)
 
     def after_return(self, status, retval, task_id, args, kwargs, einfo):
         """
@@ -490,7 +489,7 @@ class ExampleFailingJob(Job):
 
     fail_cleanly = BooleanVar(default=True)
 
-    def run(self, *args, fail_cleanly, **kwargs):
+    def run(self, *args, fail_cleanly, **kwargs):  # pylint: disable=arguments-differ
         self.logger.info("Job is running merrily along, when suddenly...")
         if fail_cleanly:
             self.fail("A failure occurs but is handled cleanly, allowing the job to continue...")

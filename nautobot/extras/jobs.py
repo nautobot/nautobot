@@ -167,7 +167,8 @@ class BaseJob:
 
     def fail(self, msg, *args, **kwargs):
         """Mark this job as failed without immediately raising an exception and aborting."""
-        self.logger.failure(msg, *args, **kwargs)
+        # Instead of failing in "fail" grouping, fail in the parent function's grouping by default
+        self.logger.failure(msg, *args, stacklevel=2, **kwargs)
         self._failed = True
 
     def before_start(self, task_id, args, kwargs):
@@ -1276,6 +1277,8 @@ def run_job(self, job_class_path, *args, **kwargs):
 
     job, event_payload = _prepare_job(job_class_path, self.request, kwargs)
 
+    result = None
+    status = None
     try:
         before_start_result = job.before_start(self.request.id, args, kwargs)
         if not job._failed:
@@ -1295,23 +1298,29 @@ def run_job(self, job_class_path, *args, **kwargs):
 
         job.after_return(status, result, self.request.id, args, kwargs, None)
 
-        if status != JobResultStatusChoices.STATUS_SUCCESS:
-            # Report a failure, but with a result rather than an exception and einfo:
-            self.update_state(
-                state=status,
-                meta=result,
-            )
-            # If we return a result, Celery automatically applies STATUS_SUCCESS.
-            # If we raise an exception *other than* `Ignore` or `Reject`, Celery automatically applies STATUS_FAILURE.
-            # We don't want to overwrite the manual state update that we did above, so:
-            raise Ignore()
+        if status == JobResultStatusChoices.STATUS_SUCCESS:
+            return result
 
-        return result
+        # Report a failure, but with a result rather than an exception and einfo:
+        self.update_state(
+            state=status,
+            meta=result,
+        )
+        # If we return a result, Celery automatically applies STATUS_SUCCESS.
+        # If we raise an exception *other than* `Ignore` or `Reject`, Celery automatically applies STATUS_FAILURE.
+        # We don't want to overwrite the manual state update that we did above, so:
+        raise Ignore()
 
-    except (Reject, Ignore):
+    except Reject:
+        status = status or JobResultStatusChoices.STATUS_REJECTED
+        raise
+
+    except Ignore:
+        status = status or JobResultStatusChoices.STATUS_IGNORED
         raise
 
     except Exception as exc:
+        status = JobResultStatusChoices.STATUS_FAILURE
         einfo = ExceptionInfo(sys.exc_info())
         job.on_failure(exc, self.request.id, args, kwargs, einfo)
         job.after_return(JobResultStatusChoices.STATUS_FAILURE, exc, self.request.id, args, kwargs, einfo)
@@ -1322,7 +1331,7 @@ def run_job(self, job_class_path, *args, **kwargs):
         raise
 
     finally:
-        _cleanup_job(job, event_payload, JobResultStatusChoices.STATUS_FAILURE, kwargs)
+        _cleanup_job(job, event_payload, status, kwargs)
 
 
 def enqueue_job_hooks(object_change, may_reload_jobs=True, jobhook_queryset=None):

@@ -458,21 +458,22 @@ class JobTransactionTest(TransactionTestCase):
         Job test with fail result.
         """
         module = "fail"
-        name = "TestFailJob"
-        job_result = create_job_result_and_run_job(module, name)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
-        logs = job_result.job_log_entries
-        self.assertGreater(logs.count(), 0)
-        try:
-            logs.get(message="before_start() was called as expected")
-            logs.get(message="I'm a test job that fails!")
-            logs.get(message="on_failure() was called as expected")
-            logs.get(message="after_return() was called as expected")
-        except models.JobLogEntry.DoesNotExist:
-            for log in logs.all():
-                print(log.message)
-            print(job_result.traceback)
-            raise
+        for name in ["TestFailJob", "TestFailInBeforeStart", "TestFailCleanly", "TestFailCleanlyInBeforeStart"]:
+            with self.subTest(job=name):
+                job_result = create_job_result_and_run_job(module, name)
+                self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+                logs = job_result.job_log_entries
+                self.assertGreater(logs.count(), 0)
+                try:
+                    logs.get(message="before_start() was called as expected")
+                    logs.get(message="I'm a test job that fails!")
+                    logs.get(message="on_failure() was called as expected")
+                    logs.get(message="after_return() was called as expected")
+                except models.JobLogEntry.DoesNotExist:
+                    for log in logs.all():
+                        print(log.message)
+                    print(job_result.traceback)
+                    raise
 
     def test_job_fail_with_sanitization(self):
         """
@@ -530,7 +531,7 @@ class JobTransactionTest(TransactionTestCase):
         """
         module = "atomic_transaction"
         name = "TestAtomicDecorator"
-        job_result = create_job_result_and_run_job(module, name, fail=True)
+        job_result = create_job_result_and_run_job(module, name, should_fail=True)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
         # Ensure DB transaction was aborted
         self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 1").exists())
@@ -547,7 +548,7 @@ class JobTransactionTest(TransactionTestCase):
         """
         module = "atomic_transaction"
         name = "TestAtomicContextManager"
-        job_result = create_job_result_and_run_job(module, name, fail=True)
+        job_result = create_job_result_and_run_job(module, name, should_fail=True)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
         # Ensure DB transaction was aborted
         self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 2").exists())
@@ -727,12 +728,17 @@ class JobTransactionTest(TransactionTestCase):
         job_class, _ = get_job_class_and_model(module, name, "local")
         self.assertTrue(job_class.is_singleton)
         cache.set(job_class.singleton_cache_key, 1)
-        failed_job_result = create_job_result_and_run_job(module, name)
+        try:
+            failed_job_result = create_job_result_and_run_job(module, name)
 
-        self.assertEqual(
-            failed_job_result.status, JobResultStatusChoices.STATUS_FAILURE, msg="Duplicate singleton job didn't error."
-        )
-        self.assertIsNone(cache.get(job_class.singleton_cache_key, None))
+            self.assertEqual(
+                failed_job_result.status,
+                JobResultStatusChoices.STATUS_FAILURE,
+                msg="Duplicate singleton job didn't error.",
+            )
+        finally:
+            # Clean up after ourselves
+            cache.delete(job_class.singleton_cache_key)
 
     def test_job_ignore_singleton(self):
         module = "singleton"
@@ -741,16 +747,21 @@ class JobTransactionTest(TransactionTestCase):
         job_class, _ = get_job_class_and_model(module, name, "local")
         self.assertTrue(job_class.is_singleton)
         cache.set(job_class.singleton_cache_key, 1)
-        passed_job_result = create_job_result_and_run_job(
-            module, name, celery_kwargs={"nautobot_job_ignore_singleton_lock": True}
-        )
+        try:
+            passed_job_result = create_job_result_and_run_job(
+                module, name, celery_kwargs={"nautobot_job_ignore_singleton_lock": True}
+            )
 
-        self.assertEqual(
-            passed_job_result.status,
-            JobResultStatusChoices.STATUS_SUCCESS,
-            msg="Duplicate singleton job didn't succeed with nautobot_job_ignore_singleton_lock=True.",
-        )
-        self.assertIsNone(cache.get(job_class.singleton_cache_key, None))
+            self.assertEqual(
+                passed_job_result.status,
+                JobResultStatusChoices.STATUS_SUCCESS,
+                msg="Duplicate singleton job didn't succeed with nautobot_job_ignore_singleton_lock=True.",
+            )
+            # Singleton cache key should be cleared when the job completes
+            self.assertIsNone(cache.get(job_class.singleton_cache_key, None))
+        finally:
+            # Clean up after ourselves, just in case
+            cache.delete(job_class.singleton_cache_key)
 
     @mock.patch("nautobot.extras.context_managers.enqueue_webhooks")
     def test_job_fires_webhooks(self, mock_enqueue_webhooks):
@@ -945,7 +956,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
 
         out, err = self.run_command("--local", "--no-color", "--username", self.user.username, job_model.class_path)
         self.assertIn(f"Running {job_model.class_path}...", out)
-        self.assertIn("run: 0 debug, 1 info, 0 warning, 0 error, 0 critical", out)
+        self.assertIn("run: 0 debug, 1 info, 0 success, 0 warning, 0 failure, 0 error, 0 critical", out)
         self.assertIn("info: Success", out)
         self.assertIn(f"{job_model.class_path}: SUCCESS", out)
         self.assertEqual("", err)
@@ -967,7 +978,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
         out, err = self.run_command("--local", "--no-color", "--username", self.user.username, job_model.class_path)
         self.assertIn(f"Running {job_model.class_path}...", out)
         # Changed job to actually log data. Can't display empty results if no logs were created.
-        self.assertIn("run: 0 debug, 1 info, 0 warning, 0 error, 0 critical", out)
+        self.assertIn("run: 0 debug, 1 info, 0 success, 0 warning, 0 failure, 0 error, 0 critical", out)
         self.assertIn(f"{job_model.class_path}: SUCCESS", out)
         self.assertEqual("", err)
 

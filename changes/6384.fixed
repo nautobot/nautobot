@@ -1,1 +1,2 @@
 Fixed rendering of "actions" column in the JobResult table view.
+Fixed incorrect `stacklevel` default value in Job `logger.success()` API.

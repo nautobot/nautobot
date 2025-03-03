@@ -251,8 +251,10 @@ class JobResultStatusChoices(ChoiceSet):
     """
 
     STATUS_FAILURE = states.FAILURE
+    STATUS_IGNORED = states.IGNORED
     STATUS_PENDING = states.PENDING
     STATUS_RECEIVED = states.RECEIVED
+    STATUS_REJECTED = states.REJECTED
     STATUS_RETRY = states.RETRY
     STATUS_REVOKED = states.REVOKED
     STATUS_STARTED = states.STARTED
