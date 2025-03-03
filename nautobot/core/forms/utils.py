@@ -42,7 +42,7 @@ def parse_numeric_range(input_string, base=10):
         except ValueError:
             begin, end = dash_range, dash_range
 
-        if any(c in 'abcdefABCDEF' for c in begin + end):
+        if any(c in "abcdefABCDEF" for c in begin + end):
             base = 16
 
         begin, end = int(begin.strip(), base=base), int(end.strip(), base=base) + 1

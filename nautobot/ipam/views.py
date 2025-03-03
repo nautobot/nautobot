@@ -1389,7 +1389,7 @@ class ServiceEditView(generic.ObjectEditView):
         return obj
 
 
-class ServiceUIViewSet(NautobotUIViewSet):   # 3.0 TODO: remove, unused BulkImportView
+class ServiceUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportView
     model = Service
     bulk_update_form_class = forms.ServiceBulkEditForm
     filterset_class = filters.ServiceFilterSet
