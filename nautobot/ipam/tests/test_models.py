@@ -1305,9 +1305,11 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         status = Status.objects.get(name="Active")
         namespace = Namespace.objects.create(name="Test IPAddress get_or_create with address kwarg")
         Prefix.objects.create(prefix="10.0.0.0/24", namespace=namespace, status=status)
-        _, created = IPAddress.objects.get_or_create(
+        ip_address, created = IPAddress.objects.get_or_create(
             address="10.0.0.40/32", namespace=namespace, defaults={"status": status}
         )
+        self.assertEqual(ip_address.host, "10.0.0.40")
+        self.assertEqual(ip_address.mask_length, 32)
         self.assertTrue(created)
         _, created = IPAddress.objects.get_or_create(
             address="10.0.0.40/32", namespace=namespace, defaults={"status": status}
