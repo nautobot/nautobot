@@ -222,13 +222,13 @@ class BaseJob:
             (None): The return value of this handler is ignored.
         """
 
-    def on_failure(self, retval, task_id, args, kwargs, einfo):
+    def on_failure(self, exc, task_id, args, kwargs, einfo):
         """Error handler.
 
         This is run by the worker when the task fails.
 
         Arguments:
-            retval (Any): Exception raised by the task **or** return value from the task, if it failed cleanly,
+            exc (Any): Exception raised by the task (if any) **or** return value from the task, if it failed cleanly,
                 such as if the Job called `self.fail()` rather than raising an exception.
             task_id (str): Unique id of the failed task.
             args (Tuple): Original arguments for the task that failed.

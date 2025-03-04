@@ -375,7 +375,11 @@ class ImportObjectsTestCase(TransactionTestCase):
             content_type=ContentType.objects.get_for_model(LocationType).pk,
             csv_data=location_types_csv,
         )
-        self.assertEqual(location_types_job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(
+            location_types_job_result.status,
+            JobResultStatusChoices.STATUS_SUCCESS,
+            location_types_job_result.traceback,
+        )
 
         location_type_count = LocationType.objects.filter(name="ContactAssignmentImportTestLocationType").count()
         self.assertEqual(location_type_count, 1, f"Unexpected count of LocationTypes {location_type_count}")
@@ -386,7 +390,11 @@ class ImportObjectsTestCase(TransactionTestCase):
             content_type=ContentType.objects.get_for_model(Location).pk,
             csv_data=locations_csv,
         )
-        self.assertEqual(locations_job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(
+            locations_job_result.status,
+            JobResultStatusChoices.STATUS_SUCCESS,
+            locations_job_result.traceback,
+        )
 
         location_count = Location.objects.filter(location_type__name="ContactAssignmentImportTestLocationType").count()
         self.assertEqual(location_count, 2, f"Unexpected count of Locations {location_count}")
@@ -397,7 +405,11 @@ class ImportObjectsTestCase(TransactionTestCase):
             content_type=ContentType.objects.get_for_model(Contact).pk,
             csv_data=contacts_csv,
         )
-        self.assertEqual(contacts_job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(
+            contacts_job_result.status,
+            JobResultStatusChoices.STATUS_SUCCESS,
+            contacts_job_result.traceback,
+        )
 
         contact_count = Contact.objects.filter(name="Bob-ContactAssignmentImportTestLocation").count()
         self.assertEqual(contact_count, 1, f"Unexpected number of contacts {contact_count}")
@@ -408,7 +420,11 @@ class ImportObjectsTestCase(TransactionTestCase):
             content_type=ContentType.objects.get_for_model(Role).pk,
             csv_data=roles_csv,
         )
-        self.assertEqual(roles_job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(
+            roles_job_result.status,
+            JobResultStatusChoices.STATUS_SUCCESS,
+            roles_job_result.traceback,
+        )
 
         role_count = Role.objects.filter(name="ContactAssignmentImportTestLocation-On Site").count()
         self.assertEqual(role_count, 1, f"Unexpected number of role values {role_count}")
@@ -427,7 +443,11 @@ class ImportObjectsTestCase(TransactionTestCase):
             csv_data=associations_csv,
         )
 
-        self.assertEqual(associations_job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(
+            associations_job_result.status,
+            JobResultStatusChoices.STATUS_SUCCESS,
+            associations_job_result.traceback,
+        )
 
 
 class LogsCleanupTestCase(TransactionTestCase):

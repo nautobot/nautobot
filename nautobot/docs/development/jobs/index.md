@@ -628,7 +628,7 @@ If both `before_start()` and `run()` are successful, the `on_success()` method w
 
 #### The `on_failure()` Method
 
-If either `before_start()` or `run()` raises any unhandled exception, or reports a failure overall through `fail()`, the `on_failure()` method will be called next, if implemented. It has the signature `on_failure(self, retval, task_id, args, kwargs, einfo)`; of these parameters, the `retval` will contain the exception that was raised (if any) or the return value from `before_start()` or `run()` (otherwise), and `kwargs` will contain the user-specified variables passed into the Job.
+If either `before_start()` or `run()` raises any unhandled exception, or reports a failure overall through `fail()`, the `on_failure()` method will be called next, if implemented. It has the signature `on_failure(self, exc, task_id, args, kwargs, einfo)`; of these parameters, the `exc` will contain the exception that was raised (if any) or the return value from `before_start()` or `run()` (otherwise), and `kwargs` will contain the user-specified variables passed into the Job.
 
 #### The `after_return()` Method
 
@@ -686,7 +686,7 @@ Markdown rendering is supported for log messages, as well as [a limited subset o
 +++ 2.4.0 "`logger.success()` added"
     You can now use `self.logger.success()` to log a message at the level `SUCCESS`, which is located between the standard `INFO` and `WARNING` log levels.
 
-+++ 2.4.4 "`logger.failure()` added"
++++ 2.4.5 "`logger.failure()` added"
     You can now use `self.logger.failure()` to log a message at the level `FAILURE`, which is located betwen the standard `WARNING` and `ERROR` log levels.
 
 ### File Output
@@ -712,7 +712,7 @@ The maximum size of any single created file (or in other words, the maximum numb
 
 Any uncaught exception raised from within the `run()` method will abort the `run()` method immediately (as usual in Python), and will result in the Job Result status being marked as `FAILURE`. The exception message and traceback will be recorded in the Job Result.
 
-Alternatively, in Nautobot v2.4.4 and later, you can more "cleanly" fail a Job by calling `self.fail(...)` and then either returning immediately from the `run()` method or continuing with the execution of the Job, as desired. In this case, after the `run()` method completes, the Job Result status will be automatically marked as `FAILURE` and no exception or traceback will be recorded.
+Alternatively, in Nautobot v2.4.5 and later, you can more "cleanly" fail a Job by calling `self.fail(...)` and then either returning immediately from the `run()` method or continuing with the execution of the Job, as desired. In this case, after the `run()` method completes, the Job Result status will be automatically marked as `FAILURE` and no exception or traceback will be recorded.
 
 As an example, the following Job will abort if the user does not put the word "Taco" in `occasion`, and fail (but not abort) if the variable does not additionally contain "Tuesday":
 

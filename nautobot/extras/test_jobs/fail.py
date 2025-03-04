@@ -33,9 +33,9 @@ class TestFailJob(Job):
     def on_success(self, retval, task_id, args, kwargs):
         raise RuntimeError("on_success() was unexpectedly called!")
 
-    def on_failure(self, retval, task_id, args, kwargs, einfo):
-        if not isinstance(retval, RunJobTaskFailed):
-            raise RuntimeError(f"Expected retval to be a RunJobTaskFailed, but it was {retval!r}")
+    def on_failure(self, exc, task_id, args, kwargs, einfo):
+        if not isinstance(exc, RunJobTaskFailed):
+            raise RuntimeError(f"Expected exc to be a RunJobTaskFailed, but it was {exc!r}")
         if task_id != self.request.id:
             raise RuntimeError(f"Expected task_id {task_id} to equal self.request.id {self.request.id}")
         if args:
@@ -115,9 +115,9 @@ class TestFailCleanly(TestFailJob):
         self.fail("Failure")
         return "We failed"
 
-    def on_failure(self, retval, task_id, args, kwargs, einfo):
-        if retval != "We failed":
-            raise RuntimeError(f"Expected retval to be the message returned from run(), but it was {retval!r}")
+    def on_failure(self, exc, task_id, args, kwargs, einfo):
+        if exc != "We failed":
+            raise RuntimeError(f"Expected exc to be the message returned from run(), but it was {exc!r}")
         if task_id != self.request.id:  # pylint: disable=no-member
             raise RuntimeError(f"Expected task_id {task_id} to equal self.request.id {self.request.id}")  # pylint: disable=no-member
         if args:

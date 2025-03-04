@@ -42,7 +42,7 @@ class TestPassJob(Job):
             raise RuntimeError(f"Expected kwargs to be empty, but it was {kwargs!r}")
         logger.info("on_success() was called as expected")
 
-    def on_failure(self, retval, task_id, args, kwargs, einfo):
+    def on_failure(self, exc, task_id, args, kwargs, einfo):
         raise RuntimeError("on_failure() was unexpectedly called!")
 
     def after_return(self, status, retval, task_id, args, kwargs, einfo):

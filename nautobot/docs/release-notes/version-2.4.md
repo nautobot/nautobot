@@ -76,15 +76,15 @@ Jobs can now log `success` messages as a new logging level which will be appropr
 self.logger.success("All data is valid.")
 ```
 
-+++ 2.4.4
++++ 2.4.5
 
-In Nautobot v2.4.4 and later, Jobs can now log `failure` messages as well:
+In Nautobot v2.4.5 and later, Jobs can now log `failure` messages as well:
 
 ```python
 self.logger.failure("Something went wrong.")
 ```
 
-In Nautobot v2.4.4 and later, Jobs can also mark their result as failed without raising an uncaught exception by calling the new `Job.fail(message)` API:
+In Nautobot v2.4.5 and later, Jobs can also mark their result as failed without raising an uncaught exception by calling the new `Job.fail(message)` API:
 
 ```python
 self.fail("Something went wrong, and we'll fail in the end, but we can continue for now.")

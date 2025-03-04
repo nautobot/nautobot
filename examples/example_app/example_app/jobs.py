@@ -245,18 +245,18 @@ This is a Job that demonstrates as many Job features as it can.
         """
         self.logger.info("Success! The retval is `%s`, kwargs were `%s`", retval, kwargs)
 
-    def on_failure(self, retval, task_id, args, kwargs, einfo):
+    def on_failure(self, exc, task_id, args, kwargs, einfo):
         """
         Called if either before_start() or run() raised an unhandled exception.
 
         Args:
-            retval (any): Exception that was raised, if any, otherwise value returned by `run()` or `before_start()`.
+            exc (any): Exception that was raised, if any, otherwise value returned by `run()` or `before_start()`.
             task_id (str): Present for Celery compatibility, can be ignored in most cases.
             args (list): Present for Celery compatibility, can be ignored in most cases.
             kwargs (dict): The keyword args that were (or would have been) passed into `run()`.
             einfo (any): Present for Celery compatibility, can be ignored in most cases.
         """
-        self.logger.error("Failure! The exception is `%s`, kwargs were `%s`", retval, kwargs)
+        self.logger.error("Failure! The exception is `%s`, kwargs were `%s`", exc, kwargs)
 
     def after_return(self, status, retval, task_id, args, kwargs, einfo):
         """
