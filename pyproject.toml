@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.4.3"
+version = "2.4.4"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -55,7 +55,7 @@ django-db-file-storage = "~0.5.6.1"
 # AutoSlugField and shell_plus
 django-extensions = "~3.2.3"
 # Advanced query filters
-django-filter = "~24.2"
+django-filter = "~25.1"
 # Health check endpoint
 django-health-check = "~3.18.3"
 # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.

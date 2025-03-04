@@ -63,14 +63,13 @@ class VRFDeviceAssignmentSerializer(ValidatedModelSerializer):
         validators = []
 
     def validate(self, attrs):
-        if attrs.get("device"):
-            validator = UniqueTogetherValidator(queryset=VRFDeviceAssignment.objects.all(), fields=("device", "vrf"))
-            validator(attrs, self)
-        if attrs.get("virtual_machine"):
-            validator = UniqueTogetherValidator(
-                queryset=VRFDeviceAssignment.objects.all(), fields=("virtual_machine", "vrf")
-            )
-            validator(attrs, self)
+        foreign_key_fields = ["device", "virtual_machine", "virtual_device_context"]
+        for foreign_key in foreign_key_fields:
+            if attrs.get(foreign_key):
+                validator = UniqueTogetherValidator(
+                    queryset=VRFDeviceAssignment.objects.all(), fields=(foreign_key, "vrf")
+                )
+                validator(attrs, self)
         return super().validate(attrs)
 
 

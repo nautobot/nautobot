@@ -151,6 +151,60 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.4 (2025-03-03)
+
+### Added in v2.4.4
+
+- [#5851](https://github.com/nautobot/nautobot/issues/5851) - Added `PrefixFilter` helper class to `nautobot.apps.filters`.
+- [#5851](https://github.com/nautobot/nautobot/issues/5851) - Enhanced `prefixes` filter on `CloudNetwork` and `Tenant` filtersets to support filtering by literal prefix string (`10.0.0.0/8`) as an alternative to filtering by primary key.
+- [#5851](https://github.com/nautobot/nautobot/issues/5851) - Enhanced `prefix` filter on `CloudNetworkPrefixAssignment`, `VRF`, and `VRFPrefixAssignment` filtersets to support filtering by literal prefix string (`10.0.0.0/8`) as an alternative to filtering by primary key.
+- [#5851](https://github.com/nautobot/nautobot/issues/5851) - Enhanced `parent` filter on `Prefix` filtersets to support filtering by literal prefix string (`10.0.0.0/8`) as an alternative to filtering by primary key.
+- [#5851](https://github.com/nautobot/nautobot/issues/5851) - Enhanced `prefix` filter on `PrefixLocationAssignment` filtersets to support filtering by primary key as an alternative to filtering by literal prefix string.
+- [#5851](https://github.com/nautobot/nautobot/issues/5851) - Added `q` search filter to `VRFPrefixAssignment` filterset.
+- [#6635](https://github.com/nautobot/nautobot/issues/6635) - Added Monaco Editor integration to object change view for improved visualization of structured data differences including JSON, YAML, XML, tags, custom fields, and config contexts.
+- [#6924](https://github.com/nautobot/nautobot/issues/6924) - Added optional VRF relationship to Virtual Device Context.
+- [#6925](https://github.com/nautobot/nautobot/issues/6925) - Added colors next to Devices to indicate Device status in Rack Elevation view.
+- [#6966](https://github.com/nautobot/nautobot/issues/6966) - Added support for accessing the current user within Custom Validators via `self.context["user"]`.
+
+### Changed in v2.4.4
+
+- [#6829](https://github.com/nautobot/nautobot/issues/6829) - Enabled assignment of a Device to a Rack that belongs to a child Location of the device's location; for example, a Device located in a "Building" can now be assigned to a Rack located in a "Room" within that building.
+
+### Fixed in v2.4.4
+
+- [#3041](https://github.com/nautobot/nautobot/issues/3041) - Fixed inability to assign a parent bay when creating a Device via the REST API.
+- [#5006](https://github.com/nautobot/nautobot/issues/5006) - Added a validation check to prevent removing an in-use content type from a LocationType.
+- [#5193](https://github.com/nautobot/nautobot/issues/5193) - Fixed an erroneous `ValidationError` when attempting to apply Tags to an object via the REST API.
+- [#5851](https://github.com/nautobot/nautobot/issues/5851) - Fixed `VRFPrefixAssignment` REST API endpoint incorrectly advertising support for Notes.
+- [#5851](https://github.com/nautobot/nautobot/issues/5851) - Fixed incorrect `Meta.model` value on `ControllerManagedDeviceGroupWirelessNetworkAssignmentTable` and `ControllerManagedDeviceGroupRadioProfileAssignmentTable`.
+- [#6848](https://github.com/nautobot/nautobot/issues/6848) - Fixed a `DoesNotExist` error in the GUI at `/extras/git-repositories/X/result/` when a Git repository was created via API and not yet synced.
+- [#6861](https://github.com/nautobot/nautobot/issues/6861) - Fixed the data population of the Rack Group dropdown to include Rack Groups from the Rack's parent locations in Rack Edit View.
+- [#6910](https://github.com/nautobot/nautobot/issues/6910) - Fixed CSV export job to add a UTF-8 BOM (byte order mark) to the created file to ensure Excel will correctly handle any Unicode data.
+- [#6920](https://github.com/nautobot/nautobot/issues/6920) - Added log messages to help troubleshoot failures when rendering UI Component Framework `extra_buttons`.
+- [#6920](https://github.com/nautobot/nautobot/issues/6920) - Fixed logic in UI Component Framework `StatsPanel` that incorrectly disallowed use of FilterSet filters implicitly defined through `fields = "__all__"`.
+- [#6920](https://github.com/nautobot/nautobot/issues/6920) - Fixed logic in generic `FormTestCase` class that would incorrectly fail if form fields used FilterSet filters implicitly defined through `fields = "__all__"`.
+- [#6939](https://github.com/nautobot/nautobot/issues/6939) - Fixed an error in testing Jobs in `JOBS_ROOT` by forcing registration of `taggit` and `social_django` models before unregistering them from the admin site.
+- [#6950](https://github.com/nautobot/nautobot/issues/6950) - Added missing `job_queues` filter field to `JobFilterSet`.
+- [#6952](https://github.com/nautobot/nautobot/issues/6952) - Fixed an `AttributeError` exception when upgrading from v1.x to v2.x with certain existing data in the database.
+
+### Dependencies in v2.4.4
+
+- [#6927](https://github.com/nautobot/nautobot/issues/6927) - Updated dependency `django-filter` to `~25.1`.
+
+### Documentation in v2.4.4
+
+- [#6903](https://github.com/nautobot/nautobot/issues/6903) - Removed documentation references to Nautobot 1.x behavior and feature changes within the 1.x release series.
+- [#6951](https://github.com/nautobot/nautobot/issues/6951) - Fixed typo in v2 migration documentation.
+
+### Housekeeping in v2.4.4
+
+- [#5851](https://github.com/nautobot/nautobot/issues/5851) - Enhanced `PrefixFactory` and `VRFFactory` test helpers to automatically create appropriate `VRFPrefixAssignment` records.
+- [#6857](https://github.com/nautobot/nautobot/issues/6857) - Added `.yarn` directory to `.gitignore`.
+- [#6857](https://github.com/nautobot/nautobot/issues/6857) - Changed CI for integration tests to use `--no-keepdb`.
+- [#6858](https://github.com/nautobot/nautobot/issues/6858) - Fixed generation of performance test endpoints for Nautobot apps.
+- [#6893](https://github.com/nautobot/nautobot/issues/6893) - Added an option for ephemeral ports, and streamlined debug settings for VSCode developers.
+- [#6943](https://github.com/nautobot/nautobot/issues/6943) - Updated `debug` invoke task to restore previous behavior.
+
 ## v2.4.3 (2025-02-18)
 
 ### Added in v2.4.3

@@ -642,7 +642,7 @@ class JobViewSetBase(
             ):
                 raise ValidationError(
                     {
-                        "_task_queue": "_task_queue and _job_queue are both specified. Please specifiy only one or another."
+                        "_task_queue": "_task_queue and _job_queue are both specified. Please specify only one or another."
                     }
                 )
 
@@ -685,7 +685,7 @@ class JobViewSetBase(
                 "job_queue", None
             ):
                 raise ValidationError(
-                    {"task_queue": "task_queue and job_queue are both specified. Please specifiy only one or another."}
+                    {"task_queue": "task_queue and job_queue are both specified. Please specify only one or another."}
                 )
             schedule_data = input_serializer.validated_data.get("schedule", None)
 
