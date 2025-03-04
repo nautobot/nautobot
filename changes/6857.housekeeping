@@ -1,2 +1,0 @@
-Added `.yarn` directory to `.gitignore`.
-Changed CI for integration tests to use `--no-keepdb`.
