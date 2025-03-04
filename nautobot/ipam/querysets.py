@@ -405,6 +405,12 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
         namespace = kwargs.pop("namespace", None)
         host = kwargs.get("host")
         mask_length = kwargs.get("mask_length")
+        address = kwargs.get("address")
+        if host is None and isinstance(address, str):
+            address = netaddr.IPNetwork(address)
+            host = str(address.ip)
+            mask_length = address.prefixlen
+
         # If `host` or `mask_length` is None skip; then there is no way of getting the closest parent;
         if parent is None and host is not None and mask_length is not None:
             if namespace is None:
