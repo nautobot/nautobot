@@ -97,7 +97,7 @@ class TestSoftwareImageFileTestCase(TransactionTestCase):
 class TestSoftwareVersionTestCase(TransactionTestCase):
     def test_correct_handling_for_model_protected_error(self):
         create_common_data_for_software_related_test_cases()
-        software_version = SoftwareVersion.objects.first()
+        software_version = SoftwareVersion.objects.filter(version="Test version 1.0.0").first()
 
         initial_count = SoftwareVersion.objects.all().count()
         self.add_permissions("dcim.delete_softwareversion")
