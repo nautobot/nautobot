@@ -719,11 +719,11 @@ def build_example_app_docs(context):
         docker_compose(context, docker_command, pty=True)
 
 
-def task_navigate_to_web_port(context, service: str, internal_port: str):
-    """Navigate to the web interface in your web browser."""
+def task_navigate_to_service_port(context, service: str, internal_port: str, proto: str = "http", creds: str = ""):
+    """Navigate to the default system application for a specified uri."""
     nautobot_raw_uri = docker_compose(context, f"port {service} {internal_port}").stdout.rstrip()
     # nautobot_raw_uri = docker_compose(context, "port nautobot 8080", hide=True).stdout.rstrip()
-    nautobot_url = f"http://{nautobot_raw_uri}".replace("0.0.0.0", "127.0.0.1")  # noqa: S104
+    nautobot_url = f"{proto}://{creds}{nautobot_raw_uri}".replace("0.0.0.0", "127.0.0.1")  # noqa: S104
 
     if platform.system().lower() == "darwin":
         open_cmd = "open"
@@ -738,13 +738,19 @@ def task_navigate_to_web_port(context, service: str, internal_port: str):
 @task
 def open_nautobot_web(context):
     """Navigate to the Nautobot interface in your web browser."""
-    task_navigate_to_web_port(context, "nautobot", "8080")
+    task_navigate_to_service_port(context, "nautobot", "8080")
 
 
 @task
 def open_docs_web(context):
     """Navigate to the mkdocs interface in your web browser."""
-    task_navigate_to_web_port(context, "mkdocs", "8001")
+    task_navigate_to_service_port(context, "mkdocs", "8001")
+
+
+@task
+def open_selenium_vnc(context):
+    """Navigate to the selenium VNC browser view."""
+    task_navigate_to_service_port(context, "selenium", "5900", proto="vnc", creds=":secret@")
 
 
 # ------------------------------------------------------------------------------
