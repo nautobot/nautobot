@@ -406,7 +406,7 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
         host = kwargs.get("host")
         mask_length = kwargs.get("mask_length")
         address = kwargs.get("address")
-        if host is None and isinstance(address, str):
+        if host is None and address is not None:
             address = netaddr.IPNetwork(address)
             host = str(address.ip)
             mask_length = address.prefixlen
