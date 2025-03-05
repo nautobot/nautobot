@@ -61,7 +61,7 @@ from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_dri
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
-from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable
+from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable, VRFTable
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.wireless.forms import ControllerManagedDeviceGroupWirelessNetworkFormSet
 from nautobot.wireless.models import (
@@ -1922,7 +1922,7 @@ class DeviceView(generic.ObjectView):
 
         # VRF assignments
         vrf_assignments = instance.vrf_assignments.restrict(request.user, "view")
-        vrf_table = VRFDeviceAssignmentTable(vrf_assignments, exclude=("virtual_machine", "device"))
+        vrf_table = VRFDeviceAssignmentTable(vrf_assignments)
 
         # Software images
         if instance.software_version is not None:
@@ -4513,15 +4513,25 @@ class VirtualDeviceContextUIViewSet(NautobotUIViewSet):
     queryset = VirtualDeviceContext.objects.all()
     serializer_class = serializers.VirtualDeviceContextSerializer
     table_class = tables.VirtualDeviceContextTable
-
-    def get_extra_context(self, request, instance):
-        if self.action == "retrieve":
-            interfaces_table = tables.InterfaceTable(
-                instance.interfaces.restrict(request.user, "view"), orderable=False, exclude=("device",)
-            )
-
-            return {
-                "interfaces_table": interfaces_table,
-                **super().get_extra_context(request, instance),
-            }
-        return super().get_extra_context(request, instance)
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                table_class=tables.InterfaceTable,
+                table_attribute="interfaces",
+                section=SectionChoices.FULL_WIDTH,
+                exclude_columns=["device"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=300,
+                table_class=VRFTable,
+                table_attribute="vrfs",
+                section=SectionChoices.FULL_WIDTH,
+            ),
+        ),
+    )

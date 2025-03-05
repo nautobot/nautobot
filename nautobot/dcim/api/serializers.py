@@ -1,6 +1,7 @@
 import contextlib
 
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
@@ -560,10 +561,45 @@ class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
             )
             validator(attrs, self)
 
+        # Validate parent bay
+        if parent_bay := attrs.get("parent_bay", None):
+            if parent_bay.installed_device and parent_bay.installed_device != self.instance:
+                raise ValidationError(
+                    {
+                        "installed_device": f"Cannot install device; parent bay is already taken ({parent_bay.installed_device})"
+                    }
+                )
+
+            if self.instance:
+                parent_bay.installed_device = self.instance
+                parent_bay.full_clean()
+
         # Enforce model validation
         super().validate(attrs)
 
         return attrs
+
+    def create(self, validated_data):
+        instance = super().create(validated_data)
+        self.update_parent_bay(validated_data, instance)
+        return instance
+
+    def update(self, instance, validated_data):
+        instance = super().update(instance, validated_data)
+        self.update_parent_bay(validated_data, instance)
+        return instance
+
+    def update_parent_bay(self, validated_data, instance):
+        update_parent_bay = "parent_bay" in validated_data.keys()
+        parent_bay = validated_data.get("parent_bay")
+        if update_parent_bay:
+            if parent_bay:
+                parent_bay.installed_device = instance
+                parent_bay.save()
+            elif hasattr(instance, "parent_bay"):
+                parent_bay = instance.parent_bay
+                parent_bay.installed_device = None
+                parent_bay.validated_save()
 
 
 class DeviceNAPALMSerializer(serializers.Serializer):

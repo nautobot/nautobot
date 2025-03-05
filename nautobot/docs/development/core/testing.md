@@ -74,8 +74,6 @@ Because integration tests normally involve interacting with Nautobot through a b
 
 ## Factories
 
-+++ 1.5.0
-
 Nautobot uses the [`factory_boy`](https://factoryboy.readthedocs.io/en/stable/) library as a way to generate randomized but plausible database data for use in unit and integration tests, or for convenience in populating a local development instance.
 
 Factories for each Nautobot app's models are defined in the corresponding `nautobot/APPNAME/factory.py` files. Helper classes and functions for certain common patterns are defined in `nautobot/core/factory.py`. Factories can be used directly from `nautobot-server nbshell` so long as you have `factory_boy` installed. Examples:
@@ -108,8 +106,6 @@ Nautobot's custom [test runner](https://docs.djangoproject.com/en/3.2/topics/tes
 
 ### Factory Caching
 
-+++ 1.5.11
-
 To reduce the time taken between multiple test runs, a new argument has been added to the `nautobot-server test` command: `--cache-test-fixtures`. When running tests with `--cache-test-fixtures` for the first time, after the factory data has been generated it will be saved to a `factory_dump.json` file in the `development` directory. On subsequent runs of unit or integration tests, if `--cache-test-fixtures` is again specified (hint: it is included by default when running `invoke unittest` or `invoke integration-test`), the factory data will be loaded from the file instead of being generated again. This can significantly reduce the time taken to run tests.
 
 +/- 2.2.7 "Hashing of migrations in the factory dump"
@@ -125,8 +121,6 @@ To reduce the time taken between multiple test runs, a new argument has been add
     2. When the definition of a factory is changed or a new factory is added.
 
 ## Performance Tests
-
-+++ 1.5.0
 
 ### Running Performance Tests
 

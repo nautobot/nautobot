@@ -157,6 +157,8 @@ def common_test_data(cls):
     cls.loc0 = loc0
     cls.loc1 = loc1
     cls.nested_loc = nested_loc
+    cls.loc2 = loc2
+    cls.loc3 = loc3
 
     provider = Provider.objects.first()
     circuit_type = CircuitType.objects.first()
@@ -1150,6 +1152,24 @@ class RackGroupTestCase(FilterTestCases.FilterTestCase):
             name="Rack Group 4",
             location=cls.loc1,
         )
+        RackGroup.objects.create(
+            name="Rack Group 5",
+            location=cls.loc2,
+            description="C",
+        )
+        RackGroup.objects.create(
+            name="Rack Group 6",
+            location=cls.loc2,
+        )
+        RackGroup.objects.create(
+            name="Rack Group 7",
+            location=cls.loc3,
+            description="C",
+        )
+        RackGroup.objects.create(
+            name="Rack Group 8",
+            location=cls.loc3,
+        )
 
     def test_children(self):
         child_groups = RackGroup.objects.filter(name__startswith="Child").filter(parent__isnull=False)[:2]
@@ -1160,6 +1180,24 @@ class RackGroupTestCase(FilterTestCases.FilterTestCase):
             rack_group_4 = RackGroup.objects.filter(name="Rack Group 4").first()
             params = {"children": [rack_group_4.pk, rack_group_4.pk]}
             self.assertFalse(self.filterset(params, self.queryset).qs.exists())
+
+    def test_ancestors(self):
+        with self.subTest():
+            pk_list = []
+            parent_locations = self.loc3.ancestors(include_self=True)
+            pk_list.extend([v.pk for v in parent_locations])
+            params = Q(location__pk__in=pk_list)
+            expected_queryset = RackGroup.objects.filter(params)
+            params = {"ancestors": [self.loc3.pk]}
+            self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected_queryset)
+        with self.subTest():
+            pk_list = []
+            parent_locations = self.loc2.ancestors(include_self=True)
+            pk_list.extend([v.pk for v in parent_locations])
+            params = Q(location__pk__in=pk_list)
+            expected_queryset = RackGroup.objects.filter(params)
+            params = {"ancestors": [self.loc2.pk]}
+            self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected_queryset)
 
 
 class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
@@ -4188,12 +4226,13 @@ class InterfaceVDCAssignmentTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        device = Device.objects.first()
+        device_1 = Device.objects.first()
+        device_2 = Device.objects.last()
         vdc_status = Status.objects.get_for_model(VirtualDeviceContext)[0]
         interface_status = Status.objects.get_for_model(Interface)[0]
         interfaces = [
             Interface.objects.create(
-                device=device,
+                device=device_1,
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 name=f"Interface 00{idx}",
                 status=interface_status,
@@ -4202,7 +4241,7 @@ class InterfaceVDCAssignmentTestCase(FilterTestCases.FilterTestCase):
         ]
         vdcs = [
             VirtualDeviceContext.objects.create(
-                device=device,
+                device=device_1,
                 status=vdc_status,
                 identifier=200 + idx,
                 name=f"Test VDC {idx}",
@@ -4213,3 +4252,17 @@ class InterfaceVDCAssignmentTestCase(FilterTestCases.FilterTestCase):
         InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[1], interface=interfaces[0])
         InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[1], interface=interfaces[1])
         InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[2], interface=interfaces[2])
+        InterfaceVDCAssignment.objects.create(
+            virtual_device_context=VirtualDeviceContext.objects.create(
+                device=device_2,
+                status=vdc_status,
+                identifier=200,
+                name="Test VDC 0",
+            ),
+            interface=Interface.objects.create(
+                device=device_2,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                name="Interface 000",
+                status=interface_status,
+            ),
+        )

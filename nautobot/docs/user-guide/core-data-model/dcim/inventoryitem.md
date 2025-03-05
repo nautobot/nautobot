@@ -9,8 +9,5 @@ Inventory items are hierarchical in nature, such that any individual item may be
 !!! warning
     Unless a specific use case is identified for inventory items, they are likely to be completely replaced by [Modules](module.md) and removed in a future release of Nautobot.
 
-+++ 1.4.5
-    The fields `created` and `last_updated` were added to all device component models. If you upgraded from Nautobot 1.4.4 or earlier, the values for these fields will default to `None` (null).
-
 +++ 2.2.0
     The [Software Version](softwareversion.md) model has been introduced to represent the software version that is currently installed on an inventory item. An optional software version field has been added to inventory items.

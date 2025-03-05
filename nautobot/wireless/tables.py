@@ -8,9 +8,14 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
-from nautobot.dcim.models import ControllerManagedDeviceGroup
 
-from .models import RadioProfile, SupportedDataRate, WirelessNetwork
+from .models import (
+    ControllerManagedDeviceGroupRadioProfileAssignment,
+    ControllerManagedDeviceGroupWirelessNetworkAssignment,
+    RadioProfile,
+    SupportedDataRate,
+    WirelessNetwork,
+)
 
 
 class RadioProfileTable(BaseTable):
@@ -151,7 +156,7 @@ class ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(BaseTable):
     )
 
     class Meta(BaseTable.Meta):
-        model = ControllerManagedDeviceGroup
+        model = ControllerManagedDeviceGroupWirelessNetworkAssignment
         fields = (
             "wireless_network",
             "controller_managed_device_group",
@@ -204,7 +209,7 @@ class ControllerManagedDeviceGroupRadioProfileAssignmentTable(BaseTable):
     regulatory_domain = tables.Column(accessor="radio_profile.regulatory_domain", verbose_name="Regulatory Domain")
 
     class Meta(BaseTable.Meta):
-        model = ControllerManagedDeviceGroup
+        model = ControllerManagedDeviceGroupRadioProfileAssignment
         fields = (
             "radio_profile",
             "controller_managed_device_group",

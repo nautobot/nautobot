@@ -55,13 +55,13 @@ class VRFViewSet(NautobotModelViewSet):
     filterset_class = filters.VRFFilterSet
 
 
-class VRFDeviceAssignmentViewSet(NautobotModelViewSet):
+class VRFDeviceAssignmentViewSet(ModelViewSet):
     queryset = VRFDeviceAssignment.objects.all()
     serializer_class = serializers.VRFDeviceAssignmentSerializer
     filterset_class = filters.VRFDeviceAssignmentFilterSet
 
 
-class VRFPrefixAssignmentViewSet(NautobotModelViewSet):
+class VRFPrefixAssignmentViewSet(ModelViewSet):
     queryset = VRFPrefixAssignment.objects.all()
     serializer_class = serializers.VRFPrefixAssignmentSerializer
     filterset_class = filters.VRFPrefixAssignmentFilterSet

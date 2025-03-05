@@ -1,5 +1,6 @@
 from typing import Optional
 
+from django.apps import apps
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.urls import get_resolver
@@ -162,6 +163,10 @@ class Command(BaseCommand):
         if model:
             app_name = model._meta.app_label
 
+        # Retrieve the base URL for the app to be used in the URL pattern
+        app_config = apps.get_app_config(app_name)
+        base_url = app_config.base_url if hasattr(app_config, "base_url") else app_name
+
         if app_name == "users" and pattern.name in ["login", "logout"]:
             # No need to test the login and logout endpoints for performance testing
             url_pattern = f"/{pattern.pattern}"  # /login, /logout
@@ -199,7 +204,7 @@ class Command(BaseCommand):
         elif is_api_endpoint:
             if not is_app:
                 # One of the nautobot apps: nautobot.circuits, nautobot.dcim, and etc.
-                url_pattern = f"/api/{app_name}/{pattern.pattern}"  # /api/dcim/devices/
+                url_pattern = f"/api/{base_url}/{pattern.pattern}"  # /api/dcim/devices/
                 app_name = f"{app_name}-api"  # dcim-api
                 view_name = f"{app_name}:{pattern.name}"  # dcim-api:device-list
             else:
@@ -207,16 +212,14 @@ class Command(BaseCommand):
                 view_name = (
                     f"plugins-api:{api_app_name}:{pattern.name}"  # plugins-api:example_app-api:examplemodel-list
                 )
-                app_name = app_name.replace("_", "-")  # example_app -> example-app
-                url_pattern = f"/api/plugins/{app_name}/{pattern.pattern}"  # /api/plugins/example-app/models/
+                url_pattern = f"/api/plugins/{base_url}/{pattern.pattern}"  # /api/plugins/example-app/models/
         else:
             if not is_app:
-                url_pattern = f"/{app_name}/{pattern.pattern}"  # /dcim/devices/
+                url_pattern = f"/{base_url}/{pattern.pattern}"  # /dcim/devices/
                 view_name = f"{app_name}:{pattern.name}"  # dcim:device_list
             else:
                 view_name = f"plugins:{app_name}:{pattern.name}"  # plugins:example_app:examplemodel_list
-                app_name = app_name.replace("_", "-")  # example_app -> example-app
-                url_pattern = f"/plugins/{app_name}/{pattern.pattern}"  # /plugins/example-app/models/
+                url_pattern = f"/plugins/{base_url}/{pattern.pattern}"  # /plugins/example-app/models/
 
         return url_pattern, view_name, is_api_endpoint
 

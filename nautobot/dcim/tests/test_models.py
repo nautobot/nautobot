@@ -1166,6 +1166,19 @@ class LocationTypeTestCase(TestCase):
         child_loc.delete()
         child.validated_save()
 
+    def test_removing_content_type(self):
+        """Validation check to prevent removing an in-use content type from a LocationType."""
+
+        location_type = LocationType.objects.get(name="Campus")
+        device_ct = ContentType.objects.get_for_model(Device)
+
+        with self.assertRaises(ValidationError) as cm:
+            location_type.content_types.remove(device_ct)
+        self.assertIn(
+            f"Cannot remove the content type {device_ct} as currently at least one device is associated to a location",
+            str(cm.exception),
+        )
+
 
 class LocationTestCase(ModelTestCases.BaseModelTestCase):
     model = Location
@@ -1894,6 +1907,33 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         rack = Rack.objects.create(name="Rack 1", location=parent_device.location, status=self.device_status)
         parent_device.rack = rack
         parent_device.save()
+
+        # Test assigning a rack in the child location of the parent device location
+        location_status = Status.objects.get_for_model(Location).first()
+        child_location = Location.objects.create(
+            name="Child Location 1",
+            location_type=self.location_type_3,
+            status=location_status,
+            parent=parent_device.location,
+        )
+        child_rack = Rack.objects.create(name="Rack 2", location=child_location, status=self.device_status)
+        parent_device.rack = child_rack
+        parent_device.validated_save()
+
+        # Test assigning a rack outside the child locations of the parent device location
+        new_location = Location.objects.create(
+            name="New Location 1",
+            status=location_status,
+            location_type=self.location_type_3,
+        )
+        invalid_rack = Rack.objects.create(name="Rack 3", location=new_location, status=self.device_status)
+        parent_device.rack = invalid_rack
+        with self.assertRaises(ValidationError) as cm:
+            parent_device.validated_save()
+        self.assertIn(
+            f'Rack "{invalid_rack}" does not belong to location "{parent_device.location}" and its descendants.',
+            str(cm.exception),
+        )
 
         child_mtime_after_parent_rack_update_save = str(Device.objects.get(name="Child Device 1").last_updated)
 

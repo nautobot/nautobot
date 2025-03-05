@@ -1,7 +1,5 @@
 # Config Context Schemas
 
-+++ 1.1.0
-
 While config contexts allow for arbitrary data structures to be stored within Nautobot, at scale it is desirable to apply validation constraints to that data to ensure its consistency and to avoid data entry errors. To service this need, Nautobot supports optionally backing config contexts with [JSON Schemas](https://json-schema.org/) for validation. These schema are managed via the config context schema model and are optionally linked to config context instances, in addition to devices and virtual machines for the purpose of validating their local context data.
 
 A JSON Schema is capable of validating the structure, format, and type of your data, and acts as a form of documentation useful in a number of automation use cases.

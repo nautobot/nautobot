@@ -17,11 +17,12 @@ from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Man
 from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.extras import plugins
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
+from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import CustomField, Relationship, RelationshipAssociation, Role, Secret, Status
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
-from nautobot.extras.plugins.validators import wrap_model_clean_methods
+from nautobot.extras.plugins.validators import CustomValidator, wrap_model_clean_methods
 from nautobot.extras.plugins.views import extract_app_data
 from nautobot.extras.registry import DatasourceContent, registry
 from nautobot.ipam.models import IPAddress, Namespace, Prefix
@@ -478,6 +479,16 @@ class AppAPITest(APIViewTestCases.APIViewTestCase):
         pass
 
 
+class TestUserContextCustomValidator(CustomValidator):
+    model = "dcim.locationtype"
+
+    def clean(self):
+        """
+        Used to validate that the correct user context is available in the custom validator.
+        """
+        self.validation_error(self.context["user"])
+
+
 class AppCustomValidationTest(TestCase):
     def setUp(self):
         # When creating a fresh test DB, wrapping model clean methods fails, which is normal.
@@ -485,6 +496,7 @@ class AppCustomValidationTest(TestCase):
         # must manually call the method again to actually perform the action, now that the
         # ContentType table has been created.
         wrap_model_clean_methods()
+        super().setUp()
 
     def test_custom_validator_raises_exception(self):
         location_type = LocationType.objects.get(name="Campus")
@@ -512,6 +524,25 @@ class AppCustomValidationTest(TestCase):
         relationship_assoc = RelationshipAssociation(relationship=relationship, source=prefix, destination=ipaddress)
         with self.assertRaises(ValidationError):
             relationship_assoc.clean()
+
+    def test_custom_validator_non_web_request_uses_anonymous_user(self):
+        location_type = LocationType.objects.get(name="Campus")
+        registry["plugin_custom_validators"]["dcim.locationtype"] = [TestUserContextCustomValidator]
+
+        from django.contrib.auth.models import AnonymousUser
+
+        with self.assertRaises(ValidationError) as context:
+            location_type.clean()
+        self.assertEqual(context.exception.message, AnonymousUser())
+
+    def test_custom_validator_web_request_uses_real_user(self):
+        location_type = LocationType.objects.get(name="Campus")
+        registry["plugin_custom_validators"]["dcim.locationtype"] = [TestUserContextCustomValidator]
+
+        with self.assertRaises(ValidationError) as context:
+            with web_request_context(user=self.user):
+                location_type.clean()
+        self.assertEqual(context.exception.message, self.user)
 
 
 class ExampleModelCustomActionViewTest(TestCase):

@@ -27,6 +27,7 @@
 <script src="{% versioned_static 'js/dropdown.js' %}"
         onerror="window.location='{% url 'media_failure' %}?filename=js/dropdown.js'"></script>
 <script type="text/javascript">
+    var nautobot_static_url = "{% static '' %}";
     var nautobot_api_path = "{% url 'api-root' %}";
     var nautobot_csrf_token = "{{ csrf_token }}";
     var loading = $(".loading");

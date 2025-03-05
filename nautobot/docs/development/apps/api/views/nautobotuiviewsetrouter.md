@@ -36,6 +36,3 @@ urlpatterns = [
 ]
 urlpatterns += router.urls
 ```
-
-+++ 1.5.1
-    Changelog and Notes views and URLs are now provided in the NautobotUIViewSet and NautobotUIViewSetRouter.

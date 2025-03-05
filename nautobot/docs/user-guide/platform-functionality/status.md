@@ -58,9 +58,6 @@ Any model form that is intended to have a `status` field must inherit from one o
 - `nautobot.extras.forms.StatusModelFilterFormMixin` should be used to add a non-required, multiple-choice `status` filter field to UI filter forms. This multiple-choice field allows for multiple status values to be selected for filtering objects in list views in the web UI.
 - `nautobot.extras.forms.StatusModelBulkEditFormMixin` should be used to add a non-required `status` form field to a an object's model form. This field constrains status choices eligible to the object type being edited.
 
-+/- 1.4.0
-    In prior Nautobot versions these mixins were named `StatusFilterFormMixin` and `StatusBulkEditFormMixin`; the old names are still available as aliases but will be removed in a future major release.
-
 ### Table field
 
 If you wish for a table to include a `status` field, your table must inherit from `nautobot.extras.tables.StatusTableMixin`. This includes a `ColorColumn` on the table.
@@ -79,9 +76,6 @@ To fully integrate a model to include a `status` field, assert the following:
 - Generic model forms will automatically include a `StatusField`
 - Bulk edit model forms must inherit from `nautobot.extras.forms.StatusModelBulkEditFormMixin`
 - Filter forms must inherit from `nautobot.extras.forms.StatusModelFilterFormMixin`
-
-+/- 1.4.0
-    In prior Nautobot releases the latter two mixins were named `StatusBulkEditFormMixin` and `StatusFilterFormMixin` respectively; the old names are still available as aliases but will be removed in a future major release.
 
 ### Filters
 

@@ -196,20 +196,6 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
 
 class ConfigContextTest(APIViewTestCases.APIViewTestCase):
     model = ConfigContext
-    create_data = [
-        {
-            "name": "Config Context 4",
-            "data": {"more_foo": True},
-        },
-        {
-            "name": "Config Context 5",
-            "data": {"more_bar": False},
-        },
-        {
-            "name": "Config Context 6",
-            "data": {"more_baz": None},
-        },
-    ]
     bulk_update_data = {
         "description": "New description",
     }
@@ -220,6 +206,21 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         ConfigContext.objects.create(name="Config Context 1", weight=100, data={"foo": 123})
         ConfigContext.objects.create(name="Config Context 2", weight=200, data={"bar": 456})
         ConfigContext.objects.create(name="Config Context 3", weight=300, data={"baz": 789})
+        cls.create_data = [
+            {
+                "name": "Config Context 4",
+                "data": {"more_foo": True},
+                "tags": [tag.pk for tag in Tag.objects.get_for_model(Device)],
+            },
+            {
+                "name": "Config Context 5",
+                "data": {"more_bar": False},
+            },
+            {
+                "name": "Config Context 6",
+                "data": {"more_baz": None},
+            },
+        ]
 
     def test_render_configcontext_for_object(self):
         """
@@ -1797,7 +1798,7 @@ class JobTest(
         )
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertIn(
-            "task_queue and job_queue are both specified. Please specifiy only one or another.", str(response.content)
+            "task_queue and job_queue are both specified. Please specify only one or another.", str(response.content)
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])

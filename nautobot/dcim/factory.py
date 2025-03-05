@@ -64,7 +64,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.models import ExternalIntegration, Role, Status
 from nautobot.extras.utils import FeatureQuery
-from nautobot.ipam.models import Prefix, VLAN, VLANGroup
+from nautobot.ipam.models import Prefix, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster
 
@@ -1008,3 +1008,11 @@ class VirtualDeviceContextFactory(PrimaryModelFactory):
                 self.interfaces.set(extracted)
             else:
                 self.interfaces.set(get_random_instances(Interface.objects.filter(device=self.device)))
+
+    @factory.post_generation
+    def vrfs(self, create, extracted, **kwargs):
+        if create:
+            if extracted:
+                self.vrfs.set(extracted)
+            else:
+                self.vrfs.set(get_random_instances(VRF.objects.all()))

@@ -131,16 +131,20 @@ class GitRepository(PrimaryModel):
 
     def get_latest_sync(self):
         """
-        Return a `JobResult` for the latest sync operation.
+        Return a `JobResult` for the latest sync operation if one has occurred.
 
         Returns:
-            JobResult
+            Returns a `JobResult` if the repo has been synced before, otherwise returns None.
         """
         from nautobot.extras.models import JobResult
 
         # This will match all "GitRepository" jobs (pull/refresh, dry-run, etc.)
         prefix = "nautobot.core.jobs.GitRepository"
-        return JobResult.objects.filter(task_name__startswith=prefix, task_kwargs__repository=self.pk).latest()
+
+        if JobResult.objects.filter(task_name__startswith=prefix, task_kwargs__repository=self.pk).exists():
+            return JobResult.objects.filter(task_name__startswith=prefix, task_kwargs__repository=self.pk).latest()
+        else:
+            return None
 
     def to_csv(self):
         return (

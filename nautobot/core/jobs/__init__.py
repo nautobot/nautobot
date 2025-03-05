@@ -229,7 +229,8 @@ class ExportObjectList(Job):
             # The force_csv=True attribute is a hack, but much easier than trying to construct a valid HttpRequest
             # object from scratch that passes all implicit and explicit assumptions in Django and DRF.
             serializer = serializer_class(queryset, many=True, context={"request": None}, force_csv=True)
-            csv_data = renderer.render(serializer.data)
+            # Explicitly add UTF-8 BOM to the data so that Excel will understand non-ASCII characters correctly...
+            csv_data = codecs.BOM_UTF8 + renderer.render(serializer.data).encode("utf-8")
             self.create_file(filename + ".csv", csv_data)
 
 

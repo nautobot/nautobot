@@ -9,8 +9,6 @@ at the top of your template file.
 
 ## Object Detail
 
-+++ 1.2.0
-
 The most customizable template is `generic/object_retrieve.html`, as object detail views have a wide range of specific requirements to be accommodated. It provides the following blocks:
 
 * `header`: overloading this block allows for changing the entire top row of

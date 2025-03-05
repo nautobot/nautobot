@@ -609,7 +609,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             dcim_models.LocationType.objects.get(name="Building"),
         ]
         for location_type in self.locations_types:
-            location_type.content_types.set([vlan_group_ct, vlan_ct])
+            location_type.content_types.add(vlan_group_ct, vlan_ct)
 
         self.statuses = extras_models.Status.objects.get_for_model(dcim_models.Location)
         self.location1 = dcim_models.Location.objects.create(

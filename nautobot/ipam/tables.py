@@ -247,13 +247,27 @@ class VRFDeviceAssignmentTable(BaseTable):
         linkify=lambda record: record.vrf.namespace.get_absolute_url(),
         accessor="vrf.namespace.name",
     )
-    device = tables.Column(
-        linkify=lambda record: record.device.get_absolute_url(), accessor="device.name", verbose_name="Device"
+    related_object_type = tables.TemplateColumn(
+        template_code="""
+        {% if record.device %}
+            Device
+        {% elif record.virtual_machine %}
+            Virtual Machine
+        {% else %}
+            Virtual Device Context
+        {% endif %}
+        """
     )
-    virtual_machine = tables.Column(
-        linkify=lambda record: record.virtual_machine.get_absolute_url(),
-        accessor="virtual_machine.name",
-        verbose_name="Virtual Machine",
+    related_object_name = tables.TemplateColumn(
+        template_code="""
+        {% if record.device %}
+            <a href="{{ record.device.get_absolute_url }}">{{ record.device.name }}</a>
+        {% elif record.virtual_machine %}
+            <a href="{{ record.virtual_machine.get_absolute_url }}">{{ record.virtual_machine.name }}</a>
+        {% else %}
+            <a href="{{ record.virtual_device_context.get_absolute_url }}">{{ record.virtual_device_context.name }}</a>
+        {% endif %}
+        """
     )
     rd = tables.Column(verbose_name="VRF RD")
     tenant = TenantColumn(accessor="vrf.tenant")
@@ -261,7 +275,7 @@ class VRFDeviceAssignmentTable(BaseTable):
     class Meta(BaseTable.Meta):
         model = VRFDeviceAssignment
         orderable = False
-        fields = ("vrf", "namespace", "device", "virtual_machine", "rd", "tenant")
+        fields = ("vrf", "related_object_type", "related_object_name", "namespace", "rd", "tenant")
 
 
 class VRFPrefixAssignmentTable(BaseTable):

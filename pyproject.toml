@@ -55,7 +55,7 @@ django-db-file-storage = "~0.5.6.1"
 # AutoSlugField and shell_plus
 django-extensions = "~3.2.3"
 # Advanced query filters
-django-filter = "~24.2"
+django-filter = "~25.1"
 # Health check endpoint
 django-health-check = "~3.18.3"
 # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
