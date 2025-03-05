@@ -1,6 +1,6 @@
 # Installation
 
-Whether you are getting started for the first time, looking to build a local lab or ready to build a production environment, there are a variety of options to find the right fit for your needs with using Nautobot. 
+Whether you are getting started for the first time, looking to build a local lab or ready to build a production environment, there are a variety of options to find the right fit for your needs with using Nautobot.
 
 !!! tip "Checking out Nautobot for the first time? Not ready to install anything yet?"
     You can explore the [Nautobot Always-On Sandbox Environments](https://networktocode.com/nautobot/sandbox-environments/). There is sample data already prepopulated, no installation required, and several Nautobot Apps are pre-installed, with sample data.
