@@ -13,7 +13,7 @@ Whether you are getting started for the first time, looking to build a local lab
     
     Nautobot was designed to be a cross-platform application that can run on nearly any system that is able to run the required dependencies. *Only the operating system platforms listed below are officially supported at this time*.
 
-    * Red Hat flavors of Linux including CentOS 8.2+ and Red Hat Enterprise Linux (RHEL) 8.2+ are supported.
+    * Red Hat flavors of Linux including Fedora 8.2+ and Red Hat Enterprise Linux (RHEL) 8.2+ are supported.
     * Debian/Ubuntu flavors of Linux including Ubuntu 20.04+ and Debian 11+ are supported.
 
     Nautobot *should* work on any POSIX-compliant system including practically any flavor of Linux, BSD, or even macOS, but those are not *officially* supported at this time.
