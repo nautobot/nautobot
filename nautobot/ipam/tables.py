@@ -833,7 +833,7 @@ class ServiceTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     parent = tables.LinkColumn(order_by=("device", "virtual_machine"))
-    ports = tables.TemplateColumn(template_code="{{record.ports|join:','}}", verbose_name="Ports")
+    ports = tables.TemplateColumn(template_code="{{ record.port_list }}", verbose_name="Ports")
     tags = TagColumn(url_name="ipam:service_list")
 
     class Meta(BaseTable.Meta):

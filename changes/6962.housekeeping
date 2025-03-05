@@ -1,0 +1,1 @@
+Refactored `service views` to use `NautobotUIViewSet`.

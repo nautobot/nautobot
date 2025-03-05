@@ -1373,7 +1373,7 @@ class VLANBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class ServiceEditView(generic.ObjectEditView):
+class ServiceEditView(generic.ObjectEditView):  # This view is used to assign services to devices and VMs
     queryset = Service.objects.prefetch_related("ip_addresses")
     model_form = forms.ServiceForm
     template_name = "ipam/service_edit.html"
@@ -1395,13 +1395,6 @@ class ServiceUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImpor
     filterset_class = filters.ServiceFilterSet
     filterset_form_class = forms.ServiceFilterForm
     form_class = forms.ServiceForm
-    queryset = Service.objects.all()
+    queryset = Service.objects.select_related("device", "virtual_machine").prefetch_related("ip_addresses")
     serializer_class = serializers.ServiceSerializer
     table_class = tables.ServiceTable
-
-    def get_queryset(self):
-        if self.action in ["bulk_update", "bulk_destroy"]:
-            self.queryset = Service.objects.select_related("device", "virtual_machine")
-        elif self.action == "retrieve":
-            self.queryset = Service.objects.prefetch_related("ip_addresses")
-        return super().get_queryset()
