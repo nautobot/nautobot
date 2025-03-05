@@ -42,8 +42,8 @@ Whether you are getting started for the first time, looking to build a local lab
 
     ### Docker Compose Pros
 
-    * Quick to deploy for single node lab work and testing
-    * For those looking for a multi-container single-node install for Nautobot often coupled with backup & HA capabilities from their hypervisor manager
+    * Quick and simple setup for single-node lab environments and testing
+    * Lightweight alternative for those who don't need full Kubernetes orchestration
 
     ### Docker Compose Cons
 
