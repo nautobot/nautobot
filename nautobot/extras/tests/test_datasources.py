@@ -798,3 +798,57 @@ class GitTest(TransactionTestCase):
             "provides contents overlapping with this repository.",
             str(cm.exception),
         )
+
+    @mock.patch("nautobot.extras.models.datasources.GitRepo")
+    def test_clone_to_directory_with_secrets(self, MockGitRepo):
+        """
+        The clone_to_directory method should correctly make use of secrets.
+        """
+        with tempfile.TemporaryDirectory() as tempdir:
+            # Prepare secrets values
+            with open(os.path.join(tempdir, "username.txt"), "wt") as handle:
+                handle.write("núñez")
+
+            with open(os.path.join(tempdir, "token.txt"), "wt") as handle:
+                handle.write("1:3@/?=ab@")
+
+            # Create secrets and assign
+            username_secret = Secret.objects.create(
+                name="Git Username",
+                provider="text-file",
+                parameters={"path": os.path.join(tempdir, "username.txt")},
+            )
+            token_secret = Secret.objects.create(
+                name="Git Token",
+                provider="text-file",
+                parameters={"path": os.path.join(tempdir, "token.txt")},
+            )
+            secrets_group = SecretsGroup.objects.create(name="Git Credentials")
+            SecretsGroupAssociation.objects.create(
+                secret=username_secret,
+                secrets_group=secrets_group,
+                access_type=SecretsGroupAccessTypeChoices.TYPE_HTTP,
+                secret_type=SecretsGroupSecretTypeChoices.TYPE_USERNAME,
+            )
+            SecretsGroupAssociation.objects.create(
+                secret=token_secret,
+                secrets_group=secrets_group,
+                access_type=SecretsGroupAccessTypeChoices.TYPE_HTTP,
+                secret_type=SecretsGroupSecretTypeChoices.TYPE_TOKEN,
+            )
+
+            # Configure GitRepository model
+            self.repo.secrets_group = secrets_group
+            self.repo.remote_url = "http://localhost/git.git"
+            self.repo.save()
+
+            # Try to clone it
+            self.repo.clone_to_directory(tempdir, "main")
+
+            # Assert that GitRepo was called with proper args
+            args, kwargs = MockGitRepo.call_args
+            path, from_url = args
+            self.assertTrue(path.startswith(os.path.join(tempdir, self.repo.slug)))
+            self.assertEqual(from_url, "http://n%C3%BA%C3%B1ez:1%3A3%40%2F%3F%3Dab%40@localhost/git.git")
+            self.assertEqual(kwargs["depth"], 0)
+            self.assertEqual(kwargs["branch"], "main")
