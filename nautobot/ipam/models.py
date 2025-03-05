@@ -1605,7 +1605,10 @@ class VLAN(PrimaryModel):
 
     @property
     def display(self):
-        return f"{self.name} ({self.vid})"
+        if self.vlan_group is None:
+            return f"{self.name} ({self.vid})"
+        else:
+            return f"{self.name} ({self.vid}) - {self.vlan_group.name}"
 
     def get_interfaces(self):
         # Return all device interfaces assigned to this VLAN
