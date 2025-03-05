@@ -23,6 +23,7 @@ services:
         condition: service_healthy
     env_file:
       - dev.env
+    init: true
     tty: true
   celery_worker:
     image: "local/nautobot-dev:local-${NAUTOBOT_VER}-py${PYTHON_VER}"

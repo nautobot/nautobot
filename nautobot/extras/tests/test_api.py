@@ -1917,7 +1917,7 @@ class JobTest(
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
 
-        job_model = Job.objects.get(job_class_name="ExampleJob")
+        job_model = Job.objects.get(job_class_name="TestHasSensitiveVariables")
         job_model.enabled = True
         job_model.validated_save()
 

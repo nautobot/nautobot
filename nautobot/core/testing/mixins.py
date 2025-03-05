@@ -18,6 +18,7 @@ from nautobot.core.models import fields as core_fields
 from nautobot.core.testing import utils
 from nautobot.core.utils import permissions
 from nautobot.extras import management, models as extras_models
+from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.users import models as users_models
 
 # Use the proper swappable User model
@@ -187,6 +188,14 @@ class NautobotTestCaseMixin:
             if msg:
                 err_message = f"{msg}\n{err_message}"
         self.assertIn(response.status_code, expected_status, err_message)
+
+    def assertJobResultStatus(self, job_result, expected_status=JobResultStatusChoices.STATUS_SUCCESS):
+        """Assert that the given job_result has the expected_status, or print the job logs to aid in debugging."""
+        self.assertEqual(
+            job_result.status,
+            expected_status,
+            (job_result.traceback, list(job_result.job_log_entries.values_list("message", flat=True))),
+        )
 
     def assertInstanceEqual(self, instance, data, exclude=None, api=False):
         """

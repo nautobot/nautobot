@@ -897,25 +897,28 @@ class JobResult(BaseModel, CustomFieldModel):
                     # Cancel the scheduled SIGALRM if it hasn't fired already
                     signal.alarm(0)
 
-            # copy fields from eager result to job result
             job_result.refresh_from_db()
-            # Emulate prepare_exception() behavior
-            if isinstance(eager_result.result, Exception):
-                job_result.result = {
-                    "exc_type": type(eager_result.result).__name__,
-                    "exc_message": sanitize(str(eager_result.result)),
-                }
-            else:
-                if eager_result.result is not None:
+            # copy from eager result to job result if and only if the job result isn't already in a proper state.
+            if JobResultStatusChoices.precedence(job_result.status) > JobResultStatusChoices.precedence(
+                eager_result.status
+            ):
+                if eager_result.status in JobResultStatusChoices.EXCEPTION_STATES and isinstance(
+                    eager_result.result, Exception
+                ):
+                    job_result.result = {
+                        "exc_type": type(eager_result.result).__name__,
+                        "exc_message": sanitize(str(eager_result.result)),
+                    }
+                elif eager_result.result is not None:
                     job_result.result = sanitize(eager_result.result)
-                else:
-                    job_result.result = None
-            job_result.status = eager_result.status
-            if eager_result.traceback is not None:
-                job_result.traceback = sanitize(eager_result.traceback)
-            else:
-                job_result.traceback = None
-            job_result.date_done = timezone.now()
+                job_result.status = eager_result.status
+                if (
+                    eager_result.status in JobResultStatusChoices.EXCEPTION_STATES
+                    and eager_result.traceback is not None
+                ):
+                    job_result.traceback = sanitize(eager_result.traceback)
+            if not job_result.date_done:
+                job_result.date_done = timezone.now()
             job_result.save()
         else:
             # Jobs queued inside of a transaction need to run after the transaction completes and the JobResult is saved to the database

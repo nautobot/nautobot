@@ -1367,7 +1367,7 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
     def setUpTestData(cls):
         # JobModel instances are automatically instantiated at startup, so we just need to look them up.
         cls.local_job = JobModel.objects.get(job_class_name="TestPassJob")
-        cls.job_containing_sensitive_variables = JobModel.objects.get(job_class_name="ExampleLoggingJob")
+        cls.job_containing_sensitive_variables = JobModel.objects.get(job_class_name="TestHasSensitiveVariables")
         cls.app_job = JobModel.objects.get(job_class_name="ExampleJob")
 
     def test_job_class(self):

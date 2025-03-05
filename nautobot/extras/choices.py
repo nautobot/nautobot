@@ -251,8 +251,10 @@ class JobResultStatusChoices(ChoiceSet):
     """
 
     STATUS_FAILURE = states.FAILURE
+    STATUS_IGNORED = states.IGNORED
     STATUS_PENDING = states.PENDING
     STATUS_RECEIVED = states.RECEIVED
+    STATUS_REJECTED = states.REJECTED
     STATUS_RETRY = states.RETRY
     STATUS_REVOKED = states.REVOKED
     STATUS_STARTED = states.STARTED
@@ -302,27 +304,30 @@ class JobResultStatusChoices(ChoiceSet):
 class LogLevelChoices(ChoiceSet):
     LOG_DEBUG = "debug"
     LOG_INFO = "info"
+    LOG_SUCCESS = "success"
     LOG_WARNING = "warning"
+    LOG_FAILURE = "failure"
     LOG_ERROR = "error"
     LOG_CRITICAL = "critical"
-    LOG_SUCCESS = "success"
 
     CHOICES = (
         (LOG_DEBUG, "Debug"),
         (LOG_INFO, "Info"),
+        (LOG_SUCCESS, "Success"),
         (LOG_WARNING, "Warning"),
+        (LOG_FAILURE, "Failure"),
         (LOG_ERROR, "Error"),
         (LOG_CRITICAL, "Critical"),
-        (LOG_SUCCESS, "Success"),
     )
 
     CSS_CLASSES = {
         LOG_DEBUG: "debug",
         LOG_INFO: "info",
+        LOG_SUCCESS: "success",
         LOG_WARNING: "warning",
+        LOG_FAILURE: "failure",
         LOG_ERROR: "error",
         LOG_CRITICAL: "critical",
-        LOG_SUCCESS: "success",
     }
 
 
