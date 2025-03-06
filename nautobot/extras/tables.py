@@ -112,6 +112,27 @@ JOB_BUTTONS = """
 <a href="{% url 'extras:jobresult_list' %}?job_model={{ record.name | urlencode }}" class="btn btn-default btn-xs" title="Job Results"><i class="mdi mdi-format-list-bulleted" aria-hidden="true"></i></a>
 """
 
+JOB_RESULT_BUTTONS = """
+{% load helpers %}
+{% if perms.extras.run_job %}
+    {% if record.job_model and record.task_kwargs %}
+        <a href="{% url 'extras:job_run' pk=record.job_model.pk %}?kwargs_from_job_result={{ record.pk }}"
+           class="btn btn-xs btn-success" title="Re-run job with same arguments.">
+            <i class="mdi mdi-repeat"></i>
+        </a>
+    {% elif record.job_model is not None %}
+        <a href="{% url 'extras:job_run' pk=record.job_model.pk %}" class="btn btn-primary btn-xs"
+           title="Run job">
+            <i class="mdi mdi-play"></i>
+        </a>
+    {% else %}
+        <a href="#" class="btn btn-xs btn-default disabled" title="Job is not available, cannot be re-run">
+            <i class="mdi mdi-repeat-off"></i>
+        </a>
+    {% endif %}
+{% endif %}
+"""
+
 SCHEDULED_JOB_BUTTONS = """
 <a href="{% url 'extras:jobresult_list' %}?scheduled_job={{ record.name | urlencode }}" class="btn btn-default btn-xs" title="Job Results"><i class="mdi mdi-format-list-bulleted" aria-hidden="true"></i></a>
 """
@@ -877,30 +898,7 @@ class JobResultTable(BaseTable):
         linkify=True,
         verbose_name="Scheduled Job",
     )
-    actions = ButtonsColumn(
-        JobResult,
-        buttons=("delete",),
-        prepend_template="""
-            {% load helpers %}
-            {% if perms.extras.run_job %}
-                {% if record.job_model and record.task_kwargs %}
-                    <a href="{% url 'extras:job_run' pk=record.job_model.pk %}?kwargs_from_job_result={{ record.pk }}"
-                       class="btn btn-xs btn-success" title="Re-run job with same arguments.">
-                        <i class="mdi mdi-repeat"></i>
-                    </a>
-                {% elif record.job_model is not None %}
-                    <a href="{% url 'extras:job_run' pk=record.job_model.pk %}" class="btn btn-primary btn-xs"
-                       title="Run job">
-                        <i class="mdi mdi-play"></i>
-                    </a>
-                {% else %}
-                    <a href="#" class="btn btn-xs btn-default disabled" title="Job is not available, cannot be re-run">
-                        <i class="mdi mdi-repeat-off"></i>
-                    </a>
-                {% endif %}
-            {% endif %}
-        """,
-    )
+    actions = ButtonsColumn(JobResult, buttons=("delete",), prepend_template=JOB_RESULT_BUTTONS)
 
     def render_summary(self, record):
         """

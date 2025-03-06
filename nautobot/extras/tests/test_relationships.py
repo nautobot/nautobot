@@ -1813,7 +1813,7 @@ class RelationshipJobTestCase(RequiredRelationshipTestMixin, TransactionTestCase
 
         # Try editing 6 VLANs and adding the required device (succeeds):
         job_result = self.create_job(pk_list, add_cr_vlans_devices_m2m__source=[str(device_for_association.id)])
-        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
 
         # Try editing 6 VLANs and removing the required device (fails):
         job_result = self.create_job(pk_list, remove_cr_vlans_devices_m2m__source=[str(device_for_association.id)])

@@ -70,7 +70,7 @@ class ExportObjectListTest(TransactionTestCase):
             username=self.user.username,  # otherwise run_job_for_testing defaults to a superuser account
             content_type=ContentType.objects.get_for_model(Status).pk,
         )
-        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertTrue(job_result.files.exists())
         self.assertEqual(Path(job_result.files.first().file.name).name, "nautobot_statuses.csv")
         csv_bytes = job_result.files.first().file.read()
@@ -86,7 +86,7 @@ class ExportObjectListTest(TransactionTestCase):
             "ExportObjectList",
             content_type=ContentType.objects.get_for_model(Status).pk,
         )
-        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertTrue(job_result.files.exists())
         self.assertEqual(Path(job_result.files.first().file.name).name, "nautobot_statuses.csv")
         csv_data = job_result.files.first().file.read().decode("utf-8")
@@ -107,7 +107,7 @@ class ExportObjectListTest(TransactionTestCase):
             content_type=ContentType.objects.get_for_model(Status).pk,
             export_template=et.pk,
         )
-        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertTrue(job_result.files.exists())
         self.assertEqual(Path(job_result.files.first().file.name).name, "nautobot_statuses.txt")
         text_data = job_result.files.first().file.read().decode("utf-8")
@@ -129,7 +129,7 @@ class ExportObjectListTest(TransactionTestCase):
             content_type=ContentType.objects.get_for_model(DeviceType).pk,
             export_format="yaml",
         )
-        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertTrue(job_result.files.exists())
         self.assertEqual(Path(job_result.files.first().file.name).name, "nautobot_device_types.yaml")
         yaml_data = job_result.files.first().file.read().decode("utf-8")
@@ -220,7 +220,7 @@ class ImportObjectsTestCase(TransactionTestCase):
             content_type=ContentType.objects.get_for_model(Status).pk,
             csv_data=self.csv_data,
         )
-        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertFalse(
             JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
         )
@@ -246,7 +246,7 @@ class ImportObjectsTestCase(TransactionTestCase):
             content_type=ContentType.objects.get_for_model(Prefix).pk,
             csv_file=csv_file.id,
         )
-        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertFalse(
             JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
         )
@@ -287,7 +287,7 @@ class ImportObjectsTestCase(TransactionTestCase):
             content_type=ContentType.objects.get_for_model(Device).pk,
             csv_file=csv_file.id,
         )
-        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertFalse(
             JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
         )
@@ -531,7 +531,7 @@ class LogsCleanupTestCase(TransactionTestCase):
             cleanup_types=[CleanupTypes.JOB_RESULT, CleanupTypes.OBJECT_CHANGE],
             max_age=0,
         )
-        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertEqual(job_result.result["extras.JobResult"], 1)
         self.assertEqual(job_result.result["extras.ObjectChange"], 1)
         with self.assertRaises(JobResult.DoesNotExist):
@@ -628,7 +628,7 @@ class BulkEditTestCase(TransactionTestCase):
             tag.content_types.add(self.namespace_ct)
 
     def _common_no_error_test_assertion(self, model, job_result, expected_count, **filter_params):
-        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertEqual(model.objects.filter(**filter_params).count(), expected_count)
         self.assertFalse(
             JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
@@ -960,7 +960,7 @@ class BulkDeleteTestCase(TransactionTestCase):
         )
 
     def _common_no_error_test_assertion(self, model, job_result, **filter_params):
-        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertEqual(model.objects.filter(**filter_params).count(), 0)
         self.assertFalse(
             JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()

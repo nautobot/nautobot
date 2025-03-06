@@ -687,7 +687,7 @@ Markdown rendering is supported for log messages, as well as [a limited subset o
     You can now use `self.logger.success()` to log a message at the level `SUCCESS`, which is located between the standard `INFO` and `WARNING` log levels.
 
 +++ 2.4.5 "`logger.failure()` added"
-    You can now use `self.logger.failure()` to log a message at the level `FAILURE`, which is located betwen the standard `WARNING` and `ERROR` log levels.
+    You can now use `self.logger.failure()` to log a message at the level `FAILURE`, which is located between the standard `WARNING` and `ERROR` log levels.
 
 ### File Output
 
