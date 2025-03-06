@@ -1389,6 +1389,16 @@ class ServiceEditView(generic.ObjectEditView):  # This view is used to assign se
         return obj
 
 
+def to_list(ip_addresses):
+    if not ip_addresses.all():
+        return "—"
+
+    ips = ""
+    for ip in ip_addresses.all():
+        ips += str(ip) + "\n"
+    return ips
+
+
 class ServiceUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportView
     model = Service
     bulk_update_form_class = forms.ServiceBulkEditForm
@@ -1398,3 +1408,21 @@ class ServiceUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImpor
     queryset = Service.objects.select_related("device", "virtual_machine").prefetch_related("ip_addresses")
     serializer_class = serializers.ServiceSerializer
     table_class = tables.ServiceTable
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=[
+                    "name",
+                    "parent",
+                    "protocol",
+                    "port_list",
+                    "ip_addresses",
+                    "description",
+                ],
+                value_transforms={"ip_addresses": [to_list]},
+            ),
+        )
+    )
