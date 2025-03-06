@@ -1,0 +1,1 @@
+Changed DCIM Model Type for `download_url` in `SoftwareImageFile` in order to allow for additional URI Schemas, such as sftp://, tftp://.
