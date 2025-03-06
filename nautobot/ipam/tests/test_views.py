@@ -6,6 +6,7 @@ from django.db.models import Count
 from django.test import override_settings
 from django.urls import reverse
 from django.utils.html import strip_tags
+from django.utils.http import urlencode
 from django.utils.timezone import make_aware
 from netaddr import IPNetwork
 
@@ -145,6 +146,25 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         # Ensure that we have at least one RIR with no prefixes that can be used for the "delete_object" tests.
         RIR.objects.create(name="RIR XYZ")
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_list_objects_with_permission(self):
+        """Test rendering of LinkedCountColumn for related fields without display_field override."""
+        response = super().test_list_objects_with_permission()
+        response_body = extract_page_body(response.content.decode(response.charset))
+
+        prefix_list_url = reverse(get_route_for_model(Prefix, "list"))
+
+        for rir in self._get_queryset().all():
+            if str(rir.pk) in response_body:
+                count = rir.prefixes.count()
+                if count > 1:
+                    self.assertBodyContains(
+                        response,
+                        f'<a href="{prefix_list_url}?{urlencode({"rir": rir.name})}" class="badge">{count}</a>',
+                    )
+                elif count == 1:
+                    self.assertBodyContains(response, hyperlinked_object(rir.prefixes.first()))
+
 
 class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.ListObjectsViewTestCase):
     model = Prefix
@@ -194,7 +214,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_list_objects_with_permission(self):
-        """Test rendering of LinkedCountColumn for related fields."""
+        """Test rendering of LinkedCountColumn for related fields with display_field override."""
         response = super().test_list_objects_with_permission()
         response_body = extract_page_body(response.content.decode(response.charset))
 
@@ -208,7 +228,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                         response, f'<a href="{locations_list_url}?prefixes={prefix.pk}" class="badge">{count}</a>'
                     )
                 elif count == 1:
-                    self.assertBodyContains(response, hyperlinked_object(prefix.locations.first().name))
+                    self.assertBodyContains(response, hyperlinked_object(prefix.locations.first(), "name"))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_empty_queryset(self):
