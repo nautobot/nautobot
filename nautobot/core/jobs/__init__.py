@@ -295,8 +295,9 @@ class ImportObjects(Job):
                     validation_failed = True
             else:
                 validation_failed = True
-                for field, err in serializer.errors.items():
-                    self.logger.error("Row %d: `%s`: `%s`", row, field, err[0])
+                for field, errs in serializer.errors.items():
+                    for err in errs:
+                        self.logger.error("Row %d: `%s`: `%s`", row, field, err)
         return new_objs, validation_failed
 
     def run(self, *, content_type, csv_data=None, csv_file=None, roll_back_if_error=False):  # pylint:disable=arguments-differ
