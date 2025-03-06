@@ -1,4 +1,4 @@
-Jinja2==3.1.5
+Jinja2==3.1.6
 mkdocs==1.5.3
 mkdocs-include-markdown-plugin==4.0.4
 mkdocs-material==9.1.18
