@@ -1,5 +1,5 @@
 griffe==0.31.0
-Jinja2==3.1.5
+Jinja2==3.1.6
 Markdown==3.3.7
 mkdocs==1.5.3
 mkdocs-gen-files==0.5.0
