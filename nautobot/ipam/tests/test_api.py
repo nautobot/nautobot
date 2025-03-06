@@ -163,16 +163,6 @@ class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
             virtual_machine=cls.test_vm,
             rd="65000:4",
         )
-        VRFDeviceAssignment.objects.create(
-            vrf=cls.vrfs[0],
-            virtual_device_context=cls.vdcs[0],
-            name="VRFDeviceAssignment 1",
-            rd="65000:5",
-        )
-        VRFDeviceAssignment.objects.create(
-            vrf=cls.vrfs[0],
-            virtual_device_context=cls.vdcs[1],
-        )
 
         cls.update_data = {
             "name": "VRFDeviceAssignment 2",
@@ -208,20 +198,23 @@ class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
     def test_creating_invalid_vrf_device_assignments(self):
         # Add object-level permission
         self.add_permissions("ipam.add_vrfdeviceassignment")
+        existing_vrf_device = VRFDeviceAssignment.objects.filter(device__isnull=False).first()
+        existing_vrf_vm = VRFDeviceAssignment.objects.filter(virtual_machine__isnull=False).first()
+        existing_vrf_vdc = VRFDeviceAssignment.objects.filter(virtual_device_context__isnull=False).first()
         duplicate_create_data = [
             {
-                "vrf": self.vrfs[0].pk,
-                "device": self.devices[1].pk,
+                "vrf": existing_vrf_device.vrf.pk,
+                "device": existing_vrf_device.device.pk,
                 "rd": "65000:6",
             },
             {
-                "vrf": self.vrfs[1].pk,
-                "virtual_machine": self.test_vm.pk,
+                "vrf": existing_vrf_vm.vrf.pk,
+                "virtual_machine": existing_vrf_vm.virtual_machine.pk,
                 "rd": "65000:6",
             },
             {
-                "vrf": self.vrfs[0].pk,
-                "virtual_device_context": self.vdcs[1].pk,
+                "vrf": existing_vrf_vdc.vrf.pk,
+                "virtual_device_context": existing_vrf_vdc.virtual_device_context.pk,
                 "rd": "65000:6",
             },
         ]
