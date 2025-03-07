@@ -238,11 +238,7 @@ class GitTest(TransactionTestCase):
                     repository=self.repo.pk,
                 )
 
-                self.assertEqual(
-                    job_result.status,
-                    JobResultStatusChoices.STATUS_FAILURE,
-                    (job_result.result, list(job_result.job_log_entries.values_list("message", "log_object"))),
-                )
+                self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
                 self.repo.refresh_from_db()
 
                 log_entries = JobLogEntry.objects.filter(job_result=job_result)
@@ -308,11 +304,7 @@ class GitTest(TransactionTestCase):
                     repository=self.repo.pk,
                 )
 
-                self.assertEqual(
-                    job_result.status,
-                    JobResultStatusChoices.STATUS_SUCCESS,
-                    (job_result.traceback, list(job_result.job_log_entries.values_list("message", flat=True))),
-                )
+                self.assertJobResultStatus(job_result)
                 self.repo.refresh_from_db()
                 MockGitRepo.assert_called_with(
                     os.path.join(tempdir, self.repo.slug),
@@ -331,11 +323,7 @@ class GitTest(TransactionTestCase):
                 job_model = GitRepositorySync().job_model
                 job_result = run_job_for_testing(job=job_model, repository=self.repo.pk)
                 job_result.refresh_from_db()
-                self.assertEqual(
-                    job_result.status,
-                    JobResultStatusChoices.STATUS_SUCCESS,
-                    (job_result.traceback, list(job_result.job_log_entries.values_list("message", flat=True))),
-                )
+                self.assertJobResultStatus(job_result)
 
                 # Make sure explicit ConfigContext was successfully loaded from file
                 self.assert_explicit_config_context_exists("Frobozz 1000 NTP servers")
@@ -383,11 +371,7 @@ class GitTest(TransactionTestCase):
                 # Run the Git operation and refresh the object from the DB
                 job_result = run_job_for_testing(job=job_model, repository=self.repo.pk)
                 job_result.refresh_from_db()
-                self.assertEqual(
-                    job_result.status,
-                    JobResultStatusChoices.STATUS_SUCCESS,
-                    (job_result.traceback, list(job_result.job_log_entries.values_list("message", flat=True))),
-                )
+                self.assertJobResultStatus(job_result)
 
                 # Verify that objects have been removed from the database
                 self.assertEqual(
@@ -442,11 +426,7 @@ class GitTest(TransactionTestCase):
                 )
                 job_result.refresh_from_db()
 
-                self.assertEqual(
-                    job_result.status,
-                    JobResultStatusChoices.STATUS_FAILURE,
-                    job_result.result,
-                )
+                self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
 
                 # Due to transaction rollback on failure, the database should still/again match the pre-sync state, of
                 # no records owned by the repository.
@@ -547,11 +527,7 @@ class GitTest(TransactionTestCase):
                 )
                 job_result.refresh_from_db()
 
-                self.assertEqual(
-                    job_result.status,
-                    JobResultStatusChoices.STATUS_SUCCESS,
-                    (job_result.traceback, list(job_result.job_log_entries.values_list("message", flat=True))),
-                )
+                self.assertJobResultStatus(job_result)
 
                 # Make sure ConfigContext was successfully loaded from file
                 config_context = ConfigContext.objects.get(
@@ -591,15 +567,7 @@ class GitTest(TransactionTestCase):
                     delete_job_result = JobResult.objects.filter(name=repo_name).first()
                     # Make sure we didn't get the wrong JobResult
                     self.assertNotEqual(job_result, delete_job_result)
-                    self.assertEqual(
-                        delete_job_result.status,
-                        JobResultStatusChoices.STATUS_SUCCESS,
-                        (
-                            delete_job_result,
-                            delete_job_result.traceback,
-                            list(delete_job_result.job_log_entries.values_list("message", flat=True)),
-                        ),
-                    )
+                    self.assertJobResultStatus(delete_job_result)
 
                 with self.assertRaises(ConfigContext.DoesNotExist):
                     ConfigContext.objects.get(
@@ -637,11 +605,7 @@ class GitTest(TransactionTestCase):
                 job_model = GitRepositorySync().job_model
                 job_result = run_job_for_testing(job=job_model, repository=self.repo.pk)
                 job_result.refresh_from_db()
-                self.assertEqual(
-                    job_result.status,
-                    JobResultStatusChoices.STATUS_SUCCESS,
-                    (job_result.traceback, list(job_result.job_log_entries.values_list("message", flat=True))),
-                )
+                self.assertJobResultStatus(job_result)
 
                 self.assert_explicit_config_context_exists("Frobozz 1000 NTP servers")
                 self.assert_implicit_config_context_exists("Location context")
@@ -673,11 +637,7 @@ class GitTest(TransactionTestCase):
                 # Resync, attempting and failing to update to the new commit
                 job_result = run_job_for_testing(job=job_model, repository=self.repo.pk)
                 job_result.refresh_from_db()
-                self.assertEqual(
-                    job_result.status,
-                    JobResultStatusChoices.STATUS_FAILURE,
-                    job_result.result,
-                )
+                self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
                 log_entries = JobLogEntry.objects.filter(job_result=job_result)
 
                 # Assert database changes were rolled back
@@ -718,11 +678,7 @@ class GitTest(TransactionTestCase):
                 )
                 job_result.refresh_from_db()
 
-                self.assertEqual(
-                    job_result.status,
-                    JobResultStatusChoices.STATUS_SUCCESS,
-                    (job_result.traceback, list(job_result.job_log_entries.values_list("message", flat=True))),
-                )
+                self.assertJobResultStatus(job_result)
 
                 log_entries = JobLogEntry.objects.filter(job_result=job_result)
 
@@ -798,3 +754,57 @@ class GitTest(TransactionTestCase):
             "provides contents overlapping with this repository.",
             str(cm.exception),
         )
+
+    @mock.patch("nautobot.extras.models.datasources.GitRepo")
+    def test_clone_to_directory_with_secrets(self, MockGitRepo):
+        """
+        The clone_to_directory method should correctly make use of secrets.
+        """
+        with tempfile.TemporaryDirectory() as tempdir:
+            # Prepare secrets values
+            with open(os.path.join(tempdir, "username.txt"), "wt") as handle:
+                handle.write("núñez")
+
+            with open(os.path.join(tempdir, "token.txt"), "wt") as handle:
+                handle.write("1:3@/?=ab@")
+
+            # Create secrets and assign
+            username_secret = Secret.objects.create(
+                name="Git Username",
+                provider="text-file",
+                parameters={"path": os.path.join(tempdir, "username.txt")},
+            )
+            token_secret = Secret.objects.create(
+                name="Git Token",
+                provider="text-file",
+                parameters={"path": os.path.join(tempdir, "token.txt")},
+            )
+            secrets_group = SecretsGroup.objects.create(name="Git Credentials")
+            SecretsGroupAssociation.objects.create(
+                secret=username_secret,
+                secrets_group=secrets_group,
+                access_type=SecretsGroupAccessTypeChoices.TYPE_HTTP,
+                secret_type=SecretsGroupSecretTypeChoices.TYPE_USERNAME,
+            )
+            SecretsGroupAssociation.objects.create(
+                secret=token_secret,
+                secrets_group=secrets_group,
+                access_type=SecretsGroupAccessTypeChoices.TYPE_HTTP,
+                secret_type=SecretsGroupSecretTypeChoices.TYPE_TOKEN,
+            )
+
+            # Configure GitRepository model
+            self.repo.secrets_group = secrets_group
+            self.repo.remote_url = "http://localhost/git.git"
+            self.repo.save()
+
+            # Try to clone it
+            self.repo.clone_to_directory(tempdir, "main")
+
+            # Assert that GitRepo was called with proper args
+            args, kwargs = MockGitRepo.call_args
+            path, from_url = args
+            self.assertTrue(path.startswith(os.path.join(tempdir, self.repo.slug)))
+            self.assertEqual(from_url, "http://n%C3%BA%C3%B1ez:1%3A3%40%2F%3F%3Dab%40@localhost/git.git")
+            self.assertEqual(kwargs["depth"], 0)
+            self.assertEqual(kwargs["branch"], "main")
