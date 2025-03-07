@@ -5,6 +5,8 @@ from django.core.exceptions import ValidationError
 from django.db import models
 import netaddr
 
+from nautobot.ipam.constants import IPV4_BYTE_LENGTH, IPV6_BYTE_LENGTH
+
 BASE_NAME = "Cleanup Namespace"
 DESCRIPTION = "Created by Nautobot 2.0 IPAM data migrations."
 GLOBAL_NS = "Global"
@@ -152,17 +154,21 @@ def add_prefix_and_ip_address_version(apps):
 
     if "test" not in sys.argv:
         print(">>> Populating Prefix.ip_version field")
-    for pfx in Prefix.objects.all():
-        cidr = validate_cidr(apps, pfx)
-        pfx.ip_version = cidr.version
-        pfx.save()
+    Prefix.objects.annotate(address_len=models.functions.Length(models.F("network"))).filter(
+        address_len=IPV4_BYTE_LENGTH
+    ).update(ip_version=4)
+    Prefix.objects.annotate(address_len=models.functions.Length(models.F("network"))).filter(
+        address_len=IPV6_BYTE_LENGTH
+    ).update(ip_version=6)
 
     if "test" not in sys.argv:
         print(">>> Populating IPAddress.ip_version field")
-    for ip in IPAddress.objects.all():
-        cidr = validate_cidr(apps, ip)
-        ip.ip_version = cidr.version
-        ip.save()
+    IPAddress.objects.annotate(address_len=models.functions.Length(models.F("host"))).filter(
+        address_len=IPV4_BYTE_LENGTH
+    ).update(ip_version=4)
+    IPAddress.objects.annotate(address_len=models.functions.Length(models.F("host"))).filter(
+        address_len=IPV6_BYTE_LENGTH
+    ).update(ip_version=6)
 
 
 def process_ip_addresses(apps):
