@@ -1389,16 +1389,6 @@ class ServiceEditView(generic.ObjectEditView):  # This view is used to assign se
         return obj
 
 
-def to_list(ip_addresses):
-    if not ip_addresses.all():
-        return "—"
-
-    ips = ""
-    for ip in ip_addresses.all():
-        ips += str(ip) + "\n"
-    return ips
-
-
 class ServiceUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportView
     model = Service
     bulk_update_form_class = forms.ServiceBulkEditForm
@@ -1414,15 +1404,28 @@ class ServiceUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImpor
             object_detail.ObjectFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
-                fields=[
-                    "name",
-                    "parent",
-                    "protocol",
-                    "port_list",
-                    "ip_addresses",
-                    "description",
-                ],
-                value_transforms={"ip_addresses": [to_list]},
+                fields=["name", "parent", "protocol", "port_list", "description"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.RIGHT_HALF,
+                context_table_key="ip_addresses_table",
             ),
         )
     )
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            if instance.ip_addresses:
+                ip_addresses = IPAddress.objects.select_related("tenant", "status", "role").filter(
+                    id__in=instance.ip_addresses.all()
+                )
+            ip_addresses_table = tables.IPAddressTable(ip_addresses)
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(ip_addresses_table)
+            context["ip_addresses_table"] = ip_addresses_table
+        return context
