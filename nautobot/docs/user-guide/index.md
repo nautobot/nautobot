@@ -28,7 +28,7 @@ There are four main headings within the guide:
     ---
     Dive into [how to use Nautobot](./feature-guides/getting-started/index.md) and the key components of the core web interface.
 
-- :material-transition-masked:{ .lg .middle } **Migrating with Nautobot**
+- :material-transition-masked:{ .lg .middle } **Migrating to Nautobot**
 
     ---
     Dig into how you can [migrate from NetBox](./administration/migration/migrating-from-netbox.md) to Nautobot seamlessly. 
