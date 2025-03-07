@@ -31,7 +31,7 @@ There are four main headings within the guide:
 - :material-transition-masked:{ .lg .middle } **Migrating with Nautobot**
 
     ---
-    Dig into how you can [migrate from Netbox](./administration/migration/migrating-from-netbox.md) to Nautobot seamlessly. 
+    Dig into how you can [migrate from NetBox](./administration/migration/migrating-from-netbox.md) to Nautobot seamlessly. 
 </div>
 
 !!! Tip
