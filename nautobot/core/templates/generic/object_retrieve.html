@@ -117,7 +117,7 @@
         {% if perms.extras.view_note %}
             {% if active_tab != 'notes' and object.get_notes_url or active_tab == 'notes' %}
                 <li role="presentation"{% if active_tab == 'notes' %} class="active"{% endif %}>
-                    <a href="{{ object.get_notes_url }}">Notes</a>
+                    <a href="{{ object.get_notes_url }}">Notes {% badge object.notes|length %}</a>
                 </li>
             {% endif %}
         {% endif %}
