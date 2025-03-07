@@ -5,7 +5,7 @@ Welcome to the Nautobot User Guide! The User Guide is designed to help you setup
 There are four main headings within the guide: 
 
 - **Administration**: Go here for [installation](./administration/installation/index.md), [migration](./administration/migration/migrating-from-netbox.md), [configuration](./administration/configuration/index.md) and [upgrade instructions](./administration/upgrading/upgrading.md).
-- **Feature Guides**: Walk through these guides if you are a [new user to Nautobot](./feature-guides/getting-started/index.md) and wondering how perform common tasks in the Web UI. 
+- **Feature Guides**: Walk through these guides if you are a [new user to Nautobot](./feature-guides/getting-started/index.md) and wondering how to perform common tasks in the Web UI. 
 - **Core Data Model**: Read about all the Nautobot [data models](./core-data-model/overview/introduction.md) to better understand what information you can store in Nautobot.
 - **Platform Functionality**: Explore this area for deep-dives on specific Nautobot functionality such as [Jobs](./platform-functionality/jobs/index.md), [APIs](./platform-functionality/rest-api/overview.md) or [Git repository integration](./platform-functionality/gitrepository.md).
 
