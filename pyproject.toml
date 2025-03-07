@@ -103,7 +103,7 @@ jsonschema = "^4.7.0"
 # Included as an explicit dependency (for now?) to require a version with https://github.com/celery/kombu/pull/2007
 kombu = "~5.4.2"
 # Library to access Kubernetes API used to develop K8s integration
-kubernetes = "^32.0.0"
+kubernetes = "^32.0.1"
 # Rendering of markdown files to HTML
 Markdown = "~3.6"
 # MySQL database adapter
@@ -117,7 +117,7 @@ netaddr = "~1.3.0"
 #       we permit a looser (^) version constraint here.
 netutils = "^1.6.0"
 # HTML sanitization
-nh3 = "~0.2.20"
+nh3 = "~0.2.21"
 # Handling of version numbers
 packaging = ">=23.1"
 # Image processing library
