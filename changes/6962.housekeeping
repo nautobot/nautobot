@@ -1,1 +1,1 @@
-Refactored `service views` to use `NautobotUIViewSet`.
+Refactored `service views` to use `NautobotUIViewSet` and `UI component framework`.
