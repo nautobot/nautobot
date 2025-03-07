@@ -670,11 +670,17 @@ class Device(PrimaryModel, ConfigContextModel):
 
         # Validate location
         if self.location is not None:
-            # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to assign a Rack belongs to
-            # the parent Location or the child location of `self.location`?
-
-            if self.rack is not None and self.rack.location != self.location:
-                raise ValidationError({"rack": f'Rack "{self.rack}" does not belong to location "{self.location}".'})
+            if self.rack is not None:
+                device_location = self.location
+                # Rack's location must be a child location or the same location as that of the parent device.
+                # Location is a required field on rack.
+                rack_location = self.rack.location
+                if device_location not in rack_location.ancestors(include_self=True):
+                    raise ValidationError(
+                        {
+                            "rack": f'Rack "{self.rack}" does not belong to location "{self.location}" and its descendants.'
+                        }
+                    )
 
             # self.cluster is validated somewhat later, see below
 
@@ -1419,11 +1425,10 @@ class Controller(PrimaryModel):
                     "controller_device": ("Cannot assign both a device and a device redundancy group to a controller."),
                 },
             )
-
         if self.location:
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
-                    {"location": f'Devices may not associate to locations of type "{self.location.location_type}".'}
+                    {"location": f'Controllers may not associate to locations of type "{self.location.location_type}".'}
                 )
 
     def get_capabilities_display(self):

@@ -60,29 +60,26 @@ New dependencies can be added to the project via the `poetry add` command. This 
 * The combination of `nautobot.core.filters.BaseFilterSet`, `nautobot.extras.filters.CreatedUpdatedModelFilterSetMixin`, `nautobot.extras.filters.CustomFieldModelFilterSetMixin`, and `nautobot.extras.filters.RelationshipModelFilterSetMixin` is such a common use case throughout the code base that they have a helper class which combines all of these at `nautobot.extras.NautobotFilterSet`. Use this helper class if you need the functionality from these classes.
 
 * The combination of `nautobot.core.forms.BootstrapMixin`, `nautobot.extras.forms.CustomFieldModelFormMixin`, `nautobot.extras.forms.RelationshipModelFormMixin` and `nautobot.extras.forms.NoteModelFormMixin` is such a common use case throughout the code base that they have a helper class which combines all of these at `nautobot.extras.forms.NautobotModelForm`. Use this helper class if you need the functionality from these classes.
+* Similarly, for filter forms, `nautobot.extras.forms.NautobotFilterForm` combines `nautobot.core.forms.BootstrapMixin`, `nautobot.extras.forms.ContactTeamModelFilterFormMixin` (since Nautobot 2.3.0), `nautobot.extras.forms.CustomFieldModelFilterFormMixin`, and `nautobot.extras.forms.RelationshipModelFilterFormMixin`, and should be used where appropriate.
 
-+++ 1.4.0
+* Similarly, for bulk-edit forms, `nautobot.extras.forms.NautobotBulkEditForm` combines `nautobot.core.forms.BulkEditForm` and `nautobot.core.forms.BootstrapMixin` with `nautobot.extras.forms.CustomFieldModelBulkEditFormMixin`, `nautobot.extras.forms.RelationshipModelBulkEditFormMixin` and `nautobot.extras.forms.NoteModelBulkEditFormMixin`, and should be used where appropriate.
 
-    * Similarly, for filter forms, `nautobot.extras.forms.NautobotFilterForm` combines `nautobot.core.forms.BootstrapMixin`, `nautobot.extras.forms.ContactTeamModelFilterFormMixin` (since Nautobot 2.3.0), `nautobot.extras.forms.CustomFieldModelFilterFormMixin`, and `nautobot.extras.forms.RelationshipModelFilterFormMixin`, and should be used where appropriate.
+* API serializers for most models should inherit from `nautobot.extras.api.serializers.NautobotModelSerializer` and any appropriate mixins. Only use more abstract base classes such as ValidatedModelSerializer where absolutely required.
 
-    * Similarly, for bulk-edit forms, `nautobot.extras.forms.NautobotBulkEditForm` combines `nautobot.core.forms.BulkEditForm` and `nautobot.core.forms.BootstrapMixin` with `nautobot.extras.forms.CustomFieldModelBulkEditFormMixin`, `nautobot.extras.forms.RelationshipModelBulkEditFormMixin` and `nautobot.extras.forms.NoteModelBulkEditFormMixin`, and should be used where appropriate.
+* `NautobotModelSerializer` will automatically add serializer fields for `id`, `created`/`last_updated` (if applicable), `custom_fields`, `computed_fields`, and `relationships`, so there's generally no need to explicitly declare these fields in `.Meta.fields` of each serializer class. Similarly, `TaggedModelSerializerMixin` and `` will automatically add the `tags` and `status` fields when included in a serializer class.
 
-    * API serializers for most models should inherit from `nautobot.extras.api.serializers.NautobotModelSerializer` and any appropriate mixins. Only use more abstract base classes such as ValidatedModelSerializer where absolutely required.
-
-    * `NautobotModelSerializer` will automatically add serializer fields for `id`, `created`/`last_updated` (if applicable), `custom_fields`, `computed_fields`, and `relationships`, so there's generally no need to explicitly declare these fields in `.Meta.fields` of each serializer class. Similarly, `TaggedModelSerializerMixin` and `` will automatically add the `tags` and `status` fields when included in a serializer class.
-
-    * API Views for most models should inherit from `nautobot.extras.api.views.NautobotModelViewSet`. Only use more abstract base classes such as `ModelViewSet` where absolutely required.
+* API Views for most models should inherit from `nautobot.extras.api.views.NautobotModelViewSet`. Only use more abstract base classes such as `ModelViewSet` where absolutely required.
 
 ## Branding
 
-* When referring to Nautobot in writing, use the proper form "Nautobot," with the letter N. The lowercase form "nautobot" should be used in code, filenames, etc.
+* When referring to Nautobot in writing, use the proper form "`Nautobot`," with the letter N. The lowercase form "`nautobot`" should be used in code, filenames, etc.
 
 <!-- pyml disable-next-line NAU001 -->
-* There is an SVG form of the Nautobot logo at [nautobot/docs/nautobot_logo.svg](../../nautobot_logo.svg). It is preferred to use this logo for all purposes as it scales to arbitrary sizes without loss of resolution. If a raster image is required, the SVG logo should be converted to a PNG image of the prescribed size.
+* There is an SVG form of the Nautobot logo at [`nautobot/docs/nautobot_logo.svg`](../../nautobot_logo.svg). It is preferred to use this logo for all purposes as it scales to arbitrary sizes without loss of resolution. If a raster image is required, the SVG logo should be converted to a PNG image of the prescribed size.
 
 ## Importing Python Packages
 
-To prevent circular dependency errors and improve code readability, the following standards should be followed when importing from other python modules.
+To prevent circular dependency errors and improve code readability, the following standards should be followed when importing from other Python modules.
 
 !!! tip
     Some of the below rules will be applied automatically when running the `ruff` linter/formatter against your code. Specifically, you can run `invoke ruff --fix` to automatically reorder imports.
@@ -188,7 +185,7 @@ When using external libraries you may need to import multiple different modules 
 
 #### Convenience Imports
 
-Nautobot uses convenience imports in the same way that [django](https://docs.djangoproject.com/en/dev/internals/contributing/writing-code/coding-style/#imports) implements them. These should be leveraged whenever possible.
+Nautobot uses convenience imports in the same way that [Django](https://docs.djangoproject.com/en/dev/internals/contributing/writing-code/coding-style/#imports) implements them. These should be leveraged whenever possible.
 
 !!! example
 

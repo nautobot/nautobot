@@ -13,7 +13,15 @@ from rest_framework import status
 from nautobot.core.testing import APITestCase, APIViewTestCases, disable_warnings
 from nautobot.core.testing.api import APITransactionTestCase
 from nautobot.dcim.choices import InterfaceTypeChoices
-from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
+from nautobot.dcim.models import (
+    Device,
+    DeviceType,
+    Interface,
+    Location,
+    LocationType,
+    Manufacturer,
+    VirtualDeviceContext,
+)
 from nautobot.extras.models import CustomField, Role, Status
 from nautobot.ipam import choices
 from nautobot.ipam.models import (
@@ -118,6 +126,7 @@ class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         cls.vrfs = VRF.objects.all()
         cls.devices = Device.objects.all()
+        cls.vdcs = VirtualDeviceContext.objects.all()
         locations = Location.objects.filter(location_type__name="Campus")
         cluster_type = ClusterType.objects.create(name="Test Cluster Type")
         clusters = (
@@ -154,25 +163,42 @@ class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
             virtual_machine=cls.test_vm,
             rd="65000:4",
         )
+        VRFDeviceAssignment.objects.create(
+            vrf=cls.vrfs[0],
+            virtual_device_context=cls.vdcs[0],
+            name="VRFDeviceAssignment 1",
+            rd="65000:5",
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=cls.vrfs[0],
+            virtual_device_context=cls.vdcs[1],
+        )
+
+        cls.update_data = {
+            "name": "VRFDeviceAssignment 2",
+            "rd": "65000:7",
+        }
 
         cls.create_data = [
             {
                 "vrf": cls.vrfs[2].pk,
                 "device": cls.devices[4].pk,
-                "virtual_machine": None,
-                "rd": "65000:4",
+                "rd": "65000:7",
             },
             {
                 "vrf": cls.vrfs[3].pk,
-                "device": None,
                 "virtual_machine": cls.test_vm.pk,
-                "rd": "65000:5",
+                "rd": "65000:8",
             },
             {
                 "vrf": cls.vrfs[4].pk,
                 "device": cls.devices[6].pk,
-                "virtual_machine": None,
-                "rd": "65000:6",
+                "name": "VRFDeviceAssignment 3",
+                "rd": "65000:9",
+            },
+            {
+                "vrf": cls.vrfs[4].pk,
+                "virtual_device_context": cls.vdcs[0].pk,
             },
         ]
         cls.bulk_update_data = {
@@ -181,39 +207,66 @@ class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
 
     def test_creating_invalid_vrf_device_assignments(self):
         # Add object-level permission
-        duplicate_device_create_data = {
-            "vrf": self.vrfs[0].pk,
-            "device": self.devices[1].pk,
-            "virtual_machine": None,
-            "rd": "65000:6",
-        }
-        duplicate_vm_create_data = {
-            "vrf": self.vrfs[1].pk,
-            "device": None,
-            "virtual_machine": self.test_vm.pk,
-            "rd": "65000:6",
-        }
-        invalid_create_data = {
-            "vrf": self.vrfs[2].pk,
-            "device": self.devices[6].pk,
-            "virtual_machine": self.test_vm.pk,
-            "rd": "65000:6",
-        }
         self.add_permissions("ipam.add_vrfdeviceassignment")
-        response = self.client.post(self._get_list_url(), duplicate_device_create_data, format="json", **self.header)
-        self.assertContains(
-            response, "The fields device, vrf must make a unique set.", status_code=status.HTTP_400_BAD_REQUEST
-        )
-        response = self.client.post(self._get_list_url(), duplicate_vm_create_data, format="json", **self.header)
-        self.assertContains(
-            response, "The fields virtual_machine, vrf must make a unique set.", status_code=status.HTTP_400_BAD_REQUEST
-        )
-        response = self.client.post(self._get_list_url(), invalid_create_data, format="json", **self.header)
-        self.assertContains(
-            response,
-            "A VRF cannot be associated with both a device and a virtual machine.",
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
+        duplicate_create_data = [
+            {
+                "vrf": self.vrfs[0].pk,
+                "device": self.devices[1].pk,
+                "rd": "65000:6",
+            },
+            {
+                "vrf": self.vrfs[1].pk,
+                "virtual_machine": self.test_vm.pk,
+                "rd": "65000:6",
+            },
+            {
+                "vrf": self.vrfs[0].pk,
+                "virtual_device_context": self.vdcs[1].pk,
+                "rd": "65000:6",
+            },
+        ]
+        expected_responses = [
+            "The fields device, vrf must make a unique set.",
+            "The fields virtual_machine, vrf must make a unique set.",
+            "The fields virtual_device_context, vrf must make a unique set.",
+        ]
+        for i, data in enumerate(duplicate_create_data):
+            response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+            self.assertContains(response, expected_responses[i], status_code=status.HTTP_400_BAD_REQUEST)
+
+        # Test VRFDeviceAssignment model clean() code paths
+        vrf = VRF.objects.create(name="New VRF ", namespace=Namespace.objects.first())
+        invalid_create_data = [
+            {
+                "vrf": vrf.pk,
+                "device": self.devices[6].pk,
+                "virtual_machine": self.test_vm.pk,
+            },
+            {
+                "vrf": vrf.pk,
+                "device": self.devices[7].pk,
+                "virtual_device_context": self.vdcs[2].pk,
+            },
+            {
+                "vrf": vrf.pk,
+                "virtual_machine": self.test_vm.pk,
+                "virtual_device_context": self.vdcs[3].pk,
+            },
+            {
+                "vrf": vrf.pk,
+                "name": "VRFDeviceAssignment 5",
+                "rd": "65000:6",
+            },
+        ]
+        expected_responses = [
+            "A VRFDeviceAssignment entry cannot be associated with both a device and a virtual machine.",
+            "A VRFDeviceAssignment entry cannot be associated with both a device and a virtual device context.",
+            "A VRFDeviceAssignment entry cannot be associated with both a virtual machine and a virtual device context.",
+            "A VRFDeviceAssignment entry must be associated with a device, a virtual machine, or a virtual device context.",
+        ]
+        for i, data in enumerate(invalid_create_data):
+            response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+            self.assertContains(response, expected_responses[i], status_code=status.HTTP_400_BAD_REQUEST)
 
 
 class VRFPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
@@ -221,50 +274,38 @@ class VRFPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        cls.namespace = (
+            Namespace.objects.annotate(prefixes_count=Count("prefixes")).filter(prefixes_count__gte=3).first()
+        )
         cls.vrfs = (
-            VRF.objects.annotate(prefixes_count=Count("namespace__prefixes")).filter(prefixes_count__gte=2).distinct()
+            VRF.objects.create(name="TEST VRF 1", namespace=cls.namespace),
+            VRF.objects.create(name="TEST VRF 2", namespace=cls.namespace),
         )
-        cls.prefixes = Prefix.objects.all()
+        cls.prefixes = Prefix.objects.filter(namespace=cls.namespace)
 
-        VRFPrefixAssignment.objects.create(
-            vrf=cls.vrfs[0],
-            prefix=cls.prefixes.filter(namespace=cls.vrfs[0].namespace)[0],
-        )
-        VRFPrefixAssignment.objects.create(
-            vrf=cls.vrfs[0],
-            prefix=cls.prefixes.filter(namespace=cls.vrfs[0].namespace)[1],
-        )
-        VRFPrefixAssignment.objects.create(
-            vrf=cls.vrfs[1],
-            prefix=cls.prefixes.filter(namespace=cls.vrfs[1].namespace)[0],
-        )
-        VRFPrefixAssignment.objects.create(
-            vrf=cls.vrfs[1],
-            prefix=cls.prefixes.filter(namespace=cls.vrfs[1].namespace)[1],
-        )
         cls.create_data = [
             {
-                "vrf": cls.vrfs[2].pk,
-                "prefix": cls.prefixes.filter(namespace=cls.vrfs[2].namespace).exclude(vrfs=cls.vrfs[2])[0].pk,
+                "vrf": cls.vrfs[0].pk,
+                "prefix": cls.prefixes.first().pk,
             },
             {
-                "vrf": cls.vrfs[3].pk,
-                "prefix": cls.prefixes.filter(namespace=cls.vrfs[3].namespace).exclude(vrfs=cls.vrfs[3])[0].pk,
+                "vrf": cls.vrfs[0].pk,
+                "prefix": cls.prefixes.last().pk,
             },
             {
-                "vrf": cls.vrfs[4].pk,
-                "prefix": cls.prefixes.filter(namespace=cls.vrfs[4].namespace).exclude(vrfs=cls.vrfs[4])[0].pk,
+                "vrf": cls.vrfs[1].pk,
+                "prefix": cls.prefixes.first().pk,
             },
         ]
 
     def test_creating_invalid_vrf_prefix_assignments(self):
         duplicate_create_data = {
-            "vrf": self.vrfs[0].pk,
-            "prefix": self.prefixes.filter(namespace=self.vrfs[0].namespace)[0].pk,
+            "vrf": VRFPrefixAssignment.objects.first().vrf.pk,
+            "prefix": VRFPrefixAssignment.objects.first().prefix.pk,
         }
         wrong_namespace_create_data = {
             "vrf": self.vrfs[0].pk,
-            "prefix": self.prefixes.exclude(namespace=self.vrfs[0].namespace)[0].pk,
+            "prefix": Prefix.objects.exclude(namespace=self.namespace)[0].pk,
         }
         missing_field_create_data = {
             "vrf": self.vrfs[0].pk,

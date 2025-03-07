@@ -4,6 +4,7 @@ As a part of the Nautobot development team's commitment to security, we maintain
 
 ## CVE-2024-36112
 
+<!-- pyml disable-num-lines 500 proper-names -->
 <!-- pyml disable-next-line no-inline-html -->
 <table>
   <tr>

@@ -42,15 +42,6 @@ Nautobot will not work without these dependencies.
 
 Nautobot is written in the [Python programming language](https://www.python.org/). The official Python package installer is called [Pip](https://pip.pypa.io/en/stable/), and you will see the `pip` command referenced often to install or update Python packages.
 
-+++ 1.3.0 "Python 3.10 support added"
-    Python 3.10 support was added.
-
---- 1.3.0 "Python 3.6 support removed"
-    Python 3.6 support was removed.
-
-+/- 1.6.0 "Python 3.11 support added, Python 3.7 support removed"
-    Python 3.11 support was added and Python 3.7 support was removed.
-
 +++ 2.3.0 "Python 3.12 support added"
     Python 3.12 support was added.
 
@@ -60,9 +51,6 @@ Nautobot is written in the [Python programming language](https://www.python.org/
 #### Database
 
 Nautobot uses a relational database to store its data. Both MySQL and PostgreSQL are officially supported.
-
-+++ 1.1.0 "MySQL support added"
-    MySQL support was added.
 
 --- 2.1.0 "PostgreSQL minimum version became 12.0"
     Support for versions of PostgreSQL older than 12.0 was removed.
