@@ -1,0 +1,1 @@
+`GitRepository.clone_to_directory` now uses configured Secrets for Repository to prepare correct `from_url`.

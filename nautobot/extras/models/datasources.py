@@ -220,6 +220,8 @@ class GitRepository(PrimaryModel):
         Returns:
             Returns the absolute path of the cloned repo if clone was successful, otherwise returns None.
         """
+        from nautobot.extras.datasources import get_repo_access_url
+
         if branch and head:
             raise ValueError("Cannot specify both branch and head")
 
@@ -233,7 +235,8 @@ class GitRepository(PrimaryModel):
             branch = self.branch
 
         try:
-            repo_helper = GitRepo(path_name, self.remote_url, depth=depth, branch=branch)
+            remote_url = get_repo_access_url(self)
+            repo_helper = GitRepo(path_name, remote_url, depth=depth, branch=branch)
             if head:
                 repo_helper.checkout(branch, head)
         except Exception as e:

@@ -47,12 +47,21 @@ def report_job_status(command, job_result):
         logs = JobLogEntry.objects.filter(job_result__pk=job_result.pk, grouping=group)
         debug_count = logs.filter(log_level=LogLevelChoices.LOG_DEBUG).count()
         info_count = logs.filter(log_level=LogLevelChoices.LOG_INFO).count()
+        success_count = logs.filter(log_level=LogLevelChoices.LOG_SUCCESS).count()
         warning_count = logs.filter(log_level=LogLevelChoices.LOG_WARNING).count()
+        failure_count = logs.filter(log_level=LogLevelChoices.LOG_FAILURE).count()
         error_count = logs.filter(log_level=LogLevelChoices.LOG_ERROR).count()
         critical_count = logs.filter(log_level=LogLevelChoices.LOG_CRITICAL).count()
 
         command.stdout.write(
-            f"\t{group}: {debug_count} debug, {info_count} info, {warning_count} warning, {error_count} error, {critical_count} critical"
+            f"\t{group}: "
+            f"{debug_count} debug, "
+            f"{info_count} info, "
+            f"{success_count} success, "
+            f"{warning_count} warning, "
+            f"{failure_count} failure, "
+            f"{error_count} error, "
+            f"{critical_count} critical"
         )
 
         for log_entry in logs:
@@ -63,7 +72,7 @@ def report_job_status(command, job_result):
                 status = status
             elif status == "warning":
                 status = command.style.WARNING(status)
-            elif status == "failure":
+            elif status in ["failure", "error", "critical"]:
                 status = command.style.NOTICE(status)
 
             if log_entry.log_object:
@@ -73,6 +82,8 @@ def report_job_status(command, job_result):
 
     if job_result.result:
         command.stdout.write(str(job_result.result))
+    if job_result.traceback:
+        command.stdout.write(command.style.ERROR(job_result.traceback))
 
     if job_result.status == JobResultStatusChoices.STATUS_FAILURE:
         status = command.style.ERROR("FAILURE")

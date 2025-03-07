@@ -1,3 +1,0 @@
-Added log messages to help troubleshoot failures when rendering UI Component Framework `extra_buttons`.
-Fixed logic in UI Component Framework `StatsPanel` that incorrectly disallowed use of FilterSet filters implicitly defined through `fields = "__all__"`.
-Fixed logic in generic `FormTestCase` class that would incorrectly fail if form fields used FilterSet filters implicitly defined through `fields = "__all__"`.

@@ -1301,6 +1301,22 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
                 str(err.exception),
             )
 
+    def test_get_or_create_address_kwarg(self):
+        status = Status.objects.get(name="Active")
+        namespace = Namespace.objects.create(name="Test IPAddress get_or_create with address kwarg")
+        Prefix.objects.create(prefix="10.0.0.0/24", namespace=namespace, status=status)
+        ip_address, created = IPAddress.objects.get_or_create(
+            address="10.0.0.40/32", namespace=namespace, defaults={"status": status}
+        )
+        self.assertEqual(ip_address.host, "10.0.0.40")
+        self.assertEqual(ip_address.mask_length, 32)
+        self.assertTrue(created)
+        _, created = IPAddress.objects.get_or_create(
+            address="10.0.0.40/32", namespace=namespace, defaults={"status": status}
+        )
+        self.assertFalse(created)
+        self.assertTrue(IPAddress.objects.filter(address="10.0.0.40/32", parent__namespace=namespace).exists())
+
     def test_create_field_population(self):
         """Test that the various ways of creating an IPAddress result in correctly populated fields."""
         if self.namespace != get_default_namespace():
