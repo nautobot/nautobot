@@ -45,7 +45,7 @@ There are four main headings within the guide:
     ---
     Check out the [REST API documentation](./platform-functionality/rest-api/overview.md) covering both basic features and advanced use cases. 
     
-    Are you looking for [GraphQL](./platform-functionality/graphql.md) APIs instead? If you are new to GraphQL, you can also read the [Nautobot GraphQL User Guide](./feature-guides/graphql.md)
+    Are you looking for [GraphQL](./platform-functionality/graphql.md) APIs instead? If you are new to GraphQL, you can also read the [Nautobot GraphQL User Guide](./feature-guides/graphql.md).
 
 - :material-briefcase:{ .lg .middle } **Nautobot Jobs**
 
