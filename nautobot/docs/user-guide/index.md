@@ -1,6 +1,6 @@
 # User Guide Overview
 
-Welcome to the Nautobot User Guide! The User Guide is designed to help you setup, use and operate your Nautobot installation. 
+Welcome to the Nautobot User Guide! The User Guide is designed to help you setup, use, and operate your Nautobot installation. 
 
 There are four main headings within the guide: 
 
