@@ -988,7 +988,7 @@ class ModuleTypeForm(NautobotModelForm):
         queryset=ModuleFamily.objects.all(),
         required=False,
         label="Module Family",
-        help_text="If selected, this module type can only be installed in a module bay matching this family.",
+        help_text="This module type will only be installable in module bays matching this family, or module bays that are not assigned a family.",
     )
     comments = CommentField(label="Comments")
 
@@ -1609,7 +1609,7 @@ class ModuleBayTemplateForm(ModularComponentTemplateForm):
     module_family = DynamicModelChoiceField(
         queryset=ModuleFamily.objects.all(),
         required=False,
-        help_text="Module family that can be installed in this bay. Leave blank for no restriction.",
+        help_text="If selected, modules installed in this bay must match this family.",
     )
 
     class Meta:
@@ -3696,7 +3696,7 @@ class ModuleBayForm(NautobotModelForm):
         queryset=ModuleFamily.objects.all(),
         required=False,
         label="Module Family",
-        help_text="Module family that can be installed in this bay. Leave blank for no restriction.",
+        help_text="If selected, modules installed in this bay must match this family.",
     )
     # TODO: Installed module field
 
