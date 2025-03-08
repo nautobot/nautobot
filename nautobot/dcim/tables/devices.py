@@ -307,7 +307,7 @@ class ModuleTable(StatusTableMixin, RoleTableMixin, BaseTable):
 
 
 class ModuleFamilyTable(BaseTable):
-    """Table for displaying ModuleFamily objects."""
+    pk = ToggleColumn()
     name = tables.Column(
         linkify=True
     )
