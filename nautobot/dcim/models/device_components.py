@@ -1,5 +1,6 @@
 import re
 
+from django.apps import apps
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -1290,15 +1291,6 @@ class ModuleBay(PrimaryModel):
 
         if not (self.parent_device or self.parent_module):
             raise ValidationError("Either parent_device or parent_module must be set")
-
-        # Validate that installed module matches the module family constraint
-        if hasattr(self, "installed_module") and self.installed_module and self.module_family:
-            if self.installed_module.module_type.module_family != self.module_family:
-                raise ValidationError(
-                    {
-                        "installed_module": f"Module type {self.installed_module.module_type} does not match bay's module family {self.module_family}"
-                    }
-                )
 
         # Populate the position field with the name of the module bay if it is not supplied by the user.
 

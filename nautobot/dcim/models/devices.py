@@ -1823,6 +1823,16 @@ class Module(PrimaryModel):
                     {"location": f'Modules may not associate to locations of type "{self.location.location_type}".'}
                 )
 
+        # Validate module family compatibility
+        if self.parent_module_bay and self.parent_module_bay.module_family:
+            if self.module_type.module_family != self.parent_module_bay.module_family:
+                print(f"Module type {self.module_type} does not match bay's module family {self.parent_module_bay.module_family}")
+                raise ValidationError(
+                    {
+                        "parent_module_bay": f"Module type {self.module_type} does not match bay's module family {self.parent_module_bay.module_family}"
+                    }
+                )
+
     def save(self, *args, **kwargs):
         is_new = not self.present_in_database
 
