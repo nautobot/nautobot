@@ -832,18 +832,18 @@ class ModuleFamilyForm(NautobotModelForm):
 
 class ModuleFamilyFilterForm(NautobotFilterForm):
     """ModuleFamily filter form."""
+
     model = ModuleFamily
     q = forms.CharField(required=False, label="Search")
     module_types = DynamicModelMultipleChoiceField(
-        queryset=ModuleType.objects.all(),
-        to_field_name="model",
-        required=False
+        queryset=ModuleType.objects.all(), to_field_name="model", required=False
     )
     tags = TagFilterField(model)
 
 
 class ModuleFamilyBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     """ModuleFamily bulk edit form."""
+
     pk = forms.ModelMultipleChoiceField(queryset=ModuleFamily.objects.all(), widget=forms.MultipleHiddenInput())
     description = forms.CharField(required=False)
 
@@ -3694,7 +3694,6 @@ class ModuleBayForm(NautobotModelForm):
     module_family = DynamicModelChoiceField(
         queryset=ModuleFamily.objects.all(),
         required=False,
-        
         help_text="If selected, this bay will only accept modules assigned to this family",
     )
     # TODO: Installed module field

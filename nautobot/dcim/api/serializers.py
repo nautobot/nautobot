@@ -1129,6 +1129,7 @@ class InterfaceVDCAssignmentSerializer(ValidatedModelSerializer):
 
 class ModuleFamilySerializer(NautobotModelSerializer):
     """API serializer for ModuleFamily objects."""
+
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:modulefamily-detail")
     module_type_count = serializers.IntegerField(read_only=True)
     module_bay_count = serializers.IntegerField(read_only=True)

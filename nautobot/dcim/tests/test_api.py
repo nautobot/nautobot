@@ -3782,15 +3782,6 @@ class ModuleFamilyTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         """Create test data for API tests."""
-        ModuleFamily.objects.create(
-            name="Module Family 1",
-            description="First family"
-        )
-        ModuleFamily.objects.create(
-            name="Module Family 2",
-            description="Second family"
-        )
-        ModuleFamily.objects.create(
-            name="Module Family 3",
-            description="Third family"
-        )
+        ModuleFamily.objects.create(name="Module Family 1", description="First family")
+        ModuleFamily.objects.create(name="Module Family 2", description="Second family")
+        ModuleFamily.objects.create(name="Module Family 3", description="Third family")

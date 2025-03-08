@@ -2081,7 +2081,7 @@ class ModuleFilterSet(
     )
     installable_in_module_bay = django_filters.ModelChoiceFilter(
         queryset=ModuleBay.objects.all(),
-        method='filter_module_bay',
+        method="filter_module_bay",
         label="Installable in module bay (ID)",
     )
 
@@ -2402,6 +2402,7 @@ class InterfaceVDCAssignmentFilterSet(NautobotFilterSet):
             "virtual_device_context",
         ]
 
+
 class ModuleFamilyFilterSet(NautobotFilterSet):
     """FilterSet for ModuleFamily objects."""
 
@@ -2428,26 +2429,26 @@ class ModuleFamilyFilterSet(NautobotFilterSet):
 
     module_type_id = django_filters.ModelMultipleChoiceFilter(
         queryset=ModuleType.objects.all(),
-        label='Module type (ID)',
+        label="Module type (ID)",
     )
     module_type = django_filters.ModelMultipleChoiceFilter(
-        field_name='module_types__model',
+        field_name="module_types__model",
         queryset=ModuleType.objects.all(),
-        to_field_name='model',
-        label='Module type (model)',
+        to_field_name="model",
+        label="Module type (model)",
     )
     module_bay_id = django_filters.ModelMultipleChoiceFilter(
         queryset=ModuleBay.objects.all(),
-        label='Module bay (ID)',
+        label="Module bay (ID)",
     )
 
     class Meta:
         model = ModuleFamily
         fields = [
-            'id',
-            'name',
-            'description',
-            'module_type_id',
-            'module_type',
-            'module_bay_id',
+            "id",
+            "name",
+            "description",
+            "module_type_id",
+            "module_type",
+            "module_bay_id",
         ]

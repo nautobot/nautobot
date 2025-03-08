@@ -4306,6 +4306,7 @@ class InterfaceRedundancyGroupAssociationUIViewSet(ObjectEditViewMixin, ObjectDe
 
 class ModuleFamilyUIViewSet(NautobotUIViewSet):
     """ViewSet for the ModuleFamily model."""
+
     filterset_class = filters.ModuleFamilyFilterSet
     filterset_form_class = forms.ModuleFamilyFilterForm
     form_class = forms.ModuleFamilyForm

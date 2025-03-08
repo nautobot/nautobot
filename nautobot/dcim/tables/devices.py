@@ -308,18 +308,12 @@ class ModuleTable(StatusTableMixin, RoleTableMixin, BaseTable):
 
 class ModuleFamilyTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.Column(
-        linkify=True
-    )
+    name = tables.Column(linkify=True)
     module_type_count = LinkedCountColumn(
-        viewname="dcim:moduletype_list",
-        url_params={"module_family": "pk"},
-        verbose_name="Module Types"
+        viewname="dcim:moduletype_list", url_params={"module_family": "pk"}, verbose_name="Module Types"
     )
     module_bay_count = LinkedCountColumn(
-        viewname="dcim:modulebay_list",
-        url_params={"module_family": "pk"},
-        verbose_name="Module Bays"
+        viewname="dcim:modulebay_list", url_params={"module_family": "pk"}, verbose_name="Module Bays"
     )
     tags = TagColumn()
     actions = ButtonsColumn(ModuleFamily)

@@ -4291,18 +4291,8 @@ class ModuleFamilyTestCase(FilterTestCases.FilterTestCase):
             ModuleFamily.objects.create(name="Module Family 3", description="Third family"),
         )
 
-        module_types = (
-            ModuleType.objects.create(
-                manufacturer=manufacturers[0],
-                model="Model 1",
-                module_family=module_families[0]
-            ),
-            ModuleType.objects.create(
-                manufacturer=manufacturers[1],
-                model="Model 2",
-                module_family=module_families[1]
-            ),
-        )
+        (ModuleType.objects.create(manufacturer=manufacturers[0], model="Model 1", module_family=module_families[0]),)
+        (ModuleType.objects.create(manufacturer=manufacturers[1], model="Model 2", module_family=module_families[1]),)
 
     def test_id(self):
         """Test filtering by ID."""

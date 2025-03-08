@@ -1531,6 +1531,7 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
 
 # TODO: 5840 - Translate comments field from devicetype library, Nautobot doesn't use that field for ModuleType
 
+
 @extras_features(
     "custom_links",
     "custom_validators",

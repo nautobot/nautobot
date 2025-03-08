@@ -49,6 +49,7 @@ from nautobot.dcim.models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     Platform,
     PowerOutlet,
@@ -63,7 +64,6 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualDeviceContext,
-    ModuleFamily,
 )
 from nautobot.extras import context_managers
 from nautobot.extras.choices import CustomFieldTypeChoices
@@ -3438,8 +3438,7 @@ class ModuleFamilyTestCase(TestCase):
     def setUp(self):
         """Create a ModuleFamily for use in test methods."""
         self.module_family = ModuleFamily.objects.create(
-            name="Test Module Family",
-            description="A module family for testing"
+            name="Test Module Family", description="A module family for testing"
         )
 
     def test_create_modulefamily(self):
