@@ -1411,9 +1411,8 @@ class ServiceUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImpor
                 section=SectionChoices.RIGHT_HALF,
                 table_class=tables.IPAddressTable,
                 table_filter="services",
-                select_related_fields= ["tenant", "status", "role"],
+                select_related_fields=["tenant", "status", "role"],
                 add_button_route=None,
             ),
         )
     )
-
