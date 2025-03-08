@@ -1409,23 +1409,11 @@ class ServiceUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImpor
             object_detail.ObjectsTablePanel(
                 weight=200,
                 section=SectionChoices.RIGHT_HALF,
-                context_table_key="ip_addresses_table",
+                table_class=tables.IPAddressTable,
+                table_filter="services",
+                select_related_fields= ["tenant", "status", "role"],
+                add_button_route=None,
             ),
         )
     )
 
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            if instance.ip_addresses:
-                ip_addresses = IPAddress.objects.select_related("tenant", "status", "role").filter(
-                    id__in=instance.ip_addresses.all()
-                )
-                ip_addresses_table = tables.IPAddressTable(ip_addresses)
-                paginate = {
-                    "paginator_class": EnhancedPaginator,
-                    "per_page": get_paginate_count(request),
-                }
-                RequestConfig(request, paginate).configure(ip_addresses_table)
-                context["ip_addresses_table"] = ip_addresses_table
-        return context
