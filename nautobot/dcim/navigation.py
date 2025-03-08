@@ -302,7 +302,7 @@ menu_items = (
                         ],
                         buttons=(
                             NavMenuAddButton(
-                                link="dcim:moduletype_add",
+                                link="dcim:modulefamily_add",
                                 permissions=[
                                     "dcim.add_modulefamily",
                                 ],
