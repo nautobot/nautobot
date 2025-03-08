@@ -340,16 +340,14 @@ class RIRUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields="__all__",
-                exclude_fields=[
-                    "name",
-                ],
             ),
             object_detail.ObjectsTablePanel(
-                section=SectionChoices.RIGHT_HALF,
+                section=SectionChoices.FULL_WIDTH,
                 weight=100,
-                label="Assigned",
+                table_title="Assigned Prefixes",
                 table_class=tables.PrefixTable,
                 table_filter="rir",
+                hide_hierarchy_ui=True,
             ),
         ),
     )
