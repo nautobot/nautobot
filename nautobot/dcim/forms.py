@@ -1608,7 +1608,7 @@ class ModuleBayTemplateForm(ModularComponentTemplateForm):
     module_family = DynamicModelChoiceField(
         queryset=ModuleFamily.objects.all(),
         required=False,
-        help_text="If selected, modules installed in this bay must match this family",
+        help_text="If selected, this bay will only accept modules assigned to this family",
     )
 
     class Meta:
@@ -2385,7 +2385,7 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         queryset=ModuleType.objects.all(),
         query_params={
             "manufacturer": "$manufacturer",
-            "module_bay": ["$parent_module_bay_module", "$parent_module_bay_device"],
+            "installable_in_module_bay": ["$parent_module_bay_module", "$parent_module_bay_device"],
         },
     )
     parent_module_bay_device_filter = DynamicModelChoiceField(
@@ -3694,8 +3694,8 @@ class ModuleBayForm(NautobotModelForm):
     module_family = DynamicModelChoiceField(
         queryset=ModuleFamily.objects.all(),
         required=False,
-        label="Module Family",
-        help_text="If selected, modules installed in this bay must match this family.",
+        
+        help_text="If selected, this bay will only accept modules assigned to this family",
     )
     # TODO: Installed module field
 
@@ -3727,8 +3727,7 @@ class ModuleBayCreateForm(ModuleBayBaseCreateForm):
     module_family = DynamicModelChoiceField(
         queryset=ModuleFamily.objects.all(),
         required=False,
-        label="Module Family",
-        help_text="Module family that can be installed in this bay. Leave blank for no restriction.",
+        help_text="If selected, this bay will only accept modules assigned to this family",
     )
     tags = DynamicModelMultipleChoiceField(
         queryset=Tag.objects.all(),
@@ -3739,10 +3738,10 @@ class ModuleBayCreateForm(ModuleBayBaseCreateForm):
         "parent_device",
         "parent_module",
         "name_pattern",
+        "module_family",
         "label_pattern",
         "position_pattern",
         "description",
-        "module_family",
         "tags",
     )
 
@@ -3757,8 +3756,7 @@ class ModuleBayBulkCreateForm(
     module_family = DynamicModelChoiceField(
         queryset=ModuleFamily.objects.all(),
         required=False,
-        label="Module Family",
-        help_text="Module family that can be installed in this bay. Leave blank for no restriction.",
+        help_text="If selected, this bay will only accept modules assigned to this family",
     )
 
     field_order = ("name_pattern", "label_pattern", "position_pattern", "description", "module_family", "tags")
@@ -3783,8 +3781,7 @@ class ModuleBayBulkEditForm(
     module_family = DynamicModelChoiceField(
         queryset=ModuleFamily.objects.all(),
         required=False,
-        label="Module Family",
-        help_text="Module family that can be installed in this bay. Leave blank for no restriction.",
+        help_text="If selected, this bay will only accept modules assigned to this family",
     )
 
     class Meta:

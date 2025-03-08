@@ -2079,10 +2079,10 @@ class ModuleFilterSet(
         label="Device (name or ID)",
         method="filter_device",
     )
-    module_bay = django_filters.ModelChoiceFilter(
+    installable_in_module_bay = django_filters.ModelChoiceFilter(
         queryset=ModuleBay.objects.all(),
         method='filter_module_bay',
-        label="Module Bay",
+        label="Installable in module bay (ID)",
     )
 
     def _construct_device_filter_recursively(self, field_name, value):
@@ -2151,10 +2151,10 @@ class ModuleTypeFilterSet(DeviceTypeModuleTypeCommonFiltersMixin, NautobotFilter
         to_field_name="name",
         label="Module family (name or ID)",
     )
-    module_bay = django_filters.ModelChoiceFilter(
+    installable_in_module_bay = django_filters.ModelChoiceFilter(
         queryset=ModuleBay.objects.all(),
         method="filter_module_bay",
-        label="Module bay",
+        label="Installable in module bay (ID)",
     )
     has_modules = RelatedMembershipBooleanFilter(
         field_name="modules",
