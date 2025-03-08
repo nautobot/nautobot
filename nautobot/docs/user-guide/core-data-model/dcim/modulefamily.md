@@ -1,3 +1,3 @@
 # Module Families
 
-A module family represents a classification of module types that ensures compatibility between modules and the module bays they can be installed in. If a module bay has a module family assigned, only module types of that family can be installed there. You can, for example, ensure that only PSU modules are installed in PSU bays.
+A module family represents a group of related [module types](moduletype.md). A module type can be optionally assigned to a module family and a [module bay](modulebay.md). A module bay assigned to a module family will only accept module types from the same family. This is useful, for example, to ensure that only PSUs are installed in PSU slots. Each module family must have a unique name and may have a description assigned to it.
