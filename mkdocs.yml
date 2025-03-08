@@ -474,6 +474,7 @@ nav:
                   - Power Port: "user-guide/core-data-model/dcim/powerport.md"
                   - Power Outlet: "user-guide/core-data-model/dcim/poweroutlet.md"
                   - Rear Port: "user-guide/core-data-model/dcim/rearport.md"
+              - Module Family: "user-guide/core-data-model/dcim/modulefamily.md"
               - Cable: "user-guide/core-data-model/dcim/cable.md"
               - Device Redundancy Group: "user-guide/core-data-model/dcim/deviceredundancygroup.md"
               - Interface Redundancy Group: "user-guide/core-data-model/dcim/interfaceredundancygroup.md"

@@ -57,6 +57,7 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
+from nautobot.dcim.models import ModuleFamily
 from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_driver_mapping_tool_names
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
@@ -4301,6 +4302,50 @@ class InterfaceRedundancyGroupAssociationUIViewSet(ObjectEditViewMixin, ObjectDe
     form_class = forms.InterfaceRedundancyGroupAssociationForm
     template_name = "dcim/interfaceredundancygroupassociation_create.html"
     lookup_field = "pk"
+
+
+class ModuleFamilyUIViewSet(NautobotUIViewSet):
+    """ViewSet for the ModuleFamily model."""
+    filterset_class = filters.ModuleFamilyFilterSet
+    filterset_form_class = forms.ModuleFamilyFilterForm
+    form_class = forms.ModuleFamilyForm
+    bulk_update_form_class = forms.ModuleFamilyBulkEditForm
+    queryset = ModuleFamily.objects.all()
+    serializer_class = serializers.ModuleFamilySerializer
+    table_class = tables.ModuleFamilyTable
+    lookup_field = "pk"
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if not instance:
+            return context
+
+        if self.action == "retrieve":
+            module_types = (
+                ModuleType.objects.restrict(request.user, "view")
+                .filter(module_family=instance)
+                .select_related("manufacturer")
+            )
+            module_type_table = tables.ModuleTypeTable(module_types, orderable=False)
+
+            module_bays = (
+                ModuleBay.objects.restrict(request.user, "view")
+                .filter(module_family=instance)
+                .select_related("parent_device", "parent_module")
+            )
+            module_bay_table = tables.ModuleBayTable(module_bays, orderable=False)
+
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(module_type_table)
+            RequestConfig(request, paginate).configure(module_bay_table)
+
+            context["module_type_table"] = module_type_table
+            context["module_bay_table"] = module_bay_table
+
+        return context
 
 
 class DeviceFamilyUIViewSet(NautobotUIViewSet):

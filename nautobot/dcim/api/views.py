@@ -54,6 +54,7 @@ from nautobot.dcim.models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     Platform,
     PowerFeed,
@@ -836,3 +837,13 @@ class InterfaceVDCAssignmentViewSet(ModelViewSet):
     queryset = InterfaceVDCAssignment.objects.all()
     serializer_class = serializers.InterfaceVDCAssignmentSerializer
     filterset_class = filters.InterfaceVDCAssignmentFilterSet
+
+
+class ModuleFamilyViewSet(NautobotModelViewSet):
+    """API viewset for interacting with ModuleFamily objects."""
+    queryset = ModuleFamily.objects.annotate(
+        module_type_count=count_related(ModuleType, 'module_family'),
+        module_bay_count=count_related(ModuleBay, 'module_family')
+    )
+    serializer_class = serializers.ModuleFamilySerializer
+    filterset_class = filters.ModuleFamilyFilterSet

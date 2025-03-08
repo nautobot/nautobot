@@ -1,0 +1,81 @@
+{% extends 'generic/object_edit.html' %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Module</strong></div>
+        <div class="panel-body">
+            {% render_field form.manufacturer %}
+            {% render_field form.module_type %}
+            <div class="form-group">
+                <label class="col-md-3 control-label">Parent Module Bay</label>
+                <div class="col-md-9">
+                    <ul class="nav nav-tabs" role="tablist">
+                        <li role="presentation" class="active">
+                            <a href="#device" role="tab" data-toggle="tab">Device</a>
+                        </li>
+                        <li role="presentation">
+                            <a href="#module" role="tab" data-toggle="tab">Module</a>
+                        </li>
+                    </ul>
+                    <div class="tab-content">
+                        <div class="tab-pane active" id="device">
+                            {% render_field form.parent_module_bay_device_filter %}
+                            {% render_field form.parent_module_bay_device %}
+                        </div>
+                        <div class="tab-pane" id="module">
+                            {% render_field form.parent_module_bay_module_filter %}
+                            {% render_field form.parent_module_bay_module %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% render_field form.serial %}
+            {% render_field form.asset_tag %}
+            {% render_field form.role %}
+            {% render_field form.status %}
+            {% render_field form.tenant_group %}
+            {% render_field form.tenant %}
+            {% render_field form.tags %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascript %}
+{{ block.super }}
+<script>
+    $(document).ready(function() {
+        // Function to update module type choices based on module bay selection
+        function updateModuleTypeChoices(moduleBayId) {
+            if (!moduleBayId) return;
+            
+            $.ajax({
+                url: "{% url 'dcim:modulebay-list' %}",
+                data: { id: moduleBayId },
+                success: function(data) {
+                    if (data.results && data.results.length > 0) {
+                        var moduleBay = data.results[0];
+                        if (moduleBay.module_family) {
+                            // Update module type choices to only show those matching the module family
+                            var $moduleType = $('#id_module_type');
+                            $moduleType.find('option').each(function() {
+                                var $option = $(this);
+                                if ($option.data('module-family') !== moduleBay.module_family.id && $option.val()) {
+                                    $option.hide();
+                                } else {
+                                    $option.show();
+                                }
+                            });
+                        }
+                    }
+                }
+            });
+        }
+
+        // Add change handlers for module bay selections
+        $('#id_parent_module_bay_device, #id_parent_module_bay_module').change(function() {
+            updateModuleTypeChoices($(this).val());
+        });
+    });
+</script>
+{% endblock %} 

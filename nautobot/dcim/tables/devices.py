@@ -26,6 +26,7 @@ from nautobot.dcim.models import (
     InventoryItem,
     Module,
     ModuleBay,
+    ModuleFamily,
     Platform,
     PowerOutlet,
     PowerPort,
@@ -86,6 +87,7 @@ __all__ = (
     "InterfaceTable",
     "InventoryItemTable",
     "ModuleBayTable",
+    "ModuleFamilyTable",
     "ModuleModuleBayTable",
     "ModuleTable",
     "PlatformTable",
@@ -300,6 +302,46 @@ class ModuleTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "status",
             "role",
             "tenant",
+            "actions",
+        )
+
+
+class ModuleFamilyTable(BaseTable):
+    """Table for displaying ModuleFamily objects."""
+    name = tables.Column(
+        linkify=True
+    )
+    module_type_count = LinkedCountColumn(
+        viewname="dcim:moduletype_list",
+        url_params={"module_family": "pk"},
+        verbose_name="Module Types"
+    )
+    module_bay_count = LinkedCountColumn(
+        viewname="dcim:modulebay_list",
+        url_params={"module_family": "pk"},
+        verbose_name="Module Bays"
+    )
+    tags = TagColumn()
+    actions = ButtonsColumn(ModuleFamily)
+
+    class Meta(BaseTable.Meta):
+        model = ModuleFamily
+        fields = (
+            "pk",
+            "name",
+            "description",
+            "module_type_count",
+            "module_bay_count",
+            "tags",
+            "created",
+            "last_updated",
+            "actions",
+        )
+        default_columns = (
+            "name",
+            "description",
+            "module_type_count",
+            "module_bay_count",
             "actions",
         )
 

@@ -74,6 +74,7 @@ from nautobot.dcim.models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     Platform,
     PowerFeed,
@@ -137,6 +138,7 @@ __all__ = (
     "ManufacturerFilterSet",
     "ModuleBayFilterSet",
     "ModuleBayTemplateFilterSet",
+    "ModuleFamilyFilterSet",
     "ModuleFilterSet",
     "ModuleTypeFilterSet",
     "PathEndpointFilterSet",
@@ -2077,6 +2079,11 @@ class ModuleFilterSet(
         label="Device (name or ID)",
         method="filter_device",
     )
+    module_bay = django_filters.ModelChoiceFilter(
+        queryset=ModuleBay.objects.all(),
+        method='filter_module_bay',
+        label="Module Bay",
+    )
 
     def _construct_device_filter_recursively(self, field_name, value):
         recursion_depth = MODULE_RECURSION_DEPTH_LIMIT
@@ -2101,6 +2108,12 @@ class ModuleFilterSet(
             return queryset
         params = self.generate_query_filter_device(value)
         return queryset.filter(params)
+
+    def filter_module_bay(self, queryset, name, value):
+        """Filter module types based on a module bay's module family."""
+        if value and value.module_family:
+            return queryset.filter(module_family=value.module_family)
+        return queryset
 
     class Meta:
         model = Module
@@ -2128,6 +2141,21 @@ class ModuleTypeFilterSet(DeviceTypeModuleTypeCommonFiltersMixin, NautobotFilter
             },
         },
     )
+    manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Manufacturer.objects.all(),
+        to_field_name="name",
+        label="Manufacturer (name or ID)",
+    )
+    module_family = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ModuleFamily.objects.all(),
+        to_field_name="name",
+        label="Module family (name or ID)",
+    )
+    module_bay = django_filters.ModelChoiceFilter(
+        queryset=ModuleBay.objects.all(),
+        method="filter_module_bay",
+        label="Module bay",
+    )
     has_modules = RelatedMembershipBooleanFilter(
         field_name="modules",
         label="Has module instances",
@@ -2136,6 +2164,12 @@ class ModuleTypeFilterSet(DeviceTypeModuleTypeCommonFiltersMixin, NautobotFilter
     class Meta:
         model = ModuleType
         fields = "__all__"
+
+    def filter_module_bay(self, queryset, name, value):
+        """Filter module types based on a module bay's module family."""
+        if value and value.module_family:
+            return queryset.filter(module_family=value.module_family)
+        return queryset
 
 
 class ModuleBayTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetMixin, NautobotFilterSet):
@@ -2166,6 +2200,11 @@ class ModuleBayTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetMix
                 "preprocessor": str.strip,
             },
         }
+    )
+    module_family = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ModuleFamily.objects.all(),
+        to_field_name="name",
+        label="Module family (name or ID)",
     )
 
     class Meta:
@@ -2222,6 +2261,11 @@ class ModuleBayFilterSet(NautobotFilterSet):
     has_installed_module = RelatedMembershipBooleanFilter(
         field_name="installed_module",
         label="Has installed module",
+    )
+    module_family = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ModuleFamily.objects.all(),
+        to_field_name="name",
+        label="Module family (name or ID)",
     )
 
     class Meta:
@@ -2356,4 +2400,54 @@ class InterfaceVDCAssignmentFilterSet(NautobotFilterSet):
             "device",
             "interface",
             "virtual_device_context",
+        ]
+
+class ModuleFamilyFilterSet(NautobotFilterSet):
+    """FilterSet for ModuleFamily objects."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "description": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "module_types__model": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "module_types__manufacturer__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+        }
+    )
+
+    module_type_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=ModuleType.objects.all(),
+        label='Module type (ID)',
+    )
+    module_type = django_filters.ModelMultipleChoiceFilter(
+        field_name='module_types__model',
+        queryset=ModuleType.objects.all(),
+        to_field_name='model',
+        label='Module type (model)',
+    )
+    module_bay_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=ModuleBay.objects.all(),
+        label='Module bay (ID)',
+    )
+
+    class Meta:
+        model = ModuleFamily
+        fields = [
+            'id',
+            'name',
+            'description',
+            'module_type_id',
+            'module_type',
+            'module_bay_id',
         ]

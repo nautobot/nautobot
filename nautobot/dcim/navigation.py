@@ -293,6 +293,22 @@ menu_items = (
                             ),
                         ),
                     ),
+                    NavMenuItem(
+                        link="dcim:modulefamily_list",
+                        name="Module Families",
+                        weight=300,
+                        permissions=[
+                            "dcim.view_modulefamily",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:moduletype_add",
+                                permissions=[
+                                    "dcim.add_modulefamily",
+                                ],
+                            ),
+                        ),
+                    ),
                 ),
             ),
             NavMenuGroup(

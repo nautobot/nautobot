@@ -63,6 +63,7 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualDeviceContext,
+    ModuleFamily,
 )
 from nautobot.extras import context_managers
 from nautobot.extras.choices import CustomFieldTypeChoices
@@ -3429,3 +3430,23 @@ class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):
             vdc.validated_save()
 
         self.assertIn("Virtual Device Context's device cannot be changed once created", str(err.exception))
+
+
+class ModuleFamilyTestCase(TestCase):
+    """Test cases for the ModuleFamily model."""
+
+    def setUp(self):
+        """Create a ModuleFamily for use in test methods."""
+        self.module_family = ModuleFamily.objects.create(
+            name="Test Module Family",
+            description="A module family for testing"
+        )
+
+    def test_create_modulefamily(self):
+        """Test the creation of a ModuleFamily instance."""
+        self.assertEqual(self.module_family.name, "Test Module Family")
+        self.assertEqual(self.module_family.description, "A module family for testing")
+
+    def test_modulefamily_str(self):
+        """Test string representation of ModuleFamily."""
+        self.assertEqual(str(self.module_family), "Test Module Family")

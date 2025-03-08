@@ -1208,6 +1208,14 @@ class ModuleBay(PrimaryModel):
         blank=True,
         null=True,
     )
+    module_family = models.ForeignKey(
+        to="dcim.ModuleFamily",
+        on_delete=models.PROTECT,
+        related_name="module_bays",
+        blank=True,
+        null=True,
+        help_text="Module family that can be installed in this bay",
+    )
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
     _name = NaturalOrderingField(target_field="name", max_length=CHARFIELD_MAX_LENGTH, blank=True, db_index=True)
     position = models.CharField(
@@ -1218,7 +1226,7 @@ class ModuleBay(PrimaryModel):
     label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Physical label")
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
-    clone_fields = ["parent_device", "parent_module"]
+    clone_fields = ["parent_device", "parent_module", "module_family"]
 
     # The recursive nature of this model combined with the fact that it can be a child of a
     # device or location makes our natural key implementation unusable, so just use the pk
@@ -1282,6 +1290,15 @@ class ModuleBay(PrimaryModel):
 
         if not (self.parent_device or self.parent_module):
             raise ValidationError("Either parent_device or parent_module must be set")
+
+        # Validate that installed module matches the module family constraint
+        if hasattr(self, "installed_module") and self.installed_module and self.module_family:
+            if self.installed_module.module_type.module_family != self.module_family:
+                raise ValidationError(
+                    {
+                        "installed_module": f"Module type {self.installed_module.module_type} does not match bay's module family {self.module_family}"
+                    }
+                )
 
         # Populate the position field with the name of the module bay if it is not supplied by the user.
 

@@ -1529,8 +1529,32 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
 # Modules
 #
 
-
 # TODO: 5840 - Translate comments field from devicetype library, Nautobot doesn't use that field for ModuleType
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
+class ModuleFamily(PrimaryModel):
+    """
+    A ModuleFamily represents a classification of ModuleTypes.
+    It is used to enforce compatibility between ModuleBays and Modules.
+    """
+
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name_plural = "module families"
+
+    def __str__(self):
+        return self.name
+
+
 @extras_features(
     "custom_links",
     "custom_validators",
@@ -1557,6 +1581,13 @@ class ModuleType(PrimaryModel):
     """
 
     manufacturer = models.ForeignKey(to="dcim.Manufacturer", on_delete=models.PROTECT, related_name="module_types")
+    module_family = models.ForeignKey(
+        to="dcim.ModuleFamily",
+        on_delete=models.PROTECT,
+        related_name="module_types",
+        blank=True,
+        null=True,
+    )
     model = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     part_number = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Discrete part number (optional)"
@@ -1565,6 +1596,7 @@ class ModuleType(PrimaryModel):
 
     clone_fields = [
         "manufacturer",
+        "module_family",
     ]
 
     class Meta:

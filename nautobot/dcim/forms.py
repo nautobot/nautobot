@@ -41,6 +41,7 @@ from nautobot.dcim.form_mixins import (
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
 )
+from nautobot.dcim.models.devices import ModuleFamily
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelCSVForm,
@@ -817,6 +818,39 @@ class DeviceFamilyBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         nullable_fields = []
 
 
+class ModuleFamilyForm(NautobotModelForm):
+    """ModuleFamily creation/edit form."""
+
+    class Meta:
+        model = ModuleFamily
+        fields = [
+            "name",
+            "description",
+            "tags",
+        ]
+
+
+class ModuleFamilyFilterForm(NautobotFilterForm):
+    """ModuleFamily filter form."""
+    model = ModuleFamily
+    q = forms.CharField(required=False, label="Search")
+    module_types = DynamicModelMultipleChoiceField(
+        queryset=ModuleType.objects.all(),
+        to_field_name="model",
+        required=False
+    )
+    tags = TagFilterField(model)
+
+
+class ModuleFamilyBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+    """ModuleFamily bulk edit form."""
+    pk = forms.ModelMultipleChoiceField(queryset=ModuleFamily.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(required=False)
+
+    class Meta:
+        nullable_fields = []
+
+
 #
 # Device types
 #
@@ -950,6 +984,12 @@ class DeviceTypeFilterForm(NautobotFilterForm):
 
 class ModuleTypeForm(NautobotModelForm):
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all())
+    module_family = DynamicModelChoiceField(
+        queryset=ModuleFamily.objects.all(),
+        required=False,
+        label="Module Family",
+        help_text="If selected, this module type can only be installed in a module bay matching this family.",
+    )
     comments = CommentField(label="Comments")
 
     class Meta:
@@ -957,6 +997,7 @@ class ModuleTypeForm(NautobotModelForm):
         fields = [
             "manufacturer",
             "model",
+            "module_family",
             "part_number",
             "comments",
             "tags",
@@ -1565,6 +1606,12 @@ class DeviceBayTemplateBulkEditForm(NautobotBulkEditForm):
 
 
 class ModuleBayTemplateForm(ModularComponentTemplateForm):
+    module_family = DynamicModelChoiceField(
+        queryset=ModuleFamily.objects.all(),
+        required=False,
+        help_text="Module family that can be installed in this bay. Leave blank for no restriction.",
+    )
+
     class Meta:
         model = ModuleBayTemplate
         fields = [
@@ -1574,6 +1621,7 @@ class ModuleBayTemplateForm(ModularComponentTemplateForm):
             "position",
             "label",
             "description",
+            "module_family",
         ]
 
 
@@ -1629,6 +1677,11 @@ class ModuleBayTemplateCreateForm(ModuleBayBaseCreateForm):
         queryset=ModuleType.objects.all(),
         required=False,
     )
+    module_family = DynamicModelChoiceField(
+        queryset=ModuleFamily.objects.all(),
+        required=False,
+        help_text="Module family that can be installed in this bay. Leave blank for no restriction.",
+    )
 
     field_order = (
         "device_type",
@@ -1637,6 +1690,7 @@ class ModuleBayTemplateCreateForm(ModuleBayBaseCreateForm):
         "label_pattern",
         "position_pattern",
         "description",
+        "module_family",
     )
 
 
@@ -1645,9 +1699,14 @@ class ModuleBayTemplateBulkEditForm(NautobotBulkEditForm):
     label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     position = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    module_family = DynamicModelChoiceField(
+        queryset=ModuleFamily.objects.all(),
+        required=False,
+        help_text="Module family that can be installed in this bay",
+    )
 
     class Meta:
-        nullable_fields = ("label", "description")
+        nullable_fields = ("label", "description", "module_family")
 
 
 #
@@ -2325,7 +2384,10 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
     )
     module_type = DynamicModelChoiceField(
         queryset=ModuleType.objects.all(),
-        query_params={"manufacturer": "$manufacturer"},
+        query_params={
+            "manufacturer": "$manufacturer",
+            "module_bay": ["$parent_module_bay_module", "$parent_module_bay_device"],
+        },
     )
     parent_module_bay_device_filter = DynamicModelChoiceField(
         queryset=Device.objects.all(),
@@ -3630,6 +3692,12 @@ class ModuleBayForm(NautobotModelForm):
         required=False,
         label="Parent Module",
     )
+    module_family = DynamicModelChoiceField(
+        queryset=ModuleFamily.objects.all(),
+        required=False,
+        label="Module Family",
+        help_text="Module family that can be installed in this bay. Leave blank for no restriction.",
+    )
     # TODO: Installed module field
 
     class Meta:
@@ -3638,6 +3706,7 @@ class ModuleBayForm(NautobotModelForm):
             "parent_device",
             "parent_module",
             "name",
+            "module_family",
             "position",
             "label",
             "description",
@@ -3656,6 +3725,12 @@ class ModuleBayForm(NautobotModelForm):
 class ModuleBayCreateForm(ModuleBayBaseCreateForm):
     parent_device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
     parent_module = DynamicModelChoiceField(queryset=Module.objects.all(), required=False)
+    module_family = DynamicModelChoiceField(
+        queryset=ModuleFamily.objects.all(),
+        required=False,
+        label="Module Family",
+        help_text="Module family that can be installed in this bay. Leave blank for no restriction.",
+    )
     tags = DynamicModelMultipleChoiceField(
         queryset=Tag.objects.all(),
         required=False,
@@ -3668,6 +3743,7 @@ class ModuleBayCreateForm(ModuleBayBaseCreateForm):
         "label_pattern",
         "position_pattern",
         "description",
+        "module_family",
         "tags",
     )
 
@@ -3679,8 +3755,14 @@ class ModuleBayBulkCreateForm(
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Device.objects.all(), widget=forms.MultipleHiddenInput())
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    module_family = DynamicModelChoiceField(
+        queryset=ModuleFamily.objects.all(),
+        required=False,
+        label="Module Family",
+        help_text="Module family that can be installed in this bay. Leave blank for no restriction.",
+    )
 
-    field_order = ("name_pattern", "label_pattern", "position_pattern", "description", "tags")
+    field_order = ("name_pattern", "label_pattern", "position_pattern", "description", "module_family", "tags")
 
     class Meta:
         nullable_fields = []
@@ -3699,9 +3781,15 @@ class ModuleBayBulkEditForm(
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=ModuleBay.objects.all(), widget=forms.MultipleHiddenInput())
+    module_family = DynamicModelChoiceField(
+        queryset=ModuleFamily.objects.all(),
+        required=False,
+        label="Module Family",
+        help_text="Module family that can be installed in this bay. Leave blank for no restriction.",
+    )
 
     class Meta:
-        nullable_fields = ["label", "description"]
+        nullable_fields = ["label", "description", "module_family"]
 
 
 #

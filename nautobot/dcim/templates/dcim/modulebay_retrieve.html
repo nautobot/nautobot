@@ -37,6 +37,12 @@
                                 {% endif %}
                             </tr>
                             <tr>
+                                <td>Module Family</td>
+                                <td>
+                                    {{ object.module_family|hyperlinked_object }}
+                                </td>
+                            </tr>
+                            <tr>
                                 <td>Name</td>
                                 <td>{{ object.name }}</td>
                             </tr>
