@@ -987,8 +987,7 @@ class ModuleTypeForm(NautobotModelForm):
     module_family = DynamicModelChoiceField(
         queryset=ModuleFamily.objects.all(),
         required=False,
-        label="Module Family",
-        help_text="This module type will only be installable in module bays matching this family, or module bays that are not assigned a family.",
+        help_text="Modules are only installable in module bays of the same family, or module bays that are not assigned to a family",
     )
     comments = CommentField(label="Comments")
 
@@ -1609,7 +1608,7 @@ class ModuleBayTemplateForm(ModularComponentTemplateForm):
     module_family = DynamicModelChoiceField(
         queryset=ModuleFamily.objects.all(),
         required=False,
-        help_text="If selected, modules installed in this bay must match this family.",
+        help_text="If selected, modules installed in this bay must match this family",
     )
 
     class Meta:
