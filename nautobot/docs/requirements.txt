@@ -1,4 +1,4 @@
-Jinja2==3.1.5
+Jinja2==3.1.6
 Markdown==3.6
 markdown-data-tables==1.0.0
 markdown-version-annotations==1.0.1

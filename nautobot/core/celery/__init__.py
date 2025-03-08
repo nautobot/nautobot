@@ -14,7 +14,7 @@ from django.utils.module_loading import import_string
 from kombu.serialization import register
 from prometheus_client import CollectorRegistry, multiprocess, start_http_server
 
-from nautobot import add_success_logger
+from nautobot import add_failure_logger, add_success_logger
 from nautobot.core.celery.control import discard_git_repository, refresh_git_repository  # noqa: F401  # unused-import
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.celery.log import NautobotDatabaseHandler
@@ -138,14 +138,16 @@ def add_nautobot_log_handler(logger_instance, log_format=None):
 
 @signals.after_setup_logger.connect
 def setup_nautobot_global_logging(logger, **kwargs):  # pylint: disable=redefined-outer-name
-    """Add SUCCESS log to celery global logger."""
+    """Add SUCCESS and FAILURE logs to celery global logger."""
     logger.success = add_success_logger()
+    logger.failure = add_failure_logger()
 
 
 @signals.after_setup_task_logger.connect
 def setup_nautobot_task_logging(logger, **kwargs):  # pylint: disable=redefined-outer-name
-    """Add SUCCESS log to celery task logger."""
+    """Add SUCCESS and FAILURE logs to celery task logger."""
     logger.success = add_success_logger()
+    logger.failure = add_failure_logger()
 
 
 @signals.celeryd_after_setup.connect

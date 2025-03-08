@@ -1,1 +1,0 @@
-Fixed an `AttributeError` exception when upgrading from v1.x to v2.x with certain existing data in the database.

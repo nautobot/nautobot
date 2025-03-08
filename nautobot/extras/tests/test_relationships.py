@@ -1784,7 +1784,7 @@ class RelationshipJobTestCase(RequiredRelationshipTestMixin, TransactionTestCase
 
         pk_list = [str(vlan.id) for vlan in vlans]
         job_result = self.create_job(pk_list)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         error_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
         self.assertIn("VLANs require at least one device, but no devices exist yet.", error_log.message)
 
@@ -1793,7 +1793,7 @@ class RelationshipJobTestCase(RequiredRelationshipTestMixin, TransactionTestCase
 
         # Try editing all 6 VLANs without adding the required device(fails):
         job_result = self.create_job(pk_list)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         error_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
         self.assertIn(
             '6 VLANs require a device for the required relationship \\"VLANs require at least one Device',
@@ -1802,7 +1802,7 @@ class RelationshipJobTestCase(RequiredRelationshipTestMixin, TransactionTestCase
 
         # Try editing 3 VLANs without adding the required device(fails):
         job_result = self.create_job(pk_list[:3])
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         error_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
         self.assertIn(
             'These VLANs require a device for the required relationship \\"VLANs require at least one Device',
@@ -1813,11 +1813,11 @@ class RelationshipJobTestCase(RequiredRelationshipTestMixin, TransactionTestCase
 
         # Try editing 6 VLANs and adding the required device (succeeds):
         job_result = self.create_job(pk_list, add_cr_vlans_devices_m2m__source=[str(device_for_association.id)])
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
 
         # Try editing 6 VLANs and removing the required device (fails):
         job_result = self.create_job(pk_list, remove_cr_vlans_devices_m2m__source=[str(device_for_association.id)])
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         error_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
         self.assertIn(
             '6 VLANs require a device for the required relationship \\"VLANs require at least one Device',
