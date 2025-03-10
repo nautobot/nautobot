@@ -4276,6 +4276,12 @@ class ModuleFamilyTestCase(FilterTestCases.FilterTestCase):
 
     queryset = ModuleFamily.objects.all()
     filterset = ModuleFamilyFilterSet
+    generic_filter_tests = [
+        ("name",),
+        ("description",),
+        ("module_types", "module_types__id"),
+        ("module_types", "module_types__model"),
+    ]
 
     @classmethod
     def setUpTestData(cls):
@@ -4291,20 +4297,9 @@ class ModuleFamilyTestCase(FilterTestCases.FilterTestCase):
             ModuleFamily.objects.create(name="Module Family 3", description="Third family"),
         )
 
-        (ModuleType.objects.create(manufacturer=manufacturers[0], model="Model 1", module_family=module_families[0]),)
-        (ModuleType.objects.create(manufacturer=manufacturers[1], model="Model 2", module_family=module_families[1]),)
+        cls.module_types = (
+            ModuleType.objects.create(manufacturer=manufacturers[0], model="Model 1", module_family=module_families[0]),
+            ModuleType.objects.create(manufacturer=manufacturers[1], model="Model 2", module_family=module_families[1]),
+        )
 
-    def test_id(self):
-        """Test filtering by ID."""
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_name(self):
-        """Test filtering by name."""
-        params = {"name": ["Module Family 1", "Module Family 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_description(self):
-        """Test filtering by description."""
-        params = {"description": ["First family", "Second family"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+    # Remove individual test methods since they're now covered by generic_filter_tests
