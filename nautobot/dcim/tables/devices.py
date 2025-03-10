@@ -276,7 +276,7 @@ class ModuleTable(StatusTableMixin, RoleTableMixin, BaseTable):
     tenant = TenantColumn()
     module_family = tables.Column(
         linkify=lambda record: record.module_type.module_family.get_absolute_url(),
-        verbose_name="Module Family",
+        verbose_name="Family",
         accessor="module_type__module_family__name",
     )
     tags = TagColumn(url_name="dcim:module_list")
@@ -287,6 +287,7 @@ class ModuleTable(StatusTableMixin, RoleTableMixin, BaseTable):
         fields = (
             "pk",
             "module_type",
+            "module_family",
             "parent_module_bay",
             "location",
             "serial",
@@ -294,13 +295,13 @@ class ModuleTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "status",
             "role",
             "tenant",
-            "module_family",
             "tags",
             "actions",
         )
         default_columns = (
             "pk",
             "module_type",
+            "module_family",
             "parent_module_bay",
             "location",
             "serial",
@@ -308,7 +309,6 @@ class ModuleTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "status",
             "role",
             "tenant",
-            "module_family",
             "actions",
         )
 

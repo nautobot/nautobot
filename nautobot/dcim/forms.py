@@ -1698,16 +1698,17 @@ class ModuleBayTemplateCreateForm(ModuleBayBaseCreateForm):
     module_type = DynamicModelChoiceField(
         queryset=ModuleType.objects.all(),
         required=False,
+        query_params={"module_family": "$module_family"},
     )
 
 
     field_order = (
         "device_type",
+        "module_family",
         "module_type",
         "name_pattern",
         "label_pattern",
         "position_pattern",
-        "module_family",
         "description",
     )
 
@@ -2615,7 +2616,7 @@ class ModularComponentCreateForm(ModularComponentForm):
     """
 
     device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
-    module_family = DynamicModelChoiceField(queryset=ModuleFamily.objects.all(), required=False)
+    module_family = DynamicModelChoiceField(queryset=ModuleFamily.objects.all(), required=False, help_text="Refine module type by family")
     module = DynamicModelChoiceField(queryset=Module.objects.all(), required=False, query_params={"module_family": "$module_family"})
 
 
@@ -2642,7 +2643,7 @@ class ModularComponentEditForm(ComponentEditForm):
     """
 
     device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
-    module_family = DynamicModelChoiceField(queryset=ModuleFamily.objects.all(), required=False)
+    module_family = DynamicModelChoiceField(queryset=ModuleFamily.objects.all(), required=False, help_text="Refine module type by family")
     module = DynamicModelChoiceField(queryset=Module.objects.all(), required=False, query_params={"module_type__module_family": "$module_family"})
 
     def __init__(self, *args, **kwargs):
@@ -2699,6 +2700,7 @@ class ConsolePortCreateForm(ModularComponentCreateForm):
     )
     field_order = (
         "device",
+        "module_family",
         "module",
         "name_pattern",
         "label_pattern",
