@@ -18,7 +18,6 @@ from nautobot.dcim.models import (
     InterfaceTemplate,
     Manufacturer,
     ModuleBayTemplate,
-    ModuleFamily,
     ModuleType,
     PowerOutletTemplate,
     PowerPortTemplate,
