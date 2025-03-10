@@ -2400,10 +2400,15 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         required=False,
         initial_params={"module_types": "$module_type"},
     )
+    module_family = DynamicModelChoiceField(
+        queryset=ModuleFamily.objects.all(),
+        required=False,
+    )
     module_type = DynamicModelChoiceField(
         queryset=ModuleType.objects.all(),
         query_params={
             "manufacturer": "$manufacturer",
+            "module_family": "$module_family",
             "compatible_with_module_bay": ["$parent_module_bay_module", "$parent_module_bay_device"],
         },
     )
@@ -2451,6 +2456,7 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         model = Module
         fields = [
             "manufacturer",
+            "module_family",
             "module_type",
             "parent_module_bay",
             "location",
@@ -2465,6 +2471,18 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         help_texts = {
             "serial": "Module serial number",
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Handle module_family field based on parent module bay
+        if "parent_module_bay" in self.initial:
+            parent_bay = ModuleBay.objects.get(pk=self.initial["parent_module_bay"])
+            if parent_bay.module_family:
+                print(parent_bay.module_family)
+                self.fields["module_family"].initial = parent_bay.module_family.id
+                self.fields["module_family"].disabled = True
+                self.fields["module_family"].help_text = f"The selected parent module bay requires a module in the {parent_bay.module_family.name} family"
 
     def clean(self):
         cleaned_data = self.cleaned_data
@@ -3740,6 +3758,7 @@ class ModuleBayForm(NautobotModelForm):
         model = ModuleBay
         fields = [
             "parent_device",
+            "parent_module_family",
             "parent_module",
             "name",
             "module_family",
@@ -3755,6 +3774,7 @@ class ModuleBayForm(NautobotModelForm):
         # Disable the parent_device and parent_module fields if an initial value is provided for either
         if "parent_device" in self.initial or "parent_module" in self.initial:
             self.fields["parent_device"].disabled = True
+            self.fields["parent_module_family"].disabled = True
             self.fields["parent_module"].disabled = True
 
 
