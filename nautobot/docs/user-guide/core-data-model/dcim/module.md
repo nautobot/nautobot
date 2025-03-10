@@ -14,4 +14,4 @@ Since modules may be installed within a module bay and also contain module bays 
 
 In order to support modules that may exist as spares in inventory and not installed in a device, the `location` field may be populated instead of `parent_module_bay`. However both fields may not be populated simultaneously. A `location` may only be set on a module if it is not installed in a module bay. If a `parent_module_bay` is supplied, the location of the module will be inherited from the parent module bay.
 
-When installing a module into a module bay, the module type must match the module bay's [module family](modulefamily.md), if it is assigned to one.
+When installing a module into a module bay, if the module bay is assigned to a [module family](modulefamily.md), the module type must also be assigned to the same family.
