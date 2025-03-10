@@ -1646,7 +1646,7 @@ class ModuleBayBaseCreateForm(BootstrapMixin, forms.Form):
     module_family = DynamicModelChoiceField(
         queryset=ModuleFamily.objects.all(),
         required=False,
-        help_text="If selected, this bay will only accept module types assigned to this family",
+        help_text="This bay will only accept module types assigned to this family",
     )
     name_pattern = ExpandableNameField(label="Name")
     label_pattern = ExpandableNameField(
@@ -1658,6 +1658,11 @@ class ModuleBayBaseCreateForm(BootstrapMixin, forms.Form):
         required=False,
         help_text="Alphanumeric ranges are supported. (Must match the number of names being created.)"
         " Default to the names of the module bays unless manually supplied by the user.",
+    )
+    constrain_to_mfr = forms.BooleanField(
+        required=False,
+        label="Requires first-party modules",
+        help_text="This bay will only accept module types from the same manufacturer as the parent device or module",
     )
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
@@ -1709,6 +1714,7 @@ class ModuleBayTemplateCreateForm(ModuleBayBaseCreateForm):
         "name_pattern",
         "label_pattern",
         "position_pattern",
+        "constrain_to_mfr",
         "description",
     )
 
@@ -3742,6 +3748,7 @@ class ModuleBayForm(NautobotModelForm):
         queryset=ModuleFamily.objects.all(),
         required=False,
         label="Parent Module Family",
+        help_text="Refine parent module type by family",
     )
     parent_module = DynamicModelChoiceField(
         queryset=Module.objects.all(),
@@ -3797,6 +3804,7 @@ class ModuleBayCreateForm(ModuleBayBaseCreateForm):
         "label_pattern",
         "position_pattern",
         "module_family",
+        "constrain_to_mfr",
         "description",
         "tags",
     )

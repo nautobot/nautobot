@@ -485,6 +485,10 @@ class ModuleBayTemplate(ModularComponentTemplateModel):
         null=True,
         help_text="Module family that can be installed in this bay. Leave blank for no restriction.",
     )
+    constrain_to_mfr = models.BooleanField(
+        default=False,
+        help_text="This bay will only accept modules from the same manufacturer as the parent device or module",
+    )
 
     natural_key_field_names = ["device_type", "module_type", "name"]
 

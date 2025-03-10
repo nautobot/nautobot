@@ -1216,6 +1216,10 @@ class ModuleBay(PrimaryModel):
         null=True,
         help_text="Module family that can be installed in this bay",
     )
+    constrain_to_mfr = models.BooleanField(
+        default=False,
+        help_text="This bay will only accept modules from the same manufacturer as the parent device or module",
+    )
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
     _name = NaturalOrderingField(target_field="name", max_length=CHARFIELD_MAX_LENGTH, blank=True, db_index=True)
     position = models.CharField(
