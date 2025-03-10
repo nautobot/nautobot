@@ -2497,7 +2497,7 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
                     self.fields["module_family"].disabled = True
                     self.fields[
                         "module_family"
-                    ].help_text = f"The selected parent module bay requires a module in the family {parent_bay.module_family.name}"
+                    ].help_text = f"The selected parent module bay requires a module in the {parent_bay.module_family.name} family"
 
                 if parent_bay.constrain_to_mfr:
                     if parent_bay.parent_device:
