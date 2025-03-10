@@ -1828,7 +1828,8 @@ class Module(PrimaryModel):
             if self.module_type.module_family != self.parent_module_bay.module_family:
                 raise ValidationError(
                     {
-                        "module_type": f"{self.module_type} does not match module bay's module family: {self.parent_module_bay.module_family}"
+                        "module_type": f"The selected module bay requires a module type in the family {self.parent_module_bay.module_family.name}, "
+                        f"but the selected module type is {'not assigned to a family' if self.module_type.module_family is None else f'in the family {self.module_type.module_family.name}'}."
                     }
                 )
 
