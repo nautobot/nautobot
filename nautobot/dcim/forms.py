@@ -2385,7 +2385,7 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         queryset=ModuleType.objects.all(),
         query_params={
             "manufacturer": "$manufacturer",
-            "installable_in_module_bay": ["$parent_module_bay_module", "$parent_module_bay_device"],
+            "compatible_with_module_bay": ["$parent_module_bay_module", "$parent_module_bay_device"],
         },
     )
     parent_module_bay_device_filter = DynamicModelChoiceField(
