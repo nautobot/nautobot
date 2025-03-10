@@ -192,6 +192,30 @@ def process_ip_addresses(apps):
     Namespace = apps.get_model("ipam", "Namespace")
     Prefix = apps.get_model("ipam", "Prefix")
 
+    # Try to efficiently bulk-reparent IPAddresses that have an exactly obvious parent Prefix,
+    # starting with the most-specific prefixes then proceeding upward.
+    for prefix in Prefix.objects.order_by("-prefix_length", "created"):
+        potential_children = IPAddress.objects.filter(
+            parent__isnull=True,
+            ip_version=prefix.ip_version,
+            tenant=prefix.tenant,
+            vrf=prefix.vrf,
+            host__lte=prefix.broadcast,
+            host__gte=prefix.network,
+        ).annotate(
+            max_id=models.Window(
+                expression=models.functions.FirstValue("id"),
+                partition_by=[models.F("host")],
+                order_by=[models.F("created")],
+            )
+        ).values_list("max_id", flat=True)
+        # 1.x allows for (and in some cases requires) "duplicate" IPAddress records,
+        # but 2.x will enforce IPAddress uniqueness per parent Prefix.
+        # So we need to only update the first of each set of duplicates.
+        filtered_children = IPAddress.objects.filter(id__in=list(potential_children))
+        filtered_children.update(parent=prefix)
+
+    # For IPs that don't have an exact obvious parent prefix, find close-enough matches.
     # Explicitly set the parent for those that were found and save them.
     for ip in IPAddress.objects.filter(parent__isnull=True).order_by("-vrf", "-tenant"):
         potential_parents = get_closest_parent(apps, ip, Prefix.objects.all())
