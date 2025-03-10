@@ -987,6 +987,7 @@ class ModuleTypeForm(NautobotModelForm):
     module_family = DynamicModelChoiceField(
         queryset=ModuleFamily.objects.all(),
         required=False,
+        label="Family",
         help_text="Modules are only installable in module bays of the same family, or module bays that are not assigned to a family",
     )
     comments = CommentField(label="Comments")
@@ -1089,6 +1090,7 @@ class ModularComponentTemplateForm(ComponentTemplateForm):
     module_family = DynamicModelChoiceField(
         queryset=ModuleFamily.objects.all(),
         required=False,
+        label="Family",
     )
     module_type = DynamicModelChoiceField(
         queryset=ModuleType.objects.all(),
@@ -1136,6 +1138,7 @@ class ModularComponentTemplateCreateForm(ComponentTemplateCreateForm):
     module_family = DynamicModelChoiceField(
         queryset=ModuleFamily.objects.all(),
         required=False,
+        label="Family",
     )
     module_type = DynamicModelChoiceField(
         queryset=ModuleType.objects.all(),
@@ -1646,6 +1649,7 @@ class ModuleBayBaseCreateForm(BootstrapMixin, forms.Form):
     module_family = DynamicModelChoiceField(
         queryset=ModuleFamily.objects.all(),
         required=False,
+        label="Family",
         help_text="This bay will only accept module types assigned to this family",
     )
     name_pattern = ExpandableNameField(label="Name")
@@ -1727,6 +1731,7 @@ class ModuleBayTemplateBulkEditForm(NautobotBulkEditForm):
     module_family = DynamicModelChoiceField(
         queryset=ModuleFamily.objects.all(),
         required=False,
+        label="Family",
         help_text="Module family that can be installed in this bay",
     )
 
@@ -2410,6 +2415,7 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
     module_family = DynamicModelChoiceField(
         queryset=ModuleFamily.objects.all(),
         required=False,
+        label="Family",
     )
     module_type = DynamicModelChoiceField(
         queryset=ModuleType.objects.all(),
@@ -2482,14 +2488,26 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Handle module_family field based on parent module bay
-        if "parent_module_bay" in self.initial:
-            parent_bay = ModuleBay.objects.get(pk=self.initial["parent_module_bay"])
-            if parent_bay.module_family:
-                print(parent_bay.module_family)
-                self.fields["module_family"].initial = parent_bay.module_family.id
-                self.fields["module_family"].disabled = True
-                self.fields["module_family"].help_text = f"The selected parent module bay requires a module in the {parent_bay.module_family.name} family"
+        # Handle module_family and manufacturer fields based on parent module bay
+        if self.initial.get("parent_module_bay"):
+            try:
+                parent_bay = ModuleBay.objects.get(pk=self.initial["parent_module_bay"])
+                if parent_bay.module_family:
+                    print(parent_bay.module_family)
+                    self.fields["module_family"].initial = parent_bay.module_family.id
+                    self.fields["module_family"].disabled = True
+                    self.fields["module_family"].help_text = f"The selected parent module bay requires a module in the family {parent_bay.module_family.name}"
+
+                if parent_bay.constrain_to_mfr:
+                    if parent_bay.parent_device:
+                        mfr = parent_bay.parent_device.device_type.manufacturer
+                    else:
+                        mfr = parent_bay.parent_module.module_type.manufacturer
+                    self.fields["manufacturer"].initial = mfr.id
+                    self.fields["manufacturer"].disabled = True
+                    self.fields["manufacturer"].help_text = "The selected parent module bay requires first-party modules"
+            except ModuleBay.DoesNotExist:
+                pass
 
     def clean(self):
         cleaned_data = self.cleaned_data
@@ -2622,7 +2640,7 @@ class ModularComponentCreateForm(ModularComponentForm):
     """
 
     device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
-    module_family = DynamicModelChoiceField(queryset=ModuleFamily.objects.all(), required=False, help_text="Refine module type by family")
+    module_family = DynamicModelChoiceField(queryset=ModuleFamily.objects.all(), required=False, help_text="Refine module type by family", label="Family")
     module = DynamicModelChoiceField(queryset=Module.objects.all(), required=False, query_params={"module_family": "$module_family"})
 
 
@@ -2649,7 +2667,7 @@ class ModularComponentEditForm(ComponentEditForm):
     """
 
     device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
-    module_family = DynamicModelChoiceField(queryset=ModuleFamily.objects.all(), required=False, help_text="Refine module type by family")
+    module_family = DynamicModelChoiceField(queryset=ModuleFamily.objects.all(), required=False, help_text="Refine module type by family", label="Family")
     module = DynamicModelChoiceField(queryset=Module.objects.all(), required=False, query_params={"module_type__module_family": "$module_family"})
 
     def __init__(self, *args, **kwargs):
@@ -3748,7 +3766,7 @@ class ModuleBayForm(NautobotModelForm):
         queryset=ModuleFamily.objects.all(),
         required=False,
         label="Parent Module Family",
-        help_text="Refine parent module type by family",
+        help_text="Refine parent module by family",
     )
     parent_module = DynamicModelChoiceField(
         queryset=Module.objects.all(),
@@ -3759,7 +3777,13 @@ class ModuleBayForm(NautobotModelForm):
     module_family = DynamicModelChoiceField(
         queryset=ModuleFamily.objects.all(),
         required=False,
+        label="Family",
         help_text="If selected, this bay will only accept module types assigned to this family",
+    )
+    constrain_to_mfr = forms.BooleanField(
+        required=False,
+        label="Requires first-party modules",
+        help_text="This bay will only accept modules from the same manufacturer as the parent device or module",
     )
     # TODO: Installed module field
 
@@ -3774,6 +3798,7 @@ class ModuleBayForm(NautobotModelForm):
             "position",
             "label",
             "description",
+            "constrain_to_mfr",
             "tags",
         ]
 
@@ -3839,6 +3864,7 @@ class ModuleBayBulkEditForm(
     module_family = DynamicModelChoiceField(
         queryset=ModuleFamily.objects.all(),
         required=False,
+        label="Family",
         help_text="If selected, this bay will only accept module types assigned to this family",
     )
 

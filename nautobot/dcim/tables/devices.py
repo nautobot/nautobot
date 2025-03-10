@@ -983,6 +983,7 @@ class ModuleBayTable(BaseTable):
     installed_module = tables.Column(linkify=True, verbose_name="Installed Module")
     installed_module__status = ColoredLabelColumn()
     tags = TagColumn(url_name="dcim:devicebay_list")
+    module_family = tables.Column(linkify=True, verbose_name="Family")
 
     class Meta(BaseTable.Meta):
         model = ModuleBay
@@ -993,6 +994,7 @@ class ModuleBayTable(BaseTable):
             "name",
             "position",
             "label",
+            "module_family",
             "description",
             "installed_module",
             "installed_module__status",
@@ -1005,6 +1007,7 @@ class ModuleBayTable(BaseTable):
             "name",
             "position",
             "label",
+            "module_family",
             "description",
             "installed_module",
             "installed_module__status",
@@ -1048,6 +1051,7 @@ class DeviceModuleBayTable(ModuleBayTable):
         '"></i> <a href="{{ record.get_absolute_url }}">{{ value }}</a>',
         attrs={"td": {"class": "text-nowrap"}},
     )
+    module_family = tables.Column(linkify=True, verbose_name="Family")
     installed_module = tables.Column(linkify=True, verbose_name="Installed Module")
     installed_module__status = ColoredLabelColumn(verbose_name="Installed Module Status")
     actions = ButtonsColumn(model=ModuleBay, buttons=("edit", "delete"), prepend_template=MODULEBAY_BUTTONS)
@@ -1058,6 +1062,7 @@ class DeviceModuleBayTable(ModuleBayTable):
             "pk",
             "name",
             "position",
+            "module_family",
             "installed_module",
             "installed_module__status",
             "label",
@@ -1069,6 +1074,7 @@ class DeviceModuleBayTable(ModuleBayTable):
             "pk",
             "name",
             "position",
+            "module_family",
             "installed_module",
             "installed_module__status",
             "actions",

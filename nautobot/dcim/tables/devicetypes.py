@@ -18,6 +18,7 @@ from nautobot.dcim.models import (
     InterfaceTemplate,
     Manufacturer,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     PowerOutletTemplate,
     PowerPortTemplate,
@@ -330,8 +331,9 @@ class ModuleBayTemplateTable(ComponentTemplateTable):
         buttons=("edit", "delete"),
         return_url_extra=r"%3Ftab=modulebays",
     )
+    module_family = tables.Column(verbose_name="Family")
 
     class Meta(BaseTable.Meta):
         model = ModuleBayTemplate
-        fields = ("pk", "name", "position", "label", "description", "actions")
+        fields = ("pk", "name", "position", "module_family", "label", "description", "actions")
         empty_text = "None"

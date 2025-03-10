@@ -1838,6 +1838,15 @@ class Module(PrimaryModel):
                     }
                 )
 
+        # Validate module manufacturer constraint
+        if self.parent_module_bay and self.parent_module_bay.constrain_to_mfr:
+            if self.module_type.manufacturer != self.parent_module_bay.parent_device.device_type.manufacturer:
+                raise ValidationError(
+                    {
+                        "module_type": "The selected module bay requires a module type from the same manufacturer as the parent device"
+                    }
+                )
+
     def save(self, *args, **kwargs):
         is_new = not self.present_in_database
 
