@@ -1826,10 +1826,15 @@ class Module(PrimaryModel):
         # Validate module family compatibility
         if self.parent_module_bay and self.parent_module_bay.module_family:
             if self.module_type.module_family != self.parent_module_bay.module_family:
+                module_family_name = self.parent_module_bay.module_family.name
+                if self.module_type.module_family is None:
+                    module_type_family = "not assigned to a family"
+                else:
+                    module_type_family = f"in the family {self.module_type.module_family.name}"
                 raise ValidationError(
                     {
-                        "module_type": f"The selected module bay requires a module type in the family {self.parent_module_bay.module_family.name}, "
-                        f"but the selected module type is {'not assigned to a family' if self.module_type.module_family is None else f'in the family {self.module_type.module_family.name}'}."
+                        "module_type": f"The selected module bay requires a module type in the family {module_family_name}, "
+                        f"but the selected module type is {module_type_family}."
                     }
                 )
 
