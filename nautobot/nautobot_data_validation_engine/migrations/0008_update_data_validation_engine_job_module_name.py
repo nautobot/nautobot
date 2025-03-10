@@ -7,7 +7,7 @@ def update_data_validation_engine_job_module_name(apps, schema_editor):
     """
     Update the `module_name` for the Jobs to match the new location of the data validation engine.
     """
-    Job = apps.get_model("extras.Job")
+    Job = apps.get_model("extras", "Job")
     dve_jobs = Job.objects.filter(module_name="nautobot_data_validation_engine.jobs")
     dve_jobs.update(module_name="nautobot.nautobot_data_validation_engine.jobs")
 
@@ -16,7 +16,7 @@ def revert_data_validation_engine_job_module_name(apps, schema_editor):
     """
     Revert the `module_name` for the Jobs to match the old location of the data validation engine.
     """
-    Job = apps.get_model("extras.Job")
+    Job = apps.get_model("extras", "Job")
     dve_jobs = Job.objects.filter(module_name="nautobot.nautobot_data_validation_engine.jobs")
     dve_jobs.update(module_name="nautobot.nautobot_data_validation_engine.jobs").update(
         module_name="nautobot_data_validation_engine.jobs"
