@@ -1,1 +1,0 @@
-Removed the (undocumented) requirement for Jobs that implement a custom `before_start()` or `after_return()` method to call `super()` for the Job to execute successfully.
