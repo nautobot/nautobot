@@ -1632,7 +1632,6 @@ class DeviceBayTemplateBulkEditForm(NautobotBulkEditForm):
 
 
 class ModuleBayTemplateForm(ModularComponentTemplateForm):
-
     class Meta:
         model = ModuleBayTemplate
         fields = [
@@ -1644,6 +1643,7 @@ class ModuleBayTemplateForm(ModularComponentTemplateForm):
             "label",
             "description",
         ]
+
 
 class ModuleBayBaseCreateForm(BootstrapMixin, forms.Form):
     module_family = DynamicModelChoiceField(
@@ -1709,7 +1709,6 @@ class ModuleBayTemplateCreateForm(ModuleBayBaseCreateForm):
         required=False,
         query_params={"module_family": "$module_family"},
     )
-
 
     field_order = (
         "device_type",
@@ -2496,7 +2495,9 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
                     print(parent_bay.module_family)
                     self.fields["module_family"].initial = parent_bay.module_family.id
                     self.fields["module_family"].disabled = True
-                    self.fields["module_family"].help_text = f"The selected parent module bay requires a module in the family {parent_bay.module_family.name}"
+                    self.fields[
+                        "module_family"
+                    ].help_text = f"The selected parent module bay requires a module in the family {parent_bay.module_family.name}"
 
                 if parent_bay.constrain_to_mfr:
                     if parent_bay.parent_device:
@@ -2505,7 +2506,9 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
                         mfr = parent_bay.parent_module.module_type.manufacturer
                     self.fields["manufacturer"].initial = mfr.id
                     self.fields["manufacturer"].disabled = True
-                    self.fields["manufacturer"].help_text = "The selected parent module bay requires first-party modules"
+                    self.fields[
+                        "manufacturer"
+                    ].help_text = "The selected parent module bay requires first-party modules"
             except ModuleBay.DoesNotExist:
                 pass
 
@@ -2640,8 +2643,12 @@ class ModularComponentCreateForm(ModularComponentForm):
     """
 
     device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
-    module_family = DynamicModelChoiceField(queryset=ModuleFamily.objects.all(), required=False, help_text="Refine module type by family", label="Family")
-    module = DynamicModelChoiceField(queryset=Module.objects.all(), required=False, query_params={"module_family": "$module_family"})
+    module_family = DynamicModelChoiceField(
+        queryset=ModuleFamily.objects.all(), required=False, help_text="Refine module type by family", label="Family"
+    )
+    module = DynamicModelChoiceField(
+        queryset=Module.objects.all(), required=False, query_params={"module_family": "$module_family"}
+    )
 
 
 class ComponentEditForm(NautobotModelForm):
@@ -2667,8 +2674,12 @@ class ModularComponentEditForm(ComponentEditForm):
     """
 
     device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
-    module_family = DynamicModelChoiceField(queryset=ModuleFamily.objects.all(), required=False, help_text="Refine module type by family", label="Family")
-    module = DynamicModelChoiceField(queryset=Module.objects.all(), required=False, query_params={"module_type__module_family": "$module_family"})
+    module_family = DynamicModelChoiceField(
+        queryset=ModuleFamily.objects.all(), required=False, help_text="Refine module type by family", label="Family"
+    )
+    module = DynamicModelChoiceField(
+        queryset=Module.objects.all(), required=False, query_params={"module_type__module_family": "$module_family"}
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -3815,7 +3826,9 @@ class ModuleBayForm(NautobotModelForm):
 class ModuleBayCreateForm(ModuleBayBaseCreateForm):
     parent_device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
     parent_module_family = DynamicModelChoiceField(queryset=ModuleFamily.objects.all(), required=False)
-    parent_module = DynamicModelChoiceField(queryset=Module.objects.all(), required=False, query_params={"module_family": "$parent_module_family"})
+    parent_module = DynamicModelChoiceField(
+        queryset=Module.objects.all(), required=False, query_params={"module_family": "$parent_module_family"}
+    )
     tags = DynamicModelMultipleChoiceField(
         queryset=Tag.objects.all(),
         required=False,

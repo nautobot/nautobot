@@ -4,20 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('dcim', '0069_modulebaytemplate_module_family'),
+        ("dcim", "0069_modulebaytemplate_module_family"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='modulebay',
-            name='constrain_to_mfr',
+            model_name="modulebay",
+            name="constrain_to_mfr",
             field=models.BooleanField(default=False),
         ),
         migrations.AddField(
-            model_name='modulebaytemplate',
-            name='constrain_to_mfr',
+            model_name="modulebaytemplate",
+            name="constrain_to_mfr",
             field=models.BooleanField(default=False),
         ),
     ]
