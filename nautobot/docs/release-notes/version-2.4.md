@@ -171,6 +171,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 ### Security in v2.4.5
 
 - [#6983](https://github.com/nautobot/nautobot/issues/6983) - Updated dependency `Jinja2` to `~3.1.6` to address `CVE-2025-27516`.
+- [#7000](https://github.com/nautobot/nautobot/issues/7000) - Updated dependency `Django` to `~4.2.20` to address `CVE-2025-26699`.
 
 ### Added in v2.4.5
 
