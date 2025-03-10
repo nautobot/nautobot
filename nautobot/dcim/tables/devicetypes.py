@@ -332,6 +332,7 @@ class ModuleBayTemplateTable(ComponentTemplateTable):
     )
     module_family = tables.Column(verbose_name="Family")
     constrain_to_mfr = BooleanColumn(verbose_name="Requires First-Party Modules")
+
     class Meta(BaseTable.Meta):
         model = ModuleBayTemplate
         fields = ("pk", "name", "position", "module_family", "constrain_to_mfr", "label", "description", "actions")
