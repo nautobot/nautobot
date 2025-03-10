@@ -2069,6 +2069,12 @@ class ModuleFilterSet(
         to_field_name="model",
         label="Module type (model or ID)",
     )
+    module_family = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="module_type__module_family",
+        queryset=ModuleFamily.objects.all(),
+        to_field_name="name",
+        label="Module family (name or ID)",
+    )
     parent_module_bay = django_filters.ModelMultipleChoiceFilter(
         queryset=ModuleBay.objects.all(),
         label="Parent Module Bay",
