@@ -1086,9 +1086,14 @@ class ModularComponentTemplateForm(ComponentTemplateForm):
         queryset=DeviceType.objects.all(),
         required=False,
     )
+    module_family = DynamicModelChoiceField(
+        queryset=ModuleFamily.objects.all(),
+        required=False,
+    )
     module_type = DynamicModelChoiceField(
         queryset=ModuleType.objects.all(),
         required=False,
+        query_params={"module_family": "$module_family"},
     )
 
 
@@ -1128,9 +1133,14 @@ class ModularComponentTemplateCreateForm(ComponentTemplateCreateForm):
         queryset=DeviceType.objects.all(),
         required=False,
     )
+    module_family = DynamicModelChoiceField(
+        queryset=ModuleFamily.objects.all(),
+        required=False,
+    )
     module_type = DynamicModelChoiceField(
         queryset=ModuleType.objects.all(),
         required=False,
+        query_params={"module_family": "$module_family"},
     )
 
 
@@ -1139,6 +1149,7 @@ class ConsolePortTemplateForm(ModularComponentTemplateForm):
         model = ConsolePortTemplate
         fields = [
             "device_type",
+            "module_family",
             "module_type",
             "name",
             "label",
@@ -1151,6 +1162,7 @@ class ConsolePortTemplateCreateForm(ModularComponentTemplateCreateForm):
     type = forms.ChoiceField(choices=add_blank_choice(ConsolePortTypeChoices), widget=StaticSelect2())
     field_order = (
         "device_type",
+        "module_family",
         "module_type",
         "name_pattern",
         "label_pattern",
@@ -1177,6 +1189,7 @@ class ConsoleServerPortTemplateForm(ModularComponentTemplateForm):
         model = ConsoleServerPortTemplate
         fields = [
             "device_type",
+            "module_family",
             "module_type",
             "name",
             "label",
@@ -1189,6 +1202,7 @@ class ConsoleServerPortTemplateCreateForm(ModularComponentTemplateCreateForm):
     type = forms.ChoiceField(choices=add_blank_choice(ConsolePortTypeChoices), widget=StaticSelect2())
     field_order = (
         "device_type",
+        "module_family",
         "module_type",
         "name_pattern",
         "label_pattern",
@@ -1219,6 +1233,7 @@ class PowerPortTemplateForm(ModularComponentTemplateForm):
         model = PowerPortTemplate
         fields = [
             "device_type",
+            "module_family",
             "module_type",
             "name",
             "label",
@@ -1235,6 +1250,7 @@ class PowerPortTemplateCreateForm(ModularComponentTemplateCreateForm):
     allocated_draw = forms.IntegerField(min_value=1, required=False, help_text="Allocated power draw (watts)")
     field_order = (
         "device_type",
+        "module_family",
         "module_type",
         "name_pattern",
         "label_pattern",
@@ -1272,6 +1288,7 @@ class PowerOutletTemplateForm(ModularComponentTemplateForm):
         model = PowerOutletTemplate
         fields = [
             "device_type",
+            "module_family",
             "module_type",
             "name",
             "label",
@@ -1309,6 +1326,7 @@ class PowerOutletTemplateCreateForm(ModularComponentTemplateCreateForm):
     )
     field_order = (
         "device_type",
+        "module_family",
         "module_type",
         "name_pattern",
         "label_pattern",
@@ -1360,6 +1378,7 @@ class InterfaceTemplateForm(ModularComponentTemplateForm):
         model = InterfaceTemplate
         fields = [
             "device_type",
+            "module_family",
             "module_type",
             "name",
             "label",
@@ -1377,6 +1396,7 @@ class InterfaceTemplateCreateForm(ModularComponentTemplateCreateForm):
     mgmt_only = forms.BooleanField(required=False, label="Management only")
     field_order = (
         "device_type",
+        "module_family",
         "module_type",
         "name_pattern",
         "label_pattern",
@@ -1406,6 +1426,7 @@ class FrontPortTemplateForm(ModularComponentTemplateForm):
         model = FrontPortTemplate
         fields = [
             "device_type",
+            "module_family",
             "module_type",
             "name",
             "label",
@@ -1441,6 +1462,7 @@ class FrontPortTemplateCreateForm(ModularComponentTemplateCreateForm):
     )
     field_order = (
         "device_type",
+        "module_family",
         "module_type",
         "name_pattern",
         "label_pattern",
@@ -1527,6 +1549,7 @@ class RearPortTemplateForm(ModularComponentTemplateForm):
         model = RearPortTemplate
         fields = [
             "device_type",
+            "module_family",
             "module_type",
             "name",
             "label",
@@ -1552,6 +1575,7 @@ class RearPortTemplateCreateForm(ModularComponentTemplateCreateForm):
     )
     field_order = (
         "device_type",
+        "module_family",
         "module_type",
         "name_pattern",
         "label_pattern",
@@ -1605,26 +1629,30 @@ class DeviceBayTemplateBulkEditForm(NautobotBulkEditForm):
 
 
 class ModuleBayTemplateForm(ModularComponentTemplateForm):
-    module_family = DynamicModelChoiceField(
-        queryset=ModuleFamily.objects.all(),
-        required=False,
-        help_text="If selected, this bay will only accept modules assigned to this family",
-    )
 
     class Meta:
         model = ModuleBayTemplate
         fields = [
             "device_type",
+            "module_family",
             "module_type",
             "name",
             "position",
             "label",
             "description",
-            "module_family",
         ]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields["module_family"].help_text = "If selected, this bay will only accept module types assigned to this family"
 
 class ModuleBayBaseCreateForm(BootstrapMixin, forms.Form):
+    module_family = DynamicModelChoiceField(
+        queryset=ModuleFamily.objects.all(),
+        required=False,
+        help_text="If selected, this bay will only accept module types assigned to this family",
+    )
     name_pattern = ExpandableNameField(label="Name")
     label_pattern = ExpandableNameField(
         label="Label",
@@ -1676,20 +1704,16 @@ class ModuleBayTemplateCreateForm(ModuleBayBaseCreateForm):
         queryset=ModuleType.objects.all(),
         required=False,
     )
-    module_family = DynamicModelChoiceField(
-        queryset=ModuleFamily.objects.all(),
-        required=False,
-        help_text="Module family that can be installed in this bay. Leave blank for no restriction.",
-    )
+
 
     field_order = (
         "device_type",
+        "module_family",
         "module_type",
         "name_pattern",
         "label_pattern",
         "position_pattern",
         "description",
-        "module_family",
     )
 
 
@@ -2578,7 +2602,8 @@ class ModularComponentCreateForm(ModularComponentForm):
     """
 
     device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
-    module = DynamicModelChoiceField(queryset=Module.objects.all(), required=False)
+    module_family = DynamicModelChoiceField(queryset=ModuleFamily.objects.all(), required=False)
+    module = DynamicModelChoiceField(queryset=Module.objects.all(), required=False, query_params={"module_family": "$module_family"})
 
 
 class ComponentEditForm(NautobotModelForm):
@@ -2604,7 +2629,8 @@ class ModularComponentEditForm(ComponentEditForm):
     """
 
     device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
-    module = DynamicModelChoiceField(queryset=Module.objects.all(), required=False)
+    module_family = DynamicModelChoiceField(queryset=ModuleFamily.objects.all(), required=False)
+    module = DynamicModelChoiceField(queryset=Module.objects.all(), required=False, query_params={"module_type__module_family": "$module_family"})
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -3030,6 +3056,7 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
         model = Interface
         fields = [
             "device",
+            "module_family",
             "module",
             "name",
             "role",
@@ -3169,6 +3196,7 @@ class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleN
     )
     field_order = (
         "device",
+        "module_family",
         "module",
         "name_pattern",
         "label_pattern",
@@ -3694,7 +3722,7 @@ class ModuleBayForm(NautobotModelForm):
     module_family = DynamicModelChoiceField(
         queryset=ModuleFamily.objects.all(),
         required=False,
-        help_text="If selected, this bay will only accept modules assigned to this family",
+        help_text="If selected, this bay will only accept module types assigned to this family",
     )
     # TODO: Installed module field
 
@@ -3723,11 +3751,6 @@ class ModuleBayForm(NautobotModelForm):
 class ModuleBayCreateForm(ModuleBayBaseCreateForm):
     parent_device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
     parent_module = DynamicModelChoiceField(queryset=Module.objects.all(), required=False)
-    module_family = DynamicModelChoiceField(
-        queryset=ModuleFamily.objects.all(),
-        required=False,
-        help_text="If selected, this bay will only accept modules assigned to this family",
-    )
     tags = DynamicModelMultipleChoiceField(
         queryset=Tag.objects.all(),
         required=False,
@@ -3736,8 +3759,8 @@ class ModuleBayCreateForm(ModuleBayBaseCreateForm):
     field_order = (
         "parent_device",
         "parent_module",
-        "name_pattern",
         "module_family",
+        "name_pattern",
         "label_pattern",
         "position_pattern",
         "description",
@@ -3752,12 +3775,6 @@ class ModuleBayBulkCreateForm(
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Device.objects.all(), widget=forms.MultipleHiddenInput())
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
-    module_family = DynamicModelChoiceField(
-        queryset=ModuleFamily.objects.all(),
-        required=False,
-        help_text="If selected, this bay will only accept modules assigned to this family",
-    )
-
     field_order = ("name_pattern", "label_pattern", "position_pattern", "description", "module_family", "tags")
 
     class Meta:
@@ -3780,7 +3797,7 @@ class ModuleBayBulkEditForm(
     module_family = DynamicModelChoiceField(
         queryset=ModuleFamily.objects.all(),
         required=False,
-        help_text="If selected, this bay will only accept modules assigned to this family",
+        help_text="If selected, this bay will only accept module types assigned to this family",
     )
 
     class Meta:
