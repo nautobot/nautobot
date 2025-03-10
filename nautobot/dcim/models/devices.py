@@ -1240,6 +1240,13 @@ class SoftwareImageFile(PrimaryModel):
         help_text="Image file size in bytes",
     )
     download_url = models.URLField(blank=True, verbose_name="Download URL")
+    external_integration = models.ForeignKey(
+        to="extras.ExternalIntegration",
+        on_delete=models.PROTECT,
+        related_name="softwareimagefiles",
+        blank=True,
+        null=True,
+    )
     default_image = models.BooleanField(
         verbose_name="Default Image", help_text="Is the default image for this software version", default=False
     )
