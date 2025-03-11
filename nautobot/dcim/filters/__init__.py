@@ -2212,6 +2212,12 @@ class ModuleBayTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetMix
         }
     )
 
+    module_family = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ModuleFamily.objects.all(),
+        to_field_name="name",
+        label="Module family (name or ID)",
+    )
+
     class Meta:
         model = ModuleBayTemplate
         fields = "__all__"
