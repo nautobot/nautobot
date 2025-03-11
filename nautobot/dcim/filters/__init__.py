@@ -2211,11 +2211,14 @@ class ModuleBayTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetMix
             },
         }
     )
-
     module_family = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=ModuleFamily.objects.all(),
         to_field_name="name",
         label="Module family (name or ID)",
+    )
+    requires_first_party_modules = django_filters.BooleanFilter(
+        field_name="constrain_to_mfr",
+        label="Requires first-party modules",
     )
 
     class Meta:
