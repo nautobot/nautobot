@@ -575,12 +575,20 @@ def common_test_data(cls):
         label="devicebay3",
         description="Device Bay Description 3",
     )
+    # Create module families for testing
+    module_families = (
+        ModuleFamily.objects.create(name="Module Family 1"),
+        ModuleFamily.objects.create(name="Module Family 2"),
+        ModuleFamily.objects.create(name="Module Family 3"),
+    )
+
     ModuleBayTemplate.objects.create(
         device_type=device_types[0],
         name="device test module bay 1",
         position=1,
         label="devicemodulebay1",
         description="device test module bay 1 description",
+        module_family=module_families[0],
     )
     ModuleBayTemplate.objects.create(
         device_type=device_types[1],
@@ -588,6 +596,7 @@ def common_test_data(cls):
         position=2,
         label="devicemodulebay2",
         description="device test module bay 2 description",
+        module_family=module_families[1],
     )
     ModuleBayTemplate.objects.create(
         device_type=device_types[2],
@@ -595,6 +604,7 @@ def common_test_data(cls):
         position=3,
         label="devicemodulebay3",
         description="device test module bay 3 description",
+        module_family=module_families[2],
     )
     secrets_groups = (
         SecretsGroup.objects.create(name="Secrets group 1"),
