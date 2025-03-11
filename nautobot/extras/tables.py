@@ -1063,15 +1063,13 @@ class ObjectMetadataTable(BaseTable):
 
 class NoteTable(BaseTable):
     actions = ButtonsColumn(Note)
-    created = tables.Column()
-    last_updated = tables.Column()
-    note = tables.LinkColumn(
-        attrs={"td": {"class": "rendered-markdown"}},
-    )
+    created = tables.DateTimeColumn(linkify=True)
+    last_updated = tables.DateTimeColumn()
+    note = tables.Column()
 
     class Meta(BaseTable.Meta):
         model = Note
-        fields = ("note", "user_name", "created", "last_updated")
+        fields = ("created", "last_updated", "note", "user_name")
 
     def render_note(self, value):
         return render_markdown(value)
