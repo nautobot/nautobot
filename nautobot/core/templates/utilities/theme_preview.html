@@ -43,23 +43,22 @@
     <button type="button" class="btn btn-default"><i class="mdi mdi-filter"></i> Filter</button>
     <div class="btn-group">
         {% add_button content_type.model_class|validated_viewname:"add" %}
-        <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
-            <span class="caret"></span>
-            <span class="sr-only">Toggle Dropdown</span>
+        <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            <span class="visually-hidden">Toggle Dropdown</span>
         </button>
         <ul class="dropdown-menu pull-right" role="menu">
             {% job_import_button content_type list_element=True%}
-            <li class="divider"></li>
+            <li class="dropdown-divider"></li>
             {% export_button content_type list_element=True %}
         </ul>
     </div>
     <div class="btn-group">
-        <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
-            Actions <span class="caret"></span>
+        <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            Actions
         </button>
         <ul class="dropdown-menu pull-right" role="menu">
             {% job_import_button content_type list_element=True%}
-            <li class="divider"></li>
+            <li class="dropdown-divider"></li>
             {% export_button content_type list_element=True %}
         </ul>
     </div>
@@ -146,10 +145,10 @@
 </h1>
 {% include 'inc/created_updated.html' %}
 <ul class="nav nav-tabs">
-    <li role="presentation" class="active"><a>Object</a></li>
-    <li role="presentation"><a>Advanced</a></li>
-    <li role="presentation"><a>Notes</a></li>
-    <li role="presentation"><a>Change Log</a></li>
+    <li role="presentation" class="nav-item"><a class="nav-link active">Object</a></li>
+    <li role="presentation" class="nav-item"><a class="nav-link">Advanced</a></li>
+    <li role="presentation" class="nav-item"><a class="nav-link">Notes</a></li>
+    <li role="presentation" class="nav-item"><a class="nav-link">Change Log</a></li>
 </ul>
 <div class="tab-content">
     <div role="tabpanel" class="tab-pane active">

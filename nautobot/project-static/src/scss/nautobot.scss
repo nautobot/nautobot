@@ -1,20 +1,317 @@
 /* nautobot.scss */
 
+@use "sass:map";
+
 /* 1. Include functions first (so you can manipulate colors, SVGs, calc, etc) */
 @import "bootstrap/scss/functions";
 
 /* 2. Include any default variable overrides here */
-$blue: #007dff;
-$gray-500: #919396;
-$green: #169f32;
-$orange: #ff8000;
-$red: #e01f1f;
+@import "colors";
 
-$primary: $blue;
-$success: $green;
-$info: $blue;
-$warning: $orange;
-$danger: $red;
+/* Color system */
+$white: $white-0;
+$black: $black-0;
+
+$blue:   $blue-0;
+$red:    $red-0;
+$orange: $orange-0;
+$yellow: $orange-0;
+$green:  $green-0;
+$cyan:   $blue-0;
+
+$primary:   $blue-0;
+$secondary: $gray-3;
+$success:   $green-0;
+$info:      $blue-0;
+$warning:   $orange-0;
+$danger:    $red-0;
+$light:     $gray-3;
+$dark:      $gray-3;
+
+$primary-text-emphasis:   $blue-0;
+$secondary-text-emphasis: $gray-3;
+$success-text-emphasis:   $green-0;
+$info-text-emphasis:      $blue-0;
+$warning-text-emphasis:   $orange-0;
+$danger-text-emphasis:    $red-0;
+$light-text-emphasis:     $gray-3;
+$dark-text-emphasis:      $gray-3;
+
+$primary-bg-subtle:       $blue-1;
+$secondary-bg-subtle:     $gray-0;
+$success-bg-subtle:       $green-1;
+$info-bg-subtle:          $blue-1;
+$warning-bg-subtle:       $orange-1;
+$danger-bg-subtle:        $red-1;
+$light-bg-subtle:         $gray-0;
+$dark-bg-subtle:          $gray-0;
+
+$primary-border-subtle:   $blue-2;
+$secondary-border-subtle: $gray-05;
+$success-border-subtle:   $green-2;
+$info-border-subtle:      $blue-2;
+$warning-border-subtle:   $orange-2;
+$danger-border-subtle:    $red-2;
+$light-border-subtle:     $gray-05;
+$dark-border-subtle:      $gray-05;
+
+$primary-text-emphasis-dark:   $blue-0-dark;
+$secondary-text-emphasis-dark: $gray-3-dark;
+$success-text-emphasis-dark:   $green-0-dark;
+$info-text-emphasis-dark:      $blue-0-dark;
+$warning-text-emphasis-dark:   $orange-0-dark;
+$danger-text-emphasis-dark:    $red-0-dark;
+$light-text-emphasis-dark:     $gray-3-dark;
+$dark-text-emphasis-dark:      $gray-3-dark;
+
+$primary-bg-subtle-dark:   $blue-1-dark;
+$secondary-bg-subtle-dark: $gray-0-dark;
+$success-bg-subtle-dark:   $green-1-dark;
+$info-bg-subtle-dark:      $blue-1-dark;
+$warning-bg-subtle-dark:   $orange-1-dark;
+$danger-bg-subtle-dark:    $red-1-dark;
+$light-bg-subtle-dark:     $gray-0-dark;
+$dark-bg-subtle-dark:      $gray-0-dark;
+
+$primary-border-subtle-dark:   $blue-2-dark;
+$secondary-border-subtle-dark: $gray-05-dark;
+$success-border-subtle-dark:   $green-2-dark;
+$info-border-subtle-dark:      $blue-2-dark;
+$warning-border-subtle-dark:   $orange-2-dark;
+$danger-border-subtle-dark:    $red-2-dark;
+$light-border-subtle-dark:     $gray-05-dark;
+$dark-border-subtle-dark:      $gray-05-dark;
+
+/* Options */
+$enable-shadows: true;
+
+$prefix: bs-;
+
+  /* Spacing */
+$spacer: 1rem;
+/*
+ * `$spacers` were supposed to use a popular notation adapted by Tailwind CSS,
+ * where keys include decimals, such as 0.5, 1.5, 2.5, etc. Ultimately, it was
+ * impossible to achieve due to SCSS shortcomings.
+ */
+$spacers: (
+  0:  0,
+  1:  $spacer * 0.0625,
+  2:  $spacer * 0.125,
+  4:  $spacer * 0.25,
+  6:  $spacer * 0.375,
+  8:  $spacer * 0.5,
+  10: $spacer * 0.625,
+  12: $spacer * 0.75,
+  14: $spacer * 0.875,
+  16: $spacer * 1,
+  20: $spacer * 1.25,
+  24: $spacer * 1.5,
+);
+
+/* Body */
+$body-color: $black-0;
+$body-bg:    $white-0;
+
+$body-secondary-color: $gray-3;
+$body-secondary-bg:    $bg;
+
+$body-tertiary-color: $gray-2;
+$body-tertiary-bg:    $gray-0;
+
+$body-emphasis-color: $black-0;
+
+$body-color-dark:           $black-0-dark;
+$body-bg-dark:              $white-0-dark;
+$body-secondary-color-dark: $gray-3-dark;
+$body-secondary-bg-dark:    $bg-dark;
+$body-tertiary-color-dark:  $gray-2-dark;
+$body-tertiary-bg-dark:     $gray-0-dark;
+$body-emphasis-color-dark:  $black-0-dark;
+
+/* Links */
+$link-color:            $primary-text-emphasis;
+$link-decoration:       none;
+$link-hover-color:      $link-color;
+$link-hover-decoration: underline;
+
+$link-color-dark:       $primary-text-emphasis-dark;
+$link-hover-color-dark: $link-color-dark;
+
+/* Components */
+/* Use `rem` instead of `px` to enable arithmetics with `$spacers`. */
+$border-width:             0.0625rem; /* 1px */
+$border-widths: (
+  1: $border-width,     /* 1px */
+  2: $border-width * 2, /* 2px */
+  3: $border-width * 3, /* 3px */
+  4: $border-width * 4, /* 4px */
+  5: $border-width * 5  /* 5px */
+);
+$border-color:             $gray-1;
+$border-color-translucent: $border-color;
+
+$border-color-dark:             $gray-1-dark;
+$border-color-translucent-dark: $border-color-dark;
+
+$border-radius:      0.25rem; /* 4px */;
+$border-radius-sm:   $border-radius;
+$border-radius-lg:   $border-radius;
+$border-radius-xl:   $border-radius;
+$border-radius-xxl:  $border-radius;
+$border-radius-pill: $border-radius;
+$border-radius-2xl:  $border-radius;
+
+$box-shadow:    0.3125rem 0.3125rem 0.625rem 0 rgba(0, 0, 0, 0.25);
+$box-shadow-sm: 0 0 0.625rem 0 rgba(0, 0, 0, 0.1);
+$box-shadow-lg: $box-shadow;
+
+$focus-ring-width:      0.25rem; /* 4px */
+$focus-ring-opacity:    1;
+$focus-ring-color:      rgba($primary-border-subtle, $focus-ring-opacity);
+$focus-ring-blur:       0;
+$focus-ring-box-shadow: 0 0 $focus-ring-blur $focus-ring-width var(--#{$prefix}focus-ring-color);
+
+$focus-ring-color-dark: rgba($primary-border-subtle-dark, $focus-ring-opacity);
+
+/* Typography */
+$font-family-sans-serif: "Ubuntu", sans-serif;
+$font-family-monospace:  "Ubuntu Mono", monospace;
+
+$font-size-root: 1rem;     /* Assumes the browser default, typically `16px` */
+$font-size-base: 0.875rem; /* 14px */
+$font-size-sm:   0.75rem;  /* 12px */
+$font-size-lg:   1.125rem; /* 18px */
+
+$line-height-base: 1.4375;
+$line-height-sm:   1;
+
+$h1-font-size: 1.5rem;          /* 24px */
+$h2-font-size: 1.25rem;         /* 20px */
+$h3-font-size: $font-size-lg;   /* 18px */
+$h4-font-size: $font-size-base; /* 14px */
+$h5-font-size: $font-size-sm;   /* 12px */
+$h6-font-size: 0.675rem;        /* 10px */
+
+$headings-margin-bottom: map.get($spacers, 0);
+$headings-line-height:   $line-height-base;
+
+/* Tables */
+$table-cell-padding-y:    map.get($spacers, 8);
+$table-cell-padding-x:    map.get($spacers, 10);
+$table-cell-padding-y-sm: map.get($spacers, 4);
+$table-cell-padding-x-sm: map.get($spacers, 4);
+
+$table-th-font-weight: 500;
+
+$table-striped-bg-factor: 1;
+$table-striped-bg:        var(--#{$prefix}tertiary-bg);
+
+$table-active-bg-factor: 1;
+$table-active-bg:        var(--#{$prefix}primary-bg-subtle);
+
+$table-hover-bg-factor: 1;
+$table-hover-bg:        var(--#{$prefix}primary-bg-subtle);
+
+$table-border-factor: 1;
+
+/* Buttons + Forms */
+$input-btn-padding-y:   map.get($spacers, 6)  - $border-width;
+$input-btn-padding-x:   map.get($spacers, 12) - $border-width;
+
+$input-btn-padding-y-sm: map.get($spacers, 2);
+$input-btn-padding-x-sm: map.get($spacers, 8);
+
+$input-btn-padding-y-lg: $input-btn-padding-y;
+$input-btn-padding-x-lg: $input-btn-padding-x;
+$input-btn-font-size-lg: $font-size-base;
+
+/* Buttons */
+$btn-box-shadow:        0 0 0 0 transparent;
+$btn-disabled-opacity:  1;
+$btn-active-box-shadow: none;
+
+$btn-link-disabled-color:   $body-tertiary-color;
+$btn-link-focus-shadow-rgb: to-rgb($primary-border-subtle);
+
+$btn-link-disabled-color-dark:   $body-tertiary-color-dark;
+$btn-link-focus-shadow-rgb-dark: to-rgb($primary-border-subtle-dark);
+
+/* Forms */
+$input-bg:                    var(--#{$prefix}body-bg);
+$input-disabled-color:        var(--#{$prefix}tertiary-color);
+$input-disabled-bg:           var(--#{$prefix}tertiary-bg);
+$input-disabled-border-color: var(--#{$prefix}border-color);
+
+$input-box-shadow: 0 0 0 0 transparent;
+
+$input-focus-border-color: var(--#{$prefix}primary-text-emphasis);
+
+$form-check-input-width:      1.25rem;
+$form-check-input-min-height: 1.25rem;
+$form-check-padding-start:    0;
+$form-check-margin-bottom:    0;
+
+$form-check-input-bg:            $input-bg;
+$form-check-input-border-radius: var(--#{$prefix}border-radius);
+
+$form-check-input-checked-color:        var(--#{$prefix}primary-text-emphasis);
+$form-check-input-checked-bg-color:     $form-check-input-bg;
+$form-check-input-checked-border-color: $form-check-input-checked-color;
+$form-check-input-checked-bg-image:     url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path fill='none' stroke='#{$primary-text-emphasis}' stroke-linecap='round' stroke-linejoin='round' stroke-width='1' d='m6 10 3 3 6-6'/></svg>");
+$form-check-radio-checked-bg-image:     url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='2' fill='#{$primary-text-emphasis}'/></svg>");
+
+$form-check-input-indeterminate-color:        $form-check-input-checked-color;
+$form-check-input-indeterminate-bg-color:     $form-check-input-checked-bg-color;
+$form-check-input-indeterminate-border-color: $form-check-input-checked-border-color;
+$form-check-input-indeterminate-bg-image:     url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path fill='none' stroke='#{$primary-text-emphasis}' stroke-linecap='round' stroke-linejoin='round' stroke-width='1' d='M6 10h8'/></svg>");
+
+$form-check-input-disabled-opacity:     1;
+$form-check-label-disabled-opacity:     $form-check-input-disabled-opacity;
+
+$form-check-inline-margin-end: map.get($spacers, 16);
+
+/* Navs */
+$nav-tabs-link-hover-border-color:  var(--#{$prefix}border-color);
+$nav-tabs-link-active-color:        var(--#{$prefix}body-color);
+$nav-tabs-link-active-border-color: var(--#{$prefix}border-color);
+
+/* Dropdowns */
+$dropdown-min-width:        15rem;
+$dropdown-padding-y:        map.get($spacers, 4) - $border-width;
+$dropdown-spacer:           $border-width;
+$dropdown-bg:               var(--#{$prefix}body-bg);
+$dropdown-border-color:     var(--#{$prefix}border-color);
+$dropdown-divider-margin-y: map.get($spacers, 4);
+$dropdown-box-shadow:       $box-shadow;
+
+$dropdown-link-hover-color: var(--#{$prefix}body-color);
+$dropdown-link-hover-bg:    var(--#{$prefix}primary-bg-subtle);
+
+$dropdown-link-active-color: var(--#{$prefix}primary-text-emphasis);
+$dropdown-link-active-bg:    var(--#{$prefix}primary-bg-subtle);
+
+$dropdown-link-disabled-color: var(--#{$prefix}tertiary-color);
+
+$dropdown-item-padding-y: map.get($spacers, 4);
+$dropdown-item-padding-x: map.get($spacers, 12);
+
+$dropdown-header-color:     var(--#{$prefix}secondary-color);
+/* Using a workaround below to get all 4 individual padding values with shorthand property. */
+$dropdown-header-padding-x: map.get($spacers, 4) $dropdown-item-padding-x;
+$dropdown-header-padding-y: map.get($spacers, 8) $dropdown-item-padding-x;
+
+$dropdown-dark-color:               $body-emphasis-color-dark;
+$dropdown-dark-bg:                  $body-bg-dark;
+$dropdown-dark-border-color:        $border-color-dark;
+$dropdown-dark-divider-bg:          $dropdown-dark-border-color;
+$dropdown-dark-box-shadow:          $dropdown-box-shadow;
+$dropdown-dark-link-hover-color:    $body-color-dark;
+$dropdown-dark-link-hover-bg:       $primary-bg-subtle-dark;
+$dropdown-dark-link-active-color:   $primary-text-emphasis-dark;
+$dropdown-dark-link-active-bg:      $primary-bg-subtle-dark;
+$dropdown-dark-link-disabled-color: $body-tertiary-color-dark;
+$dropdown-dark-header-color:        $body-secondary-color-dark;
 
 /* 3. Include remainder of required Bootstrap stylesheets (including any separate color mode stylesheets) */
 @import "bootstrap/scss/variables";
@@ -67,3 +364,181 @@ $danger: $red;
 @import "bootstrap/scss/utilities/api";
 
 /* 8. Add additional custom code here */
+@if $enable-dark-mode {
+  @include color-mode(dark, true) {
+    /* Focus styles */
+    --#{$prefix}focus-ring-color: #{$focus-ring-color-dark};
+  }
+}
+
+/* Links */
+a,
+button {
+  outline: none;
+  @include transition($btn-transition);
+
+  &:focus-visible {
+    @include box-shadow(0 0 0 #{$focus-ring-width} var(--#{$prefix}focus-ring-color));
+  }
+}
+
+.table {
+  > thead:not(caption) > tr > th {
+    background-color: var(--#{$prefix}tertiary-bg);
+    color: var(--#{$prefix}secondary-color);
+  }
+}
+
+/* Buttons */
+.btn {
+  --#{$prefix}btn-box-shadow: #{$btn-box-shadow};
+  --#{$prefix}btn-focus-box-shadow: 0 0 0 #{$btn-focus-width} var(--#{$prefix}primary-border-subtle);
+}
+
+$btn-variant-primary: (
+  "bg":     var(--#{$prefix}primary-bg-subtle),
+  "border": var(--#{$prefix}primary-text-emphasis),
+  "ring":   var(--#{$prefix}primary-border-subtle),
+  "text":   var(--#{$prefix}primary-text-emphasis),
+);
+$btn-variant-secondary: (
+  "bg":     var(--#{$prefix}secondary-bg-subtle),
+  "border": var(--#{$prefix}border-color),
+  "ring":   var(--#{$prefix}secondary-border-subtle),
+  "text":   var(--#{$prefix}emphasis-color),
+);
+$btn-variant-success: (
+  "bg":     var(--#{$prefix}success-bg-subtle),
+  "border": var(--#{$prefix}success-text-emphasis),
+  "ring":   var(--#{$prefix}success-border-subtle),
+  "text":   var(--#{$prefix}success-text-emphasis),
+);
+$btn-variant-danger: (
+  "bg":     var(--#{$prefix}danger-bg-subtle),
+  "border": var(--#{$prefix}danger-text-emphasis),
+  "ring":   var(--#{$prefix}danger-border-subtle),
+  "text":   var(--#{$prefix}danger-text-emphasis),
+);
+$btn-variant-warning: (
+  "bg":     var(--#{$prefix}warning-bg-subtle),
+  "border": var(--#{$prefix}warning-text-emphasis),
+  "ring":   var(--#{$prefix}warning-border-subtle),
+  "text":   var(--#{$prefix}warning-text-emphasis),
+);
+$btn-variants: (
+  "primary":   $btn-variant-primary,
+  "secondary": $btn-variant-secondary,
+  "success":   $btn-variant-success,
+  "danger":    $btn-variant-danger,
+  "warning":   $btn-variant-warning,
+  "info":      $btn-variant-primary,
+  "light":     $btn-variant-secondary,
+  "dark":      $btn-variant-secondary,
+  "default":   $btn-variant-secondary
+);
+
+@each $color, $variant-colors in $btn-variants  {
+  .btn-#{$color},
+  .btn-outline-#{$color} {
+    --#{$prefix}btn-focus-box-shadow: 0 0 0 #{$btn-focus-width} #{map.get($variant-colors, "ring")};
+
+    /* Bootstrap utilizes `button-variant` mixin but apparently it does not support color modes. */
+    --#{$prefix}btn-color: #{map.get($variant-colors, "text")};
+    --#{$prefix}btn-bg: transparent;
+    --#{$prefix}btn-border-color: #{map.get($variant-colors, "border")};
+    --#{$prefix}btn-hover-color: #{map.get($variant-colors, "text")};
+    --#{$prefix}btn-hover-bg: #{map.get($variant-colors, "bg")};
+    --#{$prefix}btn-hover-border-color: #{map.get($variant-colors, "border")};
+    --#{$prefix}btn-active-color: #{map.get($variant-colors, "text")};
+    --#{$prefix}btn-active-bg: #{map.get($variant-colors, "bg")};
+    --#{$prefix}btn-active-border-color: #{map.get($variant-colors, "border")};
+    --#{$prefix}btn-active-shadow: #{$btn-box-shadow};
+    --#{$prefix}btn-disabled-color: var(--#{$prefix}tertiary-color);
+    --#{$prefix}btn-disabled-bg: var(--#{$prefix}tertiary-bg);
+    --#{$prefix}btn-disabled-border-color: var(--#{$prefix}border-color);
+  }
+}
+
+.btn-link {
+  --#{$prefix}btn-hover-bg: var(--#{$prefix}primary-bg-subtle);
+  --#{$prefix}btn-focus-box-shadow: 0 0 0 #{$btn-focus-width} var(--#{$prefix}focus-ring-color);
+
+  --#{$prefix}btn-hover-border-color: var(--#{$prefix}primary-bg-subtle);
+  --#{$prefix}btn-active-border-color: var(--#{$prefix}primary-bg-subtle);
+  --#{$prefix}btn-disabled-color: var(--#{$prefix}tertiary-color);
+  --#{$prefix}btn-disabled-bg: var(--#{$prefix}tertiary-bg);
+  --#{$prefix}btn-disabled-border-color: var(--#{$prefix}border-color);
+  --#{$prefix}btn-box-shadow: #{$btn-box-shadow};
+}
+
+.btn-xs {
+  @include button-size($btn-padding-y-sm, $btn-padding-x-sm, $btn-font-size-sm, $btn-border-radius-sm);
+}
+
+/* Forms */
+.form-control {
+  &:hover:not(:disabled):not([readonly]) {
+    border-color: var(--#{$prefix}primary-text-emphasis);
+  }
+}
+
+.form-check-input {
+  @include transition($btn-transition);
+
+  &:focus {
+    background-color: var(--#{$prefix}primary-bg-subtle);
+  }
+
+  &:not(:disabled):hover,
+  &:not(:disabled):has(+ .form-check-label:hover) {
+    background-color: var(--#{$prefix}primary-bg-subtle);
+    border-color: $form-check-input-focus-border;
+  }
+
+  &:disabled {
+    background-color: $input-disabled-bg;
+    color: $input-disabled-color;
+  }
+
+  &[disabled],
+  &:disabled {
+    ~ .form-check-label {
+      color: $input-disabled-color;
+    }
+  }
+}
+
+/* Tabs */
+.nav-tabs {
+  --#{$prefix}nav-link-padding-x: #{map.get($spacers, 12) - $border-width};
+  --#{$prefix}nav-link-padding-y: #{map.get($spacers, 6) - $border-width};
+  --#{$prefix}nav-link-color: var(--#{$prefix}body-color);
+  --#{$prefix}nav-link-hover-color: var(--#{$prefix}body-color);
+  --#{$prefix}nav-link-disabled-color: var(--#{$prefix}tertiary-color);
+
+  padding-inline: #{map.get($spacers, 20)};;
+
+  .nav-item:not(:first-child) {
+    margin-inline-start: #{map.get($spacers, 8)};
+  }
+
+  .nav-link {
+    cursor: pointer;
+
+    &:hover,
+    &:focus {
+      background-color: var(--#{$prefix}nav-tabs-link-active-bg);
+    }
+
+    &.active {
+      border-bottom-color: var(--#{$prefix}nav-tabs-link-active-bg);
+    }
+  }
+}
+
+/* Dropdowns */
+.dropdown-header {
+  @include font-size($font-size-base);
+  font-weight: $font-weight-medium;
+  text-transform: uppercase;
+}
