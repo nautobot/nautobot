@@ -1243,7 +1243,7 @@ class SoftwareImageFile(PrimaryModel):
     external_integration = models.ForeignKey(
         to="extras.ExternalIntegration",
         on_delete=models.PROTECT,
-        related_name="softwareimagefiles",
+        related_name="software_image_files",
         blank=True,
         null=True,
     )
