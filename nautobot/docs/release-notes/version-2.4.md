@@ -178,6 +178,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#6384](https://github.com/nautobot/nautobot/issues/6384) - Added `Job.logger.failure()` API for Job logging, using custom `FAILURE` log level (between `WARNING` and `ERROR`).
 - [#6384](https://github.com/nautobot/nautobot/issues/6384) - Added `Job.fail()` API, which can be used to fail a Job more gracefully than by raising an uncaught exception.
 - [#6384](https://github.com/nautobot/nautobot/issues/6384) - Added `NautobotTestCaseMixin.assertJobResultStatus()` testing helper API.
+- [#7001](https://github.com/nautobot/nautobot/issues/7001) - Added bulk-edit support for the RIR model.
 
 ### Changed in v2.4.5
 
@@ -199,6 +200,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#6384](https://github.com/nautobot/nautobot/issues/6384) - Added `init: true` to development `docker-compose.yml` to avoid failed health-checks from remaining as zombie processes.
 - [#6384](https://github.com/nautobot/nautobot/issues/6384) - Added `ExampleFailingJob` to example app to demonstrate the two different ways to fail a Job.
 - [#6971](https://github.com/nautobot/nautobot/issues/6971) - Fixed invoke commands requiring pyyaml.
+- [#7001](https://github.com/nautobot/nautobot/issues/7001) - Refactored RIR model related UI views to use `NautobotUIViewSet` and `UI component framework`.
 
 ## v2.4.4 (2025-03-03)
 
