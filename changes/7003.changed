@@ -1,0 +1,1 @@
+Changed model of `SoftwareImageFile` command to include 'ExternalIntegration' foreign key, which allows the enrichment of file data to include download options, secrets, etc.

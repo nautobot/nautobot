@@ -5,16 +5,21 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('extras', '0122_add_graphqlquery_owner_content_type'),
-        ('dcim', '0067_controllermanageddevicegroup_tenant'),
+        ("extras", "0122_add_graphqlquery_owner_content_type"),
+        ("dcim", "0067_controllermanageddevicegroup_tenant"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='softwareimagefile',
-            name='external_integration',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='software_image_files', to='extras.externalintegration'),
+            model_name="softwareimagefile",
+            name="external_integration",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="software_image_files",
+                to="extras.externalintegration",
+            ),
         ),
     ]
