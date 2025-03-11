@@ -2469,7 +2469,7 @@ class ModuleFamilyFilterSet(NautobotFilterSet):
         model = ModuleFamily
         fields = [
             "id",
-            "name", 
+            "name",
             "description",
             "module_type_id",
             "module_types",
