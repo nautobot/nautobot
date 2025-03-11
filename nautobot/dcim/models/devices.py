@@ -14,7 +14,7 @@ import yaml
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, RestrictedQuerySet
-from nautobot.core.models.fields import JSONArrayField, NaturalOrderingField
+from nautobot.core.models.fields import JSONArrayField, LaxURLField, NaturalOrderingField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.utils.config import get_settings_or_config
@@ -1239,7 +1239,7 @@ class SoftwareImageFile(PrimaryModel):
         verbose_name="Image File Size",
         help_text="Image file size in bytes",
     )
-    download_url = models.URLField(blank=True, verbose_name="Download URL")
+    download_url = LaxURLField(blank=True, verbose_name="Download URL")
     default_image = models.BooleanField(
         verbose_name="Default Image", help_text="Is the default image for this software version", default=False
     )
