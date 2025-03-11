@@ -213,7 +213,7 @@ class Command(BaseCommand):
         _create_batch(PlatformFactory, 20, description="with Manufacturers", has_manufacturer=True)
         _create_batch(PlatformFactory, 5, description="without Manufacturers", has_manufacturer=False)
         _create_batch(SoftwareVersionFactory, 20, description="to be usable by Devices")
-        _create_batch(ExternalIntegrationFactory, 20, description="to be usable by SoftwareImageFileFactory")
+        _create_batch(ExternalIntegrationFactory, 25, description="to be usable by SoftwareImageFileFactory")
         _create_batch(SoftwareImageFileFactory, 25, description="to be usable by DeviceTypes")
         _create_batch(ManufacturerFactory, 4, description="without Platforms")  # 4 more hard-coded Manufacturers
         _create_batch(DeviceTypeFactory, 30)
