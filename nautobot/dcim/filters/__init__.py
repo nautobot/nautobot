@@ -2445,18 +2445,19 @@ class ModuleFamilyFilterSet(NautobotFilterSet):
         }
     )
 
+    module_types = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ModuleType.objects.all(),
+        to_field_name="model",
+        label="Module types (model or ID)",
+    )
+
     module_type_id = extend_schema_field({"type": "array", "items": {"type": "string", "format": "uuid"}})(
         django_filters.ModelMultipleChoiceFilter(
             queryset=ModuleType.objects.all(),
             label="Module type (ID)",
         )
     )
-    module_type = django_filters.ModelMultipleChoiceFilter(
-        field_name="module_types__model",
-        queryset=ModuleType.objects.all(),
-        to_field_name="model",
-        label="Module type (model)",
-    )
+
     module_bay_id = extend_schema_field({"type": "array", "items": {"type": "string", "format": "uuid"}})(
         django_filters.ModelMultipleChoiceFilter(
             queryset=ModuleBay.objects.all(),
@@ -2468,9 +2469,10 @@ class ModuleFamilyFilterSet(NautobotFilterSet):
         model = ModuleFamily
         fields = [
             "id",
-            "name",
+            "name", 
             "description",
             "module_type_id",
-            "module_type",
+            "module_types",
             "module_bay_id",
+            "tags",
         ]
