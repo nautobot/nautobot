@@ -67,6 +67,6 @@ There are four main headings within the User Guide:
     ---
     Discover the power of [Nautobot Apps & Solutions](https://networktocode.com/nautobot/nautobot-apps/), from the Golden Configuration app enforcing configuration compliance to the SSoT app synchronizing data across multiple sources of truth.
 
-    These apps are both open source and commercially supported by Network to Code.
+    These apps are all open source and commercially supported by Network to Code.
 
 </div>
