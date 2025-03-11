@@ -4786,6 +4786,7 @@ class SoftwareImageFileBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFo
             "hashing_algorithm",
             "image_file_size",
             "download_url",
+            "external_integration",
         ]
 
 
@@ -4850,6 +4851,11 @@ class SoftwareImageFileForm(NautobotModelForm):
         queryset=DeviceType.objects.all(),
         required=False,
         label="Device Types",
+    )
+
+    external_integration = DynamicModelChoiceField(
+        queryset=ExternalIntegration.objects.all(),
+        required=False,
     )
 
     field_order = [
