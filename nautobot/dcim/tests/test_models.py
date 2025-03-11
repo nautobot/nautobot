@@ -2626,7 +2626,7 @@ class SoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
 
         # Test that the download_url field is correctly validated with the default ALLOWED_URL_SCHEMES setting
         for scheme in settings.ALLOWED_URL_SCHEMES:
-            software_image = SoftwareImageFile.objects.create(
+            software_image = SoftwareImageFile(
                 software_version=software_version,
                 image_file_name=f"software_image_file_qs_test_{scheme}.bin",
                 status=software_image_file_status,
@@ -2641,7 +2641,7 @@ class SoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
         OVERRIDE_VALID_SCHEMES = ["sftp", "tftp", "https", "http", "newfs", "customfs"]
         # Invalid schemes should raise a ValidationError
         for scheme in INVALID_SCHEMES:
-            software_image = SoftwareImageFile.objects.create(
+            software_image = SoftwareImageFile(
                 software_version=software_version,
                 image_file_name=f"software_image_file_qs_test_{scheme}2.bin",
                 status=software_image_file_status,
@@ -2653,7 +2653,7 @@ class SoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
 
         with override_settings(ALLOWED_URL_SCHEMES=OVERRIDE_VALID_SCHEMES):
             for scheme in OVERRIDE_VALID_SCHEMES:
-                software_image = SoftwareImageFile.objects.create(
+                software_image = SoftwareImageFile(
                     software_version=software_version,
                     image_file_name=f"software_image_file_qs_test_{scheme}3.bin",
                     status=software_image_file_status,
@@ -2665,7 +2665,7 @@ class SoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
                     self.fail(f"download_url Scheme {scheme} ValidationError: {e}")
 
             for scheme in INVALID_SCHEMES:
-                software_image = SoftwareImageFile.objects.create(
+                software_image = SoftwareImageFile(
                     software_version=software_version,
                     image_file_name=f"software_image_file_qs_test_{scheme}4.bin",
                     status=software_image_file_status,
