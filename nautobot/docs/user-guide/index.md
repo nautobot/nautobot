@@ -6,7 +6,7 @@ There are four main headings within the User Guide:
 
 - **Administration**: Get detailed instructions on [installation](./administration/installation/index.md), [migration](./administration/migration/migrating-from-netbox.md), [configuration](./administration/configuration/index.md), and [upgrading Nautobot](./administration/upgrading/upgrading.md).
 - **Feature Guides**: Walk through these guides if you are a [new user to Nautobot](./feature-guides/getting-started/index.md) and wondering how to perform common tasks in the Web UI.
-- **Core Data Model**: Read about all the Nautobot [data models](./core-data-model/overview.md) used to store your network data.
+- **Core Data Model**: Read about all the Nautobot [data models](./core-data-model/overview/introduction.md) used to store your network data.
 - **Platform Functionality**: Dive deep into Nautobot extensibility, such as building automation with [Jobs](./platform-functionality/jobs/index.md), programmatically accessing data through the [REST](./platform-functionality/rest-api/overview.md) and [GraphQL](./platform-functionality/graphql.md) APIs, or using [Git repositories](./platform-functionality/gitrepository.md) as a data source.
 
 ## Quick Links
@@ -65,7 +65,7 @@ There are four main headings within the User Guide:
 - :material-view-dashboard:{ .lg .middle } **Nautobot Apps & Solutions**
 
     ---
-    Discover the power of [Nautobot Apps & Solutions](https://networktocode.com/nautobot/nautobot-apps/), from the Golden Configuration app enforcing configuration compliance to the SSoT app synchronizing data across multiple sources of truth.
+    Discover the power of [Nautobot Apps & Solutions](https://networktocode.com/nautobot/nautobot-apps/), from the [Golden Configuration app](https://docs.nautobot.com/projects/golden-config/en/latest/) enforcing configuration compliance to the [SSoT app](https://docs.nautobot.com/projects/ssot/en/latest/) synchronizing data across multiple sources of truth.
 
     These apps are all open source and commercially supported by Network to Code.
 
