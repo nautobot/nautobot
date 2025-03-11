@@ -2638,7 +2638,7 @@ class SoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
                 self.fail(f"download_url Scheme {scheme} ValidationError: {e}")
 
         INVALID_SCHEMES = ["httpx", "rdp", "cryptoboi"]
-        OVERRIDE_VALID_SCHEMES = ["sftp", "tftp", "https", "http", "newfs", "customfs"]  # noqa: F841 # TODO
+        OVERRIDE_VALID_SCHEMES = ["sftp", "tftp", "https", "http", "newfs", "customfs"]
         # Invalid schemes should raise a ValidationError
         for scheme in INVALID_SCHEMES:
             software_image = SoftwareImageFile.objects.create(
@@ -2651,36 +2651,29 @@ class SoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
                 software_image.validated_save()
             self.assertEqual(err.exception.message_dict["download_url"][0], "Enter a valid URL.")
 
-        # TODO: Fix&Uncomment this once we have a way to override URL_SCHEME settings in the test environment,
-        # issues:
-        # 1. settings.ALLOWED_URL_SCHEMES is a tuple, so we can't override it with override_settings - make it constance?
-        # 2. The Validator is not reloaded when the settings are overridden
+        with override_settings(ALLOWED_URL_SCHEMES=OVERRIDE_VALID_SCHEMES):
+            for scheme in OVERRIDE_VALID_SCHEMES:
+                software_image = SoftwareImageFile.objects.create(
+                    software_version=software_version,
+                    image_file_name=f"software_image_file_qs_test_{scheme}3.bin",
+                    status=software_image_file_status,
+                    download_url=f"{scheme}://example.com/software_image_file_qs_test_3.bin",
+                )
+                try:
+                    software_image.validated_save()
+                except ValidationError as e:
+                    self.fail(f"download_url Scheme {scheme} ValidationError: {e}")
 
-        # Test that the download_url field is correctly validated with the overridden
-        # ALLOWED_URL_SCHEMES settings
-        # while override_settings(ALLOWED_URL_SCHEMES=OVERRIDE_VALID_SCHEMES):
-        #     for scheme in OVERRIDE_VALID_SCHEMES:
-        #         software_image = SoftwareImageFile.objects.create(
-        #             software_version=software_version,
-        #             image_file_name=f"software_image_file_qs_test_{scheme}3.bin",
-        #             status=software_image_file_status,
-        #             download_url=f"{scheme}://example.com/software_image_file_qs_test_3.bin",
-        #         )
-        #         try:
-        #             software_image.validated_save()
-        #         except ValidationError as e:
-        #             self.fail(f"download_url Scheme {scheme} ValidationError: {e}")
-
-        #     for scheme in INVALID_SCHEMES:
-        #         software_image = SoftwareImageFile.objects.create(
-        #             software_version=software_version,
-        #             image_file_name=f"software_image_file_qs_test_{scheme}4.bin",
-        #             status=software_image_file_status,
-        #             download_url=f"{scheme}://example.com/software_image_file_qs_test_4.bin",
-        #         )
-        #         with self.assertRaises(ValidationError) as err:
-        #             software_image.validated_save()
-        #         self.assertEqual(err.exception.message_dict["download_url"][0], "Enter a valid URL.")
+            for scheme in INVALID_SCHEMES:
+                software_image = SoftwareImageFile.objects.create(
+                    software_version=software_version,
+                    image_file_name=f"software_image_file_qs_test_{scheme}4.bin",
+                    status=software_image_file_status,
+                    download_url=f"{scheme}://example.com/software_image_file_qs_test_4.bin",
+                )
+                with self.assertRaises(ValidationError) as err:
+                    software_image.validated_save()
+                self.assertEqual(err.exception.message_dict["download_url"][0], "Enter a valid URL.")
 
     def test_queryset_get_for_object(self):
         """
