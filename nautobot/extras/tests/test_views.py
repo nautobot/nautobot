@@ -823,9 +823,12 @@ class DynamicGroupTestCase(
         location_ct = ContentType.objects.get_for_model(Location)
         instance = self._get_queryset().exclude(content_type=location_ct).first()
         # Add view permissions for the group's members:
-        self.add_permissions(get_permission_for_model(instance.content_type.model_class(), "view"))
+        self.add_permissions(
+            get_permission_for_model(instance.content_type.model_class(), "view"), "extras.view_dynamicgroup"
+        )
 
-        response = super().test_get_object_with_permission()
+        response = self.client.get(instance.get_absolute_url())
+        self.assertHttpStatus(response, 200)
 
         response_body = extract_page_body(response.content.decode(response.charset))
         # Check that the "members" table in the detail view includes all appropriate member objects
@@ -1176,6 +1179,13 @@ class GitRepositoryTestCase(
         form_data["slug"] = instance.slug  # Slug is not editable
         self.form_data = form_data
         super().test_edit_object_with_constrained_permission()
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_view_when_no_sync_job_result_exists(self):
+        instance = self._get_queryset().first()
+        response = self.client.get(reverse("extras:gitrepository_result", kwargs={"pk": instance.pk}))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["result"], {})
 
     def test_post_sync_repo_anonymous(self):
         self.client.logout()

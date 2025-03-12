@@ -1,7 +1,5 @@
 # Device Redundancy Groups
 
-+++ 1.5.0
-
 Device Redundancy Groups represent logical relationships between multiple devices. Typically, a redundancy group could represent a failover pair, failover group, or a load sharing cluster.
 Device Redundancy Groups are created first, before the devices are assigned to the group.
 

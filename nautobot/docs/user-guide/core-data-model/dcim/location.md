@@ -1,7 +1,5 @@
 # Locations
 
-+++ 1.4.0
-
 To locate network information more precisely than a Site defines, you can define a hierarchy of Locations within each Site. Data objects such as devices, prefixes, VLAN groups, etc. can thus be mapped or assigned to a specific building, wing, floor, room, etc. as appropriate to your needs.
 
 Once you have defined the hierarchy of Location Types that you wish to use, you can then define Locations. Any "top-level" Locations (those whose Location Type has no parent) belong directly to a Site, while "child" Locations belong to their immediate parent Location, rather than to the Site as a whole.

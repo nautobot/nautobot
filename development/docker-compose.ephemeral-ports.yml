@@ -1,0 +1,18 @@
+# Set all ports to ephemeral to avoid conflicts with other services.
+---
+services:
+  nautobot:
+    ports:
+      - "8080"
+      - "6899"
+  celery_worker:
+    ports:
+      - "8080"
+      - "6898"
+  mkdocs:
+    ports:
+      - "8001"
+  selenium:
+    ports:
+        - "4444"
+        - "15900"

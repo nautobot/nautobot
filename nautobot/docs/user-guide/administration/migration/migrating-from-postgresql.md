@@ -15,7 +15,7 @@ nautobot-server dumpdata \
     > nautobot_dump.json
 ```
 
-+/- 1.5.23
+!!! warning
     - We do not recommend at this time using `--natural-primary` as this can result in inconsistent or incorrect data for data models that use GenericForeignKeys, such as `Cable`, `Note`, `ObjectChange`, and `Tag`.
     - We also do not recommend at this time using `--natural-foreign` as it can potentially result in errors if any data models incorrectly implement their `natural_key()` and/or `get_by_natural_key()` API methods.
     - `contenttypes` must not be excluded from the dump (it could be excluded previously due to the use of `--natural-foreign`).
