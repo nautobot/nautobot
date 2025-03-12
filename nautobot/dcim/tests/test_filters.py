@@ -3867,6 +3867,7 @@ class SoftwareImageFileFilterSetTestCase(FilterTestCases.FilterTestCase):
     @classmethod
     def setUpTestData(cls):
         common_test_data(cls)
+
         device0, device1 = cls.devices[:2]
         device0.software_image_files.set(SoftwareImageFile.objects.all()[:2])
         device1.software_image_files.set(SoftwareImageFile.objects.all()[2:4])
