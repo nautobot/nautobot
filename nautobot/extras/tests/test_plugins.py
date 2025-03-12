@@ -486,7 +486,7 @@ class TestUserContextCustomValidator(CustomValidator):
         """
         Used to validate that the correct user context is available in the custom validator.
         """
-        self.validation_error(self.context["user"])
+        self.validation_error(f"TestUserContextCustomValidator: user is {self.context['user']}")
 
 
 class AppCustomValidationTest(TestCase):
@@ -527,22 +527,28 @@ class AppCustomValidationTest(TestCase):
 
     def test_custom_validator_non_web_request_uses_anonymous_user(self):
         location_type = LocationType.objects.get(name="Campus")
-        registry["plugin_custom_validators"]["dcim.locationtype"] = [TestUserContextCustomValidator]
+        before = registry["plugin_custom_validators"]["dcim.locationtype"]
+        try:
+            registry["plugin_custom_validators"]["dcim.locationtype"] = [TestUserContextCustomValidator]
 
-        from django.contrib.auth.models import AnonymousUser
-
-        with self.assertRaises(ValidationError) as context:
-            location_type.clean()
-        self.assertEqual(context.exception.message, AnonymousUser())
+            with self.assertRaises(ValidationError) as context:
+                location_type.clean()
+            self.assertEqual(context.exception.message, "TestUserContextCustomValidator: user is AnonymousUser")
+        finally:
+            registry["plugin_custom_validators"]["dcim.locationtype"] = before
 
     def test_custom_validator_web_request_uses_real_user(self):
         location_type = LocationType.objects.get(name="Campus")
-        registry["plugin_custom_validators"]["dcim.locationtype"] = [TestUserContextCustomValidator]
+        before = registry["plugin_custom_validators"]["dcim.locationtype"]
+        try:
+            registry["plugin_custom_validators"]["dcim.locationtype"] = [TestUserContextCustomValidator]
 
-        with self.assertRaises(ValidationError) as context:
-            with web_request_context(user=self.user):
-                location_type.clean()
-        self.assertEqual(context.exception.message, self.user)
+            with self.assertRaises(ValidationError) as context:
+                with web_request_context(user=self.user):
+                    location_type.clean()
+            self.assertEqual(context.exception.message, f"TestUserContextCustomValidator: user is {self.user}")
+        finally:
+            registry["plugin_custom_validators"]["dcim.locationtype"] = before
 
 
 class ExampleModelCustomActionViewTest(TestCase):
