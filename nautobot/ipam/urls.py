@@ -7,7 +7,6 @@ from . import views
 from .models import (
     IPAddress,
     Prefix,
-    RIR,
     VLAN,
     VLANGroup,
 )
@@ -17,31 +16,12 @@ app_name = "ipam"
 router = NautobotUIViewSetRouter()
 router.register("ip-address-to-interface", views.IPAddressToInterfaceUIViewSet)
 router.register("namespaces", views.NamespaceUIViewSet)
+router.register("rirs", views.RIRUIViewSet)
 router.register("route-targets", views.RouteTargetUIViewSet)
-router.register("vrfs", views.VRFUIViewSet)
 router.register("services", views.ServiceUIViewSet)
+router.register("vrfs", views.VRFUIViewSet)
 
 urlpatterns = [
-    # RIRs
-    path("rirs/", views.RIRListView.as_view(), name="rir_list"),
-    path("rirs/add/", views.RIREditView.as_view(), name="rir_add"),
-    path("rirs/import/", views.RIRBulkImportView.as_view(), name="rir_import"),  # 3.0 TODO: remove, unused
-    path("rirs/delete/", views.RIRBulkDeleteView.as_view(), name="rir_bulk_delete"),
-    path("rirs/<uuid:pk>/", views.RIRView.as_view(), name="rir"),
-    path("rirs/<uuid:pk>/edit/", views.RIREditView.as_view(), name="rir_edit"),
-    path("rirs/<uuid:pk>/delete/", views.RIRDeleteView.as_view(), name="rir_delete"),
-    path(
-        "rirs/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="rir_changelog",
-        kwargs={"model": RIR},
-    ),
-    path(
-        "rirs/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="rir_notes",
-        kwargs={"model": RIR},
-    ),
     # Namespaces
     path(
         "namespaces/<uuid:pk>/ip-addresses/",
