@@ -325,49 +325,32 @@ class RouteTargetUIViewSet(NautobotUIViewSet):
 #
 
 
-class RIRListView(generic.ObjectListView):
+class RIRUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.RIRBulkEditForm
+    filterset_class = filters.RIRFilterSet
+    filterset_form_class = forms.RIRFilterForm
+    form_class = forms.RIRForm
     queryset = RIR.objects.all()
-    filterset = filters.RIRFilterSet
-    filterset_form = forms.RIRFilterForm
-    table = tables.RIRTable
+    serializer_class = serializers.RIRSerializer
+    table_class = tables.RIRTable
 
-
-class RIRView(generic.ObjectView):
-    queryset = RIR.objects.all()
-
-    def get_extra_context(self, request, instance):
-        # Prefixes
-        assigned_prefixes = Prefix.objects.restrict(request.user, "view").filter(rir=instance).select_related("tenant")
-
-        assigned_prefix_table = tables.PrefixTable(assigned_prefixes, hide_hierarchy_ui=True)
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(assigned_prefix_table)
-
-        return {"assigned_prefix_table": assigned_prefix_table, **super().get_extra_context(request, instance)}
-
-
-class RIREditView(generic.ObjectEditView):
-    queryset = RIR.objects.all()
-    model_form = forms.RIRForm
-
-
-class RIRDeleteView(generic.ObjectDeleteView):
-    queryset = RIR.objects.all()
-
-
-class RIRBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = RIR.objects.all()
-    table = tables.RIRTable
-
-
-class RIRBulkDeleteView(generic.BulkDeleteView):
-    queryset = RIR.objects.all()
-    filterset = filters.RIRFilterSet
-    table = tables.RIRTable
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=100,
+                table_title="Assigned Prefixes",
+                table_class=tables.PrefixTable,
+                table_filter="rir",
+                hide_hierarchy_ui=True,
+            ),
+        ),
+    )
 
 
 #
