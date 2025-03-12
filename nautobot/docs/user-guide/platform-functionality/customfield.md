@@ -22,19 +22,10 @@ Nautobot supports these custom field types:
 * Selection: A selection of one of several pre-defined custom choices
 * Multiple selection: A selection field which supports the assignment of multiple values
 
-+++ 1.3.0
-    Support for JSON-type custom fields was added.
-
-+++ 1.6.0
-    Support for Markdown-type custom fields was added.
-
 +/- 2.1.8
     Prior to this release, text-type custom fields were always limited to a maximum of 255 characters. In this and later releases, text-type custom fields have no intrinsic length limit unless one is [explicitly defined](#custom-field-validation).
 
 Each custom field must have a key; this should be a simple database-friendly string, e.g. `tps_report`. You may also assign a corresponding human-friendly label (e.g. "TPS report"); the label will be displayed on web forms. A weight is also required: Higher-weight fields will be ordered lower within a form. (The default weight is 100.) If a description is provided, it will appear beneath the field in a form.
-
-+/- 1.4.0
-    Custom fields now have both a `name` and a `slug`; in older versions there was no `slug` field. When migrating existing data to Nautobot 1.4.0 or later, the `label` and `slug` will be automatically populated for existing custom fields if necessary.
 
 +/- 2.0.0
     The custom field `slug` has been renamed to `key`, and `name` to `label`, in order to provide more clarity around their usage. Existing custom fields will automatically be migrated when upgrading to Nautobot 2.0.0 or later.
@@ -48,7 +39,7 @@ Marking a field as required will force the user to provide a value for the field
 
 The filter logic controls how values are matched when filtering objects by the custom field. Loose filtering (the default) matches on a partial value, whereas exact matching requires a complete match of the given string to a field's value. For example, exact filtering with the string "red" will only match the exact value "red", whereas loose filtering will match on the values "red", "red-orange", or "bored". Setting the filter logic to "disabled" disables filtering by the field entirely.
 
-+/- 1.4.0
+!!! tip
     Custom field [extended filtering](./rest-api/filtering.md#lookup-expressions) introduced extended lookup expression filters for `exact` and `icontains`, duplicating the functionality of both the `Strict` and `Loose` settings.
 
 A custom field must be assigned to one or more object types, or models, in Nautobot. Once created, custom fields will automatically appear as part of these models in the web UI and REST API.

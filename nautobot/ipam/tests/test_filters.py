@@ -10,6 +10,7 @@ from nautobot.dcim.models import (
     Location,
     LocationType,
     Manufacturer,
+    VirtualDeviceContext,
 )
 from nautobot.extras.models import Role, Status, Tag
 from nautobot.ipam.choices import PrefixTypeChoices, ServiceProtocolChoices
@@ -24,7 +25,9 @@ from nautobot.ipam.filters import (
     VLANFilterSet,
     VLANGroupFilterSet,
     VLANLocationAssignmentFilterSet,
+    VRFDeviceAssignmentFilterSet,
     VRFFilterSet,
+    VRFPrefixAssignmentFilterSet,
 )
 from nautobot.ipam.models import (
     IPAddress,
@@ -39,6 +42,8 @@ from nautobot.ipam.models import (
     VLANGroup,
     VLANLocationAssignment,
     VRF,
+    VRFDeviceAssignment,
+    VRFPrefixAssignment,
 )
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import (
@@ -66,18 +71,55 @@ class VRFTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterT
     # skip testing "rd" attribute for generic q filter test as it's not trivially modifiable
     exclude_q_filter_predicates = ["rd"]
     generic_filter_tests = (
+        # ("device", "devices__id"),
+        # ("device", "devices__name"),
         ("export_targets", "export_targets__id"),
         ("export_targets", "export_targets__name"),
         ("import_targets", "import_targets__id"),
         ("import_targets", "import_targets__name"),
+        ("prefix", "prefixes__id"),
         ("name",),
+        ("namespace", "namespace__id"),
+        ("namespace", "namespace__name"),
         ("rd",),
+        # ("virtual_machines", "virtual_machines__id"),
+        # ("virtual_machines", "virtual_machines__name"),
     )
 
     @classmethod
     def setUpTestData(cls):
         instance = cls.queryset.first()
         instance.tags.set(Tag.objects.all()[:2])
+
+    def test_prefix_filter_by_string(self):
+        """Test filtering by prefix strings as an alternative to pk."""
+        prefix = self.queryset.filter(prefixes__isnull=False).first().prefixes.first()
+        params = {"prefix": [prefix.prefix]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(prefixes__network=prefix.network, prefixes__prefix_length=prefix.prefix_length),
+            ordered=False,
+        )
+
+
+class VRFPrefixAssignmentTestCase(FilterTestCases.FilterTestCase):
+    queryset = VRFPrefixAssignment.objects.all()
+    filterset = VRFPrefixAssignmentFilterSet
+    generic_filter_tests = (
+        ("prefix", "prefix__id"),
+        ("vrf", "vrf__id"),
+        ("vrf", "vrf__name"),
+    )
+
+    def test_prefix_filter_by_string(self):
+        """Test filtering by prefix strings as an alternative to pk."""
+        prefix = self.queryset.first().prefix
+        params = {"prefix": [prefix.prefix]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(prefix__network=prefix.network, prefix__prefix_length=prefix.prefix_length),
+            ordered=False,
+        )
 
 
 class RouteTargetTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
@@ -190,15 +232,32 @@ class PrefixLocationAssignmentTestCase(FilterTestCases.FilterTestCase):
     # )
 
     def test_prefix(self):
-        ipv4_prefix = str(self.queryset.filter(prefix__ip_version=4).first().prefix)
-        ipv6_prefix = str(self.queryset.filter(prefix__ip_version=6).first().prefix)
+        ipv4_prefix = self.queryset.filter(prefix__ip_version=4).first().prefix
+        ipv6_prefix = self.queryset.filter(prefix__ip_version=6).first().prefix
 
-        params = {"prefix": [ipv4_prefix, ipv6_prefix]}
-        prefix_queryset = Prefix.objects.net_equals(ipv4_prefix, ipv6_prefix)
+        params = {"prefix": [ipv4_prefix.prefix, ipv6_prefix.pk]}
 
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(prefix__in=prefix_queryset),
+            self.queryset.filter(prefix=ipv6_prefix)
+            | self.queryset.filter(
+                prefix__network=ipv4_prefix.network,
+                prefix__prefix_length=ipv4_prefix.prefix_length,
+                prefix__broadcast=ipv4_prefix.broadcast,
+            ),
+            ordered=False,
+        )
+
+        params = {"prefix": [ipv4_prefix.pk, ipv6_prefix.prefix]}
+
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(prefix=ipv4_prefix)
+            | self.queryset.filter(
+                prefix__network=ipv6_prefix.network,
+                prefix__prefix_length=ipv6_prefix.prefix_length,
+                prefix__broadcast=ipv6_prefix.broadcast,
+            ),
             ordered=False,
         )
 
@@ -289,10 +348,20 @@ class PrefixFilterCustomDataTestCase(TestCase):
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(parent=parent4)
         )
+        params = {"parent": ["10.0.0.0/16"]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(parent__network="10.0.0.0", parent__prefix_length=16),
+        )
         parent6 = Prefix.objects.get(prefix="2001:db8::/32", namespace=self.namespace)
         params = {"parent": [str(parent6.pk)]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(parent=parent6)
+        )
+        params = {"parent": ["2001:db8::/32"]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(parent__network="2001:db8::", parent__prefix_length=32),
         )
 
     def test_ip_version(self):
@@ -978,6 +1047,67 @@ class IPAddressToInterfaceTestCase(FilterTestCases.FilterTestCase):
                     self.queryset.filter(**{test_filter: False}),
                     ordered=False,
                 )
+
+
+class VRFDeviceAssignmentTestCase(FilterTestCases.FilterTestCase):
+    queryset = VRFDeviceAssignment.objects.all()
+    filterset = VRFDeviceAssignmentFilterSet
+    generic_filter_tests = (
+        ["vrf", "vrf__id"],
+        ["vrf", "vrf__name"],
+        ["device", "device__id"],
+        ["device", "device__name"],
+        ["virtual_machine", "virtual_machine__id"],
+        ["virtual_machine", "virtual_machine__name"],
+        ["virtual_device_context", "virtual_device_context__id"],
+        ["virtual_device_context", "virtual_device_context__name"],
+        ["name"],
+        ["rd"],
+    )
+
+    @classmethod
+    def setUpTestData(cls):
+        # Creating VRFDeviceAssignment instances manually until VRFFactory is enhanced to generate VRFDeviceAssignments
+        cls.vrfs = VRF.objects.all()
+        cls.devices = Device.objects.all()
+        cls.vdcs = VirtualDeviceContext.objects.all()
+        locations = Location.objects.filter(location_type__name="Campus")
+        cluster_type = ClusterType.objects.create(name="Test Cluster Type")
+        cluster = Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type, location=locations[0])
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
+        vm_role = Role.objects.get_for_model(VirtualMachine).first()
+        cls.test_vm_1 = VirtualMachine.objects.create(
+            cluster=cluster,
+            name="VM 1",
+            role=vm_role,
+            status=vm_status,
+        )
+        cls.test_vm_2 = VirtualMachine.objects.create(
+            cluster=cluster,
+            name="VM 2",
+            role=vm_role,
+            status=vm_status,
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=cls.vrfs[0],
+            device=cls.devices[0],
+            rd="65000:1",
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=cls.vrfs[0],
+            device=cls.devices[1],
+            rd="65000:2",
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=cls.vrfs[0],
+            virtual_machine=cls.test_vm_1,
+            rd="65000:3",
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=cls.vrfs[1],
+            virtual_machine=cls.test_vm_2,
+            rd="65000:4",
+        )
 
 
 class VLANGroupTestCase(FilterTestCases.FilterTestCase):

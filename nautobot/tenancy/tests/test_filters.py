@@ -145,3 +145,13 @@ class TenantTestCase(FilterTestCases.FilterTestCase):
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(locations__in=[self.locations[0], self.locations[1]]).distinct(),
         )
+
+    def test_prefixes_by_string(self):
+        """Test filtering by prefix strings as an alternative to pk."""
+        prefix = self.queryset.filter(prefixes__isnull=False).first().prefixes.first()
+        params = {"prefixes": [prefix.prefix]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(prefixes__network=prefix.network, prefixes__prefix_length=prefix.prefix_length),
+            ordered=False,
+        )

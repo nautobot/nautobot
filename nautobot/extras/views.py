@@ -1165,6 +1165,9 @@ class GitRepositoryResultView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         job_result = instance.get_latest_sync()
 
+        if job_result is None:
+            job_result = {}
+
         return {
             "result": job_result,
             "base_template": "extras/gitrepository.html",

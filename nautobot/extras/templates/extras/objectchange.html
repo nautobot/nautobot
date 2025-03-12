@@ -1,5 +1,6 @@
 {% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
+{% load static %}
 
 {% block title %}{{ object }}{% endblock %}
 
@@ -97,6 +98,20 @@
             </div>
             <div class="panel panel-default">
                 <div class="panel-heading">
+                    <strong>Object Data</strong>
+                </div>
+                <div class="panel-body">
+                    <div class="editor-container" 
+                         data-lang="json"
+                         data-value="{{ object.object_data|render_json:False }}"
+                         style="max-height: 300px">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-7">
+            <div class="panel panel-default">
+                <div class="panel-heading">
                     <strong>Difference</strong>
                     <div class="btn-group btn-group-xs pull-right noprint">
                         <a {% if prev_change %}href="{% url 'extras:objectchange' pk=prev_change.pk %}"{% else %}disabled{% endif %} class="btn btn-default">
@@ -119,19 +134,14 @@
                             {% endif %}
                         </span>
                     {% else %}
-                        <pre class="diff-removed">{{ diff_removed|render_json }}</pre>
-                        <pre class="diff-added">{{ diff_added|render_json }}</pre>
+                        <div class="editor-container" 
+                            data-mode="diff"
+                            data-original="{{ diff_removed | render_json:False }}"
+                            data-modified="{{ diff_added | render_json:False }}"
+                            data-lang="json"
+                            style="max-height: 730px">
+                        </div>
                     {% endif %}
-                </div>
-            </div>
-        </div>
-        <div class="col-md-7">
-            <div class="panel panel-default">
-                <div class="panel-heading">
-                    <strong>Object Data</strong>
-                </div>
-                <div class="panel-body">
-                    <pre>{{ object.object_data|render_json }}</pre>
                 </div>
             </div>
         </div>
@@ -147,3 +157,9 @@
         </div>
     </div>
 {% endblock %}
+
+{% block javascript %}
+    {{ block.super }}
+    <script src="{% static 'js/editor.js' %}"></script>
+{% endblock %}
+
