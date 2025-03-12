@@ -1,0 +1,2 @@
+Fixed conflicts between factory data and bespoke test data involving VRF assignments to Virtual Device Contexts.
+Fixed state leakage from custom-validation test cases potentially causing failures of other test cases.
