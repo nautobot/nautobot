@@ -71,7 +71,7 @@ def create_common_data_for_software_related_test_cases():
 class TestSoftwareImageFileTestCase(TransactionTestCase):
     def test_correct_handling_for_model_protected_error(self):
         create_common_data_for_software_related_test_cases()
-        software_image_file = SoftwareImageFile.objects.first()
+        software_image_file = SoftwareImageFile.objects.get(image_file_name="software_image_file_qs_test_1.bin")
 
         self.add_permissions("dcim.delete_softwareimagefile")
         pk_list = [str(software_image_file.pk)]
@@ -86,9 +86,7 @@ class TestSoftwareImageFileTestCase(TransactionTestCase):
             pk_list=pk_list,
             username=self.user.username,
         )
-        logs = JobLogEntry.objects.filter(job_result=job_result)
-        print([(log.message, log.log_level) for log in logs])
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         error_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
         self.assertIn("Caught ProtectedError while attempting to delete objects", error_log.message)
         self.assertEqual(initial_count, SoftwareImageFile.objects.all().count())
@@ -97,7 +95,7 @@ class TestSoftwareImageFileTestCase(TransactionTestCase):
 class TestSoftwareVersionTestCase(TransactionTestCase):
     def test_correct_handling_for_model_protected_error(self):
         create_common_data_for_software_related_test_cases()
-        software_version = SoftwareVersion.objects.first()
+        software_version = SoftwareVersion.objects.get(version="Test version 1.0.0")
 
         initial_count = SoftwareVersion.objects.all().count()
         self.add_permissions("dcim.delete_softwareversion")
@@ -112,7 +110,7 @@ class TestSoftwareVersionTestCase(TransactionTestCase):
             pk_list=pk_list,
             username=self.user.username,
         )
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         error_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
         self.assertIn("Caught ProtectedError while attempting to delete objects", error_log.message)
         self.assertEqual(initial_count, SoftwareVersion.objects.all().count())

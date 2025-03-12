@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.4.4"
+version = "2.4.5"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -37,7 +37,7 @@ python = ">=3.9,<3.13"
 # Background task processing
 celery = "~5.3.6"
 # Fundamental web framework for Nautobot
-Django = "~4.2.19"
+Django = "~4.2.20"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -96,7 +96,7 @@ graphene-django = "~2.16.0"
 # NOTE: graphene-django-optimizer 0.9 and later require Graphene v3
 graphene-django-optimizer = "~0.8.0"
 # Template rendering engine
-Jinja2 = "~3.1.5"
+Jinja2 = "~3.1.6"
 # Optional data validation of config contexts - loose dependency since our usage is light but apps may be more specific
 jsonschema = "^4.7.0"
 # Messaging library for Python - dependency of Celery
