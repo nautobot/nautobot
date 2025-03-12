@@ -27,7 +27,14 @@ class EnhancedURLValidator(URLValidator):
         r"\Z",
         re.IGNORECASE,
     )
+
     schemes = settings.ALLOWED_URL_SCHEMES
+
+    def __getattribute__(self, name):
+        """Dynamically fetch schemes each time it's accessed."""
+        if name == "schemes":
+            self.schemes = settings.ALLOWED_URL_SCHEMES  # Always return the latest list
+        return super().__getattribute__(name)
 
 
 class ExclusionValidator(BaseValidator):
