@@ -160,7 +160,7 @@ With the introduction of the UI Component Framework (described [above](#ui-compo
 
 #### Removed Python 3.8 Support
 
-As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python 3.9. Note that existing installs using Python 3.8 will need to upgrade their Python version prior to initiating the Nautobot v2.4 upgrade.
+As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python 3.9, and Nautobot 2.4.6 and later specifically require a minimum of Python 3.9.2. Note that existing installs using Python 3.8 will need to upgrade their Python version prior to initiating the Nautobot v2.4 upgrade.
 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 

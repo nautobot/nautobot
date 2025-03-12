@@ -9,7 +9,7 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python Web framewo
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
 | HTTP service       | :simple-nginx: NGINX                                                                                                               |
 | WSGI service       | :material-web: uWSGI or Gunicorn                                                                                                   |
-| Application        | :simple-django: Django <br> :material-language-python: Python 3.9 - 3.12 supported                                                 |
+| Application        | :simple-django: Django <br> :material-language-python: Python 3.9.2 - 3.12 supported                                                 |
 | Database           | :simple-postgresql: PostgreSQL 12+ or <br>  :simple-mysql: MySQL 8.0+                                                              |
 | Cache              | :simple-redis: Django/Redis                                                                                                        |
 | Task queuing       | :simple-redis: Redis / :simple-celery: Celery                                                                                      |
