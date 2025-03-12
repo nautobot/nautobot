@@ -76,6 +76,21 @@ Jobs can now log `success` messages as a new logging level which will be appropr
 self.logger.success("All data is valid.")
 ```
 
++++ 2.4.5
+
+In Nautobot v2.4.5 and later, Jobs can now log `failure` messages as well:
+
+```python
+self.logger.failure("Something went wrong.")
+```
+
+In Nautobot v2.4.5 and later, Jobs can also mark their result as failed without raising an uncaught exception by calling the new `Job.fail(message)` API:
+
+```python
+self.fail("Something went wrong, and we'll fail in the end, but we can continue for now.")
+self.logger.info("Continuing...")
+```
+
 #### Kubernetes Job Execution and Job Queue Data Model (Experimental)
 
 *Please note that this functionality is considered Experimental in the v2.4.0 release and is subject to change in the future.*
@@ -150,6 +165,42 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 
 <!-- towncrier release notes start -->
+
+## v2.4.5 (2025-03-10)
+
+### Security in v2.4.5
+
+- [#6983](https://github.com/nautobot/nautobot/issues/6983) - Updated dependency `Jinja2` to `~3.1.6` to address `CVE-2025-27516`.
+- [#7000](https://github.com/nautobot/nautobot/issues/7000) - Updated dependency `Django` to `~4.2.20` to address `CVE-2025-26699`.
+
+### Added in v2.4.5
+
+- [#6384](https://github.com/nautobot/nautobot/issues/6384) - Added `Job.logger.failure()` API for Job logging, using custom `FAILURE` log level (between `WARNING` and `ERROR`).
+- [#6384](https://github.com/nautobot/nautobot/issues/6384) - Added `Job.fail()` API, which can be used to fail a Job more gracefully than by raising an uncaught exception.
+- [#6384](https://github.com/nautobot/nautobot/issues/6384) - Added `NautobotTestCaseMixin.assertJobResultStatus()` testing helper API.
+- [#7001](https://github.com/nautobot/nautobot/issues/7001) - Added bulk-edit support for the RIR model.
+
+### Changed in v2.4.5
+
+- [#6384](https://github.com/nautobot/nautobot/issues/6384) - Changed output of `nautobot-server runjob` command to include the traceback (if any) and count of `success`/`failure` log messages.
+
+### Removed in v2.4.5
+
+- [#6384](https://github.com/nautobot/nautobot/issues/6384) - Removed the (undocumented) requirement for Jobs that implement a custom `before_start()` or `after_return()` method to call `super()` for the Job to execute successfully.
+
+### Fixed in v2.4.5
+
+- [#6384](https://github.com/nautobot/nautobot/issues/6384) - Fixed rendering of "actions" column in the JobResult table view.
+- [#6384](https://github.com/nautobot/nautobot/issues/6384) - Fixed incorrect `stacklevel` default value in Job `logger.success()` API.
+- [#6906](https://github.com/nautobot/nautobot/issues/6906) - `GitRepository.clone_to_directory` now uses configured Secrets for Repository to prepare correct `from_url`.
+- [#6972](https://github.com/nautobot/nautobot/issues/6972) - Fixed IPAddress get_or_create not working with the address argument.
+
+### Housekeeping in v2.4.5
+
+- [#6384](https://github.com/nautobot/nautobot/issues/6384) - Added `init: true` to development `docker-compose.yml` to avoid failed health-checks from remaining as zombie processes.
+- [#6384](https://github.com/nautobot/nautobot/issues/6384) - Added `ExampleFailingJob` to example app to demonstrate the two different ways to fail a Job.
+- [#6971](https://github.com/nautobot/nautobot/issues/6971) - Fixed invoke commands requiring pyyaml.
+- [#7001](https://github.com/nautobot/nautobot/issues/7001) - Refactored RIR model related UI views to use `NautobotUIViewSet` and `UI component framework`.
 
 ## v2.4.4 (2025-03-03)
 

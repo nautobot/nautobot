@@ -152,6 +152,7 @@ As of Nautobot 2.4.0, the current list of reserved names (not including low-leve
 | `description_first_line`  | [metadata property](#description)                       |
 | `deserialize_data`        | internal class method                                   |
 | `dryrun_default`          | [metadata property](#dryrun_default)                    |
+| `fail`                    | [helper method](#marking-a-job-as-failed)               |
 | `file_path`               | deprecated class property                               |
 | `field_order`             | [metadata property](#field_order)                       |
 | `grouping`                | [module metadata property](#module-metadata-attributes) |
@@ -593,7 +594,7 @@ As Jobs are Python classes, you are of course free to define any number of other
 
 The `before_start()` method may optionally be implemented to perform any appropriate Job-specific setup before the `run()` method is called. It has the signature `before_start(self, task_id, args, kwargs)` for historical reasons; the `task_id` parameter will always be identical to `self.request.id`, the `args` parameter will generally be empty, and any user-specified variables passed into the Job execution will be present in the `kwargs` parameter.
 
-The return value from `before_start()` is ignored, but if it raises any exception, the Job execution will be marked as a failure and `run()` will not be called.
+The return value from `before_start()` is ignored, but if it raises any exception, the Job result status will be marked as `FAILURE` and `run()` will not be called.
 
 #### The `run()` Method
 
@@ -619,7 +620,7 @@ Again, defining user variables is totally optional; you may create a Job with a 
 !!! warning "Be cautious around bulk operations"
     The Django ORM provides methods to create/edit many objects at once, namely `bulk_create()` and `update()`. These are best avoided in most cases as they bypass a model's built-in validation and can easily lead to database corruption if not used carefully.
 
-If `run()` returns any value (even the implicit `None`), the Job execution will be marked as a success and the returned value will be stored in the associated JobResult database record. Conversely, if `run()` raises any exception, the Job execution will be marked as a failure and the traceback will be stored in the JobResult.
+If `run()` returns any value (even the implicit `None`), the returned value will be stored in the associated JobResult database record. (The Job Result will be marked as `SUCCESS` unless the `fail()` method was called at some point during `run()`, in which case it will be marked as `FAILURE`.) Conversely, if `run()` raises any exception, the Job execution will be marked as `FAILURE` and the traceback will be stored in the JobResult.
 
 #### The `on_success()` Method
 
@@ -627,11 +628,11 @@ If both `before_start()` and `run()` are successful, the `on_success()` method w
 
 #### The `on_failure()` Method
 
-If either `before_start()` or `run()` raises any unhandled exception, the `on_failure()` method will be called next, if implemented. It has the signature `on_failure(self, exc, task_id, args, kwargs, einfo)`; of these parameters, the `exc` will contain the exception that was raised, and `kwargs` will contain the user-specified variables passed into the Job.
+If either `before_start()` or `run()` raises any unhandled exception, or reports a failure overall through `fail()`, the `on_failure()` method will be called next, if implemented. It has the signature `on_failure(self, exc, task_id, args, kwargs, einfo)`; of these parameters, the `exc` will contain the exception that was raised (if any) or the return value from `before_start()` or `run()` (otherwise), and `kwargs` will contain the user-specified variables passed into the Job.
 
 #### The `after_return()` Method
 
-Regardless of the overall Job execution success or failure, the `after_return()` method will be called after `on_success()` or `on_failure()`. It has the signature `after_return(self, status, retval, task_id, args, kwargs, einfo)`; the `status` will indicate success or failure (using the `JobResultStatusChoices` enum), `retval` is *either* the return value from `run()` (on success) or the exception raised (on failure), and once again `kwargs` contains the user variables.
+Regardless of the overall Job execution success or failure, the `after_return()` method will be called after `on_success()` or `on_failure()`. It has the signature `after_return(self, status, retval, task_id, args, kwargs, einfo)`; the `status` will indicate success or failure (using the `JobResultStatusChoices` enum), `retval` is *either* the return value from `run()` or the exception raised, and once again `kwargs` contains the user variables.
 
 ### Logging
 
@@ -656,7 +657,7 @@ If a `grouping` is not provided it will default to the function name that logged
 
     class MyJob(Job):
         def run(self):
-            logger.info("This job is running!", extra={"grouping": "myjobisrunning", "object": self.job_result})
+            self.logger.info("This job is running!", extra={"grouping": "myjobisrunning", "object": self.job_result})
     ```
 
 To skip writing a log entry to the database, set the `skip_db_logging` key in the "extra" kwarg to `True` when calling the log function. The output will still be written to the console.
@@ -668,7 +669,7 @@ To skip writing a log entry to the database, set the `skip_db_logging` key in th
 
     class MyJob(Job):
         def run(self):
-            logger.info("This job is running!", extra={"skip_db_logging": True})
+            self.logger.info("This job is running!", extra={"skip_db_logging": True})
     ```
 
 Markdown rendering is supported for log messages, as well as [a limited subset of HTML](../../user-guide/platform-functionality/template-filters.md#render_markdown).
@@ -682,8 +683,11 @@ Markdown rendering is supported for log messages, as well as [a limited subset o
 +/- 2.0.0
     The `AbortTransaction` class was moved from the `nautobot.utilities.exceptions` module to `nautobot.core.exceptions`. Jobs should generally import it from `nautobot.apps.exceptions` if needed.
 
-+++ 2.4.0
-    You can now use `self.logger.success()` to set the log level to `SUCCESS`.
++++ 2.4.0 "`logger.success()` added"
+    You can now use `self.logger.success()` to log a message at the level `SUCCESS`, which is located between the standard `INFO` and `WARNING` log levels.
+
++++ 2.4.5 "`logger.failure()` added"
+    You can now use `self.logger.failure()` to log a message at the level `FAILURE`, which is located between the standard `WARNING` and `ERROR` log levels.
 
 ### File Output
 
@@ -706,20 +710,26 @@ The maximum size of any single created file (or in other words, the maximum numb
 
 ### Marking a Job as Failed
 
-To mark a Job as failed, raise an exception from within the `run()` method. The exception message will be logged to the traceback of the Job Result. The Job Result status will be set to `failed`. To output a Job log message you can use the `self.logger.error()` method.
+Any uncaught exception raised from within the `run()` method will abort the `run()` method immediately (as usual in Python), and will result in the Job Result status being marked as `FAILURE`. The exception message and traceback will be recorded in the Job Result.
 
-As an example, the following Job will fail if the user does not put the word "Taco" in `var1`:
+Alternatively, in Nautobot v2.4.5 and later, you can more "cleanly" fail a Job by calling `self.fail(...)` and then either returning immediately from the `run()` method or continuing with the execution of the Job, as desired. In this case, after the `run()` method completes, the Job Result status will be automatically marked as `FAILURE` and no exception or traceback will be recorded.
+
+As an example, the following Job will abort if the user does not put the word "Taco" in `occasion`, and fail (but not abort) if the variable does not additionally contain "Tuesday":
 
 ```python
 from nautobot.apps.jobs import Job, StringVar
 
 class MyJob(Job):
-    var1 = StringVar(...)
+    occasion = StringVar(...)
 
-    def run(self, var1):
-        if var1 != "Taco":
-            self.logger.error("var1 must be 'Taco'")
+    def run(self, occasion):
+        if not occasion.startswith("Taco"):
+            self.logger.failure("The occasion must begin with 'Taco'")
             raise Exception("Argument input validation failed.")
+        if not occasion.endswith(" Tuesday"):
+            self.fail("It's supposed to be Tuesday")
+        self.logger.info("Today is %s", occasion)
+        return occasion
 ```
 
 ### Accessing User and Job Result

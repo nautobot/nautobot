@@ -21,7 +21,13 @@ import time
 
 from invoke import Collection, task as invoke_task
 from invoke.exceptions import Exit, Failure
-import yaml
+
+try:
+    import yaml
+
+    HAS_PYYAML = True
+except ImportError:
+    HAS_PYYAML = False
 
 try:
     # Override built-in print function with rich's pretty-printer function, if available
@@ -525,6 +531,9 @@ def destroy(context):
 def vscode(context):
     """Launch Visual Studio Code with the appropriate Environment variables to run in a container."""
     command = "code nautobot.code-workspace"
+
+    if not HAS_PYYAML:
+        raise Exit("You must install pyyaml ('pip install --user pyyaml') to use this command.")
 
     # Setup PYTHON version if using docker dev containers
     env_file_path = os.path.join(BASE_DIR, "development/.env")

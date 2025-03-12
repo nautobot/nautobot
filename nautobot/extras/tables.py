@@ -112,6 +112,27 @@ JOB_BUTTONS = """
 <a href="{% url 'extras:jobresult_list' %}?job_model={{ record.name | urlencode }}" class="btn btn-default btn-xs" title="Job Results"><i class="mdi mdi-format-list-bulleted" aria-hidden="true"></i></a>
 """
 
+JOB_RESULT_BUTTONS = """
+{% load helpers %}
+{% if perms.extras.run_job %}
+    {% if record.job_model and record.task_kwargs %}
+        <a href="{% url 'extras:job_run' pk=record.job_model.pk %}?kwargs_from_job_result={{ record.pk }}"
+           class="btn btn-xs btn-success" title="Re-run job with same arguments.">
+            <i class="mdi mdi-repeat"></i>
+        </a>
+    {% elif record.job_model is not None %}
+        <a href="{% url 'extras:job_run' pk=record.job_model.pk %}" class="btn btn-primary btn-xs"
+           title="Run job">
+            <i class="mdi mdi-play"></i>
+        </a>
+    {% else %}
+        <a href="#" class="btn btn-xs btn-default disabled" title="Job is not available, cannot be re-run">
+            <i class="mdi mdi-repeat-off"></i>
+        </a>
+    {% endif %}
+{% endif %}
+"""
+
 SCHEDULED_JOB_BUTTONS = """
 <a href="{% url 'extras:jobresult_list' %}?scheduled_job={{ record.name | urlencode }}" class="btn btn-default btn-xs" title="Job Results"><i class="mdi mdi-format-list-bulleted" aria-hidden="true"></i></a>
 """
@@ -675,7 +696,7 @@ def log_object_link(value, record):
 
 
 def log_entry_color_css(record):
-    if record.log_level.lower() in ("error", "critical"):
+    if record.log_level.lower() in ("failure", "error", "critical"):
         return "danger"
     return record.log_level.lower()
 
@@ -811,7 +832,7 @@ class JobLogEntryTable(BaseTable):
     def render_log_level(self, value):
         log_level = value.lower()
         # The css is label-danger for failure items.
-        if log_level in ["error", "critical"]:
+        if log_level in ["failure", "error", "critical"]:
             log_level = "danger"
         elif log_level == "debug":
             log_level = "default"
@@ -877,32 +898,7 @@ class JobResultTable(BaseTable):
         linkify=True,
         verbose_name="Scheduled Job",
     )
-    actions = tables.TemplateColumn(
-        template_code="""
-            {% load helpers %}
-            {% if perms.extras.run_job %}
-                {% if record.job_model and record.task_kwargs %}
-                    <a href="{% url 'extras:job_run' pk=record.job_model.pk %}?kwargs_from_job_result={{ record.pk }}"
-                       class="btn btn-xs btn-success" title="Re-run job with same arguments.">
-                        <i class="mdi mdi-repeat"></i>
-                    </a>
-                {% elif record.job_model is not None %}
-                    <a href="{% url 'extras:job_run' pk=record.job_model.pk %}" class="btn btn-primary btn-xs"
-                       title="Run job">
-                        <i class="mdi mdi-play"></i>
-                    </a>
-                {% else %}
-                    <a href="#" class="btn btn-xs btn-default disabled" title="Job is not available, cannot be re-run">
-                        <i class="mdi mdi-repeat-off"></i>
-                    </a>
-                {% endif %}
-            {% endif %}
-            <a href="{% url 'extras:jobresult_delete' pk=record.pk %}" class="btn btn-xs btn-danger"
-               title="Delete this job result.">
-                <i class="mdi mdi-trash-can-outline"></i>
-            </a>
-        """
-    )
+    actions = ButtonsColumn(JobResult, buttons=("delete",), prepend_template=JOB_RESULT_BUTTONS)
 
     def render_summary(self, record):
         """
@@ -1094,7 +1090,7 @@ class ScheduledJobTable(BaseTable):
     last_run_at = tables.DateTimeColumn(verbose_name="Most Recent Run", format=settings.SHORT_DATETIME_FORMAT)
     crontab = tables.Column()
     total_run_count = tables.Column(verbose_name="Total Run Count")
-    actions = ButtonsColumn(ScheduledJob, buttons=("delete"), prepend_template=SCHEDULED_JOB_BUTTONS)
+    actions = ButtonsColumn(ScheduledJob, buttons=("delete",), prepend_template=SCHEDULED_JOB_BUTTONS)
 
     class Meta(BaseTable.Meta):
         model = ScheduledJob
