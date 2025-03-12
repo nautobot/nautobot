@@ -335,6 +335,15 @@ class ModuleBayTemplateTable(ComponentTemplateTable):
 
     class Meta(BaseTable.Meta):
         model = ModuleBayTemplate
-        fields = ("pk", "name", "position", "module_family", "requires_first_party_modules", "label", "description", "actions")
+        fields = (
+            "pk",
+            "name",
+            "position",
+            "module_family",
+            "requires_first_party_modules",
+            "label",
+            "description",
+            "actions",
+        )
         default_columns = ("pk", "name", "position", "module_family", "label", "description")
         empty_text = "None"
