@@ -604,7 +604,6 @@ def common_test_data(cls):
         position=3,
         label="devicemodulebay3",
         description="device test module bay 3 description",
-        module_family=module_families[2],
     )
     secrets_groups = (
         SecretsGroup.objects.create(name="Secrets group 1"),
@@ -4311,5 +4310,3 @@ class ModuleFamilyTestCase(FilterTestCases.FilterTestCase):
             ModuleType.objects.create(manufacturer=manufacturers[0], model="Model 1", module_family=module_families[0]),
             ModuleType.objects.create(manufacturer=manufacturers[1], model="Model 2", module_family=module_families[1]),
         )
-
-    # Remove individual test methods since they're now covered by generic_filter_tests

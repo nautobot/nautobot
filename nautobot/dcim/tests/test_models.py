@@ -3497,7 +3497,7 @@ class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):
         self.assertIn("Virtual Device Context's device cannot be changed once created", str(err.exception))
 
 
-class ModuleFamilyTestCase(TestCase):
+class ModuleFamilyTestCase(ModelTestCases.BaseModelTestCase):
     """Test cases for the ModuleFamily model."""
 
     def setUp(self):

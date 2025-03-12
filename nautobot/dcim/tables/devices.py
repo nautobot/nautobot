@@ -1054,7 +1054,7 @@ class DeviceModuleBayTable(ModuleBayTable):
     module_family = tables.Column(linkify=True, verbose_name="Family")
     installed_module = tables.Column(linkify=True, verbose_name="Installed Module")
     installed_module__status = ColoredLabelColumn(verbose_name="Installed Module Status")
-    constrain_to_mfr = BooleanColumn(verbose_name="Requires First-Party Modules")
+    requires_first_party_modules = BooleanColumn(verbose_name="Requires First-Party Modules")
     actions = ButtonsColumn(model=ModuleBay, buttons=("edit", "delete"), prepend_template=MODULEBAY_BUTTONS)
 
     class Meta(ModularDeviceComponentTable.Meta):
@@ -1068,7 +1068,7 @@ class DeviceModuleBayTable(ModuleBayTable):
             "installed_module__status",
             "label",
             "description",
-            "constrain_to_mfr",
+            "requires_first_party_modules",
             "tags",
             "actions",
         )

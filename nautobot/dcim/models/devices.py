@@ -1839,7 +1839,7 @@ class Module(PrimaryModel):
                 )
 
         # Validate module manufacturer constraint
-        if self.parent_module_bay and self.parent_module_bay.constrain_to_mfr:
+        if self.parent_module_bay and self.parent_module_bay.requires_first_party_modules:
             if self.module_type.manufacturer != self.parent_module_bay.parent_device.device_type.manufacturer:
                 raise ValidationError(
                     {

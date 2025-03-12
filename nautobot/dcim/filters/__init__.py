@@ -2217,7 +2217,6 @@ class ModuleBayTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetMix
         label="Module family (name or ID)",
     )
     requires_first_party_modules = django_filters.BooleanFilter(
-        field_name="constrain_to_mfr",
         label="Requires first-party modules",
     )
 
@@ -2282,7 +2281,7 @@ class ModuleBayFilterSet(NautobotFilterSet):
         label="Module family (name or ID)",
     )
     requires_first_party_modules = django_filters.BooleanFilter(
-        field_name="constrain_to_mfr",
+        field_name="requires_first_party_modules",
         label="Requires first-party modules",
     )
 
@@ -2451,13 +2450,6 @@ class ModuleFamilyFilterSet(NautobotFilterSet):
         label="Module types (model or ID)",
     )
 
-    module_type_id = extend_schema_field({"type": "array", "items": {"type": "string", "format": "uuid"}})(
-        django_filters.ModelMultipleChoiceFilter(
-            queryset=ModuleType.objects.all(),
-            label="Module type (ID)",
-        )
-    )
-
     module_bay_id = extend_schema_field({"type": "array", "items": {"type": "string", "format": "uuid"}})(
         django_filters.ModelMultipleChoiceFilter(
             queryset=ModuleBay.objects.all(),
@@ -2471,7 +2463,6 @@ class ModuleFamilyFilterSet(NautobotFilterSet):
             "id",
             "name",
             "description",
-            "module_type_id",
             "module_types",
             "module_bay_id",
             "tags",

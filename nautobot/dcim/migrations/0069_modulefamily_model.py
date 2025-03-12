@@ -19,12 +19,12 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name="modulebay",
-            name="constrain_to_mfr",
+            name="requires_first_party_modules",
             field=models.BooleanField(default=False),
         ),
         migrations.AddField(
             model_name="modulebaytemplate",
-            name="constrain_to_mfr",
+            name="requires_first_party_modules",
             field=models.BooleanField(default=False),
         ),
         migrations.CreateModel(

@@ -42,7 +42,6 @@ from nautobot.dcim.form_mixins import (
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
 )
-from nautobot.dcim.models.devices import ModuleFamily
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelCSVForm,
@@ -134,6 +133,7 @@ from .models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     Platform,
     PowerFeed,
@@ -1664,7 +1664,7 @@ class ModuleBayBaseCreateForm(BootstrapMixin, forms.Form):
         help_text="Alphanumeric ranges are supported. (Must match the number of names being created.)"
         " Default to the names of the module bays unless manually supplied by the user.",
     )
-    constrain_to_mfr = forms.BooleanField(
+    requires_first_party_modules = forms.BooleanField(
         required=False,
         label="Requires first-party modules",
         help_text="This bay will only accept module types from the same manufacturer as the parent device or module",
@@ -1718,7 +1718,7 @@ class ModuleBayTemplateCreateForm(ModuleBayBaseCreateForm):
         "name_pattern",
         "label_pattern",
         "position_pattern",
-        "constrain_to_mfr",
+        "requires_first_party_modules",
         "description",
     )
 
@@ -2493,14 +2493,13 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             try:
                 parent_bay = ModuleBay.objects.get(pk=self.initial["parent_module_bay"])
                 if parent_bay.module_family:
-                    print(parent_bay.module_family)
                     self.fields["module_family"].initial = parent_bay.module_family.id
                     self.fields["module_family"].disabled = True
                     self.fields[
                         "module_family"
                     ].help_text = f"The selected parent module bay requires a module in the {parent_bay.module_family.name} family"
 
-                if parent_bay.constrain_to_mfr:
+                if parent_bay.requires_first_party_modules:
                     if parent_bay.parent_device:
                         mfr = parent_bay.parent_device.device_type.manufacturer
                     else:
@@ -2800,6 +2799,7 @@ class ConsoleServerPortCreateForm(ModularComponentCreateForm):
     field_order = (
         "device",
         "module_family",
+        "module",
         "name_pattern",
         "label_pattern",
         "type",
@@ -3792,7 +3792,7 @@ class ModuleBayForm(NautobotModelForm):
         label="Family",
         help_text="If selected, this bay will only accept module types assigned to this family",
     )
-    constrain_to_mfr = forms.BooleanField(
+    requires_first_party_modules = forms.BooleanField(
         required=False,
         label="Requires first-party modules",
         help_text="This bay will only accept modules from the same manufacturer as the parent device or module",
@@ -3810,7 +3810,7 @@ class ModuleBayForm(NautobotModelForm):
             "position",
             "label",
             "description",
-            "constrain_to_mfr",
+            "requires_first_party_modules",
             "tags",
         ]
 
@@ -3843,7 +3843,7 @@ class ModuleBayCreateForm(ModuleBayBaseCreateForm):
         "label_pattern",
         "position_pattern",
         "module_family",
-        "constrain_to_mfr",
+        "requires_first_party_modules",
         "description",
         "tags",
     )

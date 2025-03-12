@@ -1216,7 +1216,7 @@ class ModuleBay(PrimaryModel):
         null=True,
         help_text="Module family that can be installed in this bay",
     )
-    constrain_to_mfr = models.BooleanField(
+    requires_first_party_modules = models.BooleanField(
         default=False,
         help_text="This bay will only accept modules from the same manufacturer as the parent device or module",
     )

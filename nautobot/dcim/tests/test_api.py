@@ -1383,7 +1383,6 @@ class ModuleBayTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.B
             {
                 "device_type": cls.device_type.pk,
                 "name": "Test3",
-                "module_family": cls.module_family.pk,
             },
         ]
 
