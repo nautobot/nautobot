@@ -69,6 +69,7 @@ from nautobot.dcim.models import (
     VirtualDeviceContext,
 )
 from nautobot.extras.models import ConfigContextSchema, Role, SecretsGroup, Status
+from nautobot.extras.models.models import ExternalIntegration
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType
@@ -3410,22 +3411,26 @@ class SoftwareImageFileTestCase(Mixins.SoftwareImageFileRelatedModelMixin, APIVi
     def setUpTestData(cls):
         statuses = Status.objects.get_for_model(SoftwareImageFile)
         software_versions = SoftwareVersion.objects.all()
+        external_integrations = ExternalIntegration.objects.all()
 
         cls.create_data = [
             {
                 "software_version": software_versions[0].pk,
                 "status": statuses[0].pk,
                 "image_file_name": "software_image_file_test_case_1.bin",
+                "external_integration": external_integrations[0].pk,
             },
             {
                 "software_version": software_versions[1].pk,
                 "status": statuses[1].pk,
                 "image_file_name": "software_image_file_test_case_2.bin",
+                "external_integration": external_integrations[1].pk,
             },
             {
                 "software_version": software_versions[2].pk,
                 "status": statuses[2].pk,
                 "image_file_name": "software_image_file_test_case_3.bin",
+                "external_integration": None,
             },
         ]
         cls.bulk_update_data = {
@@ -3435,6 +3440,7 @@ class SoftwareImageFileTestCase(Mixins.SoftwareImageFileRelatedModelMixin, APIVi
             "hashing_algorithm": SoftwareImageFileHashingAlgorithmChoices.SHA512,
             "image_file_size": 1234567890,
             "download_url": "https://example.com/software_image_file_test_case.bin",
+            "external_integration": external_integrations[0].pk,
         }
 
 

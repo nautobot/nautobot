@@ -698,7 +698,7 @@ class SoftwareImageFileFactory(PrimaryModelFactory):
     default_image = factory.LazyAttribute(
         lambda o: not o.software_version.software_image_files.filter(default_image=True).exists()
     )
-    external_integration = random_instance(ExternalIntegration, allow_null=False)
+    external_integration = random_instance(ExternalIntegration, allow_null=True)
 
 
 class SoftwareVersionFactory(PrimaryModelFactory):
