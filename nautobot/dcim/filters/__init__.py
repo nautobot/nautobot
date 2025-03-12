@@ -362,6 +362,12 @@ class RackGroupFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet, NameSe
         to_field_name="name",
         label="Parent (name or ID)",
     )
+    ancestors = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        to_field_name="name",
+        label="Location(s) and ancestors thereof (name or ID)",
+        method="_ancestors",
+    )
     children = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         to_field_name="name",
@@ -391,6 +397,26 @@ class RackGroupFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet, NameSe
     class Meta:
         model = RackGroup
         fields = ["id", "name", "description", "racks"]
+
+    def generate_query__ancestors(self, value):
+        """Helper method used by _ancestors() method."""
+        if value:
+            locations = Location.objects.filter(pk__in=[v.pk for v in value])
+            pk_list = []
+            for location in locations:
+                parent_locations = location.ancestors(include_self=True)
+                pk_list.extend([v.pk for v in parent_locations])
+            params = Q(location__pk__in=pk_list)
+            return params
+        return Q()
+
+    @extend_schema_field({"type": "string"})
+    def _ancestors(self, queryset, name, value):
+        """FilterSet method for, given a location, getting RackGroups that exist with in the parent Location(s) and the location itself."""
+        if value:
+            params = self.generate_query__ancestors(value)
+            return queryset.filter(params)
+        return queryset
 
 
 class RackFilterSet(

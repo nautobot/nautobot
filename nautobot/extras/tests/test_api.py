@@ -196,20 +196,6 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
 
 class ConfigContextTest(APIViewTestCases.APIViewTestCase):
     model = ConfigContext
-    create_data = [
-        {
-            "name": "Config Context 4",
-            "data": {"more_foo": True},
-        },
-        {
-            "name": "Config Context 5",
-            "data": {"more_bar": False},
-        },
-        {
-            "name": "Config Context 6",
-            "data": {"more_baz": None},
-        },
-    ]
     bulk_update_data = {
         "description": "New description",
     }
@@ -220,6 +206,21 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         ConfigContext.objects.create(name="Config Context 1", weight=100, data={"foo": 123})
         ConfigContext.objects.create(name="Config Context 2", weight=200, data={"bar": 456})
         ConfigContext.objects.create(name="Config Context 3", weight=300, data={"baz": 789})
+        cls.create_data = [
+            {
+                "name": "Config Context 4",
+                "data": {"more_foo": True},
+                "tags": [tag.pk for tag in Tag.objects.get_for_model(Device)],
+            },
+            {
+                "name": "Config Context 5",
+                "data": {"more_bar": False},
+            },
+            {
+                "name": "Config Context 6",
+                "data": {"more_baz": None},
+            },
+        ]
 
     def test_render_configcontext_for_object(self):
         """
@@ -1916,7 +1917,7 @@ class JobTest(
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
 
-        job_model = Job.objects.get(job_class_name="ExampleJob")
+        job_model = Job.objects.get(job_class_name="TestHasSensitiveVariables")
         job_model.enabled = True
         job_model.validated_save()
 

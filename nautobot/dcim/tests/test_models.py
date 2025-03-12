@@ -9,6 +9,7 @@ from django.test import TestCase
 from django.test.utils import override_settings
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
+from nautobot.core import settings
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.choices import (
     CableStatusChoices,
@@ -1908,6 +1909,33 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         parent_device.rack = rack
         parent_device.save()
 
+        # Test assigning a rack in the child location of the parent device location
+        location_status = Status.objects.get_for_model(Location).first()
+        child_location = Location.objects.create(
+            name="Child Location 1",
+            location_type=self.location_type_3,
+            status=location_status,
+            parent=parent_device.location,
+        )
+        child_rack = Rack.objects.create(name="Rack 2", location=child_location, status=self.device_status)
+        parent_device.rack = child_rack
+        parent_device.validated_save()
+
+        # Test assigning a rack outside the child locations of the parent device location
+        new_location = Location.objects.create(
+            name="New Location 1",
+            status=location_status,
+            location_type=self.location_type_3,
+        )
+        invalid_rack = Rack.objects.create(name="Rack 3", location=new_location, status=self.device_status)
+        parent_device.rack = invalid_rack
+        with self.assertRaises(ValidationError) as cm:
+            parent_device.validated_save()
+        self.assertIn(
+            f'Rack "{invalid_rack}" does not belong to location "{parent_device.location}" and its descendants.',
+            str(cm.exception),
+        )
+
         child_mtime_after_parent_rack_update_save = str(Device.objects.get(name="Child Device 1").last_updated)
 
         self.assertNotEqual(child_mtime_after_parent_noop_save, child_mtime_after_parent_rack_update_save)
@@ -2582,6 +2610,70 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
 
 class SoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
     model = SoftwareImageFile
+
+    def test_download_url_validation_behaviour(self):
+        """
+        Test that the `download_url` property behaves as expected in relation to laxURLField validation and
+        the ALLOWED_URL_SCHEMES setting.
+        """
+        # Prepare prerequisite objects
+        platform = Platform.objects.first()
+        software_version_status = Status.objects.get_for_model(SoftwareVersion).first()
+        software_image_file_status = Status.objects.get_for_model(SoftwareImageFile).first()
+        software_version = SoftwareVersion.objects.create(
+            platform=platform, version="Test version 1.0.0", status=software_version_status
+        )
+
+        # Test that the download_url field is correctly validated with the default ALLOWED_URL_SCHEMES setting
+        for scheme in settings.ALLOWED_URL_SCHEMES:
+            software_image = SoftwareImageFile(
+                software_version=software_version,
+                image_file_name=f"software_image_file_qs_test_{scheme}.bin",
+                status=software_image_file_status,
+                download_url=f"{scheme}://example.com/software_image_file_qs_test_1.bin",
+            )
+            try:
+                software_image.validated_save()
+            except ValidationError as e:
+                self.fail(f"download_url Scheme {scheme} ValidationError: {e}")
+
+        INVALID_SCHEMES = ["httpx", "rdp", "cryptoboi"]
+        OVERRIDE_VALID_SCHEMES = ["sftp", "tftp", "https", "http", "newfs", "customfs"]
+        # Invalid schemes should raise a ValidationError
+        for scheme in INVALID_SCHEMES:
+            software_image = SoftwareImageFile(
+                software_version=software_version,
+                image_file_name=f"software_image_file_qs_test_{scheme}2.bin",
+                status=software_image_file_status,
+                download_url=f"{scheme}://example.com/software_image_file_qs_test_2.bin",
+            )
+            with self.assertRaises(ValidationError) as err:
+                software_image.validated_save()
+            self.assertEqual(err.exception.message_dict["download_url"][0], "Enter a valid URL.")
+
+        with override_settings(ALLOWED_URL_SCHEMES=OVERRIDE_VALID_SCHEMES):
+            for scheme in OVERRIDE_VALID_SCHEMES:
+                software_image = SoftwareImageFile(
+                    software_version=software_version,
+                    image_file_name=f"software_image_file_qs_test_{scheme}3.bin",
+                    status=software_image_file_status,
+                    download_url=f"{scheme}://example.com/software_image_file_qs_test_3.bin",
+                )
+                try:
+                    software_image.validated_save()
+                except ValidationError as e:
+                    self.fail(f"download_url Scheme {scheme} ValidationError: {e}")
+
+            for scheme in INVALID_SCHEMES:
+                software_image = SoftwareImageFile(
+                    software_version=software_version,
+                    image_file_name=f"software_image_file_qs_test_{scheme}4.bin",
+                    status=software_image_file_status,
+                    download_url=f"{scheme}://example.com/software_image_file_qs_test_4.bin",
+                )
+                with self.assertRaises(ValidationError) as err:
+                    software_image.validated_save()
+                self.assertEqual(err.exception.message_dict["download_url"][0], "Enter a valid URL.")
 
     def test_queryset_get_for_object(self):
         """

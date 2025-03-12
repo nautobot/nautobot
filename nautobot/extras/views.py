@@ -2062,7 +2062,13 @@ def get_annotated_jobresult_queryset():
             error_log_count=count_related(
                 JobLogEntry,
                 "job_result",
-                filter_dict={"log_level__in": [LogLevelChoices.LOG_ERROR, LogLevelChoices.LOG_CRITICAL]},
+                filter_dict={
+                    "log_level__in": [
+                        LogLevelChoices.LOG_FAILURE,
+                        LogLevelChoices.LOG_ERROR,
+                        LogLevelChoices.LOG_CRITICAL,
+                    ],
+                },
             ),
         )
     )

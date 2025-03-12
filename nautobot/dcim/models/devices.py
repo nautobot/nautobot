@@ -14,7 +14,7 @@ import yaml
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, RestrictedQuerySet
-from nautobot.core.models.fields import JSONArrayField, NaturalOrderingField
+from nautobot.core.models.fields import JSONArrayField, LaxURLField, NaturalOrderingField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.utils.config import get_settings_or_config
@@ -670,11 +670,17 @@ class Device(PrimaryModel, ConfigContextModel):
 
         # Validate location
         if self.location is not None:
-            # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to assign a Rack belongs to
-            # the parent Location or the child location of `self.location`?
-
-            if self.rack is not None and self.rack.location != self.location:
-                raise ValidationError({"rack": f'Rack "{self.rack}" does not belong to location "{self.location}".'})
+            if self.rack is not None:
+                device_location = self.location
+                # Rack's location must be a child location or the same location as that of the parent device.
+                # Location is a required field on rack.
+                rack_location = self.rack.location
+                if device_location not in rack_location.ancestors(include_self=True):
+                    raise ValidationError(
+                        {
+                            "rack": f'Rack "{self.rack}" does not belong to location "{self.location}" and its descendants.'
+                        }
+                    )
 
             # self.cluster is validated somewhat later, see below
 
@@ -1233,7 +1239,7 @@ class SoftwareImageFile(PrimaryModel):
         verbose_name="Image File Size",
         help_text="Image file size in bytes",
     )
-    download_url = models.URLField(blank=True, verbose_name="Download URL")
+    download_url = LaxURLField(blank=True, verbose_name="Download URL")
     default_image = models.BooleanField(
         verbose_name="Default Image", help_text="Is the default image for this software version", default=False
     )
