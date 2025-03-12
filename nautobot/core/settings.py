@@ -325,9 +325,11 @@ REST_FRAMEWORK_VERSION = VERSION.rsplit(".", 1)[0]  # Use major.minor as API ver
 VERSION_MAJOR, VERSION_MINOR = [int(v) for v in REST_FRAMEWORK_VERSION.split(".")]
 # We support all major.minor API versions from 2.0 to the present latest version.
 # Similar logic exists in tasks.py, please keep them in sync!
-if VERSION_MAJOR != 2:
+if VERSION_MAJOR > 3:
     raise RuntimeError(f"REST_FRAMEWORK_ALLOWED_VERSIONS needs to be updated to handle version {VERSION_MAJOR}")
-REST_FRAMEWORK_ALLOWED_VERSIONS = [f"{VERSION_MAJOR}.{minor}" for minor in range(0, VERSION_MINOR + 1)]
+REST_FRAMEWORK_ALLOWED_VERSIONS = ["2.0", "2.1", "2.2", "2.3", "2.4"] + [
+    f"{VERSION_MAJOR}.{minor}" for minor in range(0, VERSION_MINOR + 1)
+]
 
 REST_FRAMEWORK = {
     "ALLOWED_VERSIONS": REST_FRAMEWORK_ALLOWED_VERSIONS,
@@ -577,6 +579,7 @@ INSTALLED_APPS = [
     "nautobot.users",
     "nautobot.virtualization",
     "nautobot.wireless",
+    "nautobot.nautobot_data_validation_engine",
     "drf_spectacular",
     "drf_spectacular_sidecar",
     "graphene_django",
