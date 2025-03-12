@@ -1,2 +1,0 @@
-Added `init: true` to development `docker-compose.yml` to avoid failed health-checks from remaining as zombie processes.
-Added `ExampleFailingJob` to example app to demonstrate the two different ways to fail a Job.
