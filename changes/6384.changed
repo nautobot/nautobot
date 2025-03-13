@@ -1,1 +1,0 @@
-Changed output of `nautobot-server runjob` command to include the traceback (if any) and count of `success`/`failure` log messages.

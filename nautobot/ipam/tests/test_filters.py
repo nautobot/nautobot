@@ -1108,16 +1108,6 @@ class VRFDeviceAssignmentTestCase(FilterTestCases.FilterTestCase):
             virtual_machine=cls.test_vm_2,
             rd="65000:4",
         )
-        VRFDeviceAssignment.objects.create(
-            vrf=cls.vrfs[0],
-            virtual_device_context=cls.vdcs[0],
-            name="VRFDeviceAssignment 1",
-            rd="65000:5",
-        )
-        VRFDeviceAssignment.objects.create(
-            vrf=cls.vrfs[0],
-            virtual_device_context=cls.vdcs[1],
-        )
 
 
 class VLANGroupTestCase(FilterTestCases.FilterTestCase):
