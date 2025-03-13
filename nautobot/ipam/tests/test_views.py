@@ -1259,3 +1259,25 @@ class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
         response = self.client.post(**request)
         self.assertBodyContains(response, "A service must be associated with either a device or a virtual machine.")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_port_bulk_edit_invalid(self):
+        self.add_permissions("ipam.change_service")
+        url = self._get_url("bulk_edit")
+        pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
+
+        data = {
+            "pk": pk_list,
+            "protocol": ServiceProtocolChoices.PROTOCOL_UDP,
+            "ports": "[106,107]",  # String representation of the list
+            "description": "New description",
+            "_apply": True,
+        }
+
+        response = self.client.post(url, data)
+        response_content = response.content.decode(response.charset)
+        self.assertHttpStatus(response, 200)
+        self.assertInHTML(
+            ' <strong class="panel-title">Ports</strong>: <ul class="errorlist"><li>invalid literal for int() with base 10: &#x27;[106&#x27;</li></ul>',
+            response_content,
+        )
