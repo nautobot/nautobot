@@ -1,1 +1,0 @@
-Updated dependency `Django` to `~4.2.20` to address `CVE-2025-26699`.

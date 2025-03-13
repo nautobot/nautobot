@@ -108,7 +108,7 @@ class BulkEditObjects(Job):
                         if form.cleaned_data[field_name]:
                             getattr(obj, field_name).set(form.cleaned_data[field_name])
                     # Normal fields
-                    elif form.cleaned_data[field_name] not in (None, ""):
+                    elif form.cleaned_data[field_name] not in (None, "", []):
                         setattr(obj, field_name, form.cleaned_data[field_name])
 
                 # Update custom fields
