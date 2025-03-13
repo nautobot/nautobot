@@ -69,7 +69,7 @@ from nautobot.dcim.models import (
     VirtualDeviceContext,
 )
 from nautobot.extras.models import ConfigContextSchema, Role, SecretsGroup, Status
-from nautobot.extras.models.models import ExternalIntegration
+from nautobot.extras.models import ExternalIntegration
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType
