@@ -3862,6 +3862,7 @@ class SoftwareImageFileFilterSetTestCase(FilterTestCases.FilterTestCase):
         ["status", "status__id"],
         ["status", "status__name"],
         ["external_integration", "external_integration__id"],
+        ["external_integration", "external_integration__name"],
     )
 
     @classmethod
