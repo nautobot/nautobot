@@ -112,7 +112,7 @@ Multiple permissions can be assigned to a user group.
 
 ## Recipes
 
-Below are examples of common permissions that a Nautobot admins may want to grant.
+Below are examples of common permissions that a Nautobot admin may want to grant.
 
 ### Export Job
 
