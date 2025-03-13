@@ -680,6 +680,7 @@ class SoftwareImageFileFactory(PrimaryModelFactory):
         has_hashing_algorithm = NautobotBoolIterator()
         has_image_file_size = NautobotBoolIterator()
         has_download_url = NautobotBoolIterator()
+        has_external_integration = NautobotBoolIterator()
 
     status = random_instance(
         lambda: Status.objects.get_for_model(SoftwareImageFile),
@@ -698,7 +699,7 @@ class SoftwareImageFileFactory(PrimaryModelFactory):
     default_image = factory.LazyAttribute(
         lambda o: not o.software_version.software_image_files.filter(default_image=True).exists()
     )
-    external_integration = random_instance(ExternalIntegration, allow_null=True)
+    external_integration = factory.Maybe("has_external_integration", random_instance(ExternalIntegration))
 
 
 class SoftwareVersionFactory(PrimaryModelFactory):
