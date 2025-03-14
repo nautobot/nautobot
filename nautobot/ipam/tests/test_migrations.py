@@ -492,7 +492,7 @@ class IPAMDataMigration0031TestCase(MigratorTestCase):
 
     def prepare(self):
         # Create an arbitrary set of prefixes and IPs mostly subdividing and consuming the given subnet, including dupes
-        create_prefixes_and_ips("10.0.0.0/16", apps=self.old_state.apps)
+        create_prefixes_and_ips("10.0.0.0/14", apps=self.old_state.apps)
 
     def test_validate_data(self):
         IPAddress = self.new_state.apps.get_model("ipam", "IPAddress")

@@ -1,12 +1,9 @@
 """Utilities for testing IPAM functionality, including data migrations."""
 
-import logging
 import random
 
 from django.apps import apps
 from netaddr import IPNetwork
-
-logger = logging.getLogger(__name__)
 
 # Calculate the probabilities to use for the maybe_subdivide() function defined below.
 
@@ -81,6 +78,15 @@ def maybe_subdivide(network):
             yield from maybe_subdivide(subnet)
 
 
+def maybe_random_instance(queryset, chance_of_none=0.75):
+    """
+    Helper function - randomly return either a random instance of the given queryset or None.
+    """
+    if random.random() < chance_of_none:  # noqa: S311  # suspicious-non-cryptographic-random-usage
+        return None
+    return random.choice(queryset)  # noqa: S311  # suspicious-non-cryptographic-random-usage
+
+
 def create_prefixes_and_ips(initial_subnet: str, apps=apps, seed="Nautobot"):
     """
     Create many (Nautobot 1.x) Prefix and IPAddress records under a given initial_subnet.
@@ -95,16 +101,25 @@ def create_prefixes_and_ips(initial_subnet: str, apps=apps, seed="Nautobot"):
         apps: Django application registry containing definitions of the (historical) Prefix, IPAddress, etc. models.
         seed: Random generator seed to ensure reproducible pseudo-random construction of the data.
     """
-    Prefix = apps.get_model("ipam", "Prefix")
     IPAddress = apps.get_model("ipam", "IPAddress")
+    Prefix = apps.get_model("ipam", "Prefix")
     Status = apps.get_model("extras", "Status")
+    Tenant = apps.get_model("tenancy", "Tenant")
+    VRF = apps.get_model("ipam", "VRF")
+
+    print(f"Seeding the PRNG with seed {seed}")
+    random.seed(seed)  # suspicious-non-cryptographic-random-usage
 
     status_active, _ = Status.objects.get_or_create(name="Active", defaults={"slug": "active"})
 
-    logger.debug("Seeding the PRNG with seed %r", seed)
-    random.seed(seed)  # suspicious-non-cryptographic-random-usage
+    for i in range(1, 11):
+        Tenant.objects.create(name=f"{initial_subnet} Tenant {i}")
+        VRF.objects.create(name=f"{initial_subnet} VRF {i}", enforce_unique=False)  # TODO should some enforce_unique?
 
-    logger.info("Creating Prefixes to subdivide %s", initial_subnet)
+    all_tenants = list(Tenant.objects.all())
+    all_vrfs = list(VRF.objects.all())
+
+    print(f"Creating Prefixes to subdivide {initial_subnet}")
     unique_prefix_count = 0
     duplicate_prefix_count = 0
     for subnet in maybe_subdivide(IPNetwork(initial_subnet)):
@@ -115,6 +130,8 @@ def create_prefixes_and_ips(initial_subnet: str, apps=apps, seed="Nautobot"):
                 broadcast=str(subnet.broadcast if subnet.broadcast else subnet[-1]),
                 prefix_length=subnet.prefixlen,
                 status=status_active,
+                tenant=maybe_random_instance(all_tenants),
+                vrf=maybe_random_instance(all_vrfs),
             )
             unique_prefix_count += 1
             while random.random() < 0.1:  # noqa: S311  # suspicious-non-cryptographic-random-usage
@@ -124,11 +141,13 @@ def create_prefixes_and_ips(initial_subnet: str, apps=apps, seed="Nautobot"):
                     broadcast=str(subnet.broadcast if subnet.broadcast else subnet[-1]),
                     prefix_length=subnet.prefixlen,
                     status=status_active,
+                    tenant=maybe_random_instance(all_tenants),
+                    vrf=maybe_random_instance(all_vrfs),
                 )
                 duplicate_prefix_count += 1
-    logger.info("Created %d unique Prefixes and %d duplicates", unique_prefix_count, duplicate_prefix_count)
+    print(f"Created {unique_prefix_count} unique Prefixes and {duplicate_prefix_count} duplicates")
 
-    logger.info("Creating IPAddresses within %s", initial_subnet)
+    print(f"Creating IPAddresses within {initial_subnet}")
     unique_ip_count = 0
     duplicate_ip_count = 0
     for ip in IPNetwork(initial_subnet):
@@ -140,6 +159,8 @@ def create_prefixes_and_ips(initial_subnet: str, apps=apps, seed="Nautobot"):
                 broadcast=str(network.broadcast if network.broadcast else network[-1]),
                 prefix_length=network.prefixlen,
                 status=status_active,
+                tenant=maybe_random_instance(all_tenants),
+                vrf=maybe_random_instance(all_vrfs),
             )
             unique_ip_count += 1
             while random.random() < 0.1:  # noqa: S311  # suspicious-non-cryptographic-random-usage
@@ -149,6 +170,8 @@ def create_prefixes_and_ips(initial_subnet: str, apps=apps, seed="Nautobot"):
                     broadcast=str(network.broadcast if network.broadcast else network[-1]),
                     prefix_length=network.prefixlen,
                     status=status_active,
+                    tenant=maybe_random_instance(all_tenants),
+                    vrf=maybe_random_instance(all_vrfs),
                 )
                 duplicate_ip_count += 1
-    logger.info("Created %d unique IPAddresses and %d duplicates", unique_ip_count, duplicate_ip_count)
+    print(f"Created {unique_ip_count} unique IPAddresses and {duplicate_ip_count} duplicates")
