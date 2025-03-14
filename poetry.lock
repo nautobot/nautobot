@@ -941,19 +941,6 @@ gprof2dot = ">=2017.09.19"
 sqlparse = "*"
 
 [[package]]
-name = "django-slowtests"
-version = "1.1.1"
-description = "locate your slowest tests"
-optional = false
-python-versions = "*"
-files = [
-    {file = "django-slowtests-1.1.1.tar.gz", hash = "sha256:3c6936d420c9df444ac03625b41d97de043c662bbde61fbcd33e4cd407d0c247"},
-]
-
-[package.dependencies]
-django = ">=1.6"
-
-[[package]]
 name = "django-storages"
 version = "1.14.3"
 description = "Support for many storage backends in Django"
@@ -4398,4 +4385,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.13"
-content-hash = "8ca8836e69a6474bb09095b93b166665dc1c06cf812374cdef6da03d36b45560"
+content-hash = "2ffe82cded81401048cd4e4665331f8cb58d12fbbf805d490f409ea97e7905d3"

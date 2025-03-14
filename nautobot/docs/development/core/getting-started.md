@@ -187,7 +187,7 @@ Available tasks:
   docker-push            Tags and pushes docker images to the appropriate repos, intended for release use only.
   dumpdata               Dump data from database to db_output file.
   hadolint               Check Dockerfile for hadolint compliance and other style issues.
-  integration-test       Run Nautobot integration tests.
+  lint                   Run all linters.
   loaddata               Load data from file.
   logs                   View the logs of a docker compose service.
   makemigrations         Perform makemigrations operation in Django.
@@ -195,7 +195,9 @@ Available tasks:
   migrate                Perform migrate operation in Django.
   migration-test         Test database migration from a given dataset to latest Nautobot schema.
   nbshell                Launch an interactive Nautobot shell.
-  performance-test       Run Nautobot performance tests.
+  open-docs-web          Navigate to the mkdocs interface in your web browser.
+  open-nautobot-web      Navigate to the Nautobot interface in your web browser.
+  open-selenium-vnc      Navigate to the selenium VNC browser view.
   post-upgrade           Performs Nautobot common post-upgrade operations using a single entrypoint.
   pylint                 Perform static analysis of Nautobot code.
   restart                Gracefully restart containers.
@@ -204,9 +206,7 @@ Available tasks:
   showmigrations         Perform showmigrations operation in Django.
   start                  Start Nautobot and its dependencies in detached mode.
   stop                   Stop Nautobot and its dependencies.
-  tests                  Run all linters and unit tests.
-  unittest               Run Nautobot unit tests.
-  unittest-coverage      Report on code test coverage as measured by 'invoke unittest'.
+  tests                  Run Nautobot automated tests.
   version                Show the version of Nautobot Python package or bump it when a valid bump rule is provided.
   vscode                 Launch Visual Studio Code with the appropriate Environment variables to run in a container.
   yamllint               Run yamllint to validate formatting applies to YAML standards.
@@ -617,18 +617,18 @@ For information about **writing** tests, refer to the [testing documentation](te
 
 Unit tests are automated tests written and run to ensure that a section of the Nautobot application (known as the "unit") meets its design and behaves as intended and expected. Most commonly as a developer of or contributor to Nautobot you will be writing unit tests to exercise the code you have written. Unit tests are not meant to test how the application behaves, only the individual blocks of code, therefore use of mock data and phony connections is common in unit test code. As a guiding principle, unit tests should be fast, because they will be executed quite often.
 
-Unit tests are run using the `invoke unittest` command (if using the Docker development environment) or the `nautobot-server test` command:
+Unit tests are run using the `invoke test` command (if using the Docker development environment) or the `nautobot-server test` command:
 
 | Docker Compose Workflow | Virtual Environment Workflow                                                    |
 | ----------------------- | ------------------------------------------------------------------------------- |
-| `invoke unittest`       | `nautobot-server --config=nautobot/core/tests/nautobot_config.py test nautobot` |
+| `invoke tests`          | `nautobot-server --config=nautobot/core/tests/nautobot_config.py test nautobot` |
 
 !!! info
-    By default `invoke unittest` will start and run the unit tests inside the Docker development container; this ensures that PostgreSQL and Redis servers are available during the test. However, if you have your environment configured such that `nautobot-server` can run locally, outside of the Docker environment, you may wish to set the environment variable `INVOKE_NAUTOBOT_LOCAL=True` to execute these tests in your local environment instead.
+    By default `invoke test` will start and run the unit tests inside the Docker development container; this ensures that PostgreSQL and Redis servers are available during the test. However, if you have your environment configured such that `nautobot-server` can run locally, outside of the Docker environment, you may wish to set the environment variable `INVOKE_NAUTOBOT_LOCAL=True` to execute these tests in your local environment instead.
 
 ##### Useful Unit Test Parameters
 
-The `invoke unittest` command supports a number of optional parameters to influence its behavior. Careful use of these parameters can greatly reduce the time it takes to run and re-run tests during development.
+The `invoke test` command supports a number of optional parameters to influence its behavior. Careful use of these parameters can greatly reduce the time it takes to run and re-run tests during development.
 
 * `--failfast` - Fail as soon as any test failure or error condition is encountered, instead of running to completion.
 * `--label <module.path>` - Only run the specific subset of tests. Can be broad (`--label nautobot.core.tests`) or specific (`--label nautobot.core.tests.test_graphql.GraphQLQueryTestCase`).
@@ -647,39 +647,39 @@ The `invoke unittest` command supports a number of optional parameters to influe
 In general, when you first run the Nautobot tests in your local copy of the repository, we'd recommend:
 
 ```no-highlight
-invoke unittest
+invoke tests
 ```
 
 When there are too many cores on the testing machine, you can limit the number of parallel workers:
 
 ```no-highlight
-invoke unittest --parallel-workers 4
+invoke tests --parallel-workers 4
 ```
 
 On subsequent reruns, you can add the other performance-related options:
 
 ```no-highlight
-invoke unittest --skip-docs-build
-invoke unittest --skip-docs-build --label nautobot.core.tests
+invoke tests --skip-docs-build
+invoke tests --skip-docs-build --label nautobot.core.tests
 ```
 
 When switching between significantly different branches of the code base (e.g. `main` vs `develop` vs `next`), you'll need to for once include the `--no-keepdb` option so that the test database can be destroyed and recreated appropriately:
 
 ```no-highlight
-invoke unittest --no-keepdb
+invoke tests --no-keepdb
 ```
 
 To not use the cached test fixture, you will need to include the `--no-cache-test-fixtures` flag
 
 ```no-highlight
-invoke unittest --no-cache-test-fixtures
+invoke tests --no-cache-test-fixtures
 ```
 
 To limit the test to a specific pattern or label, you can use the `--label` and `--pattern` options:
 
 ```no-highlight
-invoke unittest --verbose --skip-docs-build --label nautobot.core.tests.dcim.test_views.DeviceTestCase
-invoke unittest --verbose --skip-docs-build --pattern Controller
+invoke tests --verbose --skip-docs-build --label nautobot.core.tests.dcim.test_views.DeviceTestCase
+invoke tests --verbose --skip-docs-build --pattern Controller
 ```
 
 #### Integration Tests
@@ -696,23 +696,17 @@ Before running integration tests, the `selenium` container must be running. If y
 | ----------------------- | --------------------------------- |
 | (automatic)             | `invoke start --service selenium` |
 
-Integration tests are run using the `invoke integration-test` command. All integration tests must inherit from `nautobot.core.testing.integration.SeleniumTestCase`, which itself is tagged with `integration`. A custom test runner has been implemented to automatically skip any test case tagged with `integration` by default, so normal unit tests run without any concern. To run the integration tests the `--tag integration` argument must be passed to `nautobot-server test`.
+Integration tests are run using the `invoke tests --tag integration` command. All integration tests must inherit from `nautobot.core.testing.integration.SeleniumTestCase`, which itself is tagged with `integration`. A custom test runner has been implemented to automatically skip any test case tagged with `integration` by default, so normal unit tests run without any concern. To run the integration tests the `--tag integration` argument must be passed to `nautobot-server test`.
 
 +/- 2.0.0
     `SeleniumTestCase` was moved from the `nautobot.utilities.testing.integration` module to `nautobot.core.testing.integration`.
 
-| Docker Compose Workflow   | Virtual Environment Workflow                                                                      |
-| ------------------------- | ------------------------------------------------------------------------------------------------- |
-| `invoke integration-test` | `nautobot-server --config=nautobot/core/tests/nautobot_config.py test --tag integration nautobot` |
-
-!!! info
-    The same arguments supported by `invoke unittest` are supported by `invoke integration-test`, with the exception of `--parallel` at this time. The key difference being the dependency upon the Selenium container, and inclusion of the `integration` tag.
+| Docker Compose Workflow          | Virtual Environment Workflow                                                                      |
+| -------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `invoke tests --tag integration` | `nautobot-server --config=nautobot/core/tests/nautobot_config.py test --tag integration nautobot` |
 
 !!! tip
-    You may also use `invoke integration-test` in the Virtual Environment workflow given that the `selenium` container is running, and that the `INVOKE_NAUTOBOT_LOCAL=True` environment variable has been set.
-
-!!! tip
-    The `--cache-test-fixtures` argument was added to the `invoke integration-test` and `nautobot-server test` commands to allow for caching of test factory data between test runs. See the [factories documentation](./testing.md#factory-caching) for more information.
+    You may also use `invoke tests --tag integration` in the Virtual Environment workflow given that the `selenium` container is running, and that the `INVOKE_NAUTOBOT_LOCAL=True` environment variable has been set.
 
 ##### Customizing Integration Test Executions
 
