@@ -28,10 +28,10 @@ To create a new Device, you will need an existing Device Role or need to create 
 
 To create a new Device Role:
 
-1. Click on **Devices** in the left sidebar menu
-2. Find **Device Roles** on the drop-down menu
+1. Click on **Organization** in the left sidebar menu
+2. Find **Roles** on the drop-down menu
 3. Select `+`
-4. In the `Add a new device role` form, populate the `Name`
+4. In the `Add a new role` form, populate the `Name`
 5. Click on Create
 
 ![Create a device role](../images/getting-started-nautobot-ui/3-create-role.png)
@@ -83,11 +83,11 @@ More information on Location Type is found in the [Locations](../../core-data-mo
 To create a new Location Type:
 
 1. Click on **Organization** in the left sidebar menu
-2. Find **LocationTypes**
+2. Find **Location Types**
 3. Select **+** to go to the `Add a new location type` form
-4. Select a `Parent` LocationType if needed
-5. Populate the LocationType's `Name`
-6. Select the desired `ContentTypes` for this LocationType (in this case `dcim.device`).
+4. Select a `Parent` Location Types if needed
+5. Populate the Location Types's `Name`
+6. Select the desired `Content Types` for this Location Types (in this case `dcim.device`).
 7. Click on `Create` at the bottom of the form
 
 ![Create a location type](../images/getting-started-nautobot-ui/1-create-location-type.png)
@@ -105,7 +105,7 @@ To create a new Location:
 1. Click on **Organization** in the left sidebar menu
 2. Find **Locations**
 3. Select **+** to go to the `Add a new location` form
-4. Select a `LocationType`
+4. Select a `Location Types`
 5. Select a `Parent` Location if needed
 6. Populate the Location's `Name`
 7. Set the `Status` to `Active` in the drop-down selector
