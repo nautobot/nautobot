@@ -1030,6 +1030,20 @@ files = [
 Django = ">=4.1"
 
 [[package]]
+name = "django-test-migrations"
+version = "1.4.0"
+description = "Test django schema and data migrations, including ordering"
+optional = false
+python-versions = "<4.0,>=3.9"
+files = [
+    {file = "django_test_migrations-1.4.0-py3-none-any.whl", hash = "sha256:294dff98f6d43d020d4046b971bac5339e7c71458a35e9ad6450c388fe16ed6b"},
+    {file = "django_test_migrations-1.4.0.tar.gz", hash = "sha256:f0c9c92864ed27d0c9a582e92056637e91227f54bd868a50cb9a1726668c563e"},
+]
+
+[package.dependencies]
+typing_extensions = ">=4.0"
+
+[[package]]
 name = "django-timezone-field"
 version = "7.0"
 description = "A Django app providing DB, form, and REST framework fields for zoneinfo and pytz timezone objects."
@@ -4384,4 +4398,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.13"
-content-hash = "35f532a4636b8eeac8e1413f95c13916f2b80128f57821772d577cbdbb7324bb"
+content-hash = "8ca8836e69a6474bb09095b93b166665dc1c06cf812374cdef6da03d36b45560"

@@ -220,6 +220,8 @@ yamllint = "~1.35.1"
 coverage = "6.4.0"
 # DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
 django-slowtests = "^1.1.1"
+# Testing of data migrations
+django-test-migrations = "~1.4.0"
 # Integration Tests
 requests = "~2.32.3"
 # Selenium web drivers for live integration testing
