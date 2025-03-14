@@ -881,6 +881,7 @@ def check_schema(context, api_version=None):
 @task(
     help={
         "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests.",
+        "coverage": "Enable test code-coverage reporting. Off by default due to performance impact.",
         "keepdb": "Save test database after test run for faster re-testing in combination with `--reusedb`.",
         "reusedb": "Reuse previously saved test database for faster re-testing in combination with `--keepdb`.",
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
@@ -902,6 +903,7 @@ def check_schema(context, api_version=None):
 def unittest(
     context,
     cache_test_fixtures=True,
+    coverage=False,
     keepdb=True,
     reusedb=True,
     label="nautobot",
@@ -923,15 +925,18 @@ def unittest(
         # First build the docs so they are available.
         build_and_check_docs(context)
 
-    if not append:
+    if coverage and not append:
         run_command(context, "coverage erase")
 
     if parallel_workers:
         parallel_workers = int(parallel_workers)
 
-    append_arg = " --append" if append and not parallel else ""
-    parallel_arg = " --parallel-mode" if parallel else ""
-    command = f"coverage run{append_arg}{parallel_arg} --module nautobot.core.cli test {label}"
+    if coverage:
+        append_arg = " --append" if append and not parallel else ""
+        parallel_arg = " --parallel-mode" if parallel else ""
+        command = f"coverage run{append_arg}{parallel_arg} --module nautobot.core.cli test {label}"
+    else:
+        command = f"nautobot-server test {label}"
     command += " --config=nautobot/core/tests/nautobot_config.py"
     # booleans
     if context.nautobot.get("cache_test_fixtures", False) or cache_test_fixtures:
@@ -969,12 +974,13 @@ def unittest(
 
     run_command(context, command)
 
-    unittest_coverage(context)
+    if coverage:
+        unittest_coverage(context)
 
 
 @task
 def unittest_coverage(context):
-    """Report on code test coverage as measured by 'invoke unittest'."""
+    """Report on code test coverage as measured by 'invoke unittest --coverage'."""
     run_command(context, "coverage combine")
 
     command = "coverage report --skip-covered --include 'nautobot/*'"
@@ -985,6 +991,7 @@ def unittest_coverage(context):
 @task(
     help={
         "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests",
+        "coverage": "Enable test code-coverage reporting. Off by default due to performance impact.",
         "keepdb": "Save and re-use test database between test runs for faster re-testing.",
         "reusedb": "Reuse previously saved test database for faster re-testing in combination with `--keepdb`.",
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
@@ -1003,6 +1010,7 @@ def unittest_coverage(context):
 def integration_test(
     context,
     cache_test_fixtures=True,
+    coverage=False,
     keepdb=True,
     reusedb=True,
     label="nautobot",
@@ -1025,6 +1033,7 @@ def integration_test(
     unittest(
         context,
         cache_test_fixtures=cache_test_fixtures,
+        coverage=coverage,
         keepdb=keepdb,
         reusedb=reusedb,
         label=label,
@@ -1086,6 +1095,7 @@ def migration_test(context, dataset, db_engine="postgres", db_name="nautobot_mig
 @task(
     help={
         "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests.",
+        "coverage": "Enable test code-coverage reporting. Off by default due to performance impact.",
         "keepdb": "Save and re-use test database between test runs for faster re-testing.",
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
@@ -1102,6 +1112,7 @@ def migration_test(context, dataset, db_engine="postgres", db_name="nautobot_mig
 def performance_test(
     context,
     cache_test_fixtures=False,
+    coverage=False,
     keepdb=False,
     label="nautobot",
     failfast=False,
@@ -1124,6 +1135,7 @@ def performance_test(
     unittest(
         context,
         cache_test_fixtures=cache_test_fixtures,
+        coverage=coverage,
         keepdb=keepdb,
         label=label,
         failfast=failfast,
