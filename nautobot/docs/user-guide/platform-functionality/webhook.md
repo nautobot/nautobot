@@ -12,7 +12,7 @@ When setting up a webhook, you need to define the following parameters:
 |-----------|-------------|
 | **Name** | A unique name for the webhook (not included in outgoing messages). |
 | **Object type(s)** | The type(s) of Nautobot objects that trigger the webhook. |
-| **Enabled** | Determines whether the webhook is active. |
+| **Enabled** | Indicates whether the webhook is active. |
 | **Events** | Select one or more events: `create`, `update`, or `delete`. |
 | **HTTP method** | The type of HTTP request (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`). |
 | **URL** | The fully qualified URL of the receiver. You can specify a port if needed. |
@@ -49,7 +49,7 @@ Example: Trigger a Slack message when a new IP address is created.
 | `model` | The Nautobot model triggering the event. |
 | `timestamp` | The event timestamp in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format. |
 | `username` | The user who triggered the event. |
-| `request_id` | A unique request ID for correlation. |
+| `request_id` | A unique request ID for correlation of multiple changes associated with a single request. |
 | `data` | A serialized representation of the object *after* the change. |
 | `snapshots` | Contains `prechange`, `postchange`, and `differences` snapshots. |
 
@@ -116,4 +116,4 @@ To inspect outgoing webhooks, you can use a local HTTP listener. Nautobot provid
 > **Alternative Testing Tools:**
 > Instead of using the built-in webhook receiver, you can test webhooks with external services like [Beeceptor](https://beeceptor.com/) or [Pipedream RequestBin](https://pipedream.com/requestbin). These tools let you inspect webhook payloads and troubleshoot integration issues.
 
-If a webhook does not trigger as expected, ensure that the **Celery worker** process is running and check the Nautobot logs for errors.
+If a webhook does not trigger as expected, ensure that the **celery worker** process is running and check the Nautobot logs for errors.
