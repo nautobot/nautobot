@@ -9,4 +9,4 @@ A software image file must include a file name and a related [software version](
 
 +++ 2.4.6
 
-A software image file can optionally include an [external integration](../../platform-functionality/externalintegration.md) field to enrich the file retrieval representation, typically by providing the URL, HTTP headers and credentials required to retrieve the source file.      
+A software image file can optionally include an [external integration](../../platform-functionality/externalintegration.md) field to enrich the file retrieval representation, typically by providing the URL, HTTP headers and credentials required to retrieve the source file.     
