@@ -1,3 +1,4 @@
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 
@@ -230,6 +231,7 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_local_config_context_schema_validation_pass(self):
         """
         Given a config context schema
@@ -344,6 +346,7 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
             "untagged_vlan": vlans[0].pk,
         }
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_untagged_vlan_requires_mode(self):
         """Test that when an `untagged_vlan` is specified, `mode` is also required."""
         self.add_permissions("virtualization.add_vminterface")
@@ -360,6 +363,7 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
             self.client.post(url, self.untagged_vlan_data, format="json", **self.header), status.HTTP_201_CREATED
         )
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_tagged_vlan_raise_error_if_mode_not_set_to_tagged(self):
         self.add_permissions("virtualization.add_vminterface", "virtualization.change_vminterface")
         vlan = VLAN.objects.get(name="VLAN 1")

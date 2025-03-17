@@ -283,6 +283,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         self.assertIn("config_context", response.data)
         self.assertEqual(response.data["config_context"]["bar"], 456, response.data["config_context"])
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_schema_validation_pass(self):
         """
         Given a config context schema
@@ -2237,6 +2238,7 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
             job_hook.save()
             job_hook.content_types.set([obj_type])
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_validate_post(self):
         """POST a job hook with values that duplicate another job hook"""
 
@@ -2256,6 +2258,7 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
             status_code=400,
         )
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_validate_patch(self):
         """PATCH an existing job hook with values that duplicate another job hook"""
 
@@ -2538,6 +2541,7 @@ class UserSavedViewAssociationTest(APIViewTestCases.APIViewTestCase):
                 view_name=sv.view,
             )
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_creating_invalid_user_to_saved_view(self):
         # Add object-level permission
         duplicate_view_name = self.saved_view_views_distinct[0]["view"]
@@ -3205,6 +3209,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
             response.data["relationships"],
         )
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_populate_relationship_associations_on_location_create(self):
         """Verify that relationship associations can be populated at instance creation time."""
         location_type = LocationType.objects.get(name="Campus")
@@ -3525,6 +3530,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
             },
         ]
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_invalid_relationship_association(self):
         """Test creation of invalid relationship association restricted by destination/source filter."""
 
@@ -3574,6 +3580,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                 [f"{field_error_name} violates {relationship.label} {side}_filter restriction"],
             )
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_model_clean_method_is_called(self):
         """Validate RelationshipAssociation clean method is called"""
 
@@ -3631,6 +3638,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                 self.devices[i].name,
             )
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_update_association_data_on_location(self):
         """
         Check that relationship-associations can be updated via the 'relationships' field.

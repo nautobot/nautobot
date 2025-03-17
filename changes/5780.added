@@ -1,0 +1,1 @@
+Added object permisison enforcement to related objects when modifying records through the REST API.
