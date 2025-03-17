@@ -85,9 +85,9 @@ To create a new Location Type:
 1. Click on **Organization** in the left sidebar menu
 2. Find **Location Types**
 3. Select **+** to go to the `Add a new location type` form
-4. Select a `Parent` Location Types if needed
-5. Populate the Location Types's `Name`
-6. Select the desired `Content Types` for this Location Types (in this case `dcim.device`).
+4. Select a `Parent` Location Type if needed
+5. Populate the Location Type's `Name`
+6. Select the desired `Content Types` for this Location Type (in this case `dcim.device`).
 7. Click on `Create` at the bottom of the form
 
 ![Create a location type](../images/getting-started-nautobot-ui/1-create-location-type.png)
@@ -105,7 +105,7 @@ To create a new Location:
 1. Click on **Organization** in the left sidebar menu
 2. Find **Locations**
 3. Select **+** to go to the `Add a new location` form
-4. Select a `Location Types`
+4. Select a `Location Type`
 5. Select a `Parent` Location if needed
 6. Populate the Location's `Name`
 7. Set the `Status` to `Active` in the drop-down selector
