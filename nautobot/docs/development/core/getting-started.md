@@ -617,18 +617,18 @@ For information about **writing** tests, refer to the [testing documentation](te
 
 Unit tests are automated tests written and run to ensure that a section of the Nautobot application (known as the "unit") meets its design and behaves as intended and expected. Most commonly as a developer of or contributor to Nautobot you will be writing unit tests to exercise the code you have written. Unit tests are not meant to test how the application behaves, only the individual blocks of code, therefore use of mock data and phony connections is common in unit test code. As a guiding principle, unit tests should be fast, because they will be executed quite often.
 
-Unit tests are run using the `invoke test` command (if using the Docker development environment) or the `nautobot-server test` command:
+Unit tests are run using the `invoke tests` command (if using the Docker development environment) or the `nautobot-server test` command:
 
 | Docker Compose Workflow | Virtual Environment Workflow                                                    |
 | ----------------------- | ------------------------------------------------------------------------------- |
 | `invoke tests`          | `nautobot-server --config=nautobot/core/tests/nautobot_config.py test nautobot` |
 
 !!! info
-    By default `invoke test` will start and run the unit tests inside the Docker development container; this ensures that PostgreSQL and Redis servers are available during the test. However, if you have your environment configured such that `nautobot-server` can run locally, outside of the Docker environment, you may wish to set the environment variable `INVOKE_NAUTOBOT_LOCAL=True` to execute these tests in your local environment instead.
+    By default `invoke tests` will start and run the unit tests inside the Docker development container; this ensures that PostgreSQL and Redis servers are available during the test. However, if you have your environment configured such that `nautobot-server` can run locally, outside of the Docker environment, you may wish to set the environment variable `INVOKE_NAUTOBOT_LOCAL=True` to execute these tests in your local environment instead.
 
 ##### Useful Unit Test Parameters
 
-The `invoke test` command supports a number of optional parameters to influence its behavior. Careful use of these parameters can greatly reduce the time it takes to run and re-run tests during development.
+The `invoke tests` command supports a number of optional parameters to influence its behavior. Careful use of these parameters can greatly reduce the time it takes to run and re-run tests during development.
 
 * `--failfast` - Fail as soon as any test failure or error condition is encountered, instead of running to completion.
 * `--label <module.path>` - Only run the specific subset of tests. Can be broad (`--label nautobot.core.tests`) or specific (`--label nautobot.core.tests.test_graphql.GraphQLQueryTestCase`).
