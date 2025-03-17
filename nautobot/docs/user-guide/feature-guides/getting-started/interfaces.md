@@ -54,7 +54,7 @@ You will now see the `Interface Template` form:
 2. Click `Create and Add More`
 3. Create the `xe-` Interfaces Template
     * Keep the same `Manufacturer` and `Device Type` as the previous step
-    * Populate a `Name` of `xe-[0-1]/0/[0-9]`. Using the syntax of regular expressions for numbers in the name field like this will cause a bulk creation using the range of numbers provided
+    * Populate a `Name` of `xe-[0-1]/0/[0-9]`. Using the syntax of `[<start>-<end>]` for numbers in the name field like this will cause a bulk creation using the range of numbers provided.
     * Select the appropriate Type from the drop-down selector
 4. Click on `Create`
 
