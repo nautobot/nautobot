@@ -49,8 +49,8 @@ FREQUENCY_BY_MASK_LENGTH = [
 #   Start calculation from the /32 frequency:
 CUMULATIVE_BY_MASK_LENGTH = [FREQUENCY_BY_MASK_LENGTH[-1]]
 #   Then work backwards to each parent mask length
-for i in range(len(FREQUENCY_BY_MASK_LENGTH) - 2, -1, -1):  # 31, ... 0
-    CUMULATIVE_BY_MASK_LENGTH.append(CUMULATIVE_BY_MASK_LENGTH[-1] // 2 + FREQUENCY_BY_MASK_LENGTH[i])
+for mask_len in range(len(FREQUENCY_BY_MASK_LENGTH) - 2, -1, -1):  # 31, ... 0
+    CUMULATIVE_BY_MASK_LENGTH.append(CUMULATIVE_BY_MASK_LENGTH[-1] // 2 + FREQUENCY_BY_MASK_LENGTH[mask_len])
 #   Reverse the list to get order by ascending prefix length, same as FREQUENCY_BY_MASK_LENGTH
 CUMULATIVE_BY_MASK_LENGTH.reverse()
 
@@ -87,7 +87,7 @@ def maybe_random_instance(queryset, chance_of_none=0.75):
     return random.choice(queryset)  # noqa: S311  # suspicious-non-cryptographic-random-usage
 
 
-def create_prefixes_and_ips(initial_subnet: str, apps=apps, seed="Nautobot"):
+def create_prefixes_and_ips(initial_subnet: str, apps=apps, seed="Nautobot"):  # pylint: disable=redefined-outer-name
     """
     Create many (Nautobot 1.x) Prefix and IPAddress records under a given initial_subnet.
 

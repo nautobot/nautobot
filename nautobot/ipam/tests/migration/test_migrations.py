@@ -137,14 +137,20 @@ class AggregateToPrefixMigrationTestCase(MigratorTestCase):
             tag=self.aggregate_tag_b, content_type=self.aggregate_ct, object_id=self.aggregate3.id
         )
         TaggedItem.objects.create(
-            tag=self.aggregate_tag_a, content_type=self.aggregate_ct, object_id=self.aggregate5.id
-        )  # pylint: disable=no-member
+            tag=self.aggregate_tag_a,
+            content_type=self.aggregate_ct,
+            object_id=self.aggregate5.id,  # pylint: disable=no-member
+        )
         TaggedItem.objects.create(
-            tag=self.aggregate_tag_b, content_type=self.aggregate_ct, object_id=self.aggregate5.id
-        )  # pylint: disable=no-member
+            tag=self.aggregate_tag_b,
+            content_type=self.aggregate_ct,
+            object_id=self.aggregate5.id,  # pylint: disable=no-member
+        )
         TaggedItem.objects.create(
-            tag=self.aggregate_tag_b, content_type=self.aggregate_ct, object_id=self.aggregate6.id
-        )  # pylint: disable=no-member
+            tag=self.aggregate_tag_b,
+            content_type=self.aggregate_ct,
+            object_id=self.aggregate6.id,  # pylint: disable=no-member
+        )
 
         # notes
         Note.objects.create(

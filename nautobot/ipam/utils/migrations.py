@@ -23,7 +23,7 @@ class TimerContextManager:
         print(f"{self.indent}>>> {self.message}...")
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, *args, **kwargs):
         self.elapsed_time = monotonic() - self.start_time
         print(f"{self.indent}    ... completed (elapsed time: {self.elapsed_time:.1f} seconds)")
 
