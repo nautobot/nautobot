@@ -194,8 +194,8 @@
 </div>
 <hr>
 {% endif %}
-
-<div class="row">
+<script src="https://unpkg.com/htmx.org@1.9.2"></script>
+<div class="row" id="table-container">
     {% block table %}
     <div class="col-md-12">
         {% with bulk_edit_url=content_type.model_class|validated_viewname:"bulk_edit" bulk_delete_url=content_type.model_class|validated_viewname:"bulk_delete" %}
