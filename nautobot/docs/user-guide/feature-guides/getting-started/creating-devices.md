@@ -105,7 +105,7 @@ To create a new Location:
 1. Click on **Organization** in the left sidebar menu
 2. Find **Locations**
 3. Select **+** to go to the `Add a new location` form
-4. Select a `Location Types`
+4. Select a `Location Type`
 5. Select a `Parent` Location if needed
 6. Populate the Location's `Name`
 7. Set the `Status` to `Active` in the drop-down selector
