@@ -25,7 +25,7 @@ When setting up a webhook, you need to define the following parameters:
 
 ## Jinja2 Template Support
 
-[Jinja2 templating](https://jinja.palletsprojects.com/) allows you to customize headers and request bodies dynamically. This is useful for formatting webhook payloads to match external system expectations.
+[Jinja2 templating](https://jinja.palletsprojects.com/) is supported for the `additional_headers` and `body_template` fields. It allows you to customize headers and request bodies dynamically. This is useful for formatting webhook payloads to match external system expectations.
 
 Example: Trigger a Slack message when a new IP address is created.
 
