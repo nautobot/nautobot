@@ -631,6 +631,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
         self.vlan_group2 = ipam_models.VLANGroup.objects.create(name="Test VLANGroup 2", location=self.location2)
         self.vlan_group3 = ipam_models.VLANGroup.objects.create(name="Test VLANGroup 3", location=self.location3)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_related_by_pk(self):
         data = {
             "vid": 100,
@@ -664,6 +665,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
         self.assertTrue(response.data["vlan_group"][0].startswith("Related object not found"))
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_related_by_attributes(self):
         data = {
             "vid": 110,
@@ -696,6 +698,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
         self.assertTrue(response.data["vlan_group"][0].startswith("Related object not found"))
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_related_by_attributes_multiple_matches(self):
         data = {
             "vid": 100,
@@ -766,6 +769,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_with_specified_id(self):
         data = {
             "id": str(uuid.uuid4()),

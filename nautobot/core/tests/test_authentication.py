@@ -383,7 +383,16 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         )
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(Prefix))
-
+        related_obj_perm = ObjectPermission.objects.create(
+            name="Related object permission",
+            actions=["view", "add", "change"],
+        )
+        related_obj_perm.users.add(self.user)
+        related_obj_perm.object_types.add(
+            ContentType.objects.get_for_model(Namespace),
+            ContentType.objects.get_for_model(Status),
+            ContentType.objects.get_for_model(Location),
+        )
         # Attempt to create a non-permitted object
         response = self.client.post(url, data, format="json", **self.header)
         self.assertEqual(response.status_code, 403)
@@ -411,7 +420,16 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         )
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(Prefix))
-
+        related_obj_perm = ObjectPermission.objects.create(
+            name="Related object permission",
+            actions=["view", "add", "change"],
+        )
+        related_obj_perm.users.add(self.user)
+        related_obj_perm.object_types.add(
+            ContentType.objects.get_for_model(Namespace),
+            ContentType.objects.get_for_model(Status),
+            ContentType.objects.get_for_model(Location),
+        )
         # Attempt to edit a non-permitted object
         data = {"location": self.locations[0].pk}
         url = reverse("ipam-api:prefix-detail", kwargs={"pk": self.prefixes[3].pk})
@@ -487,6 +505,16 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         )
         obj_perm.users.add(self.user, obj_user2)
         obj_perm.object_types.add(ContentType.objects.get_for_model(Prefix))
+        related_obj_perm = ObjectPermission.objects.create(
+            name="Related object permission",
+            actions=["view", "add", "change"],
+        )
+        related_obj_perm.users.add(self.user, obj_user2)
+        related_obj_perm.object_types.add(
+            ContentType.objects.get_for_model(Namespace),
+            ContentType.objects.get_for_model(Status),
+            ContentType.objects.get_for_model(Location),
+        )
         # Create one Prefix object per user
         self.client.post(url, data[0], format="json", **self.header)
         self.client.post(url, data[1], format="json", **header_user2)
@@ -550,6 +578,16 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         )
         obj_perm.users.add(self.user, obj_user2)
         obj_perm.object_types.add(ContentType.objects.get_for_model(Prefix))
+        related_obj_perm = ObjectPermission.objects.create(
+            name="Related object permission",
+            actions=["view", "add", "change"],
+        )
+        related_obj_perm.users.add(self.user, obj_user2)
+        related_obj_perm.object_types.add(
+            ContentType.objects.get_for_model(Namespace),
+            ContentType.objects.get_for_model(Status),
+            ContentType.objects.get_for_model(Location),
+        )
         # Create one Prefix object per user
         self.client.post(url, data[0], format="json", **self.header)
         self.client.post(url, data[1], format="json", **header_user2)
