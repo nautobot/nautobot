@@ -7,7 +7,6 @@ import uuid
 from django.contrib.contenttypes.models import ContentType
 from django.db import connection
 from django.db.models import Count
-from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 
@@ -196,10 +195,15 @@ class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
             "rd": "65000:7",
         }
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_creating_invalid_vrf_device_assignments(self):
         # Add object-level permission
-        self.add_permissions("ipam.add_vrfdeviceassignment")
+        self.add_permissions(
+            "ipam.add_vrfdeviceassignment",
+            "dcim.view_device",
+            "dcim.view_virtualdevicecontext",
+            "ipam.view_vrf",
+            "virtualization.view_virtualmachine",
+        )
         existing_vrf_device = VRFDeviceAssignment.objects.filter(device__isnull=False).first()
         existing_vrf_vm = VRFDeviceAssignment.objects.filter(virtual_machine__isnull=False).first()
         existing_vrf_vdc = VRFDeviceAssignment.objects.filter(virtual_device_context__isnull=False).first()
@@ -293,7 +297,6 @@ class VRFPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
             },
         ]
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_creating_invalid_vrf_prefix_assignments(self):
         duplicate_create_data = {
             "vrf": VRFPrefixAssignment.objects.first().vrf.pk,
@@ -307,7 +310,7 @@ class VRFPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
             "vrf": self.vrfs[0].pk,
             "prefix": None,
         }
-        self.add_permissions("ipam.add_vrfprefixassignment")
+        self.add_permissions("ipam.add_vrfprefixassignment", "ipam.view_prefix", "ipam.view_vrf")
         response = self.client.post(self._get_list_url(), duplicate_create_data, format="json", **self.header)
         self.assertContains(
             response, "The fields vrf, prefix must make a unique set.", status_code=status.HTTP_400_BAD_REQUEST
@@ -412,12 +415,20 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         }
         cls.choices_fields = ["type"]
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_legacy_api_behavior(self):
         """
         Tests for the 2.0/2.1 REST API of Prefixes.
         """
-        self.add_permissions("ipam.view_prefix", "ipam.add_prefix", "ipam.change_prefix")
+        self.add_permissions(
+            "dcim.view_location",
+            "ipam.view_prefix",
+            "ipam.add_prefix",
+            "ipam.change_prefix",
+            "ipam.view_ipaddress",
+            "ipam.view_namespace",
+            "ipam.view_rir",
+            "extras.view_status",
+        )
 
         with self.subTest("valid GET"):
             prefix = Prefix.objects.annotate(location_count=Count("locations")).filter(location_count=1).first()
@@ -501,7 +512,6 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         for p in response.data["results"]:
             self.assertEqual(p["display"], f'{p["prefix"]}: {p["namespace"]["name"]}')
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_single_available_prefix(self):
         """
         Test retrieval of the first available prefix within a parent prefix.
@@ -514,7 +524,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         else:
             self.fail("Suitable prefix fixture not found")
         url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
-        self.add_permissions("ipam.add_prefix")
+        self.add_permissions("ipam.add_prefix", "ipam.view_namespace", "extras.view_status", "extras.add_customfield")
 
         # Create four available prefixes with individual requests
         child_prefix_length = prefix.prefix_length + 2
@@ -551,7 +561,6 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         self.assertIn("prefix_length", response.data)
         self.assertEqual(response.data["prefix_length"], "This field must be an integer.")
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_multiple_available_prefixes(self):
         """
         Test the creation of available prefixes within a parent prefix.
@@ -565,7 +574,9 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             self.fail("Suitable prefix fixture not found")
 
         url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
-        self.add_permissions("ipam.view_prefix", "ipam.add_prefix")
+        self.add_permissions(
+            "ipam.view_prefix", "ipam.add_prefix", "extras.view_status", "extras.add_customfield", "ipam.view_namespace"
+        )
 
         # Try to create five prefixes (only four are available)
         child_prefix_length = prefix.prefix_length + 2
@@ -615,7 +626,6 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         self.assertIn("prefixcf", response.data[0]["custom_fields"])
         self.assertEqual("value 1", response.data[0]["custom_fields"]["prefixcf"])
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_available_prefixes_with_permissions_constraint(self):
         # Prepare prefix and permissions
         prefix = Prefix.objects.create(
@@ -626,7 +636,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             description="This is the Prefix created for whole network.",
         )
         url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
-        self.add_permissions("ipam.view_prefix")
+        self.add_permissions("ipam.view_prefix", "ipam.view_namespace", "extras.view_status")
         self.add_permissions(
             "ipam.add_prefix", constraints={"description__startswith": "This is the Prefix created for"}
         )
@@ -673,7 +683,6 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.data[0]["prefix"], "10.2.3.64/26")
         self.assertEqual(response.data[1]["prefix"], "10.2.3.128/25")
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_multiple_available_prefixes_with_permissions_constraint(self):
         # Prepare prefix and permissions
         prefix = Prefix.objects.create(
@@ -684,9 +693,10 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             description="This is the Prefix created for whole network.",
         )
         url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
-        self.add_permissions("ipam.view_prefix")
+        self.add_permissions("ipam.view_prefix", "ipam.view_namespace", "extras.view_status")
         self.add_permissions(
-            "ipam.add_prefix", constraints={"description__startswith": "This is the Prefix created for"}
+            "ipam.add_prefix",
+            constraints={"description__startswith": "This is the Prefix created for"},
         )
 
         # Test invalid request
@@ -790,7 +800,6 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         response = self.client.get(url, **self.header)
         self.assertEqual(len(response.data), 7)  # 7 because prefix.type = pool got 8 IP's minus one children IP
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_single_available_ip_calculate_child_ips(self):
         """
         Test creating a single IP when child IP's exists.
@@ -814,7 +823,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             namespace=self.namespace,
         )
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
-        self.add_permissions("ipam.view_prefix", "ipam.add_ipaddress", "extras.view_status")
+        self.add_permissions("ipam.view_prefix", "ipam.add_ipaddress", "ipam.view_namespace", "extras.view_status")
 
         data = {
             "status": self.status.pk,
@@ -828,7 +837,6 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
         self.assertIn("detail", response.data)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_single_available_ip(self):
         """
         Test creating single IP will return 204 No content when pool is fully filled.
@@ -842,7 +850,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         cf = CustomField.objects.create(key="ipcf", label="IP Custom Field", type="text")
         cf.content_types.add(ContentType.objects.get_for_model(IPAddress))
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
-        self.add_permissions("ipam.view_prefix", "ipam.add_ipaddress", "extras.view_status")
+        self.add_permissions("ipam.view_prefix", "ipam.view_namespace", "ipam.add_ipaddress", "extras.view_status")
 
         # Create all six available IPs with individual requests
         for i in range(1, 7):
@@ -865,7 +873,6 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
         self.assertIn("detail", response.data)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_multiple_available_ips(self):
         """
         Test the creation of available IP addresses within a parent prefix.
@@ -879,7 +886,13 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         cf = CustomField.objects.create(key="ipcf", label="IP Custom Field", type="text")
         cf.content_types.add(ContentType.objects.get_for_model(IPAddress))
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
-        self.add_permissions("ipam.view_prefix", "ipam.add_ipaddress", "extras.view_status")
+        self.add_permissions(
+            "ipam.view_prefix",
+            "ipam.add_ipaddress",
+            "ipam.view_namespace",
+            "extras.view_customfield",
+            "extras.view_status",
+        )
 
         # Try to create seven IPs (only six are available)
         data = [
@@ -900,7 +913,6 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         self.assertIn("ipcf", response.data[0]["custom_fields"])
         self.assertEqual("1", response.data[0]["custom_fields"]["ipcf"])
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_available_ips_with_permissions_constraint(self):
         # Prepare prefix and permissions
         prefix = Prefix.objects.create(
@@ -911,7 +923,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             description="This is the Prefix created for whole network.",
         )
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
-        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
+        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress", "ipam.view_namespace", "extras.view_status")
         self.add_permissions(
             "ipam.add_ipaddress", constraints={"description__startswith": "This is the IP created for"}
         )
@@ -954,7 +966,6 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["address"], "192.168.0.2/30")
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_multiple_available_ips_with_permissions_constraint(self):
         # Prepare prefix and permissions
         prefix = Prefix.objects.create(
@@ -965,7 +976,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             description="This is a Prefix created for whole network.",
         )
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
-        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
+        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress", "ipam.view_namespace", "extras.view_status")
         self.add_permissions(
             "ipam.add_ipaddress", constraints={"description__startswith": "This is the IP created for"}
         )
@@ -1187,10 +1198,9 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
             "status": cls.statuses[1].pk,
         }
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_requires_parent_or_namespace(self):
         """Test that missing parent/namespace fields result in an error."""
-        self.add_permissions("ipam.add_ipaddress")
+        self.add_permissions("ipam.add_ipaddress", "extras.view_status")
         data = {
             "address": "192.168.0.10/32",
             "status": self.statuses[0].pk,
@@ -1218,11 +1228,10 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
             self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
             self.assertIn("address", response.data)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_multiple_outside_nat_success(self):
         """Validate NAT inside address can tie to multiple NAT outside addresses."""
         # Create the two outside NAT IP Addresses tied back to the single inside NAT address
-        self.add_permissions("ipam.add_ipaddress", "ipam.view_ipaddress")
+        self.add_permissions("ipam.add_ipaddress", "ipam.view_ipaddress", "ipam.view_namespace", "extras.view_status")
         nat_inside = IPAddress.objects.filter(nat_outside_list__isnull=True).first()
         # Create NAT outside with above address IP as inside NAT
         ip1 = self.client.post(
@@ -1258,9 +1267,10 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.data["nat_outside_list"][0]["address"], "192.168.0.19/24")
         self.assertEqual(response.data["nat_outside_list"][1]["address"], "192.168.0.20/24")
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_creating_ipaddress_with_an_invalid_parent(self):
-        self.add_permissions("ipam.add_ipaddress")
+        self.add_permissions(
+            "ipam.add_ipaddress", "extras.view_status", "ipam.view_prefix", "ipam.view_ipaddress", "ipam.view_namespace"
+        )
         prefixes = (
             Prefix.objects.create(prefix="10.0.0.0/8", status=self.statuses[0], namespace=self.namespace),
             Prefix.objects.create(prefix="192.168.0.0/25", status=self.statuses[0], namespace=self.namespace),
@@ -1401,7 +1411,6 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.data["results"], self.unused_vids)
         self.assertEqual(response.data["count"], len(self.unused_vids))
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_single_available_vlan(self):
         """
         Test creation of the first available VLAN within a VLANGroup.
@@ -1413,6 +1422,8 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
             "ipam.view_vlangroup",
             "ipam.view_vlan",
             "ipam.add_vlan",
+            "extras.view_status",
+            "extras.view_customfield",
         )
 
         # Create all nine available VLANs with individual requests
@@ -1444,7 +1455,6 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
             response.data["detail"],
         )
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_multiple_available_vlans(self):
         """
         Test the creation of available VLANS within a VLANGroup.
@@ -1456,6 +1466,7 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
             "ipam.view_vlangroup",
             "ipam.view_vlan",
             "ipam.add_vlan",
+            "extras.view_status",
         )
 
         # Try to create ten VLANs (only nine are available)
@@ -1494,7 +1505,6 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
             self.assertIn("sor", response.data["results"][i]["custom_fields"])
             self.assertEqual("Nautobot", response.data["results"][i]["custom_fields"]["sor"])
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_multiple_explicit_vlans(self):
         """
         Test the creation of available VLANS within a VLANGroup requesting explicit VLAN IDs.
@@ -1504,6 +1514,7 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
             "ipam.view_vlangroup",
             "ipam.view_vlan",
             "ipam.add_vlan",
+            "extras.view_status",
         )
 
         # Try to create VLANs with specified VLAN IDs. Also, explicitly (and redundantly) specify a VLAN Group.
@@ -1569,12 +1580,12 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
             response.data["detail"],
         )
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_available_vlans_with_permissions_constraint(self):
         url = reverse("ipam-api:vlangroup-available-vlans", kwargs={"pk": self.vlan_group.pk})
         self.add_permissions(
             "ipam.view_vlangroup",
             "ipam.view_vlan",
+            "extras.view_status",
         )
         self.add_permissions("ipam.add_vlan", constraints={"description__startswith": "This is the VLAN created for"})
 
@@ -1617,12 +1628,12 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
             len(response.data["results"]), len(self.unused_vids) - 1
         )  # initial unsued vids minus one created
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_multiple_available_vlans_with_permissions_constraint(self):
         url = reverse("ipam-api:vlangroup-available-vlans", kwargs={"pk": self.vlan_group.pk})
         self.add_permissions(
             "ipam.view_vlangroup",
             "ipam.view_vlan",
+            "extras.view_status",
         )
         self.add_permissions("ipam.add_vlan", constraints={"description__startswith": "This is the VLAN created for"})
 
@@ -1725,13 +1736,17 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
         self.assertIn("detail", content)
         self.assertTrue(content["detail"].startswith("Unable to delete object."))
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_vlan_2_1_api_version_response(self):
         """Assert location can be used in VLAN API create/retrieve."""
 
-        self.add_permissions("ipam.view_vlan")
-        self.add_permissions("ipam.add_vlan")
-        self.add_permissions("ipam.change_vlan")
+        self.add_permissions(
+            "dcim.view_location",
+            "ipam.view_vlan",
+            "ipam.add_vlan",
+            "ipam.change_vlan",
+            "ipam.view_vlangroup",
+            "extras.view_status",
+        )
         with self.subTest("Assert GET"):
             vlan = VLAN.objects.annotate(locations_count=Count("locations")).filter(locations_count=1).first()
             url = reverse("ipam-api:vlan-detail", kwargs={"pk": vlan.pk})
@@ -1887,14 +1902,13 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
             },
         ]
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_ports_regression(self):
         """
         Test that ports can be provided as str or int.
 
         Ref: https://github.com/nautobot/nautobot/issues/265
         """
-        self.add_permissions("ipam.add_service")
+        self.add_permissions("ipam.add_service", "dcim.view_device")
         url = reverse("ipam-api:service-list")
         device = self.devices[0]
 

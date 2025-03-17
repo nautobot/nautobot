@@ -385,7 +385,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         obj_perm.object_types.add(ContentType.objects.get_for_model(Prefix))
         related_obj_perm = ObjectPermission.objects.create(
             name="Related object permission",
-            actions=["view", "add", "change"],
+            actions=["view"],
         )
         related_obj_perm.users.add(self.user)
         related_obj_perm.object_types.add(
@@ -422,7 +422,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         obj_perm.object_types.add(ContentType.objects.get_for_model(Prefix))
         related_obj_perm = ObjectPermission.objects.create(
             name="Related object permission",
-            actions=["view", "add", "change"],
+            actions=["view"],
         )
         related_obj_perm.users.add(self.user)
         related_obj_perm.object_types.add(
@@ -507,7 +507,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         obj_perm.object_types.add(ContentType.objects.get_for_model(Prefix))
         related_obj_perm = ObjectPermission.objects.create(
             name="Related object permission",
-            actions=["view", "add", "change"],
+            actions=["view"],
         )
         related_obj_perm.users.add(self.user, obj_user2)
         related_obj_perm.object_types.add(
@@ -580,7 +580,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         obj_perm.object_types.add(ContentType.objects.get_for_model(Prefix))
         related_obj_perm = ObjectPermission.objects.create(
             name="Related object permission",
-            actions=["view", "add", "change"],
+            actions=["view"],
         )
         related_obj_perm.users.add(self.user, obj_user2)
         related_obj_perm.object_types.add(

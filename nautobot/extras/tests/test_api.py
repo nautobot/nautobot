@@ -283,7 +283,6 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         self.assertIn("config_context", response.data)
         self.assertEqual(response.data["config_context"]["bar"], 456, response.data["config_context"])
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_schema_validation_pass(self):
         """
         Given a config context schema
@@ -293,7 +292,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         schema = ConfigContextSchema.objects.create(
             name="Schema 1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
         )
-        self.add_permissions("extras.add_configcontext")
+        self.add_permissions("extras.add_configcontext", "extras.view_configcontextschema")
 
         data = {
             "name": "Config Context with schema",
@@ -2238,7 +2237,6 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
             job_hook.save()
             job_hook.content_types.set([obj_type])
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_validate_post(self):
         """POST a job hook with values that duplicate another job hook"""
 
@@ -2250,7 +2248,7 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
             "type_delete": True,
         }
 
-        self.add_permissions("extras.add_jobhook")
+        self.add_permissions("extras.add_jobhook", "extras.view_job")
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertContains(
             response,
@@ -2258,7 +2256,6 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
             status_code=400,
         )
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_validate_patch(self):
         """PATCH an existing job hook with values that duplicate another job hook"""
 
@@ -2267,7 +2264,7 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
             "type_delete": True,
         }
 
-        self.add_permissions("extras.change_jobhook")
+        self.add_permissions("extras.change_jobhook", "extras.view_job")
         job_hook2 = JobHook.objects.get(name="JobHook2")
         response = self.client.patch(self._get_detail_url(job_hook2), data, format="json", **self.header)
         self.assertContains(
@@ -2541,7 +2538,6 @@ class UserSavedViewAssociationTest(APIViewTestCases.APIViewTestCase):
                 view_name=sv.view,
             )
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_creating_invalid_user_to_saved_view(self):
         # Add object-level permission
         duplicate_view_name = self.saved_view_views_distinct[0]["view"]
@@ -2557,7 +2553,7 @@ class UserSavedViewAssociationTest(APIViewTestCases.APIViewTestCase):
             "saved_view": saved_view.pk,
             "view_name": duplicate_view_name,
         }
-        self.add_permissions("extras.add_usersavedviewassociation")
+        self.add_permissions("extras.add_usersavedviewassociation", "users.view_user", "extras.view_savedview")
         response = self.client.post(
             self._get_list_url(), duplicate_user_to_savedview_create_data, format="json", **self.header
         )
@@ -3209,7 +3205,6 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
             response.data["relationships"],
         )
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_populate_relationship_associations_on_location_create(self):
         """Verify that relationship associations can be populated at instance creation time."""
         location_type = LocationType.objects.get(name="Campus")
@@ -3245,7 +3240,15 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
             location=existing_location_2,
         )
 
-        self.add_permissions("dcim.view_location", "dcim.add_location", "extras.add_relationshipassociation")
+        self.add_permissions(
+            "dcim.view_location",
+            "dcim.view_locationtype",
+            "dcim.view_device",
+            "dcim.add_location",
+            "extras.view_relationship",
+            "extras.add_relationshipassociation",
+            "extras.view_status",
+        )
         response = self.client.post(
             reverse("dcim-api:location-list"),
             data={
@@ -3530,7 +3533,6 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
             },
         ]
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_invalid_relationship_association(self):
         """Test creation of invalid relationship association restricted by destination/source filter."""
 
@@ -3570,7 +3572,9 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
             ),
         ]
 
-        self.add_permissions("extras.add_relationshipassociation")
+        self.add_permissions(
+            "extras.add_relationshipassociation", "dcim.view_device", "dcim.view_location", "extras.view_relationship"
+        )
 
         for side, field_error_name, data in associations:
             response = self.client.post(self._get_list_url(), data, format="json", **self.header)
@@ -3592,7 +3596,9 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
             "destination_id": self.devices[2].pk,
         }
 
-        self.add_permissions("extras.add_relationshipassociation")
+        self.add_permissions(
+            "extras.add_relationshipassociation", "extras.view_relationship", "dcim.view_device", "dcim.view_location"
+        )
 
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
