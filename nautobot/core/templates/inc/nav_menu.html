@@ -3,6 +3,73 @@
 {% load helpers %}
 {% registry %}
 
+<nav class="sidenav" id="sidenav">
+    <button
+        aria-controls="sidenav"
+        aria-expanded="true"
+        aria-label="Collapse sidenav"
+        class="bg-warning btn btm-sm btn-warning overflow-hidden p-4 position-absolute sidenav-toggler"
+        type="button"
+    ></button>
+
+    <a class="sidenav-brand" href="{% url 'home' %}">
+        <img src="{% custom_branding_or_static 'icon' 'img/nautobot_icon.svg' %}" />
+    </a>
+    <a class="position-absolute sidenav-brand" href="{% url 'home' %}">
+        <img src="{% custom_branding_or_static 'logo' 'img/nautobot_logo.svg' %}" />
+    </a>
+
+    <ul class="list-unstyled my-0 overflow-auto pt-10 w-100">
+        {% if request.user.is_authenticated %}
+            <li>
+                <button class="sidenav-list-item" type="button">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" fill="none" r="10" stroke="currentcolor" stroke-width="1.5" /></svg>
+                    <span>Favorites</span>
+                </button>
+            </li>
+
+            <li class="sidenav-list-divider"></li>
+
+            {% for tab_name, tab_details in registry.nav_menu.tabs.items %}
+                {% if not tab_details.permissions or request.user|has_one_or_more_perms:tab_details.permissions %}
+                    <li>
+                        <button class="sidenav-list-item" type="button">
+                            <!-- TODO(norbert-mieczkowski-codilime): This is just a placeholder icon, replace it when new icons are ready to use. -->
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" fill="none" r="10" stroke="currentcolor" stroke-width="1.5" /></svg>
+                            <span>{{ tab_name }}</span>
+                        </button>
+
+                        {% for group_name, group_details in tab_details.groups.items %}
+                            {% if not group_details.permissions or request.user|has_one_or_more_perms:group_details.permissions %}
+                                <ul class="list-unstyled">
+                                    <li class="sidenav-link-group" data-group-weight="{{ group_details.weight }}">{{ group_name }}</li>
+                                    {% for item_link, item_details in group_details.items.items %}
+                                        {% if not item_details.permissions or request.user|has_one_or_more_perms:item_details.permissions %}
+                                            <li {% if item_details.permissions and not request.user|has_perms:item_details.permissions %} class="disabled"{% endif %}>
+                                                <a class="sidenav-link{% if item_link in request.path %} sidenav-link-active{% endif %}" data-item-weight="{{ item_details.weight }}" href="{{ item_link }}">
+                                                    {{ item_details.name }}
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+                        {% endfor %}
+                    </li>
+                {% endif %}
+            {% endfor %}
+        {% else %}
+            <li>
+                <a href="{% url settings.LOGIN_URL %}?next={{ request.get_full_path | urlencode }}">
+                    <i class="mdi mdi-login"></i> Log in
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+
+</nav>
+
+<!--
 <nav class="navbar navbar-default navbar-fixed-left navbar-inverse">
     <div class="container-fluid">
         <div class="navbar-header">
@@ -114,7 +181,9 @@
         </div>
     </div>
 </nav>
-<!-- Collapsible button -->
+-->
+<!-- Collapsible button
 <button type="button" class="btn btn-xs btn-warning navbar-toggler" aria-label="Collapse navbar">
     <span class="mdi mdi-chevron-up mdi-rotate-270 navbar-toggler-arrow"></span>
 </button>
+ -->

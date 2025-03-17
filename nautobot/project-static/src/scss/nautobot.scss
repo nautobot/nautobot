@@ -1,6 +1,8 @@
 /* nautobot.scss */
 
+@use "sass:list";
 @use "sass:map";
+@use "sass:selector";
 
 /* 1. Include functions first (so you can manipulate colors, SVGs, calc, etc) */
 @import "bootstrap/scss/functions";
@@ -541,4 +543,228 @@ $btn-variants: (
   @include font-size($font-size-base);
   font-weight: $font-weight-medium;
   text-transform: uppercase;
+}
+
+/* Sidenav (a.k.a. navbar, nav menu, sidebar) */
+body {
+  display: grid;
+  grid-template-areas:
+    "sidenav header       drawer"
+    "sidenav main-content drawer"
+    "sidenav footer       drawer";
+  grid-template-columns: fit-content(0) 1fr fit-content(0);
+  grid-template-rows: fit-content(0) 1fr fit-content(0);
+
+  .sidenav {
+    grid-area: sidenav;
+  }
+
+  #main-content {
+    grid-area: main-content;
+  }
+
+  #footer {
+    grid-area: footer;
+  }
+}
+
+.sidenav {
+  $sidenav-chevron-svg: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill-rule='evenodd' clip-rule='evenodd' d='M14.53 5.46967C14.8229 5.76256 14.8229 6.23744 14.53 6.53033L10.7928 10.2676C10.388 10.6724 10.1167 10.9444 9.92461 11.1708C9.73817 11.3904 9.67071 11.5171 9.6393 11.6137C9.55773 11.8648 9.55773 12.1352 9.6393 12.3863C9.67071 12.4829 9.73817 12.6096 9.92461 12.8292C10.1167 13.0556 10.388 13.3276 10.7928 13.7324L14.53 17.4697C14.8229 17.7626 14.8229 18.2374 14.53 18.5303C14.2371 18.8232 13.7623 18.8232 13.4694 18.5303L9.73211 14.7931L9.71059 14.7715C9.33288 14.3939 9.01761 14.0786 8.7811 13.8C8.53443 13.5094 8.32969 13.2098 8.21272 12.8498C8.03326 12.2975 8.03326 11.7025 8.21272 11.1502C8.32969 10.7902 8.53443 10.4906 8.7811 10.2C9.01761 9.9214 9.33287 9.60615 9.71058 9.22845L9.73211 9.20693L13.4694 5.46967C13.7623 5.17678 14.2371 5.17678 14.53 5.46967Z' fill='#{$nav-white-0}'/></svg>";
+  $sidenav-link-gap: 0.3125rem; /* 5px */
+  $sidenav-link-segment-icon-height: 5.625rem; /* 90px */
+  $sidenav-link-segment-icon-width: 1.25rem; /* 20px */
+  $sidenav-link-segment-icon-svg: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='90' stroke='#{$nav-gray-3}'/><line x1='10' y1='45' x2='15' y2='45' stroke='#{$nav-gray-3}'/></svg>";
+  $sidenav-link-segment-icon-svg-last: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='45.5' stroke='#{$nav-gray-3}'/><line x1='10' y1='45' x2='15' y2='45' stroke='#{$nav-gray-3}'/></svg>";
+
+  @mixin fade-slide-in {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+
+  @mixin fade-slide-out {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-100%);
+  }
+
+  @mixin filter-nav-orange-0 {
+    /*
+     * CSS workaround to change background-image from white to any given color.
+     * Generated with: https://codepen.io/jumarjuaton/full/mdJYWYq
+     */
+    filter: invert(50%) sepia(99%) saturate(1810%) hue-rotate(3deg) brightness(93%) contrast(94%);
+  }
+
+  @mixin chevron($size) {
+    @include transition($accordion-icon-transition, $transition-fade);
+    background: no-repeat center/#{$size} #{escape-svg(url("data:image/svg+xml,#{$sidenav-chevron-svg}"))};
+    content: "";
+    display: block;
+    height: $size;
+    width: $size;
+  }
+
+  @include transition($transition-collapse-width);
+  align-items: center;
+  background-color: $navy-0;
+  color: $nav-white-0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+  width: 15rem; /* 240px */
+
+  &#{&}-collapsed {
+    width: 4rem; /* 64px */
+
+    .sidenav-brand {
+      &:first-of-type {
+        @include fade-slide-in;
+      }
+
+      &:nth-of-type(2) {
+        @include fade-slide-out;
+      }
+    }
+
+    .sidenav-list-item {
+      > :last-child {
+        @include fade-slide-out;
+      }
+    }
+
+    .sidenav-toggler::before {
+      transform: rotate(180deg);
+    }
+  }
+
+  &, * {
+    scrollbar-width: none;
+  }
+
+  .sidenav-brand {
+    @include transition($transition-base);
+    display: inline-block;
+    margin-block-start: map.get($spacers, 10);
+    padding: map.get($spacers, 10);
+
+    &:first-of-type {
+      @include fade-slide-out;
+    }
+
+    &:nth-of-type(2) {
+      @include fade-slide-in;
+    }
+
+    img {
+      height: 1.875rem; /* 30px */
+    }
+  }
+
+  .sidenav-link {
+    align-items: center;
+    color: inherit;
+    display: flex;
+    overflow: hidden;
+    padding-block: 0.3125rem; /* 5px */
+    padding-inline-end: map.get($spacers, 10);
+    padding-inline-start: map.get($spacers, 20) + $sidenav-link-segment-icon-width + $sidenav-link-gap;
+    position: relative;
+    text-decoration: none;
+
+    &:focus-visible,
+    &:hover {
+      background-color: $navy-1;
+    }
+
+    &::before {
+      background: no-repeat center/$sidenav-link-segment-icon-width $sidenav-link-segment-icon-height #{escape-svg(url("data:image/svg+xml,#{$sidenav-link-segment-icon-svg}"))};
+      content: "";
+      display: block;
+      flex: none;
+      height: $sidenav-link-segment-icon-height;
+      left: map.get($spacers, 20);
+      position: absolute;
+      width: $sidenav-link-segment-icon-width;
+    }
+
+    &-active {
+      color: $orange-0;
+    }
+  }
+
+  li:last-child > .sidenav-link::before {
+    background-image: #{escape-svg(url("data:image/svg+xml,#{$sidenav-link-segment-icon-svg-last}"))};
+  }
+
+  .sidenav-link-group {
+    color: $nav-gray-3;
+    font-weight: $font-weight-medium;
+    padding-block: 0.3125rem; /* 5px */
+    padding-inline: #{map.get($spacers, 20)};
+    text-transform: uppercase;
+  }
+
+  .sidenav-list-divider {
+    border-top: $border-width solid $navy-4;
+    margin: #{map.get($spacers, 10)}  #{map.get($spacers, 20)};
+  }
+
+  .sidenav-list-item {
+    @include transition($btn-transition);
+    align-items: center;
+    background: transparent;
+    border: none;
+    color: inherit;
+    display: inline-flex;
+    font-weight: $font-weight-medium;
+    padding-block: 0.3125rem; /* 5px */
+    padding-inline: #{map.get($spacers, 20)}  #{map.get($spacers, 10)};
+    text-transform: uppercase;
+    width: 100%;
+
+    &:focus-visible,
+    &:hover {
+      background-color: $navy-1;
+    }
+
+    &:has(~ ul .sidenav-link-active) {
+      color: $orange-0;
+
+      > :last-child::after {
+        @include filter-nav-orange-0;
+      }
+    }
+
+    > :first-child {
+      flex: none;
+      height: 1.5rem; /* 24px */
+      width: 1.5rem; /* 24px */
+    }
+
+    > :last-child {
+      @include transition($transition-base);
+      @include fade-slide-in;
+      align-items: center;
+      display: inline-flex;
+      flex: auto 1 1;
+      margin-inline-start: map.get($spacers, 10);
+
+      &::after {
+        @include chevron(1.5rem); /* 24px */
+        margin-inline-start: auto;
+        transform: rotate(180deg);
+      }
+    }
+  }
+
+  .sidenav-toggler {
+    right: -0.8125rem; /* -13px */
+    top: 1.375rem; /* 22px */
+
+    &::before {
+      @include chevron(1rem); /* 16px */
+    }
+  }
 }
