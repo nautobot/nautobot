@@ -16,6 +16,8 @@ from django.utils.http import urlencode
 from django.views.generic import View
 from django_tables2 import RequestConfig
 import netaddr
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from nautobot.cloud.tables import CloudNetworkTable
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
@@ -63,7 +65,7 @@ logger = logging.getLogger(__name__)
 #
 
 
-class NamespaceUIViewSet(NautobotUIViewSet):  # 3.0 TODO: Remove ObjectBulkCreateViewMixin, no longer used
+class NamespaceUIViewSet(NautobotUIViewSet):
     form_class = forms.NamespaceForm
     bulk_update_form_class = forms.NamespaceBulkEditForm
     filterset_class = filters.NamespaceFilterSet
@@ -71,30 +73,90 @@ class NamespaceUIViewSet(NautobotUIViewSet):  # 3.0 TODO: Remove ObjectBulkCreat
     queryset = Namespace.objects.all()
     serializer_class = serializers.NamespaceSerializer
     table_class = tables.NamespaceTable
-
     object_detail_content = object_detail.ObjectDetailContent(
-        panels=(
-            object_detail.ObjectFieldsPanel(section=SectionChoices.LEFT_HALF, weight=100, fields="__all__"),
-            object_detail.ObjectsTablePanel(
-                table_class=tables.VRFTable,
-                section=SectionChoices.FULL_WIDTH,
-                weight=100,
-                table_filter="namespace",
+        panels=(object_detail.ObjectFieldsPanel(section=SectionChoices.LEFT_HALF, weight=100, fields="__all__"),),
+        extra_tabs=(
+            object_detail.DistinctViewTab(
+                weight=800,
+                tab_id="vrfs",
+                label="VRFs",
+                url_name="ipam:namespace_vrfs",
             ),
-            object_detail.ObjectsTablePanel(
-                table_class=tables.PrefixTable,
-                section=SectionChoices.FULL_WIDTH,
-                weight=100,
-                table_filter="namespace",
+            object_detail.DistinctViewTab(
+                weight=800,
+                tab_id="prefixes",
+                label="prefixes",
+                url_name="ipam:namespace_prefixes",
             ),
-            object_detail.ObjectsTablePanel(
-                table_class=tables.IPAddressTable,
-                section=SectionChoices.FULL_WIDTH,
-                weight=100,
-                table_filter="parent__namespace",
+            object_detail.DistinctViewTab(
+                weight=800,
+                tab_id="ipaddresses",
+                label="ipaddresses",
+                url_name="ipam:namespace_ipaddresses",
             ),
-        )
+        ),
     )
+
+    @action(detail=True, url_path="vrfs")
+    def vrfs(self, request, *args, **kwargs):
+        instance = self.get_object()
+        vrfs = instance.vrfs.restrict(request.user, "view")
+        vrf_table = tables.VRFTable(
+            data=vrfs,
+            user=request.user,
+            exclude=["namespace"],
+        )
+        if request.user.has_perm("ipam.change_vrf") or request.user.has_perm("ipam.delete_vrf"):
+            vrf_table.columns.show("pk")
+
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(vrf_table)
+        return Response(
+            {
+                "vrf_table": vrf_table,
+                "active_tab": "vrfs",
+                "vrf_count": len(vrf_table.rows),
+            }
+        )
+
+    @action(detail=True, url_path="prefixes")
+    def prefixes(self, request, *args, **kwargs):
+        instance = self.get_object()
+        prefixes = instance.prefixes.restrict(request.user, "view").select_related("status")
+        prefix_table = tables.PrefixTable(data=prefixes, user=request.user, exclude=["namespace"])
+        if request.user.has_perm("ipam.change_prefix") or request.user.has_perm("ipam.delete_prefix"):
+            prefix_table.columns.show("pk")
+
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(prefix_table)
+        return Response(
+            {
+                "prefix_table": prefix_table,
+                "active_tab": "prefixes",
+                "prefix_count": len(prefix_table.rows),
+            }
+        )
+
+    @action(detail=True, url_path="ip-addresses")
+    def ipaddresses(self, request, *args, **kwargs):
+        instance = self.get_object()
+        ip_addresses = instance.ip_addresses.restrict(request.user, "view").select_related("role", "status", "tenant")
+        ip_address_table = tables.IPAddressTable(data=ip_addresses, user=request.user, exclude=["namespace"])
+        if request.user.has_perm("ipam.change_ipaddress") or request.user.has_perm("ipam.delete_ipaddress"):
+            ip_address_table.columns.show("pk")
+
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(ip_address_table)
+        return Response(
+            {
+                "ip_address_table": ip_address_table,
+                "active_tab": "ipaddresses",
+                "ip_address_count": len(ip_address_table.rows),
+            }
+        )
 
 
 #
