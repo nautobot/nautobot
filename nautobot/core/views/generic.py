@@ -24,6 +24,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import View
 from django_filters import FilterSet
 from django_tables2 import RequestConfig, Table
+from render_block import render_block_to_string
 
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
@@ -402,6 +403,9 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         setattr(self, "request", request)
         context.update(self.extra_context())
 
+        if request.headers.get('HX-Request'):
+            block_str = render_block_to_string(self.template_name, "table", context, request)
+            return HttpResponse(block_str)
         return render(request, self.template_name, context)
 
     def alter_queryset(self, request):
