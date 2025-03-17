@@ -17,6 +17,8 @@ jobs:
         uses: "actions/checkout@v4"
       - name: "Security checks"
         uses: "./.github/actions/security-checks"
+      - name: "Testing expansion"
+        run: "echo '${{ github.ref }}'"
   ruff:
     runs-on: "ubuntu-24.04"
     env:
