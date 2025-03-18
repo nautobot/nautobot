@@ -1083,6 +1083,7 @@ class DeviceModuleBayTable(ModuleBayTable):
             "actions",
         )
 
+
 class ModuleModuleBayTable(DeviceModuleBayTable):
     actions = ButtonsColumn(model=ModuleBay, buttons=("edit", "delete"), prepend_template=MODULEBAY_BUTTONS)
 

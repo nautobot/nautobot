@@ -345,6 +345,24 @@ class ModuleBayTemplateTable(ComponentTemplateTable):
             "description",
             "actions",
         )
-        default_columns = ("pk", "name", "position", "module_family", "label", "requires_first_party_modules", "description", "actions")
-        field_order = ("pk", "name", "position", "module_family", "label", "requires_first_party_modules", "description", "actions")
+        default_columns = (
+            "pk",
+            "name",
+            "position",
+            "module_family",
+            "label",
+            "requires_first_party_modules",
+            "description",
+            "actions",
+        )
+        field_order = (
+            "pk",
+            "name",
+            "position",
+            "module_family",
+            "label",
+            "requires_first_party_modules",
+            "description",
+            "actions",
+        )
         empty_text = "None"
