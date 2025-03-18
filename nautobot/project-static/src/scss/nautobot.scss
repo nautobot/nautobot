@@ -555,7 +555,7 @@ body {
   grid-template-columns: fit-content(0) 1fr fit-content(0);
   grid-template-rows: fit-content(0) 1fr fit-content(0);
 
-  .sidenav {
+  #sidenav {
     grid-area: sidenav;
   }
 
@@ -568,7 +568,7 @@ body {
   }
 }
 
-.sidenav {
+#sidenav {
   $sidenav-chevron-svg: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill-rule='evenodd' clip-rule='evenodd' d='M14.53 5.46967C14.8229 5.76256 14.8229 6.23744 14.53 6.53033L10.7928 10.2676C10.388 10.6724 10.1167 10.9444 9.92461 11.1708C9.73817 11.3904 9.67071 11.5171 9.6393 11.6137C9.55773 11.8648 9.55773 12.1352 9.6393 12.3863C9.67071 12.4829 9.73817 12.6096 9.92461 12.8292C10.1167 13.0556 10.388 13.3276 10.7928 13.7324L14.53 17.4697C14.8229 17.7626 14.8229 18.2374 14.53 18.5303C14.2371 18.8232 13.7623 18.8232 13.4694 18.5303L9.73211 14.7931L9.71059 14.7715C9.33288 14.3939 9.01761 14.0786 8.7811 13.8C8.53443 13.5094 8.32969 13.2098 8.21272 12.8498C8.03326 12.2975 8.03326 11.7025 8.21272 11.1502C8.32969 10.7902 8.53443 10.4906 8.7811 10.2C9.01761 9.9214 9.33287 9.60615 9.71058 9.22845L9.73211 9.20693L13.4694 5.46967C13.7623 5.17678 14.2371 5.17678 14.53 5.46967Z' fill='#{$nav-white-0}'/></svg>";
   $sidenav-link-gap: 0.3125rem; /* 5px */
   $sidenav-link-segment-icon-height: 5.625rem; /* 90px */
@@ -590,7 +590,8 @@ body {
 
   @mixin filter-nav-orange-0 {
     /*
-     * CSS workaround to change background-image from white to any given color.
+     * CSS workaround to change element color (including its `background-image`)
+     * from white to any given color, `$orange-0` in this case.
      * Generated with: https://codepen.io/jumarjuaton/full/mdJYWYq
      */
     filter: invert(50%) sepia(99%) saturate(1810%) hue-rotate(3deg) brightness(93%) contrast(94%);
@@ -615,30 +616,35 @@ body {
   position: relative;
   width: 15rem; /* 240px */
 
-  &#{&}-collapsed {
+  &.sidenav-collapsed {
     width: 4rem; /* 64px */
 
+    /* Transition between brand logo and icon when navbar expands/collapses. */
     .sidenav-brand {
-      &:first-of-type {
+      &:first-of-type { /* Brand icon */
         @include fade-slide-in;
       }
 
-      &:nth-of-type(2) {
+      &:nth-of-type(2) { /* Brand logo */
         @include fade-slide-out;
       }
     }
 
     .sidenav-list-item {
-      > :last-child {
+      > :last-child { /* Sidenav list item name and chevron icon wrapper */
         @include fade-slide-out;
       }
     }
 
-    .sidenav-toggler::before {
+    .sidenav-toggler::before { /* Sidenav toggler chevron icon */
       transform: rotate(180deg);
     }
   }
 
+  /*
+   * `&, *` stands for the current element selector (`&`, i.e. `#sidenav`) and
+   * all its descendants (`*`), it interpolates to `#sidenav, #sidenav *`.
+   */
   &, * {
     scrollbar-width: none;
   }
@@ -649,11 +655,11 @@ body {
     margin-block-start: map.get($spacers, 10);
     padding: map.get($spacers, 10);
 
-    &:first-of-type {
+    &:first-of-type { /* Brand icon */
       @include fade-slide-out;
     }
 
-    &:nth-of-type(2) {
+    &:nth-of-type(2) { /* Brand logo */
       @include fade-slide-in;
     }
 
@@ -678,7 +684,7 @@ body {
       background-color: $navy-1;
     }
 
-    &::before {
+    &::before { /* Segment icon */
       background: no-repeat center/$sidenav-link-segment-icon-width $sidenav-link-segment-icon-height #{escape-svg(url("data:image/svg+xml,#{$sidenav-link-segment-icon-svg}"))};
       content: "";
       display: block;
@@ -694,7 +700,7 @@ body {
     }
   }
 
-  li:last-child > .sidenav-link::before {
+  li:last-child > .sidenav-link::before { /* Last link segment icon */
     background-image: #{escape-svg(url("data:image/svg+xml,#{$sidenav-link-segment-icon-svg-last}"))};
   }
 
@@ -729,21 +735,21 @@ body {
       background-color: $navy-1;
     }
 
-    &:has(~ ul .sidenav-link-active) {
+    &:has(~ ul .sidenav-link-active) { /* When list item contains an active link */
       color: $orange-0;
 
-      > :last-child::after {
+      > :last-child::after { /* Chevron icon */
         @include filter-nav-orange-0;
       }
     }
 
-    > :first-child {
+    > :first-child { /* Primary icon */
       flex: none;
       height: 1.5rem; /* 24px */
       width: 1.5rem; /* 24px */
     }
 
-    > :last-child {
+    > :last-child { /* Name and chevron icon wrapper */
       @include transition($transition-base);
       @include fade-slide-in;
       align-items: center;
@@ -751,7 +757,7 @@ body {
       flex: auto 1 1;
       margin-inline-start: map.get($spacers, 10);
 
-      &::after {
+      &::after { /* Chevron icon */
         @include chevron(1.5rem); /* 24px */
         margin-inline-start: auto;
         transform: rotate(180deg);
@@ -763,7 +769,7 @@ body {
     right: -0.8125rem; /* -13px */
     top: 1.375rem; /* 22px */
 
-    &::before {
+    &::before { /* Chevron icon */
       @include chevron(1rem); /* 16px */
     }
   }
