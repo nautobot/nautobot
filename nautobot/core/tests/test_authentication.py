@@ -398,8 +398,15 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(Prefix.objects.count(), initial_count)
 
-        # Create a permitted object
+        # Attempt to create a permitted object without related object permissions
         data["location"] = self.locations[0].pk
+        related_obj_perm.users.remove(self.user)
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(Prefix.objects.count(), initial_count)
+
+        # Create a permitted object with related object permissions
+        related_obj_perm.users.add(self.user)
         response = self.client.post(url, data, format="json", **self.header)
         self.assertEqual(response.status_code, 201)
         self.assertEqual(Prefix.objects.count(), initial_count + 1)
@@ -436,9 +443,15 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         response = self.client.patch(url, data, format="json", **self.header)
         self.assertEqual(response.status_code, 404)
 
-        # Edit a permitted object
+        # Attempt to edit a permitted object without related object permissions
+        related_obj_perm.users.remove(self.user)
         data["status"] = self.statuses[1].pk
         url = reverse("ipam-api:prefix-detail", kwargs={"pk": self.prefixes[0].pk})
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertEqual(response.status_code, 400)
+
+        # Edit a permitted object with related object permissions
+        related_obj_perm.users.add(self.user)
         response = self.client.patch(url, data, format="json", **self.header)
         self.assertEqual(response.status_code, 200)
 
@@ -473,6 +486,29 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         url = reverse("ipam-api:prefix-detail", kwargs={"pk": self.prefixes[0].pk})
         response = self.client.delete(url, format="json", **self.header)
         self.assertEqual(response.status_code, 204)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_related_object_permission_constraints_on_get_requests(self):
+        """
+        Users who have permission to view Location objects, but not LocationType and Status objects
+        should still be able to view Location objects from the API.
+        """
+        self.add_permissions("dcim.view_location")
+        response = self.client.get(reverse("dcim-api:location-list"), **self.header)
+        self.assertEqual(response.status_code, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_related_object_permission_constraints_on_patch_requests(self):
+        """
+        Users who have permission to view and change Location objects, but not LocationType and Status objects
+        should still be able to change a Location object's name from the API.
+        """
+        self.add_permissions("dcim.view_location", "dcim.change_location")
+        location = Location.objects.first()
+        data = {"name": "New Location Name"}
+        url = reverse("dcim-api:location-detail", kwargs={"pk": location.pk})
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertEqual(response.status_code, 200)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_user_token_constraints(self):
