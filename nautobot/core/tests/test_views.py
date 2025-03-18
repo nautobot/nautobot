@@ -352,8 +352,9 @@ class NavAppsUITestCase(TestCase):
         self.assertContains(
             response,
             f"""
-            <a href="{self.apps_list_url}"
-                data-item-weight="{self.apps_list_item_weight}">
+            <a class="sidenav-link"
+                data-item-weight="{self.apps_list_item_weight}"
+                href="{self.apps_list_url}">
                 Installed Apps
             </a>
             """,
