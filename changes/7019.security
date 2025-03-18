@@ -1,1 +1,0 @@
-Updated `cryptography` to `44.0.2` to address `CVE-2024-12797`. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
