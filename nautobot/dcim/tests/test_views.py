@@ -4585,6 +4585,7 @@ class SoftwareImageFileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         device_types = DeviceType.objects.all()[:2]
         statuses = Status.objects.get_for_model(SoftwareImageFile)
         software_versions = SoftwareVersion.objects.all()
+        external_integration = ExternalIntegration.objects.first()
 
         cls.form_data = {
             "software_version": software_versions[0].pk,
@@ -4594,6 +4595,7 @@ class SoftwareImageFileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "image_file_size": 1234567890,
             "hashing_algorithm": SoftwareImageFileHashingAlgorithmChoices.SHA512,
             "download_url": "https://example.com/software_image_file_test_case.bin",
+            "external_integration": external_integration.pk,
             "device_types": [device_types[0].pk, device_types[1].pk],
         }
 
@@ -4604,6 +4606,7 @@ class SoftwareImageFileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "hashing_algorithm": SoftwareImageFileHashingAlgorithmChoices.SHA512,
             "image_file_size": 1234567890,
             "download_url": "https://example.com/software_image_file_test_case.bin",
+            "external_integration": external_integration.pk,
         }
 
 

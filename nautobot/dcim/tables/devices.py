@@ -1326,6 +1326,7 @@ class SoftwareImageFileTable(StatusTableMixin, BaseTable):
             "image_file_checksum",
             "hashing_algorithm",
             "download_url",
+            "external_integration",
             "device_type_count",
             "tags",
             "actions",
