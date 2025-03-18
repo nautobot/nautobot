@@ -33,9 +33,13 @@ exclude = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.13"
+python = ">=3.9.2,<3.13"
 # Background task processing
 celery = "~5.3.6"
+# Cryptographic recipes and primitives.
+# Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
+# Added as an explicit dependency to protect against various CVEs in older versions.
+cryptography = "~44.0.2"
 # Fundamental web framework for Nautobot
 Django = "~4.2.20"
 # Adds AJAX capabilities to django-tables2
