@@ -81,8 +81,23 @@ If no body template is provided, Nautobot sends a default JSON payload:
     },
     "snapshots": {
         "prechange": null,
-        "postchange": { "id": "5e4f9a91-372b-46df-a50a-c26357475bee", "name": "Campus A" },
-        "differences": { "added": { "id": "5e4f9a91-372b-46df-a50a-c26357475bee", "name": "Campus A" } }
+        "postchange": {
+            "id": "5e4f9a91-372b-46df-a50a-c26357475bee",
+            "asn": null,
+            "url": "/api/dcim/locations/5e4f9a91-372b-46df-a50a-c26357475bee/",
+            "name": "Campus A",
+            ...
+        },
+        "differences": {
+            "removed": null,
+            "added": {
+                "id": "5e4f9a91-372b-46df-a50a-c26357475bee",
+                "asn": null,
+                "url": "/api/dcim/locations/5e4f9a91-372b-46df-a50a-c26357475bee/",
+                "name": "Campus A",
+                ...
+            }
+        }
     }
 }
 ```
