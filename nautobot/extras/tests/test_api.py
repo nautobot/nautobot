@@ -3648,6 +3648,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         Check that relationship-associations can be updated via the 'relationships' field.
         """
         self.add_permissions(
+            "dcim.view_device",
             "dcim.view_location",
             "dcim.change_location",
             "extras.view_relationship",
