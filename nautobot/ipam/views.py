@@ -1356,19 +1356,7 @@ class VLANBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class ServiceListView(generic.ObjectListView):
-    queryset = Service.objects.all()
-    filterset = filters.ServiceFilterSet
-    filterset_form = forms.ServiceFilterForm
-    table = tables.ServiceTable
-    action_buttons = ("add", "import", "export")
-
-
-class ServiceView(generic.ObjectView):
-    queryset = Service.objects.prefetch_related("ip_addresses")
-
-
-class ServiceEditView(generic.ObjectEditView):
+class ServiceEditView(generic.ObjectEditView):  # This view is used to assign services to devices and VMs
     queryset = Service.objects.prefetch_related("ip_addresses")
     model_form = forms.ServiceForm
     template_name = "ipam/service_edit.html"
@@ -1384,23 +1372,30 @@ class ServiceEditView(generic.ObjectEditView):
         return obj
 
 
-class ServiceBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Service.objects.all()
-    table = tables.ServiceTable
+class ServiceUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportView
+    model = Service
+    bulk_update_form_class = forms.ServiceBulkEditForm
+    filterset_class = filters.ServiceFilterSet
+    filterset_form_class = forms.ServiceFilterForm
+    form_class = forms.ServiceForm
+    queryset = Service.objects.select_related("device", "virtual_machine").prefetch_related("ip_addresses")
+    serializer_class = serializers.ServiceSerializer
+    table_class = tables.ServiceTable
 
-
-class ServiceDeleteView(generic.ObjectDeleteView):
-    queryset = Service.objects.all()
-
-
-class ServiceBulkEditView(generic.BulkEditView):
-    queryset = Service.objects.select_related("device", "virtual_machine")
-    filterset = filters.ServiceFilterSet
-    table = tables.ServiceTable
-    form = forms.ServiceBulkEditForm
-
-
-class ServiceBulkDeleteView(generic.BulkDeleteView):
-    queryset = Service.objects.select_related("device", "virtual_machine")
-    filterset = filters.ServiceFilterSet
-    table = tables.ServiceTable
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=["name", "parent", "protocol", "port_list", "description"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.RIGHT_HALF,
+                table_class=tables.IPAddressTable,
+                table_filter="services",
+                select_related_fields=["tenant", "status", "role"],
+                add_button_route=None,
+            ),
+        )
+    )
