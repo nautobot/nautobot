@@ -338,8 +338,9 @@ class NavAppsUITestCase(TestCase):
         self.assertContains(
             response,
             f"""
-            <a href="{self.apps_marketplace_url}"
-                data-item-weight="{self.apps_marketplace_item_weight}">
+            <a class="sidenav-link"
+                data-item-weight="{self.apps_marketplace_item_weight}"
+                href="{self.apps_marketplace_url}">
                 Apps Marketplace
             </a>
             """,
