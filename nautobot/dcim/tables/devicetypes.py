@@ -330,7 +330,7 @@ class ModuleBayTemplateTable(ComponentTemplateTable):
         buttons=("edit", "delete"),
         return_url_extra=r"%3Ftab=modulebays",
     )
-    module_family = tables.Column(verbose_name="Family")
+    module_family = tables.Column(verbose_name="Family", linkify=True)
     requires_first_party_modules = BooleanColumn(verbose_name="Requires First-Party Modules")
 
     class Meta(BaseTable.Meta):
@@ -345,5 +345,5 @@ class ModuleBayTemplateTable(ComponentTemplateTable):
             "description",
             "actions",
         )
-        default_columns = ("pk", "name", "position", "module_family", "label", "description")
+        default_columns = ("pk", "name", "position", "module_family", "label", "description", "actions")
         empty_text = "None"
