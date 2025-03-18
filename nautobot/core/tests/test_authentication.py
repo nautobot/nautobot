@@ -403,6 +403,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         related_obj_perm.users.remove(self.user)
         response = self.client.post(url, data, format="json", **self.header)
         self.assertEqual(response.status_code, 400)
+        self.assertIn(b"Related object not found using the provided attribute", response.content)
         self.assertEqual(Prefix.objects.count(), initial_count)
 
         # Create a permitted object with related object permissions
@@ -449,6 +450,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         url = reverse("ipam-api:prefix-detail", kwargs={"pk": self.prefixes[0].pk})
         response = self.client.patch(url, data, format="json", **self.header)
         self.assertEqual(response.status_code, 400)
+        self.assertIn(b"Related object not found using the provided attribute", response.content)
 
         # Edit a permitted object with related object permissions
         related_obj_perm.users.add(self.user)
@@ -496,6 +498,8 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         self.add_permissions("dcim.view_location")
         response = self.client.get(reverse("dcim-api:location-list"), **self.header)
         self.assertEqual(response.status_code, 200)
+        # we should be able to get all the locations
+        self.assertEqual(len(response.data["results"]), Location.objects.count())
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_related_object_permission_constraints_on_patch_requests(self):
@@ -509,6 +513,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         url = reverse("dcim-api:location-detail", kwargs={"pk": location.pk})
         response = self.client.patch(url, data, format="json", **self.header)
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["name"], "New Location Name")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_user_token_constraints(self):

@@ -222,7 +222,6 @@ class Mixins:
                 {"__all__": [f"Either {self.device_field} or {self.module_field} must be set"]},
             )
 
-        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_module_device_name_unique_validation(self):
             """Assert uniqueness constraint is enforced for (device,name) and (module,name) fields."""
 
@@ -230,6 +229,7 @@ class Mixins:
                 f"{self.model._meta.app_label}.add_{self.model._meta.model_name}",
                 "dcim.view_device",
                 "dcim.view_module",
+                "extras.view_status",
             )
             modules = Module.objects.all()[:2]
             data = {
@@ -310,7 +310,6 @@ class Mixins:
                 {"__all__": ["Either device_type or module_type must be set"]},
             )
 
-        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_module_type_device_type_name_unique_validation(self):
             """Assert uniqueness constraint is enforced for (device_type,name) and (module_type,name) fields."""
 
@@ -1271,11 +1270,12 @@ class FrontPortTemplateTest(Mixins.BasePortTemplateTestMixin):
         data["rear_port_template"] = self.module_rear_port_templates[0].pk
         self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_module_type_device_type_name_unique_validation(self):
         """Assert uniqueness constraint is enforced for (device_type,name) and (module_type,name) fields."""
 
-        self.add_permissions("dcim.add_frontporttemplate", "dcim.view_rearporttemplate", "dcim.view_moduletype")
+        self.add_permissions(
+            "dcim.add_frontporttemplate", "dcim.view_rearporttemplate", "dcim.view_moduletype", "dcim.view_devicetype"
+        )
         data = {
             "module_type": self.module_type.pk,
             "name": "test modular device_type component parent validation",
@@ -1769,7 +1769,6 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
 
         return parent_device, device_bay_1, device_bay_2, device_type_child
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_creating_device_with_parent_bay(self):
         # Create test data
         parent_device, device_bay_1, device_bay_2, device_type_child = self._parent_device_test_data()
@@ -2352,7 +2351,6 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
             ],
         ]
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_untagged_vlan_requires_mode(self):
         """Test that when an `untagged_vlan` is specified, `mode` is also required."""
         self.add_permissions("dcim.add_interface", "dcim.view_device", "extras.view_status", "ipam.view_vlan")

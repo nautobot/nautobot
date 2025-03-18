@@ -3584,7 +3584,6 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                 [f"{field_error_name} violates {relationship.label} {side}_filter restriction"],
             )
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_model_clean_method_is_called(self):
         """Validate RelationshipAssociation clean method is called"""
 
@@ -3644,7 +3643,6 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                 self.devices[i].name,
             )
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_update_association_data_on_location(self):
         """
         Check that relationship-associations can be updated via the 'relationships' field.
@@ -3652,6 +3650,8 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         self.add_permissions(
             "dcim.view_location",
             "dcim.change_location",
+            "extras.view_relationship",
+            "extras.view_relationshipassociation",
             "extras.add_relationshipassociation",
             "extras.delete_relationshipassociation",
         )
