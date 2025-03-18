@@ -457,7 +457,7 @@ class ChangeLogAPITest(APITestCase):
             "status": self.statuses[0].pk,
             "location_type": location_type.pk,
         }
-        self.add_permissions("dcim.add_location")
+        self.add_permissions("dcim.add_location", "dcim.view_locationtype", "extras.view_status")
         url = reverse("dcim-api:location-list")
 
         response = self.client.post(url, location_payload, format="json", **self.header)
