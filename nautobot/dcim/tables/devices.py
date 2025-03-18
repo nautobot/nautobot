@@ -1064,11 +1064,11 @@ class DeviceModuleBayTable(ModuleBayTable):
             "name",
             "position",
             "module_family",
+            "requires_first_party_modules",
             "installed_module",
             "installed_module__status",
             "label",
             "description",
-            "requires_first_party_modules",
             "tags",
             "actions",
         )
@@ -1077,11 +1077,11 @@ class DeviceModuleBayTable(ModuleBayTable):
             "name",
             "position",
             "module_family",
+            "requires_first_party_modules",
             "installed_module",
             "installed_module__status",
             "actions",
         )
-
 
 class ModuleModuleBayTable(DeviceModuleBayTable):
     actions = ButtonsColumn(model=ModuleBay, buttons=("edit", "delete"), prepend_template=MODULEBAY_BUTTONS)
