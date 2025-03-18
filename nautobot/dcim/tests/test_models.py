@@ -3500,6 +3500,8 @@ class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):
 class ModuleFamilyTestCase(ModelTestCases.BaseModelTestCase):
     """Test cases for the ModuleFamily model."""
 
+    model = ModuleFamily
+
     def setUp(self):
         """Create a ModuleFamily for use in test methods."""
         self.module_family = ModuleFamily.objects.create(
