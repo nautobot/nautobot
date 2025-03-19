@@ -1,0 +1,1 @@
+Refactored Clustertype model related UI views to use `NautobotUIViewSet` and `UI component framework`.
