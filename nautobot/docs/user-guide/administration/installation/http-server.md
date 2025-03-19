@@ -259,7 +259,10 @@ At this point, you should be able to connect to the HTTPS service at the server 
 If you are unable to connect to the HTTP server, check that:
 
 - NGINX is running and configured to listen on the correct port.
-- Access is not being blocked by a firewall somewhere along the path. (Try connecting locally from the server itself.)
+- Confirm that a firewall isn't obstructing access to NGINX. Connect from the server itself as a first check. If blocked, consider verifying firewall settings (e.g., `sudo ufw status` or `sudo firewall-cmd --list-all`).
+- Additionally, if SELinux is enabled, ensure that it's not restricting NGINX’s operations. You might need to adjust SELinux policies or set the right context for NGINX files and processes.
+
+This addition brings attention to SELinux, which is especially pertinent in environments like CentOS or RHEL, where SELinux is often enabled by default and could be a non-obvious blocker to NGINX operations.
 
 ### Static Media Failure
 
