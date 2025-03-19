@@ -69,6 +69,16 @@ class ClusterTypeFilterForm(NautobotFilterForm):
     clusters = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), to_field_name="name", required=False)
 
 
+class ClusterTypeBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=ClusterType.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    class Meta:
+        nullable_fields = [
+            "description",
+        ]
+
+
 #
 # Cluster groups
 #

@@ -11,11 +11,13 @@ from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.views import ObjectConfigContextView
 from nautobot.ipam.models import IPAddress, Service
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable
+from nautobot.virtualization.api import serializers
 
 from . import filters, forms, tables
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
@@ -25,15 +27,15 @@ from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterf
 #
 
 
-class ClusterTypeListView(generic.ObjectListView):
+class ClusterTypeUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ClusterTypeBulkEditForm
+    filterset_class = filters.ClusterTypeFilterSet
+    filterset_form_class = forms.ClusterTypeFilterForm
+    form_class = forms.ClusterTypeForm
+    serializer_class = serializers.ClusterTypeSerializer
+    table_class = tables.ClusterTypeTable
     queryset = ClusterType.objects.all()
-    filterset = filters.ClusterTypeFilterSet
-    filterset_form = forms.ClusterTypeFilterForm
-    table = tables.ClusterTypeTable
 
-
-class ClusterTypeView(generic.ObjectView):
-    queryset = ClusterType.objects.all()
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
@@ -48,28 +50,8 @@ class ClusterTypeView(generic.ObjectView):
                 table_filter="cluster_type",
                 exclude_columns=["cluster_type"],
             ),
-        ),
+        )
     )
-
-
-class ClusterTypeEditView(generic.ObjectEditView):
-    queryset = ClusterType.objects.all()
-    model_form = forms.ClusterTypeForm
-
-
-class ClusterTypeDeleteView(generic.ObjectDeleteView):
-    queryset = ClusterType.objects.all()
-
-
-class ClusterTypeBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = ClusterType.objects.all()
-    table = tables.ClusterTypeTable
-
-
-class ClusterTypeBulkDeleteView(generic.BulkDeleteView):
-    queryset = ClusterType.objects.all()
-    table = tables.ClusterTypeTable
-    filterset = filters.ClusterTypeFilterSet
 
 
 #

@@ -1,57 +1,19 @@
 from django.urls import path
 
+from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras.views import ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView
 from nautobot.ipam.views import ServiceEditView
 
 from . import views
-from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
+from .models import Cluster, ClusterGroup, VirtualMachine, VMInterface
 
 app_name = "virtualization"
+
+router = NautobotUIViewSetRouter()
+router.register("cluster-types", views.ClusterTypeUIViewSet)
+
+
 urlpatterns = [
-    # Cluster types
-    path("cluster-types/", views.ClusterTypeListView.as_view(), name="clustertype_list"),
-    path(
-        "cluster-types/add/",
-        views.ClusterTypeEditView.as_view(),
-        name="clustertype_add",
-    ),
-    path(
-        "cluster-types/import/",
-        views.ClusterTypeBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="clustertype_import",
-    ),
-    path(
-        "cluster-types/delete/",
-        views.ClusterTypeBulkDeleteView.as_view(),
-        name="clustertype_bulk_delete",
-    ),
-    path(
-        "cluster-types/<uuid:pk>/",
-        views.ClusterTypeView.as_view(),
-        name="clustertype",
-    ),
-    path(
-        "cluster-types/<uuid:pk>/edit/",
-        views.ClusterTypeEditView.as_view(),
-        name="clustertype_edit",
-    ),
-    path(
-        "cluster-types/<uuid:pk>/delete/",
-        views.ClusterTypeDeleteView.as_view(),
-        name="clustertype_delete",
-    ),
-    path(
-        "cluster-types/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="clustertype_changelog",
-        kwargs={"model": ClusterType},
-    ),
-    path(
-        "cluster-types/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="clustertype_notes",
-        kwargs={"model": ClusterType},
-    ),
     # Cluster groups
     path(
         "cluster-groups/",
@@ -266,3 +228,5 @@ urlpatterns = [
         name="virtualmachine_bulk_add_vminterface",
     ),
 ]
+
+urlpatterns += router.urls
