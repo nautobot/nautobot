@@ -84,6 +84,12 @@ class NautobotTestRunner(DiscoverRunner):
         for default_excluded_tag in self.exclude_tags:
             if default_excluded_tag not in incoming_tags:
                 exclude_tags.append(default_excluded_tag)
+                # Can't just use self.log() here because we haven't yet called super().__init__()
+                if logger := kwargs.get("logger"):
+                    logger.info("Implicitly excluding tests tagged %r", default_excluded_tag)
+                elif kwargs.get("verbosity", 1) >= 1:
+                    print(f"Implicitly excluding tests tagged {default_excluded_tag!r}")
+
         kwargs["exclude_tags"] = exclude_tags
 
         super().__init__(**kwargs)

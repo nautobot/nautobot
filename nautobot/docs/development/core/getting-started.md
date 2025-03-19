@@ -609,9 +609,56 @@ Installing the current project: nautobot (1.0.0-beta.2)
 
 ### Running Tests
 
-Throughout the course of development, it's a good idea to occasionally run Nautobot's test suite to catch any potential errors. Tests come in two primary flavors: Unit tests and integration tests.
+Throughout the course of development, it's a good idea to occasionally run Nautobot's test suite to catch any potential errors. Tests in Nautobot come in three primary flavors: Unit tests, integration tests, and migration tests. Most commonly you'll run unit tests, integration tests less frequently, and migration tests more rarely still.
 
 For information about **writing** tests, refer to the [testing documentation](testing.md).
+
+All three types of tests are executable via the `invoke tests` (or, if using the virtual environment workflow, `nautobot-server test`) command with appropriate parameters. These commands also support many optional parameters to influence the testing behavior. Careful use of these parameters can greatly reduce the time it takes to run and re-run tests during development. Some specific examples are provided below, but for an up-to-date summary of parameters, you can always run `invoke tests --help`.
+
+#### Test Execution Examples
+
+The simplest command **runs all unit tests** (not including integration and migration tests). This includes by default a number of performance optimizations such as [caching test factory data to disk](./testing.md#factory-caching), keeping and reusing the database schema between successive reruns, and executing tests in parallel across available CPU cores:
+
+```no-highlight
+invoke tests
+# functionally equivalent to explicitly setting the below flags:
+invoke tests --cache-test-fixtures --keepdb --buffer --parallel
+```
+
+To limit the test to a specific **subset of test cases** by pattern or label, you can use the `--label` or `--pattern` options. You can also instruct the test execution to **stop after the first failure** (if any) occurs, rather than running to completion:
+
+```no-highlight
+invoke tests --pattern Controller
+invoke tests --label nautobot.core.tests.dcim.test_views.DeviceTestCase
+invoke tests --failfast
+```
+
+Once the Nautobot static documentation has been generated once (a prerequisite for certain tests), you can **skip the documentation build** if you haven't made any changes to the documentation:
+
+```no-highlight
+invoke tests --skip-docs-build
+```
+
+To limit the CPU consumption on your system, you can **restrict the number of parallel workers** and/or **run tests serially**:
+
+```no-highlight
+invoke tests --parallel-workers 4
+invoke tests --no-parallel
+```
+
+When actively updating models or migrations, you may need to **not reuse the database from the previous test run**, but instead recreate it, and may also need to force **regeneration of the test factory data**:
+
+```no-highlight
+invoke tests --no-reusedb
+invoke tests --no-cache-test-fixtures
+```
+
+By default, to keep the test output concise, stdout and stderr for tests are not displayed to your terminal, and while executing, only a single character (`.` for successful tests, `F` for failures, and `E` for errors) is printed per executed test case. If you're **debugging code with `breakpoint()`** you need to use `--no-buffer` to allow output to the terminal when a breakpoint is reached, and when troubleshooting tests in general, it may be useful to **enable more verbose output from the test runner**:
+
+```no-highlight
+invoke tests --no-buffer
+invoke tests --verbose
+```
 
 #### Unit Tests
 
@@ -625,62 +672,6 @@ Unit tests are run using the `invoke tests` command (if using the Docker develop
 
 !!! info
     By default `invoke tests` will start and run the unit tests inside the Docker development container; this ensures that PostgreSQL and Redis servers are available during the test. However, if you have your environment configured such that `nautobot-server` can run locally, outside of the Docker environment, you may wish to set the environment variable `INVOKE_NAUTOBOT_LOCAL=True` to execute these tests in your local environment instead.
-
-##### Useful Unit Test Parameters
-
-The `invoke tests` command supports a number of optional parameters to influence its behavior. Careful use of these parameters can greatly reduce the time it takes to run and re-run tests during development.
-
-* `--failfast` - Fail as soon as any test failure or error condition is encountered, instead of running to completion.
-* `--label <module.path>` - Only run the specific subset of tests. Can be broad (`--label nautobot.core.tests`) or specific (`--label nautobot.core.tests.test_graphql.GraphQLQueryTestCase`).
-* `--no-buffer` - Allow stdout/stderr output from the test to be seen in your terminal, instead of being hidden. **If you're debugging code with `breakpoint()`, you should use this option, as otherwise you'll never see the breakpoint happen.**
-* `--no-cache-test-fixtures` - Prevent caching [test factory data](./testing.md#factory-caching) to disk, or if a cache is already present, prevent loading from that cache when initializing the test environment. **The `--no-cache-test-fixtures` option is mandatory if you're actively making changes to factories or model migrations.**
-* `--no-keepdb` - Prevent saving the initialized test database after a test run for later reuse in a test re-run.
-* `--no-parallel` - By default, Nautobot splits test execution across multiple parallel subprocesses to reduce the runtime of the test suite. When troubleshooting obscure test exceptions, it may be desirable to disable that behavior temporarily using this parameter.
-* `--parallel-workers` - Explicitly specify the number of workers to use when running tests in parallel.
-* `--pattern` - Only run tests which match the given substring. Can be used multiple times.
-* `--no-reusedb` - Prevent reusing the initialized test database from a previous test run; instead, create a new database. **The `--no-reusedb` option is mandatory if you're actively making changes to model migrations, or when switching between branches that differ in their included migrations.**
-* `--skip-docs-build` - Skip building/rebuilding the static Nautobot documentation before running the test. Saves some time on reruns when you haven't changed the documentation source files.
-* `--verbose` - Run tests more verbosely, including describing each test case as it is run.
-
-##### Unit Test Invocation Examples
-
-In general, when you first run the Nautobot tests in your local copy of the repository, we'd recommend:
-
-```no-highlight
-invoke tests
-```
-
-When there are too many cores on the testing machine, you can limit the number of parallel workers:
-
-```no-highlight
-invoke tests --parallel-workers 4
-```
-
-On subsequent reruns, you can add the other performance-related options:
-
-```no-highlight
-invoke tests --skip-docs-build
-invoke tests --skip-docs-build --label nautobot.core.tests
-```
-
-When switching between significantly different branches of the code base (e.g. `main` vs `develop` vs `next`), you'll need to for once include the `--no-keepdb` option so that the test database can be destroyed and recreated appropriately:
-
-```no-highlight
-invoke tests --no-keepdb
-```
-
-To not use the cached test fixture, you will need to include the `--no-cache-test-fixtures` flag
-
-```no-highlight
-invoke tests --no-cache-test-fixtures
-```
-
-To limit the test to a specific pattern or label, you can use the `--label` and `--pattern` options:
-
-```no-highlight
-invoke tests --verbose --skip-docs-build --label nautobot.core.tests.dcim.test_views.DeviceTestCase
-invoke tests --verbose --skip-docs-build --pattern Controller
-```
 
 #### Integration Tests
 
@@ -696,10 +687,7 @@ Before running integration tests, the `selenium` container must be running. If y
 | ----------------------- | --------------------------------- |
 | (automatic)             | `invoke start --service selenium` |
 
-Integration tests are run using the `invoke tests --tag integration` command. All integration tests must inherit from `nautobot.core.testing.integration.SeleniumTestCase`, which itself is tagged with `integration`. A custom test runner has been implemented to automatically skip any test case tagged with `integration` by default, so normal unit tests run without any concern. To run the integration tests the `--tag integration` argument must be passed to `nautobot-server test`.
-
-+/- 2.0.0
-    `SeleniumTestCase` was moved from the `nautobot.utilities.testing.integration` module to `nautobot.core.testing.integration`.
+Integration tests are run by passing `--tag integration` to the `invoke tests` command. All other optional parameters to this command can be used the same as with unit tests.
 
 | Docker Compose Workflow          | Virtual Environment Workflow                                                                      |
 | -------------------------------- | ------------------------------------------------------------------------------------------------- |
@@ -714,6 +702,14 @@ The following environment variables can be provided when running tests to custom
 
 * `NAUTOBOT_SELENIUM_URL` - The URL used by the Nautobot test runner to remotely control the headless Selenium Firefox node. You can provide your own, but it must be a [`Remote` WebDriver](https://selenium-python.readthedocs.io/getting-started.html#using-selenium-with-remote-webdriver). (Default: `http://localhost:4444/wd/hub`; for Docker: `http://selenium:4444/wd/hub`)
 * `NAUTOBOT_SELENIUM_HOST` - The hostname used by the Selenium WebDriver to access Nautobot using Firefox. (Default: `host.docker.internal`; for Docker: `nautobot`)
+
+#### Migration Tests
+
+Migration tests are automated tests of Nautobot database migrations, used to validate software upgrade (and rarely downgrade) scenarios. Because of their relatively slow performance, and because data migrations are rarely changed once initially written and validated, _migration tests do not run by default_, even in Nautobot's continuous integration (CI) environment, and **must be run manually when relevant**.
+
+Migration tests are run by passing `--tag migration_test` to the `invoke tests` command. All other optional parameters to this command can be used the same as with unit tests.
+
+See [below](#handling-migrations) for more best practices when developing and testing migrations.
 
 ### Verifying the REST API Schema
 
@@ -762,7 +758,7 @@ When modifying model field attributes, modify the test data in the tests too to 
 
 #### Testing Migrations
 
-Nautobot includes a number of data sets under the `development/datasets/` directory that represent various snapshots of historical database contents. You should validate whether your migrations correctly and successfully handle these datasets by running the `invoke migration-test --db-engine [postgres|mysql] --dataset development/datasets/<filename>` command (which handles both the Docker Compose workflow as well as the Virtual Environment workflow).
+In addition to the automated [migration tests](#migration-tests) described above, Nautobot includes a number of data sets under the `development/datasets/` directory that represent various snapshots of historical database contents. You should validate whether your migrations correctly and successfully handle these datasets by running the `invoke migration-test --db-engine [postgres|mysql] --dataset development/datasets/<filename>` command (which handles both the Docker Compose workflow as well as the Virtual Environment workflow).
 
 ## Working on Documentation
 

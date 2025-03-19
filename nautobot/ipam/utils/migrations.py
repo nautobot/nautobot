@@ -73,7 +73,7 @@ def process_namespaces(apps, schema_editor):
         copy_vrfs_to_cleanup_namespaces(apps)
 
     # [VM]Interfaces
-    with TimerContextManager("Processing Interfaces"):
+    with TimerContextManager("Processing Interfaces and VM Interfaces"):
         process_interfaces(apps)
 
     # VRF-Prefix M2M
@@ -354,15 +354,12 @@ def reparent_prefixes(apps):
         print("\n>>> Processing Prefix parents, please standby...")
     for pfx in Prefix.objects.all().order_by("-prefix_length", "tenant").select_related("namespace").iterator():
         parent = get_closest_parent(pfx, pfx.namespace.prefixes.all())
-        if parent is None:
-            continue
-        # if pfx.namespace != parent.namespace:
-        #     raise ValidationError("Prefix and parent are in different Namespaces")
-        # TODO: useful but potentially very noisy. Do migrations have a verbosity option?
-        # if "test" not in sys.argv:
-        #     print(f">>> {pfx.network}/{pfx.prefix_length} parent: {parent.network}/{parent.prefix_length}")
-        pfx.parent = parent
-        pfx.save()
+        if parent is not None:
+            # TODO: useful but potentially very noisy. Do migrations have a verbosity option?
+            # if "test" not in sys.argv:
+            #     print(f">>> {pfx.network}/{pfx.prefix_length} parent: {parent.network}/{parent.prefix_length}")
+            pfx.parent = parent
+            pfx.save()
 
 
 def copy_vrfs_to_cleanup_namespaces(apps):
