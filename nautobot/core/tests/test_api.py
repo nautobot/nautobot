@@ -639,7 +639,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             "vlan_group": self.vlan_group1.pk,
         }
         url = reverse("ipam-api:vlan-list")
-        self.add_permissions("ipam.add_vlan")
+        self.add_permissions("ipam.add_vlan", "ipam.view_vlangroup", "extras.view_status")
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
@@ -672,7 +672,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             "vlan_group": {"name": self.vlan_group1.name},
         }
         url = reverse("ipam-api:vlan-list")
-        self.add_permissions("ipam.add_vlan")
+        self.add_permissions("ipam.add_vlan", "ipam.view_vlangroup", "extras.view_status")
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
@@ -708,7 +708,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             },
         }
         url = reverse("ipam-api:vlan-list")
-        self.add_permissions("ipam.add_vlan")
+        self.add_permissions("ipam.add_vlan", "ipam.view_vlangroup", "extras.view_status")
 
         with testing.disable_warnings("django.request"):
             response = self.client.post(url, data, format="json", **self.header)
@@ -775,7 +775,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             "vlan_group": self.vlan_group1.pk,
         }
         url = reverse("ipam-api:vlan-list")
-        self.add_permissions("ipam.add_vlan")
+        self.add_permissions("ipam.add_vlan", "ipam.view_vlangroup", "extras.view_status")
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
