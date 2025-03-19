@@ -109,6 +109,16 @@ class WritableSerializerMixin:
             queryset = self.queryset
         else:
             queryset = self.Meta.model.objects
+
+        # Apply user permission on related objects
+        if (
+            "request" in self.context
+            and self.context["request"]
+            and self.context["request"].user
+            and hasattr(queryset, "restrict")
+        ):
+            queryset = queryset.restrict(self.context["request"].user, "view")
+
         if isinstance(data, list):
             return [self.get_object(data=entry, queryset=queryset) for entry in data]
         return self.get_object(data=data, queryset=queryset)

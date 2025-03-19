@@ -1,0 +1,319 @@
+Running docker compose command "exec nautobot mkdocs build --no-directory-urls --strict"
+PYTHON_VER=3.11 \
+NAUTOBOT_VER=2.4 \
+docker compose \
+    --project-name "nautobot-2-4" \
+    --project-directory "/Users/hanlinmiao/Desktop/nautobot/development/" \
+    -f "/Users/hanlinmiao/Desktop/nautobot/development/docker-compose.yml" \
+    -f "/Users/hanlinmiao/Desktop/nautobot/development/docker-compose.postgres.yml" \
+    -f "/Users/hanlinmiao/Desktop/nautobot/development/docker-compose.dev.yml" \
+    -f "/Users/hanlinmiao/Desktop/nautobot/development/docker-compose.vscode-rdb.yml" \
+    -f "/Users/hanlinmiao/Desktop/nautobot/development/docker-compose.static-ports.yml" exec nautobot mkdocs build \
+    --no-directory-urls \
+    --strict
+INFO    -  [32m[macros] - Found local Python module 'docs/macros' in:[0m
+           /source
+INFO    -  [32m[macros] - Found external Python module 'docs/macros' in:[0m
+           /source
+INFO    -  [32m[macros] - Functions found:[0m
+           define_env,on_pre_page_macros,on_post_page_macros,on_post_build
+INFO    -  [32m[macros] - Config variables:[0m ['extra', 'config',
+           'environment', 'plugin', 'git', 'generator', 'ntc_sponsor', 'social',
+           'settings_schema', 'macros', 'filters', 'filters_builtin']
+INFO    -  [32m[macros] - Config macros:[0m ['context', 'macros_info', 'now',
+           'fix_url']
+INFO    -  [32m[macros] - Config filters:[0m ['pretty', 'relative_url']
+INFO    -  Cleaning site directory
+INFO    -  Building documentation to directory:
+           /source/nautobot/project-static/docs
+INFO    -  Documentation built in 15.53 seconds
+Running docker compose command "run --rm --workdir='/source/examples/example_app' --entrypoint 'mkdocs build --no-directory-urls --strict' nautobot"
+PYTHON_VER=3.11 \
+NAUTOBOT_VER=2.4 \
+docker compose \
+    --project-name "nautobot-2-4" \
+    --project-directory "/Users/hanlinmiao/Desktop/nautobot/development/" \
+    -f "/Users/hanlinmiao/Desktop/nautobot/development/docker-compose.yml" \
+    -f "/Users/hanlinmiao/Desktop/nautobot/development/docker-compose.postgres.yml" \
+    -f "/Users/hanlinmiao/Desktop/nautobot/development/docker-compose.dev.yml" \
+    -f "/Users/hanlinmiao/Desktop/nautobot/development/docker-compose.vscode-rdb.yml" \
+    -f "/Users/hanlinmiao/Desktop/nautobot/development/docker-compose.static-ports.yml" run \
+    --rm \
+    --workdir='/source/examples/example_app' \
+    --entrypoint 'mkdocs build \
+    --no-directory-urls \
+    --strict' nautobot
+[1A[1B[0G[?25l[+] Creating 3/0
+ [32m✔[0m Container nautobot-2-4-selenium-1  [32mRunning[0m                              [34m0.0s [0m
+ [32m✔[0m Container nautobot-2-4-redis-1     [32mRunning[0m                              [34m0.0s [0m
+ [32m✔[0m Container nautobot-2-4-db-1        [32mRun...[0m                               [34m0.0s [0m
+[?25hINFO    -  Cleaning site directory
+INFO    -  Building documentation to directory:
+           /source/examples/example_app/example_app/static/example_app/docs
+INFO    -  Documentation built in 0.28 seconds
+Running docker compose command "exec nautobot coverage erase"
+PYTHON_VER=3.11 \
+NAUTOBOT_VER=2.4 \
+docker compose \
+    --project-name "nautobot-2-4" \
+    --project-directory "/Users/hanlinmiao/Desktop/nautobot/development/" \
+    -f "/Users/hanlinmiao/Desktop/nautobot/development/docker-compose.yml" \
+    -f "/Users/hanlinmiao/Desktop/nautobot/development/docker-compose.postgres.yml" \
+    -f "/Users/hanlinmiao/Desktop/nautobot/development/docker-compose.dev.yml" \
+    -f "/Users/hanlinmiao/Desktop/nautobot/development/docker-compose.vscode-rdb.yml" \
+    -f "/Users/hanlinmiao/Desktop/nautobot/development/docker-compose.static-ports.yml" exec nautobot coverage erase
+Running docker compose command "exec nautobot coverage run --module nautobot.core.cli test nautobot.extras.tests --config=nautobot/core/tests/nautobot_config.py 
+--cache-test-fixtures --keepdb"
+PYTHON_VER=3.11 \
+NAUTOBOT_VER=2.4 \
+docker compose \
+    --project-name "nautobot-2-4" \
+    --project-directory "/Users/hanlinmiao/Desktop/nautobot/development/" \
+    -f "/Users/hanlinmiao/Desktop/nautobot/development/docker-compose.yml" \
+    -f "/Users/hanlinmiao/Desktop/nautobot/development/docker-compose.postgres.yml" \
+    -f "/Users/hanlinmiao/Desktop/nautobot/development/docker-compose.dev.yml" \
+    -f "/Users/hanlinmiao/Desktop/nautobot/development/docker-compose.vscode-rdb.yml" \
+    -f "/Users/hanlinmiao/Desktop/nautobot/development/docker-compose.static-ports.yml" exec nautobot coverage run \
+    --module nautobot.core.cli test nautobot.extras.tests \
+    --config=nautobot/core/tests/nautobot_config.py \
+    --cache-test-fixtures \
+    --keepdb
+Using NautobotPerformanceTestRunner to run tests ...
+Found 3218 test(s).
+Using existing test database for alias 'default'...
+[33;1mFlushing all existing data from the database "default"...[0m
+[33;1mLoading factory data from file development/factory_dump.6d91c78217f52dd6b39f.json[0m
+Installed 9849 object(s) from 1 fixture(s)
+[32;1mDatabase default populated successfully![0m
+System check identified some issues:
+
+WARNINGS:
+[33;1m<Settings "nautobot_config">: (nautobot.core.W005) STORAGE_CONFIG has been set but STORAGE_BACKEND is not defined. STORAGE_CONFIG will be ignored.[0m
+
+System check identified 1 issue (0 silenced).
+................................................................................................................................................................................................s............................s..........s...s....s........s.............................................................................................................................................s...................................s...s........................s............................................................................s...................s........s..........................................................s...s........................................s...................s........s................................................s........................s...................s........s......................s......................................................................s...................s..........................................................................s.................................................................................................................................................................s....................s........s.................................F....F.F...........................s....FFFFFF......FF.F................................................
+    Found and fixed 2 DynamicGroup(s) that should be typed as "Group of groups".
+
+    Found and fixed 2 DynamicGroup(s) that should be typed as "Filter-defined".
+.........s......................................................................s.......ss.........s..................s......s......s.......s..............s...............s........s.......s......................s.........s......s.................s......s................s......ss................s........s.......s........s................s......s.......s.......s.......s.................s.........................................................................
+
+.
+
+.sss..................................s........................sx...............................s..........s........s................s........s................................s......................s..................s...s....................................................s............................................................s.....................................FF.............................s...................................s................................s......................................s.............................................................s...............................s..............................s........................................s..........................s.....................................s...................................s...........................s...............................s......................................s..........................s......................................................s.....................................s...........................s...................s...............................s................................s...........................................s................................s................................s..........................s..........................s..................................s.......................................s..........................s.........
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+======================================================================
+FAIL: test_create_object (nautobot.extras.tests.test_changelog.ChangeLogAPITest.test_create_object)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/source/nautobot/extras/tests/test_changelog.py", line 283, in test_create_object
+    self.assertHttpStatus(response, status.HTTP_201_CREATED)
+  File "/source/nautobot/core/testing/mixins.py", line 190, in assertHttpStatus
+    self.assertIn(response.status_code, expected_status, err_message)
+AssertionError: 400 not found in [201] : Expected HTTP status(es) [201]; received 400:
+{'location_type': [ErrorDetail(string="Related object not found using the provided attributes: {'pk': UUID('c5a026fa-6a3d-4a7c-bda5-90aba7cb40d4')}", code='invalid')], 'tags': [ErrorDetail(string="Related object not found using the provided attributes: {'name': 'Amber'}", code='invalid')]}
+
+======================================================================
+FAIL: test_m2m_change (nautobot.extras.tests.test_changelog.ChangeLogAPITest.test_m2m_change)
+Test that ManyToMany change only generates a single ObjectChange instance
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/source/nautobot/extras/tests/test_changelog.py", line 499, in test_m2m_change
+    self.assertHttpStatus(response, status.HTTP_200_OK)
+  File "/source/nautobot/core/testing/mixins.py", line 190, in assertHttpStatus
+    self.assertIn(response.status_code, expected_status, err_message)
+AssertionError: 400 not found in [200] : Expected HTTP status(es) [200]; received 400:
+{'tagged_vlans': [ErrorDetail(string="Related object not found using the provided attributes: {'pk': UUID('0b864155-0d7c-4f8d-bb5f-73ce340411f0')}", code='invalid')]}
+
+======================================================================
+FAIL: test_update_object (nautobot.extras.tests.test_changelog.ChangeLogAPITest.test_update_object)
+Test PUT with changelogs.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/source/nautobot/extras/tests/test_changelog.py", line 317, in test_update_object
+    self.assertHttpStatus(response, status.HTTP_200_OK)
+  File "/source/nautobot/core/testing/mixins.py", line 190, in assertHttpStatus
+    self.assertIn(response.status_code, expected_status, err_message)
+AssertionError: 400 not found in [200] : Expected HTTP status(es) [200]; received 400:
+{'location_type': [ErrorDetail(string="Related object not found using the provided attributes: {'pk': UUID('c5a026fa-6a3d-4a7c-bda5-90aba7cb40d4')}", code='invalid')], 'tags': [ErrorDetail(string="Related object not found using the provided attributes: {'name': 'Dark red'}", code='invalid')]}
+
+======================================================================
+FAIL: test_create_invalid_select_choice (nautobot.extras.tests.test_customfields.CustomFieldDataAPITest.test_create_invalid_select_choice)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/source/nautobot/extras/tests/test_customfields.py", line 1048, in test_create_invalid_select_choice
+    self.assertContains(response, "Invalid choice", status_code=status.HTTP_400_BAD_REQUEST)
+  File "/usr/local/lib/python3.11/site-packages/django/test/testcases.py", line 660, in assertContains
+    self.assertTrue(
+AssertionError: False is not true : Couldn't find 'Invalid choice' in response
+
+======================================================================
+FAIL: test_create_multiple_objects_with_defaults (nautobot.extras.tests.test_customfields.CustomFieldDataAPITest.test_create_multiple_objects_with_defaults)
+Create three news locations with no specified custom field values and check that each received
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/source/nautobot/extras/tests/test_customfields.py", line 726, in test_create_multiple_objects_with_defaults
+    self.assertHttpStatus(response, status.HTTP_201_CREATED)
+  File "/source/nautobot/core/testing/mixins.py", line 190, in assertHttpStatus
+    self.assertIn(response.status_code, expected_status, err_message)
+AssertionError: 400 not found in [201] : Expected HTTP status(es) [201]; received 400:
+[{'location_type': [ErrorDetail(string="Related object not found using the provided attributes: {'pk': UUID('c5a026fa-6a3d-4a7c-bda5-90aba7cb40d4')}", code='invalid')], 'status': [ErrorDetail(string="Related object not found using the provided attributes: {'pk': UUID('7e990514-17bd-45e4-b576-11a496bbe2be')}", code='invalid')]}, {'location_type': [ErrorDetail(string="Related object not found using the provided attributes: {'pk': UUID('c5a026fa-6a3d-4a7c-bda5-90aba7cb40d4')}", code='invalid')], 'status': [ErrorDetail(string="Related object not found using the provided attributes: {'pk': UUID('7e990514-17bd-45e4-b576-11a496bbe2be')}", code='invalid')]}, {'location_type': [ErrorDetail(string="Related object not found using the provided attributes: {'pk': UUID('c5a026fa-6a3d-4a7c-bda5-90aba7cb40d4')}", code='invalid')], 'status': [ErrorDetail(string="Related object not found using the provided attributes: {'pk': UUID('7e990514-17bd-45e4-b576-11a496bbe2be')}", code='invalid')]}]
+
+======================================================================
+FAIL: test_create_multiple_objects_with_values (nautobot.extras.tests.test_customfields.CustomFieldDataAPITest.test_create_multiple_objects_with_values)
+Create a three new locations, each with custom fields defined.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/source/nautobot/extras/tests/test_customfields.py", line 781, in test_create_multiple_objects_with_values
+    self.assertHttpStatus(response, status.HTTP_201_CREATED)
+  File "/source/nautobot/core/testing/mixins.py", line 190, in assertHttpStatus
+    self.assertIn(response.status_code, expected_status, err_message)
+AssertionError: 400 not found in [201] : Expected HTTP status(es) [201]; received 400:
+[{'location_type': [ErrorDetail(string="Related object not found using the provided attributes: {'pk': UUID('c5a026fa-6a3d-4a7c-bda5-90aba7cb40d4')}", code='invalid')], 'status': [ErrorDetail(string="Related object not found using the provided attributes: {'pk': UUID('7e990514-17bd-45e4-b576-11a496bbe2be')}", code='invalid')]}, {'location_type': [ErrorDetail(string="Related object not found using the provided attributes: {'pk': UUID('c5a026fa-6a3d-4a7c-bda5-90aba7cb40d4')}", code='invalid')], 'status': [ErrorDetail(string="Related object not found using the provided attributes: {'pk': UUID('7e990514-17bd-45e4-b576-11a496bbe2be')}", code='invalid')]}, {'location_type': [ErrorDetail(string="Related object not found using the provided attributes: {'pk': UUID('c5a026fa-6a3d-4a7c-bda5-90aba7cb40d4')}", code='invalid')], 'status': [ErrorDetail(string="Related object not found using the provided attributes: {'pk': UUID('7e990514-17bd-45e4-b576-11a496bbe2be')}", code='invalid')]}]
+
+======================================================================
+FAIL: test_create_single_object_with_defaults (nautobot.extras.tests.test_customfields.CustomFieldDataAPITest.test_create_single_object_with_defaults)
+Create a new location with no specified custom field values and check that it received the default values.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/source/nautobot/extras/tests/test_customfields.py", line 650, in test_create_single_object_with_defaults
+    self.assertHttpStatus(response, status.HTTP_201_CREATED)
+  File "/source/nautobot/core/testing/mixins.py", line 190, in assertHttpStatus
+    self.assertIn(response.status_code, expected_status, err_message)
+AssertionError: 400 not found in [201] : Expected HTTP status(es) [201]; received 400:
+{'location_type': [ErrorDetail(string="Related object not found using the provided attributes: {'pk': UUID('c5a026fa-6a3d-4a7c-bda5-90aba7cb40d4')}", code='invalid')], 'status': [ErrorDetail(string="Related object not found using the provided attributes: {'pk': UUID('7e990514-17bd-45e4-b576-11a496bbe2be')}", code='invalid')]}
+
+======================================================================
+FAIL: test_create_single_object_with_values (nautobot.extras.tests.test_customfields.CustomFieldDataAPITest.test_create_single_object_with_values)
+Create a single new location with a value for each type of custom field.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/source/nautobot/extras/tests/test_customfields.py", line 687, in test_create_single_object_with_values
+    self.assertHttpStatus(response, status.HTTP_201_CREATED)
+  File "/source/nautobot/core/testing/mixins.py", line 190, in assertHttpStatus
+    self.assertIn(response.status_code, expected_status, err_message)
+AssertionError: 400 not found in [201] : Expected HTTP status(es) [201]; received 400:
+{'location_type': [ErrorDetail(string="Related object not found using the provided attributes: {'pk': UUID('c5a026fa-6a3d-4a7c-bda5-90aba7cb40d4')}", code='invalid')], 'status': [ErrorDetail(string="Related object not found using the provided attributes: {'pk': UUID('7e990514-17bd-45e4-b576-11a496bbe2be')}", code='invalid')]}
+
+======================================================================
+FAIL: test_create_without_required_field (nautobot.extras.tests.test_customfields.CustomFieldDataAPITest.test_create_without_required_field)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/source/nautobot/extras/tests/test_customfields.py", line 1026, in test_create_without_required_field
+    self.assertContains(response, "Required field cannot be empty", status_code=status.HTTP_400_BAD_REQUEST)
+  File "/usr/local/lib/python3.11/site-packages/django/test/testcases.py", line 660, in assertContains
+    self.assertTrue(
+AssertionError: False is not true : Couldn't find 'Required field cannot be empty' in response
+
+======================================================================
+FAIL: test_select_minimum_maximum_validation (nautobot.extras.tests.test_customfields.CustomFieldDataAPITest.test_select_minimum_maximum_validation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/source/nautobot/extras/tests/test_customfields.py", line 990, in test_select_minimum_maximum_validation
+    self.assertHttpStatus(response, status.HTTP_201_CREATED)
+  File "/source/nautobot/core/testing/mixins.py", line 190, in assertHttpStatus
+    self.assertIn(response.status_code, expected_status, err_message)
+AssertionError: 400 not found in [201] : Expected HTTP status(es) [201]; received 400:
+{'custom_field': [ErrorDetail(string="Related object not found using the provided attributes: {'pk': UUID('66d08802-a11d-4606-b7b8-1bdcc3462ffc')}", code='invalid')]}
+
+======================================================================
+FAIL: test_select_regex_validation (nautobot.extras.tests.test_customfields.CustomFieldDataAPITest.test_select_regex_validation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/source/nautobot/extras/tests/test_customfields.py", line 970, in test_select_regex_validation
+    self.assertHttpStatus(response, status.HTTP_201_CREATED)
+  File "/source/nautobot/core/testing/mixins.py", line 190, in assertHttpStatus
+    self.assertIn(response.status_code, expected_status, err_message)
+AssertionError: 400 not found in [201] : Expected HTTP status(es) [201]; received 400:
+{'custom_field': [ErrorDetail(string="Related object not found using the provided attributes: {'pk': UUID('afac8cec-592a-49e2-8a12-c509f341b7a9')}", code='invalid')]}
+
+======================================================================
+FAIL: test_text_type_with_invalid_values (nautobot.extras.tests.test_customfields.CustomFieldDataAPITest.test_text_type_with_invalid_values)
+Try and create a new location with an invalid value for a text type.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/source/nautobot/extras/tests/test_customfields.py", line 1005, in test_text_type_with_invalid_values
+    self.assertContains(response, "Value must be a string", status_code=status.HTTP_400_BAD_REQUEST)
+  File "/usr/local/lib/python3.11/site-packages/django/test/testcases.py", line 660, in assertContains
+    self.assertTrue(
+AssertionError: False is not true : Couldn't find 'Value must be a string' in response
+
+======================================================================
+FAIL: test_create_tagged_item (nautobot.extras.tests.test_tags.TaggedItemTest.test_create_tagged_item)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/source/nautobot/extras/tests/test_tags.py", line 52, in test_create_tagged_item
+    self.assertHttpStatus(response, status.HTTP_201_CREATED)
+  File "/source/nautobot/core/testing/mixins.py", line 190, in assertHttpStatus
+    self.assertIn(response.status_code, expected_status, err_message)
+AssertionError: 400 not found in [201] : Expected HTTP status(es) [201]; received 400:
+{'location_type': [ErrorDetail(string="Related object not found using the provided attributes: {'pk': UUID('c5a026fa-6a3d-4a7c-bda5-90aba7cb40d4')}", code='invalid')], 'status': [ErrorDetail(string="Related object not found using the provided attributes: {'pk': UUID('7e990514-17bd-45e4-b576-11a496bbe2be')}", code='invalid')], 'tags': [ErrorDetail(string="Related object not found using the provided attributes: {'pk': UUID('f8f9f2fc-6afe-4558-b189-88811d23cec2')}", code='invalid')]}
+
+======================================================================
+FAIL: test_update_tagged_item (nautobot.extras.tests.test_tags.TaggedItemTest.test_update_tagged_item)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/source/nautobot/extras/tests/test_tags.py", line 74, in test_update_tagged_item
+    self.assertHttpStatus(response, status.HTTP_200_OK)
+  File "/source/nautobot/core/testing/mixins.py", line 190, in assertHttpStatus
+    self.assertIn(response.status_code, expected_status, err_message)
+AssertionError: 400 not found in [200] : Expected HTTP status(es) [200]; received 400:
+{'tags': [ErrorDetail(string="Related object not found using the provided attributes: {'name': 'Amber'}", code='invalid')]}
+
+----------------------------------------------------------------------
+Ran 3218 tests in 1216.776s
+
+FAILED (failures=14, skipped=106, expected failures=1)
+Emptying test database "default"...
+Database default emptied!
+Preserving test database for alias 'default'...
+[0m
