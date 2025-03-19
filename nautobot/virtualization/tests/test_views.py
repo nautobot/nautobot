@@ -52,6 +52,7 @@ class ClusterTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTe
             "description": "New description",
         }
 
+
 class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Cluster
 
