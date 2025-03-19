@@ -87,7 +87,8 @@ North America:
 1. Leave the `Parent` blank; **North America** will be a top-tier Location
 2. Select **Continent** from the Location Type drop-down menu selector
 3. Populate the `Name` to be `North America`
-4. Click on the `Create and Add Another` button
+4. Select `Active` from the Status drop-down menu selector
+5. Click on the `Create and Add Another` button
 
 Canada:
 
