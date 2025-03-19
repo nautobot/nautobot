@@ -36,3 +36,4 @@ development/pod.yaml
 node_modules
 .yarn
 .service_ports.json
+.qodo

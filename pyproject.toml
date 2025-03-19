@@ -1,16 +1,118 @@
-[tool.poetry]
+[project]
+authors = [
+    {name = "Network to Code", email = "opensource@networktocode.com"},
+]
+license = {text = "Apache-2.0"}
+requires-python = "<3.13,>=3.9.2"
+dependencies = [
+    # Background task processing
+    "celery~=5.3.6",
+    # Cryptographic recipes and primitives.
+    # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
+    # Added as an explicit dependency to protect against various CVEs in older versions.
+    "cryptography~=44.0.2",
+    # Fundamental web framework for Nautobot
+    "Django~=4.2.20",
+    # Adds AJAX capabilities to django-tables2
+    "django-ajax-tables~=1.1.1",
+    # Base functionality for task scheduling with Celery
+    "django-celery-beat~=2.6.0",
+    # Provides a database backend & models for Celery task results
+    "django-celery-results~=2.5.1",
+    # Management of app configuration via the Django admin UI
+    "django-constance~=4.3.0",
+    # Permit cross-domain API requests
+    "django-cors-headers~=4.4.0",
+    # Store files in the database for background tasks
+    "django-db-file-storage~=0.5.6.1",
+    # AutoSlugField and shell_plus
+    "django-extensions~=3.2.3",
+    # Advanced query filters
+    "django-filter~=25.1",
+    # Health check endpoint
+    "django-health-check~=3.18.3",
+    # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
+    "django-jinja~=2.11.0",
+    # Prometheus metrics for Django
+    "django-prometheus~=2.3.1",
+    # Redis cache for Django used for distributed locking
+    "django-redis~=5.4.0",
+    # Django silk for request profiling
+    "django-silk~=5.3.2",
+    # Structured logging for Django
+    "django-structlog[celery]<10.0.0,>=9.0.1",
+    # Advanced HTML tables
+    "django-tables2~=2.7.5",
+    # Tags
+    "django-taggit~=6.1.0",
+    # Represent time zones in Django
+    "django-timezone-field~=7.0",
+    # Tree database structures based on Common Table Expressions
+    "django-tree-queries~=0.19.0",
+    # Run production webservers such as uWSGI/gunicorn as a Django management command.
+    "django-webserver~=1.2.0",
+    # REST API framework
+    "djangorestframework~=3.15.2",
+    # OpenAPI 3.0 schema generation for the REST API
+    "drf-spectacular[sidecar]~=0.27.2",
+    # Emoji terminal output for Python.
+    "emoji~=2.12.1",
+    # Git integrations for Python
+    "GitPython~=3.1.44",
+    # GraphQL support
+    # NOTE: graphene-django 3.x is available but includes breaking changes. Will address in a future release.
+    "graphene-django~=2.16.0",
+    # Graphene Optimizer
+    # NOTE: graphene-django-optimizer 0.9 and later require Graphene v3
+    "graphene-django-optimizer~=0.8.0",
+    # Template rendering engine
+    "Jinja2~=3.1.6",
+    # Optional data validation of config contexts - loose dependency since our usage is light but apps may be more specific
+    "jsonschema<5.0.0,>=4.7.0",
+    # Messaging library for Python - dependency of Celery
+    # Included as an explicit dependency (for now?) to require a version with https://github.com/celery/kombu/pull/2007
+    "kombu~=5.4.2",
+    # Library to access Kubernetes API used to develop K8s integration
+    "kubernetes<33.0.0,>=32.0.1",
+    # Rendering of markdown files to HTML
+    "Markdown~=3.6",
+    # IP prefix and address handling
+    "netaddr~=1.3.0",
+    # Library of network related utilities including network driver mappings and Jinja Filters
+    # Note: netutils is limited in scope, dependencies, and observes semver, as such
+    #       we permit a looser version constraint here.
+    "netutils<2.0.0,>=1.6.0",
+    # HTML sanitization
+    "nh3~=0.2.21",
+    # Handling of version numbers
+    "packaging>=23.1",
+    # Image processing library
+    "Pillow~=11.0.0",
+    # Custom prometheus metrics
+    "prometheus-client~=0.20.0",
+    # PostgreSQL database adapter
+    # NOTE: psycopg3 is available now and nominally replaces psycopg2
+    "psycopg2-binary~=2.9.10",
+    # A Python slugify application that handles unicode.
+    "python-slugify~=8.0.3",
+    # The uWSGI WSGI HTTP server as a Python module
+    "pyuwsgi~=2.0.26",
+    # YAML parsing and rendering
+    "PyYAML~=6.0.2",
+    # Social authentication/registration with support for many auth providers
+    "social-auth-app-django~=5.4.3",
+    # Rendering of SVG images (for rack elevations, etc.)
+    "svgwrite~=1.4.2",
+]
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
 version = "2.4.6b1"
 description = "Source of truth and network automation platform."
-authors = ["Network to Code <opensource@networktocode.com>"]
-license = "Apache-2.0"
-homepage = "https://nautobot.com"
-repository = "https://github.com/nautobot/nautobot"
-documentation = "https://docs.nautobot.com"
 readme = "README.md"
-keywords = ["Nautobot"]
+keywords = [
+    "Nautobot",
+]
 classifiers = [
     "Intended Audience :: Developers",
     "Development Status :: 5 - Production/Stable",
@@ -20,227 +122,144 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
-packages = [
-    {include = "nautobot"}
-]
-include = [
-    # Rendered documentation - Poetry by default would exclude these files as they are in .gitignore
-    "nautobot/project-static/docs/**/*",
-]
-exclude = [
-    # Source code of the documentation doesn't need to be included since we package the rendered docs
-    "nautobot/docs/**/*",
-]
 
-[tool.poetry.dependencies]
-python = ">=3.9.2,<3.13"
-# Background task processing
-celery = "~5.3.6"
-# Cryptographic recipes and primitives.
-# Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
-# Added as an explicit dependency to protect against various CVEs in older versions.
-cryptography = "~44.0.2"
-# Fundamental web framework for Nautobot
-Django = "~4.2.20"
-# Adds AJAX capabilities to django-tables2
-django-ajax-tables = "~1.1.1"
-# LDAP Support
-django-auth-ldap = {version = "~5.1.0", optional = true}
-# Base functionality for task scheduling with Celery
-django-celery-beat = "~2.6.0"
-# Provides a database backend & models for Celery task results
-django-celery-results = "~2.5.1"
-# Management of app configuration via the Django admin UI
-django-constance = "~4.3.0"
-# Permit cross-domain API requests
-django-cors-headers = "~4.4.0"
-# Store files in the database for background tasks
-django-db-file-storage = "~0.5.6.1"
-# AutoSlugField and shell_plus
-django-extensions = "~3.2.3"
-# Advanced query filters
-django-filter = "~25.1"
-# Health check endpoint
-django-health-check = "~3.18.3"
-# Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
-django-jinja = "~2.11.0"
-# Prometheus metrics for Django
-django-prometheus = "~2.3.1"
-# Redis cache for Django used for distributed locking
-django-redis = "~5.4.0"
-# Django silk for request profiling
-django-silk = "~5.3.2"
-# External Storage support (i.e. S3)
-# Pinned temporarily to 1.14.3 due to https://github.com/revsys/django-health-check/issues/434
-django-storages = {version = "1.14.3", optional = true}
-# Structured logging for Django
-django-structlog = {version = "^9.0.1", extras = ["celery"]}
-# Advanced HTML tables
-django-tables2 = "~2.7.5"
-# Tags
-django-taggit = "~6.1.0"
-# Represent time zones in Django
-django-timezone-field = "~7.0"
-# Tree database structures based on Common Table Expressions
-django-tree-queries = "~0.19.0"
-# Run production webservers such as uWSGI/gunicorn as a Django management command.
-django-webserver = "~1.2.0"
-# REST API framework
-djangorestframework = "~3.15.2"
-# OpenAPI 3.0 schema generation for the REST API
-drf-spectacular = {version = "~0.27.2", extras = ["sidecar"]}
-# Emoji terminal output for Python.
-emoji = "~2.12.1"
-# Git integrations for Python
-GitPython = "~3.1.44"
-# GraphQL support
-# NOTE: graphene-django 3.x is available but includes breaking changes. Will address in a future release.
-graphene-django = "~2.16.0"
-# Graphene Optimizer
-# NOTE: graphene-django-optimizer 0.9 and later require Graphene v3
-graphene-django-optimizer = "~0.8.0"
-# Template rendering engine
-Jinja2 = "~3.1.6"
-# Optional data validation of config contexts - loose dependency since our usage is light but apps may be more specific
-jsonschema = "^4.7.0"
-# Messaging library for Python - dependency of Celery
-# Included as an explicit dependency (for now?) to require a version with https://github.com/celery/kombu/pull/2007
-kombu = "~5.4.2"
-# Library to access Kubernetes API used to develop K8s integration
-kubernetes = "^32.0.1"
-# Rendering of markdown files to HTML
-Markdown = "~3.6"
-# MySQL database adapter
-mysqlclient = {version = "~2.2.7", optional = true}
-# NAPALM automation library
-napalm = {version = ">=4.1.0,<6.0.0", optional = true}
-# IP prefix and address handling
-netaddr = "~1.3.0"
-# Library of network related utilities including network driver mappings and Jinja Filters
-# Note: netutils is limited in scope, dependencies, and observes semver, as such
-#       we permit a looser (^) version constraint here.
-netutils = "^1.6.0"
-# HTML sanitization
-nh3 = "~0.2.21"
-# Handling of version numbers
-packaging = ">=23.1"
-# Image processing library
-Pillow = "~11.0.0"
-# Custom prometheus metrics
-prometheus-client = "~0.20.0"
-# PostgreSQL database adapter
-# NOTE: psycopg3 is available now and nominally replaces psycopg2
-psycopg2-binary = "~2.9.10"
-# A Python slugify application that handles unicode.
-python-slugify = "~8.0.3"
-# The uWSGI WSGI HTTP server as a Python module
-pyuwsgi = "~2.0.26"
-# YAML parsing and rendering
-PyYAML = "~6.0.2"
-# Social authentication core
-# Note that social-auth-app-django (below) is *not* an optional dependency, and it requires social-auth-core in turn.
-# The only part of this dependency that is actually optional is in fact social-auth-core's "saml" extra.
-social-auth-core = {version = "~4.5.6", optional = true, extras = ["saml"]}
-# Social authentication/registration with support for many auth providers
-social-auth-app-django = "~5.4.3"
-# Rendering of SVG images (for rack elevations, etc.)
-svgwrite = "~1.4.2"
+[project.urls]
+homepage = "https://nautobot.com"
+repository = "https://github.com/nautobot/nautobot"
+documentation = "https://docs.nautobot.com"
 
-[tool.poetry.extras]
-all = ["django-auth-ldap", "django-storages", "mysqlclient", "napalm", "social-auth-core"]
-ldap = ["django-auth-ldap"]
-mysql = ["mysqlclient"]
-napalm = ["napalm"]
+[project.optional-dependencies]
+all = [
+    # LDAP Support
+    "django-auth-ldap~=5.1.0",
+    # External Storage support (i.e. S3)
+    # Pinned temporarily to 1.14.3 due to https://github.com/revsys/django-health-check/issues/434
+    "django-storages==1.14.3",
+    # MySQL database adapter
+    "mysqlclient~=2.2.7",
+    # NAPALM automation library
+    "napalm<6.0.0,>=4.1.0",
+    # Social authentication core
+    # Note that social-auth-app-django (below) is *not* an optional dependency, and it requires social-auth-core in turn.
+    # The only part of this dependency that is actually optional is in fact social-auth-core's "saml" extra.
+    "social-auth-core[saml]~=4.5.6",
+]
+ldap = [
+    # LDAP Support
+    "django-auth-ldap~=5.1.0",
+]
+mysql = [
+    # MySQL database adapter
+    "mysqlclient~=2.2.7",
+]
+napalm = [
+    # NAPALM automation library
+    "napalm<6.0.0,>=4.1.0",
+]
 # This is not currently possible, there is a feature request with Poetry https://github.com/python-poetry/poetry/issues/3913
 # openid = ["social-auth-core[openidconnect]"]
-remote_storage = ["django-storages"]
+remote_storage = [
+    # External Storage support (i.e. S3)
+    # Pinned temporarily to 1.14.3 due to https://github.com/revsys/django-health-check/issues/434
+    "django-storages==1.14.3",
+]
 # This is not currently possible, there is a feature request with Poetry https://github.com/python-poetry/poetry/issues/3913
 # saml = ["social-auth-core[saml]"]
-sso = ["social-auth-core"]
+sso = [
+    "social-auth-core~=4.5.6"
+]
 
-[tool.poetry.group.dev.dependencies]
-# Tool for debugging Django
-django-debug-toolbar = "~5.0.1"
-# DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
-django-slowtests = "^1.1.1"
-# Nautobot example App used for testing
-example-app = {path = "examples/example_app", develop = true}
-# Nautobot test App used for testing core view overrides
-example-app-with-view-override = {path = "examples/example_app_with_view_override", develop = true}
-# Random data generation
-factory-boy = "~3.3.3"
-# Factory Boy dependency.
-faker = "~36.1.1"
-# Alternative to Make, CLI based on `tasks.py`
-invoke = "~2.2.0"
-# Colorization and autoformatting of CLI output, used for Invoke tasks
-rich = "~13.9.4"
-# Change log management and generation
-towncrier = "~24.8.0"
-# Watch files for celery and mkdocs reload
-watchdog = "~6.0.0"
-
-[tool.poetry.group.docs.dependencies]
-# Rendering docs to HTML
-mkdocs = "~1.6.1"
-# Embedding YAML files into Markdown documents as tables
-markdown-data-tables = "~1.0.0"
-# Render custom markdown for version added/changed/remove notes
-markdown-version-annotations = "~1.0.1"
-# Automatically generate some files as part of mkdocs build
-mkdocs-gen-files = "~0.5.0"
-# Image lightboxing in mkdocs
-mkdocs-glightbox = "^0.4.0"
-# Allow Markdown files to include other files
-# 3.0 TODO: remove this, as we don't actually use it any more since 2.0?
-mkdocs-include-markdown-plugin = ">=4.0.4"
-# Use Jinja2 templating in docs - see settings.md
-mkdocs-macros-plugin = "~1.3.7"
-# Material for mkdocs theme
-mkdocs-material = "~9.5.50"
-# Handle docs redirections
-mkdocs-redirects = "~1.2.2"
-# Automatically handle index pages for docs sections
-mkdocs-section-index = "~0.3.9"
-# Automatic documentation from sources, for MkDocs
-mkdocstrings = "~0.27.0"
-# Python-specific extension to mkdocstrings
-mkdocstrings-python = "~1.13.0"
-
-[tool.poetry.group.linting.dependencies]
-# Code static analysis
-pylint = "~3.3.4"
-# Pylint extensions for Django
-pylint-django = "~2.6.1"
-# Python implementation of markdownlint
-pymarkdownlnt = "~0.9.28"
-# Combination linter and code formatter
-ruff = "~0.8.6"
-# YAML linting
-yamllint = "~1.35.1"
-
-[tool.poetry.group.testing.dependencies]
-# Test code coverage measurement - pinned to 6.4.0 to resolve https://github.com/nedbat/coveragepy/issues/1420
-coverage = "6.4.0"
-# DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
-django-slowtests = "^1.1.1"
-# Integration Tests
-requests = "~2.32.3"
-# Selenium web drivers for live integration testing
-selenium = "~4.27.1"
-# Abstraction layer for working with Selenium
-splinter = "~0.21.0"
-# Serialization of tracebacks - used when running unittest with --parallel flag
-tblib = "~3.0.0"
-# Time travel for testing, used in ScheduledJob tests etc.
-time-machine = "~2.16.0"
-
-[tool.poetry.scripts]
+[project.scripts]
 nautobot-server = "nautobot.core.cli:main"
 
+[dependency-groups]
+dev = [
+    # Tool for debugging Django
+    "django-debug-toolbar~=5.0.1",
+    # DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
+    "django-slowtests<2.0.0,>=1.1.1",
+    # Nautobot example App used for testing
+    "example-app @ file:///${PROJECT_ROOT}/examples/example_app",
+    # Nautobot test App used for testing core view overrides
+    "example-app-with-view-override @ file:///${PROJECT_ROOT}/examples/example_app_with_view_override",
+    # Random data generation
+    "factory-boy~=3.3.3",
+    # Factory Boy dependency.
+    "faker~=36.1.1",
+    # Alternative to Make, CLI based on `tasks.py`
+    "invoke~=2.2.0",
+    # Colorization and autoformatting of CLI output, used for Invoke tasks
+    "rich~=13.9.4",
+    # Change log management and generation
+    "towncrier~=24.8.0",
+    # Watch files for celery and mkdocs reload
+    "watchdog~=6.0.0",
+]
+docs = [
+    # Rendering docs to HTML
+    "mkdocs~=1.6.1",
+    # Embedding YAML files into Markdown documents as tables
+    "markdown-data-tables~=1.0.0",
+    # Render custom markdown for version added/changed/remove notes
+    "markdown-version-annotations~=1.0.1",
+    # Automatically generate some files as part of mkdocs build
+    "mkdocs-gen-files~=0.5.0",
+    # Image lightboxing in mkdocs
+    "mkdocs-glightbox<1.0.0,>=0.4.0",
+    # Allow Markdown files to include other files
+    # 3.0 TODO: remove this, as we don't actually use it any more since 2.0?
+    "mkdocs-include-markdown-plugin>=4.0.4",
+    # Use Jinja2 templating in docs - see settings.md
+    "mkdocs-macros-plugin~=1.3.7",
+    # Material for mkdocs theme
+    "mkdocs-material~=9.5.50",
+    # Handle docs redirections
+    "mkdocs-redirects~=1.2.2",
+    # Automatically handle index pages for docs sections
+    "mkdocs-section-index~=0.3.9",
+    # Automatic documentation from sources, for MkDocs
+    "mkdocstrings~=0.27.0",
+    # Python-specific extension to mkdocstrings
+    "mkdocstrings-python~=1.13.0",
+]
+linting = [
+    # Code static analysis
+    "pylint~=3.3.4",
+    # Pylint extensions for Django
+    "pylint-django~=2.6.1",
+    # Python implementation of markdownlint
+    "pymarkdownlnt~=0.9.28",
+    # Combination linter and code formatter
+    "ruff~=0.8.6",
+    # YAML linting
+    "yamllint~=1.35.1",
+]
+testing = [
+    # Test code coverage measurement - pinned to 6.4.0 to resolve https://github.com/nedbat/coveragepy/issues/1420
+    "coverage==6.4.0",
+    # DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
+    "django-slowtests<2.0.0,>=1.1.1",
+    # Integration Tests
+    "requests~=2.32.3",
+    # Selenium web drivers for live integration testing
+    "selenium~=4.27.1",
+    # Abstraction layer for working with Selenium
+    "splinter~=0.21.0",
+    # Serialization of tracebacks - used when running unittest with --parallel flag
+    "tblib~=3.0.0",
+    # Time travel for testing, used in ScheduledJob tests etc.
+    "time-machine~=2.16.0",
+]
+
+[tool.pdm.build]
+# Rendered documentation - Uv by default would exclude these files as they are in .gitignore
+includes = ["nautobot", "nautobot/project-static/docs/**/*"]
+# Source code of the documentation doesn't need to be included since we package the rendered docs
+excludes = ["nautobot/docs/**/*"]
+
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
 
 [tool.coverage.run]
 concurrency = ["multiprocessing", "thread"]

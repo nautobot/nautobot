@@ -98,47 +98,41 @@ FROM system-dev-dependencies AS system-dev-dependencies-arm64
 RUN curl -Lo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.10.0/hadolint-Linux-arm64 && \
     chmod +x /usr/bin/hadolint
 
-################################ Stage: poetry (stub for poetry only)
+# ################################ Stage: poetry (stub for poetry only)
 
-FROM python:${PYTHON_VER}-slim AS poetry
-# Install Poetry manually via its installer script;
-# if we instead used "pip install poetry" it would install its own dependencies globally which may conflict with ours.
-# https://python-poetry.org/docs/master/#installing-with-the-official-installer
-# This also makes it so that Poetry will *not* be included in the "final" image since it's not installed to /usr/local/
-ARG POETRY_HOME=/opt/poetry
-ARG POETRY_INSTALLER_PARALLEL=true
-ARG POETRY_VERSION=1.8.2
-ARG POETRY_VIRTUALENVS_CREATE=false
-ADD https://install.python-poetry.org /tmp/install-poetry.py
-RUN python /tmp/install-poetry.py
+# FROM python:${PYTHON_VER}-slim AS poetry
+# # Install Poetry manually via its installer script;
+# ADD https://install.python-poetry.org /tmp/install-poetry.py
+# RUN python /tmp/install-poetry.py
 
-# Add poetry install location to the $PATH
-ENV PATH="${POETRY_HOME}/bin:${PATH}"
+# # Add uv sync location to the $PATH
+# ENV PATH="${POETRY_HOME}/bin:${PATH}"
 
-RUN poetry config virtualenvs.create ${POETRY_VIRTUALENVS_CREATE} && \
-    poetry config installer.parallel "${POETRY_INSTALLER_PARALLEL}" && \
-    poetry config installer.no-binary lxml,pyuwsgi,xmlsec
+# RUN poetry config virtualenvs.create ${POETRY_VIRTUALENVS_CREATE} && \
+#     poetry config installer.parallel "${POETRY_INSTALLER_PARALLEL}" && \
+#     poetry config installer.no-binary lxml,pyuwsgi,xmlsec
 
 ################################ Stage: python-dependencies (intermediate build target)
 
 # hadolint ignore=DL3006
 FROM system-dev-dependencies-${ARCH} AS python-dependencies
 
-ARG POETRY_HOME=/opt/poetry
-COPY --from=poetry ${POETRY_HOME} ${POETRY_HOME}
-COPY --from=poetry /root/.config/pypoetry /root/.config/pypoetry
-ENV PATH="${POETRY_HOME}/bin:${PATH}"
+COPY --from=ghcr.io/astral-sh/uv:0.6.8 /uv /uvx /bin/
+ENV PATH="/root/.local/bin/:$PATH"
 
-# The example_app is only a dev dependency, but Poetry fails to install non-dev dependencies if its source is missing
-COPY --chown=nautobot:nautobot pyproject.toml poetry.lock README.md /source/
+RUN uv pip install --system --no-binary lxml lxml
+RUN uv pip install --system --no-binary pyuwsgi pyuwsgi
+RUN uv pip install --system --no-binary xmlsec xmlsec
+
+# The example_app is only a dev dependency, but Uv fails to install non-dev dependencies if its source is missing
+COPY --chown=nautobot:nautobot pyproject.toml uv.lock README.md /source/
 COPY --chown=nautobot:nautobot examples /source/examples
 
 WORKDIR /source
 
 # Install (non-development) Python dependencies of Nautobot
 RUN --mount=type=cache,target="/root/.cache",sharing=locked \
-    poetry install --no-root --only main --no-ansi --extras all && \
-    rm -rf /tmp/tmp*
+    uv sync --color never --frozen && rm -rf /tmp/tmp*
 
 # Verify that pyuwsgi was installed correctly, i.e. with SSL support
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -150,8 +144,7 @@ FROM python-dependencies AS python-dev-dependencies
 
 # Add development-specific dependencies of Nautobot to the installation
 RUN --mount=type=cache,target="/root/.cache",sharing=locked \
-    poetry install --no-root --no-ansi --extras all && \
-    rm -rf /tmp/tmp*
+    uv sync --color never --group docs --frozen && rm -rf /tmp/tmp*
 
 ################################ Stage: build-nautobot (intermediate build target)
 
@@ -162,8 +155,8 @@ COPY --chown=nautobot:nautobot docs /source/docs
 COPY --chown=nautobot:nautobot nautobot /source/nautobot
 
 # Build the rendered docs, this ensures that the docs are in the final image.
-RUN mkdocs build --no-directory-urls && \
-    poetry build
+RUN uv run mkdocs build --no-directory-urls && \
+    uv build --quiet
 
 ################################ Stage: dev (development environment for Nautobot core)
 
@@ -174,8 +167,7 @@ COPY --chown=nautobot:nautobot nautobot /source/nautobot
 COPY --from=build-nautobot --chown=nautobot:nautobot /source/nautobot/project-static/docs /source/nautobot/project-static/docs
 
 RUN --mount=type=cache,target="/root/.cache",sharing=locked \
-    poetry install --no-ansi --extras all && \
-    rm -rf /tmp/tmp*
+    uv sync --color never --frozen --all-groups && rm -rf /tmp/tmp*
 
 ENV NAUTOBOT_INSTALLATION_METRICS_ENABLED=false
 
@@ -195,8 +187,8 @@ COPY --from=build-nautobot --chown=nautobot:nautobot /source/dist /source/dist
 # DL3042 - run pip install with --no-cache-dir (https://github.com/hadolint/hadolint/issues/497)
 # hadolint ignore=DL3042
 RUN --mount=type=cache,target="/root/.cache",sharing=locked \
-    pip install --no-deps /source/dist/*.whl && \
-    pip uninstall -y example-app example-app-with-view-override && \
+    uv pip install --no-deps /source/dist/*.whl && \
+    uv pip uninstall -y example-app example-app-with-view-override && \
     rm -rf /source/*
 
 USER nautobot
@@ -231,7 +223,7 @@ COPY --from=final-dev --chown=nautobot:nautobot /opt/nautobot/nautobot_config.py
 # DL3042 - run pip install with --no-cache-dir (https://github.com/hadolint/hadolint/issues/497)
 # hadolint ignore=DL3042
 RUN --mount=type=cache,target="/root/.cache",sharing=locked \
-    pip install --no-deps /source/dist/*.whl && \
+    uv pip install --no-deps /source/dist/*.whl && \
     rm -rf /source/*
 
 USER nautobot
