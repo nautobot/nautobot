@@ -263,49 +263,32 @@ class RouteTargetUIViewSet(NautobotUIViewSet):
 #
 
 
-class RIRListView(generic.ObjectListView):
+class RIRUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.RIRBulkEditForm
+    filterset_class = filters.RIRFilterSet
+    filterset_form_class = forms.RIRFilterForm
+    form_class = forms.RIRForm
     queryset = RIR.objects.all()
-    filterset = filters.RIRFilterSet
-    filterset_form = forms.RIRFilterForm
-    table = tables.RIRTable
+    serializer_class = serializers.RIRSerializer
+    table_class = tables.RIRTable
 
-
-class RIRView(generic.ObjectView):
-    queryset = RIR.objects.all()
-
-    def get_extra_context(self, request, instance):
-        # Prefixes
-        assigned_prefixes = Prefix.objects.restrict(request.user, "view").filter(rir=instance).select_related("tenant")
-
-        assigned_prefix_table = tables.PrefixTable(assigned_prefixes, hide_hierarchy_ui=True)
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(assigned_prefix_table)
-
-        return {"assigned_prefix_table": assigned_prefix_table, **super().get_extra_context(request, instance)}
-
-
-class RIREditView(generic.ObjectEditView):
-    queryset = RIR.objects.all()
-    model_form = forms.RIRForm
-
-
-class RIRDeleteView(generic.ObjectDeleteView):
-    queryset = RIR.objects.all()
-
-
-class RIRBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = RIR.objects.all()
-    table = tables.RIRTable
-
-
-class RIRBulkDeleteView(generic.BulkDeleteView):
-    queryset = RIR.objects.all()
-    filterset = filters.RIRFilterSet
-    table = tables.RIRTable
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=100,
+                table_title="Assigned Prefixes",
+                table_class=tables.PrefixTable,
+                table_filter="rir",
+                hide_hierarchy_ui=True,
+            ),
+        ),
+    )
 
 
 #
@@ -1311,19 +1294,7 @@ class VLANBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class ServiceListView(generic.ObjectListView):
-    queryset = Service.objects.all()
-    filterset = filters.ServiceFilterSet
-    filterset_form = forms.ServiceFilterForm
-    table = tables.ServiceTable
-    action_buttons = ("add", "import", "export")
-
-
-class ServiceView(generic.ObjectView):
-    queryset = Service.objects.prefetch_related("ip_addresses")
-
-
-class ServiceEditView(generic.ObjectEditView):
+class ServiceEditView(generic.ObjectEditView):  # This view is used to assign services to devices and VMs
     queryset = Service.objects.prefetch_related("ip_addresses")
     model_form = forms.ServiceForm
     template_name = "ipam/service_edit.html"
@@ -1339,23 +1310,30 @@ class ServiceEditView(generic.ObjectEditView):
         return obj
 
 
-class ServiceBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Service.objects.all()
-    table = tables.ServiceTable
+class ServiceUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportView
+    model = Service
+    bulk_update_form_class = forms.ServiceBulkEditForm
+    filterset_class = filters.ServiceFilterSet
+    filterset_form_class = forms.ServiceFilterForm
+    form_class = forms.ServiceForm
+    queryset = Service.objects.select_related("device", "virtual_machine").prefetch_related("ip_addresses")
+    serializer_class = serializers.ServiceSerializer
+    table_class = tables.ServiceTable
 
-
-class ServiceDeleteView(generic.ObjectDeleteView):
-    queryset = Service.objects.all()
-
-
-class ServiceBulkEditView(generic.BulkEditView):
-    queryset = Service.objects.select_related("device", "virtual_machine")
-    filterset = filters.ServiceFilterSet
-    table = tables.ServiceTable
-    form = forms.ServiceBulkEditForm
-
-
-class ServiceBulkDeleteView(generic.BulkDeleteView):
-    queryset = Service.objects.select_related("device", "virtual_machine")
-    filterset = filters.ServiceFilterSet
-    table = tables.ServiceTable
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=["name", "parent", "protocol", "port_list", "description"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.RIGHT_HALF,
+                table_class=tables.IPAddressTable,
+                table_filter="services",
+                select_related_fields=["tenant", "status", "role"],
+                add_button_route=None,
+            ),
+        )
+    )

@@ -36,6 +36,7 @@ from nautobot.core.forms import (
     TagFilterField,
 )
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.core.forms.fields import LaxURLField
 from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
     LocatableModelFilterFormMixin,
@@ -4773,7 +4774,11 @@ class SoftwareImageFileBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFo
     )
     image_file_size = forms.IntegerField(required=False)
     default_image = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect, label="Is default image")
-    download_url = forms.URLField(required=False)
+    download_url = LaxURLField(required=False)
+    external_integration = DynamicModelChoiceField(
+        queryset=ExternalIntegration.objects.all(),
+        required=False,
+    )
 
     class Meta:
         model = SoftwareImageFile
@@ -4782,6 +4787,7 @@ class SoftwareImageFileBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFo
             "hashing_algorithm",
             "image_file_size",
             "download_url",
+            "external_integration",
         ]
 
 
@@ -4816,6 +4822,10 @@ class SoftwareImageFileFilterForm(NautobotFilterForm, StatusModelFilterFormMixin
         label="Has device types",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
+    external_integration = DynamicModelChoiceField(
+        queryset=ExternalIntegration.objects.all(),
+        required=False,
+    )
 
     tags = TagFilterField(model)
 
@@ -4829,6 +4839,7 @@ class SoftwareImageFileFilterForm(NautobotFilterForm, StatusModelFilterFormMixin
         "download_url",
         "device_types",
         "has_device_types",
+        "external_integration",
         "status",
         "tags",
     ]
@@ -4841,6 +4852,11 @@ class SoftwareImageFileForm(NautobotModelForm):
         queryset=DeviceType.objects.all(),
         required=False,
         label="Device Types",
+    )
+
+    external_integration = DynamicModelChoiceField(
+        queryset=ExternalIntegration.objects.all(),
+        required=False,
     )
 
     field_order = [

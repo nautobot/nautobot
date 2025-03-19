@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.4.5b1"
+version = "2.4.6b1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -33,11 +33,15 @@ exclude = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.13"
+python = ">=3.9.2,<3.13"
 # Background task processing
 celery = "~5.3.6"
+# Cryptographic recipes and primitives.
+# Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
+# Added as an explicit dependency to protect against various CVEs in older versions.
+cryptography = "~44.0.2"
 # Fundamental web framework for Nautobot
-Django = "~4.2.19"
+Django = "~4.2.20"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -103,7 +107,7 @@ jsonschema = "^4.7.0"
 # Included as an explicit dependency (for now?) to require a version with https://github.com/celery/kombu/pull/2007
 kombu = "~5.4.2"
 # Library to access Kubernetes API used to develop K8s integration
-kubernetes = "^32.0.0"
+kubernetes = "^32.0.1"
 # Rendering of markdown files to HTML
 Markdown = "~3.6"
 # MySQL database adapter
@@ -117,7 +121,7 @@ netaddr = "~1.3.0"
 #       we permit a looser (^) version constraint here.
 netutils = "^1.6.0"
 # HTML sanitization
-nh3 = "~0.2.20"
+nh3 = "~0.2.21"
 # Handling of version numbers
 packaging = ">=23.1"
 # Image processing library
