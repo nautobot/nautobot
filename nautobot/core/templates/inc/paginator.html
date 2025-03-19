@@ -8,21 +8,26 @@
                     <li><a
                         hx-get="{% querystring request page=page.previous_page_number %}"
                         hx-target="#table-container"
+                        hx-push-url="true"
                     ><i class="mdi mdi-chevron-double-left"></i></a></li>
                 {% endif %}
                 {% for p in page.smart_pages %}
                     {% if p %}
                         <li{% if page.number == p %} class="active"{% endif %}><a
-{#                            href="{% querystring request page=p %}"#}
                             hx-get="{% querystring request page=p %}"
                             hx-target="#table-container"
+                            hx-push-url="true"
                         >{{ p }}</a></li>
                     {% else %}
                         <li class="disabled"><span>&hellip;</span></li>
                     {% endif %}
                 {% endfor %}
                 {% if page.has_next %}
-                    <li><a href="{% querystring request page=page.next_page_number %}"><i class="mdi mdi-chevron-double-right"></i></a></li>
+                    <li><a
+                        hx-get="{% querystring request page=page.next_page_number %}"
+                        hx-target="#table-container"
+                        hx-push-url="true"
+                    ><i class="mdi mdi-chevron-double-right"></i></a></li>
                 {% endif %}
             </ul>
         </nav>
