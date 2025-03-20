@@ -375,6 +375,11 @@ class Tab(Component):
 class DistinctViewTab(Tab):
     """
     A Tab that doesn't render inline on the same page, but instead links to a distinct view of its own when clicked.
+
+    Args:
+        url_name (str): The name of the URL pattern to link to, which will be reversed to generate the URL.
+        label_wrapper_template_path (str, optional): Template path to render the tab label to HTML.
+        related_object_attribute (str, optional): The name of the related object attribute to count for the tab label.
     """
 
     def __init__(
