@@ -48,10 +48,10 @@ from .models import (
     VLANGroup,
     VRF,
 )
+from .tables import VLANDetailTable
 from .utils import (
     get_add_available_ipaddresses_callback,
     get_add_available_prefixes_callback,
-    get_add_available_vlans_callback,
     handle_relationship_changes_when_merging_ips,
     retrieve_interface_or_vminterface_from_request,
 )
@@ -1161,75 +1161,32 @@ class IPAddressToInterfaceUIViewSet(view_mixins.ObjectBulkCreateViewMixin):  # 3
 #
 # VLAN groups
 #
-
-
-class VLANGroupListView(generic.ObjectListView):
+class VLANGroupUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.VLANGroupBulkEditForm
+    filterset_class = filters.VLANGroupFilterSet
+    filterset_form_class = forms.VLANGroupFilterForm
+    form_class = forms.VLANGroupForm
     queryset = VLANGroup.objects.all()
-    filterset = filters.VLANGroupFilterSet
-    filterset_form = forms.VLANGroupFilterForm
-    table = tables.VLANGroupTable
+    serializer_class = serializers.VLANGroupSerializer
+    table_class = tables.VLANGroupTable
 
-
-class VLANGroupView(generic.ObjectView):
-    queryset = VLANGroup.objects.all()
-
-    def get_extra_context(self, request, instance):
-        vlans = (
-            VLAN.objects.restrict(request.user, "view")
-            .filter(vlan_group=instance)
-            .prefetch_related(Prefetch("prefixes", queryset=Prefix.objects.restrict(request.user)))
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                table_class=VLANDetailTable,
+                table_filter="vlan_group",
+                exclude_columns=["vlan_group"],
+                enable_bulk_actions=True,
+            ),
         )
-        vlans_count = vlans.count()
-
-        data_transform_callback = get_add_available_vlans_callback(show_available=True, vlan_group=instance)
-
-        vlan_table = tables.VLANDetailTable(
-            vlans, exclude=["vlan_group"], data_transform_callback=data_transform_callback
-        )
-        if request.user.has_perm("ipam.change_vlan") or request.user.has_perm("ipam.delete_vlan"):
-            vlan_table.columns.show("pk")
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(vlan_table)
-
-        # Compile permissions list for rendering the object table
-        permissions = {
-            "add": request.user.has_perm("ipam.add_vlan"),
-            "change": request.user.has_perm("ipam.change_vlan"),
-            "delete": request.user.has_perm("ipam.delete_vlan"),
-        }
-
-        return {
-            "first_available_vlan": instance.get_next_available_vid(),
-            "bulk_querystring": f"vlan_group={instance.pk}",
-            "vlan_table": vlan_table,
-            "permissions": permissions,
-            "vlans_count": vlans_count,
-            **super().get_extra_context(request, instance),
-        }
-
-
-class VLANGroupEditView(generic.ObjectEditView):
-    queryset = VLANGroup.objects.all()
-    model_form = forms.VLANGroupForm
-
-
-class VLANGroupDeleteView(generic.ObjectDeleteView):
-    queryset = VLANGroup.objects.all()
-
-
-class VLANGroupBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = VLANGroup.objects.all()
-    table = tables.VLANGroupTable
-
-
-class VLANGroupBulkDeleteView(generic.BulkDeleteView):
-    queryset = VLANGroup.objects.all()
-    filterset = filters.VLANGroupFilterSet
-    table = tables.VLANGroupTable
+    )
 
 
 #

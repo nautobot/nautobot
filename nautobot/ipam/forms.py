@@ -744,6 +744,21 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
 #
 
 
+class VLANGroupBulkEditForm(NautobotBulkEditForm):
+    """Bulk edit form for VLANGroup objects."""
+
+    pk = forms.ModelMultipleChoiceField(queryset=VLANGroup.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=VLANGroup._meta.get_field("description").max_length, required=False)
+    name = forms.CharField(max_length=VLANGroup._meta.get_field("name").max_length, required=False)
+    location = forms.ModelChoiceField(queryset=Location.objects.all(), required=False)
+    range = forms.CharField(max_length=VLANGroup._meta.get_field("range").max_length, required=False)
+
+    class Meta:
+        model = VLANGroup
+        fields = ["description", "location", "range"]
+        nullable_fields = ["location", "description"]
+
+
 class VLANGroupForm(LocatableModelFormMixin, NautobotModelForm):
     class Meta:
         model = VLANGroup

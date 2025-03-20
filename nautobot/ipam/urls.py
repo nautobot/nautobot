@@ -8,7 +8,6 @@ from .models import (
     IPAddress,
     Prefix,
     VLAN,
-    VLANGroup,
 )
 
 app_name = "ipam"
@@ -20,6 +19,7 @@ router.register("rirs", views.RIRUIViewSet)
 router.register("route-targets", views.RouteTargetUIViewSet)
 router.register("services", views.ServiceUIViewSet)
 router.register("vrfs", views.VRFUIViewSet)
+router.register("vlan-groups", views.VLANGroupUIViewSet)
 
 urlpatterns = [
     # Namespaces
@@ -154,42 +154,6 @@ urlpatterns = [
         "ip-addresses/<uuid:pk>/delete/",
         views.IPAddressDeleteView.as_view(),
         name="ipaddress_delete",
-    ),
-    # VLAN groups
-    path("vlan-groups/", views.VLANGroupListView.as_view(), name="vlangroup_list"),
-    path("vlan-groups/add/", views.VLANGroupEditView.as_view(), name="vlangroup_add"),
-    path(
-        "vlan-groups/import/",
-        views.VLANGroupBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="vlangroup_import",
-    ),
-    path(
-        "vlan-groups/delete/",
-        views.VLANGroupBulkDeleteView.as_view(),
-        name="vlangroup_bulk_delete",
-    ),
-    path("vlan-groups/<uuid:pk>/", views.VLANGroupView.as_view(), name="vlangroup"),
-    path(
-        "vlan-groups/<uuid:pk>/edit/",
-        views.VLANGroupEditView.as_view(),
-        name="vlangroup_edit",
-    ),
-    path(
-        "vlan-groups/<uuid:pk>/delete/",
-        views.VLANGroupDeleteView.as_view(),
-        name="vlangroup_delete",
-    ),
-    path(
-        "vlan-groups/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="vlangroup_changelog",
-        kwargs={"model": VLANGroup},
-    ),
-    path(
-        "vlan-groups/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="vlangroup_notes",
-        kwargs={"model": VLANGroup},
     ),
     # VLANs
     path("vlans/", views.VLANListView.as_view(), name="vlan_list"),
