@@ -81,21 +81,29 @@ class NamespaceUIViewSet(NautobotUIViewSet):
                 tab_id="vrfs",
                 label="VRFs",
                 url_name="ipam:namespace_vrfs",
+                related_object_attribute="vrfs",
             ),
             object_detail.DistinctViewTab(
                 weight=800,
                 tab_id="prefixes",
-                label="prefixes",
+                label="Prefixes",
                 url_name="ipam:namespace_prefixes",
+                related_object_attribute="prefixes",
             ),
             object_detail.DistinctViewTab(
                 weight=800,
                 tab_id="ipaddresses",
-                label="ipaddresses",
+                label="IP Addresses",
                 url_name="ipam:namespace_ipaddresses",
+                related_object_attribute="ip_addresses",
             ),
         ),
     )
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        context.update({"object_detail_content": self.object_detail_content})
+        return context
 
     @action(detail=True, url_path="vrfs")
     def vrfs(self, request, *args, **kwargs):
@@ -116,7 +124,6 @@ class NamespaceUIViewSet(NautobotUIViewSet):
             {
                 "vrf_table": vrf_table,
                 "active_tab": "vrfs",
-                "vrf_count": len(vrf_table.rows),
             }
         )
 
@@ -135,7 +142,6 @@ class NamespaceUIViewSet(NautobotUIViewSet):
             {
                 "prefix_table": prefix_table,
                 "active_tab": "prefixes",
-                "prefix_count": len(prefix_table.rows),
             }
         )
 
@@ -154,7 +160,6 @@ class NamespaceUIViewSet(NautobotUIViewSet):
             {
                 "ip_address_table": ip_address_table,
                 "active_tab": "ipaddresses",
-                "ip_address_count": len(ip_address_table.rows),
             }
         )
 
