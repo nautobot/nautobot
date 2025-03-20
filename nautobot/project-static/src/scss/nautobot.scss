@@ -576,16 +576,14 @@ body {
   $sidenav-link-segment-icon-svg: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='90' stroke='#{$nav-gray-3}'/><line x1='10' y1='45' x2='15' y2='45' stroke='#{$nav-gray-3}'/></svg>";
   $sidenav-link-segment-icon-svg-last: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='45.5' stroke='#{$nav-gray-3}'/><line x1='10' y1='45' x2='15' y2='45' stroke='#{$nav-gray-3}'/></svg>";
 
-  @mixin fade-slide-in {
+  @mixin fade-in {
     opacity: 1;
     visibility: visible;
-    transform: translateY(0);
   }
 
-  @mixin fade-slide-out {
+  @mixin fade-out {
     opacity: 0;
     visibility: hidden;
-    transform: translateY(-100%);
   }
 
   @mixin filter-nav-orange-0 {
@@ -622,17 +620,17 @@ body {
     /* Transition between brand logo and icon when navbar expands/collapses. */
     .sidenav-brand {
       &:first-of-type { /* Brand icon */
-        @include fade-slide-in;
+        @include fade-in;
       }
 
       &:nth-of-type(2) { /* Brand logo */
-        @include fade-slide-out;
+        @include fade-out;
       }
     }
 
     .sidenav-list-item {
       > :last-child { /* Sidenav list item name and chevron icon wrapper */
-        @include fade-slide-out;
+        @include fade-out;
       }
     }
 
@@ -656,11 +654,11 @@ body {
     padding: map.get($spacers, 10);
 
     &:first-of-type { /* Brand icon */
-      @include fade-slide-out;
+      @include fade-out;
     }
 
     &:nth-of-type(2) { /* Brand logo */
-      @include fade-slide-in;
+      @include fade-in;
     }
 
     img {
@@ -751,7 +749,7 @@ body {
 
     > :last-child { /* Name and chevron icon wrapper */
       @include transition($transition-base);
-      @include fade-slide-in;
+      @include fade-in;
       align-items: center;
       display: inline-flex;
       flex: auto 1 1;
