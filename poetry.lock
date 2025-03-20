@@ -949,19 +949,6 @@ gprof2dot = ">=2017.09.19"
 sqlparse = "*"
 
 [[package]]
-name = "django-slowtests"
-version = "1.1.1"
-description = "locate your slowest tests"
-optional = false
-python-versions = "*"
-files = [
-    {file = "django-slowtests-1.1.1.tar.gz", hash = "sha256:3c6936d420c9df444ac03625b41d97de043c662bbde61fbcd33e4cd407d0c247"},
-]
-
-[package.dependencies]
-django = ">=1.6"
-
-[[package]]
 name = "django-storages"
 version = "1.14.3"
 description = "Support for many storage backends in Django"
@@ -1036,6 +1023,20 @@ files = [
 
 [package.dependencies]
 Django = ">=4.1"
+
+[[package]]
+name = "django-test-migrations"
+version = "1.4.0"
+description = "Test django schema and data migrations, including ordering"
+optional = false
+python-versions = "<4.0,>=3.9"
+files = [
+    {file = "django_test_migrations-1.4.0-py3-none-any.whl", hash = "sha256:294dff98f6d43d020d4046b971bac5339e7c71458a35e9ad6450c388fe16ed6b"},
+    {file = "django_test_migrations-1.4.0.tar.gz", hash = "sha256:f0c9c92864ed27d0c9a582e92056637e91227f54bd868a50cb9a1726668c563e"},
+]
+
+[package.dependencies]
+typing_extensions = ">=4.0"
 
 [[package]]
 name = "django-timezone-field"
@@ -4392,4 +4393,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9.2,<3.13"
-content-hash = "47691b0a8f9bd1fef1005a14d6053a0b8c2af25211344ecec425c1fc7beb4485"
+content-hash = "a7505330a993fc225d0e4178e061b709455f0e819f39c1a96b410659addaee73"

@@ -80,7 +80,7 @@ jobs:
           poetry-version: "1.8.2"
           python-version: "3.12"
       - name: "Run unittest"
-        run: "poetry run invoke unittest --failfast --no-keepdb --no-cache-test-fixtures --parallel"
+        run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel"
   tests-mysql:
     name: "Unit tests (MySQL and Python 3.9)"
     runs-on: "ubuntu-24.04"
@@ -116,7 +116,7 @@ jobs:
           poetry-version: "1.8.2"
           python-version: "3.9"
       - name: "Run unittest"
-        run: "poetry run invoke unittest --failfast --no-keepdb --no-cache-test-fixtures --parallel"
+        run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel"
   migration-tests-mysql:
     name: "Run migrations against test dataset (MySQL and Python 3.9)"
     runs-on: "ubuntu-24.04"
@@ -218,7 +218,7 @@ jobs:
           python-version: "3.12"
       - name: "Run Integration Tests"
         # If NAUTOBOT_SELENIUM_HOST is set to 'localhost' or '127.0.0.1' the connection does not work
-        run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke integration-test --no-keepdb"
+        run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke tests --tag integration --no-keepdb"
   container-build:
     name: "Build Container Images (amd64 on GHCR Only)"
     runs-on: "ubuntu-24.04"
