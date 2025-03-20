@@ -84,17 +84,17 @@ class NamespaceUIViewSet(NautobotUIViewSet):
                 related_object_attribute="vrfs",
             ),
             object_detail.DistinctViewTab(
-                weight=800,
+                weight=900,
                 tab_id="prefixes",
                 label="Prefixes",
                 url_name="ipam:namespace_prefixes",
                 related_object_attribute="prefixes",
             ),
             object_detail.DistinctViewTab(
-                weight=800,
-                tab_id="ipaddresses",
+                weight=1000,
+                tab_id="ip_addresses",
                 label="IP Addresses",
-                url_name="ipam:namespace_ipaddresses",
+                url_name="ipam:namespace_ip_addresses",
                 related_object_attribute="ip_addresses",
             ),
         ),
@@ -145,8 +145,8 @@ class NamespaceUIViewSet(NautobotUIViewSet):
             }
         )
 
-    @action(detail=True, url_path="ip-addresses")
-    def ipaddresses(self, request, *args, **kwargs):
+    @action(detail=True, url_path="ip-addresses", url_name="ip_addresses")
+    def ip_addresses(self, request, *args, **kwargs):
         instance = self.get_object()
         ip_addresses = instance.ip_addresses.restrict(request.user, "view").select_related("role", "status", "tenant")
         ip_address_table = tables.IPAddressTable(data=ip_addresses, user=request.user, exclude=["namespace"])
@@ -159,7 +159,7 @@ class NamespaceUIViewSet(NautobotUIViewSet):
         return Response(
             {
                 "ip_address_table": ip_address_table,
-                "active_tab": "ipaddresses",
+                "active_tab": "ip_addresses",
             }
         )
 
