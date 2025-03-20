@@ -787,6 +787,19 @@ class ManufacturerFilterForm(NautobotFilterForm):
 
 
 #
+# Platform
+#
+class PlatformBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=Platform.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    class Meta:
+        nullable_fields = [
+            "description",
+        ]
+
+
+#
 # Device Family
 #
 
