@@ -1181,8 +1181,6 @@ class VLANGroupUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.RIGHT_HALF,
                 context_table_key="vlan_table",
-                enable_bulk_actions=True,
-                footer_content_template_path="ipam/vlangroup_vlans_table_footer.html",
             ),
         )
     )
@@ -1201,9 +1199,6 @@ class VLANGroupUIViewSet(NautobotUIViewSet):
             vlan_table = tables.VLANDetailTable(
                 vlans, exclude=["vlan_group"], data_transform_callback=data_transform_callback
             )
-            if request.user.has_perm("ipam.change_vlan") or request.user.has_perm("ipam.delete_vlan"):
-                vlan_table.columns.show("pk")
-
             paginate = {
                 "paginator_class": EnhancedPaginator,
                 "per_page": get_paginate_count(request),
