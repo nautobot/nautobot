@@ -353,6 +353,13 @@ class ImportObjectsTestCase(TransactionTestCase):
             self.assertEqual(log_successes[4].message, "Created 4 status object(s) from 5 row(s) of data")
 
     def test_csv_import_contact_assignment(self):
+        self.add_permissions(
+            "dcim.view_locationtype",
+            "extras.view_status",
+            "dcim.view_location",
+            "extras.add_role",
+            "extras.add_contact",
+        )
         location_types_csv = "\n".join(["name", "ContactAssignmentImportTestLocationType"])
         locations_csv = "\n".join(
             [

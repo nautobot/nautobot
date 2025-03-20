@@ -101,6 +101,10 @@
                                     </td>
                                 </tr>
                                 <tr>
+                                    <td>External Integration</td>
+                                    <td>{{ object.external_integration|hyperlinked_object }}</td>
+                                </tr>
+                                <tr>
                                     <td>Devices overridden to use this file</td>
                                     <td>
                                         {% with device_count=object.devices.count %}
