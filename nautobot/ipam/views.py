@@ -48,10 +48,10 @@ from .models import (
     VLANGroup,
     VRF,
 )
-from .tables import VLANDetailTable
 from .utils import (
     get_add_available_ipaddresses_callback,
     get_add_available_prefixes_callback,
+    get_add_available_vlans_callback,
     handle_relationship_changes_when_merging_ips,
     retrieve_interface_or_vminterface_from_request,
 )
@@ -1180,13 +1180,45 @@ class VLANGroupUIViewSet(NautobotUIViewSet):
             object_detail.ObjectsTablePanel(
                 weight=100,
                 section=SectionChoices.RIGHT_HALF,
-                table_class=VLANDetailTable,
-                table_filter="vlan_group",
-                exclude_columns=["vlan_group"],
+                context_table_key="vlan_table",
                 enable_bulk_actions=True,
+                footer_content_template_path="ipam/vlangroup_vlans_table_footer.html",
             ),
         )
     )
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            vlans = (
+                VLAN.objects.restrict(request.user, "view")
+                .filter(vlan_group=instance)
+                .prefetch_related(Prefetch("prefixes", queryset=Prefix.objects.restrict(request.user)))
+            )
+            vlans_count = vlans.count()
+
+            data_transform_callback = get_add_available_vlans_callback(show_available=True, vlan_group=instance)
+            vlan_table = tables.VLANDetailTable(
+                vlans, exclude=["vlan_group"], data_transform_callback=data_transform_callback
+            )
+            if request.user.has_perm("ipam.change_vlan") or request.user.has_perm("ipam.delete_vlan"):
+                vlan_table.columns.show("pk")
+
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(vlan_table)
+
+            context.update(
+                {
+                    "first_available_vlan": instance.get_next_available_vid(),
+                    "bulk_querystring": f"vlan_group={instance.pk}",
+                    "vlan_table": vlan_table,
+                    "vlans_count": vlans_count,
+                }
+            )
+        return context
 
 
 #

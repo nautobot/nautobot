@@ -750,6 +750,8 @@ class ObjectsTablePanel(Panel):
         request = context["request"]
         if self.context_table_key:
             body_content_table = context.get(self.context_table_key)
+            body_content_table_class = type(body_content_table)
+            body_content_table_model = body_content_table_class.Meta.model
         else:
             body_content_table_class = self.table_class
             body_content_table_model = body_content_table_class.Meta.model
@@ -793,7 +795,10 @@ class ObjectsTablePanel(Panel):
         per_page = self.max_display_count if self.max_display_count is not None else get_paginate_count(request)
         paginate = {"paginator_class": EnhancedPaginator, "per_page": per_page}
         RequestConfig(request, paginate).configure(body_content_table)
-        more_queryset_count = max(body_content_table.data.data.count() - per_page, 0)
+        try:
+            more_queryset_count = max(body_content_table.data.data.count() - per_page, 0)
+        except TypeError:
+            more_queryset_count = max(len(body_content_table.data.data) - per_page, 0)
 
         obj = get_obj_from_context(context)
         body_content_table_model = body_content_table.Meta.model
