@@ -145,4 +145,4 @@ To inspect outgoing webhooks, you can use a local HTTP listener. Nautobot provid
 > **Alternative Testing Tools:**
 > Instead of using the built-in webhook receiver, you can test webhooks with external services like [Beeceptor](https://beeceptor.com/) or [Pipedream RequestBin](https://pipedream.com/requestbin). These tools let you inspect webhook payloads and troubleshoot integration issues.
 
-If a webhook does not trigger as expected, ensure that the **celery worker** process is running and check the Nautobot logs for errors.
+If a webhook does not trigger as expected, ensure that the **Celery worker** process is running and check the Nautobot logs for errors.
