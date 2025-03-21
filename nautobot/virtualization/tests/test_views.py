@@ -18,7 +18,7 @@ from nautobot.virtualization.models import (
 )
 
 
-class ClusterGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class ClusterGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = ClusterGroup
 
     @classmethod
@@ -28,6 +28,10 @@ class ClusterGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         cls.form_data = {
             "name": "Cluster Group X",
             "description": "A new cluster group",
+        }
+
+        cls.bulk_edit_data = {
+            "description": "New description",
         }
 
 

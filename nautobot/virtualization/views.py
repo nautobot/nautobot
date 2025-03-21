@@ -4,13 +4,11 @@ from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.functional import cached_property
-from django_tables2 import RequestConfig
 
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic
-from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
@@ -59,50 +57,31 @@ class ClusterTypeUIViewSet(NautobotUIViewSet):
 #
 
 
-class ClusterGroupListView(generic.ObjectListView):
-    queryset = ClusterGroup.objects.all()
-    filterset = filters.ClusterGroupFilterSet
-    filterset_form = forms.ClusterGroupFilterForm
-    table = tables.ClusterGroupTable
-
-
-class ClusterGroupView(generic.ObjectView):
-    queryset = ClusterGroup.objects.all()
-
-    def get_extra_context(self, request, instance):
-        # Clusters
-        clusters = Cluster.objects.restrict(request.user, "view").filter(cluster_group=instance)
-
-        cluster_table = tables.ClusterTable(clusters)
-        cluster_table.columns.hide("cluster_group")
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(cluster_table)
-
-        return {"cluster_table": cluster_table, **super().get_extra_context(request, instance)}
-
-
-class ClusterGroupEditView(generic.ObjectEditView):
-    queryset = ClusterGroup.objects.all()
-    model_form = forms.ClusterGroupForm
-
-
-class ClusterGroupDeleteView(generic.ObjectDeleteView):
+class ClusterGroupUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ClusterGroupBulkEditForm
+    filterset_class = filters.ClusterGroupFilterSet
+    filterset_form_class = forms.ClusterGroupFilterForm
+    form_class = forms.ClusterGroupForm
+    serializer_class = serializers.ClusterGroupSerializer
+    table_class = tables.ClusterGroupTable
     queryset = ClusterGroup.objects.all()
 
-
-class ClusterGroupBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = ClusterGroup.objects.all()
-    table = tables.ClusterGroupTable
-
-
-class ClusterGroupBulkDeleteView(generic.BulkDeleteView):
-    queryset = ClusterGroup.objects.all()
-    table = tables.ClusterGroupTable
-    filterset = filters.ClusterGroupFilterSet
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                table_class=tables.ClusterTable,
+                table_filter="cluster_group",
+                exclude_columns=["cluster_group"],
+            ),
+        )
+    )
 
 
 #
