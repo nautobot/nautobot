@@ -9,8 +9,8 @@ from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic
-from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.core.views.utils import get_obj_from_context
+from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.views import ObjectConfigContextView
@@ -146,8 +146,8 @@ class ClusterUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.RIGHT_HALF,
                 table_class=DeviceTable,
                 table_filter="cluster",
-                table_title='Host Devices',
-                add_button_route='virtualization:cluster_add_devices',
+                table_title="Host Devices",
+                add_button_route="virtualization:cluster_add_devices",
             ),
         )
     )
