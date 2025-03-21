@@ -10,6 +10,7 @@ from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic
 from nautobot.core.views.viewsets import NautobotUIViewSet
+from nautobot.core.views.utils import get_obj_from_context
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.views import ObjectConfigContextView
@@ -109,52 +110,47 @@ class ClusterGroupUIViewSet(NautobotUIViewSet):
 #
 
 
-class ClusterListView(generic.ObjectListView):
-    permission_required = "virtualization.view_cluster"
-    queryset = Cluster.objects.all()
-    table = tables.ClusterTable
-    filterset = filters.ClusterFilterSet
-    filterset_form = forms.ClusterFilterForm
+class ClusterAddDeviceObjectsTablePanel(object_detail.ObjectsTablePanel):
+    def _get_table_add_url(self, context):
+        obj = get_obj_from_context(context)
+        body_content_table_add_url = None
+        request = context["request"]
+        related_field_name = self.related_field_name or self.table_filter or obj._meta.model_name
+        return_url = context.get("return_url", obj.get_absolute_url())
+
+        if request.user.has_perms(self.add_permissions or []):
+            add_route = reverse(self.add_button_route, kwargs={"pk": obj.pk})
+            body_content_table_add_url = f"{add_route}?{related_field_name}={obj.pk}&return_url={return_url}"
+
+        return body_content_table_add_url
 
 
-class ClusterView(generic.ObjectView):
-    queryset = Cluster.objects.all()
-
-    def get_extra_context(self, request, instance):
-        devices = Device.objects.restrict(request.user, "view").filter(cluster=instance)
-        device_table = DeviceTable(list(devices), orderable=False)
-        if request.user.has_perm("virtualization.change_cluster"):
-            device_table.columns.show("pk")
-
-        return {"device_table": device_table, **super().get_extra_context(request, instance)}
-
-
-class ClusterEditView(generic.ObjectEditView):
-    template_name = "virtualization/cluster_edit.html"
-    queryset = Cluster.objects.all()
-    model_form = forms.ClusterForm
-
-
-class ClusterDeleteView(generic.ObjectDeleteView):
+class ClusterUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ClusterGroupBulkEditForm
+    filterset_class = filters.ClusterFilterSet
+    filterset_form_class = forms.ClusterFilterForm
+    form_class = forms.ClusterForm
+    serializer_class = serializers.ClusterSerializer
+    table_class = tables.ClusterTable
     queryset = Cluster.objects.all()
 
-
-class ClusterBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Cluster.objects.all()
-    table = tables.ClusterTable
-
-
-class ClusterBulkEditView(generic.BulkEditView):
-    queryset = Cluster.objects.all()
-    filterset = filters.ClusterFilterSet
-    table = tables.ClusterTable
-    form = forms.ClusterBulkEditForm
-
-
-class ClusterBulkDeleteView(generic.BulkDeleteView):
-    queryset = Cluster.objects.all()
-    filterset = filters.ClusterFilterSet
-    table = tables.ClusterTable
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            ClusterAddDeviceObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                table_class=DeviceTable,
+                table_filter="cluster",
+                table_title='Host Devices',
+                add_button_route='virtualization:cluster_add_devices',
+            ),
+        )
+    )
 
 
 class ClusterAddDevicesView(generic.ObjectEditView):
