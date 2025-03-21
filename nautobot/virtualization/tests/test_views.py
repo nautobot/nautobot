@@ -35,7 +35,7 @@ class ClusterGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewT
         }
 
 
-class ClusterTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class ClusterTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = ClusterType
 
     @classmethod
@@ -50,6 +50,10 @@ class ClusterTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         cls.form_data = {
             "name": "Cluster Type X",
             "description": "A new cluster type",
+        }
+
+        cls.bulk_edit_data = {
+            "description": "New description",
         }
 
 
