@@ -9,7 +9,6 @@ from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic
-from nautobot.core.views.utils import get_obj_from_context
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
@@ -110,23 +109,8 @@ class ClusterGroupUIViewSet(NautobotUIViewSet):
 #
 
 
-class ClusterAddDeviceObjectsTablePanel(object_detail.ObjectsTablePanel):
-    def _get_table_add_url(self, context):
-        obj = get_obj_from_context(context)
-        body_content_table_add_url = None
-        request = context["request"]
-        related_field_name = self.related_field_name or self.table_filter or obj._meta.model_name
-        return_url = context.get("return_url", obj.get_absolute_url())
-
-        if request.user.has_perms(self.add_permissions or []):
-            add_route = reverse(self.add_button_route, kwargs={"pk": obj.pk})
-            body_content_table_add_url = f"{add_route}?{related_field_name}={obj.pk}&return_url={return_url}"
-
-        return body_content_table_add_url
-
-
 class ClusterUIViewSet(NautobotUIViewSet):
-    bulk_update_form_class = forms.ClusterGroupBulkEditForm
+    bulk_update_form_class = forms.ClusterBulkEditForm
     filterset_class = filters.ClusterFilterSet
     filterset_form_class = forms.ClusterFilterForm
     form_class = forms.ClusterForm
@@ -141,13 +125,21 @@ class ClusterUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
             ),
-            ClusterAddDeviceObjectsTablePanel(
+            object_detail.ObjectsTablePanel(
                 weight=100,
                 section=SectionChoices.RIGHT_HALF,
                 table_class=DeviceTable,
                 table_filter="cluster",
                 table_title="Host Devices",
-                add_button_route="virtualization:cluster_add_devices",
+                enable_bulk_actions=True,
+                footer_content_template_path="virtualization/cluster_add_devices_table_footer.html",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.VirtualMachineTable,
+                table_filter="cluster",
+                add_button_route=None,
             ),
         )
     )
