@@ -23,7 +23,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: "Install Python Packages"
-        run: "pip install poetry==1.8.2"
+        run: "pip install poetry==1.8.5"
       - name: "Configure Poetry"
         run: "poetry config virtualenvs.create false && poetry config installer.parallel false"
       - name: "Install Dependencies (needed for mkdocs)"
