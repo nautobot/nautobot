@@ -17,24 +17,37 @@ add "&raw" to the end of the URL within a browser.
 
   <!-- GraphiQL template requirements -->
   <style>
+    .graphiql-container {
+      --color-primary: 211, 100%, 50% !important;  /* #007dff blue */
+      --color-secondary: 208, 13%, 36% !important; /* #505d68 gray */
+      --color-tertiary: 0, 0%, 10% !important; /* #1a1a1a near black */
+      --color-info: var(--color-primary) !important;
+      --color-success: 126, 72%, 39% !important; /* #1ca92a green */
+      --color-warning: 31, 94%, 45% !important; /* #e07807 orange */
+      --color-error: 0, 76%, 50% !important; /* #e01f1f red */
+      --color-neutral: var(--color-secondary) !important;
+      --color-base: 0, 0%, 96% !important; /* #f4f4f4 near white */
+
+      --font-family: "Ubuntu", sans-serif !important;
+      --font-family-mono: "Ubuntu Mono", monospace !important;
+      --font-size-body: 14px !important;
+    }
     #editor {
       margin: 0;
       width: 100%;
       height: calc(100vh - 56px - 3rem);
     }
-    .toolbar .dropdown-menu > li > a {
+    .graphiql-toolbar .dropdown-menu > li > a {
         clear: left;
-        margin-right: 120px;  /* leave room for the "Save Changes" button if present */
+        margin-right: 140px;  /* leave room for the "Save Changes" button if present */
     }
-    .graphiql-container .doc-explorer-title-bar {
-      box-sizing: content-box;
-  }
-    .graphiql-container .history-title-bar {
-      box-sizing: content-box;
-  }
-  .graphiql-container .docExplorerShow {
-    white-space: nowrap;
-  }
+
+    /* Save Changes button */
+    .graphiql-toolbar .dropdown-menu a.btn {
+      color: #ffffff !important;
+      margin-right: 20px;
+    }
+
   </style>
   <!-- As Nautobot may be run without internet access, we source these files locally rather than from an online CDN -->
   <link rel="stylesheet"
@@ -83,9 +96,8 @@ add "&raw" to the end of the URL within a browser.
     document.addEventListener('DOMContentLoaded', function() {
       queries_tab = `
         <div class="btn-group" role="button">
-          <button class="toolbar-button dropdown-toggle" aria-haspopup="true" aria-expanded="false" data-toggle="dropdown">
-              <span>Queries </span>
-              <span class="caret"></span>
+          <button class="graphiql-un-styled graphiql-toolbar-button dropdown-toggle" aria-haspopup="true" aria-expanded="false" data-toggle="dropdown">
+              <img class="graphiql-toolbar-icon" src="{% static 'img/nautobot_icon.svg' %}" style="height:24px">
           </button>
           <ul class="dropdown-menu" id="graphql-queries-menu">
             <li class="dropdown-header">Saved Queries</li>
@@ -110,7 +122,7 @@ add "&raw" to the end of the URL within a browser.
             </ul>
         </div>
       `
-      $(".toolbar").append(queries_tab);
+      $(".graphiql-toolbar").append(queries_tab);
     }, false);
   {% endif %}
 
