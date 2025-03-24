@@ -57,6 +57,7 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
+from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_driver_mapping_tool_names
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
@@ -1679,16 +1680,56 @@ class PlatformUIViewSet(NautobotUIViewSet):
     queryset = Platform.objects.all()
     filterset = filters.PlatformFilterSet
 
-    # Object detail content configuration for the Platform model
+    # Define the object detail content layout (fields, tables, etc.)
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
-                fields="__all__",
+                fields=["description", "manufacturer", "napalm_driver", "napalm_args", "network_driver"],
+            ),
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                fields=["network_driver_mappings"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.DeviceTable,
+                table_filter="platform",
+                exclude_columns=["platform"],
             ),
         ),
     )
+
+    # Combine the logic from both get_extra_context methods
+    def get_extra_context(self, request, instance):
+        # Fetch the associated devices for the platform
+        devices = (
+            Device.objects.restrict(request.user, "view")
+            .filter(platform=instance)
+            .select_related("status", "location", "tenant", "rack", "device_type", "role")
+        )
+
+        device_table = tables.DeviceTable(devices)
+
+        # Pagination setup for the device table
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(device_table)
+
+        # Return all necessary context for the view
+        return {
+            "device_table": device_table,
+            "network_driver_tool_names": get_network_driver_mapping_tool_names(),
+            "network_driver_names": sorted(
+                get_all_network_driver_mappings().keys()
+            ),  # Sorted list of network driver names
+            **super().get_extra_context(request, instance),  # Include any extra context from the parent class
+        }
 
 
 #

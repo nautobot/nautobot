@@ -32,7 +32,6 @@ from .models import (
 app_name = "dcim"
 
 router = NautobotUIViewSetRouter()
-router.register("platform", views.PlatformUIViewSet)
 router.register("controller-managed-device-groups", views.ControllerManagedDeviceGroupUIViewSet)
 router.register("controllers", views.ControllerUIViewSet)
 router.register("device-families", views.DeviceFamilyUIViewSet)
@@ -44,6 +43,7 @@ router.register("module-bays", views.ModuleBayUIViewSet)
 router.register("module-bay-templates", views.ModuleBayTemplateUIViewSet)
 router.register("modules", views.ModuleUIViewSet)
 router.register("module-types", views.ModuleTypeUIViewSet)
+router.register("platform", views.PlatformUIViewSet)
 router.register("software-image-files", views.SoftwareImageFileUIViewSet)
 router.register("software-versions", views.SoftwareVersionUIViewSet)
 router.register("virtual-device-contexts", views.VirtualDeviceContextUIViewSet)
