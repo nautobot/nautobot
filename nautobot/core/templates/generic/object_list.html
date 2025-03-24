@@ -195,7 +195,7 @@
 <hr>
 {% endif %}
 <script src="https://unpkg.com/htmx.org@1.9.2"></script>
-<div class="row" id="table-container">
+<div class="row" id="table-container" hx-on:htmx:after-request="window.scrollTo({top: 0, behavior: 'smooth'})">
     {% block table %}
     <div class="col-md-12">
         {% with bulk_edit_url=content_type.model_class|validated_viewname:"bulk_edit" bulk_delete_url=content_type.model_class|validated_viewname:"bulk_delete" %}
