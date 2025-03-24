@@ -161,8 +161,6 @@ sso = ["social-auth-core"]
 [tool.poetry.group.dev.dependencies]
 # Tool for debugging Django
 django-debug-toolbar = "~5.0.1"
-# DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
-django-slowtests = "^1.1.1"
 # Nautobot example App used for testing
 example-app = {path = "examples/example_app", develop = true}
 # Nautobot test App used for testing core view overrides
@@ -222,8 +220,8 @@ yamllint = "~1.35.1"
 [tool.poetry.group.testing.dependencies]
 # Test code coverage measurement - pinned to 6.4.0 to resolve https://github.com/nedbat/coveragepy/issues/1420
 coverage = "6.4.0"
-# DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
-django-slowtests = "^1.1.1"
+# Testing of data migrations
+django-test-migrations = "~1.4.0"
 # Integration Tests
 requests = "~2.32.3"
 # Selenium web drivers for live integration testing
