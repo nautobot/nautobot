@@ -4,18 +4,20 @@ from django.apps import apps as global_apps
 from django.contrib.contenttypes.models import ContentType
 from django_tables2 import RequestConfig
 
-from nautobot.apps.views import (
-    ObjectBulkDestroyViewMixin,
-    ObjectDestroyViewMixin,
-    ObjectDetailViewMixin,
-    ObjectListViewMixin,
-)
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import (
     ObjectDetailContent,
     ObjectFieldsPanel,
 )
 from nautobot.core.views.generic import ObjectView
+from nautobot.core.views.mixins import (
+    ObjectBulkDestroyViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectNotesViewMixin,
+)
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.extras.utils import get_base_template
@@ -139,7 +141,12 @@ class UniqueValidationRuleUIViewSet(NautobotUIViewSet):
 
 
 class DataComplianceListView(  # pylint: disable=W0223
-    ObjectListViewMixin, ObjectDetailViewMixin, ObjectDestroyViewMixin, ObjectBulkDestroyViewMixin
+    ObjectListViewMixin,
+    ObjectDetailViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectNotesViewMixin,
 ):
     """Views for the DataComplianceListView model."""
 

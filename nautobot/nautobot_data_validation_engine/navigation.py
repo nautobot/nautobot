@@ -7,7 +7,7 @@ menu_items = (
         name="Extensibility",
         groups=(
             NavMenuGroup(
-                name="Data Validation Engine",
+                name="Data Validation",
                 weight=200,
                 items=(
                     NavMenuItem(

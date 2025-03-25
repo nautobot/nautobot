@@ -197,8 +197,8 @@ def get_classes_from_git_repo(repo: GitRepository):
         if discovered_module_name in sys.modules:
             del sys.modules[discovered_module_name]
         module = importer.find_module(discovered_module_name).load_module(discovered_module_name)
-        for _, complance_class in inspect.getmembers(module, is_data_compliance_rule):
-            class_list.append(complance_class)
+        for _, compliance_class in inspect.getmembers(module, is_data_compliance_rule):
+            class_list.append(compliance_class)
     return class_list
 
 

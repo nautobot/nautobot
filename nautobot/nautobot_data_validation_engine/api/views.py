@@ -22,7 +22,7 @@ class MinMaxValidationRuleViewSet(NautobotModelViewSet):
 
 
 class RequiredValidationRuleViewSet(NautobotModelViewSet):
-    """View to manage min max expression validation rules."""
+    """View to manage required field validation rules."""
 
     queryset = models.RequiredValidationRule.objects.all()
     serializer_class = serializers.RequiredValidationRuleSerializer
@@ -30,7 +30,7 @@ class RequiredValidationRuleViewSet(NautobotModelViewSet):
 
 
 class UniqueValidationRuleViewSet(NautobotModelViewSet):
-    """View to manage min max expression validation rules."""
+    """View to manage unique value validation rules."""
 
     queryset = models.UniqueValidationRule.objects.all()
     serializer_class = serializers.UniqueValidationRuleSerializer

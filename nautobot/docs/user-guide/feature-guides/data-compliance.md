@@ -14,9 +14,9 @@ The `DataComplianceRule` class takes advantage of the `CustomValidator` workflow
 
 Any `DataComplianceRule` class can have a `name` defined to provide a friendly name to be shown within in the UI. The `enforce` attribute can also be set to decide whether or not the `ComplianceError` caught in the `audit` method is raised again to the `clean` method, acting like a `ValidationError` wherever the original `full_clean` was called. Setting `enforce` to `True` changes the `DataComplianceRule` from a passive validation of data to an active enforcement of the logic within it.
 
-> **Note:** Individual rules implemented using the `DataComplianceRule` class are re-ran and re-validated when the target object is modified and saved, in addition to run ad-hoc using the `RunRegisteredDataComplianceRules` job. However, `DataCompliance` objects that are created by the job for the built-in validation rules when using the `Run built-in validation rules?` option will not update nor be re-validated until the job is explicitly ran once again.
->
-> For example, if a user fixes an object attribute that was incompliant with a built-in rule and then navigates to its `Data Compliance` tab, the object will still show as invalid for that built-in rule. This will remain the case until the job is ran again with the `Run built-in validation rules?` option checked.
+!!! note
+    Individual rules implemented using the `DataComplianceRule` class are re-ran and re-validated when the target object is modified and saved, in addition to run ad-hoc using the `RunRegisteredDataComplianceRules` job. However, `DataCompliance` objects that are created by the job for the built-in validation rules when using the `Run built-in validation rules?` option will not update nor be re-validated until the job is explicitly ran once again.
+    For example, if a user fixes an object attribute that was non-compliant with a built-in rule and then navigates to its `Data Compliance` tab, the object will still show as invalid for that built-in rule. This will remain the case until the job is ran again with the `Run built-in validation rules?` option checked.
 
 ## How to Use
 
@@ -52,7 +52,7 @@ class DesiredClassName(DataComplianceRule):
         # Your logic to determine if this function has succeeded or failed
         if "undesired_value" in self.context["object"].desired_attribute:
             raise ComplianceError({"desired_attribute": "Desired message why it's invalid."})
-    
+
     def audit(self):
         messages = {}
         for fn in [self.audit_desired_name_one, self.audit_desired_name_two]: # Add audit functions here
@@ -64,7 +64,7 @@ class DesiredClassName(DataComplianceRule):
             raise ComplianceError(messages)
 ```
 
-After your Git repo is configured and rule class(es) written, add the repository to Nautobot from `Extensibility -> Data Sources -> Git Repositories`. Include the remote repo URL, as well as credentials if it's not public (recommend using Nautobot Secrets for this). Also select `data compliance rules` for the 'provides' field. This will add/sync your repository and automatically find your data compliance rule classes.
+After your Git repository is configured and rule class(es) written, add the repository to Nautobot from `Extensibility -> Data Sources -> Git Repositories`. Select `data compliance rules` for the 'provides' field. This will add/sync your repository and automatically find your data compliance rule classes.
 
 #### Writing Data Compliance Rules within the App
 
@@ -88,7 +88,7 @@ class DesiredClassName(DataComplianceRule):
         # Your logic to determine if this function has succeeded or failed
         if "undesired_value" in self.context["object"].desired_attribute:
             raise ComplianceError({"desired_attribute": "Desired message why it's invalid."})
-    
+
     def audit(self):
         messages = {}
         for fn in [self.audit_desired_name_one, self.audit_desired_name_two]: # Add audit functions here
@@ -102,7 +102,8 @@ class DesiredClassName(DataComplianceRule):
 custom_validators = list(CustomValidatorIterator()) + [DesiredClassName]
 ```
 
-> **Note:** Be sure to modify the existing `custom_validators` variable by casting `CustomValidatorIterator()` to a list and then appending the classes to it.
+!!! tip
+    Be sure to modify the existing `custom_validators` variable by casting `CustomValidatorIterator()` to a list and then appending the classes to it.
 
 ### Step 2. Run the `RunRegisteredDataComplianceRules` Job
 
@@ -120,7 +121,8 @@ All data compliance result objects can be found on the navigation bar under `Ext
 
 Additionally, the `nautobot_data_validation_engine` app automatically creates template extensions to add a `Data Compliance` tab to the detail view of all objects. This tab makes it easy to check an individual object's compliance with any applicable data compliance rules.
 
-> **Note:** A second job, `DeleteOrphanedDataComplianceData`, associated with Data Compliance can be run to remove/clean up any data compliance results that might be left dangling over time due to the parent object having since been deleted.
+!!! info
+    A second job, `DeleteOrphanedDataComplianceData`, associated with Data Compliance can be run to remove/clean up any data compliance results that might be left dangling over time due to the parent object having since been deleted.
 
 ## Example
 
@@ -137,12 +139,12 @@ from nautobot.apps.models import DataComplianceRule, ComplianceError
 class DeviceDataComplianceRules(DataComplianceRule):
     model = "dcim.device"
     enforce = False
-    
+
     # Checks if a device name contains any special characters other than a dash (-), underscore (_), or period (.) using regex
     def audit_device_name_chars(self):
         if not re.match("^[a-zA-Z0-9\-_.]+$", self.context["object"].name):
             raise ComplianceError({"name": "Device name contains unallowed special characters."})
-    
+
     def audit(self):
         messages = {}
         for fn in [self.audit_device_name_chars]:
@@ -156,12 +158,12 @@ class DeviceDataComplianceRules(DataComplianceRule):
 class RackDeviceComplianceRules(DataComplianceRule):
     model = "dcim.device"
     enforce = False
-    
+
     # Checks if a device is not assigned to a rack
     def audit_device_rack(self):
         if not self.context["object"].rack:
             raise ComplianceError({"rack": "Device should be assigned to a rack."})
-    
+
     def audit(self):
         messages = {}
         for fn in [self.audit_device_rack]:

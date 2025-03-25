@@ -1,9 +1,8 @@
 """Unit tests for nautobot_data_validation_engine."""
 
 from django.contrib.contenttypes.models import ContentType
-from django.urls import reverse
 
-from nautobot.core.testing import APITestCase, APIViewTestCases
+from nautobot.core.testing import APIViewTestCases
 from nautobot.dcim.models import Location, Manufacturer, Platform, PowerFeed
 from nautobot.nautobot_data_validation_engine.models import (
     MinMaxValidationRule,
@@ -13,33 +12,12 @@ from nautobot.nautobot_data_validation_engine.models import (
 )
 
 
-class AppTest(APITestCase):
-    """
-    Test base path for app
-    """
-
-    def test_root(self):
-        """
-        Test the root view
-        """
-        url = reverse("nautobot_data_validation_engine-api:api-root")
-        response = self.client.get(f"{url}?format=api", **self.header)
-
-        self.assertEqual(response.status_code, 200)
-
-
 class RegularExpressionValidationRuleTest(APIViewTestCases.APIViewTestCase):
     """
     API view test cases for the RegularExpressionValidationRule model
     """
 
     model = RegularExpressionValidationRule
-    brief_fields = [
-        "display",
-        "id",
-        "name",
-        "url",
-    ]
     choices_fields = {"content_type"}
 
     create_data = [
@@ -97,12 +75,6 @@ class MinMaxValidationRuleTest(APIViewTestCases.APIViewTestCase):
     """
 
     model = MinMaxValidationRule
-    brief_fields = [
-        "display",
-        "id",
-        "name",
-        "url",
-    ]
     choices_fields = {"content_type"}
 
     create_data = [
@@ -163,12 +135,6 @@ class RequiredValidationRuleTest(APIViewTestCases.APIViewTestCase):
     """
 
     model = RequiredValidationRule
-    brief_fields = [
-        "display",
-        "id",
-        "name",
-        "url",
-    ]
     choices_fields = {"content_type"}
 
     create_data = [
@@ -220,12 +186,6 @@ class UniqueValidationRuleTest(APIViewTestCases.APIViewTestCase):
     """
 
     model = UniqueValidationRule
-    brief_fields = [
-        "display",
-        "id",
-        "name",
-        "url",
-    ]
     choices_fields = {"content_type"}
 
     create_data = [

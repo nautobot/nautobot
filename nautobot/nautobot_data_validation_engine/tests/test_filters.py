@@ -36,17 +36,9 @@ class RegularExpressionValidationRuleFilterTestCase(FilterTestCases.NameOnlyFilt
         """
         Create test data
         """
-        tag_1 = Tag.objects.create(
-            name="Tag 1",
-            color="00bcd4",
-            description="Test tag 1",
-        )
+        tag_1 = Tag.objects.first()
         tag_1.content_types.set([ContentType.objects.get_for_model(RegularExpressionValidationRule)])
-        tag_2 = Tag.objects.create(
-            name="Tag 2",
-            color="ff5722",
-            description="Test tag 2",
-        )
+        tag_2 = Tag.objects.last()
         tag_2.content_types.set([ContentType.objects.get_for_model(RegularExpressionValidationRule)])
         regex_1 = RegularExpressionValidationRule.objects.create(
             name="Regex rule 1",
@@ -113,17 +105,9 @@ class MinMaxValidationRuleFilterTestCase(FilterTestCases.NameOnlyFilterTestCase)
         """
         Create test data
         """
-        tag_1 = Tag.objects.create(
-            name="Tag 1",
-            color="00bcd4",
-            description="Test tag 1",
-        )
+        tag_1 = Tag.objects.first()
         tag_1.content_types.set([ContentType.objects.get_for_model(MinMaxValidationRule)])
-        tag_2 = Tag.objects.create(
-            name="Tag 2",
-            color="ff5722",
-            description="Test tag 2",
-        )
+        tag_2 = Tag.objects.last()
         tag_2.content_types.set([ContentType.objects.get_for_model(MinMaxValidationRule)])
         min_max_1 = MinMaxValidationRule.objects.create(
             name="Min max rule 1",
@@ -184,17 +168,9 @@ class RequiredValidationRuleFilterTestCase(FilterTestCases.NameOnlyFilterTestCas
         """
         Create test data
         """
-        tag_1 = Tag.objects.create(
-            name="Tag 1",
-            color="00bcd4",
-            description="Test tag 1",
-        )
+        tag_1 = Tag.objects.first()
         tag_1.content_types.set([ContentType.objects.get_for_model(RequiredValidationRule)])
-        tag_2 = Tag.objects.create(
-            name="Tag 2",
-            color="ff5722",
-            description="Test tag 2",
-        )
+        tag_2 = Tag.objects.last()
         tag_2.content_types.set([ContentType.objects.get_for_model(RequiredValidationRule)])
         required_1 = RequiredValidationRule.objects.create(
             name="Required rule 1",
@@ -252,17 +228,9 @@ class UniqueValidationRuleFilterTestCase(FilterTestCases.NameOnlyFilterTestCase)
         """
         Create test data
         """
-        tag_1 = Tag.objects.create(
-            name="Tag 1",
-            color="00bcd4",
-            description="Test tag 1",
-        )
+        tag_1 = Tag.objects.first()
         tag_1.content_types.set([ContentType.objects.get_for_model(UniqueValidationRule)])
-        tag_2 = Tag.objects.create(
-            name="Tag 2",
-            color="ff5722",
-            description="Test tag 2",
-        )
+        tag_2 = Tag.objects.last()
         tag_2.content_types.set([ContentType.objects.get_for_model(UniqueValidationRule)])
         unique_1 = UniqueValidationRule.objects.create(
             name="Unique rule 1",

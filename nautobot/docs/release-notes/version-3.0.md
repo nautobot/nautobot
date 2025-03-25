@@ -2,7 +2,7 @@
 
 This document describes all new features and changes in Nautobot 3.0.
 
-## Upgdate Actions
+## Upgrade Actions
 
 ### Job Authors & App Developers
 
