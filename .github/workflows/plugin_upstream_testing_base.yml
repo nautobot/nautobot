@@ -12,7 +12,7 @@ on:
         type: string
 
 env:
-  PYTHON_VERSION: "3.9"
+  PYTHON_VERSION: "3.11" # maximum version currently supported by both develop and ltm-1.6
 
 jobs:
   build:
@@ -31,7 +31,7 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-          poetry-version: "1.8.2"
+          poetry-version: "1.8.5"
           python-version: "${{ env.PYTHON_VERSION }}"
       # This deviates from the app CI since we can't force invoke to run locally using the `INVOKE_APPNAME_LOCAL` environment variable
       - name: "Constrain Nautobot version and regenerate lock file"
@@ -83,7 +83,7 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-          poetry-version: "1.8.2"
+          poetry-version: "1.8.5"
           python-version: "${{ env.PYTHON_VERSION }}"
       - name: "Copy credentials"
         run: "cp development/creds.example.env development/creds.env"
@@ -114,7 +114,7 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-          poetry-version: "1.8.2"
+          poetry-version: "1.8.5"
           python-version: "${{ env.PYTHON_VERSION }}"
       - name: "Copy credentials"
         run: "cp development/creds.example.env development/creds.env"

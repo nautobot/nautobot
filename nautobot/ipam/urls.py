@@ -22,22 +22,6 @@ router.register("vrfs", views.VRFUIViewSet)
 router.register("vlan-groups", views.VLANGroupUIViewSet)
 
 urlpatterns = [
-    # Namespaces
-    path(
-        "namespaces/<uuid:pk>/ip-addresses/",
-        views.NamespaceIPAddressesView.as_view(),
-        name="namespace_ipaddresses",
-    ),
-    path(
-        "namespaces/<uuid:pk>/prefixes/",
-        views.NamespacePrefixesView.as_view(),
-        name="namespace_prefixes",
-    ),
-    path(
-        "namespaces/<uuid:pk>/vrfs/",
-        views.NamespaceVRFsView.as_view(),
-        name="namespace_vrfs",
-    ),
     # Prefixes
     path("prefixes/", views.PrefixListView.as_view(), name="prefix_list"),
     path("prefixes/add/", views.PrefixEditView.as_view(), name="prefix_add"),

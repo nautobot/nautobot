@@ -375,6 +375,11 @@ class Tab(Component):
 class DistinctViewTab(Tab):
     """
     A Tab that doesn't render inline on the same page, but instead links to a distinct view of its own when clicked.
+
+    Args:
+        url_name (str): The name of the URL pattern to link to, which will be reversed to generate the URL.
+        label_wrapper_template_path (str, optional): Template path to render the tab label to HTML.
+        related_object_attribute (str, optional): The name of the related object attribute to count for the tab label.
     """
 
     def __init__(
@@ -382,9 +387,11 @@ class DistinctViewTab(Tab):
         *,
         url_name,
         label_wrapper_template_path="components/tab/label_wrapper_distinct_view.html",
+        related_object_attribute="",
         **kwargs,
     ):
         self.url_name = url_name
+        self.related_object_attribute = related_object_attribute
         super().__init__(label_wrapper_template_path=label_wrapper_template_path, **kwargs)
 
     def get_extra_context(self, context: Context):
@@ -392,6 +399,30 @@ class DistinctViewTab(Tab):
 
     def render(self, context: Context):
         return ""
+
+    def render_label(self, context: Context):
+        if not self.related_object_attribute:
+            return super().render_label(context)
+
+        obj = get_obj_from_context(context)
+        if not hasattr(obj, self.related_object_attribute):
+            logger.warning(
+                f"{obj} does not have a related attribute {self.related_object_attribute} to count for tab label."
+            )
+            return super().render_label(context)
+
+        try:
+            related_obj_count = getattr(obj, self.related_object_attribute).count()
+            return format_html(
+                "{} {}",
+                self.label,
+                render_to_string("utilities/templatetags/badge.html", badge(related_obj_count)),
+            )
+        except AttributeError:
+            logger.warning(
+                f"{obj}'s attribute {self.related_object_attribute} is not a related manager to count for tab label."
+            )
+            return super().render_label(context)
 
 
 class Panel(Component):
