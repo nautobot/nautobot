@@ -627,7 +627,6 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
     # https://github.com/graphql-python/graphene-django/blob/main/graphene_django/views.py#L57
 
     permission_classes = [IsAuthenticated]
-    graphql_schema = None
     execution_context_class = None
     middleware = None
     root_value = None
@@ -689,8 +688,6 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
         if not self.schema:
             self.schema = graphene_settings.SCHEMA
 
-        self.graphql_schema = self.graphql_schema or self.schema.graphql_schema
-
         if self.middleware is not None:
             if isinstance(self.middleware, MiddlewareManager):
                 self.middleware = graphene_settings.MIDDLEWARE
@@ -700,7 +697,7 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
         self.execution_context_class = self.execution_context_class
         self.root_value = self.root_value
 
-        if not isinstance(self.graphql_schema, GraphQLSchema):
+        if not isinstance(self.schema.graphql_schema, GraphQLSchema):
             raise ValueError("A Schema is required to be provided to GraphQLAPIView.")
 
     def get_response(self, request, data):
