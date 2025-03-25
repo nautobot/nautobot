@@ -2,14 +2,14 @@
 
 from nautobot.apps.api import OrderedDefaultRouter
 
-from nautobot_vpn_models.api import views
+from . import views
 
-app_name = "nautobot_vpn_models-api"
+app_name = "vpn"
 router = OrderedDefaultRouter()
 # add the name of your api endpoint, usually hyphenated model name in plural, e.g. "my-model-classes"
 router.register("vpn-profiles", views.VPNProfileViewSet)
-router.register("vpn-phase-1-policys", views.VPNPhase1PolicyViewSet)
-router.register("vpn-phase-2-policys", views.VPNPhase2PolicyViewSet)
+router.register("vpn-phase-1-policies", views.VPNPhase1PolicyViewSet)
+router.register("vpn-phase-2-policies", views.VPNPhase2PolicyViewSet)
 router.register("vpns", views.VPNViewSet)
 router.register("vpn-tunnels", views.VPNTunnelViewSet)
 router.register("vpn-tunnel-endpoints", views.VPNTunnelEndpointViewSet)
