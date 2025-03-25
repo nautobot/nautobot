@@ -573,6 +573,7 @@ body {
   $sidenav-link-segment-icon-width: 1.25rem; /* 20px */
   $sidenav-link-segment-icon-svg: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='90' stroke='#{$nav-gray-3}'/><line x1='10' y1='45' x2='15' y2='45' stroke='#{$nav-gray-3}'/></svg>";
   $sidenav-link-segment-icon-svg-last: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='45.5' stroke='#{$nav-gray-3}'/><line x1='10' y1='45' x2='15' y2='45' stroke='#{$nav-gray-3}'/></svg>";
+  $sidenav-link-width: 15rem; /* 240px */
 
   @mixin fade-in {
     opacity: 1;
@@ -603,6 +604,7 @@ body {
   }
 
   @include transition($transition-collapse-width);
+  @include box-shadow($box-shadow);
   align-items: center;
   background-color: $navy-0;
   color: $nav-white-0;
@@ -610,7 +612,8 @@ body {
   flex-direction: column;
   height: 100%;
   position: relative;
-  width: 15rem; /* 240px */
+  width: $sidenav-link-width;
+  z-index: 1;
 
   &.sidenav-collapsed {
     width: 4rem; /* 64px */
@@ -664,6 +667,23 @@ body {
     }
   }
 
+  .sidenav-flyout {
+    @include transition($transition-base);
+    @include box-shadow($box-shadow);
+    @include fade-out;
+    background: $navy-1;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    height: 100%;
+    left: 0;
+    padding-block: map.get($spacers, 20);
+    position: absolute;
+    top: 0;
+    z-index: -1;
+    width: max-content;
+  }
+
   .sidenav-link {
     align-items: center;
     color: inherit;
@@ -674,10 +694,11 @@ body {
     padding-inline-start: map.get($spacers, 20) + $sidenav-link-segment-icon-width + $sidenav-link-gap;
     position: relative;
     text-decoration: none;
+    width: $sidenav-link-width;
 
     &:focus-visible,
     &:hover {
-      background-color: $navy-1;
+      background-color: $navy-2;
     }
 
     &::before { /* Segment icon */
@@ -706,6 +727,7 @@ body {
     padding-block: 0.3125rem; /* 5px */
     padding-inline: #{map.get($spacers, 20)};
     text-transform: uppercase;
+    width: $sidenav-link-width;
   }
 
   .sidenav-list-divider {
@@ -726,12 +748,37 @@ body {
     text-transform: uppercase;
     width: 100%;
 
+    &::after { /* Overlay */
+      @include transition($transition-base);
+      @include fade-out;
+      background: rgba(0, 0, 0, 0.25);
+      content: "";
+      cursor: default;
+      display: block;
+      inset: 0 0 0 $sidenav-link-width;
+      position: fixed;
+      z-index: -1;
+    }
+
+    &[aria-expanded="true"] { /* When list item is expanded */
+      background-color: $navy-1;
+
+      &::after { /* Overlay */
+        @include fade-in;
+      }
+
+      & + .sidenav-flyout {
+        @include fade-in;
+        left: 100%;
+      }
+    }
+
     &:focus-visible,
     &:hover {
       background-color: $navy-1;
     }
 
-    &:has(~ ul .sidenav-link-active) { /* When list item contains an active link */
+    &:has(+ .sidenav-flyout .sidenav-link-active) { /* When list item contains an active link */
       color: $orange-0;
 
       > :last-child::after { /* Chevron icon */
@@ -750,7 +797,7 @@ body {
       @include fade-in;
       align-items: center;
       display: inline-flex;
-      flex: auto 1 1;
+      flex: auto 1 0;
       margin-inline-start: map.get($spacers, 10);
 
       &::after { /* Chevron icon */
@@ -762,11 +809,19 @@ body {
   }
 
   .sidenav-toggler {
+    @include transition($transition-base);
+    @include fade-in;
     right: -0.8125rem; /* -13px */
     top: 1.375rem; /* 22px */
 
     &::before { /* Chevron icon */
       @include chevron(1rem); /* 16px */
+    }
+  }
+
+  &:has(> ul .sidenav-list-item[aria-expanded="true"]) { /* When flyout is expanded */
+    .sidenav-toggler {
+      @include fade-out;
     }
   }
 }
