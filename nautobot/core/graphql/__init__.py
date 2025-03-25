@@ -1,8 +1,7 @@
 from django.test.client import RequestFactory
-from graphene.types import Scalar
+from graphene.types import BigInt
 from graphene_django.settings import graphene_settings
 from graphql import execute, parse
-from graphql.language import ast
 
 from nautobot.extras.models import GraphQLQuery
 
@@ -24,7 +23,7 @@ def execute_query(query, variables=None, request=None, user=None):
     if not request:
         request = RequestFactory().post("/graphql/")
         request.user = user
-    schema = graphene_settings.SCHEMA
+    schema = graphene_settings.SCHEMA.graphql_schema
     document = parse(query)
     if variables:
         return execute(schema=schema, document=document, context_value=request, variable_values=variables)
@@ -50,21 +49,5 @@ def execute_saved_query(saved_query_name, **kwargs):
     return execute_query(query=query.query, **kwargs)
 
 
-# See also:
-# https://github.com/graphql-python/graphene-django/issues/241
-# https://github.com/graphql-python/graphene/pull/1261 (graphene 3.0)
-class BigInteger(Scalar):
-    """An integer which, unlike GraphQL's native Int type, doesn't reject values outside (-2^31, 2^31-1).
-
-    Currently only used for ASNField, which goes up to 2^32-1 (i.e., unsigned 32-bit int); it's possible
-    that this approach may fail for values in excess of 2^53-1 (the largest integer value supported in JavaScript).
-    """
-
-    serialize = int
-    parse_value = int
-
-    @staticmethod
-    def parse_literal(node):
-        if isinstance(node, ast.IntValue):
-            return int(node.value)
-        return None
+class BigInteger(BigInt):
+    """For backwards compatibility only."""

@@ -334,8 +334,8 @@ class CoreConfig(NautobotConfig):
             # Register in django_jinja
             library.filter(name=name, fn=func)
 
-        from graphene_django.converter import convert_django_field
         from graphene.types.scalars import BigInt
+        from graphene_django.converter import convert_django_field
 
         @convert_django_field.register(JSONField)
         def convert_json(field, registry=None):  # pylint: disable=redefined-outer-name

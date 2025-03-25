@@ -20,10 +20,11 @@ from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import SpectacularRedocView, SpectacularSwaggerView
 from graphene_django.settings import graphene_settings
 from graphene_django.views import GraphQLView, HttpError, instantiate_middleware
-from graphql import parse
+from graphql import execute, get_operation_ast, OperationType, parse, validate_schema
 from graphql.execution import ExecutionResult
 from graphql.execution.middleware import MiddlewareManager
 from graphql.type.schema import GraphQLSchema
+from graphql.validation import validate
 import redis.exceptions
 from rest_framework import routers, serializers as drf_serializers, status
 from rest_framework.exceptions import APIException, ParseError, PermissionDenied
@@ -627,15 +628,25 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
 
     permission_classes = [IsAuthenticated]
     graphql_schema = None
-    executor = None
+    execution_context_class = None
     middleware = None
     root_value = None
+    validation_rules = None
 
-    def __init__(self, schema=None, executor=None, middleware=None, root_value=None, **kwargs):
+    def __init__(
+        self,
+        schema=None,
+        execution_context_class=None,
+        middleware=None,
+        root_value=None,
+        validation_rules=None,
+        **kwargs,
+    ):
         self.schema = schema
-        self.executor = executor
+        self.execution_context_class = execution_context_class
         self.middleware = middleware
         self.root_value = root_value
+        self.validation_rules = validation_rules
         super().__init__(**kwargs)
 
     def get_root_value(self, request):
@@ -678,7 +689,7 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
         if not self.schema:
             self.schema = graphene_settings.SCHEMA
 
-        self.graphql_schema = self.graphql_schema or self.schema
+        self.graphql_schema = self.graphql_schema or self.schema.graphql_schema
 
         if self.middleware is not None:
             if isinstance(self.middleware, MiddlewareManager):
@@ -686,7 +697,7 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
             else:
                 self.middleware = list(instantiate_middleware(self.middleware))
 
-        self.executor = self.executor
+        self.execution_context_class = self.execution_context_class
         self.root_value = self.root_value
 
         if not isinstance(self.graphql_schema, GraphQLSchema):
@@ -713,7 +724,7 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
             if execution_result.errors:
                 response["errors"] = [GraphQLView.format_error(e) for e in execution_result.errors]
 
-            if execution_result.invalid:
+            if execution_result.errors and any(not getattr(e, "path", None) for e in execution_result.errors):
                 status_code = 400
             else:
                 response["data"] = execution_result.data
@@ -765,34 +776,42 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
         if not query:
             raise HttpError(HttpResponseBadRequest("Must provide query string."))
 
+        schema = self.schema.graphql_schema
+
+        schema_validation_errors = validate_schema(schema)
+        if schema_validation_errors:
+            return ExecutionResult(data=None, errors=schema_validation_errors)
+
         try:
-            document = parse(self.graphql_schema, query)
+            document = parse(query)
         except Exception as e:
             return ExecutionResult(errors=[e])
 
-        operation_type = document.definitions[0].operation
-        if operation_type != "query":
+        operation_ast = get_operation_ast(document, operation_name)
+
+        if operation_ast is not None and operation_ast.operation != OperationType.QUERY:
             raise HttpError(
-                HttpResponseBadRequest(f"'{operation_type}' is not a supported operation, Only query are supported.")
+                HttpResponseBadRequest(
+                    f"'{operation_ast.operation}' is not a supported operation, Only query are supported."
+                )
             )
 
-        try:
-            extra_options = {}
-            if self.executor:
-                # We only include it optionally since
-                # executor is not a valid argument in all backends
-                extra_options["executor"] = self.executor
+        validation_errors = validate(schema, document, self.validation_rules, graphene_settings.MAX_VALIDATION_ERRORS)
+        if validation_errors:
+            return ExecutionResult(data=None, errors=validation_errors)
 
-            options = {
+        try:
+            execute_options = {
                 "root_value": self.get_root_value(request),
+                "context_value": self.get_context(request),
                 "variable_values": variables,
                 "operation_name": operation_name,
-                "context_value": self.get_context(request),
                 "middleware": self.get_middleware(request),
             }
-            options.update(extra_options)
+            if self.execution_context_class:
+                execute_options["execution_context_class"] = self.execution_context_class
 
-            return document.execute(**options)
+            return execute(schema=schema, document=document, **execute_options)
         except Exception as e:
             return ExecutionResult(errors=[e])
 
