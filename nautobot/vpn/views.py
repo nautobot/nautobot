@@ -3,17 +3,8 @@
 from nautobot.apps.ui import ObjectDetailContent, ObjectFieldsPanel, SectionChoices
 from nautobot.apps.views import NautobotUIViewSet
 
-from nautobot_vpn_models import filters, forms, models, tables
-from nautobot_vpn_models.api import serializers
-
-
-
-
-
-
-
-
-
+from . import filters, forms, models, tables
+from .api import serializers
 
 
 class VPNProfileUIViewSet(NautobotUIViewSet):

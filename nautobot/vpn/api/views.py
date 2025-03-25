@@ -2,17 +2,8 @@
 
 from nautobot.apps.api import NautobotModelViewSet
 
-from nautobot_vpn_models import filters, models
-from nautobot_vpn_models.api import serializers
-
-
-
-
-
-
-
-
-
+from .. import filters, models
+from .. api import serializers
 
 
 class VPNProfileViewSet(NautobotModelViewSet):  # pylint: disable=too-many-ancestors

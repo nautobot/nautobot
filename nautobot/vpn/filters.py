@@ -11,7 +11,7 @@ from nautobot.apps.filters import (
     TenancyModelFilterSetMixin,
 )
 
-from nautobot_vpn_models import models
+from . import models
 
 
 

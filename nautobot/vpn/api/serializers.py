@@ -1,6 +1,6 @@
 from nautobot.apps.api import NautobotModelSerializer, TaggedModelSerializerMixin
 
-from nautobot_vpn_models import models
+from .. import models
 
 
 
