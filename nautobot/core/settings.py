@@ -415,6 +415,7 @@ SPECTACULAR_SETTINGS = {
         # result in this error:
         #    enum naming encountered a non-optimally resolvable collision for fields named "mode".
         "InterfaceModeChoices": "nautobot.dcim.choices.InterfaceModeChoices",
+        # TODO Add VPN choices
         "WirelessNetworkModeChoices": "nautobot.wireless.choices.WirelessNetworkModeChoices",
     },
     # Create separate schema components for PATCH requests (fields generally are not `required` on PATCH)
@@ -568,6 +569,7 @@ INSTALLED_APPS = [
     "nautobot.tenancy",
     "nautobot.users",
     "nautobot.virtualization",
+    "nautobot.vpn",
     "nautobot.wireless",
     "drf_spectacular",
     "drf_spectacular_sidecar",
