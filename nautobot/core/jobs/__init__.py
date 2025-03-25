@@ -446,9 +446,7 @@ class RunRegisteredDataComplianceRules(Job):
             self.logger.info("Running built-in data validation rules")
             self.report_for_validation_rules()
 
-        self.logger.info(
-            "View Data Compliance results [here](/plugins/nautobot-data-validation-engine/data-compliance/)"
-        )
+        self.logger.info("View Data Compliance results [here](/data-validation-engine/data-compliance/)")
 
     @staticmethod
     def report_for_validation_rules():

@@ -157,6 +157,15 @@ class DataComplianceListView(  # pylint: disable=W0223
     filterset_form_class = forms.DataComplianceFilterForm
     serializer_class = serializers.DataComplianceSerializer
     action_buttons = ("export",)
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+        )
+    )
 
 
 class DataComplianceObjectView(ObjectView):
