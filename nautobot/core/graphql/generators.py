@@ -87,7 +87,7 @@ def generate_filter_resolver(schema_type, resolver_name, field_name):
             errors[key] = resolved_obj.errors[key]
 
         # Raising this exception will send the error message in the response of the GraphQL request
-        raise GraphQLError(errors)
+        raise GraphQLError(str(errors))
 
     resolve_filter.__name__ = resolver_name
     return resolve_filter
@@ -306,6 +306,11 @@ def generate_list_resolver(schema_type, resolver_name):
 
     def list_resolver(self, info, limit=None, offset=None, **kwargs):
         filterset_class = schema_type._meta.filterset_class
+
+        # Inverse of substitution logic from get_filtering_args_from_filterset() - transform "_description" back to "description"
+        if "_description" in kwargs:
+            kwargs["description"] = kwargs.pop("_description")
+
         if filterset_class is not None:
             resolved_obj = filterset_class(kwargs, model.objects.restrict(info.context.user, "view").all())
 
@@ -319,7 +324,7 @@ def generate_list_resolver(schema_type, resolver_name):
                     errors[key] = resolved_obj.errors[key]
 
                 # Raising this exception will send the error message in the response of the GraphQL request
-                raise GraphQLError(errors)
+                raise GraphQLError(str(errors))
             qs = resolved_obj.qs.all()
 
         else:
