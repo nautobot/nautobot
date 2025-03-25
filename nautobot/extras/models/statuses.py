@@ -4,6 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.utils.encoding import force_str
 from django.utils.hashable import make_hashable
+from django.utils.html import format_html
 
 from nautobot.core.models.fields import ForeignKeyLimitedByContentTypes
 from nautobot.core.models.name_color_content_types import NameColorContentTypesModel
@@ -32,6 +33,13 @@ class Status(NameColorContentTypesModel):
     class Meta:
         ordering = ["name"]
         verbose_name_plural = "statuses"
+
+    def get_color_display(self):
+        if self.color:
+            return format_html(
+                '<span class="label color-block" style="background-color: #{}">&nbsp;</span>', self.color
+            )
+        return format_html('<span class="text-muted">&mdash;</span>')
 
 
 class StatusField(ForeignKeyLimitedByContentTypes):
