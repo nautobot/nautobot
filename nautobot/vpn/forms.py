@@ -14,20 +14,22 @@ from nautobot.apps.forms import (
     TagsBulkEditFormMixin,
     add_blank_choice,
 )
+from nautobot.ipam.models import IPAddress, Prefix
+from nautobot.extras.models import DynamicGroup
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 
-from nautobot_vpn_models import choices, models
+from . import choices, models
 
 
 class VPNProfileForm(NautobotModelForm):  # pylint: disable=too-many-ancestors
-    """Form for creating and updating VPNProfile.""" 
+    """Form for creating and updating VPNProfile."""
     vpn_phase1_policy = DynamicModelMultipleChoiceField(
         queryset=models.VPNPhase1Policy.objects.all(),
         required=False,
         label="VPN Phase 1 Policy",
         # TODO INIT defaulting to the common field `name`, you may want to change this.
         to_field_name="name",
-    ) 
+    )
     vpn_phase2_policy = DynamicModelMultipleChoiceField(
         queryset=models.VPNPhase2Policy.objects.all(),
         required=False,
@@ -220,14 +222,14 @@ class VPNPhase2PolicyFilterForm(NautobotFilterForm):  # pylint: disable=too-many
     tags = TagFilterField(model)
 
 class VPNForm(NautobotModelForm, TenancyForm):  # pylint: disable=too-many-ancestors
-    """Form for creating and updating VPN.""" 
-    contact_associations = DynamicModelMultipleChoiceField(
-        queryset=ContactAssociations.objects.all(),
-        required=False,
-        label="Contact Associations",
-        # TODO INIT defaulting to the common field `name`, you may want to change this.
-        to_field_name="name",
-    )
+    """Form for creating and updating VPN."""
+    # contact_associations = DynamicModelMultipleChoiceField(
+    #     queryset=ContactAssociations.objects.all(),
+    #     required=False,
+    #     label="Contact Associations",
+    #     # TODO INIT defaulting to the common field `name`, you may want to change this.
+    #     to_field_name="name",
+    # )
 
     class Meta:
         """Meta attributes."""
@@ -243,13 +245,13 @@ class VPNBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # pylint: d
     name = forms.CharField(required=False, label="Name")
     description = forms.CharField(required=False, label="Description")
     vpn_id = forms.CharField(required=False, label="Vpn Id")
-    contact_associations = DynamicModelMultipleChoiceField(
-        queryset=ContactAssociations.objects.all(),
-        required=False,
-        label="Contact Associations",
-        # TODO INIT defaulting to the common field `name`, you may want to change this.
-        to_field_name="name",
-    )
+    # contact_associations = DynamicModelMultipleChoiceField(
+    #     queryset=ContactAssociations.objects.all(),
+    #     required=False,
+    #     label="Contact Associations",
+    #     # TODO INIT defaulting to the common field `name`, you may want to change this.
+    #     to_field_name="name",
+    # )
 
     class Meta:
         """Meta attributes."""
@@ -274,14 +276,14 @@ class VPNFilterForm(NautobotFilterForm, TenancyFilterForm):  # pylint: disable=t
     tags = TagFilterField(model)
 
 class VPNTunnelForm(NautobotModelForm, TenancyForm):  # pylint: disable=too-many-ancestors
-    """Form for creating and updating VPNTunnel.""" 
-    contact_associations = DynamicModelMultipleChoiceField(
-        queryset=ContactAssociations.objects.all(),
-        required=False,
-        label="Contact Associations",
-        # TODO INIT defaulting to the common field `name`, you may want to change this.
-        to_field_name="name",
-    )
+    """Form for creating and updating VPNTunnel."""
+    # contact_associations = DynamicModelMultipleChoiceField(
+    #     queryset=ContactAssociations.objects.all(),
+    #     required=False,
+    #     label="Contact Associations",
+    #     # TODO INIT defaulting to the common field `name`, you may want to change this.
+    #     to_field_name="name",
+    # )
 
     class Meta:
         """Meta attributes."""
@@ -303,13 +305,13 @@ class VPNTunnelBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # pyl
         widget=StaticSelect2,
         label="Encapsulation",
     )
-    contact_associations = DynamicModelMultipleChoiceField(
-        queryset=ContactAssociations.objects.all(),
-        required=False,
-        label="Contact Associations",
-        # TODO INIT defaulting to the common field `name`, you may want to change this.
-        to_field_name="name",
-    )
+    # contact_associations = DynamicModelMultipleChoiceField(
+    #     queryset=ContactAssociations.objects.all(),
+    #     required=False,
+    #     label="Contact Associations",
+    #     # TODO INIT defaulting to the common field `name`, you may want to change this.
+    #     to_field_name="name",
+    # )
 
     class Meta:
         """Meta attributes."""
@@ -336,28 +338,28 @@ class VPNTunnelFilterForm(NautobotFilterForm, TenancyFilterForm):  # pylint: dis
     tags = TagFilterField(model)
 
 class VPNTunnelEndpointForm(NautobotModelForm):  # pylint: disable=too-many-ancestors
-    """Form for creating and updating VPNTunnelEndpoint.""" 
+    """Form for creating and updating VPNTunnelEndpoint."""
     protected_prefixes_dg = DynamicModelMultipleChoiceField(
         queryset=DynamicGroup.objects.all(),
         required=False,
         label="Dynamic Group",
         # TODO INIT defaulting to the common field `name`, you may want to change this.
         to_field_name="name",
-    ) 
+    )
     protected_prefixes = DynamicModelMultipleChoiceField(
         queryset=Prefix.objects.all(),
         required=False,
         label="Prefix",
         # TODO INIT defaulting to the common field `name`, you may want to change this.
         to_field_name="name",
-    ) 
-    contact_associations = DynamicModelMultipleChoiceField(
-        queryset=ContactAssociations.objects.all(),
-        required=False,
-        label="Contact Associations",
-        # TODO INIT defaulting to the common field `name`, you may want to change this.
-        to_field_name="name",
     )
+    # contact_associations = DynamicModelMultipleChoiceField(
+    #     queryset=ContactAssociations.objects.all(),
+    #     required=False,
+    #     label="Contact Associations",
+    #     # TODO INIT defaulting to the common field `name`, you may want to change this.
+    #     to_field_name="name",
+    # )
 
     class Meta:
         """Meta attributes."""
@@ -385,13 +387,13 @@ class VPNTunnelEndpointBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm)
         # TODO INIT defaulting to the common field `name`, you may want to change this.
         to_field_name="name",
     )
-    contact_associations = DynamicModelMultipleChoiceField(
-        queryset=ContactAssociations.objects.all(),
-        required=False,
-        label="Contact Associations",
-        # TODO INIT defaulting to the common field `name`, you may want to change this.
-        to_field_name="name",
-    )
+    # contact_associations = DynamicModelMultipleChoiceField(
+    #     queryset=ContactAssociations.objects.all(),
+    #     required=False,
+    #     label="Contact Associations",
+    #     # TODO INIT defaulting to the common field `name`, you may want to change this.
+    #     to_field_name="name",
+    # )
 
     class Meta:
         """Meta attributes."""
