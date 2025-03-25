@@ -1350,13 +1350,13 @@ test = ["coveralls (>=3.3,<4)", "iso8601 (>=1,<2)", "mock (>=4,<5)", "pytest (>=
 
 [[package]]
 name = "graphene-django"
-version = "3.2.1"
+version = "3.2.3"
 description = "Graphene Django integration"
 optional = false
 python-versions = "*"
 files = [
-    {file = "graphene-django-3.2.1.tar.gz", hash = "sha256:52145037872d2575974c4bb2be224756ffeafe5a4e20f9c4367519622965812b"},
-    {file = "graphene_django-3.2.1-py2.py3-none-any.whl", hash = "sha256:3fbdd8d4990ecec326c59d68edfcaf9a7bc9c4dbdcbf88b11ac46dfc10240e49"},
+    {file = "graphene-django-3.2.3.tar.gz", hash = "sha256:d831bfe8e9a6e77e477b7854faef4addb318f386119a69ee4c57b74560f3e07d"},
+    {file = "graphene_django-3.2.3-py2.py3-none-any.whl", hash = "sha256:0c673a4dad315b26b4d18eb379ad0c7027fd6a36d23a1848b7c7c09a14a9271e"},
 ]
 
 [package.dependencies]
@@ -4351,4 +4351,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.13"
-content-hash = "cc47e3f09099cde4304bb93ac3986bbfd2d53616efdc49de2f91b1b379180f82"
+content-hash = "1814ae2e6209ce097ce09748d5b5938659268d6ebb70c4fdb43adf9a6e46f132"

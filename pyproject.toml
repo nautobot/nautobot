@@ -90,7 +90,7 @@ emoji = "~2.12.1"
 # Git integrations for Python
 GitPython = "~3.1.44"
 # GraphQL support
-graphene-django = "~3.2.0"
+graphene-django = "~3.2.3"
 # Graphene Optimizer
 graphene-django-optimizer = "~0.10.0"
 # Template rendering engine
