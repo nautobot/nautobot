@@ -6,14 +6,15 @@
 
 {% if body_content_table_add_url %}
     {% if perms.virtualization.change_cluster %}
+    <form action="{% url 'virtualization:cluster_remove_devices' pk=object.pk %}" method="post">
+        {% csrf_token %}
+        {% include 'responsive_table.html' with table=body_content_table%}
         <div class="pull-right">
             <a href="{% url 'virtualization:cluster_add_devices' pk=object.pk %}" class="btn btn-xs btn-primary">
                 <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add {{ body_content_table_verbose_name }}
             </a>
         </div>
         <div class="pull-left">
-            <form action="{% url 'virtualization:cluster_remove_devices' pk=object.pk %}" method="post">
-                {% csrf_token %}
                 <button type="submit" name="_remove" class="btn btn-danger primary btn-xs">
                     <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
                     Remove {{ body_content_table_verbose_name }}
