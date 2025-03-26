@@ -497,12 +497,7 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
 
 
 class Relationship(
-    ChangeLoggedModel,
-    ContactMixin,
-    DynamicGroupsModelMixin,
-    NotesMixin,
-    SavedViewMixin,
-    BaseModel,
+    ChangeLoggedModel, ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin, BaseModel, RelationshipModel
 ):
     label = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH, unique=True, help_text="Label of the relationship as displayed to users"
@@ -600,6 +595,10 @@ class Relationship(
 
     def __str__(self):
         return self.label
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
     @property
     def symmetric(self):
@@ -718,10 +717,6 @@ class Relationship(
             field.help_text = self.description
 
         return field
-
-    def save(self, *args, **kwargs):
-        self.clean()
-        super().save(*args, **kwargs)
 
     def clean(self):
         # Check if relationship.key is graphql safe.

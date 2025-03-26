@@ -180,6 +180,7 @@ __all__ = (
     "ObjectMetadataFilterForm",
     "PasswordInputWithPlaceholder",
     "RelationshipAssociationFilterForm",
+    "RelationshipBulkEditForm",
     "RelationshipFilterForm",
     "RelationshipForm",
     "RoleBulkEditForm",
@@ -1772,6 +1773,24 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
 #
 # Relationship
 #
+class RelationshipBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=Relationship.objects.all(), widget=forms.MultipleHiddenInput())
+    label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    type = forms.ChoiceField(choices=RelationshipTypeChoices, required=False)
+
+    class Meta:
+        model = Relationship
+        fields = [
+            "label",
+            "description",
+            "type",
+        ]
+        nullable_fields = [
+            "label",
+            "description",
+            "type",
+        ]
 
 
 class RelationshipForm(BootstrapMixin, forms.ModelForm):
