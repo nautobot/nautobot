@@ -738,6 +738,11 @@ body {
     display: flex;
     width: $sidenav-link-width;
 
+    &.disabled {
+      color: $nav-gray-3;
+      pointer-events: none;
+    }
+
     &:has(> :focus-visible), /* CSS has `:focus-within` pseudo-class available but it works similar to `:focus` rather than `:focus-visible` */
     &:hover {
       background-color: $navy-2;
