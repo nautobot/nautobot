@@ -22,6 +22,7 @@ from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.testing import views
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Tag, Team
+from nautobot.nautobot_data_validation_engine.filters import CustomContentTypeFilter
 from nautobot.tenancy import models
 
 
@@ -392,7 +393,13 @@ class FilterTestCases:
                         # This field is not part of the Filterset.
                         continue
                     self.assertIsInstance(
-                        filter_field, (ContentTypeFilter, ContentTypeMultipleChoiceFilter, ContentTypeChoiceFilter)
+                        filter_field,
+                        (
+                            ContentTypeFilter,
+                            ContentTypeMultipleChoiceFilter,
+                            ContentTypeChoiceFilter,
+                            CustomContentTypeFilter,
+                        ),
                     )
 
     # Test cases should just explicitly include `name` as a generic_filter_tests entry

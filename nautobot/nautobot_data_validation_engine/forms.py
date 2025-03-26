@@ -7,7 +7,6 @@ from nautobot.apps.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
     BootstrapMixin,
     BulkEditNullBooleanSelect,
-    CSVMultipleContentTypeField,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     MultipleContentTypeField,
@@ -93,10 +92,10 @@ class RegularExpressionValidationRuleFilterForm(NautobotFilterForm):
     q = forms.CharField(required=False, label="Search")
     # "CSV" field is being used here because it is using the slug-form input for
     # content-types, which improves UX.
-    content_type = CSVMultipleContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("custom_validators").get_query()).order_by(
-            "app_label", "model"
-        ),
+    content_type = MultipleContentTypeField(
+        feature=None,
+        queryset=ContentType.objects.all().order_by("app_label", "model"),
+        choices_as_strings=True,
         required=False,
     )
     tags = TagFilterField(model)
@@ -150,10 +149,10 @@ class MinMaxValidationRuleFilterForm(NautobotFilterForm):
     q = forms.CharField(required=False, label="Search")
     # "CSV" field is being used here because it is using the slug-form input for
     # content-types, which improves UX.
-    content_type = CSVMultipleContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("custom_validators").get_query()).order_by(
-            "app_label", "model"
-        ),
+    content_type = MultipleContentTypeField(
+        feature=None,
+        queryset=ContentType.objects.all().order_by("app_label", "model"),
+        choices_as_strings=True,
         required=False,
     )
     min = forms.IntegerField(required=False)
@@ -216,10 +215,10 @@ class RequiredValidationRuleFilterForm(NautobotFilterForm):
     q = forms.CharField(required=False, label="Search")
     # "CSV" field is being used here because it is using the slug-form input for
     # content-types, which improves UX.
-    content_type = CSVMultipleContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("custom_validators").get_query()).order_by(
-            "app_label", "model"
-        ),
+    content_type = MultipleContentTypeField(
+        feature=None,
+        queryset=ContentType.objects.all().order_by("app_label", "model"),
+        choices_as_strings=True,
         required=False,
     )
     tags = TagFilterField(model)
@@ -280,10 +279,10 @@ class UniqueValidationRuleFilterForm(NautobotFilterForm):
     q = forms.CharField(required=False, label="Search")
     # "CSV" field is being used here because it is using the slug-form input for
     # content-types, which improves UX.
-    content_type = CSVMultipleContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("custom_validators").get_query()).order_by(
-            "app_label", "model"
-        ),
+    content_type = MultipleContentTypeField(
+        feature=None,
+        queryset=ContentType.objects.all().order_by("app_label", "model"),
+        choices_as_strings=True,
         required=False,
     )
     max_instances = forms.IntegerField(required=False)
