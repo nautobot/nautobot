@@ -8,6 +8,7 @@ from django.utils.html import format_html
 
 from nautobot.core.models.fields import ForeignKeyLimitedByContentTypes
 from nautobot.core.models.name_color_content_types import NameColorContentTypesModel
+from nautobot.core.templatetags import helpers
 from nautobot.core.utils.deprecation import class_deprecated
 from nautobot.extras.utils import extras_features, FeatureQuery
 
@@ -39,7 +40,7 @@ class Status(NameColorContentTypesModel):
             return format_html(
                 '<span class="label color-block" style="background-color: #{}">&nbsp;</span>', self.color
             )
-        return format_html('<span class="text-muted">&mdash;</span>')
+        return helpers.placeholder(self.color)
 
 
 class StatusField(ForeignKeyLimitedByContentTypes):
