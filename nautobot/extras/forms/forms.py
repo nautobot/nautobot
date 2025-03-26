@@ -1778,6 +1778,8 @@ class RelationshipBulkEditForm(NautobotBulkEditForm):
     label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     type = forms.ChoiceField(choices=RelationshipTypeChoices, required=False)
+    source_hidden = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    destination_hidden = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
 
     class Meta:
         model = Relationship
@@ -1785,11 +1787,15 @@ class RelationshipBulkEditForm(NautobotBulkEditForm):
             "label",
             "description",
             "type",
+            "source_hidden",
+            "destination_hidden",
         ]
         nullable_fields = [
             "label",
             "description",
             "type",
+            "source_hidden",
+            "destination_hidden",
         ]
 
 
