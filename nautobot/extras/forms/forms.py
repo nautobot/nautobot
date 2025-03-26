@@ -200,6 +200,7 @@ __all__ = (
     "TagBulkEditForm",
     "TagFilterForm",
     "TagForm",
+    "WebhookBulkEditForm",
     "WebhookFilterForm",
     "WebhookForm",
 )
@@ -2070,6 +2071,23 @@ class TagBulkEditForm(NautobotBulkEditForm):
 #
 # Webhooks
 #
+class WebhookBulkEditForm(NautobotBulkEditForm):
+    """Bulk edit form for Webhook objects."""
+
+    pk = forms.ModelMultipleChoiceField(queryset=Webhook.objects.all(), widget=forms.MultipleHiddenInput())
+    enabled = forms.BooleanField(required=False)
+    type_create = forms.BooleanField(required=False)
+    type_update = forms.BooleanField(required=False)
+    type_delete = forms.BooleanField(required=False)
+
+    class Meta:
+        model = Webhook
+        fields = (
+            "enabled",
+            "type_create",
+            "type_update",
+            "type_delete",
+        )
 
 
 class WebhookForm(BootstrapMixin, forms.ModelForm):

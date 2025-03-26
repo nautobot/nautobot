@@ -19,7 +19,6 @@ from nautobot.extras.models import (
     SecretsGroup,
     Status,
     Tag,
-    Webhook,
 )
 
 app_name = "extras"
@@ -37,6 +36,7 @@ router.register("saved-views", views.SavedViewUIViewSet)
 router.register("secrets", views.SecretUIViewSet)
 router.register("static-group-associations", views.StaticGroupAssociationUIViewSet)
 router.register("teams", views.TeamUIViewSet)
+router.register("webhook", views.WebhookUIViewSet)
 
 urlpatterns = [
     # Change logging
@@ -638,33 +638,6 @@ urlpatterns = [
         views.ObjectNotesView.as_view(),
         name="tag_notes",
         kwargs={"model": Tag},
-    ),
-    # Webhook
-    path("webhooks/", views.WebhookListView.as_view(), name="webhook_list"),
-    path("webhooks/add/", views.WebhookEditView.as_view(), name="webhook_add"),
-    path(
-        "webhooks/delete/",
-        views.WebhookBulkDeleteView.as_view(),
-        name="webhook_bulk_delete",
-    ),
-    path("webhooks/<uuid:pk>/", views.WebhookView.as_view(), name="webhook"),
-    path("webhooks/<uuid:pk>/edit/", views.WebhookEditView.as_view(), name="webhook_edit"),
-    path(
-        "webhooks/<uuid:pk>/delete/",
-        views.WebhookDeleteView.as_view(),
-        name="webhook_delete",
-    ),
-    path(
-        "webhooks/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="webhook_changelog",
-        kwargs={"model": Webhook},
-    ),
-    path(
-        "webhooks/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="webhook_notes",
-        kwargs={"model": Webhook},
     ),
 ]
 
