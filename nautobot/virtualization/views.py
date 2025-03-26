@@ -132,7 +132,7 @@ class ClusterUIViewSet(NautobotUIViewSet):
                 table_filter="cluster",
                 table_title="Host Devices",
                 enable_bulk_actions=True,
-                body_content_template_path=None,
+                body_content_template_path="virtualization/cluster_devices_body_content.html",
                 footer_content_template_path="virtualization/cluster_add_devices_table_footer.html",
             ),
             object_detail.ObjectsTablePanel(
