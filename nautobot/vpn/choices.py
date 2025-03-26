@@ -1,147 +1,148 @@
-"""Custom choices for the nautobot_vpn_models app."""
+"""Custom choices for the vpn models."""
 
 from nautobot.apps.choices import ChoiceSet
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+
+
 class IkeVersionChoices(ChoiceSet):
     """Choices for the ike_version field on the VPNPhase1Policy model."""
 
-    # TODO INIT Add choices here
-    NYC = "New York City"
+    ike_v1 = "IKEv1"
+    ike_v2 = "IKEv2"
 
     CHOICES = (
-        (NYC, "New York City"),
+        (ike_v1, "IKEv1"),
+        (ike_v2, "IKEv2"),
     )
-        
-        
+
+
 class EncryptionAlgorithmChoices(ChoiceSet):
     """Choices for the encryption_algorithm field on the VPNPhase1Policy model."""
 
-    # TODO INIT Add choices here
-    NYC = "New York City"
+    aes_128_cbc = "AES-128-CBC"
+    aes_128_gcm = "AES-128-GCM"
+    aes_192_cbc = "AES-192-CBC"
+    aes_192_gcm = "AES-192-GCM"
+    aes_256_cbc = "AES-256-CBC"
+    aes_256_gcm = "AES-256-GCM"
+    des = "DES"
+    a3des = "3DES"
 
     CHOICES = (
-        (NYC, "New York City"),
+        (aes_128_cbc, "AES-128-CBC"),
+        (aes_128_gcm, "AES-128-GCM"),
+        (aes_192_cbc, "AES-192-CBC"),
+        (aes_192_gcm, "AES-192-GCM"),
+        (aes_256_cbc, "AES-256-CBC"),
+        (aes_256_gcm, "AES-256-GCM"),
+        (des, "DES"),
+        (a3des, "3DES"),
     )
-        
+
+
 class IntegrityAlgorithmChoices(ChoiceSet):
     """Choices for the integrity_algorithm field on the VPNPhase1Policy model."""
 
-    # TODO INIT Add choices here
-    NYC = "New York City"
+    md5 = "MD5"
+    sha1 = "SHA1"
+    sha256 = "SHA256"
+    sha384 = "SHA384"
+    sha512 = "SHA512"
 
     CHOICES = (
-        (NYC, "New York City"),
+        (md5, "MD5"),
+        (sha1, "SHA1"),
+        (sha256, "SHA256"),
+        (sha384, "SHA384"),
+        (sha512, "SHA512"),
     )
-        
+
 class DhGroupChoices(ChoiceSet):
     """Choices for the dh_group field on the VPNPhase1Policy model."""
 
-    # TODO INIT Add choices here
-    NYC = "New York City"
+    group1 = "1"
+    group2 = "2"
+    group5 = "5"
+    group14 = "14"
+    group15 = "15"
+    group16 = "16"
+    group17 = "17"
+    group18 = "18"
+    group19 = "19"
+    group20 = "20"
+    group24 = "24"
 
     CHOICES = (
-        (NYC, "New York City"),
+        (group1, "1"),
+        (group2, "2"),
+        (group5, "5"),
+        (group14, "14"),
+        (group15, "15"),
+        (group16, "16"),
+        (group17, "17"),
+        (group18, "18"),
+        (group19, "19"),
+        (group20, "20"),
+        (group24, "24"),
     )
-        
-        
-        
+
+
 class AuthenticationMethodChoices(ChoiceSet):
     """Choices for the authentication_method field on the VPNPhase1Policy model."""
 
-    # TODO INIT Add choices here
-    NYC = "New York City"
+    psk = "PSK"
+    rsa = "RSA"
+    ecdsa = "ECDSA"
+    certificate = "Certificate"
 
     CHOICES = (
-        (NYC, "New York City"),
+        (psk, "PSK"),
+        (rsa, "RSA"),
+        (ecdsa, "ECDSA"),
+        (certificate, "Certificate"),
     )
-        
-        
-        
-class EncryptionAlgorithmChoices(ChoiceSet):
-    """Choices for the encryption_algorithm field on the VPNPhase2Policy model."""
 
-    # TODO INIT Add choices here
-    NYC = "New York City"
 
-    CHOICES = (
-        (NYC, "New York City"),
-    )
-        
-class IntegrityAlgorithmChoices(ChoiceSet):
-    """Choices for the integrity_algorithm field on the VPNPhase2Policy model."""
-
-    # TODO INIT Add choices here
-    NYC = "New York City"
-
-    CHOICES = (
-        (NYC, "New York City"),
-    )
-        
 class PfsGroupChoices(ChoiceSet):
     """Choices for the pfs_group field on the VPNPhase2Policy model."""
 
-    # TODO INIT Add choices here
-    NYC = "New York City"
+    group1 = "1"
+    group2 = "2"
+    group5 = "5"
+    group14 = "14"
+    group19 = "19"
+    group20 = "20"
 
     CHOICES = (
-        (NYC, "New York City"),
+        (group1, "1"),
+        (group2, "2"),
+        (group5, "5"),
+        (group14, "14"),
+        (group19, "19"),
+        (group20, "20"),
     )
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+
+
 class EncapsulationChoices(ChoiceSet):
     """Choices for the encapsulation field on the VPNTunnel model."""
 
-    # TODO INIT Add choices here
-    NYC = "New York City"
+    ipsec_transport = "IPsec-Transport"
+    ipsec_tunnel = "IPsec-Tunnel"
+    ip_in_ip = "IP-in-IP"
+    gre = "GRE"
+    wireguard = "WireGuard"
+    l2tp = "L2TP"
+    pptp = "PPTP"
+    openvpn = "OpenVPN"
+    eoip = "EoIP"
 
     CHOICES = (
-        (NYC, "New York City"),
+        (ipsec_transport, "IPsec-Transport"),
+        (ipsec_tunnel, "IPsec-Tunnel"),
+        (ip_in_ip, "IP-in-IP"),
+        (gre, "GRE"),
+        (wireguard, "WireGuard"),
+        (l2tp, "L2TP"),
+        (pptp, "PPTP"),
+        (openvpn, "OpenVPN"),
+        (eoip, "EoIP"),
     )
-        
-        
-        
-class VPNTunnelStatusChoices(ChoiceSet):
-    """Choices for the status field on the VPNTunnel model."""
-
-    # TODO INIT Add Status choices here
-    STATUS_ACTIVE = "active"
-
-    CHOICES = (
-        (STATUS_ACTIVE, "Active"),
-    )
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
