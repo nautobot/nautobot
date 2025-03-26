@@ -1,17 +1,7 @@
 """Test nautobot_vpn_models forms."""
 
 from nautobot.apps.testing import FormTestCases
-
-from nautobot_vpn_models import choices, forms
-
-
-
-
-
-
-
-
-
+from nautobot.vpn import forms
 
 
 class VPNProfileFormTest(FormTestCases.BaseFormTestCase):
@@ -50,6 +40,7 @@ class VPNProfileFormTest(FormTestCases.BaseFormTestCase):
         form = self.form_class(data=data)
         self.assertTrue(form.is_valid())
         self.assertTrue(form.save())
+
     def test_validate_name_is_required(self):
         """Test that the name field is required."""
 
@@ -68,6 +59,7 @@ class VPNProfileFormTest(FormTestCases.BaseFormTestCase):
         form = self.form_class(data=data)
         self.assertFalse(form.is_valid())
         self.assertIn("This field is required.", form.errors["name"])
+
     def test_validate_keepalive_enabled_is_required(self):
         """Test that the keepalive_enabled field is required."""
 
@@ -86,6 +78,7 @@ class VPNProfileFormTest(FormTestCases.BaseFormTestCase):
         form = self.form_class(data=data)
         self.assertFalse(form.is_valid())
         self.assertIn("This field is required.", form.errors["keepalive_enabled"])
+
     def test_validate_nat_traversal_is_required(self):
         """Test that the nat_traversal field is required."""
 
@@ -104,6 +97,7 @@ class VPNProfileFormTest(FormTestCases.BaseFormTestCase):
         form = self.form_class(data=data)
         self.assertFalse(form.is_valid())
         self.assertIn("This field is required.", form.errors["nat_traversal"])
+
 
 class VPNPhase1PolicyFormTest(FormTestCases.BaseFormTestCase):
     """Test the VPNPhase1Policy form."""
@@ -139,6 +133,7 @@ class VPNPhase1PolicyFormTest(FormTestCases.BaseFormTestCase):
         form = self.form_class(data=data)
         self.assertTrue(form.is_valid())
         self.assertTrue(form.save())
+
     def test_validate_name_is_required(self):
         """Test that the name field is required."""
 
@@ -156,6 +151,7 @@ class VPNPhase1PolicyFormTest(FormTestCases.BaseFormTestCase):
         form = self.form_class(data=data)
         self.assertFalse(form.is_valid())
         self.assertIn("This field is required.", form.errors["name"])
+
     def test_validate_aggressive_mode_is_required(self):
         """Test that the aggressive_mode field is required."""
 
@@ -173,6 +169,7 @@ class VPNPhase1PolicyFormTest(FormTestCases.BaseFormTestCase):
         form = self.form_class(data=data)
         self.assertFalse(form.is_valid())
         self.assertIn("This field is required.", form.errors["aggressive_mode"])
+
 
 class VPNPhase2PolicyFormTest(FormTestCases.BaseFormTestCase):
     """Test the VPNPhase2Policy form."""
@@ -203,6 +200,7 @@ class VPNPhase2PolicyFormTest(FormTestCases.BaseFormTestCase):
         form = self.form_class(data=data)
         self.assertTrue(form.is_valid())
         self.assertTrue(form.save())
+
     def test_validate_name_is_required(self):
         """Test that the name field is required."""
 
@@ -216,6 +214,7 @@ class VPNPhase2PolicyFormTest(FormTestCases.BaseFormTestCase):
         form = self.form_class(data=data)
         self.assertFalse(form.is_valid())
         self.assertIn("This field is required.", form.errors["name"])
+
 
 class VPNFormTest(FormTestCases.BaseFormTestCase):
     """Test the VPN form."""
@@ -247,6 +246,7 @@ class VPNFormTest(FormTestCases.BaseFormTestCase):
         form = self.form_class(data=data)
         self.assertTrue(form.is_valid())
         self.assertTrue(form.save())
+
     def test_validate_name_is_required(self):
         """Test that the name field is required."""
 
@@ -261,6 +261,7 @@ class VPNFormTest(FormTestCases.BaseFormTestCase):
         form = self.form_class(data=data)
         self.assertFalse(form.is_valid())
         self.assertIn("This field is required.", form.errors["name"])
+
 
 class VPNTunnelFormTest(FormTestCases.BaseFormTestCase):
     """Test the VPNTunnel form."""
@@ -294,6 +295,7 @@ class VPNTunnelFormTest(FormTestCases.BaseFormTestCase):
         form = self.form_class(data=data)
         self.assertTrue(form.is_valid())
         self.assertTrue(form.save())
+
     def test_validate_name_is_required(self):
         """Test that the name field is required."""
 
@@ -310,6 +312,7 @@ class VPNTunnelFormTest(FormTestCases.BaseFormTestCase):
         form = self.form_class(data=data)
         self.assertFalse(form.is_valid())
         self.assertIn("This field is required.", form.errors["name"])
+
 
 class VPNTunnelEndpointFormTest(FormTestCases.BaseFormTestCase):
     """Test the VPNTunnelEndpoint form."""
@@ -339,8 +342,7 @@ class VPNTunnelEndpointFormTest(FormTestCases.BaseFormTestCase):
     def test_specifying_required_fields_success(self):
         """Test specifying only required fields."""
 
-        data = {
-        }
+        data = {}
         form = self.form_class(data=data)
         self.assertTrue(form.is_valid())
         self.assertTrue(form.save())

@@ -1,4 +1,4 @@
-"""Menu items."""
+"""Menu items for the vpn models."""
 
 from nautobot.apps.ui import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuTab
 
