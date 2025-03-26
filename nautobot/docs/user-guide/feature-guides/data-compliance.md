@@ -124,9 +124,6 @@ All data compliance result objects can be found on the navigation bar under `Ext
 
 Additionally, the `nautobot_data_validation_engine` app automatically creates template extensions to add a `Data Compliance` tab to the detail view of all objects. This tab makes it easy to check an individual object's compliance with any applicable data compliance rules.
 
-!!! info
-    A second job, `DeleteOrphanedDataComplianceData`, associated with Data Compliance can be run to remove/clean up any data compliance results that might be left dangling over time due to the parent object having since been deleted.
-
 ## Example
 
 Two data compliance rules will be created using two separate `DataComplianceRule` classes within a remote Git repository called `dve-datacompliance-demo` that check devices for the following:

@@ -496,27 +496,9 @@ class RunRegisteredDataComplianceRules(Job):
                         clean_compliance_rules_results_for_instance(instance=validated_object, excluded_pks=[result.pk])
 
 
-class DeleteOrphanedDataComplianceData(Job):
-    """Utility job to delete any Data Compliance objects where the validated object no longer exists."""
-
-    name = "Delete Orphaned Data Compliance Data"
-    description = "Delete any Data Compliance objects where its validated object no longer exists."
-
-    def run(self, *args, **kwargs):
-        """Delete DataCompliance objects where its validated_object no longer exists."""
-        number_deleted = 0
-        for obj in DataCompliance.objects.all():
-            if obj.validated_object is None:
-                self.logger.info("Deleting %s.", obj)
-                obj.delete()
-                number_deleted += 1
-        self.logger.info("Deleted %s orphaned DataCompliance objects.", number_deleted)
-
-
 jobs = [
     BulkDeleteObjects,
     BulkEditObjects,
-    DeleteOrphanedDataComplianceData,
     ExportObjectList,
     GitRepositorySync,
     GitRepositoryDryRun,
