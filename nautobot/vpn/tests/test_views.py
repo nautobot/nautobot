@@ -1,17 +1,7 @@
 """Unit tests for views."""
 
 from nautobot.apps.testing import ViewTestCases
-
-from nautobot_vpn_models import choices, models
-
-
-
-
-
-
-
-
-
+from nautobot.vpn import models
 
 
 class VPNProfileViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -65,6 +55,7 @@ class VPNProfileViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "role": "updated value",
         }
 
+
 class VPNPhase1PolicyViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     # pylint: disable=too-many-ancestors
     """Test the VPNPhase1Policy views."""
@@ -113,6 +104,7 @@ class VPNPhase1PolicyViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "authentication_method": "updated value",
         }
 
+
 class VPNPhase2PolicyViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     # pylint: disable=too-many-ancestors
     """Test the VPNPhase2Policy views."""
@@ -148,6 +140,7 @@ class VPNPhase2PolicyViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "pfs_group": "updated value",
             "lifetime": "updated value",
         }
+
 
 class VPNViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     # pylint: disable=too-many-ancestors
@@ -187,6 +180,7 @@ class VPNViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "role": "updated value",
             "contact_associations": "updated value",
         }
+
 
 class VPNTunnelViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     # pylint: disable=too-many-ancestors
@@ -232,6 +226,7 @@ class VPNTunnelViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "role": "updated value",
             "contact_associations": "updated value",
         }
+
 
 class VPNTunnelEndpointViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     # pylint: disable=too-many-ancestors

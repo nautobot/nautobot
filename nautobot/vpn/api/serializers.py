@@ -3,15 +3,6 @@ from nautobot.apps.api import NautobotModelSerializer, TaggedModelSerializerMixi
 from .. import models
 
 
-
-
-
-
-
-
-
-
-
 class VPNProfileSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):  # pylint: disable=too-many-ancestors
     """VPNProfile Serializer."""
 
@@ -70,4 +61,3 @@ class VPNTunnelEndpointSerializer(TaggedModelSerializerMixin, NautobotModelSeria
 
         model = models.VPNTunnelEndpoint
         fields = "__all__"
-

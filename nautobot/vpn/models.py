@@ -3,7 +3,6 @@ from django.db import models
 from nautobot.apps.constants import CHARFIELD_MAX_LENGTH
 from nautobot.apps.models import extras_features, PrimaryModel, StatusField
 from nautobot.extras.models import RoleField
-
 from nautobot.vpn import choices
 
 
@@ -16,55 +15,36 @@ from nautobot.vpn import choices
 )
 class VPNProfile(PrimaryModel):  # pylint: disable=too-many-ancestors
     """VPNProfile model for nautobot_vpn_models."""
+
     vpn_phase1_policy = models.ManyToManyField(
         to="vpn.VPNPhase1Policy",
         related_name="vpn_profiles",
         verbose_name="VPN Phase 1 Policy",
         blank=True,
-        help_text="Phase 1 Policy"
+        help_text="Phase 1 Policy",
     )
     vpn_phase2_policy = models.ManyToManyField(
         to="vpn.VPNPhase2Policy",
         related_name="vpn_profiles",
         verbose_name="VPN Phase 2 Policy",
         blank=True,
-        help_text="Phase 2 Policy"
+        help_text="Phase 2 Policy",
     )
-    name = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        unique=True,
-        help_text="Name"
-    )
-    description = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        blank=True,
-        help_text="Description"
-    )
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True, help_text="Name")
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Description")
     keepalive_enabled = models.BooleanField(
         # TODO INIT Confirm the default value
         default=False,
-        help_text="Keepalive enabled"
+        help_text="Keepalive enabled",
     )
-    keepalive_interval = models.PositiveIntegerField(
-        blank=True,
-        null=True,
-        help_text="Keepalive interval"
-    )
-    keepalive_retries = models.PositiveIntegerField(
-        blank=True,
-        null=True,
-        help_text="Keepalive retries"
-    )
+    keepalive_interval = models.PositiveIntegerField(blank=True, null=True, help_text="Keepalive interval")
+    keepalive_retries = models.PositiveIntegerField(blank=True, null=True, help_text="Keepalive retries")
     nat_traversal = models.BooleanField(
         # TODO INIT Confirm the default value
         default=False,
-        help_text="NAT traversal"
+        help_text="NAT traversal",
     )
-    extra_options = models.JSONField(
-        blank=True,
-        null=True,
-        help_text="Extra options"
-    )
+    extra_options = models.JSONField(blank=True, null=True, help_text="Extra options")
     secrets_group = models.ForeignKey(
         to="extras.SecretsGroup",
         on_delete=models.SET_NULL,
@@ -86,6 +66,7 @@ class VPNProfile(PrimaryModel):  # pylint: disable=too-many-ancestors
 
     class Meta:
         """Meta class for VPNProfile."""
+
         # TODO INIT Confirm the verbose_name of the model
         verbose_name = "VPN Profile"
 
@@ -104,60 +85,39 @@ class VPNProfile(PrimaryModel):  # pylint: disable=too-many-ancestors
 )
 class VPNPhase1Policy(PrimaryModel):  # pylint: disable=too-many-ancestors
     """VPNPhase1Policy model for nautobot_vpn_models."""
-    name = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        unique=True,
-        help_text="Name"
-    )
-    description = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        blank=True,
-        help_text="Description"
-    )
+
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True, help_text="Name")
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Description")
     ike_version = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        choices=choices.IkeVersionChoices,
-        blank=True,
-        help_text="IKEv1, IKEv2"
+        max_length=CHARFIELD_MAX_LENGTH, choices=choices.IkeVersionChoices, blank=True, help_text="IKE version"
     )
     aggressive_mode = models.BooleanField(
         # TODO INIT Confirm the default value
         default=False,
-        help_text="Use aggressive mode"
+        help_text="Use aggressive mode",
     )
     encryption_algorithm = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
         choices=choices.EncryptionAlgorithmChoices,
         blank=True,
-        help_text="AES-256-GCM, AES-256-CBC, AES-192-GCM, AES-192-CBC, AES-128-GCM, AES-128-CBC, 3DES, DES"
+        help_text="AES-256-GCM, AES-256-CBC, AES-192-GCM, AES-192-CBC, AES-128-GCM, AES-128-CBC, 3DES, DES",
     )
     integrity_algorithm = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
         choices=choices.IntegrityAlgorithmChoices,
         blank=True,
-        help_text="SHA512, SHA384, SHA256, SHA1, MD5"
+        help_text="SHA512, SHA384, SHA256, SHA1, MD5",
     )
     dh_group = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        choices=choices.DhGroupChoices,
-        blank=True,
-        help_text="Diffie-Hellman group"
+        max_length=CHARFIELD_MAX_LENGTH, choices=choices.DhGroupChoices, blank=True, help_text="Diffie-Hellman group"
     )
-    lifetime_seconds = models.PositiveIntegerField(
-        blank=True,
-        null=True,
-        help_text="Lifetime in seconds"
-    )
-    lifetime_kb = models.PositiveIntegerField(
-        blank=True,
-        null=True,
-        help_text="Lifetime in kiolbytes"
-    )
+    lifetime_seconds = models.PositiveIntegerField(blank=True, null=True, help_text="Lifetime in seconds")
+    lifetime_kb = models.PositiveIntegerField(blank=True, null=True, help_text="Lifetime in kiolbytes")
     authentication_method = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
         choices=choices.AuthenticationMethodChoices,
         blank=True,
-        help_text="PSK, RSA, ECDSA, Certificate"
+        help_text="PSK, RSA, ECDSA, Certificate",
     )
     # TODO INIT Nautobot recommends that all models have a tenant field, unless you have a good reason not to.
     # tenant = models.ForeignKey(
@@ -170,6 +130,7 @@ class VPNPhase1Policy(PrimaryModel):  # pylint: disable=too-many-ancestors
 
     class Meta:
         """Meta class for VPNPhase1Policy."""
+
         # TODO INIT Confirm the verbose_name of the model
         verbose_name = "VPN Phase 1 Policy"
 
@@ -188,39 +149,28 @@ class VPNPhase1Policy(PrimaryModel):  # pylint: disable=too-many-ancestors
 )
 class VPNPhase2Policy(PrimaryModel):  # pylint: disable=too-many-ancestors
     """VPNPhase2Policy model for nautobot_vpn_models."""
-    name = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        unique=True,
-        help_text="Name"
-    )
-    description = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        blank=True,
-        help_text="Description"
-    )
+
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True, help_text="Name")
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Description")
     encryption_algorithm = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
         choices=choices.EncryptionAlgorithmChoices,
         blank=True,
-        help_text="AES-256-GCM, AES-256-CBC, AES-192-GCM, AES-192-CBC, AES-128-GCM, AES-128-CBC, 3DES, DES"
+        help_text="AES-256-GCM, AES-256-CBC, AES-192-GCM, AES-192-CBC, AES-128-GCM, AES-128-CBC, 3DES, DES",
     )
     integrity_algorithm = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
         choices=choices.IntegrityAlgorithmChoices,
         blank=True,
-        help_text="SHA512, SHA384, SHA256, SHA1, MD5"
+        help_text="SHA512, SHA384, SHA256, SHA1, MD5",
     )
     pfs_group = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
         choices=choices.PfsGroupChoices,
         blank=True,
-        help_text="Perfect Forward Secrecy group"
+        help_text="Perfect Forward Secrecy group",
     )
-    lifetime = models.PositiveIntegerField(
-        blank=True,
-        null=True,
-        help_text="Lifetime in seconds"
-    )
+    lifetime = models.PositiveIntegerField(blank=True, null=True, help_text="Lifetime in seconds")
     # TODO INIT Nautobot recommends that all models have a tenant field, unless you have a good reason not to.
     # tenant = models.ForeignKey(
     #     to="tenancy.Tenant",
@@ -232,6 +182,7 @@ class VPNPhase2Policy(PrimaryModel):  # pylint: disable=too-many-ancestors
 
     class Meta:
         """Meta class for VPNPhase2Policy."""
+
         # TODO INIT Confirm the verbose_name of the model
         verbose_name = "VPN Phase 2 Policy"
 
@@ -259,21 +210,9 @@ class VPN(PrimaryModel):  # pylint: disable=too-many-ancestors
         blank=True,
         null=True,
     )
-    name = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        unique=True,
-        help_text="Name"
-    )
-    description = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        blank=True,
-        help_text="Description"
-    )
-    vpn_id = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        blank=True,
-        help_text="VPN ID"
-    )
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True, help_text="Name")
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Description")
+    vpn_id = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="VPN ID")
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -293,6 +232,7 @@ class VPN(PrimaryModel):  # pylint: disable=too-many-ancestors
 
     class Meta:
         """Meta class for VPN."""
+
         # TODO INIT Confirm the verbose_name of the model
         verbose_name = "VPN"
 
@@ -312,6 +252,7 @@ class VPN(PrimaryModel):  # pylint: disable=too-many-ancestors
 )
 class VPNTunnel(PrimaryModel):  # pylint: disable=too-many-ancestors
     """VPNTunnel model for nautobot_vpn_models."""
+
     vpn_profile = models.ForeignKey(
         to="vpn.VPNProfile",
         on_delete=models.PROTECT,
@@ -328,26 +269,14 @@ class VPNTunnel(PrimaryModel):  # pylint: disable=too-many-ancestors
         null=False,
         verbose_name="VPN",
     )
-    name = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        unique=True,
-        help_text="Name"
-    )
-    description = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        blank=True,
-        help_text="Description"
-    )
-    tunnel_id = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        blank=True,
-        help_text="Tunnel ID"
-    )
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True, help_text="Name")
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Description")
+    tunnel_id = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Tunnel ID")
     encapsulation = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
         choices=choices.EncapsulationChoices,
         blank=True,
-        help_text="IPsec - Transport, IPsec - Tunnel, IP-in-IP, GRE, WireGuard, L2TP, PPTP, OpenVPN, EoIP"
+        help_text="IPsec - Transport, IPsec - Tunnel, IP-in-IP, GRE, WireGuard, L2TP, PPTP, OpenVPN, EoIP",
     )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
@@ -369,6 +298,7 @@ class VPNTunnel(PrimaryModel):  # pylint: disable=too-many-ancestors
 
     class Meta:
         """Meta class for VPNTunnel."""
+
         # TODO INIT Confirm the verbose_name of the model
         verbose_name = "VPN Tunnel"
 
@@ -387,6 +317,7 @@ class VPNTunnel(PrimaryModel):  # pylint: disable=too-many-ancestors
 )
 class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
     """VPNTunnelEndpoint model for nautobot_vpn_models."""
+
     vpn_profile = models.ForeignKey(
         to="vpn.VPNProfile",
         on_delete=models.PROTECT,
@@ -427,11 +358,7 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
         null=True,
         verbose_name="Destination IP Address",
     )
-    destination_fqdn = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        blank=True,
-        help_text="Destination FQDN"
-    )
+    destination_fqdn = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Destination FQDN")
     tunnel_interface = models.OneToOneField(
         to="dcim.Interface",
         on_delete=models.CASCADE,
@@ -445,14 +372,14 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
         related_name="vpn_tunnel_endpoints",
         verbose_name="Dynamic Group",
         blank=True,
-        help_text="Protected Prefixes in Dynamic Groups"
+        help_text="Protected Prefixes in Dynamic Groups",
     )
     protected_prefixes = models.ManyToManyField(
         to="ipam.Prefix",
         related_name="vpn_tunnel_endpoints",
         verbose_name="Prefix",
         blank=True,
-        help_text="Protected Prefixes"
+        help_text="Protected Prefixes",
     )
     role = RoleField(blank=True, null=True)
     # contact_associations = models.ManyToManyField(
@@ -474,6 +401,7 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
 
     class Meta:
         """Meta class for VPNTunnelEndpoint."""
+
         # TODO INIT Confirm the verbose_name of the model
         verbose_name = "VPN Tunnel Endpoint"
 

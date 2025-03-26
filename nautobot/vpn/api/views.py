@@ -1,9 +1,9 @@
-"""API views for nautobot_vpn_models."""
+"""API views for the vpn models."""
 
 from nautobot.apps.api import NautobotModelViewSet
 
 from .. import filters, models
-from .. api import serializers
+from ..api import serializers
 
 
 class VPNProfileViewSet(NautobotModelViewSet):  # pylint: disable=too-many-ancestors
@@ -52,4 +52,3 @@ class VPNTunnelEndpointViewSet(NautobotModelViewSet):  # pylint: disable=too-man
     queryset = models.VPNTunnelEndpoint.objects.all()
     serializer_class = serializers.VPNTunnelEndpointSerializer
     filterset_class = filters.VPNTunnelEndpointFilterSet
-

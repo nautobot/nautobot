@@ -1,7 +1,16 @@
-"""Tables for nautobot_vpn_models."""
+"""Tables for the vpn models."""
 
 import django_tables2 as tables
-from nautobot.apps.tables import BaseTable, ButtonsColumn, LinkedCountColumn, RoleTableMixin, StatusTableMixin, TagColumn, ToggleColumn
+
+from nautobot.apps.tables import (
+    BaseTable,
+    ButtonsColumn,
+    LinkedCountColumn,
+    RoleTableMixin,
+    StatusTableMixin,
+    TagColumn,
+    ToggleColumn,
+)
 from nautobot.tenancy.tables import TenantColumn
 
 from . import models
