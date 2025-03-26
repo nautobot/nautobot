@@ -153,7 +153,7 @@ class DataComplianceFilterSet(NautobotFilterSet):
             "object_id": "icontains",
         }
     )
-    content_type = CustomContentTypeFilter(
+    content_type = ContentTypeMultipleChoiceFilter(
         choices=FeatureQuery("custom_validators").get_choices,
     )
 

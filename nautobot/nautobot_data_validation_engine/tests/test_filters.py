@@ -4,6 +4,7 @@ Filterset test cases
 
 from django.contrib.contenttypes.models import ContentType
 
+from nautobot.circuits.models import Provider
 from nautobot.core.testing.filters import FilterTestCases
 from nautobot.dcim.models import Location, Manufacturer, Platform, PowerFeed, Rack
 from nautobot.extras.models import Tag
@@ -21,15 +22,36 @@ from nautobot.nautobot_data_validation_engine.models import (
 )
 
 
-class RegularExpressionValidationRuleFilterTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class ValidationRuleTestMixin:
+    """
+    Content type test mixin for validation rule filter test cases
+    """
+
+    def test_content_type(self):
+        """Test content type lookups."""
+        expected_queryset = self.queryset.filter(
+            content_type__pk__in=[
+                ContentType.objects.get_for_model(Location).pk,
+                ContentType.objects.get_for_model(Manufacturer).pk,
+            ]
+        ).distinct()
+        params = {"content_type": ["dcim.location", "dcim.manufacturer"]}
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected_queryset)
+
+
+class RegularExpressionValidationRuleFilterTestCase(ValidationRuleTestMixin, FilterTestCases.NameOnlyFilterTestCase):
     """
     Filterset test cases for the RegularExpressionValidationRule model
     """
 
     queryset = RegularExpressionValidationRule.objects.all()
     filterset = RegularExpressionValidationRuleFilterSet
-    # TODO Look into enabling the generic filter tests to replace the filter tests that are defined.
-    generic_filter_tests = []
+    generic_filter_tests = [
+        ("id",),
+        ("regular_expression",),
+        ("error_message",),
+        ("field",),
+    ]
 
     @classmethod
     def setUpTestData(cls):
@@ -57,48 +79,25 @@ class RegularExpressionValidationRuleFilterTestCase(FilterTestCases.NameOnlyFilt
         )
         RegularExpressionValidationRule.objects.create(
             name="Regex rule 3",
-            content_type=ContentType.objects.get_for_model(Location),
+            content_type=ContentType.objects.get_for_model(Provider),
             field="comments",
             regular_expression="GHI",
             error_message="C",
         )
 
-    def test_id(self):
-        """Test ID lookups."""
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_content_type(self):
-        """Test content type lookups."""
-        params = {"content_type": ["dcim.rack", "dcim.location"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-
-    def test_regular_expression(self):
-        """Test regex lookups."""
-        # TODO(john): revisit this once this is sorted: https://github.com/nautobot/nautobot/issues/477
-        params = {"regular_expression": "^ABC$"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-    def test_error_message(self):
-        """Test error message lookups."""
-        params = {"error_message": ["A", "B"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_field(self):
-        """Test field lookups."""
-        params = {"field": ["name", "description"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-
-class MinMaxValidationRuleFilterTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class MinMaxValidationRuleFilterTestCase(ValidationRuleTestMixin, FilterTestCases.NameOnlyFilterTestCase):
     """
     Filterset test cases for the MinMaxValidationRule model
     """
 
     queryset = MinMaxValidationRule.objects.all()
     filterset = MinMaxValidationRuleFilterSet
-    # TODO Look into enabling the generic filter tests to replace the filter tests that are defined.
-    generic_filter_tests = []
+    generic_filter_tests = [
+        ("id",),
+        ("error_message",),
+        ("field",),
+    ]
 
     @classmethod
     def setUpTestData(cls):
@@ -132,36 +131,24 @@ class MinMaxValidationRuleFilterTestCase(FilterTestCases.NameOnlyFilterTestCase)
             error_message="C",
         )
 
-    def test_id(self):
-        """Test ID lookups."""
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_content_type(self):
         """Test content type lookups."""
         params = {"content_type": ["dcim.powerfeed"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
-    def test_error_message(self):
-        """Test error message lookups."""
-        params = {"error_message": ["A", "B"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_field(self):
-        """Test field lookups."""
-        params = {"field": ["voltage", "max_utilization"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-
-class RequiredValidationRuleFilterTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class RequiredValidationRuleFilterTestCase(ValidationRuleTestMixin, FilterTestCases.NameOnlyFilterTestCase):
     """
     Filterset test cases for the RequiredValidationRule model
     """
 
     queryset = RequiredValidationRule.objects.all()
     filterset = RequiredValidationRuleFilterSet
-    # TODO Look into enabling the generic filter tests to replace the filter tests that are defined.
-    generic_filter_tests = []
+    generic_filter_tests = [
+        ("id",),
+        ("error_message",),
+        ("field",),
+    ]
 
     @classmethod
     def setUpTestData(cls):
@@ -182,7 +169,7 @@ class RequiredValidationRuleFilterTestCase(FilterTestCases.NameOnlyFilterTestCas
         RequiredValidationRule.objects.create(
             name="Required rule 2",
             content_type=ContentType.objects.get_for_model(Platform),
-            field="description",
+            field="name",
             error_message="B",
         )
         RequiredValidationRule.objects.create(
@@ -192,36 +179,20 @@ class RequiredValidationRuleFilterTestCase(FilterTestCases.NameOnlyFilterTestCas
             error_message="C",
         )
 
-    def test_id(self):
-        """Test ID lookups."""
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_content_type(self):
-        """Test content type lookups."""
-        params = {"content_type": ["dcim.location"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-    def test_error_message(self):
-        """Test error message lookups."""
-        params = {"error_message": ["A", "B"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_field(self):
-        """Test field lookups."""
-        params = {"field": ["asn"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-
-class UniqueValidationRuleFilterTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class UniqueValidationRuleFilterTestCase(ValidationRuleTestMixin, FilterTestCases.NameOnlyFilterTestCase):
     """
     Filterset test cases for the UniqueValidationRule model
     """
 
     queryset = UniqueValidationRule.objects.all()
     filterset = UniqueValidationRuleFilterSet
-    # TODO Look into enabling the generic filter tests to replace the filter tests that are defined.
-    generic_filter_tests = []
+    generic_filter_tests = [
+        ("id",),
+        ("error_message",),
+        ("field",),
+        ("max_instances",),
+    ]
 
     @classmethod
     def setUpTestData(cls):
@@ -243,7 +214,7 @@ class UniqueValidationRuleFilterTestCase(FilterTestCases.NameOnlyFilterTestCase)
         UniqueValidationRule.objects.create(
             name="Unique rule 2",
             content_type=ContentType.objects.get_for_model(Platform),
-            field="description",
+            field="name",
             max_instances=2,
             error_message="B",
         )
@@ -254,28 +225,3 @@ class UniqueValidationRuleFilterTestCase(FilterTestCases.NameOnlyFilterTestCase)
             max_instances=3,
             error_message="C",
         )
-
-    def test_id(self):
-        """Test ID lookups."""
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_content_type(self):
-        """Test content type lookups."""
-        params = {"content_type": ["dcim.location"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-    def test_error_message(self):
-        """Test error message lookups."""
-        params = {"error_message": ["A", "B"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_field(self):
-        """Test field lookups."""
-        params = {"field": ["asn"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-    def test_max_instances(self):
-        """Test field lookups."""
-        params = {"max_instances__gte": [2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
