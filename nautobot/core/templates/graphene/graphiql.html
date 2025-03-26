@@ -54,8 +54,8 @@ add "&raw" to the end of the URL within a browser.
         href="{% static 'graphiql-2.4.7/graphiql.min.css' %}"
         onerror="window.location='{% url 'media_failure' %}?filename=graphiql-2.4.7/graphiql.min.css'">
   <link rel="stylesheet"
-        href="{% static 'graphiql-plugin-explorer-0.1.15/dist/style.css' %}"
-        onerror="window.location='{% url 'media_failure' %}?filename=graphiql-plugin-explorer-0.1.15/dist/style.css'">
+        href="{% static 'graphiql-plugin-explorer-0.1.15/style.css' %}"
+        onerror="window.location='{% url 'media_failure' %}?filename=graphiql-plugin-explorer-0.1.15/style.css'">
   <script src="{% static 'whatwg-fetch-3.6.2/fetch.umd.min.js' %}"
       onerror="window.location='{% url 'media_failure' %}?filename=whatwg-fetch-3.6.2/fetch.umd.min.js'"></script>
   <script src="{% static 'react-17.0.2/umd/react.production.min.js' %}"
@@ -66,8 +66,8 @@ add "&raw" to the end of the URL within a browser.
           onerror="window.location='{% url 'media_failure' %}?filename=graphiql-2.4.7/graphiql.min.js'"></script>
   <script src="{% static 'graphql-ws-5.13.1/umd/graphql-ws.min.js' %}"
       onerror="window.location='{% url 'media_failure' %}?filename=graphql-ws-5.13.1/umd/graphql-ws.min.js'"></script>
-  <script src="{% static 'graphiql-plugin-explorer-0.1.15/dist/graphiql-plugin-explorer.umd.js' %}"
-          onerror="window.location='{% url 'media_failure' %}?filename=graphiql-plugin-explorer-0.1.15/dist/graphiql-graphiql-plugin-explorer.umd.js'"></script>
+  <script src="{% static 'graphiql-plugin-explorer-0.1.15/graphiql-plugin-explorer.umd.js' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=graphiql-plugin-explorer-0.1.15/graphiql-graphiql-plugin-explorer.umd.js'"></script>
 </head>
 <body>
   <!-- Nautobot page contents -->
