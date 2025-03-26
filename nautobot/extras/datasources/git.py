@@ -1055,6 +1055,7 @@ def get_data_compliance_classes_from_git_repo(repository_record, job_result, del
     from nautobot.nautobot_data_validation_engine.custom_validators import get_classes_from_git_repo
 
     job_result.log("Successfully pulled git repo", level_choice=LogLevelChoices.LOG_INFO)
+    # TODO should we call ensure_git_repository as well to skip reloading the data compliance rules if the repo is not updated?
     for compliance_class in get_classes_from_git_repo(repository_record):
         job_result.log(f"Found class {compliance_class.__name__!s}", level_choice=LogLevelChoices.LOG_INFO)
 

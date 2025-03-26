@@ -9,9 +9,10 @@ A common clean method for all these classes looks for any
 validation rules that have been defined for the given model.
 """
 
+import importlib.util
 import inspect
 import logging
-import pkgutil
+import pathlib
 import re
 import sys
 from typing import Optional
@@ -142,6 +143,10 @@ class BaseValidator(CustomValidator):
         for repo in GitRepository.objects.filter(
             provided_contents__contains="nautobot.nautobot_data_validation_engine.data_compliance_rules"  # TODO(john): data migration for this? used to be data_validation_engine.data_compliance_rules
         ):
+            is_repo_updated = ensure_git_repository(repo, head=repo.current_head)
+            # Skip reimporting the code if the repo is not updated
+            if not is_repo_updated:
+                continue
             for compliance_class in get_classes_from_git_repo(repo):
                 if (
                     f"{self.context['object']._meta.app_label}.{self.context['object']._meta.model_name}"
@@ -191,14 +196,21 @@ def get_data_compliance_rules_map():
 
 def get_classes_from_git_repo(repo: GitRepository):
     """Get list of DataComplianceRule classes found within the custom_validators folder of the given repo."""
-    ensure_git_repository(repo, head=repo.current_head)
     class_list = []
-    for importer, discovered_module_name, _ in pkgutil.iter_modules([f"{repo.filesystem_path}/custom_validators"]):
-        if discovered_module_name in sys.modules:
-            del sys.modules[discovered_module_name]
-        module = importer.find_module(discovered_module_name).load_module(discovered_module_name)
-        for _, compliance_class in inspect.getmembers(module, is_data_compliance_rule):
-            class_list.append(compliance_class)
+    custom_validators_path = pathlib.Path(f"{repo.filesystem_path}/custom_validators")
+
+    for module_path in custom_validators_path.glob("*.py"):  # Only load Python files
+        module_name = module_path.stem  # Extract the filename without ".py" extension
+        module_spec = importlib.util.spec_from_file_location(module_name, module_path) # Create a module spec
+
+        if module_spec and module_spec.loader:
+            module = importlib.util.module_from_spec(module_spec)
+            sys.modules[module_name] = module  # Register the module
+            module_spec.loader.exec_module(module)  # Execute the module to load its content
+
+            for _, compliance_class in inspect.getmembers(module, is_data_compliance_rule):
+                class_list.append(compliance_class)
+
     return class_list
 
 
