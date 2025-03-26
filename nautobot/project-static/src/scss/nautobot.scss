@@ -578,6 +578,15 @@ body {
   $sidenav-link-segment-icon-svg-last: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='45.5' stroke='#{$nav-gray-3}'/><line x1='10' y1='45' x2='15' y2='45' stroke='#{$nav-gray-3}'/></svg>";
   $sidenav-link-width: 15rem; /* 240px */
 
+  @mixin chevron($size) {
+    @include transition($accordion-icon-transition, $transition-fade);
+    background: no-repeat center/#{$size} #{escape-svg(url("data:image/svg+xml,#{$sidenav-chevron-svg}"))};
+    content: "";
+    display: block;
+    height: $size;
+    width: $size;
+  }
+
   @mixin fade-in {
     opacity: 1;
     visibility: visible;
@@ -597,17 +606,8 @@ body {
     filter: invert(50%) sepia(99%) saturate(1810%) hue-rotate(3deg) brightness(93%) contrast(94%);
   }
 
-  @mixin chevron($size) {
-    @include transition($accordion-icon-transition, $transition-fade);
-    background: no-repeat center/#{$size} #{escape-svg(url("data:image/svg+xml,#{$sidenav-chevron-svg}"))};
-    content: "";
-    display: block;
-    height: $size;
-    width: $size;
-  }
-
-  @include transition($transition-collapse-width);
   @include box-shadow($box-shadow);
+  @include transition($transition-collapse-width);
   align-items: center;
   background-color: $navy-0;
   color: $nav-white-0;
@@ -671,9 +671,9 @@ body {
   }
 
   .sidenav-flyout {
-    @include transition($transition-base);
     @include box-shadow($box-shadow);
     @include fade-out;
+    @include transition($transition-base);
     background: $navy-1;
     display: flex;
     flex-direction: column;
@@ -683,8 +683,8 @@ body {
     padding-block: map.get($spacers, 20);
     position: absolute;
     top: 0;
-    z-index: -1;
     width: max-content;
+    z-index: -1;
   }
 
   .sidenav-link {
@@ -699,6 +699,10 @@ body {
     text-decoration: none;
     width: $sidenav-link-width;
 
+    &-active {
+      color: $orange-0;
+    }
+
     &::before { /* Segment icon */
       background: no-repeat center/$sidenav-link-segment-icon-width $sidenav-link-segment-icon-height #{escape-svg(url("data:image/svg+xml,#{$sidenav-link-segment-icon-svg}"))};
       content: "";
@@ -709,10 +713,6 @@ body {
       position: absolute;
       width: $sidenav-link-segment-icon-width;
     }
-
-    &-active {
-      color: $orange-0;
-    }
   }
 
   li:last-child > .sidenav-link::before { /* Last link segment icon */
@@ -720,8 +720,8 @@ body {
   }
 
   .sidenav-favorite {
-    @include transition($transition-base);
     @include fade-out;
+    @include transition($transition-base);
     background: no-repeat #{map.get($spacers, 10)} center/$sidenav-favorite-size #{escape-svg(url("data:image/svg+xml,#{$sidenav-favorite-icon-svg}"))};
     border: none;
     flex: none;
@@ -775,18 +775,6 @@ body {
     text-transform: uppercase;
     width: 100%;
 
-    &::after { /* Overlay */
-      @include transition($transition-base);
-      @include fade-out;
-      background: rgba(0, 0, 0, 0.25);
-      content: "";
-      cursor: default;
-      display: block;
-      inset: 0 0 0 $sidenav-link-width;
-      position: fixed;
-      z-index: -1;
-    }
-
     &[aria-expanded="true"] { /* When list item is expanded */
       background-color: $navy-1;
 
@@ -803,6 +791,18 @@ body {
     &:focus-visible,
     &:hover {
       background-color: $navy-1;
+    }
+
+    &::after { /* Overlay */
+      @include fade-out;
+      @include transition($transition-base);
+      background: rgba(0, 0, 0, 0.25);
+      content: "";
+      cursor: default;
+      display: block;
+      inset: 0 0 0 $sidenav-link-width;
+      position: fixed;
+      z-index: -1;
     }
 
     &:has(+ .sidenav-flyout .sidenav-link-active) { /* When list item contains an active link */
@@ -836,8 +836,8 @@ body {
   }
 
   .sidenav-toggler {
-    @include transition($transition-base);
     @include fade-in;
+    @include transition($transition-base);
     right: -0.8125rem; /* -13px */
     top: 1.375rem; /* 22px */
 
