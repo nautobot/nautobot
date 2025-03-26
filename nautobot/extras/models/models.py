@@ -923,8 +923,6 @@ class UserSavedViewAssociation(BaseModel):
 #
 # Webhooks
 #
-
-
 @extras_features("graphql")
 class Webhook(
     ChangeLoggedModel,
@@ -933,6 +931,7 @@ class Webhook(
     NotesMixin,
     SavedViewMixin,
     BaseModel,
+    RelationshipModel,
 ):
     """
     A Webhook defines a request that will be sent to a remote application when an object is created, updated, and/or
