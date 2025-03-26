@@ -63,10 +63,15 @@
                                         <li class="sidenav-link-group" data-group-weight="{{ group_details.weight }}">{{ group_name }}</li>
                                         {% for item_link, item_details in group_details.items.items %}
                                             {% if not item_details.permissions or request.user|has_one_or_more_perms:item_details.permissions %}
-                                                <li {% if item_details.permissions and not request.user|has_perms:item_details.permissions %} class="disabled"{% endif %}>
+                                                <li class="sidenav-link-wrapper{% if item_details.permissions and not request.user|has_perms:item_details.permissions %} disabled{% endif %}">
                                                     <a class="sidenav-link{% if item_link in request.path %} sidenav-link-active{% endif %}" data-item-weight="{{ item_details.weight }}" href="{{ item_link }}">
                                                         {{ item_details.name }}
                                                     </a>
+                                                    <button class="sidenav-favorite" type="button">
+                                                            <span class="visually-hidden">
+                                                                Add to favorites
+                                                            </span>
+                                                    </button>
                                                 </li>
                                             {% endif %}
                                         {% endfor %}
