@@ -8,7 +8,7 @@ from nautobot.nautobot_data_validation_engine import views
 app_name = "nautobot_data_validation_engine"
 
 router = NautobotUIViewSetRouter()
-router.register("data-compliance", views.DataComplianceListView)
+router.register("data-compliance", views.DataComplianceUIViewSet)
 router.register("regex-rules", views.RegularExpressionValidationRuleUIViewSet)
 router.register("min-max-rules", views.MinMaxValidationRuleUIViewSet)
 router.register("required-rules", views.RequiredValidationRuleUIViewSet)

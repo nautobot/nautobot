@@ -188,7 +188,7 @@ class MinMaxValidationRuleModelTestCase(TestCase):
         )
 
         location = Location(
-            name="Location with a invalid latitude",
+            name="Location with an invalid latitude",
             location_type=LocationType.objects.get_by_natural_key("Region"),
             latitude="foobar",  # wrong type
             status=Status.objects.get_by_natural_key("Active"),

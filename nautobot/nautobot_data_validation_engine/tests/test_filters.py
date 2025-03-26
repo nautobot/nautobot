@@ -59,9 +59,9 @@ class RegularExpressionValidationRuleFilterTestCase(ValidationRuleTestMixin, Fil
         Create test data
         """
         tag_1 = Tag.objects.first()
-        tag_1.content_types.set([ContentType.objects.get_for_model(RegularExpressionValidationRule)])
+        tag_1.content_types.add([ContentType.objects.get_for_model(RegularExpressionValidationRule)])
         tag_2 = Tag.objects.last()
-        tag_2.content_types.set([ContentType.objects.get_for_model(RegularExpressionValidationRule)])
+        tag_2.content_types.add([ContentType.objects.get_for_model(RegularExpressionValidationRule)])
         regex_1 = RegularExpressionValidationRule.objects.create(
             name="Regex rule 1",
             content_type=ContentType.objects.get_for_model(Rack),
@@ -69,7 +69,7 @@ class RegularExpressionValidationRuleFilterTestCase(ValidationRuleTestMixin, Fil
             regular_expression="^ABC$",
             error_message="A",
         )
-        regex_1.tags.set([tag_1, tag_2])
+        regex_1.tags.add([tag_1, tag_2])
         RegularExpressionValidationRule.objects.create(
             name="Regex rule 2",
             content_type=ContentType.objects.get_for_model(Location),
@@ -105,9 +105,9 @@ class MinMaxValidationRuleFilterTestCase(ValidationRuleTestMixin, FilterTestCase
         Create test data
         """
         tag_1 = Tag.objects.first()
-        tag_1.content_types.set([ContentType.objects.get_for_model(MinMaxValidationRule)])
+        tag_1.content_types.add([ContentType.objects.get_for_model(MinMaxValidationRule)])
         tag_2 = Tag.objects.last()
-        tag_2.content_types.set([ContentType.objects.get_for_model(MinMaxValidationRule)])
+        tag_2.content_types.add([ContentType.objects.get_for_model(MinMaxValidationRule)])
         min_max_1 = MinMaxValidationRule.objects.create(
             name="Min max rule 1",
             content_type=ContentType.objects.get_for_model(PowerFeed),
@@ -115,7 +115,7 @@ class MinMaxValidationRuleFilterTestCase(ValidationRuleTestMixin, FilterTestCase
             min=1,
             error_message="A",
         )
-        min_max_1.tags.set([tag_1, tag_2])
+        min_max_1.tags.add([tag_1, tag_2])
         MinMaxValidationRule.objects.create(
             name="Min max rule 2",
             content_type=ContentType.objects.get_for_model(PowerFeed),
@@ -156,16 +156,16 @@ class RequiredValidationRuleFilterTestCase(ValidationRuleTestMixin, FilterTestCa
         Create test data
         """
         tag_1 = Tag.objects.first()
-        tag_1.content_types.set([ContentType.objects.get_for_model(RequiredValidationRule)])
+        tag_1.content_types.add([ContentType.objects.get_for_model(RequiredValidationRule)])
         tag_2 = Tag.objects.last()
-        tag_2.content_types.set([ContentType.objects.get_for_model(RequiredValidationRule)])
+        tag_2.content_types.add([ContentType.objects.get_for_model(RequiredValidationRule)])
         required_1 = RequiredValidationRule.objects.create(
             name="Required rule 1",
             content_type=ContentType.objects.get_for_model(Location),
             field="asn",
             error_message="A",
         )
-        required_1.tags.set([tag_1, tag_2])
+        required_1.tags.add([tag_1, tag_2])
         RequiredValidationRule.objects.create(
             name="Required rule 2",
             content_type=ContentType.objects.get_for_model(Platform),
@@ -200,9 +200,9 @@ class UniqueValidationRuleFilterTestCase(ValidationRuleTestMixin, FilterTestCase
         Create test data
         """
         tag_1 = Tag.objects.first()
-        tag_1.content_types.set([ContentType.objects.get_for_model(UniqueValidationRule)])
+        tag_1.content_types.add([ContentType.objects.get_for_model(UniqueValidationRule)])
         tag_2 = Tag.objects.last()
-        tag_2.content_types.set([ContentType.objects.get_for_model(UniqueValidationRule)])
+        tag_2.content_types.add([ContentType.objects.get_for_model(UniqueValidationRule)])
         unique_1 = UniqueValidationRule.objects.create(
             name="Unique rule 1",
             content_type=ContentType.objects.get_for_model(Location),
@@ -210,7 +210,7 @@ class UniqueValidationRuleFilterTestCase(ValidationRuleTestMixin, FilterTestCase
             max_instances=1,
             error_message="A",
         )
-        unique_1.tags.set([tag_1, tag_2])
+        unique_1.tags.add([tag_1, tag_2])
         UniqueValidationRule.objects.create(
             name="Unique rule 2",
             content_type=ContentType.objects.get_for_model(Platform),

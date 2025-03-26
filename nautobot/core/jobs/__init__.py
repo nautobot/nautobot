@@ -372,22 +372,23 @@ class ImportObjects(Job):
 
 
 def get_data_compliance_rules():
-    """Generate a list of Audit Ruleset classes that exist from the registry."""
+    """Generate a list of Audit Ruleset classes that exist from the registry as well as from any Git Repositories."""
     validators = []
     for rule_sets in get_data_compliance_rules_map().values():
         validators.extend(rule_sets)
+
+    # Get rules from Git Repositories
+    for repo in GitRepository.objects.all():
+        if "nautobot_data_validation_engine.data_compliance_rules" in repo.provided_contents:
+            validators.extend(get_classes_from_git_repo(repo))
     return validators
 
 
-def get_choices():
-    """Get choices from registry."""
+def get_data_compliance_choices():
+    """Get data compliance choices from registry as well as from any Git Repositories."""
     choices = []
     for ruleset_class in get_data_compliance_rules():
         choices.append((ruleset_class.__name__, ruleset_class.__name__))
-    for repo in GitRepository.objects.all():
-        if "nautobot_data_validation_engine.data_compliance_rules" in repo.provided_contents:
-            for compliance_class in get_classes_from_git_repo(repo):
-                choices.append((compliance_class.__name__, compliance_class.__name__))
 
     choices.sort()
     return choices
@@ -410,14 +411,14 @@ class RunRegisteredDataComplianceRules(Job):
     description = "Runs selected Data Compliance rule classes."
 
     selected_data_compliance_rules = MultiChoiceVar(
-        choices=get_choices,
+        choices=get_data_compliance_choices,
         label="Select Data Compliance Rules",
         required=False,
         description="Not selecting any rules will run all rules listed.",
     )
 
-    run_builtin_rules_in_report = BooleanVar(
-        label="Run built-in validation rules?", description="Include created, built-in data validation rules in report."
+    run_existing_rules_in_report = BooleanVar(
+        label="Run existing validation rules?", description="Include existing data validation rules in report."
     )
 
     def run(self, *args, **kwargs):
@@ -427,23 +428,19 @@ class RunRegisteredDataComplianceRules(Job):
         compliance_classes = []
         compliance_classes.extend(get_data_compliance_rules())
 
-        for repo in GitRepository.objects.all():
-            if "nautobot_data_validation_engine.data_compliance_rules" in repo.provided_contents:
-                compliance_classes.extend(get_classes_from_git_repo(repo))
-
         for compliance_class in compliance_classes:
             if selected_data_compliance_rules and compliance_class.__name__ not in selected_data_compliance_rules:
                 continue
             self.logger.info(f"Running {compliance_class.__name__}")
             app_label, model = compliance_class.model.split(".")
-            for obj in global_apps.get_model(app_label, model).objects.all():
+            for obj in global_apps.get_model(app_label, model).objects.iterator():
                 ins = compliance_class(obj)
                 ins.enforce = False
                 ins.clean()
 
-        run_builtin_rules_in_report = kwargs.get("run_builtin_rules_in_report", False)
-        if run_builtin_rules_in_report:
-            self.logger.info("Running built-in data validation rules")
+        run_existing_rules_in_report = kwargs.get("run_existing_rules_in_report", False)
+        if run_existing_rules_in_report:
+            self.logger.info("Running existing data validation rules")
             self.report_for_validation_rules()
 
         self.logger.info("View Data Compliance results [here](/data-validation-engine/data-compliance/)")
@@ -478,7 +475,7 @@ class RunRegisteredDataComplianceRules(Job):
         # Run validation on existing objects and add to report
         for validator_dict in validator_dicts:
             for validator, class_name in validator_dict.items():
-                if getattr(validator, "clean") == getattr(CustomValidator, "clean"):
+                if validator.clean == CustomValidator.clean:
                     continue
 
                 for validated_object in class_name.objects.all():

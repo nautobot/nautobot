@@ -1050,7 +1050,7 @@ def delete_git_graphql_queries(repository_record, job_result, preserve=None):
                 job_result.log(error_msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="graphql queries")
 
 
-def refresh_git_data_compliance_rules(repository_record, job_result, delete=False):  # pylint: disable=W0613
+def get_data_compliance_classes_from_git_repo(repository_record, job_result, delete=False):  # pylint: disable=W0613
     """Callback for repo refresh."""
     from nautobot.nautobot_data_validation_engine.custom_validators import get_classes_from_git_repo
 
@@ -1118,7 +1118,7 @@ register_datasource_contents(
                 name="data compliance rules",
                 content_identifier="nautobot_data_validation_engine.data_compliance_rules",
                 icon="mdi-file-document-outline",
-                callback=refresh_git_data_compliance_rules,
+                callback=get_data_compliance_classes_from_git_repo,
             ),
         ),
     ]
