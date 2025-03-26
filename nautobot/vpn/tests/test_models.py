@@ -1,18 +1,7 @@
 """Test nautobot_vpn_models models."""
 
 from nautobot.apps.testing import ModelTestCases
-
-from nautobot_vpn_models import models
-
-
-
-
-
-
-
-
-
-
+from nautobot.vpn import models
 
 
 class TestVPNProfileModel(ModelTestCases.BaseModelTestCase):
@@ -29,7 +18,6 @@ class TestVPNProfileModel(ModelTestCases.BaseModelTestCase):
         # Attempt to create the foreign key relationship models
 
 
-
 class TestVPNPhase1PolicyModel(ModelTestCases.BaseModelTestCase):
     """Test VPNPhase1Policy model."""
 
@@ -42,7 +30,6 @@ class TestVPNPhase1PolicyModel(ModelTestCases.BaseModelTestCase):
         # Add test data here
 
         # Attempt to create the foreign key relationship models
-
 
 
 class TestVPNPhase2PolicyModel(ModelTestCases.BaseModelTestCase):
@@ -59,7 +46,6 @@ class TestVPNPhase2PolicyModel(ModelTestCases.BaseModelTestCase):
         # Attempt to create the foreign key relationship models
 
 
-
 class TestVPNModel(ModelTestCases.BaseModelTestCase):
     """Test VPN model."""
 
@@ -72,7 +58,6 @@ class TestVPNModel(ModelTestCases.BaseModelTestCase):
         # Add test data here
 
         # Attempt to create the foreign key relationship models
-
 
 
 class TestVPNTunnelModel(ModelTestCases.BaseModelTestCase):
@@ -89,7 +74,6 @@ class TestVPNTunnelModel(ModelTestCases.BaseModelTestCase):
         # Attempt to create the foreign key relationship models
 
 
-
 class TestVPNTunnelEndpointModel(ModelTestCases.BaseModelTestCase):
     """Test VPNTunnelEndpoint model."""
 
@@ -102,5 +86,3 @@ class TestVPNTunnelEndpointModel(ModelTestCases.BaseModelTestCase):
         # Add test data here
 
         # Attempt to create the foreign key relationship models
-
-

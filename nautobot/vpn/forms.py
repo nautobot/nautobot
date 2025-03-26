@@ -1,9 +1,10 @@
-"""Forms for nautobot_vpn_models."""
+"""Forms for the vpn models."""
 
 from django import forms
+
 from nautobot.apps.forms import (
+    add_blank_choice,
     BulkEditNullBooleanSelect,
-    DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     JSONField,
     NautobotBulkEditForm,
@@ -12,10 +13,9 @@ from nautobot.apps.forms import (
     StaticSelect2,
     TagFilterField,
     TagsBulkEditFormMixin,
-    add_blank_choice,
 )
-from nautobot.ipam.models import IPAddress, Prefix
 from nautobot.extras.models import DynamicGroup
+from nautobot.ipam.models import Prefix
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 
 from . import choices, models
@@ -23,6 +23,7 @@ from . import choices, models
 
 class VPNProfileForm(NautobotModelForm):  # pylint: disable=too-many-ancestors
     """Form for creating and updating VPNProfile."""
+
     vpn_phase1_policy = DynamicModelMultipleChoiceField(
         queryset=models.VPNPhase1Policy.objects.all(),
         required=False,
@@ -66,7 +67,9 @@ class VPNProfileBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # py
     )
     name = forms.CharField(required=False, label="Name")
     description = forms.CharField(required=False, label="Description")
-    keepalive_enabled = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect, label="Keepalive Enabled")
+    keepalive_enabled = forms.NullBooleanField(
+        required=False, widget=BulkEditNullBooleanSelect, label="Keepalive Enabled"
+    )
     nat_traversal = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect, label="Nat Traversal")
 
     class Meta:
@@ -92,6 +95,7 @@ class VPNProfileFilterForm(NautobotFilterForm):  # pylint: disable=too-many-ance
     model = models.VPNProfile
     q = forms.CharField(required=False, label="Search")
     tags = TagFilterField(model)
+
 
 class VPNPhase1PolicyForm(NautobotModelForm):  # pylint: disable=too-many-ancestors
     """Form for creating and updating VPNPhase1Policy."""
@@ -165,6 +169,7 @@ class VPNPhase1PolicyFilterForm(NautobotFilterForm):  # pylint: disable=too-many
     q = forms.CharField(required=False, label="Search")
     tags = TagFilterField(model)
 
+
 class VPNPhase2PolicyForm(NautobotModelForm):  # pylint: disable=too-many-ancestors
     """Form for creating and updating VPNPhase2Policy."""
 
@@ -221,8 +226,10 @@ class VPNPhase2PolicyFilterForm(NautobotFilterForm):  # pylint: disable=too-many
     q = forms.CharField(required=False, label="Search")
     tags = TagFilterField(model)
 
+
 class VPNForm(NautobotModelForm, TenancyForm):  # pylint: disable=too-many-ancestors
     """Form for creating and updating VPN."""
+
     # contact_associations = DynamicModelMultipleChoiceField(
     #     queryset=ContactAssociations.objects.all(),
     #     required=False,
@@ -275,8 +282,10 @@ class VPNFilterForm(NautobotFilterForm, TenancyFilterForm):  # pylint: disable=t
     q = forms.CharField(required=False, label="Search")
     tags = TagFilterField(model)
 
+
 class VPNTunnelForm(NautobotModelForm, TenancyForm):  # pylint: disable=too-many-ancestors
     """Form for creating and updating VPNTunnel."""
+
     # contact_associations = DynamicModelMultipleChoiceField(
     #     queryset=ContactAssociations.objects.all(),
     #     required=False,
@@ -337,8 +346,10 @@ class VPNTunnelFilterForm(NautobotFilterForm, TenancyFilterForm):  # pylint: dis
     q = forms.CharField(required=False, label="Search")
     tags = TagFilterField(model)
 
+
 class VPNTunnelEndpointForm(NautobotModelForm):  # pylint: disable=too-many-ancestors
     """Form for creating and updating VPNTunnelEndpoint."""
+
     protected_prefixes_dg = DynamicModelMultipleChoiceField(
         queryset=DynamicGroup.objects.all(),
         required=False,
@@ -371,7 +382,9 @@ class VPNTunnelEndpointForm(NautobotModelForm):  # pylint: disable=too-many-ance
 class VPNTunnelEndpointBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # pylint: disable=too-many-ancestors
     """VPNTunnelEndpoint bulk edit form."""
 
-    pk = forms.ModelMultipleChoiceField(queryset=models.VPNTunnelEndpoint.objects.all(), widget=forms.MultipleHiddenInput)
+    pk = forms.ModelMultipleChoiceField(
+        queryset=models.VPNTunnelEndpoint.objects.all(), widget=forms.MultipleHiddenInput
+    )
     destination_fqdn = forms.CharField(required=False, label="Destination Fqdn")
     protected_prefixes_dg = DynamicModelMultipleChoiceField(
         queryset=DynamicGroup.objects.all(),

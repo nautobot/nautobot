@@ -1,4 +1,4 @@
-"""Views for nautobot_vpn_models."""
+"""Views for the vpn models."""
 
 from nautobot.apps.ui import ObjectDetailContent, ObjectFieldsPanel, SectionChoices
 from nautobot.apps.views import NautobotUIViewSet
@@ -38,7 +38,7 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
                     "nat_traversal",
                     "extra_options",
                     "secrets_group",
-                    "role"
+                    "role",
                 ],
             ),
         ],
@@ -75,7 +75,7 @@ class VPNPhase1PolicyUIViewSet(NautobotUIViewSet):
                     "dh_group",
                     "lifetime_seconds",
                     "lifetime_kb",
-                    "authentication_method"
+                    "authentication_method",
                 ],
             ),
         ],
@@ -102,14 +102,7 @@ class VPNPhase2PolicyUIViewSet(NautobotUIViewSet):
             ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
-                fields=[
-                    "name",
-                    "description",
-                    "encryption_algorithm",
-                    "integrity_algorithm",
-                    "pfs_group",
-                    "lifetime"
-                ],
+                fields=["name", "description", "encryption_algorithm", "integrity_algorithm", "pfs_group", "lifetime"],
             ),
         ],
     )
@@ -135,15 +128,7 @@ class VPNUIViewSet(NautobotUIViewSet):
             ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
-                fields=[
-                    "vpn_profile",
-                    "name",
-                    "description",
-                    "vpn_id",
-                    "tenant",
-                    "role",
-                    "contact_associations"
-                ],
+                fields=["vpn_profile", "name", "description", "vpn_id", "tenant", "role", "contact_associations"],
             ),
         ],
     )
@@ -178,7 +163,7 @@ class VPNTunnelUIViewSet(NautobotUIViewSet):
                     "encapsulation",
                     "tenant",
                     "role",
-                    "contact_associations"
+                    "contact_associations",
                 ],
             ),
         ],
@@ -216,9 +201,8 @@ class VPNTunnelEndpointUIViewSet(NautobotUIViewSet):
                     "protected_prefixes_dg",
                     "protected_prefixes",
                     "role",
-                    "contact_associations"
+                    "contact_associations",
                 ],
             ),
         ],
     )
-

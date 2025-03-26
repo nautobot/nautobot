@@ -1,19 +1,8 @@
 """Test nautobot_vpn_models Filters."""
 
-from django.contrib.contenttypes.models import ContentType
 from nautobot.apps.testing import FilterTestCases
 from nautobot.tenancy.models import Tenant, TenantGroup
-
-from nautobot_vpn_models import choices, filters, models
-
-
-
-
-
-
-
-
-
+from nautobot.vpn import filters, models
 
 
 class VPNProfileFilterTestCase(
@@ -42,7 +31,6 @@ class VPNProfileFilterTestCase(
     )
     # TODO INIT Uncomment the line below if the model has a tenancy relationship.
     # tenancy_related_name = "vpn_profiles"
-
 
     @classmethod
     def setUpTestData(cls):
@@ -99,7 +87,6 @@ class VPNPhase1PolicyFilterTestCase(
     # TODO INIT Uncomment the line below if the model has a tenancy relationship.
     # tenancy_related_name = "vpn_phase_1_policys"
 
-
     @classmethod
     def setUpTestData(cls):
         """Set up test data."""
@@ -151,7 +138,6 @@ class VPNPhase2PolicyFilterTestCase(
     # TODO INIT Uncomment the line below if the model has a tenancy relationship.
     # tenancy_related_name = "vpn_phase_2_policys"
 
-
     @classmethod
     def setUpTestData(cls):
         """Set up test data."""
@@ -197,7 +183,6 @@ class VPNFilterTestCase(
     )
     tenancy_related_name = "vpns"
 
-
     @classmethod
     def setUpTestData(cls):
         """Set up test data."""
@@ -242,7 +227,6 @@ class VPNTunnelFilterTestCase(
         ("contact_associations",),
     )
     tenancy_related_name = "vpn_tunnels"
-
 
     @classmethod
     def setUpTestData(cls):
@@ -296,7 +280,6 @@ class VPNTunnelEndpointFilterTestCase(
     # TODO INIT Uncomment the line below if the model has a tenancy relationship.
     # tenancy_related_name = "vpn_tunnel_endpoints"
 
-
     @classmethod
     def setUpTestData(cls):
         """Set up test data."""
@@ -323,4 +306,3 @@ class VPNTunnelEndpointFilterTestCase(
             # tenant=cls.tenant1,
         )
         # TODO INIT Add more instances as needed for testing. Not all fields should be used for all instances.
-
