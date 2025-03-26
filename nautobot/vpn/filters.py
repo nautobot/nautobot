@@ -1,10 +1,6 @@
-"""Filtering for nautobot_vpn_models."""
+"""Filtering for the vpn models."""
 
 from nautobot.apps.filters import (
-    MultiValueDateFilter,
-    MultiValueDateTimeFilter,
-    NameSearchFilterSet,
-    NaturalKeyOrPKMultipleChoiceFilter,
     NautobotFilterSet,
     SearchFilter,
     StatusModelFilterSetMixin,
@@ -12,15 +8,6 @@ from nautobot.apps.filters import (
 )
 
 from . import models
-
-
-
-
-
-
-
-
-
 
 
 class VPNProfileFilterSet(NautobotFilterSet):  # pylint: disable=too-many-ancestors
@@ -34,7 +21,6 @@ class VPNProfileFilterSet(NautobotFilterSet):  # pylint: disable=too-many-ancest
             "description": "icontains",
         }
     )
-
 
     class Meta:
         """Meta attributes for filter."""
@@ -60,7 +46,6 @@ class VPNPhase1PolicyFilterSet(NautobotFilterSet):  # pylint: disable=too-many-a
         }
     )
 
-
     class Meta:
         """Meta attributes for filter."""
 
@@ -83,7 +68,6 @@ class VPNPhase2PolicyFilterSet(NautobotFilterSet):  # pylint: disable=too-many-a
         }
     )
 
-
     class Meta:
         """Meta attributes for filter."""
 
@@ -103,7 +87,6 @@ class VPNFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: di
             "vpn_id": "icontains",
         }
     )
-
 
     class Meta:
         """Meta attributes for filter."""
@@ -126,7 +109,6 @@ class VPNTunnelFilterSet(StatusModelFilterSetMixin, TenancyModelFilterSetMixin, 
         }
     )
 
-
     class Meta:
         """Meta attributes for filter."""
 
@@ -145,10 +127,8 @@ class VPNTunnelEndpointFilterSet(NautobotFilterSet):  # pylint: disable=too-many
         }
     )
 
-
     class Meta:
         """Meta attributes for filter."""
 
         model = models.VPNTunnelEndpoint
         fields = "__all__"
-

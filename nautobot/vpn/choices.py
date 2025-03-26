@@ -56,6 +56,7 @@ class IntegrityAlgorithmChoices(ChoiceSet):
         (sha512, "SHA512"),
     )
 
+
 class DhGroupChoices(ChoiceSet):
     """Choices for the dh_group field on the VPNPhase1Policy model."""
 
