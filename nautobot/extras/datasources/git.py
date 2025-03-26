@@ -1058,6 +1058,7 @@ def refresh_git_data_compliance_rules(repository_record, job_result, delete=Fals
     for compliance_class in get_classes_from_git_repo(repository_record):
         job_result.log(f"Found class {compliance_class.__name__!s}", level_choice=LogLevelChoices.LOG_INFO)
 
+
 # Register built-in callbacks for data types potentially provided by a GitRepository
 register_datasource_contents(
     [
@@ -1112,13 +1113,13 @@ register_datasource_contents(
             ),
         ),
         (
-        "extras.gitrepository",
-        DatasourceContent(
-            name="data compliance rules",
-            content_identifier="nautobot_data_validation_engine.data_compliance_rules",
-            icon="mdi-file-document-outline",
-            callback=refresh_git_data_compliance_rules,
+            "extras.gitrepository",
+            DatasourceContent(
+                name="data compliance rules",
+                content_identifier="nautobot_data_validation_engine.data_compliance_rules",
+                icon="mdi-file-document-outline",
+                callback=refresh_git_data_compliance_rules,
+            ),
         ),
-    )
     ]
 )
