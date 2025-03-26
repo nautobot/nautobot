@@ -201,7 +201,7 @@ def get_classes_from_git_repo(repo: GitRepository):
 
     for module_path in custom_validators_path.glob("*.py"):  # Only load Python files
         module_name = module_path.stem  # Extract the filename without ".py" extension
-        module_spec = importlib.util.spec_from_file_location(module_name, module_path) # Create a module spec
+        module_spec = importlib.util.spec_from_file_location(module_name, module_path)  # Create a module spec
 
         if module_spec and module_spec.loader:
             module = importlib.util.module_from_spec(module_spec)
