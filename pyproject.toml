@@ -207,11 +207,11 @@ mkdocstrings-python = "~1.13.0"
 
 [tool.poetry.group.linting.dependencies]
 # Code static analysis
-pylint = "~3.3.4"
+pylint = "~3.3.6"
 # Pylint extensions for Django
 pylint-django = "~2.6.1"
 # Python implementation of markdownlint
-pymarkdownlnt = "~0.9.28"
+pymarkdownlnt = "~0.9.29"
 # Combination linter and code formatter
 ruff = "~0.8.6"
 # YAML linting
