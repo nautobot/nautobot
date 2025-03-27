@@ -568,11 +568,24 @@ body {
 
 #sidenav {
   $sidenav-chevron-svg: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill-rule='evenodd' clip-rule='evenodd' d='M14.53 5.46967C14.8229 5.76256 14.8229 6.23744 14.53 6.53033L10.7928 10.2676C10.388 10.6724 10.1167 10.9444 9.92461 11.1708C9.73817 11.3904 9.67071 11.5171 9.6393 11.6137C9.55773 11.8648 9.55773 12.1352 9.6393 12.3863C9.67071 12.4829 9.73817 12.6096 9.92461 12.8292C10.1167 13.0556 10.388 13.3276 10.7928 13.7324L14.53 17.4697C14.8229 17.7626 14.8229 18.2374 14.53 18.5303C14.2371 18.8232 13.7623 18.8232 13.4694 18.5303L9.73211 14.7931L9.71059 14.7715C9.33288 14.3939 9.01761 14.0786 8.7811 13.8C8.53443 13.5094 8.32969 13.2098 8.21272 12.8498C8.03326 12.2975 8.03326 11.7025 8.21272 11.1502C8.32969 10.7902 8.53443 10.4906 8.7811 10.2C9.01761 9.9214 9.33287 9.60615 9.71058 9.22845L9.73211 9.20693L13.4694 5.46967C13.7623 5.17678 14.2371 5.17678 14.53 5.46967Z' fill='#{$nav-white-0}'/></svg>";
+  $sidenav-favorite-icon-svg: "<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M9.13784 4.72433C10.0591 2.8819 10.5197 1.96069 11.143 1.66508C11.6854 1.40782 12.3146 1.40782 12.8571 1.66508C13.4804 1.96069 13.941 2.88191 14.8622 4.72434L15.2215 5.4429C15.5059 6.01177 15.6481 6.29621 15.8562 6.51399C16.0403 6.70676 16.2612 6.86077 16.5058 6.96694C16.782 7.08689 17.0981 7.12201 17.7302 7.19225L18.0564 7.22849C20.2646 7.47385 21.3687 7.59653 21.8677 8.10561C22.3013 8.54802 22.5055 9.16639 22.4205 9.78001C22.3227 10.4861 21.5086 11.242 19.8805 12.7539L19.5361 13.0736C18.9804 13.5897 18.7025 13.8477 18.5419 14.1604C18.4 14.4368 18.3244 14.7424 18.3211 15.0531C18.3174 15.4046 18.4446 15.7671 18.699 16.4921V16.4921C19.5294 18.8587 19.9446 20.042 19.673 20.7338C19.4374 21.3339 18.927 21.7836 18.3021 21.9418C17.5816 22.1241 16.4767 21.5717 14.267 20.4668L13.4311 20.0489C12.9064 19.7865 12.644 19.6553 12.3688 19.6037C12.1251 19.558 11.8749 19.558 11.6312 19.6037C11.356 19.6553 11.0937 19.7865 10.5689 20.0489L9.73299 20.4668C7.52325 21.5717 6.41838 22.1241 5.69791 21.9418C5.07298 21.7836 4.56261 21.3339 4.32703 20.7338C4.05543 20.042 4.47062 18.8587 5.30101 16.4921V16.4921C5.55541 15.7671 5.68261 15.4046 5.67891 15.0531C5.67565 14.7424 5.60005 14.4368 5.45811 14.1604C5.29751 13.8477 5.01964 13.5897 4.46388 13.0736L4.11954 12.7539C2.49141 11.242 1.67734 10.4861 1.57953 9.78001C1.49453 9.16639 1.69867 8.54802 2.13229 8.10561C2.63127 7.59653 3.73538 7.47385 5.9436 7.22849L6.26976 7.19225C6.90189 7.12201 7.21795 7.08689 7.49423 6.96694C7.73879 6.86077 7.95965 6.70676 8.14383 6.51399C8.35189 6.29621 8.49411 6.01178 8.77855 5.44291L9.13784 4.72433Z' fill='none' stroke='#{$nav-white-0}' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>";
+  $sidenav-favorite-icon-svg-filled: "<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M9.13784 4.72433C10.0591 2.8819 10.5197 1.96069 11.143 1.66508C11.6854 1.40782 12.3146 1.40782 12.8571 1.66508C13.4804 1.96069 13.941 2.88191 14.8622 4.72434L15.2215 5.4429C15.5059 6.01177 15.6481 6.29621 15.8562 6.51399C16.0403 6.70676 16.2612 6.86077 16.5058 6.96694C16.782 7.08689 17.0981 7.12201 17.7302 7.19225L18.0564 7.22849C20.2646 7.47385 21.3687 7.59653 21.8677 8.10561C22.3013 8.54802 22.5055 9.16639 22.4205 9.78001C22.3227 10.4861 21.5086 11.242 19.8805 12.7539L19.5361 13.0736C18.9804 13.5897 18.7025 13.8477 18.5419 14.1604C18.4 14.4368 18.3244 14.7424 18.3211 15.0531C18.3174 15.4046 18.4446 15.7671 18.699 16.4921V16.4921C19.5294 18.8587 19.9446 20.042 19.673 20.7338C19.4374 21.3339 18.927 21.7836 18.3021 21.9418C17.5816 22.1241 16.4767 21.5717 14.267 20.4668L13.4311 20.0489C12.9064 19.7865 12.644 19.6553 12.3688 19.6037C12.1251 19.558 11.8749 19.558 11.6312 19.6037C11.356 19.6553 11.0937 19.7865 10.5689 20.0489L9.73299 20.4668C7.52325 21.5717 6.41838 22.1241 5.69791 21.9418C5.07298 21.7836 4.56261 21.3339 4.32703 20.7338C4.05543 20.042 4.47062 18.8587 5.30101 16.4921V16.4921C5.55541 15.7671 5.68261 15.4046 5.67891 15.0531C5.67565 14.7424 5.60005 14.4368 5.45811 14.1604C5.29751 13.8477 5.01964 13.5897 4.46388 13.0736L4.11954 12.7539C2.49141 11.242 1.67734 10.4861 1.57953 9.78001C1.49453 9.16639 1.69867 8.54802 2.13229 8.10561C2.63127 7.59653 3.73538 7.47385 5.9436 7.22849L6.26976 7.19225C6.90189 7.12201 7.21795 7.08689 7.49423 6.96694C7.73879 6.86077 7.95965 6.70676 8.14383 6.51399C8.35189 6.29621 8.49411 6.01178 8.77855 5.44291L9.13784 4.72433Z' fill='#{$nav-white-0}' stroke='#{$nav-white-0}' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>";
+  $sidenav-favorite-size: 1.25rem; /* 20px */
   $sidenav-link-gap: 0.3125rem; /* 5px */
   $sidenav-link-segment-icon-height: 5.625rem; /* 90px */
   $sidenav-link-segment-icon-width: 1.25rem; /* 20px */
   $sidenav-link-segment-icon-svg: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='90' stroke='#{$nav-gray-3}'/><line x1='10' y1='45' x2='15' y2='45' stroke='#{$nav-gray-3}'/></svg>";
   $sidenav-link-segment-icon-svg-last: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='45.5' stroke='#{$nav-gray-3}'/><line x1='10' y1='45' x2='15' y2='45' stroke='#{$nav-gray-3}'/></svg>";
+  $sidenav-link-width: 15rem; /* 240px */
+
+  @mixin chevron($size) {
+    @include transition($accordion-icon-transition, $transition-fade);
+    background: no-repeat center/#{$size} #{escape-svg(url("data:image/svg+xml,#{$sidenav-chevron-svg}"))};
+    content: "";
+    display: block;
+    height: $size;
+    width: $size;
+  }
 
   @mixin fade-in {
     opacity: 1;
@@ -593,15 +606,7 @@ body {
     filter: invert(50%) sepia(99%) saturate(1810%) hue-rotate(3deg) brightness(93%) contrast(94%);
   }
 
-  @mixin chevron($size) {
-    @include transition($accordion-icon-transition, $transition-fade);
-    background: no-repeat center/#{$size} #{escape-svg(url("data:image/svg+xml,#{$sidenav-chevron-svg}"))};
-    content: "";
-    display: block;
-    height: $size;
-    width: $size;
-  }
-
+  @include box-shadow($box-shadow);
   @include transition($transition-collapse-width);
   align-items: center;
   background-color: $navy-0;
@@ -610,7 +615,8 @@ body {
   flex-direction: column;
   height: 100%;
   position: relative;
-  width: 15rem; /* 240px */
+  width: $sidenav-link-width;
+  z-index: 1;
 
   &.sidenav-collapsed {
     width: 4rem; /* 64px */
@@ -664,20 +670,37 @@ body {
     }
   }
 
+  .sidenav-flyout {
+    @include box-shadow($box-shadow);
+    @include fade-out;
+    @include transition($transition-base);
+    background: $navy-1;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    height: 100%;
+    left: 0;
+    padding-block: map.get($spacers, 20);
+    position: absolute;
+    top: 0;
+    width: max-content;
+    z-index: -1;
+  }
+
   .sidenav-link {
     align-items: center;
     color: inherit;
     display: flex;
+    flex: 1;
     overflow: hidden;
     padding-block: 0.3125rem; /* 5px */
-    padding-inline-end: map.get($spacers, 10);
     padding-inline-start: map.get($spacers, 20) + $sidenav-link-segment-icon-width + $sidenav-link-gap;
     position: relative;
     text-decoration: none;
+    width: $sidenav-link-width;
 
-    &:focus-visible,
-    &:hover {
-      background-color: $navy-1;
+    &-active {
+      color: $orange-0;
     }
 
     &::before { /* Segment icon */
@@ -690,14 +713,44 @@ body {
       position: absolute;
       width: $sidenav-link-segment-icon-width;
     }
-
-    &-active {
-      color: $orange-0;
-    }
   }
 
   li:last-child > .sidenav-link::before { /* Last link segment icon */
     background-image: #{escape-svg(url("data:image/svg+xml,#{$sidenav-link-segment-icon-svg-last}"))};
+  }
+
+  .sidenav-favorite {
+    @include fade-out;
+    @include transition($transition-base);
+    background: no-repeat #{map.get($spacers, 10)} center/$sidenav-favorite-size #{escape-svg(url("data:image/svg+xml,#{$sidenav-favorite-icon-svg}"))};
+    border: none;
+    flex: none;
+    padding: 0;
+    width: $sidenav-favorite-size + 2 * map.get($spacers, 10); /* 20px + 2 * 10px = 40px */
+
+    &:focus-visible,
+    &:hover {
+      background-image: #{escape-svg(url("data:image/svg+xml,#{$sidenav-favorite-icon-svg-filled}"))};
+    }
+  }
+
+  .sidenav-link-wrapper {
+    display: flex;
+    width: $sidenav-link-width;
+
+    &.disabled {
+      color: $nav-gray-3;
+      pointer-events: none;
+    }
+
+    &:has(> :focus-visible), /* CSS has `:focus-within` pseudo-class available but it works similar to `:focus` rather than `:focus-visible` */
+    &:hover {
+      background-color: $navy-2;
+
+      > .sidenav-favorite {
+        @include fade-in;
+      }
+    }
   }
 
   .sidenav-link-group {
@@ -706,6 +759,7 @@ body {
     padding-block: 0.3125rem; /* 5px */
     padding-inline: #{map.get($spacers, 20)};
     text-transform: uppercase;
+    width: $sidenav-link-width;
   }
 
   .sidenav-list-divider {
@@ -726,12 +780,37 @@ body {
     text-transform: uppercase;
     width: 100%;
 
+    &[aria-expanded="true"] { /* When list item is expanded */
+      background-color: $navy-1;
+
+      &::after { /* Overlay */
+        @include fade-in;
+      }
+
+      & + .sidenav-flyout {
+        @include fade-in;
+        left: 100%;
+      }
+    }
+
     &:focus-visible,
     &:hover {
       background-color: $navy-1;
     }
 
-    &:has(~ ul .sidenav-link-active) { /* When list item contains an active link */
+    &::after { /* Overlay */
+      @include fade-out;
+      @include transition($transition-base);
+      background: rgba(0, 0, 0, 0.25);
+      content: "";
+      cursor: default;
+      display: block;
+      inset: 0 0 0 $sidenav-link-width;
+      position: fixed;
+      z-index: -1;
+    }
+
+    &:has(+ .sidenav-flyout .sidenav-link-active) { /* When list item contains an active link */
       color: $orange-0;
 
       > :last-child::after { /* Chevron icon */
@@ -750,7 +829,7 @@ body {
       @include fade-in;
       align-items: center;
       display: inline-flex;
-      flex: auto 1 1;
+      flex: auto 1 0;
       margin-inline-start: map.get($spacers, 10);
 
       &::after { /* Chevron icon */
@@ -762,11 +841,19 @@ body {
   }
 
   .sidenav-toggler {
+    @include fade-in;
+    @include transition($transition-base);
     right: -0.8125rem; /* -13px */
     top: 1.375rem; /* 22px */
 
     &::before { /* Chevron icon */
       @include chevron(1rem); /* 16px */
+    }
+  }
+
+  &:has(> ul .sidenav-list-item[aria-expanded="true"]) { /* When flyout is expanded */
+    .sidenav-toggler {
+      @include fade-out;
     }
   }
 }
