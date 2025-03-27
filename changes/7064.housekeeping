@@ -1,0 +1,2 @@
+Updated CI to use Poetry 1.8.5.
+Updated "upstream testing" CI to use Python 3.11.
