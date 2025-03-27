@@ -65,6 +65,11 @@ def cable_status_color_css(record):
         return CABLE_STATUS_TO_CSS_CLASS.get(status_color, "")
 
 
+def get_network_driver_mapping_for_platform(platform):
+    tool_names = get_network_driver_mapping_tool_names()
+    return {tool_name: platform.network_driver_mappings.get(tool_name) for tool_name in tool_names}
+
+
 def get_network_driver_mapping_tool_names():
     """
     Return a list of all available network driver tool names derived from the netutils library and the optional NETWORK_DRIVERS setting.
@@ -74,7 +79,7 @@ def get_network_driver_mapping_tool_names():
     network_driver_names = NETUTILS_NETWORK_DRIVER_MAPPING_NAMES.copy()
     network_driver_names.update(get_settings_or_config("NETWORK_DRIVERS", fallback={}).keys())
 
-    return sorted(network_driver_names)
+    return {key: "" for key in sorted(network_driver_names)}
 
 
 def get_all_network_driver_mappings():

@@ -57,7 +57,10 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
-from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_driver_mapping_tool_names
+from nautobot.dcim.utils import (
+    get_all_network_driver_mappings,
+    get_network_driver_mapping_for_platform,
+)
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
@@ -1668,8 +1671,6 @@ class ModuleBayTemplateUIViewSet(
 #
 # Platforms
 #
-
-
 class PlatformUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.PlatformBulkEditForm
     filterset_class = filters.PlatformFilterSet
@@ -1678,9 +1679,7 @@ class PlatformUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.PlatformSerializer
     table_class = tables.PlatformTable
     queryset = Platform.objects.all()
-    filterset = filters.PlatformFilterSet
 
-    # Define the object detail content layout (fields, tables, etc.)
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
@@ -1688,10 +1687,11 @@ class PlatformUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 fields=["description", "manufacturer", "napalm_driver", "napalm_args", "network_driver"],
             ),
-            object_detail.ObjectFieldsPanel(
+            object_detail.KeyValueTablePanel(
                 weight=100,
                 section=SectionChoices.RIGHT_HALF,
-                fields=["network_driver_mappings"],
+                context_data_key="network_driver_tool_names",
+                label="Network Driver Mappings",
             ),
             object_detail.ObjectsTablePanel(
                 weight=100,
@@ -1703,33 +1703,29 @@ class PlatformUIViewSet(NautobotUIViewSet):
         ),
     )
 
-    # Combine the logic from both get_extra_context methods
     def get_extra_context(self, request, instance):
-        # Fetch the associated devices for the platform
-        devices = (
-            Device.objects.restrict(request.user, "view")
-            .filter(platform=instance)
-            .select_related("status", "location", "tenant", "rack", "device_type", "role")
-        )
+        if self.action == "retrieve":
+            devices = (
+                Device.objects.restrict(request.user, "view")
+                .filter(platform=instance)
+                .select_related("status", "location", "tenant", "rack", "device_type", "role")
+            )
 
-        device_table = tables.DeviceTable(devices)
+            device_table = tables.DeviceTable(devices)
 
-        # Pagination setup for the device table
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(device_table)
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(device_table)
 
-        # Return all necessary context for the view
-        return {
-            "device_table": device_table,
-            "network_driver_tool_names": get_network_driver_mapping_tool_names(),
-            "network_driver_names": sorted(
-                get_all_network_driver_mappings().keys()
-            ),  # Sorted list of network driver names
-            **super().get_extra_context(request, instance),  # Include any extra context from the parent class
-        }
+            return {
+                "device_table": device_table,
+                "network_driver_tool_names": get_network_driver_mapping_for_platform(instance),
+                "network_driver_names": sorted(get_all_network_driver_mappings().keys()),
+                **super().get_extra_context(request, instance),
+            }
+        return super().get_extra_context(request, instance)
 
 
 #
