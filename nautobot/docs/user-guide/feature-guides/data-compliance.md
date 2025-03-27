@@ -10,6 +10,20 @@ This is ideal for implementing some kind of business logic or standardization re
 
 The `DataComplianceRule` class takes advantage of the [CustomValidator](../../development/apps/api/platform-features/custom-validators.md) workflow. The basic idea is that during an object's `full_clean` method call, any `DataComplianceRule` classes are called to run their `clean` method. That method calls the object class's `audit` method, which you should implement. The expected return value of the `audit` method is `None`; however, any issues found during the `audit` method should raise a `ComplianceError`. Multiple key-value pairs can be passed in to a `ComplianceError`. The data within a `ComplianceError` is used by the `clean` method to create `DataCompliance` objects which relate the given object to the `DataComplianceRule` class, the attribute checked, and the message passed into the `ComplianceError` as to why the attribute is not valid. If there are no `ComplianceErrors` raised within the `audit` method, any existing `DataCompliance` objects for the given object and `DataComplianceRule` pair are marked as valid.
 
+```mermaid
+---
+title: Data Compliance WorkFlow Diagram
+---
+flowchart LR
+    A["Object"] -- full_clean() invoked --> B("Data Compliance Rules")
+    B -- clean() methods invoked --> C["Object"]
+    C -- audit() method invoked --> D["audit() return value"]
+    D -- None --> E["Object is valid"]
+    D -- ComplianceError --> F["Object is invalid"]
+    E --> G["Mark existing DataCompliance objects valid"]
+    F --> H["Generate new DataCompliance objects for invalid attributes"]
+```
+
 `DataCompliance` objects are only created for the attribute `__all__` (to represent the overall status) and attributes that have at some point been invalid. As an example, suppose there is a `DataComplianceRule` that checks the `location_type` and `status` attributes of a Location object named Location A. When this rule is run for Location A, both attributes are valid, so the only `DataCompliance` object created would be for `__all__` with a value of valid. Then, suppose Location A's `location_type` attribute is edited in a way that makes it invalid. A new `DataCompliance` object would be created for `location_type` stating why it is invalid, and the `__all__` object would be updated to now be invalid. Then, if `location_type` is edited again to bring it back into compliance, the `DataCompliance` objects for `location_type` and `__all__` would be updated to be valid.
 
 Any `DataComplianceRule` class can have a `name` defined to provide a friendly name to be shown within in the UI. The `enforce` attribute can also be set to decide whether or not the `ComplianceError` caught in the `audit` method is raised again to the `clean` method, acting like a `ValidationError` wherever the original `full_clean` was called. Setting `enforce` to `True` changes the `DataComplianceRule` from a passive validation of data to an active enforcement of the logic within it.
@@ -69,9 +83,9 @@ class DesiredClassName(DataComplianceRule):
 
 After your Git repository is configured and rule class(es) written, add the repository to Nautobot from `Extensibility -> Data Sources -> Git Repositories`. Select `data compliance rules` for the 'provides' field. This will add/sync your repository and automatically find your data compliance rule classes.
 
-#### Writing Data Compliance Rules within the App
+#### Writing Data Compliance Rules within a Custom App
 
-To write data compliance rules within the app itself, add the classes that implement `DataComplianceRule` within `nautobot/nautobot_data_validation_engine/custom_validators.py`.
+To write data compliance rules within your own Custom App, add the classes that implement `DataComplianceRule` within `<nautobot-app-custom-app>/<nautobot_custom_app>/custom_validators.py`.
 
 Below is a template data compliance rule class in `custom_validators/custom_validators.py` with the app's code:
 
