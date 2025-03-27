@@ -26,9 +26,6 @@ Nautobot requires at least one worker to consume background tasks required for a
 nautobot-server celery --help
 ```
 
-+/- 1.1.0 "Celery added to Nautobot"
-    Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated*. RQ and the `@job` decorator for custom tasks were still supported for the remainder of the 1.x.y releases, but users should [migrate the primary worker to Celery](#migrating-to-celery-from-rq).
-
 --- 2.0.0 "RQ removed from Nautobot"
     Support for RQ has been completely removed from Nautobot.
 
@@ -175,9 +172,6 @@ Next, we will setup the `systemd` units for the Celery worker and Celery Beat sc
 
 #### Celery Worker
 
-+++ 1.1.0 "Celery added to Nautobot"
-    Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated* and has been replaced with Celery. RQ and the `@job` decorator for custom tasks were still supported for the remainder of the 1.x.y releases, but users should [migrate the primary worker to Celery](#migrating-to-celery-from-rq).
-
 The Celery worker service consumes tasks from background task queues and is required for taking advantage of advanced
 Nautobot features including [Jobs](../../platform-functionality/jobs/index.md), [Custom
 Fields](../../platform-functionality/customfield.md), and [Git Repositories](../../platform-functionality/gitrepository.md), among others.
@@ -223,8 +217,6 @@ WantedBy=multi-user.target
 ```
 
 #### Celery Beat Scheduler
-
-+++ 1.2.0 "Celery Beat added to Nautobot"
 
 The Celery Beat scheduler enables the periodic execution of and scheduling of background tasks. It is required to take advantage of the [job scheduling and approval](../../platform-functionality/jobs/job-scheduling-and-approvals.md) features.
 
@@ -364,7 +356,7 @@ Please see [Computed fields with fallback value that is unicode results in Opera
 
 ### SVG images not rendered
 
-When serving Nautobot directly from uWSGI on RedHat or CentOS there may be a problem rendering .svg images to include the Nautobot logo. On the RedHat based operating systems there is no file `/etc/mime.types` by default, unfortunately, uWSGI looks for this file to serve static files (see [Serving static files with uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/StaticFiles.html#mime-types)). To work around this copy the file `/etc/mime.types` from a known good system for example an Ubuntu/Debian system or even the Nautobot container to /opt/nautobot/mime.types. Then add the following line to your `uwsgi.ini` file and restart the Nautobot services:
+When serving Nautobot directly from uWSGI on RedHat or CentOS there may be a problem rendering .svg images to include the Nautobot logo. On the RedHat based operating systems there is no file `/etc/mime.types` by default, unfortunately, uWSGI looks for this file to serve static files (see [Serving static files with uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/StaticFiles.html#mime-types)). To work around this copy the file `/etc/mime.types` from a known good system for example an Ubuntu/Debian system or even the Nautobot container to `/opt/nautobot/mime.types`. Then add the following line to your `uwsgi.ini` file and restart the Nautobot services:
 
 ```no-highlight title="Add MIME file settings to uwsgi.ini"
 mime-file = /opt/nautobot/mime.types

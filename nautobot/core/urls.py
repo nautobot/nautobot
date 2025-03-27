@@ -46,6 +46,7 @@ urlpatterns = [
     path("users/", include("nautobot.users.urls", "users")),
     path("virtualization/", include("nautobot.virtualization.urls")),
     path("wireless/", include("nautobot.wireless.urls")),
+    path("data-validation-engine/", include("nautobot.nautobot_data_validation_engine.urls")),
     # API
     path("api/", include("nautobot.core.api.urls")),
     # GraphQL

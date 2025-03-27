@@ -14,9 +14,9 @@ So if you have any concerns with running Celery workers in your Kubernetes deplo
 
 ## How to Configure Environment Variables
 
-### NAUTOBOT_KUBERNETES_JOB_MANIFEST
+### `NAUTOBOT_KUBERNETES_JOB_MANIFEST`
 
-This environment variable should store a [Kubernetes Job](https://kubernetes.io/docs/concepts/workloads/controllers/job/) template as a python dictionary. Below is a sample kubernetes job manifest.
+This environment variable should store a [Kubernetes Job](https://kubernetes.io/docs/concepts/workloads/controllers/job/) template as a Python dictionary. Below is a sample kubernetes job manifest.
 
 !!!important
     Ensure this job template uses the same Docker image as your Nautobot Kubernetes deployment. You can specify the image name in spec.template.spec.containers.image. Additionally, configure and map the required environment variables to corresponding [Kubernetes ConfigMap](https://kubernetes.io/docs/concepts/configuration/configmap/) instances. These variables can be defined in the spec.template.spec.containers.env list. For consistency, it is recommended to use the same environment configuration for this Job manifest as that of your Nautobot Kubernetes deployment.
@@ -87,11 +87,11 @@ This environment variable should store a [Kubernetes Job](https://kubernetes.io/
 }
 ```
 
-### NAUTOBOT_KUBERNETES_JOB_POD_NAME
+### `NAUTOBOT_KUBERNETES_JOB_POD_NAME`
 
-The default value for this environment variable is "nautobot-job". You can modify this value as needed; however, ensure that `metadata.name` field in NAUTOBOT_KUBERNETES_JOB_MANIFEST is updated accordingly to maintain consistencty
+The default value for this environment variable is `"nautobot-job"`. You can modify this value as needed; however, ensure that `metadata.name` field in `NAUTOBOT_KUBERNETES_JOB_MANIFEST` is updated accordingly to maintain consistencty
 
-### NAUTOBOT_KUBERNETES_JOB_POD_NAMESPACE
+### `NAUTOBOT_KUBERNETES_JOB_POD_NAMESPACE`
 
 The default value for this environment variable is "default". However, this value could be inaccurate depending on the setup of your Nautobot deployment. To ensure you have the right value for this variable. You can run the command `kubectl describe pod <nautobot-pod-name>` and you should see an output similar to what is below:
 
@@ -113,7 +113,7 @@ IP:               10.244.1.148
 
 Note that the field with label `Namespace` tells you exactly what namespace your Nautobot deployment is in and what value you should assign to the environment variable `NAUTOBOT_KUBERNETES_JOB_POD_NAMESPACE`. To ensure you have the right value for this variable. You can run the command `kubectl describe pod <nautobot-pod-name>` and you should see an output similar to what is below:
 
-### NAUTOBOT_KUBERNETES_DEFAULT_SERVICE_ADDRESS
+### `NAUTOBOT_KUBERNETES_DEFAULT_SERVICE_ADDRESS`
 
 The default value for this environment variable is <https://kubernetes.default.svc>. However, this value may vary depending on your Nautobot deployment setup. The format for the base URL is `https://<kubernetes-service-name>.<kubernetes-service-namespace>.svc.`
 

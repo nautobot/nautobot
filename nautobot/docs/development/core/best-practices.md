@@ -142,9 +142,6 @@ from nautobot.core.utils.lookup import get_route_for_model
 
 This utility function supports both UI and API views for both Nautobot core apps and Nautobot Apps.
 
-+++ 1.4.3
-    Support for generating API routes was added to `get_route_for_model()` by passing the argument `api=True`.
-
 ### UI Routes
 
 Instead of:
@@ -390,7 +387,7 @@ Consider this example from `nautobot.dcim.filters.DeviceFilterSet.pass_through_p
         return queryset.exclude(frontports__isnull=value, rearports__isnull=value)
 ```
 
-The default `lookup_expr` unless otherwise specified is “exact”, as seen in [django_filters.conf](https://github.com/carltongibson/django-filter/blob/main/django_filters/conf.py#L10):
+The default `lookup_expr` unless otherwise specified is “exact”, as seen in the [`django_filters.conf`](https://github.com/carltongibson/django-filter/blob/main/django_filters/conf.py#L10) module:
 
 ```python
   'DEFAULT_LOOKUP_EXPR': 'exact',
@@ -469,8 +466,3 @@ filterset.qs.filter(query).count()  # 339
 - Reversibility may not always necessarily be required, but by properly defining `field_name`, `lookup_expr`, and `exclude` on filter fields, **introspection becomes deterministic and reversible queries can be reliably generated as needed.**
 - For exceptions such as `DeviceFilterSet.has_primary_ip` where it checks for both `Device.primary_ip4` OR `Device.primary_ip6`, method filters may still be necessary, however, they would be **the exception and not the norm.**
 - The good news is that in the core there are not that many of these filter methods defined, but we also don’t want to see them continue to proliferate.
-
-## Using NautobotUIViewSet for App Development
-
-+++ 1.4.0
-    Using `NautobotUIViewSet` for [App development](../apps/api/views/nautobotuiviewset.md) is strongly recommended.

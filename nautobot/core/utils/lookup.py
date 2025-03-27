@@ -250,6 +250,11 @@ def get_model_for_view_name(view_name):
     Return the model class associated with the given view_name e.g. "circuits:circuit_detail", "dcim:device_list" and etc.
     If the app_label or model_name contained by the given view_name is invalid, this will return `None`.
     """
+    if view_name == "users-api:group-detail":
+        return Group
+    if view_name == "extras-api:contenttype-detail":
+        return ContentType
+
     split_view_name = view_name.split(":")
     if len(split_view_name) == 2:
         app_label, model_name = split_view_name  # dcim, device_list
@@ -257,7 +262,13 @@ def get_model_for_view_name(view_name):
         _, app_label, model_name = split_view_name  # plugins, app_name, model_list
     else:
         raise ValueError(f"Unexpected View Name: {view_name}")
-    model_name = model_name.split("_")[0]  # device
+
+    delimiter = "_"
+    if app_label.endswith("-api"):
+        app_label = app_label.replace("-api", "")
+        delimiter = "-"
+
+    model_name = model_name.split(delimiter)[0]  # device
 
     try:
         model = apps.get_model(app_label=app_label, model_name=model_name)
@@ -414,6 +425,8 @@ def get_url_for_url_pattern(url_pattern):
     # Fixup tokens in path-style "classic" view URLs:
     # "/admin/users/user/<id>/password/"
     url = re.sub(r"<id>", "00000000-0000-0000-0000-000000000000", url)
+    # "/data-validation-engine/data-compliance/<model>/00000000-0000-0000-0000-000000000000/"
+    url = re.sub(r"<model>", "circuits.circuit", url)
     # "/silk/request/<uuid:request_id>/profile/<int:profile_id>/"
     url = re.sub(r"<int:\w+>", "1", url)
     # "/admin/admin/logentry/<path:object_id>/"

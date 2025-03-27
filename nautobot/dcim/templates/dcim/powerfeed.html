@@ -39,7 +39,7 @@
                     <td>Connected Device</td>
                     <td>
                         {% if object.connected_endpoint %}
-                            {{ object.connected_endpoint.device|hyperlinked_object }}
+                            {{ object.connected_endpoint.parent|hyperlinked_object }}
                             ({{ object.connected_endpoint }})
                         {% else %}
                             <span class="text-muted">None</span>
@@ -110,8 +110,13 @@
                     </tr>
                     {% if object.connected_endpoint %}
                         <tr>
-                            <td>Device</td>
-                            <td>{{ object.connected_endpoint.device|hyperlinked_object }}</td>
+                            {% if object.connected_endpoint.device %}
+                                <td>Device</td>
+                                <td>{{ object.connected_endpoint.device|hyperlinked_object }}</td>
+                            {% else %}
+                                <td>Module</td>
+                                <td>{{ object.connected_endpoint.module|hyperlinked_object }}</td>
+                            {% endif %}
                         </tr>
                         <tr>
                             <td>Power Port</td>

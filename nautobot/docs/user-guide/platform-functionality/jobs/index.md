@@ -102,9 +102,6 @@ It is a key concept to understand the 2 `class_path` elements:
 
 The `class_path` is often represented as a string in the format of `<module_name>.<JobClassName>`, such as `example.MyJobWithNoVars` or `nautobot_golden_config.jobs.BackupJob`. Understanding the definitions of these elements will be important in running jobs programmatically.
 
-+/- 1.3.0
-    With the addition of Job database models, it is now generally possible and preferable to refer to a job by its UUID primary key, similar to other Nautobot database models, rather than its `class_path`.
-
 +/- 2.0.0
     The Job database model `name` field is now enforced to be globally unique and so is also an option for uniquely identifying Job records.
 
@@ -180,10 +177,7 @@ nautobot-server runjob [--username <username>] [--local] [--data <data>] <class_
 !!! note
     [See above](#jobs-and-class_path) for `class_path` definitions.
 
-+++ 1.3.10
-    The `--data` and `--local` parameters were added.
-
-    The `--data` parameter must be a JSON string, e.g. `--data='{"string_variable": "somevalue", "integer_variable": 123}'`
+The `--data` parameter must be a JSON string, e.g. `--data='{"string_variable": "somevalue", "integer_variable": 123}'`
 
 Using the same example shown in the API:
 

@@ -131,16 +131,20 @@ class GitRepository(PrimaryModel):
 
     def get_latest_sync(self):
         """
-        Return a `JobResult` for the latest sync operation.
+        Return a `JobResult` for the latest sync operation if one has occurred.
 
         Returns:
-            JobResult
+            Returns a `JobResult` if the repo has been synced before, otherwise returns None.
         """
         from nautobot.extras.models import JobResult
 
         # This will match all "GitRepository" jobs (pull/refresh, dry-run, etc.)
         prefix = "nautobot.core.jobs.GitRepository"
-        return JobResult.objects.filter(task_name__startswith=prefix, task_kwargs__repository=self.pk).latest()
+
+        if JobResult.objects.filter(task_name__startswith=prefix, task_kwargs__repository=self.pk).exists():
+            return JobResult.objects.filter(task_name__startswith=prefix, task_kwargs__repository=self.pk).latest()
+        else:
+            return None
 
     def to_csv(self):
         return (
@@ -216,6 +220,8 @@ class GitRepository(PrimaryModel):
         Returns:
             Returns the absolute path of the cloned repo if clone was successful, otherwise returns None.
         """
+        from nautobot.extras.datasources import get_repo_access_url
+
         if branch and head:
             raise ValueError("Cannot specify both branch and head")
 
@@ -229,7 +235,8 @@ class GitRepository(PrimaryModel):
             branch = self.branch
 
         try:
-            repo_helper = GitRepo(path_name, self.remote_url, depth=depth, branch=branch)
+            remote_url = get_repo_access_url(self)
+            repo_helper = GitRepo(path_name, remote_url, depth=depth, branch=branch)
             if head:
                 repo_helper.checkout(branch, head)
         except Exception as e:

@@ -1,4 +1,4 @@
-from nautobot.extras.api.views import NautobotModelViewSet
+from nautobot.extras.api.views import ModelViewSet, NautobotModelViewSet
 from nautobot.wireless import filters, models
 
 from . import serializers
@@ -22,13 +22,13 @@ class WirelessNetworkViewSet(NautobotModelViewSet):
     filterset_class = filters.WirelessNetworkFilterSet
 
 
-class ControllerManagedDeviceGroupWirelessNetworkAssignmentViewSet(NautobotModelViewSet):
+class ControllerManagedDeviceGroupWirelessNetworkAssignmentViewSet(ModelViewSet):
     queryset = models.ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.all()
     serializer_class = serializers.ControllerManagedDeviceGroupWirelessNetworkAssignmentSerializer
     filterset_class = filters.ControllerManagedDeviceGroupWirelessNetworkAssignmentFilterSet
 
 
-class ControllerManagedDeviceGroupRadioProfileAssignmentViewSet(NautobotModelViewSet):
+class ControllerManagedDeviceGroupRadioProfileAssignmentViewSet(ModelViewSet):
     queryset = models.ControllerManagedDeviceGroupRadioProfileAssignment.objects.all()
     serializer_class = serializers.ControllerManagedDeviceGroupRadioProfileAssignmentSerializer
     filterset_class = filters.ControllerManagedDeviceGroupRadioProfileAssignmentFilterSet
