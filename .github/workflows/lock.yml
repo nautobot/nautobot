@@ -9,7 +9,7 @@ jobs:
   lock:
     runs-on: ubuntu-latest
     steps:
-      - uses: dessant/lock-threads@v2
+      - uses: dessant/lock-threads@f1a42f0f44eb83361d617a014663e1a76cf282d2 # v2
         with:
           github-token: ${{ github.token }}
           issue-lock-inactive-days: '90'
