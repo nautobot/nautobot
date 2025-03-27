@@ -3108,11 +3108,6 @@ class WebhookUIViewSet(NautobotUIViewSet):
         extra = super().get_extra_context(request, instance)
         if instance is None:
             return extra
-        extra.update(
-            {
-                "content_types": instance.content_types.order_by("app_label", "model"),
-            }
-        )
         return extra
 
 

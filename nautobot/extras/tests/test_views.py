@@ -3771,6 +3771,7 @@ class WebhookTestCase(
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = Webhook
 
@@ -3814,6 +3815,22 @@ class WebhookTestCase(
             "payload_url": "http://test-url.com/test-4",
             "http_method": "POST",
             "http_content_type": "application/json",
+        }
+        cls.bulk_edit_data = {
+            "name": "webhook-4",
+            "content_types": [obj_type.pk],
+            "enabled": True,
+            "type_create": True,
+            "type_update": True,
+            "type_delete": False,
+            "payload_url": "http://test-url.com/test-4",
+            "http_method": "POST",
+            "http_content_type": "application/json",
+            "additional_headers": "Authorization: Token abc123\nX-Custom-Header: ExampleValue",
+            "body_template": '{"event": "{{ event }}", "data": {{ data | tojson }}}',
+            "secret": "my-secret-key",
+            "ssl_verification": True,
+            "ca_file_path": "/etc/ssl/certs/ca-certificates.crt",
         }
 
 
