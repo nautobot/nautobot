@@ -27,6 +27,11 @@ import 'jquery-ui';
 import 'select2';
 
 document.addEventListener('DOMContentLoaded', function() {
+  // Tooltips
+  // https://getbootstrap.com/docs/5.3/components/tooltips/#enable-tooltips
+  [...document.querySelectorAll('[data-bs-toggle="tooltip"]')].forEach(tooltip => new bootstrap.Tooltip(tooltip));
+
+  // Sidenav
   document.querySelector('.sidenav-toggler').addEventListener('click', (event) => {
     const toggler = event.currentTarget;
 

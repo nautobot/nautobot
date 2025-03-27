@@ -138,6 +138,12 @@ $link-hover-decoration: underline;
 $link-color-dark:       $primary-text-emphasis-dark;
 $link-hover-color-dark: $link-color-dark;
 
+/* Grid columns */
+$grid-gutter-width: map.get($spacers, 20);
+
+/* Container padding */
+$container-padding-x: $grid-gutter-width * 2;
+
 /* Components */
 /* Use `rem` instead of `px` to enable arithmetics with `$spacers`. */
 $border-width:             0.0625rem; /* 1px */
@@ -854,6 +860,18 @@ body {
   &:has(> ul .sidenav-list-item[aria-expanded="true"]) { /* When flyout is expanded */
     .sidenav-toggler {
       @include fade-out;
+    }
+  }
+}
+
+/* Footer */
+#footer {
+  a {
+    color: inherit;
+
+    &:focus-visible,
+    &:hover {
+      color: var(--#{$prefix}primary-text-emphasis);
     }
   }
 }
