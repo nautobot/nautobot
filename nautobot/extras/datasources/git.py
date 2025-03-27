@@ -1050,13 +1050,13 @@ def delete_git_graphql_queries(repository_record, job_result, preserve=None):
                 job_result.log(error_msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="graphql queries")
 
 
-def get_data_compliance_classes_from_git_repo(repository_record, job_result, delete=False):  # pylint: disable=W0613
+def refresh_git_data_compliance_rules(repository_record, job_result, delete=False):  # pylint: disable=W0613
     """Callback for repo refresh."""
-    from nautobot.nautobot_data_validation_engine.custom_validators import get_classes_from_git_repo
+    from nautobot.nautobot_data_validation_engine.custom_validators import get_data_compliance_classes_from_git_repo
 
     job_result.log("Successfully pulled git repo", level_choice=LogLevelChoices.LOG_INFO)
     # TODO should we call ensure_git_repository as well to skip reloading the data compliance rules if the repo is not updated?
-    for compliance_class in get_classes_from_git_repo(repository_record):
+    for compliance_class in get_data_compliance_classes_from_git_repo(repository_record):
         job_result.log(f"Found class {compliance_class.__name__!s}", level_choice=LogLevelChoices.LOG_INFO)
 
 
@@ -1119,7 +1119,7 @@ register_datasource_contents(
                 name="data compliance rules",
                 content_identifier="nautobot_data_validation_engine.data_compliance_rules",
                 icon="mdi-file-document-outline",
-                callback=get_data_compliance_classes_from_git_repo,
+                callback=refresh_git_data_compliance_rules,
             ),
         ),
     ]

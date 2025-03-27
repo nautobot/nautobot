@@ -44,11 +44,11 @@ from nautobot.extras.jobs import (
 from nautobot.extras.models import ExportTemplate, GitRepository
 from nautobot.extras.plugins import CustomValidator, ValidationError
 from nautobot.extras.registry import registry
+from nautobot.nautobot_data_validation_engine import models
 from nautobot.nautobot_data_validation_engine.custom_validators import (
-    get_classes_from_git_repo,
+    get_data_compliance_classes_from_git_repo,
     get_data_compliance_rules_map,
 )
-from nautobot.nautobot_data_validation_engine.models import DataCompliance
 
 name = "System Jobs"
 
@@ -380,7 +380,7 @@ def get_data_compliance_rules():
     # Get rules from Git Repositories
     for repo in GitRepository.objects.all():
         if "nautobot_data_validation_engine.data_compliance_rules" in repo.provided_contents:
-            validators.extend(get_classes_from_git_repo(repo))
+            validators.extend(get_data_compliance_classes_from_git_repo(repo))
     return validators
 
 
@@ -397,7 +397,7 @@ def get_data_compliance_choices():
 def clean_compliance_rules_results_for_instance(instance, excluded_pks):
     """Clean compliance results."""
     excluded_pks = excluded_pks or []
-    DataCompliance.objects.filter(
+    models.DataCompliance.objects.filter(
         object_id=instance.id,
         content_type=ContentType.objects.get_for_model(instance),
         compliance_class_name__endswith="CustomValidator",
@@ -455,11 +455,14 @@ class RunRegisteredDataComplianceRules(Job):
             | Q(requiredvalidationrule__isnull=False)
         )
 
+        # Gather model classes that have any of the user created rules:
+        # UniqueValidationRules, RegularExpressionValidationRules, MinMaxValidationRules, and RequiredValidationRules.
         model_classes = [ct.model_class() for ct in ContentType.objects.filter(query).distinct()]
 
         # Gather custom validators of built-in rules
         validator_dicts = []
         for model_class in model_classes:
+            # find the custom validators for the model from any custom apps that we might have
             model_custom_validators = registry["plugin_custom_validators"][model_class._meta.label_lower]
             # Get only DataValidationCustomValidators
             # otherwise, we would get all validators (more than those dynamically created)
@@ -487,7 +490,7 @@ class RunRegisteredDataComplianceRules(Job):
                             validator,
                             instance=validated_object,
                             message=error.messages[0],
-                            attribute=next(list(error.message_dict.keys())),
+                            attribute=next(iter(error.message_dict.keys())),
                             valid=False,
                         )
                         clean_compliance_rules_results_for_instance(instance=validated_object, excluded_pks=[result.pk])

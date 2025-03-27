@@ -93,7 +93,7 @@ class RegularExpressionValidationRuleFilterForm(NautobotFilterForm):
     # "CSV" field is being used here because it is using the slug-form input for
     # content-types, which improves UX.
     content_type = MultipleContentTypeField(
-        feature=None,
+        feature="custom_validators",
         queryset=ContentType.objects.all().order_by("app_label", "model"),
         choices_as_strings=True,
         required=False,
@@ -150,7 +150,7 @@ class MinMaxValidationRuleFilterForm(NautobotFilterForm):
     # "CSV" field is being used here because it is using the slug-form input for
     # content-types, which improves UX.
     content_type = MultipleContentTypeField(
-        feature=None,
+        feature="custom_validators",
         queryset=ContentType.objects.all().order_by("app_label", "model"),
         choices_as_strings=True,
         required=False,
@@ -216,7 +216,7 @@ class RequiredValidationRuleFilterForm(NautobotFilterForm):
     # "CSV" field is being used here because it is using the slug-form input for
     # content-types, which improves UX.
     content_type = MultipleContentTypeField(
-        feature=None,
+        feature="custom_validators",
         queryset=ContentType.objects.all().order_by("app_label", "model"),
         choices_as_strings=True,
         required=False,
@@ -280,7 +280,7 @@ class UniqueValidationRuleFilterForm(NautobotFilterForm):
     # "CSV" field is being used here because it is using the slug-form input for
     # content-types, which improves UX.
     content_type = MultipleContentTypeField(
-        feature=None,
+        feature="custom_validators",
         queryset=ContentType.objects.all().order_by("app_label", "model"),
         choices_as_strings=True,
         required=False,
@@ -302,7 +302,7 @@ class DataComplianceFilterForm(BootstrapMixin, forms.Form):
     validated_attribute = MultiValueCharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     valid = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     content_type = MultipleContentTypeField(
-        feature=None,
+        feature="custom_validators",
         queryset=ContentType.objects.all().order_by("app_label", "model"),
         choices_as_strings=True,
         required=False,

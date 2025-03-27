@@ -16,7 +16,7 @@ title: Data Compliance WorkFlow Diagram
 ---
 flowchart LR
     A["Object"] -- full_clean() invoked --> B("Data Compliance Rules")
-    B -- clean() methods invoked --> C["Object"]
+    B -- clean() methods invoked --> C["Data Compliance Rules"]
     C -- audit() method invoked --> D["audit() return value"]
     D -- None --> E["Object is valid"]
     D -- ComplianceError --> F["Object is invalid"]
