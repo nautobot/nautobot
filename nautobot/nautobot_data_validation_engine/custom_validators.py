@@ -147,7 +147,7 @@ class BaseValidator(CustomValidator):
             # Skip reimporting the code if the repo is not updated
             if not is_repo_updated:
                 continue
-            for compliance_class in get_classes_from_git_repo(repo):
+            for compliance_class in get_data_compliance_classes_from_git_repo(repo):
                 if (
                     f"{self.context['object']._meta.app_label}.{self.context['object']._meta.model_name}"
                     != compliance_class.model
@@ -194,7 +194,7 @@ def get_data_compliance_rules_map():
     return compliance_rulesets
 
 
-def get_classes_from_git_repo(repo: GitRepository):
+def get_data_compliance_classes_from_git_repo(repo: GitRepository):
     """Get list of DataComplianceRule classes found within the custom_validators folder of the given repo."""
     ensure_git_repository(repo, head=repo.current_head)
     class_list = []
@@ -315,6 +315,21 @@ class DataComplianceRule(CustomValidator):
         result.validated_save()
 
 
+class CustomValidatorIterator:
+    """Iterator that generates PluginCustomValidator classes for each model registered in the extras feature query registry 'custom_validators'."""
+
+    def __iter__(self):
+        """Return a generator of PluginCustomValidator classes for each registered model."""
+        for app_label, models in registry["model_features"]["custom_validators"].items():
+            for model in models:
+                yield type(
+                    f"{app_label.capitalize()}{model.capitalize()}CustomValidator",
+                    (BaseValidator,),
+                    {"model": f"{app_label}.{model}"},
+                )
+
+
+custom_validators = CustomValidatorIterator()
 #
 # Note that with the move to core, DVE no longer registers its own custom validators via the apps API.
 # Instead, BaseValidator instances are automatically added via nautobot.extras.plugins.validators.custom_validator_clean

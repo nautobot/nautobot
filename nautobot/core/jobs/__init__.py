@@ -46,6 +46,7 @@ from nautobot.extras.plugins import CustomValidator, ValidationError
 from nautobot.extras.registry import registry
 from nautobot.nautobot_data_validation_engine import models
 from nautobot.nautobot_data_validation_engine.custom_validators import (
+    BaseValidator,
     get_data_compliance_classes_from_git_repo,
     get_data_compliance_rules_map,
 )
@@ -459,20 +460,16 @@ class RunRegisteredDataComplianceRules(Job):
         # UniqueValidationRules, RegularExpressionValidationRules, MinMaxValidationRules, and RequiredValidationRules.
         model_classes = [ct.model_class() for ct in ContentType.objects.filter(query).distinct()]
 
-        # Gather custom validators of built-in rules
+        # Gather custom validators of user created rules
         validator_dicts = []
         for model_class in model_classes:
-            # find the custom validators for the model from any custom apps that we might have
             model_custom_validators = registry["plugin_custom_validators"][model_class._meta.label_lower]
-            # Get only DataValidationCustomValidators
+            # Get only subclasses of BaseValidator
+            # BaseValidator is the validator that enforces the user created rules:
+            # UniqueValidationRules, RegularExpressionValidationRules, MinMaxValidationRules, and RequiredValidationRules.
             # otherwise, we would get all validators (more than those dynamically created)
             validator_dicts.extend(
-                [
-                    {cv: model_class}
-                    for cv in model_custom_validators
-                    if cv.__name__
-                    == f"{model_class._meta.app_label.capitalize()}{model_class._meta.model_name.capitalize()}CustomValidator"
-                ]
+                [{cv: model_class} for cv in model_custom_validators if issubclass(cv, BaseValidator)]
             )
 
         # Run validation on existing objects and add to report
