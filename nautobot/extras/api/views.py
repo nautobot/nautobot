@@ -472,8 +472,8 @@ class GraphQLQueryViewSet(NotesViewSetMixin, ModelViewSet):
     def run(self, request, pk):
         try:
             query = get_object_or_404(self.queryset, pk=pk)
-            result = execute_saved_query(query.name, variables=request.data.get("variables"), request=request).to_dict()
-            return Response(result)
+            result = execute_saved_query(query.name, variables=request.data.get("variables"), request=request)
+            return Response({"data": result.data, "errors": result.errors})
         except GraphQLError as error:
             return Response(
                 {"errors": [GraphQLView.format_error(error)]},
