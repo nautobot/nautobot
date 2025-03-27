@@ -2071,14 +2071,45 @@ class TagBulkEditForm(NautobotBulkEditForm):
 #
 # Webhooks
 #
-class WebhookBulkEditForm(NautobotBulkEditForm):
+class WebhookBulkEditForm(BootstrapMixin, CustomFieldModelBulkEditFormMixin, NoteModelBulkEditFormMixin):
     """Bulk edit form for Webhook objects."""
 
     pk = forms.ModelMultipleChoiceField(queryset=Webhook.objects.all(), widget=forms.MultipleHiddenInput())
-    enabled = forms.BooleanField(required=False)
-    type_create = forms.BooleanField(required=False)
-    type_update = forms.BooleanField(required=False)
-    type_delete = forms.BooleanField(required=False)
+
+    # Boolean fields
+    enabled = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    type_create = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    type_update = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    type_delete = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    ssl_verification = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+
+    # Editable string fields
+    payload_url = forms.CharField(required=False, max_length=500)
+    secret = forms.CharField(required=False, max_length=Webhook._meta.get_field("secret").max_length)
+    ca_file_path = forms.CharField(required=False, max_length=4096)
+    http_content_type = forms.CharField(
+        required=False, max_length=Webhook._meta.get_field("http_content_type").max_length
+    )
+
+    # Choice field
+    http_method = forms.ChoiceField(required=False, choices=WebhookHttpMethodChoices.CHOICES)
+
+    # M2M: Content Types
+    # add_content_types = forms.ModelMultipleChoiceField(
+    #     queryset=ContentType.objects.filter(FeatureQuery("webhooks")),
+    #     required=False,
+    #     label="Add Content Types",
+    #     help_text="Select content types to ADD to the existing list.",
+    #     widget=forms.SelectMultiple(attrs={"size": "8"})
+    # )
+
+    # remove_content_types = forms.ModelMultipleChoiceField(
+    #     queryset=ContentType.objects.filter(FeatureQuery("webhooks")),
+    #     required=False,
+    #     label="Remove Content Types",
+    #     help_text="Select content types to REMOVE from the existing list.",
+    #     widget=forms.SelectMultiple(attrs={"size": "8"})
+    # )
 
     class Meta:
         model = Webhook
@@ -2087,6 +2118,13 @@ class WebhookBulkEditForm(NautobotBulkEditForm):
             "type_create",
             "type_update",
             "type_delete",
+            "http_method",
+            "http_content_type",
+            "ssl_verification",
+            "ca_file_path",
+            "payload_url",
+            "secret",
+            "content_types",
         )
 
 

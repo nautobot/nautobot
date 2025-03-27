@@ -36,7 +36,7 @@ router.register("saved-views", views.SavedViewUIViewSet)
 router.register("secrets", views.SecretUIViewSet)
 router.register("static-group-associations", views.StaticGroupAssociationUIViewSet)
 router.register("teams", views.TeamUIViewSet)
-router.register("webhook", views.WebhookUIViewSet)
+router.register("webhooks", views.WebhookUIViewSet)
 
 urlpatterns = [
     # Change logging
