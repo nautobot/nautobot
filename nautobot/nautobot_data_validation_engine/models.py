@@ -40,7 +40,7 @@ class ValidationRule(PrimaryModel):
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     field = models.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
     )
     content_type = models.ForeignKey(
         to=ContentType, on_delete=models.CASCADE, limit_choices_to=FeatureQuery("custom_validators")

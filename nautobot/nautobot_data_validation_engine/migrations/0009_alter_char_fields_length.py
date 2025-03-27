@@ -29,4 +29,24 @@ class Migration(migrations.Migration):
             name="name",
             field=models.CharField(max_length=255, unique=True),
         ),
+        migrations.AlterField(
+            model_name="minmaxvalidationrule",
+            name="field",
+            field=models.CharField(max_length=255),
+        ),
+        migrations.AlterField(
+            model_name="regularexpressionvalidationrule",
+            name="field",
+            field=models.CharField(max_length=255),
+        ),
+        migrations.AlterField(
+            model_name="requiredvalidationrule",
+            name="field",
+            field=models.CharField(max_length=255),
+        ),
+        migrations.AlterField(
+            model_name="uniquevalidationrule",
+            name="field",
+            field=models.CharField(max_length=255),
+        ),
     ]
