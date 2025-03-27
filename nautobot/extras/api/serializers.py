@@ -513,6 +513,7 @@ class GraphQLQueryInputSerializer(serializers.Serializer):
 
 class GraphQLQueryOutputSerializer(serializers.Serializer):
     data = serializers.DictField(default={})
+    errors = serializers.ListField(default=None)
 
 
 #
