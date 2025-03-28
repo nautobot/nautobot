@@ -842,4 +842,4 @@ Example output:
 Listening on port http://localhost:9000. Stop with CONTROL-C.
 ```
 
-Please see the guide on [Troubleshooting Webhooks](../../platform-functionality/webhook.md#troubleshooting) for more information.
+Please see the guide on [Troubleshooting Webhooks](../../platform-functionality/webhook.md#troubleshooting-webhooks) for more information.
