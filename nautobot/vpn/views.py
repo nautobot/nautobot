@@ -170,6 +170,7 @@ class VPNTunnelUIViewSet(NautobotUIViewSet):
                     "encapsulation",
                     "tenant",
                     "role",
+                    "status",
                     # "contact_associations",
                 ],
             ),

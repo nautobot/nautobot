@@ -200,7 +200,7 @@ class VPNPhase2PolicyBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm): 
     )
     pfs_group = forms.ChoiceField(
         required=False,
-        choices=add_blank_choice(choices.PfsGroupChoices),
+        choices=add_blank_choice(choices.DhGroupChoices),
         widget=StaticSelect2,
         label="Pfs Group",
     )
