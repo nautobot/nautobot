@@ -75,6 +75,11 @@ class VPNProfile(PrimaryModel):  # pylint: disable=too-many-ancestors
         """Stringify instance."""
         return self.name
 
+    @property
+    def priority_ph1_policy(self):
+        # TODO add trough-table with wait.
+        return "return with highest prio"
+
 
 @extras_features(
     "custom_links",
@@ -166,7 +171,7 @@ class VPNPhase2Policy(PrimaryModel):  # pylint: disable=too-many-ancestors
     )
     pfs_group = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
-        choices=choices.PfsGroupChoices,
+        choices=choices.DhGroupChoices,
         blank=True,
         help_text="Perfect Forward Secrecy group",
     )
@@ -204,7 +209,7 @@ class VPN(PrimaryModel):  # pylint: disable=too-many-ancestors
 
     vpn_profile = models.ForeignKey(
         to="vpn.VPNProfile",
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         related_name="vpns",
         default=None,
         blank=True,
@@ -215,7 +220,7 @@ class VPN(PrimaryModel):  # pylint: disable=too-many-ancestors
     vpn_id = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="VPN ID")
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         related_name="vpns",
         blank=True,
         null=True,
@@ -280,7 +285,7 @@ class VPNTunnel(PrimaryModel):  # pylint: disable=too-many-ancestors
     )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         related_name="vpn_tunnels",
         blank=True,
         null=True,
@@ -328,7 +333,7 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
     )
     vpn_tunnel = models.ForeignKey(
         to="vpn.VPNTunnel",
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,  # TODO add protection mechanism for hub and spoke.
         related_name="vpn_tunnel_endpoints",
         blank=False,
         null=False,
@@ -338,10 +343,10 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
         to="ipam.IPAddress",
         on_delete=models.PROTECT,
         related_name="vpn_tunnel_endpoints_src_ip",
-        blank=False,
-        null=False,
+        blank=True,
+        null=True,
         verbose_name="Source IP Address",
-    )
+    )  # TODO add validation source_ipaddress or source_interface must be defined.
     source_interface = models.OneToOneField(
         to="dcim.Interface",
         on_delete=models.SET_NULL,
@@ -361,7 +366,7 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
     destination_fqdn = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Destination FQDN")
     tunnel_interface = models.OneToOneField(
         to="dcim.Interface",
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         related_name="vpn_tunnel_endpoints_tunnel",
         blank=True,
         null=True,
@@ -409,7 +414,7 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
 
     @property
     def name(self):
-        return f"VPNTunnelEndpoint-{self.vpn_tunnel.name}"
+        return f"{self.vpn_tunnel.name} --> {self.source_ipaddress.address}"  # TODO IP or source interface.
 
     def __str__(self):
         """Stringify instance."""
