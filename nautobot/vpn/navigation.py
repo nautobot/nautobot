@@ -8,9 +8,47 @@ menu_items = (
         weight=250,
         groups=(
             NavMenuGroup(
-                name="VPN Models",  # TODO INIT you will likely want to change this.
+                name="VPN",  # TODO INIT you will likely want to change this.
                 weight=100,
                 items=(
+                    NavMenuItem(
+                        link="vpn:vpn_list",
+                        name="VPNs",  # TODO INIT Verify.
+                        weight=100,
+                        # TODO INIT The standard is to have these listed in reverse order of creation, changing the weight will influence the order.
+                        permissions=["vpn.view_vpn"],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="vpn:vpn_add",
+                                permissions=["vpn.add_vpn"],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="vpn:vpntunnel_list",
+                        name="VPN Tunnels",  # TODO INIT Verify.
+                        weight=100,
+                        # TODO INIT The standard is to have these listed in reverse order of creation, changing the weight will influence the order.
+                        permissions=["vpn.view_vpntunnel"],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="vpn:vpntunnel_add",
+                                permissions=["vpn.add_vpntunnel"],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="vpn:vpntunnelendpoint_list",
+                        name="VPN Tunnel Endpoints",  # TODO INIT Verify.
+                        weight=100,  # TODO INIT The standard is to have these listed in reverse order of creation, changing the weight will influence the order.
+                        permissions=["vpn.view_vpntunnelendpoint"],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="vpn:vpntunnelendpoint_add",
+                                permissions=["vpn.add_vpntunnelendpoint"],
+                            ),
+                        ),
+                    ),
                     NavMenuItem(
                         link="vpn:vpnprofile_list",
                         name="VPN Profiles",  # TODO INIT Verify.
@@ -44,42 +82,6 @@ menu_items = (
                             NavMenuAddButton(
                                 link="vpn:vpnphase2policy_add",
                                 permissions=["vpn.add_vpnphase2policy"],
-                            ),
-                        ),
-                    ),
-                    NavMenuItem(
-                        link="vpn:vpn_list",
-                        name="VPNs",  # TODO INIT Verify.
-                        weight=100,  # TODO INIT The standard is to have these listed in reverse order of creation, changing the weight will influence the order.
-                        permissions=["vpn.view_vpn"],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="vpn:vpn_add",
-                                permissions=["vpn.add_vpn"],
-                            ),
-                        ),
-                    ),
-                    NavMenuItem(
-                        link="vpn:vpntunnel_list",
-                        name="VPN Tunnels",  # TODO INIT Verify.
-                        weight=100,  # TODO INIT The standard is to have these listed in reverse order of creation, changing the weight will influence the order.
-                        permissions=["vpn.view_vpntunnel"],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="vpn:vpntunnel_add",
-                                permissions=["vpn.add_vpntunnel"],
-                            ),
-                        ),
-                    ),
-                    NavMenuItem(
-                        link="vpn:vpntunnelendpoint_list",
-                        name="VPN Tunnel Endpoints",  # TODO INIT Verify.
-                        weight=100,  # TODO INIT The standard is to have these listed in reverse order of creation, changing the weight will influence the order.
-                        permissions=["vpn.view_vpntunnelendpoint"],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="vpn:vpntunnelendpoint_add",
-                                permissions=["vpn.add_vpntunnelendpoint"],
                             ),
                         ),
                     ),

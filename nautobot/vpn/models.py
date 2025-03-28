@@ -406,6 +406,11 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
         verbose_name = "VPN Tunnel Endpoint"
 
     # TODO INIT Confirm the string representation of the model
+
+    @property
+    def name(self):
+        return f"VPNTunnelEndpoint-{self.vpn_tunnel.name}"
+
     def __str__(self):
         """Stringify instance."""
-        return f"VPNTunnelEndpoint-{self.vpn_tunnel.name}"
+        return self.name
