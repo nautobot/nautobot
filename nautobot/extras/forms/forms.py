@@ -2096,21 +2096,12 @@ class WebhookBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin):
         required=False,
         choices=add_blank_choice(WebhookHttpMethodChoices.CHOICES),
     )
-    # M2M: Content Types
-    add_content_types = forms.ModelMultipleChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("webhooks")()),
-        required=False,
-        label="Add Content Types",
-        help_text="Select content types to ADD to the existing list.",
-        widget=forms.SelectMultiple(attrs={"size": "8"}),
-    )
 
-    remove_content_types = forms.ModelMultipleChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("webhooks")()),
-        required=False,
-        label="Remove Content Types",
-        help_text="Select content types to REMOVE from the existing list.",
-        widget=forms.SelectMultiple(attrs={"size": "8"}),
+    add_content_types = MultipleContentTypeField(
+        limit_choices_to=FeatureQuery("webhooks"), required=False, label="Add Content Type(s)"
+    )
+    remove_content_types = MultipleContentTypeField(
+        limit_choices_to=FeatureQuery("webhooks"), required=False, label="Remove Content Type(s)"
     )
 
     class Meta:
