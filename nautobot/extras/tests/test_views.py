@@ -3584,6 +3584,7 @@ class StatusTestCase(
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = Status
 
@@ -3591,6 +3592,7 @@ class StatusTestCase(
     def setUpTestData(cls):
         # Status objects to test.
         content_type = ContentType.objects.get_for_model(Device)
+        content_type_2 = ContentType.objects.get_for_model(Interface)
 
         cls.form_data = {
             "name": "new_status",
@@ -3601,6 +3603,7 @@ class StatusTestCase(
 
         cls.bulk_edit_data = {
             "color": "000000",
+            "content_types": [content_type_2.pk],
         }
 
 
@@ -3790,13 +3793,14 @@ class WebhookTestCase(
         }
 
 
-class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class RoleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Role
 
     @classmethod
     def setUpTestData(cls):
         # Status objects to test.
         content_type = ContentType.objects.get_for_model(Device)
+        content_type_2 = ContentType.objects.get_for_model(Interface)
 
         cls.form_data = {
             "name": "New Role",
@@ -3809,6 +3813,7 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "color": "000000",
             "description": "I used to be a new role object.",
             "weight": 255,
+            "content_types": [content_type_2.pk],
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
