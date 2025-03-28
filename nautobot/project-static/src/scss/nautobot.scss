@@ -83,7 +83,8 @@ $light-border-subtle-dark:     $gray-05-dark;
 $dark-border-subtle-dark:      $gray-05-dark;
 
 /* Options */
-$enable-shadows: true;
+$enable-shadows:          true;
+$enable-negative-margins: true;
 
 $prefix: bs-;
 
@@ -868,6 +869,7 @@ body {
 #footer {
   a {
     color: inherit;
+    font-size: 0;
 
     &:focus-visible,
     &:hover {

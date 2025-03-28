@@ -4,12 +4,12 @@
 
 <footer id="footer">
     <div class="container-fluid bg-body-secondary text-secondary">
-        <div class="row row-cols-3">
-            <div class="col align-items-center d-flex gap-8 fs-5">
+        <div class="row row-cols-1 row-cols-lg-3">
+            <div class="col align-items-center d-flex flex-wrap fs-5 gap-8 justify-content-center lh-sm py-10 text-center flex-lg-nowrap justify-content-lg-start text-lg-start">
                 {% if request.user.is_authenticated %}
                     {% if settings.BRANDING_FILEPATHS.logo and settings.BRANDING_POWERED_BY_URL %}
                         <a
-                            class="align-items-center d-inline-flex gap-4 text-decoration-none"
+                            class="align-items-center d-inline-flex gap-4 my-n4 text-decoration-none"
                             href="{{ settings.BRANDING_POWERED_BY_URL }}"
                             target="_blank"
                         >
@@ -26,10 +26,10 @@
                     </span>
                 {% endif %}
             </div>
-            <div class="col lh-sm fs-5 py-10 text-center">
+            <div class="col fs-5 lh-sm py-10 text-center">
                 {% now 'Y-m-d H:i:s T' %}
             </div>
-            <div class="col align-items-center d-flex gap-8 justify-content-end text-end">
+            <div class="col align-items-center d-flex flex-wrap gap-8 justify-content-center py-6 text-center flex-lg-nowrap justify-content-lg-end text-lg-end">
                 {% if request.user.is_authenticated %}
                     <div class="d-flex" data-bs-toggle="tooltip" data-bs-title="Theme">
                         <a
