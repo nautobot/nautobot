@@ -1,6 +1,6 @@
 """Views for the vpn models."""
 
-from nautobot.apps.ui import ObjectDetailContent, ObjectFieldsPanel, SectionChoices
+from nautobot.apps.ui import ObjectDetailContent, ObjectFieldsPanel, ObjectsTablePanel, SectionChoices
 from nautobot.apps.views import NautobotUIViewSet
 
 from . import filters, forms, models, tables
@@ -19,7 +19,7 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
     queryset = models.VPNProfile.objects.all()
     serializer_class = serializers.VPNProfileSerializer
     table_class = tables.VPNProfileTable
-    base_template = "generic/object_retrieve.html"
+    # base_template = "generic/object_retrieve.html"
 
     object_detail_content = ObjectDetailContent(
         panels=[
@@ -57,7 +57,7 @@ class VPNPhase1PolicyUIViewSet(NautobotUIViewSet):
     queryset = models.VPNPhase1Policy.objects.all()
     serializer_class = serializers.VPNPhase1PolicySerializer
     table_class = tables.VPNPhase1PolicyTable
-    base_template = "generic/object_retrieve.html"
+    # base_template = "generic/object_retrieve.html"
 
     object_detail_content = ObjectDetailContent(
         panels=[
@@ -94,7 +94,7 @@ class VPNPhase2PolicyUIViewSet(NautobotUIViewSet):
     queryset = models.VPNPhase2Policy.objects.all()
     serializer_class = serializers.VPNPhase2PolicySerializer
     table_class = tables.VPNPhase2PolicyTable
-    base_template = "generic/object_retrieve.html"
+    # base_template = "generic/object_retrieve.html"
 
     object_detail_content = ObjectDetailContent(
         panels=[
@@ -128,7 +128,14 @@ class VPNUIViewSet(NautobotUIViewSet):
             ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
-                fields=["vpn_profile", "name", "description", "vpn_id", "tenant", "role", "contact_associations"],
+                fields=["vpn_profile", "name", "description", "vpn_id", "tenant", "role"],
+            ),
+            ObjectsTablePanel(
+                weight=200,
+                table_class=tables.VPNTunnelTable,
+                table_filter="vpn",
+                section=SectionChoices.FULL_WIDTH,
+                exclude_columns=[],
             ),
         ],
     )
@@ -163,8 +170,15 @@ class VPNTunnelUIViewSet(NautobotUIViewSet):
                     "encapsulation",
                     "tenant",
                     "role",
-                    "contact_associations",
+                    # "contact_associations",
                 ],
+            ),
+            ObjectsTablePanel(
+                weight=200,
+                table_class=tables.VPNTunnelEndpointTable,
+                table_filter="vpn_tunnel",
+                section=SectionChoices.FULL_WIDTH,
+                exclude_columns=[],
             ),
         ],
     )
@@ -201,7 +215,6 @@ class VPNTunnelEndpointUIViewSet(NautobotUIViewSet):
                     "protected_prefixes_dg",
                     "protected_prefixes",
                     "role",
-                    "contact_associations",
                 ],
             ),
         ],

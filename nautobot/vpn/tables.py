@@ -21,6 +21,7 @@ class VPNProfileTable(RoleTableMixin, BaseTable):
     """Table for VPNProfile list view."""
 
     pk = ToggleColumn()
+    name = tables.Column(linkify=True)
     vpn_phase1_policy_count = LinkedCountColumn(
         viewname="vpn:vpnphase1policy_list",
         verbose_name="VPN Phase 1 Policy",
@@ -42,9 +43,9 @@ class VPNProfileTable(RoleTableMixin, BaseTable):
         model = models.VPNProfile
         fields = (
             "pk",
+            "name",
             "vpn_phase1_policy_count",
             "vpn_phase2_policy_count",
-            "name",
             "description",
             "keepalive_enabled",
             "keepalive_interval",
@@ -56,9 +57,9 @@ class VPNProfileTable(RoleTableMixin, BaseTable):
         # TODO INIT Add or Remove the columns below to change the list view default columns.
         default_columns = (
             "pk",
+            "name",
             "vpn_phase1_policy_count",
             "vpn_phase2_policy_count",
-            "name",
             "description",
             "keepalive_enabled",
             "keepalive_interval",
@@ -75,6 +76,7 @@ class VPNPhase1PolicyTable(BaseTable):
     """Table for VPNPhase1Policy list view."""
 
     pk = ToggleColumn()
+    name = tables.Column(linkify=True)
     actions = ButtonsColumn(models.VPNPhase1Policy)
     tags = TagColumn(url_name="vpn:vpnphase1policy_list")
 
@@ -117,6 +119,7 @@ class VPNPhase2PolicyTable(BaseTable):
     """Table for VPNPhase2Policy list view."""
 
     pk = ToggleColumn()
+    name = tables.Column(linkify=True)
     actions = ButtonsColumn(models.VPNPhase2Policy)
     tags = TagColumn(url_name="vpn:vpnphase2policy_list")
 
@@ -151,6 +154,7 @@ class VPNTable(RoleTableMixin, BaseTable):
     """Table for VPN list view."""
 
     pk = ToggleColumn()
+    name = tables.Column(linkify=True)
     tenant = TenantColumn()
     # contact_associations_count = LinkedCountColumn(
     #     viewname="vpn:contactassociations_list",
@@ -167,9 +171,9 @@ class VPNTable(RoleTableMixin, BaseTable):
         model = models.VPN
         fields = (
             "pk",
-            "vpn_profile",
             "name",
             "description",
+            "vpn_profile",
             "vpn_id",
             "tenant",
             "role",
@@ -194,6 +198,7 @@ class VPNTunnelTable(StatusTableMixin, RoleTableMixin, BaseTable):
     """Table for VPNTunnel list view."""
 
     pk = ToggleColumn()
+    name = tables.Column(linkify=True)
     tenant = TenantColumn()
     # contact_associations_count = LinkedCountColumn(
     #     viewname="vpn:contactassociations_list",
@@ -210,10 +215,10 @@ class VPNTunnelTable(StatusTableMixin, RoleTableMixin, BaseTable):
         model = models.VPNTunnel
         fields = (
             "pk",
-            "vpn_profile",
-            "vpn",
             "name",
             "description",
+            "vpn",
+            "vpn_profile",
             "tunnel_id",
             "encapsulation",
             "tenant",
@@ -223,10 +228,10 @@ class VPNTunnelTable(StatusTableMixin, RoleTableMixin, BaseTable):
         # TODO INIT Add or Remove the columns below to change the list view default columns.
         default_columns = (
             "pk",
-            "vpn_profile",
-            "vpn",
             "name",
             "description",
+            "vpn",
+            "vpn_profile",
             "tunnel_id",
             "encapsulation",
             "tenant",
@@ -241,6 +246,7 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
     """Table for VPNTunnelEndpoint list view."""
 
     pk = ToggleColumn()
+    name = tables.Column(linkify=True)
     source_interface = tables.Column(linkify=True)
     tunnel_interface = tables.Column(linkify=True)
     protected_prefixes_dg_count = LinkedCountColumn(
@@ -270,6 +276,7 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
         model = models.VPNTunnelEndpoint
         fields = (
             "pk",
+            "name",
             "vpn_profile",
             "vpn_tunnel",
             "source_ipaddress",
@@ -285,6 +292,7 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
         # TODO INIT Add or Remove the columns below to change the list view default columns.
         default_columns = (
             "pk",
+            "name",
             "vpn_profile",
             "vpn_tunnel",
             "source_ipaddress",
