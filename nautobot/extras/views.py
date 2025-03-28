@@ -2951,6 +2951,7 @@ class StatusBulkEditView(generic.BulkEditView):
     queryset = Status.objects.all()
     table = tables.StatusTable
     form = forms.StatusBulkEditForm
+    filterset = filters.StatusFilterSet
 
 
 class StatusBulkDeleteView(generic.BulkDeleteView):
