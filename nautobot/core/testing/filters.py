@@ -22,7 +22,6 @@ from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.testing import views
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Tag, Team
-from nautobot.nautobot_data_validation_engine.filters import CustomContentTypeFilter
 from nautobot.tenancy import models
 
 
@@ -398,7 +397,6 @@ class FilterTestCases:
                             ContentTypeFilter,
                             ContentTypeMultipleChoiceFilter,
                             ContentTypeChoiceFilter,
-                            CustomContentTypeFilter,
                         ),
                     )
 
