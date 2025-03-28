@@ -335,7 +335,7 @@ class VPNTunnelBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # pyl
             "encapsulation",
             "tenant",
             "role",
-            "contact_associations",
+            # "contact_associations",
         ]
 
 
@@ -424,7 +424,7 @@ class VPNTunnelEndpointBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm)
             "protected_prefixes_dg",
             "protected_prefixes",
             "role",
-            "contact_associations",
+            # "contact_associations",
         ]
 
 
