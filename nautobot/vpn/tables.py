@@ -155,6 +155,11 @@ class VPNTable(RoleTableMixin, BaseTable):
 
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
+    tunnel_count = LinkedCountColumn(
+        viewname="vpn:vpntunnel_list",
+        verbose_name="VPN Tunnels",
+        url_params={"vpn": "pk"},
+    )
     tenant = TenantColumn()
     # contact_associations_count = LinkedCountColumn(
     #     viewname="vpn:contactassociations_list",
@@ -173,6 +178,7 @@ class VPNTable(RoleTableMixin, BaseTable):
             "pk",
             "name",
             "description",
+            "tunnel_count",
             "vpn_profile",
             "vpn_id",
             "tenant",
@@ -185,12 +191,14 @@ class VPNTable(RoleTableMixin, BaseTable):
             "vpn_profile",
             "name",
             "description",
+            "tunnel_count",
             "vpn_id",
             "tenant",
             "role",
             # "contact_associations_count",
             "actions",
         )
+        order_by = ["name"]
 
 
 class VPNTunnelTable(StatusTableMixin, RoleTableMixin, BaseTable):
@@ -199,6 +207,11 @@ class VPNTunnelTable(StatusTableMixin, RoleTableMixin, BaseTable):
 
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
+    tunnel_endpoints_count = LinkedCountColumn(
+        viewname="vpn:vpntunnelendpoint_list",
+        verbose_name="VPN Tunnel Endpoints",
+        url_params={"vpn_tunnel": "pk"},
+    )
     tenant = TenantColumn()
     # contact_associations_count = LinkedCountColumn(
     #     viewname="vpn:contactassociations_list",
@@ -220,9 +233,11 @@ class VPNTunnelTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "vpn",
             "vpn_profile",
             "tunnel_id",
+            "tunnel_endpoints_count",
             "encapsulation",
             "tenant",
             "role",
+            "status",
             # "contact_associations_count",
         )
         # TODO INIT Add or Remove the columns below to change the list view default columns.
@@ -233,12 +248,15 @@ class VPNTunnelTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "vpn",
             "vpn_profile",
             "tunnel_id",
+            "tunnel_endpoints_count",
             "encapsulation",
             "tenant",
             "role",
+            "status",
             # "contact_associations_count",
             "actions",
         )
+        order_by = ["name"]
 
 
 class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):

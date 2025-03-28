@@ -64,26 +64,44 @@ class DhGroupChoices(ChoiceSet):
     group2 = "2"
     group5 = "5"
     group14 = "14"
-    group15 = "15"
-    group16 = "16"
-    group17 = "17"
-    group18 = "18"
     group19 = "19"
     group20 = "20"
+    group21 = "21"
+    group22 = "22"
+    group23 = "23"
     group24 = "24"
+    group25 = "25"
+    group26 = "26"
+    group27 = "27"
+    group28 = "28"
+    group29 = "29"
+    group30 = "30"
+    group31 = "31"
+    group32 = "32"
+    group33 = "33"
+    group34 = "34"
 
     CHOICES = (
         (group1, "1"),
         (group2, "2"),
         (group5, "5"),
         (group14, "14"),
-        (group15, "15"),
-        (group16, "16"),
-        (group17, "17"),
-        (group18, "18"),
         (group19, "19"),
         (group20, "20"),
+        (group21, "21"),
+        (group22, "22"),
+        (group23, "23"),
         (group24, "24"),
+        (group25, "25"),
+        (group26, "26"),
+        (group27, "27"),
+        (group28, "28"),
+        (group29, "29"),
+        (group30, "30"),
+        (group31, "31"),
+        (group32, "32"),
+        (group33, "33"),
+        (group34, "34"),
     )
 
 
@@ -100,26 +118,6 @@ class AuthenticationMethodChoices(ChoiceSet):
         (rsa, "RSA"),
         (ecdsa, "ECDSA"),
         (certificate, "Certificate"),
-    )
-
-
-class PfsGroupChoices(ChoiceSet):
-    """Choices for the pfs_group field on the VPNPhase2Policy model."""
-
-    group1 = "1"
-    group2 = "2"
-    group5 = "5"
-    group14 = "14"
-    group19 = "19"
-    group20 = "20"
-
-    CHOICES = (
-        (group1, "1"),
-        (group2, "2"),
-        (group5, "5"),
-        (group14, "14"),
-        (group19, "19"),
-        (group20, "20"),
     )
 
 

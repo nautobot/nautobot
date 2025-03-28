@@ -1,6 +1,7 @@
 """Filtering for the vpn models."""
 
 from nautobot.apps.filters import (
+    NaturalKeyOrPKMultipleChoiceFilter,
     NautobotFilterSet,
     SearchFilter,
     StatusModelFilterSetMixin,
@@ -45,6 +46,11 @@ class VPNPhase1PolicyFilterSet(NautobotFilterSet):  # pylint: disable=too-many-a
             "authentication_method": "icontains",
         }
     )
+    vpn_profiles = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.VPNProfile.objects.all(),
+        to_field_name="name",
+        label="VPN Profile",
+    )
 
     class Meta:
         """Meta attributes for filter."""
@@ -66,6 +72,11 @@ class VPNPhase2PolicyFilterSet(NautobotFilterSet):  # pylint: disable=too-many-a
             "integrity_algorithm": "icontains",
             "pfs_group": "icontains",
         }
+    )
+    vpn_profiles = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.VPNProfile.objects.all(),
+        to_field_name="name",
+        label="VPN Profile",
     )
 
     class Meta:
