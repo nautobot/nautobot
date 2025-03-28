@@ -1,1 +1,1 @@
-Added graceful handling for route-lookup errors when constructing a DynamicModelChoiceField.
+Added graceful handling for route-lookup errors when constructing a DynamicModelChoiceField or a DynamicModelMultipleChoiceField.
