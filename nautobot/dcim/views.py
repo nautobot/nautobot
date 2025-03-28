@@ -58,8 +58,7 @@ from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.dcim.utils import (
-    get_all_network_driver_mappings,
-    get_network_driver_mapping_for_platform,
+    fetch_network_driver_mappings,
 )
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
@@ -1721,8 +1720,7 @@ class PlatformUIViewSet(NautobotUIViewSet):
 
             return {
                 "device_table": device_table,
-                "network_driver_tool_names": get_network_driver_mapping_for_platform(instance),
-                "network_driver_names": sorted(get_all_network_driver_mappings().keys()),
+                "network_driver_tool_names": fetch_network_driver_mappings(instance),
                 **super().get_extra_context(request, instance),
             }
         return super().get_extra_context(request, instance)
