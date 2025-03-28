@@ -2071,7 +2071,7 @@ class TagBulkEditForm(NautobotBulkEditForm):
 #
 # Webhooks
 #
-class WebhookBulkEditForm(BootstrapMixin, CustomFieldModelBulkEditFormMixin, NoteModelBulkEditFormMixin):
+class WebhookBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin):
     """Bulk edit form for Webhook objects."""
 
     pk = forms.ModelMultipleChoiceField(queryset=Webhook.objects.all(), widget=forms.MultipleHiddenInput())
@@ -2092,24 +2092,26 @@ class WebhookBulkEditForm(BootstrapMixin, CustomFieldModelBulkEditFormMixin, Not
     )
 
     # Choice field
-    http_method = forms.ChoiceField(required=False, choices=WebhookHttpMethodChoices.CHOICES)
-
+    http_method = forms.ChoiceField(
+        required=False,
+        choices=add_blank_choice(WebhookHttpMethodChoices.CHOICES),
+    )
     # M2M: Content Types
-    # add_content_types = forms.ModelMultipleChoiceField(
-    #     queryset=ContentType.objects.filter(FeatureQuery("webhooks")),
-    #     required=False,
-    #     label="Add Content Types",
-    #     help_text="Select content types to ADD to the existing list.",
-    #     widget=forms.SelectMultiple(attrs={"size": "8"})
-    # )
+    add_content_types = forms.ModelMultipleChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("webhooks")()),
+        required=False,
+        label="Add Content Types",
+        help_text="Select content types to ADD to the existing list.",
+        widget=forms.SelectMultiple(attrs={"size": "8"}),
+    )
 
-    # remove_content_types = forms.ModelMultipleChoiceField(
-    #     queryset=ContentType.objects.filter(FeatureQuery("webhooks")),
-    #     required=False,
-    #     label="Remove Content Types",
-    #     help_text="Select content types to REMOVE from the existing list.",
-    #     widget=forms.SelectMultiple(attrs={"size": "8"})
-    # )
+    remove_content_types = forms.ModelMultipleChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("webhooks")()),
+        required=False,
+        label="Remove Content Types",
+        help_text="Select content types to REMOVE from the existing list.",
+        widget=forms.SelectMultiple(attrs={"size": "8"}),
+    )
 
     class Meta:
         model = Webhook
@@ -2124,7 +2126,8 @@ class WebhookBulkEditForm(BootstrapMixin, CustomFieldModelBulkEditFormMixin, Not
             "ca_file_path",
             "payload_url",
             "secret",
-            "content_types",
+            "add_content_types",
+            "remove_content_types",
         )
 
 

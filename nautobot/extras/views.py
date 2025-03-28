@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Optional
 from urllib.parse import parse_qs
@@ -3087,6 +3088,21 @@ class TeamUIViewSet(NautobotUIViewSet):
 #
 # Webhooks
 #
+class WebhookHTTPFieldsPanel(ObjectFieldsPanel):
+    """Displays HTTP fields and pretty-prints 'additional_headers' JSON in <pre> format."""
+
+    def render_value(self, key, value, context):
+        """Overrides 'additional_headers' rendering as indented JSON; defaults for others."""
+
+        if key == "additional_headers":
+            try:
+                value = json.dumps(json.loads(value or "{}"), indent=2)
+            except Exception:
+                value = value or ""
+            return format_html("<pre>{}</pre>", value)
+        return super().render_value(key, value, context)
+
+
 class WebhookUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.WebhookBulkEditForm
     filterset_class = filters.WebhookFilterSet
@@ -3104,7 +3120,7 @@ class WebhookUIViewSet(NautobotUIViewSet):
                 weight=100,
                 fields=("name", "content_types", "type_create", "type_update", "type_delete", "enabled"),
             ),
-            ObjectFieldsPanel(
+            WebhookHTTPFieldsPanel(
                 label="HTTP",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
