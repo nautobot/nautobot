@@ -1,0 +1,1 @@
+Added graceful handling for route-lookup errors when constructing a DynamicModelChoiceField.
