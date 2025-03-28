@@ -199,14 +199,16 @@ def get_data_compliance_classes_from_git_repo(repo: GitRepository):
     ensure_git_repository(repo, head=repo.current_head)
     class_list = []
     custom_validators_path = pathlib.Path(f"{repo.filesystem_path}/custom_validators")
+    repo_namespace = repo.slug.replace("-", "_")  # Ensure a valid Python module name
 
     for module_path in custom_validators_path.glob("*.py"):  # Only load Python files
         module_name = module_path.stem  # Extract the filename without ".py" extension
-        module_spec = importlib.util.spec_from_file_location(module_name, module_path)  # Create a module spec
+        namespaced_module_name = f"{repo_namespace}.{module_name}"
+        module_spec = importlib.util.spec_from_file_location(namespaced_module_name, module_path)  # Create a module spec
 
         if module_spec and module_spec.loader:
             module = importlib.util.module_from_spec(module_spec)
-            sys.modules[module_name] = module  # Register the module
+            sys.modules[namespaced_module_name] = module  # Register the module
             module_spec.loader.exec_module(module)  # Execute the module to load its content
 
             for _, compliance_class in inspect.getmembers(module, is_data_compliance_rule):
