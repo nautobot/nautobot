@@ -1651,7 +1651,7 @@ class ModuleBayTemplateUIViewSet(
     model_form_class = forms.ModuleBayTemplateForm
     serializer_class = serializers.ModuleBayTemplateSerializer
     table_class = tables.ModuleBayTemplateTable
-    create_template_name = "dcim/device_component_add.html"
+    create_template_name = "dcim/modulebay_create.html"
 
     def get_selected_objects_parents_name(self, selected_objects):
         selected_object = selected_objects.first()
@@ -1769,6 +1769,7 @@ class DeviceView(generic.ObjectView):
                 weight=100,
                 color=ButtonColorChoices.BLUE,
                 label="Add Components",
+                attributes={"id": "device-add-components-button"},
                 icon="mdi-plus-thick",
                 required_permissions=["dcim.change_device"],
                 children=(
@@ -2332,7 +2333,11 @@ class DeviceWirelessView(generic.ObjectView):
 
 
 class BulkComponentCreateUIViewSetMixin:
-    def _bulk_component_create(self, request, component_queryset, bulk_component_form, parent_field=None):
+    bulk_component_create_template = "generic/object_bulk_add_component.html"
+
+    def _bulk_component_create(
+        self, request, component_queryset, bulk_component_form, parent_field=None, template=None
+    ):
         parent_model_name = self.queryset.model._meta.verbose_name_plural
         if parent_field is None:
             parent_field = self.queryset.model._meta.model_name
@@ -2416,7 +2421,7 @@ class BulkComponentCreateUIViewSetMixin:
 
         return Response(
             {
-                "template": "generic/object_bulk_add_component.html",
+                "template": template or self.bulk_component_create_template,
                 "form": form,
                 "parent_model_name": parent_model_name,
                 "model_name": model_name,
@@ -2749,6 +2754,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             component_queryset=ModuleBay.objects.all(),
             bulk_component_form=forms.ModuleModuleBayBulkCreateForm,
             parent_field="parent_module",
+            template="dcim/modulebay_bulk_create.html",
         )
 
 
@@ -3630,6 +3636,7 @@ class DeviceBulkAddModuleBayView(generic.BulkComponentCreateView):
     filterset = filters.DeviceFilterSet
     table = tables.DeviceTable
     default_return_url = "dcim:device_list"
+    template_name = "dcim/modulebay_bulk_create.html"
 
 
 class DeviceBulkAddInventoryItemView(generic.BulkComponentCreateView):
