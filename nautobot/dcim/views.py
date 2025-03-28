@@ -1704,22 +1704,7 @@ class PlatformUIViewSet(NautobotUIViewSet):
 
     def get_extra_context(self, request, instance):
         if self.action == "retrieve":
-            devices = (
-                Device.objects.restrict(request.user, "view")
-                .filter(platform=instance)
-                .select_related("status", "location", "tenant", "rack", "device_type", "role")
-            )
-
-            device_table = tables.DeviceTable(devices)
-
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(device_table)
-
             return {
-                "device_table": device_table,
                 "network_driver_tool_names": fetch_network_driver_mappings(instance),
                 **super().get_extra_context(request, instance),
             }
