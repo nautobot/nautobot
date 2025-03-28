@@ -9,6 +9,14 @@ on:  # yamllint disable
   workflow_call:
 
 jobs:
+  security-tooling:
+    name: "Security Tooling"
+    runs-on: "ubuntu-22.04"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v4"
+      - name: "Security checks"
+        uses: "./.github/actions/security-checks"
   ruff:
     runs-on: "ubuntu-24.04"
     env:
@@ -20,7 +28,7 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: "--only dev --only linting"
-          poetry-version: "1.8.2"
+          poetry-version: "1.8.5"
           python-version: "3.12"
       - name: "Linting: ruff"
         run: "poetry run invoke ruff --output-format github"
@@ -35,7 +43,7 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: "--only dev --only linting"
-          poetry-version: "1.8.2"
+          poetry-version: "1.8.5"
           python-version: "3.12"
       - name: "Linting: yamllint"
         run: "poetry run invoke yamllint"
@@ -50,7 +58,7 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: "--only dev --only linting"
-          poetry-version: "1.8.2"
+          poetry-version: "1.8.5"
           python-version: "3.12"
       - name: "Linting: pymarkdownlnt"
         run: "poetry run invoke markdownlint"
@@ -62,7 +70,7 @@ jobs:
       - name: "Check out repository code"
         uses: "actions/checkout@v4"
       - name: "Run Hadolint"
-        uses: "hadolint/hadolint-action@v1.6.0"
+        uses: "hadolint/hadolint-action@d7b38582334d9ac11c12021c16f21d63015fa250" # v1.6.0
         with:
           dockerfile: "docker/Dockerfile"
   check-migrations:
@@ -89,7 +97,7 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-          poetry-version: "1.8.2"
+          poetry-version: "1.8.5"
           python-version: "3.12"
       - name: "Run check migrations"
         run: "poetry run invoke check-migrations"
@@ -118,7 +126,7 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-          poetry-version: "1.8.2"
+          poetry-version: "1.8.5"
           python-version: "3.12"
       - name: "Run check-schema"
         # REST API schema generation currently includes GraphQL schema generation, which is dependent on the DB :-(
@@ -147,7 +155,7 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-          poetry-version: "1.8.2"
+          poetry-version: "1.8.5"
           python-version: "3.12"
       - name: "Run pylint"
         run: "poetry run invoke pylint"
@@ -179,10 +187,10 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-          poetry-version: "1.8.2"
+          poetry-version: "1.8.5"
           python-version: "3.9"
       - name: "Run unittest"
-        run: "poetry run invoke unittest --failfast --no-keepdb --no-cache-test-fixtures --parallel"
+        run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel"
     needs:
       - "check-migrations"
       - "check-schema"
@@ -222,10 +230,10 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: "--extras mysql"
-          poetry-version: "1.8.2"
+          poetry-version: "1.8.5"
           python-version: "3.12"
       - name: "Run unittest"
-        run: "poetry run invoke unittest --failfast --no-keepdb --no-cache-test-fixtures --parallel"
+        run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel"
     needs:
       - "check-migrations"
       - "check-schema"
@@ -263,7 +271,7 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: "--extras mysql"
-          poetry-version: "1.8.2"
+          poetry-version: "1.8.5"
           python-version: "3.9"
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine mysql --dataset $MIGRATION_TEST_DATASET"
@@ -301,7 +309,7 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-          poetry-version: "1.8.2"
+          poetry-version: "1.8.5"
           python-version: "3.12"
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine postgres --dataset $MIGRATION_TEST_DATASET"
@@ -344,11 +352,11 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-          poetry-version: "1.8.2"
+          poetry-version: "1.8.5"
           python-version: "3.12"
       - name: "Run Integration Tests"
         # If NAUTOBOT_SELENIUM_HOST is set to 'localhost' or '127.0.0.1' the connection does not work
-        run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke integration-test --no-keepdb"
+        run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke tests --tag integration --no-keepdb"
     needs:
       - "check-migrations"
       - "check-schema"
@@ -368,7 +376,7 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: "--only dev"
-          poetry-version: "1.8.2"
+          poetry-version: "1.8.5"
           python-version: "3.12"
       - name: "Check for changelog entry"
         run: |
@@ -388,11 +396,11 @@ jobs:
       - name: "Check out repository code"
         uses: "actions/checkout@v4"
       - name: "Set up QEMU"
-        uses: "docker/setup-qemu-action@v2"
+        uses: "docker/setup-qemu-action@2b82ce82d56a2a04d2637cd93a637ae1b359c0a7" # v2
       - name: "Set up Docker Buildx"
-        uses: "docker/setup-buildx-action@v2"
+        uses: "docker/setup-buildx-action@885d1462b80bc1c1c7f0b00334ad271f09369c55" # v2
       - name: "Login to GitHub Container Registry"
-        uses: "docker/login-action@v2"
+        uses: "docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc" # v2
         with:
           registry: "ghcr.io"
           username: "${{ github.actor }}"
