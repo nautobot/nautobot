@@ -472,8 +472,8 @@ class GraphQLQueryViewSet(NotesViewSetMixin, ModelViewSet):
     def run(self, request, pk):
         try:
             query = get_object_or_404(self.queryset, pk=pk)
-            result = execute_saved_query(query.name, variables=request.data.get("variables"), request=request).to_dict()
-            return Response(result)
+            result = execute_saved_query(query.name, variables=request.data.get("variables"), request=request)
+            return Response({"data": result.data, "errors": result.errors})
         except GraphQLError as error:
             return Response(
                 {"errors": [GraphQLView.format_error(error)]},
@@ -642,7 +642,7 @@ class JobViewSetBase(
             ):
                 raise ValidationError(
                     {
-                        "_task_queue": "_task_queue and _job_queue are both specified. Please specifiy only one or another."
+                        "_task_queue": "_task_queue and _job_queue are both specified. Please specify only one or another."
                     }
                 )
 
@@ -685,7 +685,7 @@ class JobViewSetBase(
                 "job_queue", None
             ):
                 raise ValidationError(
-                    {"task_queue": "task_queue and job_queue are both specified. Please specifiy only one or another."}
+                    {"task_queue": "task_queue and job_queue are both specified. Please specify only one or another."}
                 )
             schedule_data = input_serializer.validated_data.get("schedule", None)
 
@@ -836,7 +836,7 @@ class JobQueueViewSet(NautobotModelViewSet):
     filterset_class = filters.JobQueueFilterSet
 
 
-class JobQueueAssignmentViewSet(NautobotModelViewSet):
+class JobQueueAssignmentViewSet(ModelViewSet):
     """
     Manage job queue assignments through DELETE, GET, POST, PUT, and PATCH requests.
     """
@@ -1069,7 +1069,7 @@ class MetadataChoiceViewSet(ModelViewSet):
     filterset_class = filters.MetadataChoiceFilterSet
 
 
-class ObjectMetadataViewSet(NautobotModelViewSet):
+class ObjectMetadataViewSet(ModelViewSet):
     queryset = ObjectMetadata.objects.all()
     serializer_class = serializers.ObjectMetadataSerializer
     filterset_class = filters.ObjectMetadataFilterSet

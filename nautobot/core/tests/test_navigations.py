@@ -45,6 +45,14 @@ class NavMenuTestCase(TestCase):
                                     expected_name = "Change Log"
                                 elif expected_name == "Controller Managed Device Groups":
                                     expected_name = "Device Groups"
+                                elif expected_name == "Min Max Validation Rules":
+                                    expected_name = "Min/Max Rules"
+                                elif expected_name == "Regular Expression Validation Rules":
+                                    expected_name = "Regex Rules"
+                                elif expected_name == "Required Validation Rules":
+                                    expected_name = "Required Rules"
+                                elif expected_name == "Unique Validation Rules":
+                                    expected_name = "Unique Rules"
                                 self.assertEqual(item_details["name"], expected_name)
                             if item_url == get_route_for_model(view_model, "list"):
                                 # Not assertEqual as some menu items have additional permissions defined.

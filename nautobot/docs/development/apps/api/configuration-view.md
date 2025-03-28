@@ -1,7 +1,5 @@
 # Adding Links to the Installed Apps View
 
-+++ 1.2.0
-
 It's common for many apps to provide an "app configuration" [view](views/index.md) used for interactive configuration of aspects of the app that don't necessarily need to be managed by a system administrator via `PLUGINS_CONFIG`. The `NautobotAppConfig` setting of `config_view_name` lets you provide the URL pattern name defined for this view, which will then be accessible via a button on the **Apps -> Installed Apps** UI view.
 
 For example, if the `animal_sounds` app provides a configuration view, which is set up in `urls.py` as follows:

@@ -26,6 +26,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.events import publish_event
+from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.forms import restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query, serialize_object_v2
@@ -36,12 +37,13 @@ from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPane
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
+    get_model_for_view_name,
     get_route_for_model,
     get_table_class_string_from_view_name,
     get_table_for_model,
 )
 from nautobot.core.utils.permissions import get_permission_for_model
-from nautobot.core.utils.requests import normalize_querydict
+from nautobot.core.utils.requests import is_single_choice_field, normalize_querydict
 from nautobot.core.views import generic, viewsets
 from nautobot.core.views.mixins import (
     GetReturnURLMixin,
@@ -69,7 +71,7 @@ from nautobot.dcim.tables import (
     VirtualDeviceContextTable,
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
-from nautobot.extras.utils import get_base_template, get_job_queue, get_worker_count
+from nautobot.extras.utils import fixup_filterset_query_params, get_base_template, get_job_queue, get_worker_count
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
@@ -720,8 +722,13 @@ class DynamicGroupView(generic.ObjectView):
 
         if table_class is not None:
             # Members table (for display on Members nav tab)
+            if hasattr(members, "without_tree_fields"):
+                members = members.without_tree_fields()
             members_table = table_class(
-                members.restrict(request.user, "view"), orderable=False, exclude=["dynamic_group_count"]
+                members.restrict(request.user, "view"),
+                orderable=False,
+                exclude=["dynamic_group_count"],
+                hide_hierarchy_ui=True,
             )
             paginate = {
                 "paginator_class": EnhancedPaginator,
@@ -1158,6 +1165,9 @@ class GitRepositoryResultView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         job_result = instance.get_latest_sync()
 
+        if job_result is None:
+            job_result = {}
+
         return {
             "result": job_result,
             "base_template": "extras/gitrepository.html",
@@ -1265,9 +1275,10 @@ class JobListView(generic.ObjectListView):
     def alter_queryset(self, request):
         queryset = super().alter_queryset(request)
         # Default to hiding "hidden" and non-installed jobs
-        if "hidden" not in request.GET:
+        filter_params = self.get_filter_params(request)
+        if "hidden" not in filter_params:
             queryset = queryset.filter(hidden=False)
-        if "installed" not in request.GET:
+        if "installed" not in filter_params:
             queryset = queryset.filter(installed=True)
         return queryset
 
@@ -1806,15 +1817,23 @@ class SavedViewUIViewSet(
         if sort_order:
             sv.config["sort_order"] = sort_order
 
+        model = get_model_for_view_name(sv.view)
+        filterset_class = get_filterset_for_model(model)
+        filterset = filterset_class()
         filter_params = {}
         for key in request.GET:
             if key in self.non_filter_params:
                 continue
-            # TODO: this is fragile, other single-value filters will also be unhappy if given a list
-            if key == "q":
-                filter_params[key] = request.GET.get(key)
-            else:
-                filter_params[key] = request.GET.getlist(key)
+            try:
+                if is_single_choice_field(filterset, key):
+                    filter_params[key] = request.GET.getlist(key)[0]
+            except FilterSetFieldNotFound:
+                continue
+            try:
+                if not is_single_choice_field(filterset, key):
+                    filter_params[key] = request.GET.getlist(key)
+            except FilterSetFieldNotFound:
+                continue
 
         if filter_params:
             sv.config["filter_params"] = filter_params
@@ -1839,14 +1858,14 @@ class SavedViewUIViewSet(
         and the name of the new SavedView from request.POST to create a new SavedView.
         """
         name = request.POST.get("name")
+        view_name = request.POST.get("view")
         is_shared = request.POST.get("is_shared", False)
         if is_shared:
             is_shared = True
         params = request.POST.get("params", "")
+        param_dict = fixup_filterset_query_params(parse_qs(params), view_name, self.non_filter_params)
 
-        param_dict = parse_qs(params)
-
-        single_value_params = ["saved_view", "table_changes_pending", "all_filters_removed", "q", "per_page"]
+        single_value_params = ["saved_view", "table_changes_pending", "all_filters_removed", "per_page"]
         for key in param_dict.keys():
             if key in single_value_params:
                 param_dict[key] = param_dict[key][0]
@@ -1855,7 +1874,6 @@ class SavedViewUIViewSet(
         derived_instance = None
         if derived_view_pk:
             derived_instance = self.get_queryset().get(pk=derived_view_pk)
-        view_name = request.POST.get("view")
         try:
             reverse(view_name)
         except NoReverseMatch:
@@ -2044,7 +2062,13 @@ def get_annotated_jobresult_queryset():
             error_log_count=count_related(
                 JobLogEntry,
                 "job_result",
-                filter_dict={"log_level__in": [LogLevelChoices.LOG_ERROR, LogLevelChoices.LOG_CRITICAL]},
+                filter_dict={
+                    "log_level__in": [
+                        LogLevelChoices.LOG_FAILURE,
+                        LogLevelChoices.LOG_ERROR,
+                        LogLevelChoices.LOG_CRITICAL,
+                    ],
+                },
             ),
         )
     )
