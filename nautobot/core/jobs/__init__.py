@@ -418,8 +418,8 @@ class RunRegisteredDataComplianceRules(Job):
         description="Not selecting any rules will run all rules listed.",
     )
 
-    run_existing_rules_in_report = BooleanVar(
-        label="Run existing validation rules?", description="Include existing data validation rules in report."
+    run_user_created_rules_in_report = BooleanVar(
+        label="Run user created validation rules?", description="Include user created data validation rules in report."
     )
 
     def run(self, *args, **kwargs):
@@ -439,9 +439,9 @@ class RunRegisteredDataComplianceRules(Job):
                 ins.enforce = False
                 ins.clean()
 
-        run_existing_rules_in_report = kwargs.get("run_existing_rules_in_report", False)
-        if run_existing_rules_in_report:
-            self.logger.info("Running existing data validation rules")
+        run_user_created_rules_in_report = kwargs.get("run_user_created_rules_in_report", False)
+        if run_user_created_rules_in_report:
+            self.logger.info("Running user created data validation rules")
             self.report_for_validation_rules()
 
         self.logger.info("View Data Compliance results [here](/data-validation-engine/data-compliance/)")
