@@ -1,1 +1,1 @@
-Added missing DelineaSecretChoices TYPE_NOTES and TYPE_URL to SecretsGroupSecretTypeChoices
+Added `TYPE_NOTES` and `TYPE_URL` to SecretsGroupSecretTypeChoices.
