@@ -13,19 +13,6 @@
 {% block header %}
     <div class="row noprint">
         {% with list_url=object|validated_viewname:"list" %}
-        <div class="col-sm-8 col-md-9">
-            <ol class="breadcrumb">
-            {% block breadcrumbs %}
-                {% if list_url %}
-                <li><a href="{% url list_url %}">
-                    {{ verbose_name_plural|bettertitle }}
-                </a></li>
-                {% endif %}
-                {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
-                <li>{{ object|hyperlinked_object }}</li>
-            {% endblock breadcrumbs %}
-            </ol>
-        </div>
         {% if list_url %}
         <div class="col-sm-4 col-md-3">
             <form action="{% url list_url %}" method="get">
@@ -43,7 +30,7 @@
         {% endwith %}
     </div>
 
-    <div class="pull-right noprint">
+    <div class="float-end noprint">
     {% block buttons %}
         {% plugin_buttons object %}
         {% render_detail_view_extra_buttons %}
@@ -61,15 +48,34 @@
                 </button>
             </span>
         </h1>
+        <br/>
+        {% with list_url=object|validated_viewname:"list" %}
+        {% if list_url %}
+            <nav class="col-sm-8 col-md-9" aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                {% block breadcrumbs %}
+                    {% if list_url %}
+                    <li class="breadcrumb-item"><a href="{% url list_url %}">
+                        {{ verbose_name_plural|bettertitle }}
+                    </a></li>
+                    {% endif %}
+                    {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
+                    <li class="breadcrumb-item active" aria-current="page">{{ object|hyperlinked_object }}</li>
+                {% endblock breadcrumbs %}
+                </ol>
+            </nav>
+        {% endif %}
+        {% endwith %}
     {% endblock masthead %}
-    {% include 'inc/created_updated.html' %}
-    <div class="pull-right noprint">
+    {% if not object_detail_content %}
+        {% include 'inc/created_updated.html' %}
+    {% endif %}
+    <div class="float-end noprint">
         {% custom_links object %}
         {% job_buttons object %}
         {% block panel_buttons %}{% endblock panel_buttons %}
     </div>
-
-    <ul id="tabs" class="nav nav-tabs">
+    <ul id="tabs" class="nav nav-tabs" role="tablist">
     {% block nav_tabs %}
       {% if object_detail_content %}
         {% render_tabs_labels object_detail_content.tabs %}
@@ -116,15 +122,27 @@
       {% endif %}
         {% if perms.extras.view_note %}
             {% if active_tab != 'notes' and object.get_notes_url or active_tab == 'notes' %}
-                <li role="presentation"{% if active_tab == 'notes' %} class="active"{% endif %}>
-                    <a href="{{ object.get_notes_url }}">Notes</a>
+                <li class="nav-item" role="presentation">
+                    <a
+                        class="nav-link {% if active_tab == 'notes' %}active{% endif %}"
+                        {% if active_tab == 'notes' %}aria-current="page"{% endif %}
+                        href="{{ object.get_notes_url }}"
+                    >
+                        Notes
+                    </a>
                 </li>
             {% endif %}
         {% endif %}
         {% if perms.extras.view_objectchange %}
             {% if active_tab != 'changelog' and object.get_changelog_url or active_tab == 'changelog' %}
-                <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
-                    <a href="{{ object.get_changelog_url }}">Change Log</a>
+                <li role="presentation">
+                    <a
+                        class="nav-link {% if active_tab == 'changelog' %}active{% endif %}"
+                        {% if active_tab == 'changelog' %} aria-current="page"{% endif %}"
+                        href="{{ object.get_changelog_url }}"
+                    >
+                        Change Log
+                    </a>
                 </li>
             {% endif %}
         {% endif %}
@@ -185,7 +203,7 @@
                             <div class="panel panel-default">
                                 <div class="panel-heading">
                                     <strong>Contact Associations</strong>
-                                    <div class="pull-right noprint">
+                                    <div class="float-end noprint">
                                         <!-- Insert table config button here -->
                                     </div>
                                 </div>
@@ -205,7 +223,7 @@
                                             </button>
                                         {% endif %}
                                             {% if perms.extras.add_contactassociation %}
-                                                <div class="pull-right">
+                                                <div class="float-end">
                                                 <a href="{% url 'extras:object_contact_team_assign' %}?return_url={{return_url}}&associated_object_id={{object.id}}&associated_object_type={{content_type.id}}" class="btn btn-primary btn-xs">
                                                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Contact
                                                 </a>
@@ -241,7 +259,7 @@
                             <div class="panel panel-default">
                                 <div class="panel-heading">
                                     <strong>Dynamic Groups</strong>
-                                    <div class="pull-right noprint">
+                                    <div class="float-end noprint">
                                         <!-- Insert table config button here -->
                                     </div>
                                 </div>
@@ -263,7 +281,7 @@
                             <div class="panel panel-default">
                                 <div class="panel-heading">
                                     <strong>Object Metadata</strong>
-                                    <div class="pull-right noprint">
+                                    <div class="float-end noprint">
                                         <!-- Insert table config button here -->
                                     </div>
                                 </div>
@@ -311,8 +329,6 @@
         final_query_string = query_string ? "&" + query_string : ""
 
         window.history.replaceState({id: tab_id}, document.title, `${tab_url}?tab=${tab_id}${final_query_string}`);
-        $(`#tabs a[href="{{ object.get_absolute_url }}#${tab_id}"]`).tab('show');
-
     }
 
 
@@ -328,12 +344,17 @@
 
         // If set, reload the page after asserting state.
         reload && window.location.reload();
-
     }
 
     window.onpopstate = function(event) {
-        if(event)
-            $(`#tabs a[href="{{ object.get_absolute_url }}#${event.state.id}"]`).tab('show');
+        if(event) {
+            var tabLink = document.querySelector(`#tabs a[href="${location.pathname}#${event.state.id}"]`);
+            // Check if the tab link exists
+            if (tabLink) {
+                // click on the tab link
+                tabLink.click();
+            }
+        }
     }
     // Toggle v -. >
     $(".accordion-toggle").click(function () {

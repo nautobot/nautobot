@@ -213,9 +213,8 @@ def consolidate_bulk_action_buttons(context):
         if bulk_action_button_count > 1:
             bulk_action_buttons[0] += format_html(
                 f"""
-                <button type="button" data-toggle="dropdown" class="{edit_button_classes} dropdown-toggle" aria-haspopup="true">
-                    <span class="caret"></span>
-                    <span class="sr-only">Toggle Dropdown</span>
+                <button type="button" data-bs-toggle="dropdown" class="{edit_button_classes} dropdown-toggle" aria-haspopup="true">
+                    <span class="visually-hidden">Toggle Dropdown</span>
                 </button>
                 """
             )
@@ -225,8 +224,8 @@ def consolidate_bulk_action_buttons(context):
         bulk_action_buttons.append(
             format_html(
                 """
-                <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true">
-                    Bulk Actions <span class="caret"></span>
+                <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true">
+                    Bulk Actions
                 </button>
                 """
             )
@@ -261,7 +260,7 @@ def consolidate_bulk_action_buttons(context):
                     {
                         "class": static_group_button_classes,
                         "id": "update_dynamic_groups_for_selected",
-                        "data-toggle": "modal",
+                        "data-bs-toggle": "modal",
                         "data-target": "#dynamic_group_assignment_modal",
                         "data-objects": "selected",
                         "type": "button",
@@ -345,9 +344,8 @@ def consolidate_detail_view_action_buttons(context):
         if detail_view_action_button_count > 1:
             detail_view_action_buttons[0] += format_html(
                 f"""
-                <button type="button" id="actions-dropdown" data-toggle="dropdown" class="{edit_button_classes} dropdown-toggle">
-                    <span class="caret"></span>
-                    <span class="sr-only">Toggle Dropdown</span>
+                <button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="{edit_button_classes} dropdown-toggle">
+                    <span class="visually-hidden">Toggle Dropdown</span>
                 </button>
                 """
             )
@@ -357,8 +355,8 @@ def consolidate_detail_view_action_buttons(context):
         detail_view_action_buttons.append(
             format_html(
                 """
-                <button type="button" id="actions-dropdown" class="btn btn-warning dropdown-toggle" data-toggle="dropdown">
-                    Actions <span class="caret"></span>
+                <button type="button" id="actions-dropdown" class="btn btn-warning dropdown-toggle" data-bs-toggle="dropdown">
+                    Actions
                 </button>
                 """
             )

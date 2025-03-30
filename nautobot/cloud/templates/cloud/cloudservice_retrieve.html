@@ -2,7 +2,7 @@
 {% load helpers %}
 
 {% block extra_breadcrumbs %}
-    <li><a href="{% url 'cloud:cloudresourcetype' pk=object.cloud_resource_type.pk %}">{{ object.cloud_resource_type }}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'cloud:cloudresourcetype' pk=object.cloud_resource_type.pk %}">{{ object.cloud_resource_type }}</a></li>
 {% endblock extra_breadcrumbs %}
 
 {% block extra_nav_tabs %}

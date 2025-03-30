@@ -2,7 +2,7 @@
 {% load helpers %}
 
 {% block extra_breadcrumbs %}
-            <li>{{ object.parent|hyperlinked_object }}</li>
+            <li class="breadcrumb-item">{{ object.parent|hyperlinked_object }}</li>
 {% endblock extra_breadcrumbs %}
 
 {% block content_left_page %}

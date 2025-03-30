@@ -1,6 +1,6 @@
-<div class="panel panel-default">
+<div class="card mb-10">
     {% if label.strip or header_extra_content.strip %}
-        <div class="panel-heading">
+        <div class="card-header">
             {% if label %}
                 <strong>{{ label }}</strong>
             {% endif %}
@@ -9,7 +9,7 @@
     {% endif %}
     {{ body }}
     {% if footer_content.strip %}
-        <div class="panel-footer">
+        <div class="card-footer">
             {{ footer_content }}
         </div>
     {% endif %}
