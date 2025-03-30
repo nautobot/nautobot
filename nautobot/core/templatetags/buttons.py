@@ -249,7 +249,7 @@ def consolidate_bulk_action_buttons(context):
         )
 
     if render_delete_button and render_static_group_assign_button:
-        bulk_action_buttons.append(format_html('<li role="separator" class="divider"></li>'))
+        bulk_action_buttons.append(format_html('<li><hr class="dropdown-divider"></li>'))
 
     if render_static_group_assign_button:
         bulk_action_buttons.append(
@@ -304,7 +304,7 @@ def consolidate_detail_view_action_buttons(context):
             "detail_view_action_buttons": detail_view_action_buttons,
         }
 
-    child_button_fragment = primary_button_fragment = """
+    primary_button_fragment = """
         <a {attrs}>
             <span class="{icon}" aria-hidden="true"></span> {label}
         </a>
@@ -317,37 +317,43 @@ def consolidate_detail_view_action_buttons(context):
             </a>
         </button>
     """
-
+    dropdown_button_classes = "btn btn-warning rounded-end"
+    dropdown_button_style = (
+        "border-left: none; width: 5px; display: flex; justify-content: center; align-items: center;"
+    )
     edit_button_classes = "btn btn-warning"
     delete_button_classes = "text-danger"
-    clone_button_classes = "text"
+    clone_button_classes = "text text-reset text-decoration-none"
     clone_icon = "mdi mdi-plus-thick text-muted"
-    child_button_fragment = f"<li>{primary_button_fragment}</li>"
     delete_button_fragment = f"<li>{delete_button_fragment}</li>"
 
     if render_edit_button:
+        attrs = {
+            "id": "edit-button",
+            "class": edit_button_classes,
+            "href": object_edit_url,
+        }
+        # No border between the dropdown button and the edit button if there are multiple buttons
+        if detail_view_action_button_count > 1:
+            attrs["style"] = "border-right: none;"
         detail_view_action_buttons.append(
             format_html(
                 primary_button_fragment,
-                label=f"Edit {bettertitle(context['verbose_name'])}",
-                attrs=render_tag_attrs(
-                    {
-                        "id": "edit-button",
-                        "class": edit_button_classes,
-                        "href": object_edit_url,
-                    }
-                ),
+                label="Edit",
+                attrs=render_tag_attrs(attrs),
                 button_class=edit_button_classes,
                 icon="mdi mdi-pencil",
             ),
         )
         if detail_view_action_button_count > 1:
             detail_view_action_buttons[0] += format_html(
-                f"""
-                <button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="{edit_button_classes} dropdown-toggle">
-                    <span class="visually-hidden">Toggle Dropdown</span>
-                </button>
                 """
+                <button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="{button_class}" style="{button_style}">
+                    <span class="mdi mdi-chevron-down"></span>
+                 </button>
+                """,
+                button_class=dropdown_button_classes,
+                button_style=dropdown_button_style,
             )
 
     # Render a generic "Actions" dropdown button if the edit button is not present
@@ -355,10 +361,11 @@ def consolidate_detail_view_action_buttons(context):
         detail_view_action_buttons.append(
             format_html(
                 """
-                <button type="button" id="actions-dropdown" class="btn btn-warning dropdown-toggle" data-bs-toggle="dropdown">
-                    Actions
-                </button>
-                """
+                <button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="{button_class}">
+                    Actions <span class="mdi mdi-chevron-down"></span>
+                 </button>
+                """,
+                button_class=dropdown_button_classes,
             )
         )
     if render_clone_button:
@@ -367,7 +374,7 @@ def consolidate_detail_view_action_buttons(context):
             object_clone_url = f"{object_clone_url}?{param_string}"
         detail_view_action_buttons.append(
             format_html(
-                child_button_fragment,
+                delete_button_fragment,
                 label=f"Clone {bettertitle(context['verbose_name'])}",
                 attrs=render_tag_attrs(
                     {
@@ -382,7 +389,7 @@ def consolidate_detail_view_action_buttons(context):
         )
     if render_delete_button:
         if render_clone_button:
-            detail_view_action_buttons.append(format_html('<li role="separator" class="divider"></li>'))
+            detail_view_action_buttons.append(format_html('<li><hr class="dropdown-divider"></li>'))
         detail_view_action_buttons.append(
             format_html(
                 delete_button_fragment,
