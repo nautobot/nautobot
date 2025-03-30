@@ -4,6 +4,7 @@ import contextlib
 from dataclasses import dataclass
 from enum import Enum
 import logging
+import uuid
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
@@ -453,6 +454,8 @@ class Panel(Component):
         """
         if not self.should_render(context):
             return ""
+        if not self.body_id:
+            self.body_id = self._get_body_id(context)
         with context.update(self.get_extra_context(context)):
             return render_component_template(
                 self.template_path,
@@ -461,7 +464,17 @@ class Panel(Component):
                 header_extra_content=self.render_header_extra_content(context),
                 body=self.render_body(context),
                 footer_content=self.render_footer_content(context),
+                body_id=self.body_id,
             )
+
+    def _get_body_id(self, context: Context):
+        """Retreive the `body_id` attribute to the rendered components, used for the collapsible panel feature."""
+        if self.body_id:
+            return self.body_id
+        if self.label:
+            return slugify(self.label)
+
+        return str(uuid.uuid4())
 
     def render_label(self, context: Context):
         """Render the label of this panel, if any."""

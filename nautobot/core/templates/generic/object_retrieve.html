@@ -356,6 +356,29 @@
             }
         }
     }
+    document.addEventListener("DOMContentLoaded", function () {
+        var collapseIcons = document.querySelectorAll('[data-bs-toggle="collapse"]');
+        collapseIcons.forEach(function (button) {
+            var chevronIcon = button.querySelector("span"); // Select the icon inside the anchor
+
+            button.addEventListener("click", function () {
+                // Get the associated collapsible element
+                var panelId = button.getAttribute("panel-id");
+                var collapseElement = document.getElementById(panelId);
+                var expanded = button.getAttribute("aria-expanded") === "true";
+                // Wait a short time for Bootstrap to apply the show/hide classes
+                setTimeout(() => {
+                    if (expanded===true) {
+                        chevronIcon.classList.replace("mdi-chevron-left", "mdi-chevron-down");
+                        console.log(icon.classList);
+                    } else {
+                        chevronIcon.classList.replace("mdi-chevron-down", "mdi-chevron-left");
+                    }
+                }, 100);
+            });
+        });
+    });
+
     // Toggle v -. >
     $(".accordion-toggle").click(function () {
         $(this).toggleClass("mdi-chevron-down mdi-chevron-right");
