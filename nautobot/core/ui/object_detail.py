@@ -1760,6 +1760,7 @@ class _ObjectDetailContactsTab(Tab):
                     # TODO: we should provide a standard reusable component template for bulk-actions in the footer
                     footer_content_template_path="components/panel/footer_contacts_table.html",
                     header_extra_content_template_path=None,
+                    label="Contacts/Teams",
                 ),
             )
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
@@ -1845,6 +1846,7 @@ class _ObjectDetailMetadataTab(Tab):
                     add_button_route=None,
                     related_field_name="assigned_object_id",
                     header_extra_content_template_path=None,
+                    label="Object Metadata",
                 ),
             )
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
