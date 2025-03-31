@@ -221,7 +221,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#6987](https://github.com/nautobot/nautobot/issues/6987) - Added `django-test-migrations` as a testing dependency.
 - [#6987](https://github.com/nautobot/nautobot/issues/6987) - Added `nautobot.ipam.tests.test_migrations.IPAMDataMigration0031TestCase` that can be run to reproducibly test IPAM data migration `0031_ipam___data_migrations` for correctness and performance.
 - [#6987](https://github.com/nautobot/nautobot/issues/6987) - Renamed `invoke tests` task to `invoke lint` and renamed `invoke unittest` task to `invoke tests`.
-- [#6987](https://github.com/nautobot/nautobot/issues/6987) - Changed 'invoke tests' task to default to _not_ measuring and reporting code coverage by default, since doing so slows test performance.
+- [#6987](https://github.com/nautobot/nautobot/issues/6987) - Changed `invoke tests` task to default to _not_ measuring and reporting code coverage by default, since doing so slows test performance.
 - [#6987](https://github.com/nautobot/nautobot/issues/6987) - Removed `django-slowtests` as a development dependency and removed associated test-performance-measuring functionality.
 - [#6987](https://github.com/nautobot/nautobot/issues/6987) - Removed distinct `invoke integration-test`, `invoke performance-test`, and `invoke unittest-coverage` tasks; integration tests should now be run with `invoke tests --tag integration` and test coverage is reported when running `invoke tests --coverage`.
 - [#6987](https://github.com/nautobot/nautobot/issues/6987) - Refactored `nautobot.ipam.tests.test_migrations.AggregateToPrefixMigrationTestCase` to use `django-test-migrations` and be runnable.
