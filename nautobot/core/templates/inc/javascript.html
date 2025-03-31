@@ -24,12 +24,6 @@
     }).ajaxStop(function() {
         loading.hide();
     });
-    // Applies bootstrap tooltip to all elements with the title attribute.
-    // Button groups are "special" and require child tooltips to have
-    // `{ container: 'body' }` option not to break their styles:
-    // https://getbootstrap.com/docs/3.4/javascript/#markup-1
-    $("*:not(.btn-group) > [title]").tooltip();
-    $(".btn-group > [title]").tooltip({ container: 'body' });
 </script>
 <script type="text/javascript">
     hljs.configure({ cssSelector: '.language-graphql, .language-json, .language-xml, .language-yaml' });
