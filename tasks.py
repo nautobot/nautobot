@@ -719,11 +719,11 @@ def build_example_app_docs(context):
         docker_compose(context, docker_command, pty=True)
 
 
-def task_navigate_to_web_port(context, service: str, internal_port: str):
-    """Navigate to the web interface in your web browser."""
+def task_navigate_to_service_port(context, service: str, internal_port: str, proto: str = "http", creds: str = ""):
+    """Navigate to the default system application for a specified uri."""
     nautobot_raw_uri = docker_compose(context, f"port {service} {internal_port}").stdout.rstrip()
     # nautobot_raw_uri = docker_compose(context, "port nautobot 8080", hide=True).stdout.rstrip()
-    nautobot_url = f"http://{nautobot_raw_uri}".replace("0.0.0.0", "127.0.0.1")  # noqa: S104
+    nautobot_url = f"{proto}://{creds}{nautobot_raw_uri}".replace("0.0.0.0", "127.0.0.1")  # noqa: S104
 
     if platform.system().lower() == "darwin":
         open_cmd = "open"
@@ -738,13 +738,19 @@ def task_navigate_to_web_port(context, service: str, internal_port: str):
 @task
 def open_nautobot_web(context):
     """Navigate to the Nautobot interface in your web browser."""
-    task_navigate_to_web_port(context, "nautobot", "8080")
+    task_navigate_to_service_port(context, "nautobot", "8080")
 
 
 @task
 def open_docs_web(context):
     """Navigate to the mkdocs interface in your web browser."""
-    task_navigate_to_web_port(context, "mkdocs", "8001")
+    task_navigate_to_service_port(context, "mkdocs", "8001")
+
+
+@task
+def open_selenium_vnc(context):
+    """Navigate to the selenium VNC browser view."""
+    task_navigate_to_service_port(context, "selenium", "5900", proto="vnc", creds=":secret@")
 
 
 # ------------------------------------------------------------------------------
@@ -874,58 +880,59 @@ def check_schema(context, api_version=None):
 
 @task(
     help={
-        "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests.",
-        "keepdb": "Save test database after test run for faster re-testing in combination with `--reusedb`.",
-        "reusedb": "Reuse previously saved test database for faster re-testing in combination with `--keepdb`.",
-        "label": "Specify a directory or module to test instead of running all Nautobot tests.",
-        "pattern": "Only run tests which match the given substring. Can be used multiple times.",
-        "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
+        "append_coverage": "Append coverage data to .coverage, otherwise it starts clean each time.",
         "buffer": "Discard output from passing tests.",
-        "tag": "Run only tests with the specified tag. Can be used multiple times.",
-        "exclude_tag": "Do not run tests with the specified tag. Can be used multiple times.",
-        "verbose": "Enable verbose test output.",
-        "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
+        "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests.",
+        "coverage": "Enable test code-coverage reporting. Off by default due to performance impact.",
+        "exclude_tag": "Do not run tests with the specified tag (e.g. 'unit', 'integration', 'migration_test'). Can be used multiple times.",
+        "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
+        "keepdb": "Save test database after test run for faster re-testing in combination with `--reusedb`.",
+        "label": "Specify a directory or module to test instead of running all Nautobot tests.",
         "parallel": "Run tests in parallel; auto-detects the number of workers if not specified with `--parallel-workers`.",
         "parallel_workers": "Specify the number of workers to use when running tests in parallel.",
+        "pattern": "Only run tests which match the given substring. Can be used multiple times.",
+        "reusedb": "Reuse previously saved test database for faster re-testing in combination with `--keepdb`.",
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
-        "performance_report": "Generate Performance Testing report in the terminal. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
-        "performance_snapshot": "Generate a new performance testing report to report.yml. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
+        "tag": "Run only tests with the specified tag (e.g. 'unit', 'integration', 'migration_test'). Can be used multiple times.",
+        "verbose": "Enable verbose test output.",
     },
     iterable=["tag", "exclude_tag", "pattern"],
 )
-def unittest(
+def tests(
     context,
-    cache_test_fixtures=True,
-    keepdb=True,
-    reusedb=True,
-    label="nautobot",
-    pattern=None,
-    failfast=False,
+    append_coverage=False,
     buffer=True,
+    cache_test_fixtures=True,
+    coverage=False,
     exclude_tag=None,
-    tag=None,
-    verbose=False,
-    append=False,
+    failfast=False,
+    keepdb=True,
+    label="nautobot",
     parallel=True,
     parallel_workers=None,
+    pattern=None,
+    reusedb=True,
     skip_docs_build=False,
-    performance_report=False,
-    performance_snapshot=False,
+    tag=None,
+    verbose=False,
 ):
-    """Run Nautobot unit tests."""
+    """Run Nautobot automated tests."""
     if not skip_docs_build:
         # First build the docs so they are available.
         build_and_check_docs(context)
 
-    if not append:
+    if coverage and not append_coverage:
         run_command(context, "coverage erase")
 
     if parallel_workers:
         parallel_workers = int(parallel_workers)
 
-    append_arg = " --append" if append and not parallel else ""
-    parallel_arg = " --parallel-mode" if parallel else ""
-    command = f"coverage run{append_arg}{parallel_arg} --module nautobot.core.cli test {label}"
+    if coverage:
+        append_arg = " --append" if append_coverage and not parallel else ""
+        parallel_arg = " --parallel-mode" if parallel else ""
+        command = f"coverage run{append_arg}{parallel_arg} --module nautobot.core.cli test {label}"
+    else:
+        command = f"nautobot-server test {label}"
     command += " --config=nautobot/core/tests/nautobot_config.py"
     # booleans
     if context.nautobot.get("cache_test_fixtures", False) or cache_test_fixtures:
@@ -944,96 +951,22 @@ def unittest(
         command += " --parallel"
         if parallel_workers:
             command += f"={parallel_workers}"
-    if performance_report or (tag and "performance" in tag):
-        command += " --slowreport"
-    if performance_snapshot:
-        command += " --slowreport --slowreportpath report.yml"
-    # change the default testrunner only if performance testing is running
-    if "--slowreport" in command:
-        command += " --testrunner nautobot.core.tests.runner.NautobotPerformanceTestRunner"
     # lists
     if tag:
         for individual_tag in tag:
             command += f" --tag {individual_tag}"
     if exclude_tag:
         for individual_exclude_tag in exclude_tag:
-            command += f" --tag {individual_exclude_tag}"
+            command += f" --exclude-tag {individual_exclude_tag}"
     for item in pattern or []:
         command += f" -k='{item}'"
 
     run_command(context, command)
 
-    unittest_coverage(context)
+    if coverage:
+        run_command(context, "coverage combine")
 
-
-@task
-def unittest_coverage(context):
-    """Report on code test coverage as measured by 'invoke unittest'."""
-    run_command(context, "coverage combine")
-
-    command = "coverage report --skip-covered --include 'nautobot/*'"
-
-    run_command(context, command)
-
-
-@task(
-    help={
-        "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests",
-        "keepdb": "Save and re-use test database between test runs for faster re-testing.",
-        "reusedb": "Reuse previously saved test database for faster re-testing in combination with `--keepdb`.",
-        "label": "Specify a directory or module to test instead of running all Nautobot tests.",
-        "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
-        "buffer": "Discard output from passing tests.",
-        "tag": "Run only tests with the specified tag. Can be used multiple times.",
-        "exclude_tag": "Do not run tests with the specified tag. Can be used multiple times.",
-        "verbose": "Enable verbose test output.",
-        "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
-        "skip_docs_build": "Skip (re)build of documentation before running the test.",
-        "performance_report": "Generate Performance Testing report in the terminal. Set GENERATE_PERFORMANCE_REPORT=True in settings.py before using this flag",
-        "performance_snapshot": "Generate a new performance testing report to report.yml. Set GENERATE_PERFORMANCE_REPORT=True in settings.py before using this flag",
-    },
-    iterable=["tag", "exclude_tag", "pattern"],
-)
-def integration_test(
-    context,
-    cache_test_fixtures=True,
-    keepdb=True,
-    reusedb=True,
-    label="nautobot",
-    failfast=False,
-    buffer=True,
-    tag=None,
-    exclude_tag=None,
-    verbose=False,
-    append=False,
-    skip_docs_build=False,
-    performance_report=False,
-    performance_snapshot=False,
-    pattern=None,
-):
-    """Run Nautobot integration tests."""
-
-    # Enforce "integration" tag
-    tag.append("integration")
-
-    unittest(
-        context,
-        cache_test_fixtures=cache_test_fixtures,
-        keepdb=keepdb,
-        reusedb=reusedb,
-        label=label,
-        failfast=failfast,
-        buffer=buffer,
-        tag=tag,
-        exclude_tag=exclude_tag,
-        verbose=verbose,
-        append=append,
-        skip_docs_build=skip_docs_build,
-        performance_report=performance_report,
-        performance_snapshot=performance_snapshot,
-        parallel=False,
-        pattern=pattern,
-    )
+        run_command(context, "coverage report --skip-covered --include 'nautobot/*'")
 
 
 @task(
@@ -1077,69 +1010,9 @@ def migration_test(context, dataset, db_engine="postgres", db_name="nautobot_mig
         )
 
 
-@task(
-    help={
-        "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests.",
-        "keepdb": "Save and re-use test database between test runs for faster re-testing.",
-        "label": "Specify a directory or module to test instead of running all Nautobot tests.",
-        "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
-        "buffer": "Discard output from passing tests.",
-        "tag": "Run only tests with the specified tag. Can be used multiple times.",
-        "exclude_tag": "Do not run tests with the specified tag. Can be used multiple times.",
-        "verbose": "Enable verbose test output.",
-        "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
-        "skip_docs_build": "Skip (re)build of documentation before running the test.",
-        "performance_snapshot": "Generate a new performance testing report to report.json. Set GENERATE_PERFORMANCE_REPORT=True in settings.py before using this flag",
-    },
-    iterable=["tag", "exclude_tag"],
-)
-def performance_test(
-    context,
-    cache_test_fixtures=False,
-    keepdb=False,
-    label="nautobot",
-    failfast=False,
-    buffer=True,
-    tag=None,
-    exclude_tag=None,
-    verbose=False,
-    append=False,
-    skip_docs_build=False,
-    performance_snapshot=False,
-):
-    """
-    Run Nautobot performance tests.
-    Prerequisite:
-        Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py
-    """
-    # Enforce "performance" tag
-    tag.append("performance")
-
-    unittest(
-        context,
-        cache_test_fixtures=cache_test_fixtures,
-        keepdb=keepdb,
-        label=label,
-        failfast=failfast,
-        buffer=buffer,
-        tag=tag,
-        exclude_tag=exclude_tag,
-        verbose=verbose,
-        append=append,
-        skip_docs_build=skip_docs_build,
-        performance_report=True,
-        performance_snapshot=performance_snapshot,
-    )
-
-
-@task(
-    help={
-        "lint-only": "Only run linters; unit tests will be excluded.",
-        "keepdb": "Save and re-use test database between test runs for faster re-testing.",
-    }
-)
-def tests(context, lint_only=False, keepdb=False):
-    """Run all linters and unit tests."""
+@task
+def lint(context):
+    """Run all linters."""
     hadolint(context)
     markdownlint(context)
     yamllint(context)
@@ -1148,8 +1021,6 @@ def tests(context, lint_only=False, keepdb=False):
     check_migrations(context)
     check_schema(context)
     build_and_check_docs(context)
-    if not lint_only:
-        unittest(context, keepdb=keepdb)
 
 
 @task(help={"version": "The version number or the rule to update the version."})

@@ -68,7 +68,7 @@ from nautobot.dcim.models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
-from nautobot.extras.models import ConfigContextSchema, Role, SecretsGroup, Status
+from nautobot.extras.models import ConfigContextSchema, ExternalIntegration, Role, SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType
@@ -187,7 +187,12 @@ class Mixins:
         def test_module_device_validation(self):
             """Assert that a modular component can have a module or a device but not both."""
 
-            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+            self.add_permissions(
+                f"{self.model._meta.app_label}.add_{self.model._meta.model_name}",
+                "dcim.view_device",
+                "dcim.view_module",
+                "extras.view_status",
+            )
             data = {
                 self.module_field: self.module.pk,
                 self.device_field: self.device.pk,
@@ -220,7 +225,12 @@ class Mixins:
         def test_module_device_name_unique_validation(self):
             """Assert uniqueness constraint is enforced for (device,name) and (module,name) fields."""
 
-            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+            self.add_permissions(
+                f"{self.model._meta.app_label}.add_{self.model._meta.model_name}",
+                "dcim.view_device",
+                "dcim.view_module",
+                "extras.view_status",
+            )
             modules = Module.objects.all()[:2]
             data = {
                 self.module_field: modules[0].pk,
@@ -266,7 +276,11 @@ class Mixins:
         def test_module_type_device_type_validation(self):
             """Assert that a modular component template can have a module_type or a device_type but not both."""
 
-            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+            self.add_permissions(
+                f"{self.model._meta.app_label}.add_{self.model._meta.model_name}",
+                "dcim.view_devicetype",
+                "dcim.view_moduletype",
+            )
             data = {
                 "module_type": self.module_type.pk,
                 "device_type": self.device_type.pk,
@@ -299,7 +313,11 @@ class Mixins:
         def test_module_type_device_type_name_unique_validation(self):
             """Assert uniqueness constraint is enforced for (device_type,name) and (module_type,name) fields."""
 
-            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+            self.add_permissions(
+                f"{self.model._meta.app_label}.add_{self.model._meta.model_name}",
+                "dcim.view_devicetype",
+                "dcim.view_moduletype",
+            )
             module_types = ModuleType.objects.all()[:2]
             data = {
                 "module_type": module_types[0].pk,
@@ -442,7 +460,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelA
         Test allow_null to time_zone field on locaton.
         """
 
-        self.add_permissions("dcim.add_location")
+        self.add_permissions("dcim.add_location", "dcim.view_locationtype", "extras.view_status")
         url = reverse("dcim-api:location-list")
         location = {
             "name": "foo",
@@ -461,7 +479,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelA
         Test disallowed blank time_zone field on location.
         """
 
-        self.add_permissions("dcim.add_location")
+        self.add_permissions("dcim.add_location", "dcim.view_locationtype", "extras.view_status")
         url = reverse("dcim-api:location-list")
         location = {
             "name": "foo",
@@ -480,7 +498,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelA
         Test valid time_zone field on location.
         """
 
-        self.add_permissions("dcim.add_location")
+        self.add_permissions("dcim.add_location", "dcim.view_locationtype", "extras.view_status")
         url = reverse("dcim-api:location-list")
         time_zone = "UTC"
         location = {
@@ -500,7 +518,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelA
         Test invalid time_zone field on location.
         """
 
-        self.add_permissions("dcim.add_location")
+        self.add_permissions("dcim.add_location", "dcim.view_locationtype", "extras.view_status")
         url = reverse("dcim-api:location-list")
         time_zone = "IDONOTEXIST"
         location = {
@@ -593,7 +611,7 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModel
 
     def test_child_group_location_valid(self):
         """A child group with a location may fall within the parent group's location."""
-        self.add_permissions("dcim.add_rackgroup")
+        self.add_permissions("dcim.add_rackgroup", "dcim.view_rackgroup", "dcim.view_location")
         url = reverse("dcim-api:rackgroup-list")
 
         parent_group = RackGroup.objects.filter(location=self.locations[0]).first()
@@ -615,7 +633,7 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModel
 
     def test_child_group_location_invalid(self):
         """A child group with a location must not fall outside its parent group's location."""
-        self.add_permissions("dcim.add_rackgroup")
+        self.add_permissions("dcim.add_rackgroup", "dcim.view_location", "dcim.view_rackgroup")
         url = reverse("dcim-api:rackgroup-list")
 
         parent_group = RackGroup.objects.filter(location=self.locations[0]).first()
@@ -1225,7 +1243,9 @@ class FrontPortTemplateTest(Mixins.BasePortTemplateTestMixin):
     def test_module_type_device_type_validation(self):
         """Assert that a modular component template can have a module_type or a device_type but not both."""
 
-        self.add_permissions("dcim.add_frontporttemplate")
+        self.add_permissions(
+            "dcim.add_frontporttemplate", "dcim.view_rearporttemplate", "dcim.view_devicetype", "dcim.view_moduletype"
+        )
         data = {
             "module_type": self.module_type.pk,
             "device_type": self.device_type.pk,
@@ -1253,7 +1273,9 @@ class FrontPortTemplateTest(Mixins.BasePortTemplateTestMixin):
     def test_module_type_device_type_name_unique_validation(self):
         """Assert uniqueness constraint is enforced for (device_type,name) and (module_type,name) fields."""
 
-        self.add_permissions("dcim.add_frontporttemplate")
+        self.add_permissions(
+            "dcim.add_frontporttemplate", "dcim.view_rearporttemplate", "dcim.view_moduletype", "dcim.view_devicetype"
+        )
         data = {
             "module_type": self.module_type.pk,
             "name": "test modular device_type component parent validation",
@@ -1617,7 +1639,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         schema = ConfigContextSchema.objects.create(
             name="Schema 1", data_schema={"type": "object", "properties": {"A": {"type": "integer"}}}
         )
-        self.add_permissions("dcim.change_device")
+        self.add_permissions("dcim.change_device", "extras.view_configcontextschema")
 
         patch_data = {"local_config_context_schema": str(schema.pk)}
 
@@ -1651,7 +1673,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         Validate we can set primary_ip4 on a device using a PATCH.
         """
         # Add object-level permission
-        self.add_permissions("dcim.change_device")
+        self.add_permissions("dcim.change_device", "ipam.view_ipaddress")
 
         dev = Device.objects.get(name="Device 3")
         intf_status = Status.objects.get_for_model(Interface).first()
@@ -1677,7 +1699,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         Validate we can set device redundancy group on a device using a PATCH.
         """
         # Add object-level permission
-        self.add_permissions("dcim.change_device")
+        self.add_permissions("dcim.change_device", "dcim.view_deviceredundancygroup")
 
         device_redundancy_group = DeviceRedundancyGroup.objects.first()
 
@@ -1751,7 +1773,15 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         # Create test data
         parent_device, device_bay_1, device_bay_2, device_type_child = self._parent_device_test_data()
 
-        self.add_permissions("dcim.add_device")
+        self.add_permissions(
+            "dcim.add_device",
+            "dcim.view_device",
+            "dcim.view_devicetype",
+            "extras.view_role",
+            "extras.view_status",
+            "dcim.view_location",
+            "dcim.view_devicebay",
+        )
         url = reverse("dcim-api:device-list")
 
         # Test creating device with parent bay by device bay data
@@ -1808,7 +1838,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         # Create test data
         parent_device, device_bay_1, device_bay_2, device_type_child = self._parent_device_test_data()
 
-        self.add_permissions("dcim.change_device")
+        self.add_permissions("dcim.change_device", "dcim.view_devicebay")
 
         child_device = Device.objects.create(
             device_type=device_type_child,
@@ -1852,7 +1882,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         device_bay_1.installed_device = child_device
         device_bay_1.save()
 
-        self.add_permissions("dcim.change_device", "dcim.view_device", "dcim.change_devicebay")
+        self.add_permissions("dcim.change_device", "dcim.view_device", "dcim.change_devicebay", "dcim.view_devicebay")
         child_device_detail_url = self._get_detail_url(child_device)
 
         response = self.client.get(child_device_detail_url, **self.header)
@@ -1950,7 +1980,9 @@ class ModuleTestCase(APIViewTestCases.APIViewTestCase):
     def test_parent_module_bay_location_validation(self):
         """Assert that a module can have a parent_module_bay or a location but not both."""
 
-        self.add_permissions("dcim.add_module")
+        self.add_permissions(
+            "dcim.add_module", "dcim.view_moduletype", "dcim.view_location", "dcim.view_modulebay", "extras.view_status"
+        )
         data = {
             "module_type": self.module_type.pk,
             "location": self.location.pk,
@@ -1981,7 +2013,7 @@ class ModuleTestCase(APIViewTestCases.APIViewTestCase):
         )
 
     def test_serial_module_type_unique_validation(self):
-        self.add_permissions("dcim.add_module")
+        self.add_permissions("dcim.add_module", "dcim.view_location", "dcim.view_moduletype", "extras.view_status")
         data = {
             "module_type": self.module_type.pk,
             "location": self.location.pk,
@@ -2006,7 +2038,7 @@ class ModuleTestCase(APIViewTestCases.APIViewTestCase):
         )
 
     def test_asset_tag_unique_validation(self):
-        self.add_permissions("dcim.add_module")
+        self.add_permissions("dcim.add_module", "dcim.view_location", "dcim.view_moduletype", "extras.view_status")
         data = {
             "module_type": self.module_type.pk,
             "location": self.location.pk,
@@ -2321,7 +2353,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
 
     def test_untagged_vlan_requires_mode(self):
         """Test that when an `untagged_vlan` is specified, `mode` is also required."""
-        self.add_permissions("dcim.add_interface")
+        self.add_permissions("dcim.add_interface", "dcim.view_device", "extras.view_status", "ipam.view_vlan")
 
         # This will fail.
         url = self._get_list_url()
@@ -2336,7 +2368,9 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
         )
 
     def test_tagged_vlan_must_be_in_the_location_or_parent_locations_of_the_parent_device(self):
-        self.add_permissions("dcim.add_interface")
+        self.add_permissions(
+            "dcim.add_interface", "dcim.view_interface", "dcim.view_device", "extras.view_status", "ipam.view_vlan"
+        )
 
         interface_status = Status.objects.get_for_model(Interface).first()
         location = self.devices[0].location
@@ -2365,7 +2399,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
 
     def test_interface_belonging_to_common_device_or_vc_allowed(self):
         """Test parent, bridge, and LAG interfaces belonging to common device or VC is valid"""
-        self.add_permissions("dcim.add_interface")
+        self.add_permissions("dcim.add_interface", "dcim.view_device", "dcim.view_interface", "extras.view_status")
 
         response = self.client.post(
             self._get_list_url(), data=self.common_device_or_vc_data[0], format="json", **self.header
@@ -2388,7 +2422,9 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
     def test_interface_not_belonging_to_common_device_or_vc_not_allowed(self):
         """Test parent, bridge, and LAG interfaces not belonging to common device or VC is invalid"""
 
-        self.add_permissions("dcim.add_interface")
+        self.add_permissions(
+            "dcim.add_interface", "dcim.view_device", "dcim.view_interface", "extras.view_status", "extras.view_role"
+        )
 
         for name, payload in self.interfaces_not_belonging_to_same_device_data:
             response = self.client.post(self._get_list_url(), data=payload, format="json", **self.header)
@@ -2405,7 +2441,9 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
             )
 
     def test_tagged_vlan_raise_error_if_mode_not_set_to_tagged(self):
-        self.add_permissions("dcim.add_interface", "dcim.change_interface")
+        self.add_permissions(
+            "dcim.add_interface", "dcim.change_interface", "dcim.view_device", "extras.view_status", "ipam.view_vlan"
+        )
         with self.subTest("On create, assert 400 status."):
             payload = {
                 "device": self.devices[0].pk,
@@ -2509,7 +2547,7 @@ class FrontPortTest(Mixins.BasePortTestMixin):
     def test_module_device_validation(self):
         """Assert that a modular component can have a module or a device but not both."""
 
-        self.add_permissions("dcim.add_frontport")
+        self.add_permissions("dcim.add_frontport", "dcim.view_device", "dcim.view_module", "dcim.view_rearport")
         data = {
             "module": self.module.pk,
             "device": self.device.pk,
@@ -2546,7 +2584,7 @@ class FrontPortTest(Mixins.BasePortTestMixin):
     def test_module_device_name_unique_validation(self):
         """Assert uniqueness constraint is enforced for (device,name) and (module,name) fields."""
 
-        self.add_permissions("dcim.add_frontport")
+        self.add_permissions("dcim.add_frontport", "dcim.view_module", "dcim.view_rearport", "dcim.view_device")
         data = {
             "module": self.module.pk,
             "name": "test modular device component parent validation",
@@ -3410,22 +3448,26 @@ class SoftwareImageFileTestCase(Mixins.SoftwareImageFileRelatedModelMixin, APIVi
     def setUpTestData(cls):
         statuses = Status.objects.get_for_model(SoftwareImageFile)
         software_versions = SoftwareVersion.objects.all()
+        external_integrations = ExternalIntegration.objects.all()
 
         cls.create_data = [
             {
                 "software_version": software_versions[0].pk,
                 "status": statuses[0].pk,
                 "image_file_name": "software_image_file_test_case_1.bin",
+                "external_integration": external_integrations[0].pk,
             },
             {
                 "software_version": software_versions[1].pk,
                 "status": statuses[1].pk,
                 "image_file_name": "software_image_file_test_case_2.bin",
+                "external_integration": external_integrations[1].pk,
             },
             {
                 "software_version": software_versions[2].pk,
                 "status": statuses[2].pk,
                 "image_file_name": "software_image_file_test_case_3.bin",
+                "external_integration": None,
             },
         ]
         cls.bulk_update_data = {
@@ -3435,6 +3477,7 @@ class SoftwareImageFileTestCase(Mixins.SoftwareImageFileRelatedModelMixin, APIVi
             "hashing_algorithm": SoftwareImageFileHashingAlgorithmChoices.SHA512,
             "image_file_size": 1234567890,
             "download_url": "https://example.com/software_image_file_test_case.bin",
+            "external_integration": external_integrations[0].pk,
         }
 
 
@@ -3642,7 +3685,7 @@ class VirtualDeviceContextTestCase(APIViewTestCases.APIViewTestCase):
         Validate we can set primary_ip on a Virtual Device Context using a PATCH.
         """
         # Add object-level permission
-        self.add_permissions("dcim.change_virtualdevicecontext")
+        self.add_permissions("dcim.change_virtualdevicecontext", "ipam.view_ipaddress")
         vdc = VirtualDeviceContext.objects.first()
         device = vdc.device
         intf_status = Status.objects.get_for_model(Interface).first()
@@ -3679,7 +3722,7 @@ class VirtualDeviceContextTestCase(APIViewTestCases.APIViewTestCase):
         """
         Validate that changing device on the virutal device context is not allowed.
         """
-        self.add_permissions("dcim.change_virtualdevicecontext")
+        self.add_permissions("dcim.change_virtualdevicecontext", "dcim.view_device")
         vdc = VirtualDeviceContext.objects.first()
         old_device = vdc.device
         new_device = Device.objects.exclude(pk=old_device.pk).first()

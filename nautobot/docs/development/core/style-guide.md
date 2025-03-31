@@ -29,7 +29,7 @@ invoke pylint
 or, as a single command:
 
 ```no-highlight
-invoke tests --lint-only
+invoke lint
 ```
 
 ## Introducing New Dependencies
