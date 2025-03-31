@@ -1072,7 +1072,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
     def render_label(self, context: Context):
         """Default to rendering the provided object's `verbose_name` if no more specific `label` was defined."""
         if self.label is None:
-            return bettertitle(get_obj_from_context(context, self.context_object_key)._meta.verbose_name).upper()
+            return get_obj_from_context(context, self.context_object_key)._meta.verbose_name.upper()
         return super().render_label(context)
 
     def render_value(self, key, value, context: Context):

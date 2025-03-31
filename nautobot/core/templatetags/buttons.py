@@ -261,7 +261,7 @@ def consolidate_bulk_action_buttons(context):
                         "class": static_group_button_classes,
                         "id": "update_dynamic_groups_for_selected",
                         "data-bs-toggle": "modal",
-                        "data-target": "#dynamic_group_assignment_modal",
+                        "data-bs-target": "#dynamic_group_assignment_modal",
                         "data-objects": "selected",
                         "type": "button",
                     }

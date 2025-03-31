@@ -1,9 +1,9 @@
 {% load render_table from django_tables2 %}
 {% load helpers %}
 
-<div class="panel panel-{{ panel_class|default:'default' }}">
+<div class="card">
     {% if heading %}
-        <div class="panel-heading">
+        <div class="card-header">
             <strong>{{ heading }}</strong>
         </div>
     {% endif %}
@@ -12,16 +12,16 @@
             {% render_table table table_inc_template|default:'inc/table.html' %}
         </div>
     {% else %}
-        <div class="panel-body text-muted">None</div>
+        <div class="card-body text-muted">None</div>
     {% endif %}
     {% if add_obj_url %}
-        <div class="panel-footer noprint">
+        <div class="card-footer noprint">
             <div class="pull-right">
                 <a href="{{ add_obj_url }}" class="btn btn-primary btn-xs">
                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add {{ table.data.data.model|meta:"verbose_name" }}
                 </a>
             </div>
-        
+
             <div class="clearfix"></div>
         </div>
     {% endif %}

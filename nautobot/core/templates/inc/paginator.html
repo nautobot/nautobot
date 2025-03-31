@@ -1,6 +1,6 @@
 {% load helpers %}
 
-<div class="paginator text-right">
+<div class="paginator text-end">
     {% if paginator.num_pages > 1 %}
         <nav>
             <ul class="pagination float-end">
@@ -28,7 +28,7 @@
             </ul>
         </nav>
     {% endif %}
-    <form method="get" class="form-inline">
+    <form method="get" class="d-inline-flex flex-wrap float-end">
         {% for k, v_list in request.GET.lists %}
             {% if k != 'per_page' %}
                 {% for v in v_list %}
@@ -36,7 +36,7 @@
                 {% endfor %}
             {% endif %}
         {% endfor %}
-        <select name="per_page" id="per_page" class="form-control">
+        <select name="per_page" id="per_page" class="form-control me-2">
             {% if page.paginator.per_page not in "PER_PAGE_DEFAULTS"|settings_or_config %}
                 <option value="{{ page.paginator.per_page }}" selected="selected">{{ page.paginator.per_page }}</option>
             {% endif %}
@@ -45,7 +45,8 @@
             {% endfor %}
         </select> per page
         {% if page %}
-            <div class="text-right text-muted">
+            <div class="flex-basis-100"></div>
+            <div class="text-muted">
                 Showing {{ page.start_index }}-{{ page.end_index }} of {{ page.paginator.count }}
             </div>
         {% endif %}
