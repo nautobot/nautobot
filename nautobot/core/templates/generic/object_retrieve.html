@@ -362,7 +362,6 @@
                 // Get the associated collapsible element
                 var panelId = button.getAttribute("panel-id");
                 var collapseElement = document.getElementById(panelId);
-                // Wait a short time for Bootstrap to apply the show/hide classes
                 collapseElement.addEventListener("shown.bs.collapse", function () {
                     chevronIcon.classList.replace("mdi-chevron-left", "mdi-chevron-down");
                 });

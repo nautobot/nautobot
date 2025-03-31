@@ -50,7 +50,7 @@
     {% if model.is_saved_view_model %}
         <div class="btn-group">
             <button type="button" class="btn btn-default dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <span class="mdi mdi-view-compact-outline" aria-hidden="true"></span> Saved Views <span class="caret"></span>
+                <span class="mdi mdi-view-compact-outline" aria-hidden="true"></span> Saved Views
             </button>
             <ul class="dropdown-menu">
                 {% for saved_view in saved_views %}
@@ -112,11 +112,11 @@
             </button>
         {% elif permissions.add and 'import' in action_buttons %}
             <button type="button" id="actions-dropdown" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
-                Actions <span class="caret"></span>
+                Actions
             </button>
         {% elif 'export' in action_buttons %}
             <button type="button" id="actions-dropdown" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
-                Actions <span class="caret"></span>
+                Actions
             </button>
         {% endif %}
         <ul class="dropdown-menu pull-right" role="menu">
