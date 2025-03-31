@@ -8,7 +8,7 @@
     {% if perms.extras.add_note %}
         <form action="{% url 'extras:note_add' %}?return_url={{ request.path }}?tab=notes" method="post" enctype="multipart/form-data" class="form form-horizontal">
             <div class="row">
-                <div class="col-md-6 offset-md-3">
+                <div class="col-md-6 offset-md-3 mt-4 mb-4">
                     <h3>Add a new note</h3>
                     <div class="card">
                         <div class="card-header">
@@ -20,7 +20,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6 offset-md-3 text-end" style="margin-top: 20px; margin-bottom: 20px;">
+                <div class="col-md-6 offset-md-3 mt-4 mb-4 text-end">
                     <button id="createNote" type="submit" class="btn btn-primary">Create</button>
                     <a href="{{ object.get_absolute_url }}" class="btn btn-default">Cancel</a>
                 </div>

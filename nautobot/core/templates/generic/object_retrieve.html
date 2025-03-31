@@ -362,15 +362,13 @@
                 // Get the associated collapsible element
                 var panelId = button.getAttribute("panel-id");
                 var collapseElement = document.getElementById(panelId);
-                var expanded = button.getAttribute("aria-expanded") === "true";
                 // Wait a short time for Bootstrap to apply the show/hide classes
-                setTimeout(() => {
-                    if (expanded===true) {
-                        chevronIcon.classList.replace("mdi-chevron-left", "mdi-chevron-down");
-                    } else {
-                        chevronIcon.classList.replace("mdi-chevron-down", "mdi-chevron-left");
-                    }
-                }, 100);
+                collapseElement.addEventListener("shown.bs.collapse", function () {
+                    chevronIcon.classList.replace("mdi-chevron-left", "mdi-chevron-down");
+                });
+                collapseElement.addEventListener("hidden.bs.collapse", function () {
+                    chevronIcon.classList.replace("mdi-chevron-down", "mdi-chevron-left");
+                });
             });
         });
     });
