@@ -30,7 +30,7 @@ class ModuleBayPositionTestCase(SeleniumTestCase, ObjectsListMixin):
         for _ in name_pattern_field.type("v2", slowly=True):
             pass
 
-        self.assertEqual(position_field.value, "new pattern", "Position field value has changed")
+        self.assertEqual(position_field.value, "new pattern", "Position field value has unexpectedly changed")
 
         # Regenerate position
         self.browser.find_by_css('button[data-original-title="Regenerate position"]').click()
