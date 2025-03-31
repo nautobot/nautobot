@@ -9,23 +9,6 @@ html {
 html, body {
     height: 100%;
 }
-.footer, .push {
-    height: 48px; /* .push must be the same height as .footer */
-}
-.footer {
-    background-color: #f5f5f5;
-    border-top-left-radius: 10px;
-    border-top-right-radius: 10px;
-    white-space: nowrap;
-    overflow: visible;
-    margin: 0;
-}
-.footer .row {
-    background-color: #f5f5f5;
-}
-footer p {
-    margin: 12px 0;
-}
 .right-side-panel {
     max-width: 400px;
     min-width: 300px;
