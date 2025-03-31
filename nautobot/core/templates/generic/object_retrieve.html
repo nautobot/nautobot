@@ -48,7 +48,6 @@
                 </button>
             </span>
         </h1>
-        <br/>
         {% with list_url=object|validated_viewname:"list" %}
         {% if list_url %}
             <nav class="col-sm-8 col-md-9" aria-label="breadcrumb">
@@ -66,10 +65,8 @@
             </nav>
         {% endif %}
         {% endwith %}
-    {% endblock masthead %}
-    {% if not object_detail_content %}
         {% include 'inc/created_updated.html' %}
-    {% endif %}
+    {% endblock masthead %}
     <div class="float-end noprint">
         {% custom_links object %}
         {% job_buttons object %}
