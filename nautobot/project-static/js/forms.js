@@ -86,43 +86,90 @@ function initializeCheckboxes(context){
     });
 }
 
-function initializeSlugField(context){
-    this_context = $(context);
-    var slug_field = this_context.find('#id_slug');
+function repopulate(targetField, sourceFields, maxLength, transformValue = null){
+   const newValues = sourceFields.map(function(sourceFieldName){
+        const sourceFieldId = `id_${sourceFieldName}`;
+        return document.getElementById(sourceFieldId).value;
+    })
+
+    const newValue = newValues.join(" ")
+    if(transformValue){
+        targetField.value = transformValue(newValue, maxLength)
+    }
+    targetField.value = newValue.slice(0, maxLength)
+}
+
+function repopulateIfChanged(targetField, repopulate){
+    if(targetField.dataset.manuallyChanged === 'true'){
+        return;
+    }
+    repopulate()
+}
+
+function watchManualChanges(field){
+    field.dataset.manuallyChanged = Boolean(field.value)
+    field.addEventListener('change', function(){
+        field.dataset.manuallyChanged = Boolean(field.value)
+    })
+}
+
+function watchSourceFields(targetField, sourceFields, repopulate){
+    // Watch for any changes in source fields to regenerate the target field
+    sourceFields.forEach(function(sourceFieldName){
+        const sourceFieldId = `id_${sourceFieldName}`;
+        const sourceField = document.getElementById(sourceFieldId);
+        const onFieldUpdate = function(){ repopulateIfChanged(targetField, repopulate)}
+        sourceField.addEventListener('keyup', onFieldUpdate)
+        sourceField.addEventListener('change', onFieldUpdate)
+    })
+}
+
+function watchRegenerateButton(targetField, repopulate){
+    // If user clicks the "regenerate" button, set target field to be auto-populate again
+    const regenerateButton = document.querySelector(`[data-regenerate=${targetField.getAttribute('id')}]`)
+    regenerateButton.addEventListener('click', repopulate)
+}
+
+function getSlugField(){
+    const slugField = document.getElementById("id_slug");
+    if(slugField){
+        return slugField
+    }
     // If id_slug field is not to be found
     // check if it is rename to key field like what we did for CustomField and Relationship
-    if (slug_field.length == 0) {
-        slug_field = this_context.find('#id_key');
-    }
-    if (slug_field.length != 0) {
-        var slug_source_arr = slug_field.attr('slug-source').split(" ");
-        var slug_length = slug_field.attr('maxlength');
-        slug_field.attr('_changed', Boolean(slug_field.val()));
-        slug_field.change(function() {
-            $(this).attr('_changed', Boolean($(this).val()));
-        });
-        function reslugify() {
-            let slug_str = "";
-            for (slug_source_str of slug_source_arr) {
-                if (slug_str != "") {
-                    slug_str += " ";
-                }
-                let slug_source = $('#id_' + slug_source_str);
-                slug_str += slug_source.val();
-            }
-            slug_field.val(slugify(slug_str, (slug_length ? slug_length : 100)));
-        };
+    return document.getElementById("id_key");
+}
 
-        for (slug_source_str of slug_source_arr) {
-            let slug_source = $('#id_' + slug_source_str);
-            slug_source.on('keyup change', function() {
-                if (slug_field && slug_field.attr('_changed')=="false") {
-                    reslugify();
-                }
-            });
-        }
-        this_context.find('button.reslugify').click(reslugify);
+function initializeAutoField(field, sourceFieldsAttrName, defaultMaxLength = 255, transformValue = null){
+    // Get source fields and length values set as html attributes on given field
+    const sourceFields = field.getAttribute(sourceFieldsAttrName).split(" ");
+    const length = field.getAttribute('maxlength') || defaultMaxLength
+
+    // Prepare repopulate function with custom source fields and length set on this field
+    const repopulateField = function() {
+        repopulate(field, sourceFields, length, transformValue)
     }
+    watchSourceFields(field, sourceFields, repopulateField);
+    watchRegenerateButton(field, repopulateField);
+    watchManualChanges(field);
+}
+
+function initializeSlugField(){
+    // Function to support slug fields auto-populate and slugify logic
+    const slugField = getSlugField()
+    if(!slugField){
+        return
+    }
+    initializeAutoField(slugField, 'slug-source', 100, slugify);
+}
+
+function initializeAutoPopulateField(){
+    // Function to support other auto-populate fields like position for Device Module Bay
+    const fields = document.querySelectorAll('[data-autopopulate]');
+
+    fields.forEach(function(field){
+        initializeAutoField(field, 'source');
+    })
 }
 
 function initializeFormActionClick(context){
@@ -891,6 +938,7 @@ function initializeInputs(context) {
     initializeStaticChoiceSelection(this_context)
     initializeCheckboxes(this_context)
     initializeSlugField(this_context)
+    initializeAutoPopulateField(this_context)
     initializeFormActionClick(this_context)
     initializeBulkEditNullification(this_context)
     initializeColorPicker(this_context)

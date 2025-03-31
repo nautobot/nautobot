@@ -2333,11 +2333,7 @@ class DeviceWirelessView(generic.ObjectView):
 
 
 class BulkComponentCreateUIViewSetMixin:
-    bulk_component_create_template = "generic/object_bulk_add_component.html"
-
-    def _bulk_component_create(
-        self, request, component_queryset, bulk_component_form, parent_field=None, template=None
-    ):
+    def _bulk_component_create(self, request, component_queryset, bulk_component_form, parent_field=None):
         parent_model_name = self.queryset.model._meta.verbose_name_plural
         if parent_field is None:
             parent_field = self.queryset.model._meta.model_name
@@ -2421,7 +2417,7 @@ class BulkComponentCreateUIViewSetMixin:
 
         return Response(
             {
-                "template": template or self.bulk_component_create_template,
+                "template": "generic/object_bulk_add_component.html",
                 "form": form,
                 "parent_model_name": parent_model_name,
                 "model_name": model_name,
@@ -2754,7 +2750,6 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             component_queryset=ModuleBay.objects.all(),
             bulk_component_form=forms.ModuleModuleBayBulkCreateForm,
             parent_field="parent_module",
-            template="dcim/modulebay_bulk_create.html",
         )
 
 
@@ -3442,7 +3437,7 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
     model_form_class = forms.ModuleBayForm
     serializer_class = serializers.ModuleBaySerializer
     table_class = tables.ModuleBayTable
-    create_template_name = "dcim/modulebay_create.html"
+    create_template_name = "dcim/device_component_add.html"
 
     def get_extra_context(self, request, instance):
         if instance:
@@ -3636,7 +3631,6 @@ class DeviceBulkAddModuleBayView(generic.BulkComponentCreateView):
     filterset = filters.DeviceFilterSet
     table = tables.DeviceTable
     default_return_url = "dcim:device_list"
-    template_name = "dcim/modulebay_bulk_create.html"
 
 
 class DeviceBulkAddInventoryItemView(generic.BulkComponentCreateView):
