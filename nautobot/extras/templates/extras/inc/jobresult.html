@@ -12,45 +12,43 @@
         <strong>Summary of Results</strong>
     </div>
     <table class="table table-hover panel-body">
-        {% if result.job_model is not None %}
             <tr>
                 <td>Job Description</td>
-                <td>{{ result.job_model.description | render_markdown }}</td>
+                <td>{{ result.job_model.description | render_markdown | placeholder }}</td>
             </tr>
-        {% endif %}
         <tr>
             <td>Status</td>
             <td><span id="pending-result-label">{% include 'extras/inc/job_label.html' with result=result %}</span></td>
         </tr>
         <tr>
             <td>Started at</td>
-            <td>{{ result.date_created }}</td>
+            <td>{{ result.date_created | placeholder }}</td>
         </tr>
         <tr>
             <td>User</td>
-            <td>{{ result.user }}</td>
+            <td>{{ result.user | placeholder }}</td>
         </tr>
         <tr>
             <td>Duration</td>
             <td>
-            {% if result.date_done %}
-                {{ result.duration }}
-            {% else %}
+            {% if result.date_created and not result.date_done %}
                 <img src="{% static 'img/ajax-loader.gif' %}">
+            {% else %}
+                {{ result.duration | placeholder}}
             {% endif %}
             </td>
         </tr>
         <tr>
             <td>Return Value</td>
             <td>
-            {% if result.date_done %}
+            {% if result.date_created and not result.date_done %}
+                <img src="{% static 'img/ajax-loader.gif' %}">
+            {% else %}
                 {% if result.result %}
                     <pre>{{ result.result | render_json }}</pre>
                 {% else %}
                     {{ result.result | placeholder }}
                 {% endif %}
-            {% else %}
-                <img src="{% static 'img/ajax-loader.gif' %}">
             {% endif %}
             </td>
         </tr>
@@ -89,6 +87,7 @@
             <input class="form-control" id="log-filter" type="text" placeholder="Filter log level or message" title="Filter log level or message" style="height: 23px" />
         </div>
     </div>
-    {% ajax_table "log_table" "extras:jobresult_log-table" pk=result.pk %}
+    {% if result and result.pk %}
+        {% ajax_table "log_table" "extras:jobresult_log-table" pk=result.pk %}
+    {% endif %}
 </div>
-

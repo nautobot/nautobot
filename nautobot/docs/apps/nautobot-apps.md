@@ -2,7 +2,7 @@
 
 The following is a manually curated list of Apps from the wider Nautobot community, which have some sort of documentation.
 
-<!-- pyml disable-num-lines 4 no-inline-html -->
+<!-- pyml disable-num-lines 4 no-inline-html,proper-names -->
 | App Name | Links | Description |
 | --- | --- | --- |
 | Nautobot SSoT vSphere | [Docs](https://h4ndzdatm0ld.github.io/nautobot-ssot-vsphere/overview.html)<br>[GitHub](https://github.com/h4ndzdatm0ld/nautobot-ssot-vsphere) | An App for Nautobot that leverages the SSoT App to create Virtual Machines, VMInterfaces, IPAddresses, Clusters, and Cluster Groups from VMWare vSphere. |

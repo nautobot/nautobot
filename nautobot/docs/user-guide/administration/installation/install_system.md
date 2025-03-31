@@ -499,7 +499,7 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
 
 ### Troubleshooting
 
-<!-- pyml disable-next-line no-inline-html -->
+<!-- pyml disable-next-line no-inline-html,proper-names -->
 <h4>django.db.utils.NotSupportedError: conversion between UTF8 and SQL_ASCII is not supported</h4>
 
 Django requires the database encoding for PostgreSQL databases to be set to UTF-8. If you receive the error `django.db.utils.NotSupportedError: conversion between UTF8 and SQL_ASCII is not supported`, you will need to drop and re-create the `nautobot` database with the correct encoding.

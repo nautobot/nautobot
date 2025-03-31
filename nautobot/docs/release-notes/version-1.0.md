@@ -75,7 +75,7 @@ Nautobot now allows and encourages plugins to make use of the generic view class
 
 #### Single Sign-On / Social Authentication Support
 
-Nautobot now supports single sign on as an authentication option using OAuth2, OpenID, SAML, and others, using the [social-auth-app-django](https://python-social-auth.readthedocs.io/en/latest/) module. For more details please refer to the guide on [SSO authentication](../user-guide/administration/configuration/authentication/sso.md).
+Nautobot now supports single sign on as an authentication option using OAuth2, OpenID, SAML, and others, using the [`social-auth-app-django`](https://python-social-auth.readthedocs.io/en/latest/) module. For more details please refer to the guide on [SSO authentication](../user-guide/administration/configuration/authentication/sso.md).
 
 #### User-Defined Relationships
 
@@ -408,7 +408,7 @@ Other changes:
 - [#83](https://github.com/nautobot/nautobot/issues/83) - Custom user model added; UserConfig model merged into User model
 - [#98](https://github.com/nautobot/nautobot/issues/98) - Simplify MultipleContentTypeField boilerplate
 - [#128](https://github.com/nautobot/nautobot/pull/128) - Overview of usage for the `nautobot-netbox-importer` plugin could be mistaken for full instructions
-- [#122](https://github.com/nautobot/nautobot/pull/122) - Improved installation flow for creating nautobot user and virtualenv
+- [#122](https://github.com/nautobot/nautobot/pull/122) - Improved installation flow for creating `nautobot` user and virtualenv
 - [#131](https://github.com/nautobot/nautobot/pull/131) - Replaced PostgreSQL-specific ArrayField with a more generic JSONArrayField
 - [#137](https://github.com/nautobot/nautobot/issues/137) - Explicitly disallow Custom Field Name Changes
 - [#142](https://github.com/nautobot/nautobot/pull/142) - Converted various config validation checks into proper Django checks

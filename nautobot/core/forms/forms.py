@@ -10,6 +10,7 @@ from django.forms import formset_factory
 from django.urls import reverse
 import yaml
 
+from nautobot.core.forms import widgets as nautobot_widgets
 from nautobot.core.utils.filtering import build_lookup_label, get_filter_field_label, get_filterset_parameter_form_field
 from nautobot.ipam import formfields
 
@@ -76,9 +77,9 @@ class BootstrapMixin(forms.BaseForm):
 
         exempt_widgets = [
             forms.CheckboxInput,
-            forms.ClearableFileInput,
             forms.FileInput,
             forms.RadioSelect,
+            nautobot_widgets.ClearableFileInput,
         ]
 
         for field in self.fields.values():

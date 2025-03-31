@@ -1322,12 +1322,13 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset_class(params, self.queryset).qs, self.queryset.filter(asn__exact=12345)
         )
-        asn = (
-            dcim_models.Location.objects.exclude(asn="12345")
-            .exclude(asn__isnull=True)
-            .values_list("asn", flat=True)
-            .first()
-        )
+        asn = 1111111
+        first_location = dcim_models.Location.objects.first()
+        first_location.asn = 1111111
+        first_location.save()
+        last_location = dcim_models.Location.objects.last()
+        last_location.asn = 1111111
+        last_location.save()
         params = {"q": str(asn)}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset_class(params, self.queryset).qs, self.queryset.filter(asn__exact=asn)

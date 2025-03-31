@@ -17,8 +17,7 @@ class CircuitTerminationModelTestCase(ModelTestCases.BaseModelTestCase):
         provider = Provider.objects.first()
         circuit_type = CircuitType.objects.first()
 
-        location_type_1 = LocationType.objects.get(name="Campus")
-        location_type_1.content_types.set([])
+        location_type_1 = LocationType.objects.create(name="University")
         location_type_2 = LocationType.objects.get(name="Building")
         location_type_2.content_types.add(ContentType.objects.get_for_model(CircuitTermination))
         status = Status.objects.get_for_model(Circuit).first()
@@ -26,7 +25,10 @@ class CircuitTerminationModelTestCase(ModelTestCases.BaseModelTestCase):
             cid="Circuit 1", provider=provider, circuit_type=circuit_type, status=status
         )
         cls.provider_network = ProviderNetwork.objects.create(name="Provider Network 1", provider=provider)
-        cls.location_1 = Location.objects.filter(location_type=location_type_1)[0]
+        location_status = Status.objects.get_for_model(Location).first()
+        cls.location_1 = Location.objects.create(
+            name="Department", location_type=location_type_1, status=location_status
+        )
         cls.location_2 = Location.objects.filter(location_type=location_type_2)[0]
 
         cloud_resource_type = CloudResourceType.objects.get_for_model(CloudNetwork).first()

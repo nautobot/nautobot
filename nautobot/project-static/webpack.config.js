@@ -91,6 +91,12 @@ module.exports = [
             filename: 'js/[name].js',
             path: path.resolve(__dirname, 'dist')
         },
+        optimization: {
+            splitChunks: {
+                chunks: 'all',
+                name: 'graphql-libraries'
+            }
+        },
         plugins: [
             new miniCssExtractPlugin(
                 {

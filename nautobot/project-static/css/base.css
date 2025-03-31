@@ -723,3 +723,14 @@ a.tile.clickable:visited {
     text-decoration: none;
     background-color: #646464;
 }
+
+/* Monaco Editor container */
+.editor-container {
+    display: flex;  /* Use flexbox for layout */
+    flex-direction: column;
+    flex: 1;  /* Allow container to grow */
+    min-height: 100px;
+    position: relative;  /* Required for Monaco's absolute positioning */
+    overflow: hidden;  /* Let Monaco handle scrolling */
+}
+

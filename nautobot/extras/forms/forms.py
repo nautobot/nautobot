@@ -38,6 +38,7 @@ from nautobot.core.forms import (
 )
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.forms import ConfirmationForm
+from nautobot.core.forms.widgets import ClearableFileInput
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
@@ -985,6 +986,9 @@ class ImageAttachmentForm(BootstrapMixin, forms.ModelForm):
             "name",
             "image",
         ]
+        widgets = {
+            "image": ClearableFileInput,
+        }
 
 
 #
