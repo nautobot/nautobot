@@ -174,8 +174,11 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 ### Added in v2.4.6
 
+- [#4181](https://github.com/nautobot/nautobot/issues/4181) - Added `last_updated` column to Note table.
+- [#4181](https://github.com/nautobot/nautobot/issues/4181) - Added display for number of notes attached to each object on the Notes tab header in Object Detail View.
 - [#5780](https://github.com/nautobot/nautobot/issues/5780) - Added object permission enforcement to related objects when modifying records through the REST API.
 - [#6957](https://github.com/nautobot/nautobot/issues/6957) - Added optional `display_field` parameter to `LinkedCountColumn`.
+- [#7003](https://github.com/nautobot/nautobot/issues/7003) - Added `external_integration` foreign key field to `SoftwareImageFile` model, which allows the enrichment of file data to include download options, secrets, etc.
 - [#7041](https://github.com/nautobot/nautobot/issues/7041) - Added bulk-edit support for the ClusterType model.
 - [#7044](https://github.com/nautobot/nautobot/issues/7044) - Added bulk-edit support for the ClusterGroup model.
 - [#7088](https://github.com/nautobot/nautobot/issues/7088) - Added support for removing content types in Status bulk-edit and Role bulk-edit.
@@ -184,11 +187,8 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 ### Changed in v2.4.6
 
 - [#4181](https://github.com/nautobot/nautobot/issues/4181) - Changed the default column ordering of Note table.
-- [#4181](https://github.com/nautobot/nautobot/issues/4181) - Added `last_updated` column to Note table.
-- [#4181](https://github.com/nautobot/nautobot/issues/4181) - Added display for number of notes attached to each object on the Notes tab header in Object Detail View.
 - [#6379](https://github.com/nautobot/nautobot/issues/6379) - Changed `SoftwareImageFile.download_url` to allow additional URI Schemas, such as `sftp://`, `tftp://`.
 - [#6957](https://github.com/nautobot/nautobot/issues/6957) - Changed "Locations" column in Prefix table to show `location.name` instead of `location.display` to avoid verbose location hierarchy in tables.
-- [#7003](https://github.com/nautobot/nautobot/issues/7003) - Added `external_integration` foreign key field to `SoftwareImageFile` model, which allows the enrichment of file data to include download options, secrets, etc.
 
 ### Fixed in v2.4.6
 
