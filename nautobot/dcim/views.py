@@ -1651,7 +1651,7 @@ class ModuleBayTemplateUIViewSet(
     model_form_class = forms.ModuleBayTemplateForm
     serializer_class = serializers.ModuleBayTemplateSerializer
     table_class = tables.ModuleBayTemplateTable
-    create_template_name = "dcim/modulebay_create.html"
+    create_template_name = "dcim/device_component_add.html"
 
     def get_selected_objects_parents_name(self, selected_objects):
         selected_object = selected_objects.first()

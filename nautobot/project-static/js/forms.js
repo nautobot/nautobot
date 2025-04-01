@@ -86,10 +86,10 @@ function initializeCheckboxes(context){
     });
 }
 
-function repopulate(targetField, sourceFields, maxLength, transformValue = null){
+function repopulate(context, targetField, sourceFields, maxLength, transformValue = null){
    const newValues = sourceFields.map(function(sourceFieldName){
         const sourceFieldId = `id_${sourceFieldName}`;
-        return document.getElementById(sourceFieldId).value;
+        return context.getElementById(sourceFieldId).value;
     })
 
     const newValue = newValues.join(" ")
@@ -113,62 +113,64 @@ function watchManualChanges(field){
     })
 }
 
-function watchSourceFields(targetField, sourceFields, repopulate){
+function watchSourceFields(context, targetField, sourceFields, repopulate){
     // Watch for any changes in source fields to regenerate the target field
     sourceFields.forEach(function(sourceFieldName){
         const sourceFieldId = `id_${sourceFieldName}`;
-        const sourceField = document.getElementById(sourceFieldId);
+        const sourceField = context.getElementById(sourceFieldId);
         const onFieldUpdate = function(){ repopulateIfChanged(targetField, repopulate)}
         sourceField.addEventListener('keyup', onFieldUpdate)
         sourceField.addEventListener('change', onFieldUpdate)
     })
 }
 
-function watchRegenerateButton(targetField, repopulate){
+function watchRegenerateButton(context, targetField, repopulate){
     // If user clicks the "regenerate" button, set target field to be auto-populate again
-    const regenerateButton = document.querySelector(`[data-regenerate=${targetField.getAttribute('id')}]`)
+    const regenerateButton = context.querySelector(`[data-regenerate=${targetField.getAttribute('id')}]`)
     regenerateButton.addEventListener('click', repopulate)
 }
 
-function getSlugField(){
-    const slugField = document.getElementById("id_slug");
+function getSlugField(context){
+    const slugField = context.getElementById("id_slug");
     if(slugField){
         return slugField
     }
     // If id_slug field is not to be found
-    // check if it is rename to key field like what we did for CustomField and Relationship
-    return document.getElementById("id_key");
+    // check if it is renamed to key field like what we did for CustomField and Relationship
+    return context.getElementById("id_key");
 }
 
-function initializeAutoField(field, sourceFieldsAttrName, defaultMaxLength = 255, transformValue = null){
+function initializeAutoField(context, field, sourceFieldsAttrName, defaultMaxLength = 255, transformValue = null){
     // Get source fields and length values set as html attributes on given field
     const sourceFields = field.getAttribute(sourceFieldsAttrName).split(" ");
     const length = field.getAttribute('maxlength') || defaultMaxLength
 
     // Prepare repopulate function with custom source fields and length set on this field
     const repopulateField = function() {
-        repopulate(field, sourceFields, length, transformValue)
+        repopulate(context, field, sourceFields, length, transformValue)
     }
-    watchSourceFields(field, sourceFields, repopulateField);
-    watchRegenerateButton(field, repopulateField);
+    watchSourceFields(context, field, sourceFields, repopulateField);
+    watchRegenerateButton(context, field, repopulateField);
     watchManualChanges(field);
 }
 
-function initializeSlugField(){
+function initializeSlugField(context){
     // Function to support slug fields auto-populate and slugify logic
-    const slugField = getSlugField()
+    const vanilla_context = context[0] // jsify form passes jquery context
+    const slugField = getSlugField(vanilla_context)
     if(!slugField){
         return
     }
-    initializeAutoField(slugField, 'slug-source', 100, slugify);
+    initializeAutoField(vanilla_context, slugField, 'slug-source', 100, slugify);
 }
 
-function initializeAutoPopulateField(){
+function initializeAutoPopulateField(context){
     // Function to support other auto-populate fields like position for Device Module Bay
-    const fields = document.querySelectorAll('[data-autopopulate]');
+    const vanilla_context = context[0] // jsify form passes jquery context
+    const fields = vanilla_context.querySelectorAll('[data-autopopulate]');
 
     fields.forEach(function(field){
-        initializeAutoField(field, 'source');
+        initializeAutoField(vanilla_context, field, 'source');
     })
 }
 
@@ -934,7 +936,7 @@ function replaceEl(replaced_el, replacing_el) {
 }
 
 function initializeInputs(context) {
-    this_context = $(context);
+    const this_context = $(context);
     initializeStaticChoiceSelection(this_context)
     initializeCheckboxes(this_context)
     initializeSlugField(this_context)
@@ -953,7 +955,7 @@ function initializeInputs(context) {
     initializeMultiValueChar(this_context)
 
     $(this_context).find(".modal").each(function() {
-        this_modal = $(this)
+        const this_modal = $(this)
         initializeStaticChoiceSelection(this_modal, this_modal)
         initializeColorPicker(this_modal, this_modal)
         initializeDynamicChoiceSelection(this_modal, this_modal)
@@ -963,7 +965,7 @@ function initializeInputs(context) {
 }
 
 function jsify_form(context) {
-    this_context = $(context);
+    const this_context = $(context);
     // Pagination
     initializeInputs(this_context)
 }
