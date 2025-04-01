@@ -1773,13 +1773,30 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
 #
 # Relationship
 #
-class RelationshipBulkEditForm(NautobotBulkEditForm):
+
+
+class RelationshipBulkEditForm(
+    BootstrapMixin, CustomFieldModelBulkEditFormMixin, NoteModelBulkEditFormMixin
+):
     pk = forms.ModelMultipleChoiceField(queryset=Relationship.objects.all(), widget=forms.MultipleHiddenInput())
     label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     type = forms.ChoiceField(choices=RelationshipTypeChoices, required=False)
     source_hidden = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
     destination_hidden = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+
+    # New fields
+    key = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    source_filter = forms.JSONField(required=False, widget=forms.Textarea, help_text="Filter for the source")
+    destination_filter = forms.JSONField(required=False, widget=forms.Textarea, help_text="Filter for the destination")
+    
+    # Foreign keys to link to ContentType
+    source_type = forms.ModelChoiceField(queryset=ContentType.objects.all(), required=False)
+    destination_type = forms.ModelChoiceField(queryset=ContentType.objects.all(), required=False)
+    
+    # New labels for source and destination
+    source_label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    destination_label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
         model = Relationship
@@ -1789,15 +1806,15 @@ class RelationshipBulkEditForm(NautobotBulkEditForm):
             "type",
             "source_hidden",
             "destination_hidden",
+            "key", 
+            "source_filter", 
+            "destination_filter",
+            "source_type", 
+            "destination_type", 
+            "source_label", 
+            "destination_label",
         ]
-        nullable_fields = [
-            "label",
-            "description",
-            "type",
-            "source_hidden",
-            "destination_hidden",
-        ]
-
+      
 
 class RelationshipForm(BootstrapMixin, forms.ModelForm):
     key = SlugField(
@@ -1916,11 +1933,8 @@ class RoleBulkEditForm(NautobotBulkEditForm):
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     weight = forms.IntegerField(required=False)
-    add_content_types = MultipleContentTypeField(
-        queryset=RoleModelsQuery().as_queryset(), required=False, label="Add Content Type(s)"
-    )
-    remove_content_types = MultipleContentTypeField(
-        queryset=RoleModelsQuery().as_queryset(), required=False, label="Remove Content Type(s)"
+    content_types = MultipleContentTypeField(
+        queryset=RoleModelsQuery().as_queryset(), required=False, label="Content Type(s)"
     )
 
     class Meta:
@@ -2040,8 +2054,7 @@ class StatusBulkEditForm(NautobotBulkEditForm):
 
     pk = forms.ModelMultipleChoiceField(queryset=Status.objects.all(), widget=forms.MultipleHiddenInput)
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
-    add_content_types = MultipleContentTypeField(feature="statuses", required=False, label="Add Content Type(s)")
-    remove_content_types = MultipleContentTypeField(feature="statuses", required=False, label="Remove Content Type(s)")
+    content_types = MultipleContentTypeField(feature="statuses", required=False, label="Content Type(s)")
 
     class Meta:
         nullable_fields = []

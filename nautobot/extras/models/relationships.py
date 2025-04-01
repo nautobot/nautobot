@@ -497,7 +497,7 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
 
 
 class Relationship(
-    ChangeLoggedModel, ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin, BaseModel, RelationshipModel
+    ChangeLoggedModel, ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin, BaseModel
 ):
     label = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH, unique=True, help_text="Label of the relationship as displayed to users"
