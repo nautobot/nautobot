@@ -122,20 +122,20 @@ class HomeViewTestCase(TestCase):
             response.content.decode(response.charset).replace("\n", "")
         )
 
-        return nav_search_bar_result, body_search_bar_result
+        return header_search_bar_result, body_search_bar_result
 
     def test_search_bar_not_visible_if_user_not_authenticated(self):
         self.client.logout()
 
-        nav_search_bar_result, body_search_bar_result = self.make_request()
+        header_search_bar_result, body_search_bar_result = self.make_request()
 
-        self.assertIsNone(nav_search_bar_result)
+        self.assertIsNone(header_search_bar_result)
         self.assertIsNone(body_search_bar_result)
 
     def test_search_bar_visible_if_user_authenticated(self):
-        nav_search_bar_result, body_search_bar_result = self.make_request()
+        header_search_bar_result, body_search_bar_result = self.make_request()
 
-        self.assertIsNotNone(nav_search_bar_result)
+        self.assertIsNotNone(header_search_bar_result)
         self.assertIsNotNone(body_search_bar_result)
 
     @override_settings(VERSION="1.2.3")
