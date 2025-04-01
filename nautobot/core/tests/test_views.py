@@ -104,11 +104,11 @@ class HomeViewTestCase(TestCase):
         url = reverse("home")
         response = self.client.get(url)
 
-        # Search bar in nav
-        nav_search_bar_pattern = re.compile(
-            '<nav.*<form action="/search/" method="get" class="navbar-form" id="navbar_search" role="search">.*</form>.*</nav>'
+        # Search bar in header
+        header_search_bar_pattern = re.compile(
+            '<header.*<form action="/search/" class="col text-center" method="get" id="navbar_search" role="search">.*</form>.*</header>'
         )
-        nav_search_bar_result = nav_search_bar_pattern.search(
+        header_search_bar_result = header_search_bar_pattern.search(
             response.content.decode(response.charset).replace("\n", "")
         )
 

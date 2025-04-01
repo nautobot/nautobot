@@ -30,9 +30,6 @@
 
 {% block content %}
     {% registry %}
-    {% if request.user.is_authenticated %}
-        {% include 'search_form.html' %}
-    {% endif %}
     <div class="row">
         <div class="col-sm-12">
             <div class="homepage_column" id="draggable-homepage-panels" style="columns: 4 360px">
