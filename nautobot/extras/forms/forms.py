@@ -1775,26 +1775,18 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
 #
 
 
-class RelationshipBulkEditForm(
-    BootstrapMixin, CustomFieldModelBulkEditFormMixin, NoteModelBulkEditFormMixin
-):
+class RelationshipBulkEditForm(BootstrapMixin, CustomFieldModelBulkEditFormMixin, NoteModelBulkEditFormMixin):
     pk = forms.ModelMultipleChoiceField(queryset=Relationship.objects.all(), widget=forms.MultipleHiddenInput())
     label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     type = forms.ChoiceField(choices=RelationshipTypeChoices, required=False)
     source_hidden = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
     destination_hidden = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
-
-    # New fields
     key = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     source_filter = forms.JSONField(required=False, widget=forms.Textarea, help_text="Filter for the source")
     destination_filter = forms.JSONField(required=False, widget=forms.Textarea, help_text="Filter for the destination")
-    
-    # Foreign keys to link to ContentType
     source_type = forms.ModelChoiceField(queryset=ContentType.objects.all(), required=False)
     destination_type = forms.ModelChoiceField(queryset=ContentType.objects.all(), required=False)
-    
-    # New labels for source and destination
     source_label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     destination_label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
@@ -1806,15 +1798,15 @@ class RelationshipBulkEditForm(
             "type",
             "source_hidden",
             "destination_hidden",
-            "key", 
-            "source_filter", 
+            "key",
+            "source_filter",
             "destination_filter",
-            "source_type", 
-            "destination_type", 
-            "source_label", 
+            "source_type",
+            "destination_type",
+            "source_label",
             "destination_label",
         ]
-      
+
 
 class RelationshipForm(BootstrapMixin, forms.ModelForm):
     key = SlugField(
