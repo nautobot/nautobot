@@ -249,7 +249,7 @@ def consolidate_bulk_action_buttons(context):
         )
 
     if render_delete_button and render_static_group_assign_button:
-        bulk_action_buttons.append(format_html('<li><hr class="dropdown-divider"></li>'))
+        bulk_action_buttons.append(format_html('<li class="dropdown-divider"></li>'))
 
     if render_static_group_assign_button:
         bulk_action_buttons.append(
@@ -389,7 +389,7 @@ def consolidate_detail_view_action_buttons(context):
         )
     if render_delete_button:
         if render_clone_button:
-            detail_view_action_buttons.append(format_html('<li><hr class="dropdown-divider"></li>'))
+            detail_view_action_buttons.append(format_html('<li class="dropdown-divider"></li>'))
         detail_view_action_buttons.append(
             format_html(
                 delete_button_fragment,
