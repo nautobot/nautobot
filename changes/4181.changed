@@ -1,3 +1,0 @@
-Changed the default column ordering of Note table.
-Added `last_updated` column to Note table.
-Added display for number of notes attached to each object on the Notes tab header in Object Detail View.
