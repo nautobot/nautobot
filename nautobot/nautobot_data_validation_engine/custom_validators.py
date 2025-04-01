@@ -9,12 +9,9 @@ A common clean method for all these classes looks for any
 validation rules that have been defined for the given model.
 """
 
-import importlib.util
 import inspect
 import logging
-import pathlib
 import re
-import sys
 from typing import Optional
 
 from django.contrib.contenttypes.models import ContentType
@@ -23,6 +20,7 @@ from django.template.defaultfilters import pluralize
 from django.utils import timezone
 
 from nautobot.core.utils.data import render_jinja2
+from nautobot.core.utils.module_loading import import_modules_privately
 from nautobot.extras.datasources import ensure_git_repository
 from nautobot.extras.models import GitRepository
 from nautobot.extras.plugins import CustomValidator
@@ -198,24 +196,16 @@ def get_data_compliance_classes_from_git_repo(repo: GitRepository):
     """Get list of DataComplianceRule classes found within the custom_validators folder of the given repo."""
     ensure_git_repository(repo, head=repo.current_head)
     class_list = []
-    custom_validators_path = pathlib.Path(f"{repo.filesystem_path}/custom_validators")
-    repo_namespace = repo.slug.replace("-", "_")  # Ensure a valid Python module name
-
-    for module_path in custom_validators_path.glob("*.py"):  # Only load Python files
-        module_name = module_path.stem  # Extract the filename without ".py" extension
-        namespaced_module_name = f"{repo_namespace}.{module_name}"
-        module_spec = importlib.util.spec_from_file_location(
-            namespaced_module_name, module_path
-        )  # Create a module spec
-
-        if module_spec and module_spec.loader:
-            module = importlib.util.module_from_spec(module_spec)
-            sys.modules[namespaced_module_name] = module  # Register the module
-            module_spec.loader.exec_module(module)  # Execute the module to load its content
-
+    try:
+        path = f"{repo.filesystem_path}/custom_validators"
+        modules = import_modules_privately(path=path, ignore_import_errors=False)
+        for module in modules:
             for _, compliance_class in inspect.getmembers(module, is_data_compliance_rule):
                 class_list.append(compliance_class)
-    return class_list
+        return class_list
+    except Exception:
+        LOGGER.exception("Failed to import custom validators from %s", repo.slug)
+        return []
 
 
 class ComplianceError(ValidationError):
