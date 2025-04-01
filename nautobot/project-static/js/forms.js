@@ -86,7 +86,7 @@ function initializeCheckboxes(context){
     });
 }
 
-function repopulate(context, targetField, sourceFields, maxLength, transformValue = null){
+function repopulateAutoField(context, targetField, sourceFields, maxLength, transformValue = null){
    const newValues = sourceFields.map(function(sourceFieldName){
         const sourceFieldId = `id_${sourceFieldName}`;
         return context.getElementById(sourceFieldId).value;
@@ -148,7 +148,7 @@ function initializeAutoField(context, field, sourceFieldsAttrName, defaultMaxLen
 
     // Prepare repopulate function with custom source fields and length set on this field
     const repopulateField = function() {
-        repopulate(context, field, sourceFields, length, transformValue)
+        repopulateAutoField(context, field, sourceFields, length, transformValue)
     }
     watchSourceFields(context, field, sourceFields, repopulateField);
     watchRegenerateButton(context, field, repopulateField);
