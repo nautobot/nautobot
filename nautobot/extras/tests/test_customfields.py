@@ -472,6 +472,9 @@ class CustomFieldDataAPITest(APITestCase):
         "dcim.add_location",
         "dcim.change_location",
         "dcim.view_location",
+        "dcim.view_locationtype",
+        "extras.view_status",
+        "extras.view_customfield",
     )
 
     def setUp(self):

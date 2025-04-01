@@ -16,6 +16,8 @@ from django.utils.http import urlencode
 from django.views.generic import View
 from django_tables2 import RequestConfig
 import netaddr
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from nautobot.cloud.tables import CloudNetworkTable
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
@@ -63,27 +65,7 @@ logger = logging.getLogger(__name__)
 #
 
 
-def get_namespace_related_counts(instance, request):
-    """Return counts of all IPAM objects related to the given Namespace."""
-    return {
-        "vrf_count": instance.vrfs.restrict(request.user, "view").count(),
-        "prefix_count": instance.prefixes.restrict(request.user, "view").count(),
-        "ip_address_count": instance.ip_addresses.restrict(request.user, "view").count(),
-    }
-
-
-class NamespaceUIViewSet(
-    view_mixins.ObjectDetailViewMixin,
-    view_mixins.ObjectListViewMixin,
-    view_mixins.ObjectEditViewMixin,
-    view_mixins.ObjectDestroyViewMixin,
-    view_mixins.ObjectChangeLogViewMixin,
-    view_mixins.ObjectBulkCreateViewMixin,  # 3.0 TODO: remove, no longer used
-    view_mixins.ObjectBulkDestroyViewMixin,
-    view_mixins.ObjectBulkUpdateViewMixin,
-    view_mixins.ObjectNotesViewMixin,
-):
-    lookup_field = "pk"
+class NamespaceUIViewSet(NautobotUIViewSet):
     form_class = forms.NamespaceForm
     bulk_update_form_class = forms.NamespaceBulkEditForm
     filterset_class = filters.NamespaceFilterSet
@@ -91,134 +73,95 @@ class NamespaceUIViewSet(
     queryset = Namespace.objects.all()
     serializer_class = serializers.NamespaceSerializer
     table_class = tables.NamespaceTable
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(object_detail.ObjectFieldsPanel(section=SectionChoices.LEFT_HALF, weight=100, fields="__all__"),),
+        extra_tabs=(
+            object_detail.DistinctViewTab(
+                weight=800,
+                tab_id="vrfs",
+                label="VRFs",
+                url_name="ipam:namespace_vrfs",
+                related_object_attribute="vrfs",
+            ),
+            object_detail.DistinctViewTab(
+                weight=900,
+                tab_id="prefixes",
+                label="Prefixes",
+                url_name="ipam:namespace_prefixes",
+                related_object_attribute="prefixes",
+            ),
+            object_detail.DistinctViewTab(
+                weight=1000,
+                tab_id="ip_addresses",
+                label="IP Addresses",
+                url_name="ipam:namespace_ip_addresses",
+                related_object_attribute="ip_addresses",
+            ),
+        ),
+    )
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
-
-        if self.action == "retrieve":
-            context.update(get_namespace_related_counts(instance, request))
-
+        context.update({"object_detail_content": self.object_detail_content})
         return context
 
-
-class NamespaceIPAddressesView(generic.ObjectView):
-    queryset = Namespace.objects.all()
-    template_name = "ipam/namespace_ipaddresses.html"
-
-    def get_extra_context(self, request, instance):
-        # Find all IPAddresses belonging to this Namespace
-        ip_addresses = instance.ip_addresses.restrict(request.user, "view").select_related("role", "status", "tenant")
-
-        ip_address_table = tables.IPAddressTable(ip_addresses, exclude=["namespace"])
-        if request.user.has_perm("ipam.change_ipaddress") or request.user.has_perm("ipam.delete_ipaddress"):
-            ip_address_table.columns.show("pk")
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(ip_address_table)
-
-        # Compile permissions list for rendering the object table
-        permissions = {
-            "add": request.user.has_perm("ipam.add_ipaddress"),
-            "change": request.user.has_perm("ipam.change_ipaddress"),
-            "delete": request.user.has_perm("ipam.delete_ipaddress"),
-        }
-        bulk_querystring = f"namespace={instance.id}"
-
-        context = super().get_extra_context(request, instance)
-        context.update(
-            {
-                "ip_address_table": ip_address_table,
-                "permissions": permissions,
-                "bulk_querystring": bulk_querystring,
-                "active_tab": "ip-addresses",
-            }
-        )
-        context.update(get_namespace_related_counts(instance, request))
-
-        return context
-
-
-class NamespacePrefixesView(generic.ObjectView):
-    queryset = Namespace.objects.all()
-    template_name = "ipam/namespace_prefixes.html"
-
-    def get_extra_context(self, request, instance):
-        # Find all Prefixes belonging to this Namespace
-        prefixes = instance.prefixes.restrict(request.user, "view").select_related("status")
-
-        prefix_table = tables.PrefixTable(prefixes, exclude=["namespace"])
-        if request.user.has_perm("ipam.change_prefix") or request.user.has_perm("ipam.delete_prefix"):
-            prefix_table.columns.show("pk")
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(prefix_table)
-
-        # Compile permissions list for rendering the object table
-        permissions = {
-            "add": request.user.has_perm("ipam.add_prefix"),
-            "change": request.user.has_perm("ipam.change_prefix"),
-            "delete": request.user.has_perm("ipam.delete_prefix"),
-        }
-        bulk_querystring = f"namespace={instance.id}"
-
-        context = super().get_extra_context(request, instance)
-        context.update(
-            {
-                "prefix_table": prefix_table,
-                "permissions": permissions,
-                "bulk_querystring": bulk_querystring,
-                "active_tab": "prefixes",
-            }
-        )
-        context.update(get_namespace_related_counts(instance, request))
-
-        return context
-
-
-class NamespaceVRFsView(generic.ObjectView):
-    queryset = Namespace.objects.all()
-    template_name = "ipam/namespace_vrfs.html"
-
-    def get_extra_context(self, request, instance):
-        # Find all VRFs belonging to this Namespace
+    @action(detail=True, url_path="vrfs")
+    def vrfs(self, request, *args, **kwargs):
+        instance = self.get_object()
         vrfs = instance.vrfs.restrict(request.user, "view")
-
-        vrf_table = tables.VRFTable(vrfs, exclude=["namespace"])
+        vrf_table = tables.VRFTable(
+            data=vrfs,
+            user=request.user,
+            exclude=["namespace"],
+        )
         if request.user.has_perm("ipam.change_vrf") or request.user.has_perm("ipam.delete_vrf"):
             vrf_table.columns.show("pk")
 
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(vrf_table)
-
-        # Compile permissions list for rendering the object table
-        permissions = {
-            "add": request.user.has_perm("ipam.add_vrf"),
-            "change": request.user.has_perm("ipam.change_vrf"),
-            "delete": request.user.has_perm("ipam.delete_vrf"),
-        }
-        bulk_querystring = f"namespace={instance.id}"
-
-        context = super().get_extra_context(request, instance)
-        context.update(
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(vrf_table)
+        return Response(
             {
                 "vrf_table": vrf_table,
-                "permissions": permissions,
-                "bulk_querystring": bulk_querystring,
                 "active_tab": "vrfs",
             }
         )
-        context.update(get_namespace_related_counts(instance, request))
 
-        return context
+    @action(detail=True, url_path="prefixes")
+    def prefixes(self, request, *args, **kwargs):
+        instance = self.get_object()
+        prefixes = instance.prefixes.restrict(request.user, "view").select_related("status")
+        prefix_table = tables.PrefixTable(data=prefixes, user=request.user, exclude=["namespace"])
+        if request.user.has_perm("ipam.change_prefix") or request.user.has_perm("ipam.delete_prefix"):
+            prefix_table.columns.show("pk")
+
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(prefix_table)
+        return Response(
+            {
+                "prefix_table": prefix_table,
+                "active_tab": "prefixes",
+            }
+        )
+
+    @action(detail=True, url_path="ip-addresses", url_name="ip_addresses")
+    def ip_addresses(self, request, *args, **kwargs):
+        instance = self.get_object()
+        ip_addresses = instance.ip_addresses.restrict(request.user, "view").select_related("role", "status", "tenant")
+        ip_address_table = tables.IPAddressTable(data=ip_addresses, user=request.user, exclude=["namespace"])
+        if request.user.has_perm("ipam.change_ipaddress") or request.user.has_perm("ipam.delete_ipaddress"):
+            ip_address_table.columns.show("pk")
+
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(ip_address_table)
+        return Response(
+            {
+                "ip_address_table": ip_address_table,
+                "active_tab": "ip_addresses",
+            }
+        )
 
 
 #
@@ -1356,19 +1299,7 @@ class VLANBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class ServiceListView(generic.ObjectListView):
-    queryset = Service.objects.all()
-    filterset = filters.ServiceFilterSet
-    filterset_form = forms.ServiceFilterForm
-    table = tables.ServiceTable
-    action_buttons = ("add", "import", "export")
-
-
-class ServiceView(generic.ObjectView):
-    queryset = Service.objects.prefetch_related("ip_addresses")
-
-
-class ServiceEditView(generic.ObjectEditView):
+class ServiceEditView(generic.ObjectEditView):  # This view is used to assign services to devices and VMs
     queryset = Service.objects.prefetch_related("ip_addresses")
     model_form = forms.ServiceForm
     template_name = "ipam/service_edit.html"
@@ -1384,23 +1315,30 @@ class ServiceEditView(generic.ObjectEditView):
         return obj
 
 
-class ServiceBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Service.objects.all()
-    table = tables.ServiceTable
+class ServiceUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportView
+    model = Service
+    bulk_update_form_class = forms.ServiceBulkEditForm
+    filterset_class = filters.ServiceFilterSet
+    filterset_form_class = forms.ServiceFilterForm
+    form_class = forms.ServiceForm
+    queryset = Service.objects.select_related("device", "virtual_machine").prefetch_related("ip_addresses")
+    serializer_class = serializers.ServiceSerializer
+    table_class = tables.ServiceTable
 
-
-class ServiceDeleteView(generic.ObjectDeleteView):
-    queryset = Service.objects.all()
-
-
-class ServiceBulkEditView(generic.BulkEditView):
-    queryset = Service.objects.select_related("device", "virtual_machine")
-    filterset = filters.ServiceFilterSet
-    table = tables.ServiceTable
-    form = forms.ServiceBulkEditForm
-
-
-class ServiceBulkDeleteView(generic.BulkDeleteView):
-    queryset = Service.objects.select_related("device", "virtual_machine")
-    filterset = filters.ServiceFilterSet
-    table = tables.ServiceTable
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=["name", "parent", "protocol", "port_list", "description"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.RIGHT_HALF,
+                table_class=tables.IPAddressTable,
+                table_filter="services",
+                select_related_fields=["tenant", "status", "role"],
+                add_button_route=None,
+            ),
+        )
+    )
