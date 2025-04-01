@@ -1,0 +1,1 @@
+`forms.js` refactor of `initializeSlugField` to use common logic with auto populate field like Module Bay position.
