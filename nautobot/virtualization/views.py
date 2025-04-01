@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.functional import cached_property
 
+from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.requests import normalize_querydict
@@ -112,12 +113,19 @@ class ClusterUIViewSet(NautobotUIViewSet):
                 table_filter="cluster",
                 table_title="Host Devices",
                 enable_bulk_actions=True,
+                add_button_route=None,
                 footer_buttons=[
                     object_detail.Button(
                         link_name="virtualization:cluster_remove_devices",
                         label="Remove Device",
-                        weight=250,
-                        color="danger",
+                        weight=100,
+                        color=ButtonColorChoices.RED,
+                    ),
+                    object_detail.Button(
+                        link_name="virtualization:cluster_add_devices",
+                        label="Add Device",
+                        weight=100,
+                        color=ButtonColorChoices.BLUE,
                     ),
                 ],
             ),
