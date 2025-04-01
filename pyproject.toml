@@ -33,9 +33,13 @@ exclude = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.13"
+python = ">=3.9.2,<3.13"
 # Background task processing
 celery = "~5.3.6"
+# Cryptographic recipes and primitives.
+# Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
+# Added as an explicit dependency to protect against various CVEs in older versions.
+cryptography = "~44.0.2"
 # Fundamental web framework for Nautobot
 Django = "~4.2.20"
 # Adds AJAX capabilities to django-tables2
@@ -101,7 +105,7 @@ jsonschema = "^4.7.0"
 # Included as an explicit dependency (for now?) to require a version with https://github.com/celery/kombu/pull/2007
 kombu = "~5.4.2"
 # Library to access Kubernetes API used to develop K8s integration
-kubernetes = "^32.0.0"
+kubernetes = "^32.0.1"
 # Rendering of markdown files to HTML
 Markdown = "~3.6"
 # MySQL database adapter
@@ -115,7 +119,7 @@ netaddr = "~1.3.0"
 #       we permit a looser (^) version constraint here.
 netutils = "^1.6.0"
 # HTML sanitization
-nh3 = "~0.2.20"
+nh3 = "~0.2.21"
 # Handling of version numbers
 packaging = ">=23.1"
 # Image processing library
@@ -155,8 +159,6 @@ sso = ["social-auth-core"]
 [tool.poetry.group.dev.dependencies]
 # Tool for debugging Django
 django-debug-toolbar = "~5.0.1"
-# DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
-django-slowtests = "^1.1.1"
 # Nautobot example App used for testing
 example-app = {path = "examples/example_app", develop = true}
 # Nautobot test App used for testing core view overrides
@@ -203,11 +205,11 @@ mkdocstrings-python = "~1.13.0"
 
 [tool.poetry.group.linting.dependencies]
 # Code static analysis
-pylint = "~3.3.4"
+pylint = "~3.3.6"
 # Pylint extensions for Django
 pylint-django = "~2.6.1"
 # Python implementation of markdownlint
-pymarkdownlnt = "~0.9.28"
+pymarkdownlnt = "~0.9.29"
 # Combination linter and code formatter
 ruff = "~0.8.6"
 # YAML linting
@@ -216,8 +218,8 @@ yamllint = "~1.35.1"
 [tool.poetry.group.testing.dependencies]
 # Test code coverage measurement - pinned to 6.4.0 to resolve https://github.com/nedbat/coveragepy/issues/1420
 coverage = "6.4.0"
-# DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
-django-slowtests = "^1.1.1"
+# Testing of data migrations
+django-test-migrations = "~1.4.0"
 # Integration Tests
 requests = "~2.32.3"
 # Selenium web drivers for live integration testing

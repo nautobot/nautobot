@@ -1,46 +1,84 @@
 import collections
 import sys
+from time import monotonic
 
 from django.core.exceptions import ValidationError
 from django.db import models
 import netaddr
+
+from nautobot.ipam.constants import IPV4_BYTE_LENGTH, IPV6_BYTE_LENGTH
 
 BASE_NAME = "Cleanup Namespace"
 DESCRIPTION = "Created by Nautobot 2.0 IPAM data migrations."
 GLOBAL_NS = "Global"
 
 
+class TimerContextManager:
+    def __init__(self, message, indent=""):
+        self.message = message
+        self.indent = indent
+
+    def __enter__(self):
+        self.start_time = monotonic()
+        print(f"{self.indent}>>> {self.message}...")
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        self.elapsed_time = monotonic() - self.start_time
+        print(f"{self.indent}    ... completed (elapsed time: {self.elapsed_time:.1f} seconds)")
+
+
+def is_prefix(obj):
+    return obj.__class__.__name__ == "Prefix"
+
+
+def is_ipaddress(obj):
+    return obj.__class__.__name__ == "IPAddress"
+
+
 def process_namespaces(apps, schema_editor):
+    """
+    Migration entry point for 1.x to 2.x IPAM data migration.
+    """
     print("\n", end="")
 
-    # Fail if any interface or vm interface has IPs with different VRFs
-    check_interface_vrfs(apps)
+    with TimerContextManager("Checking whether any Interface or VMInterface has IPs with differing VRFs"):
+        check_interface_vrfs(apps)
 
     # Prefix Broadcast is a derived field, so we should update it before we start
-    ensure_correct_prefix_broadcast(apps)
+    with TimerContextManager("Verifying all Prefix.broadcast values"):
+        ensure_correct_prefix_broadcast(apps)
 
     # Cleanup Prefixes and IPAddresses version fields
-    add_prefix_and_ip_address_version(apps)
+    with TimerContextManager("Setting Prefix.version and IPAddress.version values"):
+        add_prefix_and_ip_address_version(apps)
 
     # VRFs
-    process_vrfs(apps)
+    with TimerContextManager("Processing VRFs"):
+        process_vrfs(apps)
 
     # IPAddresses
-    process_ip_addresses(apps)
+    with TimerContextManager("Processing IPAddresses"):
+        process_ip_addresses(apps)
 
     # Prefixes
-    process_prefix_duplicates(apps)
-    reparent_prefixes(apps)
+    with TimerContextManager("Processing duplicate Prefixes"):
+        process_prefix_duplicates(apps)
+    with TimerContextManager("Reparenting Prefixes"):
+        reparent_prefixes(apps)
 
     # Make another pass across all VRFs to duplicate it if it has prefixes
     # in another namespace (non-unique VRFs with duplicate Prefixes)
-    copy_vrfs_to_cleanup_namespaces(apps)
+    with TimerContextManager("Copying VRFs to cleanup Namespaces as needed"):
+        copy_vrfs_to_cleanup_namespaces(apps)
 
     # [VM]Interfaces
-    process_interfaces(apps)
+    with TimerContextManager("Processing Interfaces and VM Interfaces"):
+        process_interfaces(apps)
 
     # VRF-Prefix M2M
-    process_vrfs_prefixes_m2m(apps)
+    with TimerContextManager("Processing VRF to Prefix many-to-many"):
+        process_vrfs_prefixes_m2m(apps)
 
 
 def check_interface_vrfs(apps):
@@ -105,36 +143,37 @@ def process_vrfs(apps):
     Returns:
         None
     """
+    Namespace = apps.get_model("ipam", "Namespace")
     VRF = apps.get_model("ipam", "VRF")
+
+    global_ns = Namespace.objects.get(name=GLOBAL_NS)
     vrfs = VRF.objects.all().order_by("name", "rd")
     unique_non_empty_vrfs = vrfs.filter(enforce_unique=True).exclude(ip_addresses__isnull=True, prefixes__isnull=True)
     # At the point in the migration where we iterate through vrfs in global_ns_vrfs, every vrf that
     # has already been processed has been moved to a new namespace. Anything left in the global
     # namespace has yet to be processed which is why we're iterating through this on the second
     # loop.
-    global_ns_vrfs = vrfs.filter(namespace__name=GLOBAL_NS)
+    global_ns_vrfs = vrfs.filter(namespace=global_ns)
 
     # Case 0: VRFs with enforce_unique move to their own Namespace.
-    for vrf in unique_non_empty_vrfs:
+    for vrf in unique_non_empty_vrfs.iterator():
         if "test" not in sys.argv:
             print(f">>> Processing migration for VRF {vrf.name!r}, Namespace {vrf.namespace.name!r}")
         vrf.namespace = create_vrf_namespace(apps, vrf)
         vrf.save()
         vrf.prefixes.update(namespace=vrf.namespace)
-        if "test" not in sys.argv:
-            print(f"    VRF {vrf.name!r} migrated to Namespace {vrf.namespace.name!r}")
+        print(f"    VRF {vrf.name!r} migrated to Namespace {vrf.namespace.name!r}")
 
     # Case 00: VRFs with duplicate names or prefixes move to a Cleanup Namespace.
     # Case 1 is not included here because it is a no-op.
-    for vrf in global_ns_vrfs.annotate(prefix_count=models.Count("prefixes")).order_by("-prefix_count"):
+    for vrf in global_ns_vrfs.annotate(prefix_count=models.Count("prefixes")).order_by("-prefix_count").iterator():
         if "test" not in sys.argv:
-            print(f">>> Processing migration for VRF {vrf.name!r}, Namespace {vrf.namespace.name!r}")
-        original_namespace = vrf.namespace
-        vrf.namespace = get_next_vrf_cleanup_namespace(apps, vrf)
-        vrf.save()
-        if vrf.namespace != original_namespace:
+            print(f">>> Processing migration for VRF {vrf.name!r}, Namespace {global_ns.name!r}")
+        vrf.namespace = get_next_vrf_cleanup_namespace(apps, vrf, global_ns=global_ns)
+        if vrf.namespace != global_ns:
+            vrf.save()
             vrf.prefixes.update(namespace=vrf.namespace)
-            print(f"    VRF {vrf.name!r} migrated from Namespace {original_namespace.name!r} to {vrf.namespace.name!r}")
+            print(f"    VRF {vrf.name!r} migrated from Namespace {global_ns.name!r} to {vrf.namespace.name!r}")
 
 
 def add_prefix_and_ip_address_version(apps):
@@ -152,17 +191,21 @@ def add_prefix_and_ip_address_version(apps):
 
     if "test" not in sys.argv:
         print(">>> Populating Prefix.ip_version field")
-    for pfx in Prefix.objects.all():
-        cidr = validate_cidr(apps, pfx)
-        pfx.ip_version = cidr.version
-        pfx.save()
+    Prefix.objects.annotate(address_len=models.functions.Length(models.F("network"))).filter(
+        address_len=IPV4_BYTE_LENGTH
+    ).update(ip_version=4)
+    Prefix.objects.annotate(address_len=models.functions.Length(models.F("network"))).filter(
+        address_len=IPV6_BYTE_LENGTH
+    ).update(ip_version=6)
 
     if "test" not in sys.argv:
         print(">>> Populating IPAddress.ip_version field")
-    for ip in IPAddress.objects.all():
-        cidr = validate_cidr(apps, ip)
-        ip.ip_version = cidr.version
-        ip.save()
+    IPAddress.objects.annotate(address_len=models.functions.Length(models.F("host"))).filter(
+        address_len=IPV4_BYTE_LENGTH
+    ).update(ip_version=4)
+    IPAddress.objects.annotate(address_len=models.functions.Length(models.F("host"))).filter(
+        address_len=IPV6_BYTE_LENGTH
+    ).update(ip_version=6)
 
 
 def process_ip_addresses(apps):
@@ -186,53 +229,52 @@ def process_ip_addresses(apps):
     Namespace = apps.get_model("ipam", "Namespace")
     Prefix = apps.get_model("ipam", "Prefix")
 
-    # Explicitly set the parent for those that were found and save them.
-    for ip in IPAddress.objects.filter(parent__isnull=True).order_by("-vrf", "-tenant"):
-        potential_parents = get_closest_parent(apps, ip, Prefix.objects.all())
-        for prefix in potential_parents:
-            if not prefix.ip_addresses.filter(host=ip.host).exists():
-                ip.parent = prefix
+    with TimerContextManager("Reparenting individual IPAddresses to a close-enough parent Prefix", indent="    "):
+        # For IPs that don't have an exact obvious parent prefix, find close-enough matches.
+        # Explicitly set the parent for those that were found and save them.
+        for ip in IPAddress.objects.filter(parent__isnull=True).order_by("-vrf", "-tenant").iterator():
+            potential_parent = get_closest_parent(ip, Prefix.objects.all())
+            if potential_parent is not None:
+                ip.parent = potential_parent
                 ip.save()
-                break
 
-    # For IPs with no discovered parent, create one and assign it to the IP.
-    global_ns = Namespace.objects.get(name=GLOBAL_NS)
-    for orphaned_ip in IPAddress.objects.filter(parent__isnull=True):
-        ip_repr = str(validate_cidr(apps, orphaned_ip))
-        if "test" not in sys.argv:
-            print(f">>> Processing Parent migration for orphaned IPAddress {ip_repr!r}")
+    with TimerContextManager("Reparenting orphaned IPAddresses by creating new Prefixes as needed", indent="    "):
+        # For IPs with no discovered parent, create one and assign it to the IP.
+        global_ns = Namespace.objects.get(name=GLOBAL_NS)
+        for orphaned_ip in IPAddress.objects.filter(parent__isnull=True).select_related("tenant", "vrf").iterator():
+            ip_repr = str(validate_cidr(orphaned_ip))
+            if "test" not in sys.argv:
+                print(f">>> Processing Parent migration for orphaned IPAddress {ip_repr!r}")
 
-        new_parent_cidr = generate_parent_prefix(apps, orphaned_ip)
-        network = new_parent_cidr.network
-        prefix_length = new_parent_cidr.prefixlen
-        potential_parents = Prefix.objects.filter(network=network, prefix_length=prefix_length).exclude(
-            ip_addresses__host=orphaned_ip.host
-        )
-        if potential_parents.exists():
+            new_parent_cidr = generate_parent_prefix(apps, orphaned_ip)
+            network = new_parent_cidr.network
+            prefix_length = new_parent_cidr.prefixlen
+            potential_parents = Prefix.objects.filter(network=network, prefix_length=prefix_length).exclude(
+                ip_addresses__host=orphaned_ip.host
+            )
             new_parent = potential_parents.first()
+            if new_parent is None:
+                broadcast = new_parent_cidr[-1]
+                # This can result in duplicate Prefixes being created in the global_ns but that will be
+                # cleaned up subsequently in `process_prefix_duplicates`.
+                new_parent = Prefix.objects.create(
+                    ip_version=orphaned_ip.ip_version,
+                    network=network,
+                    broadcast=broadcast,
+                    tenant=orphaned_ip.tenant,
+                    vrf=orphaned_ip.vrf,
+                    prefix_length=prefix_length,
+                    namespace=orphaned_ip.vrf.namespace if orphaned_ip.vrf else global_ns,
+                    description=DESCRIPTION,
+                )
+            orphaned_ip.parent = new_parent
+            orphaned_ip.save()
 
-        else:
-            broadcast = new_parent_cidr[-1]
-            # This can result in duplicate Prefixes being created in the global_ns but that will be
-            # cleaned up subsequently in `process_prefix_duplicates`.
-            new_parent = Prefix.objects.create(
-                ip_version=orphaned_ip.ip_version,
-                network=network,
-                broadcast=broadcast,
-                tenant=orphaned_ip.tenant,
-                vrf=orphaned_ip.vrf,
-                prefix_length=prefix_length,
-                namespace=orphaned_ip.vrf.namespace if orphaned_ip.vrf else global_ns,
-                description=DESCRIPTION,
-            )
-        orphaned_ip.parent = new_parent
-        orphaned_ip.save()
-
-        parent_repr = str(validate_cidr(apps, new_parent))
-        if "test" not in sys.argv:
-            print(
-                f"    IPAddress {ip_repr!r} migrated to Parent Prefix {parent_repr!r} in Namespace {new_parent.namespace.name!r}"
-            )
+            parent_repr = str(validate_cidr(new_parent))
+            if "test" not in sys.argv:
+                print(
+                    f"    IPAddress {ip_repr!r} migrated to Parent Prefix {parent_repr!r} in Namespace {new_parent.namespace.name!r}"
+                )
 
     # By this point we should arrive at NO orphaned IPAddress objects.
     if IPAddress.objects.filter(parent__isnull=True).exists():
@@ -274,7 +316,9 @@ def process_prefix_duplicates(apps):
             if "test" not in sys.argv:
                 print(f">>> Processing Namespace migration for duplicate Prefix {dupe!r}")
             network, prefix_length = dupe.split("/")
-            objects = Prefix.objects.filter(network=network, prefix_length=prefix_length, namespace=ns)
+            objects = Prefix.objects.filter(network=network, prefix_length=prefix_length, namespace=ns).select_related(
+                "tenant"
+            )
             # Leave the last instance of the Prefix in the original Namespace
             last_prefix = objects.filter(tenant_id=tenant_ids_sorted.last()).last()
 
@@ -308,18 +352,14 @@ def reparent_prefixes(apps):
 
     if "test" not in sys.argv:
         print("\n>>> Processing Prefix parents, please standby...")
-    for pfx in Prefix.objects.all().order_by("-prefix_length", "tenant"):
-        try:
-            parent = get_closest_parent(apps, pfx, pfx.namespace.prefixes.all())
-            if pfx.namespace != parent.namespace:
-                raise ValidationError("Prefix and parent are in different Namespaces")
+    for pfx in Prefix.objects.all().order_by("-prefix_length", "tenant").select_related("namespace").iterator():
+        parent = get_closest_parent(pfx, pfx.namespace.prefixes.all())
+        if parent is not None:
             # TODO: useful but potentially very noisy. Do migrations have a verbosity option?
             # if "test" not in sys.argv:
             #     print(f">>> {pfx.network}/{pfx.prefix_length} parent: {parent.network}/{parent.prefix_length}")
             pfx.parent = parent
             pfx.save()
-        except Prefix.DoesNotExist:
-            continue
 
 
 def copy_vrfs_to_cleanup_namespaces(apps):
@@ -339,14 +379,11 @@ def copy_vrfs_to_cleanup_namespaces(apps):
     VRF = apps.get_model("ipam", "VRF")
     Namespace = apps.get_model("ipam", "Namespace")
 
-    for vrf in VRF.objects.all():
-        if not vrf.prefixes.exclude(namespace=vrf.namespace).exists():
-            continue
-
+    for vrf in VRF.objects.select_related("namespace", "tenant").iterator():
         namespaces = (
             vrf.prefixes.exclude(namespace=vrf.namespace).order_by().values_list("namespace", flat=True).distinct()
         )
-        for namespace_pk in namespaces:
+        for namespace_pk in namespaces.iterator():
             namespace = Namespace.objects.get(pk=namespace_pk)
             if "test" not in sys.argv:
                 print(f">>> Copying VRF {vrf.name!r} to namespace {namespace.name!r}")
@@ -386,11 +423,11 @@ def process_interfaces(apps):
     # Case 2: Interface has one or more IP address assigned to it with no more than 1 distinct associated VRF (none is excluded)
     # The interface's VRF foreign key should be set to the VRF of any related IP Address with a non-null VRF.
     # The interface's parent device or virtual machine should adopt an assocation to the VRF (VRFDeviceAssignment) as well.
-    for ifc in ip_interfaces:
+    for ifc in ip_interfaces.select_related("device").iterator():
         if "test" not in sys.argv:
             print(f">>> Processing VRF migration for numbered Interface {ifc.name!r}")
         # Set the Interface VRF to that of the first assigned IPAddress.
-        first_ip = ifc.ip_addresses.filter(vrf__isnull=False).first()
+        first_ip = ifc.ip_addresses.filter(vrf__isnull=False).select_related("vrf").first()
 
         ifc_vrf = first_ip.vrf
         ifc.vrf = ifc_vrf
@@ -403,11 +440,11 @@ def process_interfaces(apps):
             print(f"    VRF {ifc_vrf.name!r} migrated from IPAddress {first_ip.host!r} to Interface {ifc.name!r}")
 
     # VirtualMachine should adopt an association to the VRF (VRFDeviceAssignment) as well.
-    for ifc in ip_vminterfaces:
+    for ifc in ip_vminterfaces.select_related("virtual_machine").iterator():
         if "test" not in sys.argv:
             print(f">>> Processing VRF migration for numbered VMInterface {ifc.name!r}")
         # Set the VMInterface VRF to that of the first assigned IPAddress.
-        first_ip = ifc.ip_addresses.filter(vrf__isnull=False).first()
+        first_ip = ifc.ip_addresses.filter(vrf__isnull=False).select_related("vrf").first()
 
         ifc_vrf = first_ip.vrf
         ifc.vrf = ifc_vrf
@@ -437,7 +474,7 @@ def process_vrfs_prefixes_m2m(apps):
 
     vrfs_with_prefixes = VRF.objects.filter(prefixes__isnull=False).order_by().distinct()
 
-    for vrf in vrfs_with_prefixes:
+    for vrf in vrfs_with_prefixes.iterator():
         if "test" not in sys.argv:
             print(f"    Converting Prefix relationships to VRF {vrf.name} to M2M.")
         vrf.prefixes_m2m.set(vrf.prefixes.all())
@@ -448,28 +485,30 @@ def get_prefixes(qs):
     Given a queryset, return the prefixes as 2-tuples of (network, prefix_length).
 
     Args:
-        qs (QuerySet): QuerySet of Prefix objects.
+        qs (QuerySet, set): QuerySet of Prefix objects, or set of values already processed by this function
 
     Returns:
-        list
+        set
     """
-    return sorted(qs.values_list("network", "prefix_length"))
+    if isinstance(qs, set):
+        return qs
+    return set(qs.values_list("network", "prefix_length"))
 
 
 def compare_prefix_querysets(a, b):
     """
-    Compare two QuerySets of Prefix objects and return the set intersection of both.
+    Compare two QuerySets of Prefix objects and return whether the set intersection has any common networks.
 
     Args:
-        a (QuerySet): Left-side QuerySet
-        b (QuerySet): Right-side QuerySet
+        a (QuerySet, set): Left-side QuerySet, or set of values derived from a queryset by get_prefixes()
+        b (QuerySet, set): Right-side QuerySet, or set of values derived from a queryset by get_prefixes()
 
     Returns:
-        set(tuple)
+        bool
     """
-    set_a = set(get_prefixes(a))
-    set_b = set(get_prefixes(b))
-    return set_a.intersection(set_b)
+    set_a = get_prefixes(a)
+    set_b = get_prefixes(b)
+    return bool(set_a.intersection(set_b))
 
 
 def create_vrf_namespace(apps, vrf):
@@ -528,11 +567,11 @@ def generate_parent_prefix(apps, address):
     Returns:
         netaddr.IPNetwork
     """
-    cidr = validate_cidr(apps, address)
+    cidr = validate_cidr(address)
     return cidr.cidr
 
 
-def get_closest_parent(apps, obj, qs):
+def get_closest_parent(obj, qs):
     """
     This is forklifted from `Prefix.objects.get_closest_parent()` so that it can safely be used in
     migrations.
@@ -540,18 +579,15 @@ def get_closest_parent(apps, obj, qs):
     Return the closest matching parent Prefix for a `cidr` even if it doesn't exist in the database.
 
     Args:
-        obj: Prefix/IPAddress instance
+        obj (IPAddress, Prefix): Prefix/IPAddress instance
         qs (QuerySet): QuerySet of Prefix objects
 
     Returns:
-        Prefix or a filtered queryset
+        Prefix or None
     """
     # Validate that it's a real CIDR
-    cidr = validate_cidr(apps, obj)
+    cidr = validate_cidr(obj)
     broadcast = str(cidr.broadcast or cidr.ip)
-
-    Prefix = apps.get_model("ipam", "Prefix")
-    IPAddress = apps.get_model("ipam", "IPAddress")
 
     # Prepare the queryset filter
     lookup_kwargs = {
@@ -560,9 +596,8 @@ def get_closest_parent(apps, obj, qs):
         "broadcast__gte": broadcast,
     }
 
-    if isinstance(obj, Prefix):
+    if is_prefix(obj):
         lookup_kwargs["prefix_length__lt"] = cidr.prefixlen
-        qs = qs.exclude(id=obj.id)
     else:
         lookup_kwargs["prefix_length__lte"] = cidr.prefixlen
 
@@ -572,10 +607,10 @@ def get_closest_parent(apps, obj, qs):
         qs.filter(**lookup_kwargs)
         .annotate(
             custom_sort_order=models.Case(
-                models.When(tenant=obj.tenant, vrf=obj.vrf, then=models.Value(1)),
-                models.When(tenant__isnull=True, vrf=obj.vrf, then=models.Value(2)),
-                models.When(tenant=obj.tenant, vrf__isnull=True, then=models.Value(3)),
-                models.When(vrf=obj.vrf, then=models.Value(4)),
+                models.When(tenant_id=obj.tenant_id, vrf_id=obj.vrf_id, then=models.Value(1)),
+                models.When(tenant__isnull=True, vrf_id=obj.vrf_id, then=models.Value(2)),
+                models.When(tenant_id=obj.tenant_id, vrf__isnull=True, then=models.Value(3)),
+                models.When(vrf_id=obj.vrf_id, then=models.Value(4)),
                 models.When(tenant__isnull=True, vrf__isnull=True, then=models.Value(5)),
                 models.When(vrf__isnull=True, then=models.Value(6)),
                 default=models.Value(7),
@@ -584,21 +619,19 @@ def get_closest_parent(apps, obj, qs):
         .order_by("-prefix_length", "custom_sort_order")
     )
 
-    if isinstance(obj, IPAddress):
+    if is_ipaddress(obj):
         # IP should not fall back to less specific prefixes
-        if not possible_ancestors.exists():
-            return qs.none()
-        prefix_length = possible_ancestors.first().prefix_length
-        return possible_ancestors.filter(prefix_length=prefix_length)
+        first_ancestor = possible_ancestors.only("prefix_length").first()
+        if not first_ancestor:
+            return None
+        prefix_length = first_ancestor.prefix_length
+        possible_ancestors = possible_ancestors.filter(prefix_length=prefix_length).exclude(ip_addresses__host=obj.host)
 
     # If we've got any matches, the first one is our closest parent.
-    try:
-        return possible_ancestors[0]
-    except IndexError:
-        raise Prefix.DoesNotExist(f"Could not determine parent Prefix for {cidr}")
+    return possible_ancestors.first()
 
 
-def get_next_vrf_cleanup_namespace(apps, vrf):
+def get_next_vrf_cleanup_namespace(apps, vrf, global_ns):
     """
     Try to get the next available Cleanup Namespace based on `vrf` found in the "Global" Namespace.
 
@@ -610,6 +643,7 @@ def get_next_vrf_cleanup_namespace(apps, vrf):
     Args:
         apps: Django apps module
         vrf (VRF): VRF instance
+        global_ns (Namespace): Global Namespace.
 
     Returns:
         Namespace
@@ -618,21 +652,22 @@ def get_next_vrf_cleanup_namespace(apps, vrf):
     VRF = apps.get_model("ipam", "VRF")
 
     counter = 1
-    vrf_prefixes = vrf.prefixes.all()
+    vrf_prefixes = get_prefixes(vrf.prefixes.all())
 
-    global_ns = Namespace.objects.get(name=GLOBAL_NS)
-    global_ns_prefixes = global_ns.prefixes.exclude(vrf=vrf)
-    global_dupe_prefixes = compare_prefix_querysets(vrf_prefixes, global_ns_prefixes)
     global_dupe_vrfs = VRF.objects.filter(namespace=global_ns, name=vrf.name).exclude(pk=vrf.pk).exists()
 
-    if global_dupe_prefixes and "test" not in sys.argv:
-        print(f"    VRF {vrf.name} has duplicate prefixes with NS {global_ns.name}")
-
-    if global_dupe_vrfs and "test" not in sys.argv:
-        print(f"    VRF {vrf.name} has duplicate VRF name with NS {global_ns.name}")
-
-    if not any([global_dupe_prefixes, global_dupe_vrfs]):
-        return global_ns
+    if global_dupe_vrfs:
+        if "test" not in sys.argv:
+            print(f"    VRF {vrf.name} has duplicate VRF name with NS {global_ns.name}")
+    else:
+        global_ns_prefixes = global_ns.prefixes.exclude(vrf=vrf)
+        global_dupe_prefixes = compare_prefix_querysets(vrf_prefixes, global_ns_prefixes)
+        if global_dupe_prefixes:
+            if "test" not in sys.argv:
+                print(f"    VRF {vrf.name} has duplicate prefixes with NS {global_ns.name}")
+        else:
+            # No duplicate VRF or duplicate prefixes - just stay in global Namespace
+            return global_ns
 
     # Iterate non-enforce_unique VRFS
     # - Compare duplicate prefixes for each VRF
@@ -646,17 +681,18 @@ def get_next_vrf_cleanup_namespace(apps, vrf):
         if created:
             return namespace
 
+        dupe_vrfs = VRF.objects.filter(namespace=namespace, name=vrf.name).exclude(pk=vrf.pk).exists()
+        if dupe_vrfs:
+            if "test" not in sys.argv:
+                print(f"    VRF {vrf.name} has duplicate VRF name with NS {namespace.name}")
+            counter += 1
+            continue
+
         ns_prefixes = namespace.prefixes.exclude(vrf=vrf)
         dupe_prefixes = compare_prefix_querysets(vrf_prefixes, ns_prefixes)
-        dupe_vrfs = VRF.objects.filter(namespace=namespace, name=vrf.name).exclude(pk=vrf.pk).exists()
-
-        if dupe_prefixes and "test" not in sys.argv:
-            print(f"    VRF {vrf.name} has duplicate prefixes with NS {namespace.name}")
-
-        if dupe_vrfs and "test" not in sys.argv:
-            print(f"    VRF {vrf.name} has duplicate VRF name with NS {namespace.name}")
-
-        if any([dupe_prefixes, dupe_vrfs]):
+        if dupe_prefixes:
+            if "test" not in sys.argv:
+                print(f"    VRF {vrf.name} has duplicate prefixes with NS {namespace.name}")
             counter += 1
             continue
 
@@ -704,7 +740,7 @@ def get_next_prefix_cleanup_namespace(apps, prefix, base_name=BASE_NAME):
         return namespace
 
 
-def validate_cidr(apps, value):
+def validate_cidr(value):
     """
     Validate whether `value` is a valid IPv4/IPv6 CIDR.
 
@@ -714,12 +750,9 @@ def validate_cidr(apps, value):
     Returns:
         netaddr.IPNetwork
     """
-    IPAddress = apps.get_model("ipam", "IPAddress")
-    Prefix = apps.get_model("ipam", "Prefix")
-
-    if isinstance(value, IPAddress):
+    if is_ipaddress(value):
         value = f"{value.host}/{value.prefix_length}"
-    elif isinstance(value, Prefix):
+    elif is_prefix(value):
         value = f"{value.network}/{value.prefix_length}"
     else:
         value = str(value)
@@ -742,7 +775,7 @@ def ensure_correct_prefix_broadcast(apps):
     """
     Prefix = apps.get_model("ipam", "Prefix")
 
-    for prefix in Prefix.objects.all():
+    for prefix in Prefix.objects.all().iterator():
         true_broadcast = str(netaddr.IPNetwork(f"{prefix.network}/{prefix.prefix_length}")[-1])
         if prefix.broadcast != true_broadcast:
             if "test" not in sys.argv:

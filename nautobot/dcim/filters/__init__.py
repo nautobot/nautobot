@@ -1791,6 +1791,11 @@ class SoftwareImageFileFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     default_image = django_filters.BooleanFilter(
         label="Is default image for associated software version",
     )
+    external_integration = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ExternalIntegration.objects.all(),
+        to_field_name="name",
+        label="External integration (name or ID)",
+    )
 
     class Meta:
         model = SoftwareImageFile

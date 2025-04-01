@@ -7,7 +7,6 @@ from . import views
 from .models import (
     IPAddress,
     Prefix,
-    Service,
     VLAN,
     VLANGroup,
 )
@@ -17,27 +16,12 @@ app_name = "ipam"
 router = NautobotUIViewSetRouter()
 router.register("ip-address-to-interface", views.IPAddressToInterfaceUIViewSet)
 router.register("namespaces", views.NamespaceUIViewSet)
-router.register("route-targets", views.RouteTargetUIViewSet)
-router.register("vrfs", views.VRFUIViewSet)
 router.register("rirs", views.RIRUIViewSet)
+router.register("route-targets", views.RouteTargetUIViewSet)
+router.register("services", views.ServiceUIViewSet)
+router.register("vrfs", views.VRFUIViewSet)
 
 urlpatterns = [
-    # Namespaces
-    path(
-        "namespaces/<uuid:pk>/ip-addresses/",
-        views.NamespaceIPAddressesView.as_view(),
-        name="namespace_ipaddresses",
-    ),
-    path(
-        "namespaces/<uuid:pk>/prefixes/",
-        views.NamespacePrefixesView.as_view(),
-        name="namespace_prefixes",
-    ),
-    path(
-        "namespaces/<uuid:pk>/vrfs/",
-        views.NamespaceVRFsView.as_view(),
-        name="namespace_vrfs",
-    ),
     # Prefixes
     path("prefixes/", views.PrefixListView.as_view(), name="prefix_list"),
     path("prefixes/add/", views.PrefixEditView.as_view(), name="prefix_add"),
@@ -221,35 +205,6 @@ urlpatterns = [
         ObjectNotesView.as_view(),
         name="vlan_notes",
         kwargs={"model": VLAN},
-    ),
-    # Services
-    path("services/", views.ServiceListView.as_view(), name="service_list"),
-    path("services/add/", views.ServiceEditView.as_view(), name="service_add"),
-    path("services/import/", views.ServiceBulkImportView.as_view(), name="service_import"),  # 3.0 TODO: remove, unused
-    path("services/edit/", views.ServiceBulkEditView.as_view(), name="service_bulk_edit"),
-    path(
-        "services/delete/",
-        views.ServiceBulkDeleteView.as_view(),
-        name="service_bulk_delete",
-    ),
-    path("services/<uuid:pk>/", views.ServiceView.as_view(), name="service"),
-    path("services/<uuid:pk>/edit/", views.ServiceEditView.as_view(), name="service_edit"),
-    path(
-        "services/<uuid:pk>/delete/",
-        views.ServiceDeleteView.as_view(),
-        name="service_delete",
-    ),
-    path(
-        "services/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="service_changelog",
-        kwargs={"model": Service},
-    ),
-    path(
-        "services/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="service_notes",
-        kwargs={"model": Service},
     ),
 ]
 
