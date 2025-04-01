@@ -1916,8 +1916,11 @@ class RoleBulkEditForm(NautobotBulkEditForm):
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     weight = forms.IntegerField(required=False)
-    content_types = MultipleContentTypeField(
-        queryset=RoleModelsQuery().as_queryset(), required=False, label="Content Type(s)"
+    add_content_types = MultipleContentTypeField(
+        queryset=RoleModelsQuery().as_queryset(), required=False, label="Add Content Type(s)"
+    )
+    remove_content_types = MultipleContentTypeField(
+        queryset=RoleModelsQuery().as_queryset(), required=False, label="Remove Content Type(s)"
     )
 
     class Meta:
@@ -2037,7 +2040,8 @@ class StatusBulkEditForm(NautobotBulkEditForm):
 
     pk = forms.ModelMultipleChoiceField(queryset=Status.objects.all(), widget=forms.MultipleHiddenInput)
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
-    content_types = MultipleContentTypeField(feature="statuses", required=False, label="Content Type(s)")
+    add_content_types = MultipleContentTypeField(feature="statuses", required=False, label="Add Content Type(s)")
+    remove_content_types = MultipleContentTypeField(feature="statuses", required=False, label="Remove Content Type(s)")
 
     class Meta:
         nullable_fields = []

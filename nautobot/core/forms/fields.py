@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 
 from django import forms as django_forms
@@ -11,6 +12,7 @@ from django.db.models import Q
 from django.forms.fields import BoundField, CallableChoiceIterator, InvalidJSONInput, JSONField as _JSONField
 from django.templatetags.static import static
 from django.urls import reverse
+from django.urls.exceptions import NoReverseMatch
 from django.utils.html import format_html
 import django_filters
 from netaddr import EUI
@@ -20,6 +22,8 @@ from nautobot.core import choices as core_choices, forms
 from nautobot.core.forms import widgets
 from nautobot.core.models import validators
 from nautobot.core.utils import data as data_utils, lookup
+
+logger = logging.getLogger(__name__)
 
 __all__ = (
     "CSVChoiceField",
@@ -591,8 +595,16 @@ class DynamicModelChoiceMixin:
         widget = bound_field.field.widget
         if not widget.attrs.get("data-url"):
             route = lookup.get_route_for_model(self.queryset.model, "list", api=True)
-            data_url = reverse(route)
-            widget.attrs["data-url"] = data_url
+            try:
+                data_url = reverse(route)
+                widget.attrs["data-url"] = data_url
+            except NoReverseMatch:
+                logger.error(
+                    'API route lookup "%s" failed for model %s, form field "%s" will not work properly',
+                    route,
+                    self.queryset.model.__name__,
+                    bound_field.name,
+                )
 
         return bound_field
 

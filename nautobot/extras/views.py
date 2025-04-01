@@ -2912,62 +2912,18 @@ class DynamicGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixi
 #
 
 
-class StatusListView(generic.ObjectListView):
-    """List `Status` objects."""
-
-    queryset = Status.objects.all()
-    filterset = filters.StatusFilterSet
-    filterset_form = forms.StatusFilterForm
-    table = tables.StatusTable
-
-
-class StatusEditView(generic.ObjectEditView):
-    """Edit a single `Status` object."""
-
-    queryset = Status.objects.all()
-    model_form = forms.StatusForm
-
-
-class StatusBulkEditView(generic.BulkEditView):
-    """Edit multiple `Status` objects."""
-
-    queryset = Status.objects.all()
-    table = tables.StatusTable
-    form = forms.StatusBulkEditForm
-
-
-class StatusBulkDeleteView(generic.BulkDeleteView):
-    """Delete multiple `Status` objects."""
-
-    queryset = Status.objects.all()
-    table = tables.StatusTable
-    filterset = filters.StatusFilterSet
-
-
-class StatusDeleteView(generic.ObjectDeleteView):
-    """Delete a single `Status` object."""
-
+class StatusUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.StatusBulkEditForm
+    filterset_class = filters.StatusFilterSet
+    filterset_form_class = forms.StatusFilterForm
+    form_class = forms.StatusForm
+    serializer_class = serializers.StatusSerializer
+    table_class = tables.StatusTable
     queryset = Status.objects.all()
 
-
-class StatusBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    """Bulk CSV import of multiple `Status` objects."""
-
-    queryset = Status.objects.all()
-    table = tables.StatusTable
-
-
-class StatusView(generic.ObjectView):
-    """Detail view for a single `Status` object."""
-
-    queryset = Status.objects.all()
-
-    def get_extra_context(self, request, instance):
-        """Return ordered content types."""
-        return {
-            "content_types": instance.content_types.order_by("app_label", "model"),
-            **super().get_extra_context(request, instance),
-        }
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(object_detail.ObjectFieldsPanel(weight=100, section=SectionChoices.LEFT_HALF, fields="__all__"),)
+    )
 
 
 #
