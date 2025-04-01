@@ -656,6 +656,7 @@ class ObjectsTablePanel(Panel):
         body_content_template_path="components/panel/body_content_objects_table.html",
         header_extra_content_template_path="components/panel/header_extra_content_table.html",
         footer_content_template_path="components/panel/footer_content_table.html",
+        footer_buttons=None,
         **kwargs,
     ):
         """Instantiate an ObjectsTable panel.
@@ -732,6 +733,7 @@ class ObjectsTablePanel(Panel):
         self.hide_hierarchy_ui = hide_hierarchy_ui
         self.related_field_name = related_field_name
         self.enable_bulk_actions = enable_bulk_actions
+        self.footer_buttons = footer_buttons
 
         super().__init__(
             body_wrapper_template_path=body_wrapper_template_path,
@@ -770,6 +772,14 @@ class ObjectsTablePanel(Panel):
                 body_content_table_add_url = f"{add_route}?{related_field_name}={obj.pk}&return_url={return_url}"
 
         return body_content_table_add_url
+
+    def get_buttons_context(self, context: Context):
+        buttons_context = []
+        for button in self.footer_buttons:
+            # Call get_extra_context on each button
+            _context = button.get_extra_context(context)
+            buttons_context.append(_context)
+        return buttons_context
 
     def get_extra_context(self, context: Context):
         """Add additional context for rendering the table panel.
@@ -838,6 +848,7 @@ class ObjectsTablePanel(Panel):
 
         body_content_table_add_url = self._get_table_add_url(context)
         body_content_table_verbose_name_plural = self.table_title or body_content_table_model._meta.verbose_name_plural
+        buttons_context = self.get_buttons_context(context) if self.footer_buttons else None
 
         return {
             "body_content_table": body_content_table,
@@ -846,6 +857,7 @@ class ObjectsTablePanel(Panel):
             "body_content_table_verbose_name": body_content_table_model._meta.verbose_name,
             "body_content_table_verbose_name_plural": body_content_table_verbose_name_plural,
             "more_queryset_count": more_queryset_count,
+            "buttons_context": buttons_context,
         }
 
 

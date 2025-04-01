@@ -112,8 +112,14 @@ class ClusterUIViewSet(NautobotUIViewSet):
                 table_filter="cluster",
                 table_title="Host Devices",
                 enable_bulk_actions=True,
-                body_content_template_path="virtualization/cluster_devices_body_content.html",
-                footer_content_template_path="virtualization/cluster_add_devices_table_footer.html",
+                footer_buttons=[
+                    object_detail.Button(
+                        link_name="virtualization:cluster_remove_devices",
+                        label="Remove Device",
+                        weight=250,
+                        color="danger",
+                    ),
+                ],
             ),
             object_detail.ObjectsTablePanel(
                 weight=100,
