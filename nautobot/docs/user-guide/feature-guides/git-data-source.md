@@ -9,7 +9,7 @@ Like other Nautobot features, it is possible to create, read, update, and delete
 
 ## Supported Providers
 
-The feature uses the concept of a `provides` field to identify the provided data types and therefore map a repository to a use case. A list of the supported options is provided below.
+This feature uses the concept of a `provides` field to identify the provided data types and therefore map a repository to a use case. A list of the supported options is provided below.
 
 ### Core Functionality
 

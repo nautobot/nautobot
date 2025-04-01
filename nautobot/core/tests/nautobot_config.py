@@ -44,8 +44,6 @@ CONSTANCE_BACKEND = "constance.backends.memory.MemoryBackend"
 TEST_USE_FACTORIES = True
 # For now, use a constant PRNG seed for consistent results. In the future we can remove this for fuzzier testing.
 TEST_FACTORY_SEED = "Nautobot"
-# File in which all performance-specifc test baselines are stored
-TEST_PERFORMANCE_BASELINE_FILE = "nautobot/core/tests/performance_baselines.yml"
 
 # Make Celery run synchronously (eager), to always store eager results, and run the broker in-memory.
 # NOTE: Celery does not honor the TASK_TRACK_STARTED config when running in eager mode, so the job result is not saved until after the task completes.

@@ -8,18 +8,18 @@ The below best practices apply to test code as well as feature code, and there a
 
 For models that support change-logging, custom fields, and relationships (which includes all subclasses of `OrganizationalModel` and `PrimaryModel`), the "Full-featured models" base classes below should always be used. For less full-featured models, refer to the "Minimal models" column instead.
 
-| Feature                  | Full-featured models       | Minimal models              |
-| ------------------------ | -------------------------- | --------------------------- |
-| Data models              | `PrimaryModel`             | `BaseModel`                 |
-| FilterSets               | `NautobotFilterSet`        | `BaseFilterSet`             |
-| Object create/edit forms | `NautobotModelForm`        | `BootstrapMixin`            |
-| Object bulk-edit forms   | `NautobotBulkEditForm`     | `BootstrapMixin`            |
-| Table filter forms       | `NautobotFilterForm`       | `BootstrapMixin`            |
-| Read-only serializers    | `BaseModelSerializer`      | `BaseModelSerializer`       |
-| All other serializers    | `NautobotModelSerializer`  | `ValidatedModelSerializer`  |
-| List view tables         | `BaseTable`                | `BaseTable`                 |
-| API ViewSets             | `NautobotModelViewSet`     | `ModelViewSet`              |
-| UI ViewSets              | `NautobotUIViewSet`        | individual mixins as needed |
+| Feature                  | Full-featured models       | Minimal models                              |
+| ------------------------ | -------------------------- | ------------------------------------------- |
+| Data models              | `PrimaryModel`             | `BaseModel`                                 |
+| FilterSets               | `NautobotFilterSet`        | `BaseFilterSet`                             |
+| Object create/edit forms | `NautobotModelForm`        | `BootstrapMixin` + `django.forms.ModelForm` |
+| Object bulk-edit forms   | `NautobotBulkEditForm`     | `BootstrapMixin` + `BulkEditForm`           |
+| Table filter forms       | `NautobotFilterForm`       | `BootstrapMixin` + `django.forms.Form`      |
+| Read-only serializers    | `BaseModelSerializer`      | `BaseModelSerializer`                       |
+| All other serializers    | `NautobotModelSerializer`  | `ValidatedModelSerializer`                  |
+| List view tables         | `BaseTable`                | `BaseTable`                                 |
+| API ViewSets             | `NautobotModelViewSet`     | `ModelViewSet`                              |
+| UI ViewSets              | `NautobotUIViewSet`        | individual mixins as needed                 |
 
 ## Data Model Best Practices
 

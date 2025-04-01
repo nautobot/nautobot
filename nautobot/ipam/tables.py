@@ -355,7 +355,11 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
         template_code=PREFIX_COPY_LINK, attrs={"td": {"class": "text-nowrap"}}, order_by=("network", "prefix_length")
     )
     vrf_count = LinkedCountColumn(
-        viewname="ipam:vrf_list", url_params={"prefix": "pk"}, reverse_lookup="prefixes", verbose_name="VRFs"
+        viewname="ipam:vrf_list",
+        url_params={"prefix": "pk"},
+        display_field="name",
+        reverse_lookup="prefixes",
+        verbose_name="VRFs",
     )
     tenant = TenantColumn()
     namespace = tables.Column(linkify=True)
@@ -364,7 +368,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     children = tables.Column(accessor="descendants_count", orderable=False)
     date_allocated = tables.DateTimeColumn()
     location_count = LinkedCountColumn(
-        viewname="dcim:location_list", url_params={"prefixes": "pk"}, verbose_name="Locations"
+        viewname="dcim:location_list", url_params={"prefixes": "pk"}, display_field="name", verbose_name="Locations"
     )
     cloud_networks_count = LinkedCountColumn(
         viewname="cloud:cloudnetwork_list", url_params={"prefixes": "pk"}, verbose_name="Cloud Networks"

@@ -1,3 +1,4 @@
+import contextlib
 import datetime
 import random
 import types
@@ -8,6 +9,7 @@ from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.db.models import Count, Q
 from django.test import override_settings
 from django.test.client import RequestFactory
@@ -16,6 +18,7 @@ import graphene.types
 from graphene_django.registry import get_global_registry
 from graphene_django.settings import graphene_settings
 from graphql import execute, get_introspection_query, graphql_sync, GraphQLError, parse
+import redis.exceptions
 from rest_framework import status
 
 from nautobot.circuits.models import CircuitTermination, Provider
@@ -396,6 +399,12 @@ class GraphQLExtendSchemaRelationship(GraphQLTestCaseBase):
 
         self.location_schema = generate_schema_type(app_name="dcim", model=Location)
         self.vlan_schema = generate_schema_type(app_name="ipam", model=VLAN)
+
+    def tearDown(self):
+        """Ensure that relationship caches are cleared to avoid leakage into other tests."""
+        with contextlib.suppress(redis.exceptions.ConnectionError):
+            cache.delete_pattern(f"{Relationship.objects.get_for_model_source.cache_key_prefix}.*")
+            cache.delete_pattern(f"{Relationship.objects.get_for_model_destination.cache_key_prefix}.*")
 
     def test_extend_relationship_default_prefix(self):
         """Verify that relationships are correctly added to the schema."""
