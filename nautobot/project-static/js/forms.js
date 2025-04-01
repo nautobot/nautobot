@@ -95,8 +95,9 @@ function repopulate(context, targetField, sourceFields, maxLength, transformValu
     const newValue = newValues.join(" ")
     if(transformValue){
         targetField.value = transformValue(newValue, maxLength)
+    } else {
+        targetField.value = newValue.slice(0, maxLength)
     }
-    targetField.value = newValue.slice(0, maxLength)
 }
 
 function repopulateIfChanged(targetField, repopulate){
