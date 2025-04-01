@@ -90,8 +90,6 @@ class RegularExpressionValidationRuleFilterForm(NautobotFilterForm):
         "error_message",
     ]
     q = forms.CharField(required=False, label="Search")
-    # "CSV" field is being used here because it is using the slug-form input for
-    # content-types, which improves UX.
     content_type = MultipleContentTypeField(
         feature="custom_validators",
         queryset=ContentType.objects.all().order_by("app_label", "model"),
@@ -147,8 +145,6 @@ class MinMaxValidationRuleFilterForm(NautobotFilterForm):
     model = MinMaxValidationRule
     field_order = ["q", "name", "enabled", "content_type", "field", "min", "max", "error_message"]
     q = forms.CharField(required=False, label="Search")
-    # "CSV" field is being used here because it is using the slug-form input for
-    # content-types, which improves UX.
     content_type = MultipleContentTypeField(
         feature="custom_validators",
         queryset=ContentType.objects.all().order_by("app_label", "model"),
@@ -213,8 +209,6 @@ class RequiredValidationRuleFilterForm(NautobotFilterForm):
         "error_message",
     ]
     q = forms.CharField(required=False, label="Search")
-    # "CSV" field is being used here because it is using the slug-form input for
-    # content-types, which improves UX.
     content_type = MultipleContentTypeField(
         feature="custom_validators",
         queryset=ContentType.objects.all().order_by("app_label", "model"),
@@ -277,8 +271,6 @@ class UniqueValidationRuleFilterForm(NautobotFilterForm):
         "error_message",
     ]
     q = forms.CharField(required=False, label="Search")
-    # "CSV" field is being used here because it is using the slug-form input for
-    # content-types, which improves UX.
     content_type = MultipleContentTypeField(
         feature="custom_validators",
         queryset=ContentType.objects.all().order_by("app_label", "model"),

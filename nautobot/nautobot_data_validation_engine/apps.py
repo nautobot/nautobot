@@ -1,6 +1,5 @@
 from nautobot.core.apps import NautobotConfig
 from nautobot.extras.plugins import register_custom_validators
-from nautobot.extras.plugins.utils import import_object
 
 
 class DataValidationEngineConfig(NautobotConfig):
@@ -13,6 +12,6 @@ class DataValidationEngineConfig(NautobotConfig):
     def ready(self):
         super().ready()
 
-        validators = import_object("nautobot.nautobot_data_validation_engine.custom_validators.custom_validators")
-        if validators is not None:
-            register_custom_validators(validators)
+        from nautobot.nautobot_data_validation_engine.custom_validators import custom_validators
+
+        register_custom_validators(custom_validators)

@@ -11,9 +11,11 @@ validation rules that have been defined for the given model.
 
 import inspect
 import logging
+import os
 import re
 from typing import Optional
 
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.template.defaultfilters import pluralize
@@ -139,12 +141,8 @@ class BaseValidator(CustomValidator):
             compliance_class(obj).clean()
 
         for repo in GitRepository.objects.filter(
-            provided_contents__contains="nautobot.nautobot_data_validation_engine.data_compliance_rules"  # TODO(john): data migration for this? used to be data_validation_engine.data_compliance_rules
+            provided_contents__contains="nautobot.nautobot_data_validation_engine.data_compliance_rule"  # TODO(john): data migration for this? used to be data_validation_engine.data_compliance_rules
         ):
-            is_repo_updated = ensure_git_repository(repo, head=repo.current_head)
-            # Skip reimporting the code if the repo is not updated
-            if not is_repo_updated:
-                continue
             for compliance_class in get_data_compliance_classes_from_git_repo(repo):
                 if (
                     f"{self.context['object']._meta.app_label}.{self.context['object']._meta.model_name}"
@@ -192,20 +190,29 @@ def get_data_compliance_rules_map():
     return compliance_rulesets
 
 
-def get_data_compliance_classes_from_git_repo(repo: GitRepository):
+def get_data_compliance_classes_from_git_repo(repo: GitRepository, ignore_import_errors=False):
     """Get list of DataComplianceRule classes found within the custom_validators folder of the given repo."""
     ensure_git_repository(repo, head=repo.current_head)
     class_list = []
-    try:
-        path = f"{repo.filesystem_path}/custom_validators"
-        modules = import_modules_privately(path=path, ignore_import_errors=False)
-        for module in modules:
-            for _, compliance_class in inspect.getmembers(module, is_data_compliance_rule):
-                class_list.append(compliance_class)
-        return class_list
-    except Exception:
-        LOGGER.exception("Failed to import custom validators from %s", repo.slug)
-        return []
+    if "nautobot_data_validation_engine.data_compliance_rule" in repo.provided_contents:
+        if not (
+            os.path.isdir(os.path.join(repo.filesystem_path, "custom_validators"))
+            or os.path.isfile(os.path.join(repo.filesystem_path, "custom_validators.py"))
+        ):
+            LOGGER.error("No `custom_validators` submodule found in Git repository %s", repo)
+            if not ignore_import_errors:
+                raise FileNotFoundError(f"No `custom_validators` submodule found in Git repository {repo}")
+        else:
+            modules = import_modules_privately(
+                settings.GIT_ROOT,
+                module_path=[repo.slug.replace("-", "_"), "custom_validators"],
+                ignore_import_errors=ignore_import_errors,
+            )
+            for module in modules:
+                for _, compliance_class in inspect.getmembers(module, is_data_compliance_rule):
+                    class_list.append(compliance_class)
+            return class_list
+    return []
 
 
 class ComplianceError(ValidationError):

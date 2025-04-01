@@ -11,6 +11,7 @@ from django.core.exceptions import (
 from django.db import transaction
 from django.db.models import Q
 from django.http import QueryDict
+from django.urls import reverse
 from rest_framework import exceptions as drf_exceptions
 
 from nautobot.core.api.exceptions import SerializerNotFound
@@ -380,7 +381,7 @@ def get_data_compliance_rules():
 
     # Get rules from Git Repositories
     for repo in GitRepository.objects.all():
-        if "nautobot_data_validation_engine.data_compliance_rules" in repo.provided_contents:
+        if "nautobot_data_validation_engine.data_compliance_rule" in repo.provided_contents:
             validators.extend(get_data_compliance_classes_from_git_repo(repo))
     return validators
 
@@ -396,12 +397,33 @@ def get_data_compliance_choices():
 
 
 def clean_compliance_rules_results_for_instance(instance, excluded_pks):
-    """Clean compliance results."""
+    """
+    Delete data compliance results generated from runs of RunRegisteredDataComplianceRules job,
+    which validates object against user-created rules.
+    e.g. UniqueValidationRules, RegularExpressionValidationRules, MinMaxValidationRules, and RequiredValidationRules.
+
+    The usage is that:
+    If the instance is valid against all user-created rules, then the previous data compliance results of the instance are deleted.
+    If the instance is invalid against any user-created rules, then this method deletes the existing data compliance results of the instance,
+    and preserves only the data compliance result from the most recent job run by including the pk of the result in the `excluded_pks` list.
+
+    Args:
+        instance: The validated object to clean compliance results for.
+        excluded_pks: List of primary keys of compliance results to exclude from deletion.
+    """
+    model_class = instance.__class__
+    model_custom_validators = registry["plugin_custom_validators"][model_class._meta.label_lower]
+    # Prep for compliance names to be deleted.
+    compliance_class_names_to_be_deleted = []
+    for cv in model_custom_validators:
+        if issubclass(cv, BaseValidator):
+            compliance_class_names_to_be_deleted.append(cv.__name__)
+
     excluded_pks = excluded_pks or []
     models.DataCompliance.objects.filter(
         object_id=instance.id,
         content_type=ContentType.objects.get_for_model(instance),
-        compliance_class_name__endswith="CustomValidator",
+        compliance_class_name__in=compliance_class_names_to_be_deleted,
     ).exclude(pk__in=excluded_pks).delete()
 
 
@@ -426,10 +448,11 @@ class RunRegisteredDataComplianceRules(Job):
         """Run the validate function on all given DataComplianceRule classes."""
         selected_data_compliance_rules = kwargs.get("selected_data_compliance_rules", None)
 
-        compliance_classes = []
-        compliance_classes.extend(get_data_compliance_rules())
+        compliance_classes = get_data_compliance_rules()
 
-        for compliance_class in compliance_classes:
+        for compliance_class in sorted(
+            compliance_classes, key=lambda x: x.model.split(".")
+        ):  # sort by model.app_label and model.model_name
             if selected_data_compliance_rules and compliance_class.__name__ not in selected_data_compliance_rules:
                 continue
             self.logger.info(f"Running {compliance_class.__name__}")
@@ -444,7 +467,8 @@ class RunRegisteredDataComplianceRules(Job):
             self.logger.info("Running user created data validation rules")
             self.report_for_validation_rules()
 
-        self.logger.info("View Data Compliance results [here](/data-validation-engine/data-compliance/)")
+        result_url = reverse("nautobot_data_validation_engine:datacompliance_list")
+        self.logger.info(f"View Data Compliance results [here]({result_url})")
 
     @staticmethod
     def report_for_validation_rules():
@@ -478,7 +502,7 @@ class RunRegisteredDataComplianceRules(Job):
                 if validator.clean == CustomValidator.clean:
                     continue
 
-                for validated_object in class_name.objects.all():
+                for validated_object in class_name.objects.iterator():
                     try:
                         validator(validated_object).clean(exclude_disabled_rules=False)
                         clean_compliance_rules_results_for_instance(instance=validated_object, excluded_pks=[])
