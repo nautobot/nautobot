@@ -133,7 +133,7 @@ def invalidate_relationship_models_cache(sender, **kwargs):
 def invalidate_openapi_schema_cache(sender, **kwargs):
     """Invalidate the openapi schema cache."""
     with contextlib.suppress(redis.exceptions.ConnectionError):
-        cache.delete_pattern(f"openapi_schema_cache_*")
+        cache.delete_pattern("openapi_schema_cache_*")
 
 
 @receiver(post_save)
