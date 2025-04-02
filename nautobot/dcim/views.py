@@ -57,9 +57,6 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
-from nautobot.dcim.utils import (
-    fetch_network_driver_mappings,
-)
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
@@ -1703,12 +1700,10 @@ class PlatformUIViewSet(NautobotUIViewSet):
     )
 
     def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
-            return {
-                "network_driver_tool_names": fetch_network_driver_mappings(instance),
-                **super().get_extra_context(request, instance),
-            }
-        return super().get_extra_context(request, instance)
+            context["network_driver_tool_names"] = instance.fetch_network_driver_mappings()
+        return context
 
 
 #

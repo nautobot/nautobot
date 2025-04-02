@@ -65,26 +65,6 @@ def cable_status_color_css(record):
         return CABLE_STATUS_TO_CSS_CLASS.get(status_color, "")
 
 
-def fetch_network_driver_mappings(platform):
-    """
-    Retrieves the network driver mappings for a specific platform.
-
-    If the platform is None, an empty dictionary is returned.
-
-    Args:
-        platform (object or None): The platform object which contains network driver mappings. If None, an empty dictionary is returned.
-
-    Returns:
-        dict: A dictionary where the keys are tool names and the values are the corresponding
-              network driver mappings for the given platform, or an empty dictionary if platform is None.
-    """
-    if platform is None:
-        return {}
-
-    tool_names = get_network_driver_mapping_tool_names()
-    return {tool_name: platform.network_driver_mappings.get(tool_name) for tool_name in tool_names}
-
-
 def get_network_driver_mapping_tool_names():
     """
     Return a list of all available network driver tool names derived from the netutils library and the optional NETWORK_DRIVERS setting.

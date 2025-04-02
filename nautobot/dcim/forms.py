@@ -789,19 +789,21 @@ class ManufacturerFilterForm(NautobotFilterForm):
 #
 # Platform
 #
+
+
 class PlatformBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Platform.objects.all(), widget=forms.MultipleHiddenInput())
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     name = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
-    manufacturer = forms.ModelChoiceField(
-        queryset=Manufacturer.objects.all(), required=False, widget=forms.Select(attrs={"class": "form-control"})
-    )
+
+    manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
+
     network_driver = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     napalm_driver = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
-    napalm_args = forms.JSONField(required=False, widget=forms.Textarea(attrs={"rows": 4, "class": "form-control"}))
+    napalm_args = forms.JSONField(required=False, widget=forms.Textarea(attrs={"rows": 4}))
 
     class Meta:
-        nullable_fields = ["description", "name", "manufacturer", "network_driver", "napalm_driver", "napalm_args"]
+        nullable_fields = ["manufacturer", "napalm_args"]
 
 
 #
