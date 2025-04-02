@@ -1,9 +1,9 @@
 {% load render_table from django_tables2 %}
 {% load helpers %}
 
-<div class="card">
+<div class="card{% if card_class %} border-{{ card_class }} {% endif %} mb-3">
     {% if heading %}
-        <div class="card-header">
+        <div class="card-header{% if card_class %} bg-{{ card_class }} text-white {% endif %}">
             <strong>{{ heading }}</strong>
         </div>
     {% endif %}
