@@ -28,7 +28,7 @@
             </ul>
         </nav>
     {% endif %}
-    <form method="get" class="d-inline-flex flex-wrap float-end">
+    <form method="get" class="d-inline-flex flex-wrap justify-content-end">
         {% for k, v_list in request.GET.lists %}
             {% if k != 'per_page' %}
                 {% for v in v_list %}

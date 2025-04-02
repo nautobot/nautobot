@@ -317,8 +317,8 @@ def consolidate_detail_view_action_buttons(context):
             </a>
         </button>
     """
-    dropdown_button_classes = "btn btn-warning rounded-end d-flex justify-content-center align-items-center"
-    dropdown_button_style = "border-left: none; width: 5px;"
+    dropdown_button_classes = "btn btn-warning rounded-end d-flex justify-content-center align-items-center border-start-0"
+    dropdown_button_style = "width: 5px;"
     edit_button_classes = "btn btn-warning"
     delete_button_classes = "text-danger"
     clone_button_classes = "text text-reset text-decoration-none"
@@ -333,7 +333,7 @@ def consolidate_detail_view_action_buttons(context):
         }
         # No border between the dropdown button and the edit button if there are multiple buttons
         if detail_view_action_button_count > 1:
-            attrs["style"] = "border-right: none;"
+            attrs["class"] += "border-end-0"
         detail_view_action_buttons.append(
             format_html(
                 primary_button_fragment,
