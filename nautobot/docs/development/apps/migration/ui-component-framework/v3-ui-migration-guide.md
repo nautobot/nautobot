@@ -31,19 +31,21 @@ Bootstrap 5:
 
 ## Buttons
 
-- `.btn-default` is removed; use `.btn-secondary` instead
-- `.close` is removed; use `.btn-close` instead
+- `.btn-default` is replaced by `.btn-secondary`
+- `.close` is replaced by `.btn-close`
 - `.btn-xs` (extra small) is removed; use `.btn-sm` as the smallest size
 
 Bootstrap 3:
 
 ```html
+<button class="btn-default"></button>
 <button class="close" data-dismiss="alert">×</button>
 ```
 
 Bootstrap 5:
 
 ```html
+<button class="btn-secondary"></button>
 <button class="btn-close" data-bs-dismiss="alert"></button>
 ```
 
@@ -110,7 +112,8 @@ Bootstrap 5:
 
 ## Pagination Items and Pagination Links
 
-- `.page-item` needs to be applied to `<li>` elements and `.page-link` needs to be applied to `<a>` elements
+- `.page-item` needs to be applied to `<li>` elements
+- `.page-link` needs to be applied to `<a>` elements
 - `.active` is now applied to `<li>` instead of `<a>`
 - `.disabled` should be applied to `<li>` instead of `<a>`
 - replace `<i class="mdi mdi-chevron-double-left"></i>` with `<span aria-hidden="true">&laquo;</span>`
@@ -142,11 +145,11 @@ Bootstrap 5:
 
 ## Panel Components
 
-- .panel is no longer available, use .card instead
-- .panel-heading is replaced by .card-header
-- .panel-body is replaced by .card-body
-- .panel-footer is replaced by .card-footer
-- .panel-default, .panel-primary is replaced by a combination of .border-* and .bg-* classes
+- `.panel` is no longer available, use `.card` instead
+- `.panel-heading` is replaced by `.card-header`
+- `.panel-body` is replaced by `.card-body`
+- `.panel-footer` is replaced by `.card-footer`
+- `.panel-default`, `.panel-primary` is replaced by a combination of `.border-*` and `.bg-*` classes applied to `.card` and `.card-header`
 - `<div class="panel panel-default">` is replaced by `<div class="card">` without additional classes
 
 Bootstrap 3:
