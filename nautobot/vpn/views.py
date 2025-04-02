@@ -1,10 +1,16 @@
 """Views for the vpn models."""
 
+import logging
+
+from django.core.exceptions import ValidationError
+
 from nautobot.apps.ui import ObjectDetailContent, ObjectFieldsPanel, ObjectsTablePanel, SectionChoices
 from nautobot.apps.views import NautobotUIViewSet
 
 from . import filters, forms, models, tables
 from .api import serializers
+
+logger = logging.getLogger(__name__)
 
 
 class VPNProfileUIViewSet(NautobotUIViewSet):
@@ -28,8 +34,6 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields=[
-                    "vpn_phase1_policy",
-                    "vpn_phase2_policy",
                     "name",
                     "description",
                     "keepalive_enabled",
@@ -41,8 +45,58 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
                     "role",
                 ],
             ),
+            ObjectsTablePanel(
+                weight=100,
+                table_class=tables.VPNProfilePhase1PolicyAssignmentTable,
+                table_filter="vpn_profile",
+                section=SectionChoices.RIGHT_HALF,
+                exclude_columns=[],
+            ),
+            ObjectsTablePanel(
+                weight=200,
+                table_class=tables.VPNProfilePhase2PolicyAssignmentTable,
+                table_filter="vpn_profile",
+                section=SectionChoices.RIGHT_HALF,
+                exclude_columns=[],
+            ),
         ],
     )
+
+    def get_extra_context(self, request, instance=None):
+        ctx = super().get_extra_context(request, instance)
+
+        if self.action in ["create", "update"]:
+            ctx["vpn_phase1_policies"] = forms.VPNProfilePh1FormSet(
+                instance=instance,
+                data=request.POST if request.method == "POST" else None,
+            )
+            ctx["vpn_phase2_policies"] = forms.VPNProfilePh2FormSet(
+                instance=instance,
+                data=request.POST if request.method == "POST" else None,
+            )
+        return ctx
+
+    def form_save(self, form, **kwargs):
+        obj = super().form_save(form, **kwargs)
+        ctx = self.get_extra_context(self.request, obj)
+
+        vpn_phase1_policies = ctx.get("vpn_phase1_policies")
+        if vpn_phase1_policies.is_valid():
+            vpn_phase1_policies.save()
+        else:
+            logger.debug("PH1 Policies")
+            logger.error(vpn_phase1_policies.errors)
+            raise ValidationError(vpn_phase1_policies.errors)
+
+        vpn_phase2_policies = ctx.get("vpn_phase2_policies")
+        if vpn_phase2_policies.is_valid():
+            vpn_phase2_policies.save()
+        else:
+            logger.debug("PH2 Policies")
+            logger.error(vpn_phase1_policies.errors)
+            raise ValidationError(vpn_phase2_policies.errors)
+
+        return obj
 
 
 class VPNPhase1PolicyUIViewSet(NautobotUIViewSet):

@@ -1,7 +1,7 @@
 from django.db import models
 
 from nautobot.apps.constants import CHARFIELD_MAX_LENGTH
-from nautobot.apps.models import extras_features, PrimaryModel, StatusField
+from nautobot.apps.models import BaseModel, extras_features, PrimaryModel, StatusField
 from nautobot.extras.models import RoleField
 from nautobot.vpn import choices
 
@@ -16,17 +16,19 @@ from nautobot.vpn import choices
 class VPNProfile(PrimaryModel):  # pylint: disable=too-many-ancestors
     """VPNProfile model for nautobot_vpn_models."""
 
-    vpn_phase1_policy = models.ManyToManyField(
+    vpn_phase1_policies = models.ManyToManyField(
         to="vpn.VPNPhase1Policy",
         related_name="vpn_profiles",
         verbose_name="VPN Phase 1 Policy",
+        through="vpn.VPNProfilePhase1PolicyAssignment",
         blank=True,
         help_text="Phase 1 Policy",
     )
-    vpn_phase2_policy = models.ManyToManyField(
+    vpn_phase2_policies = models.ManyToManyField(
         to="vpn.VPNPhase2Policy",
         related_name="vpn_profiles",
         verbose_name="VPN Phase 2 Policy",
+        through="vpn.VPNProfilePhase2PolicyAssignment",
         blank=True,
         help_text="Phase 2 Policy",
     )
@@ -77,7 +79,7 @@ class VPNProfile(PrimaryModel):  # pylint: disable=too-many-ancestors
 
     @property
     def priority_ph1_policy(self):
-        # TODO add trough-table with wait.
+        # TODO add trough-table with weight.
         return "return with highest prio"
 
 
@@ -195,6 +197,44 @@ class VPNPhase2Policy(PrimaryModel):  # pylint: disable=too-many-ancestors
     def __str__(self):
         """Stringify instance."""
         return self.name
+
+
+@extras_features("graphql")
+class VPNProfilePhase1PolicyAssignment(BaseModel):
+    vpn_profile = models.ForeignKey(
+        "vpn.VPNProfile", on_delete=models.CASCADE, related_name="vpn_profile_phase1_policy_assignments"
+    )
+    vpn_phase1_policy = models.ForeignKey(
+        "vpn.VPNPhase1Policy", on_delete=models.CASCADE, related_name="vpn_profile_phase1_policy_assignments"
+    )
+    weight = models.PositiveIntegerField(default=100, help_text="Higher weights appear later in the list")
+    is_metadata_associable_model = False
+
+    class Meta:
+        unique_together = ["vpn_profile", "vpn_phase1_policy"]
+        ordering = ["weight", "vpn_profile", "vpn_phase1_policy"]
+
+    def __str__(self):
+        return f"{self.vpn_profile}: {self.vpn_phase1_policy}"
+
+
+@extras_features("graphql")
+class VPNProfilePhase2PolicyAssignment(BaseModel):
+    vpn_profile = models.ForeignKey(
+        "vpn.VPNProfile", on_delete=models.CASCADE, related_name="vpn_profile_phase2_policy_assignments"
+    )
+    vpn_phase2_policy = models.ForeignKey(
+        "vpn.VPNPhase2Policy", on_delete=models.CASCADE, related_name="vpn_profile_phase2_policy_assignments"
+    )
+    weight = models.PositiveIntegerField(default=100, help_text="Higher weights appear later in the list")
+    is_metadata_associable_model = False
+
+    class Meta:
+        unique_together = ["vpn_profile", "vpn_phase2_policy"]
+        ordering = ["weight", "vpn_profile", "vpn_phase2_policy"]
+
+    def __str__(self):
+        return f"{self.vpn_profile}: {self.vpn_phase2_policy}"
 
 
 @extras_features(
