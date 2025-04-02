@@ -190,7 +190,7 @@ def get_data_compliance_rules_map():
     return compliance_rulesets
 
 
-def get_data_compliance_classes_from_git_repo(repo: GitRepository, ignore_import_errors=False):
+def get_data_compliance_classes_from_git_repo(repo: GitRepository, ignore_import_errors=True):
     """Get list of DataComplianceRule classes found within the custom_validators folder of the given repo."""
     ensure_git_repository(repo, head=repo.current_head)
     class_list = []
