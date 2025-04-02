@@ -2046,7 +2046,8 @@ class StatusBulkEditForm(NautobotBulkEditForm):
 
     pk = forms.ModelMultipleChoiceField(queryset=Status.objects.all(), widget=forms.MultipleHiddenInput)
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
-    content_types = MultipleContentTypeField(feature="statuses", required=False, label="Content Type(s)")
+    add_content_types = MultipleContentTypeField(feature="statuses", required=False, label="Add Content Type(s)")
+    remove_content_types = MultipleContentTypeField(feature="statuses", required=False, label="Remove Content Type(s)")
 
     class Meta:
         nullable_fields = []
