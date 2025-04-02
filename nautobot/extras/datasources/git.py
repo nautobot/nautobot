@@ -1063,6 +1063,7 @@ def refresh_git_data_compliance_rules(repository_record, job_result):  # pylint:
                 grouping="data compliance rules",
             )
 
+
 # Register built-in callbacks for data types potentially provided by a GitRepository
 register_datasource_contents(
     [
