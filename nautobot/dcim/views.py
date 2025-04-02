@@ -1769,6 +1769,7 @@ class DeviceView(generic.ObjectView):
                 weight=100,
                 color=ButtonColorChoices.BLUE,
                 label="Add Components",
+                attributes={"id": "device-add-components-button"},
                 icon="mdi-plus-thick",
                 required_permissions=["dcim.change_device"],
                 children=(
@@ -3436,7 +3437,7 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
     model_form_class = forms.ModuleBayForm
     serializer_class = serializers.ModuleBaySerializer
     table_class = tables.ModuleBayTable
-    create_template_name = "dcim/modulebay_create.html"
+    create_template_name = "dcim/device_component_add.html"
 
     def get_extra_context(self, request, instance):
         if instance:
