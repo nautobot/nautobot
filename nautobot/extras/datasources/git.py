@@ -1050,7 +1050,7 @@ def delete_git_graphql_queries(repository_record, job_result, preserve=None):
                 job_result.log(error_msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="graphql queries")
 
 
-def refresh_git_data_compliance_rules(repository_record, job_result):  # pylint: disable=W0613
+def refresh_git_data_compliance_rules(repository_record, job_result, delete=False):  # pylint: disable=W0613
     """Callback function for GitRepository updates - refresh all DataComplianceRules managed by this repository."""
     from nautobot.nautobot_data_validation_engine.custom_validators import get_data_compliance_classes_from_git_repo
 
