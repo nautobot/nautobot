@@ -2,6 +2,7 @@ from celery import states
 from django.utils import timezone
 from django_celery_results.managers import TaskResultManager, transaction_retry
 
+from nautobot.core.branching import maybe_with_branch
 from nautobot.core.models import BaseManager
 from nautobot.core.models.querysets import RestrictedQuerySet
 
@@ -111,28 +112,29 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
         except Job.DoesNotExist:
             pass
 
-        obj, created = self.using(using).get_or_create(id=task_id, defaults=fields)
+        with maybe_with_branch(branch_name=celery_kwargs.get("nautobot_job_branch_name", None)):
+            obj, created = self.get_or_create(id=task_id, defaults=fields)
 
-        if not created:
-            # Make sure `date_done` is allowed to stay null until the task reacheas a ready state.
-            #
-            # Default behavior in `django-celery-results` has this field as a
-            # `DateField(auto_now=True)` which just automatically updates the `date_done` field on every
-            # state transition. This is different than Celery's default behavior (and the current
-            # behavior of Nautobot) to keep it null until there is a state transition to a ready state
-            # (e.g. `SUCCESS`, `REVOKED`, `FAILURE`).
-            if fields["status"] in states.READY_STATES:
-                fields["date_done"] = timezone.now()
+            if not created:
+                # Make sure `date_done` is allowed to stay null until the task reacheas a ready state.
+                #
+                # Default behavior in `django-celery-results` has this field as a
+                # `DateField(auto_now=True)` which just automatically updates the `date_done` field on every
+                # state transition. This is different than Celery's default behavior (and the current
+                # behavior of Nautobot) to keep it null until there is a state transition to a ready state
+                # (e.g. `SUCCESS`, `REVOKED`, `FAILURE`).
+                if fields["status"] in states.READY_STATES:
+                    fields["date_done"] = timezone.now()
 
-            # Always make sure the Job `name` is set.
-            if not obj.name and fields["task_name"]:
-                fields["name"] = fields["task_name"]
+                # Always make sure the Job `name` is set.
+                if not obj.name and fields["task_name"]:
+                    fields["name"] = fields["task_name"]
 
-            # Set the field values on the model instance.
-            for k, v in fields.items():
-                setattr(obj, k, v)
+                # Set the field values on the model instance.
+                for k, v in fields.items():
+                    setattr(obj, k, v)
 
-            obj.save(using=using)
+                obj.save()
 
         return obj
 

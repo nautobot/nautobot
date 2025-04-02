@@ -910,11 +910,11 @@ class JobResultTable(BaseTable):
             <label class="label label-info">{}</label>
             <label class="label label-warning">{}</label>
             <label class="label label-danger">{}</label>""",
-            record.debug_log_count,
-            record.success_log_count,
-            record.info_log_count,
-            record.warning_log_count,
-            record.error_log_count,
+            getattr(record, "debug_log_count", 0),
+            getattr(record, "success_log_count", 0),
+            getattr(record, "info_log_count", 0),
+            getattr(record, "warning_log_count", 0),
+            getattr(record, "error_log_count", 0),
         )
 
     class Meta(BaseTable.Meta):

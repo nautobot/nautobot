@@ -22,6 +22,7 @@ from django_celery_beat.tzcrontab import TzAwareCrontab
 from prometheus_client import Histogram
 from timezone_field import TimeZoneField
 
+from nautobot.core.branching import maybe_with_branch
 from nautobot.core.celery import (
     app,
     NautobotKombuJSONEncoder,
@@ -791,6 +792,7 @@ class JobResult(BaseModel, CustomFieldModel):
         job_result=None,
         synchronous=False,
         ignore_singleton_lock=False,
+        branch_name=None,
         **job_kwargs,
     ):
         """Create/Modify a JobResult instance and enqueue a job to be executed asynchronously by a Celery worker.
@@ -807,6 +809,7 @@ class JobResult(BaseModel, CustomFieldModel):
             ignore_singleton_lock (bool, optional): If True, invalidate the singleton lock before running the job.
               This allows singleton jobs to run twice, or makes it possible to remove the lock when the first instance
               of the job failed to remove it for any reason.
+            branch_name (str): Version Control database branch to run the job against, if any.
             *job_args: positional args passed to the job task (UNUSED)
             **job_kwargs: keyword args passed to the job task
 
@@ -845,6 +848,7 @@ class JobResult(BaseModel, CustomFieldModel):
         # And from the kubernetes pod, we specify "--local"/synchronous=True
         # so that `run_kubernetes_job_and_return_job_result` is not executed again and the job will be run locally.
         if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES and not synchronous:
+            # TODO: make this branch aware!
             return run_kubernetes_job_and_return_job_result(job_queue, job_result, json.dumps(job_kwargs))
 
         job_celery_kwargs = {
@@ -855,6 +859,8 @@ class JobResult(BaseModel, CustomFieldModel):
             "queue": task_queue,
         }
 
+        if branch_name is not None:
+            job_celery_kwargs["nautobot_job_branch_name"] = branch_name
         if schedule is not None:
             job_celery_kwargs["nautobot_job_schedule_id"] = schedule.id
         if job_model.soft_time_limit > 0:
@@ -980,9 +986,13 @@ class JobResult(BaseModel, CustomFieldModel):
         # instead of within transaction.atomic(). This allows us to be able to report logs when the jobs
         # are running, and allow us to rollback the database without losing the log entries.
         if not self.use_job_logs_db or not JOB_LOGS:
-            log.save()
+            with maybe_with_branch(branch_name=self.celery_kwargs.get("nautobot_job_branch_name", None)):
+                log.save()
         else:
-            log.save(using=JOB_LOGS)
+            with maybe_with_branch(
+                branch_name=self.celery_kwargs.get("nautobot_job_branch_name", None), using=JOB_LOGS
+            ):
+                log.save()
 
 
 #
@@ -1309,6 +1319,7 @@ class ScheduledJob(BaseModel):
         approval_required=False,
         task_queue=None,
         ignore_singleton_lock=False,
+        branch_name=None,
         **job_kwargs,
     ):
         """
@@ -1330,6 +1341,7 @@ class ScheduledJob(BaseModel):
             approval_required (bool, optional): Flag indicating if approval is required. Defaults to False.
             task_queue (str, optional): The task queue for the job. Defaults to None, which will use the configured default celery queue.
             ignore_singleton_lock (bool, optional): Flag indicating whether to ignore singleton locks. Defaults to False.
+            branch_name (str, optional): Version Control database branch name to run against, if any.
             **job_kwargs: Additional keyword arguments to pass to the job.
 
         Returns:
@@ -1350,6 +1362,9 @@ class ScheduledJob(BaseModel):
             "queue": task_queue,
             "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
         }
+        if branch_name:
+            # TODO: what do we do when merging a branch's ScheduledJob down to main?
+            celery_kwargs["nautobot_job_branch_name"] = branch_name
         if job_model.soft_time_limit > 0:
             celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
         if job_model.time_limit > 0:

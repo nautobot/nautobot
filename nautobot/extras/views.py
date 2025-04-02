@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 from urllib.parse import parse_qs
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -1435,6 +1436,12 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             profile = job_form.cleaned_data.pop("_profile")
             ignore_singleton_lock = job_form.cleaned_data.pop("_ignore_singleton_lock", False)
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
+            if "nautobot_version_control" in settings.PLUGINS:
+                from nautobot_version_control.utils import active_branch
+
+                branch_name = active_branch()
+            else:
+                branch_name = None
 
             if (not dryrun and job_model.approval_required) or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
                 scheduled_job = ScheduledJob.create_schedule(
@@ -1448,6 +1455,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     task_queue=jq.name if jq else None,
                     profile=profile,
                     ignore_singleton_lock=ignore_singleton_lock,
+                    branch_name=branch_name,
                     **job_class.serialize_data(job_form.cleaned_data),
                 )
 
@@ -1467,6 +1475,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     profile=profile,
                     ignore_singleton_lock=ignore_singleton_lock,
                     task_queue=jq.name if jq else None,
+                    branch_name=branch_name,
                     **job_class.serialize_data(job_kwargs),
                 )
 
