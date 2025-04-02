@@ -149,6 +149,54 @@ class VPNPhase2PolicyTable(BaseTable):
         )
 
 
+class VPNProfilePhase1PolicyAssignmentTable(BaseTable):
+    # pylint: disable=too-few-public-methods
+    """Table for VPNProfile list view."""
+
+    pk = ToggleColumn()
+    vpn_phase1_policy = tables.Column(linkify=True)
+    actions = ButtonsColumn(models.VPNProfilePhase1PolicyAssignment)
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = models.VPNProfilePhase1PolicyAssignment
+        fields = (
+            "pk",
+            "vpn_phase1_policy",
+            "weight",
+        )
+        default_columns = (
+            "pk",
+            "vpn_phase1_policy",
+            "weight",
+        )
+
+
+class VPNProfilePhase2PolicyAssignmentTable(BaseTable):
+    # pylint: disable=too-few-public-methods
+    """Table for VPNProfile list view."""
+
+    pk = ToggleColumn()
+    vpn_phase2_policy = tables.Column(linkify=True)
+    actions = ButtonsColumn(models.VPNProfilePhase2PolicyAssignment)
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = models.VPNProfilePhase2PolicyAssignment
+        fields = (
+            "pk",
+            "vpn_phase2_policy",
+            "weight",
+        )
+        default_columns = (
+            "pk",
+            "vpn_phase2_policy",
+            "weight",
+        )
+
+
 class VPNTable(RoleTableMixin, BaseTable):
     # pylint: disable=too-few-public-methods
     """Table for VPN list view."""

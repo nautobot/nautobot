@@ -1,6 +1,8 @@
 """Filtering for the vpn models."""
 
+
 from nautobot.apps.filters import (
+    BaseFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
     NautobotFilterSet,
     SearchFilter,
@@ -83,6 +85,58 @@ class VPNPhase2PolicyFilterSet(NautobotFilterSet):  # pylint: disable=too-many-a
         """Meta attributes for filter."""
 
         model = models.VPNPhase2Policy
+        fields = "__all__"
+
+
+class VPNProfilePhase1PolicyAssignmentFilterSet(BaseFilterSet):
+    """Filterset for the VPNProfilePhase1PolicyAssignment through model."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "vpn_profile__name": "icontains",
+            "vpn_phase1_policy__name": "icontains",
+        },
+    )
+
+    vpn_profile = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.VPNProfile.objects.all(),
+        label="VPN Profile (ID or name)",
+        to_field_name="name",
+    )
+    vpn_phase1_policy = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.VPNPhase1Policy.objects.all(),
+        label="Phase 1 Policy (ID or name)",
+        to_field_name="name",
+    )
+
+    class Meta:
+        model = models.VPNProfilePhase1PolicyAssignment
+        fields = "__all__"
+
+
+class VPNProfilePhase2PolicyAssignmentFilterSet(BaseFilterSet):
+    """Filterset for the VPNProfilePhase2PolicyAssignment through model."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "vpn_profile__name": "icontains",
+            "vpn_phase2_policy__name": "icontains",
+        },
+    )
+
+    vpn_profile = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.VPNProfile.objects.all(),
+        label="VPN Profile (ID or name)",
+        to_field_name="name",
+    )
+    vpn_phase2_policy = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.VPNPhase2Policy.objects.all(),
+        label="Phase 2 Policy (ID or name)",
+        to_field_name="name",
+    )
+
+    class Meta:
+        model = models.VPNProfilePhase2PolicyAssignment
         fields = "__all__"
 
 
