@@ -12,6 +12,7 @@ from nautobot.core.forms import utils
 __all__ = (
     "APISelect",
     "APISelectMultiple",
+    "AutoPopulateWidget",
     "BulkEditNullBooleanSelect",
     "ClearableFileInput",
     "ColorSelect",
@@ -40,6 +41,23 @@ class SlugWidget(forms.TextInput):
     """
 
     template_name = "widgets/sluginput.html"
+
+    def get_context(self, name, value, attrs):
+        custom_title = self.attrs.pop("title", None)
+        context = super().get_context(name, value, attrs)
+        context["widget"]["custom_title"] = custom_title
+        return context
+
+
+class AutoPopulateWidget(SlugWidget):
+    """
+    Subclass SlugWidget and add support for auto-populate JavaScript logic from `form.js`.
+    """
+
+    def get_context(self, name, value, attrs):
+        attrs["data-autopopulate"] = ""
+        context = super().get_context(name, value, attrs)
+        return context
 
 
 class ColorSelect(forms.Select):
