@@ -3071,12 +3071,14 @@ class WebhookHTTPFieldsPanel(ObjectFieldsPanel):
 
     def render_value(self, key, value, context):
         """Overrides 'additional_headers' rendering as indented JSON; defaults for others."""
-
         if key == "additional_headers":
+            if not value:  # Handles None, empty string, etc.
+                return format_html("<span style='color: #888;'>—</span>")  # A subtle dash
             try:
-                value = json.dumps(json.loads(value or "{}"), indent=2)
-            except Exception:
-                value = value or ""
+                value = json.dumps(json.loads(value), indent=2)
+            except (json.JSONDecodeError, TypeError) as e:
+                logger.debug(f"Invalid JSON in additional_headers: {e}")
+
             return format_html("<pre>{}</pre>", value)
         return super().render_value(key, value, context)
 
@@ -3119,12 +3121,6 @@ class WebhookUIViewSet(NautobotUIViewSet):
             ),
         ]
     )
-
-    def get_extra_context(self, request, instance):
-        extra = super().get_extra_context(request, instance)
-        if instance is None:
-            return extra
-        return extra
 
 
 #
