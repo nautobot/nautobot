@@ -1050,39 +1050,18 @@ def delete_git_graphql_queries(repository_record, job_result, preserve=None):
                 job_result.log(error_msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="graphql queries")
 
 
-def refresh_git_data_compliance_rules(repository_record, job_result, delete=False):  # pylint: disable=W0613
+def refresh_git_data_compliance_rules(repository_record, job_result):  # pylint: disable=W0613
     """Callback function for GitRepository updates - refresh all DataComplianceRules managed by this repository."""
     from nautobot.nautobot_data_validation_engine.custom_validators import get_data_compliance_classes_from_git_repo
 
     # TODO should we call ensure_git_repository as well to skip reloading the data compliance rules if the repo is not updated?
-    if "nautobot_data_validation_engine.data_compliance_rule" in repository_record.provided_contents and not delete:
+    if "nautobot_data_validation_engine.data_compliance_rule" in repository_record.provided_contents:
         for compliance_class in get_data_compliance_classes_from_git_repo(repository_record):
             job_result.log(
                 f"Found class {compliance_class.__name__!s}",
                 level_choice=LogLevelChoices.LOG_INFO,
                 grouping="data compliance rules",
             )
-    else:
-        delete_git_data_compliance_rules(repository_record, job_result)
-
-
-def delete_git_data_compliance_rules(repository_record, job_result):
-    """Delete DataComplianceRules owned by the given Git repository"""
-    from nautobot.nautobot_data_validation_engine.custom_validators import get_data_compliance_classes_from_git_repo
-
-    if "nautobot_data_validation_engine.data_compliance_rule" in repository_record.provided_contents:
-        for compliance_class in get_data_compliance_classes_from_git_repo(repository_record):
-            compliance_rule = compliance_class()
-            try:
-                compliance_rule.delete()
-                msg = f"Deleted Data Compliance Rule: {compliance_rule.name}"
-                logger.warning(msg)
-                job_result.log(msg, level_choice=LogLevelChoices.LOG_WARNING, grouping="data compliance rules")
-            except Exception as exc:
-                error_msg = f"Unable to delete '{compliance_rule.name}': {exc}"
-                logger.error(error_msg)
-                job_result.log(error_msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="data compliance rules")
-
 
 # Register built-in callbacks for data types potentially provided by a GitRepository
 register_datasource_contents(
