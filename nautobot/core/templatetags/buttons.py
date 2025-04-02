@@ -333,7 +333,7 @@ def consolidate_detail_view_action_buttons(context):
         }
         # No border between the dropdown button and the edit button if there are multiple buttons
         if detail_view_action_button_count > 1:
-            attrs["class"] += "border-end-0"
+            attrs["class"] += " border-end-0"
         detail_view_action_buttons.append(
             format_html(
                 primary_button_fragment,
