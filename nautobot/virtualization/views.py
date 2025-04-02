@@ -119,20 +119,20 @@ class ClusterUIViewSet(NautobotUIViewSet):
                     object_detail.Button(
                         link_name="virtualization:cluster_remove_devices",
                         label="Remove Device",
-                        weight=200,
+                        weight=100,
                         color=ButtonActionColorChoices.DELETE,
                         render_as_button=True,
                     ),
                     object_detail.Button(
                         link_name="virtualization:cluster_add_devices",
                         label="Add Device",
-                        weight=300,
+                        weight=200,
                         color=ButtonActionColorChoices.ADD,
                     ),
                 ],
             ),
             object_detail.ObjectsTablePanel(
-                weight=400,
+                weight=100,
                 section=SectionChoices.FULL_WIDTH,
                 table_class=tables.VirtualMachineTable,
                 table_filter="cluster",
