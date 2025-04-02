@@ -317,7 +317,9 @@ def consolidate_detail_view_action_buttons(context):
             </a>
         </button>
     """
-    dropdown_button_classes = "btn btn-warning rounded-end d-flex justify-content-center align-items-center border-start-0"
+    dropdown_button_classes = (
+        "btn btn-warning rounded-end d-flex justify-content-center align-items-center border-start-0"
+    )
     dropdown_button_style = "width: 5px;"
     edit_button_classes = "btn btn-warning"
     delete_button_classes = "text-danger"
