@@ -5,10 +5,8 @@
 {% endif %}
 
 <div class="pull-left">
-    {% for button_context in buttons_context %}
-        <button form="object-table-form" type="button" class="btn btn-{{button_context.color}} primary btn-xs" action-url="{{button_context.link}}">
-            {{button_context.label}}
-        </button>
+    {% for button_render in buttons_render %}
+        {{button_render}}
     {% endfor %}
 </div>
 
@@ -24,12 +22,11 @@
 <div class="clearfix"></div>
 
 <script>
-    const buttons = document.querySelectorAll('[form="object-table-form"]');
-
+    const buttons = document.querySelectorAll('button');
     buttons.forEach(button => {
         button.addEventListener('click', function() {
             const actionUrl = button.getAttribute('action-url');
-            const form = document.getElementById('object-table-form');
+            const form = document.getElementById('{{form_id}}'  );
             form.action = actionUrl;
             form.submit();
         });
