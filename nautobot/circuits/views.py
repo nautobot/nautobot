@@ -300,6 +300,23 @@ class ProviderNetworkUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.ProviderNetworkSerializer
     table_class = tables.ProviderNetworkTable
 
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.FULL_WIDTH,
+                context_table_key="circuits_table",
+                related_field_name="provider_network",
+                add_button_route=None,
+            ),
+        )
+    )
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
