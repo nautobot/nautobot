@@ -1124,6 +1124,7 @@ class VLANGroupUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.RIGHT_HALF,
                 context_table_key="vlan_table",
+                related_field_name="vlan_group",
             ),
         )
     )
@@ -1137,7 +1138,7 @@ class VLANGroupUIViewSet(NautobotUIViewSet):
                 .prefetch_related(Prefetch("prefixes", queryset=Prefix.objects.restrict(request.user)))
             )
             vlans_count = vlans.count()
-
+            excluded_vlans = vlans.exclude(prefixes__isnull=True)
             data_transform_callback = get_add_available_vlans_callback(show_available=True, vlan_group=instance)
             vlan_table = tables.VLANDetailTable(
                 vlans, exclude=["vlan_group"], data_transform_callback=data_transform_callback
@@ -1147,13 +1148,14 @@ class VLANGroupUIViewSet(NautobotUIViewSet):
                 "per_page": get_paginate_count(request),
             }
             RequestConfig(request, paginate).configure(vlan_table)
-
             context.update(
                 {
                     "first_available_vlan": instance.get_next_available_vid(),
                     "bulk_querystring": f"vlan_group={instance.pk}",
                     "vlan_table": vlan_table,
                     "vlans_count": vlans_count,
+                    "filtered_vlans": excluded_vlans,
+                    "badge_count_override": len(excluded_vlans),
                 }
             )
         return context
