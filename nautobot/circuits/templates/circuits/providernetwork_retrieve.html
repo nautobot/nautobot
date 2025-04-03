@@ -1,6 +1,4 @@
 {% extends 'generic/object_retrieve.html' %}
-{% block breadcrumbs %}
-  <li><a href="{% url 'circuits:providernetwork_list' %}">Provider Networks</a></li>
-  <li><a href="{% url 'circuits:providernetwork_list' %}?provider={{ object.provider_id }}">{{ object.provider }}</a></li>
-  <li><a href="{% url 'circuits:providernetwork' pk=object.pk %}">{{ object }}</a></li>
-{% endblock %}
+{% block extra_breadcrumbs %}
+  <li><a href="{% url 'circuits:providernetwork_list' %}?provider={{ object.provider.pk }}">{{ object.provider }}</a></li>
+{% endblock extra_breadcrumbs %}
