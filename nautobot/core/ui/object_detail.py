@@ -795,8 +795,10 @@ class ObjectsTablePanel(Panel):
             else:
                 if isinstance(self.table_filter, str):
                     table_filters = [self.table_filter]
-                else:
+                elif isinstance(self.table_filter, list):
                     table_filters = self.table_filter
+                else:
+                    table_filters = []
                 query = Q()
                 for table_filter in table_filters:
                     query = query | Q(**{table_filter: instance})
