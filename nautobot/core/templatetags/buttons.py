@@ -361,7 +361,7 @@ def consolidate_detail_view_action_buttons(context):
         detail_view_action_buttons.append(
             format_html(
                 """
-                <button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="{button_class}">
+                <button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="{button_class}" style="{button_style}">
                     Actions <span class="mdi mdi-chevron-down"></span>
                  </button>
                 """,

@@ -200,6 +200,9 @@ Bootstrap 5:
 
 ## Positioning and Layout
 
+!!! note
+    It is recommended that instead of using `.float-start` and `.float-end`, we should use the [grid system](https://getbootstrap.com/docs/5.0/layout/grid/) in Bootstrap 5 for a more structured approach to positioning elements and layout.
+
 - `.pull-left` is now `.float-start`
 - `.pull-right` is now `.float-end`
 - `.center-block` is now `.mx-auto`
