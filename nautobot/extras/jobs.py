@@ -1275,7 +1275,10 @@ def run_job(self, job_class_path, *args, **kwargs):
 
     Finally, it either returns any data returned from `Job.run()` or re-raises any exception encountered.
     """
-    with maybe_with_branch(branch_name=self.request.properties.get("nautobot_job_branch_name", None)):
+    with maybe_with_branch(
+        branch_name=self.request.properties.get("nautobot_job_branch_name", None),
+        user=User.objects.get(id=self.request.properties["nautobot_job_user_id"]),
+    ):
         job, event_payload = _prepare_job(job_class_path, self.request, kwargs)
 
         result = None

@@ -986,11 +986,13 @@ class JobResult(BaseModel, CustomFieldModel):
         # instead of within transaction.atomic(). This allows us to be able to report logs when the jobs
         # are running, and allow us to rollback the database without losing the log entries.
         if not self.use_job_logs_db or not JOB_LOGS:
-            with maybe_with_branch(branch_name=self.celery_kwargs.get("nautobot_job_branch_name", None)):
+            with maybe_with_branch(
+                branch_name=self.celery_kwargs.get("nautobot_job_branch_name", None), user=self.user
+            ):
                 log.save()
         else:
             with maybe_with_branch(
-                branch_name=self.celery_kwargs.get("nautobot_job_branch_name", None), using=JOB_LOGS
+                branch_name=self.celery_kwargs.get("nautobot_job_branch_name", None), using=JOB_LOGS, user=self.user
             ):
                 log.save()
 

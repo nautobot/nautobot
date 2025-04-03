@@ -1,4 +1,5 @@
 from celery import states
+from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django_celery_results.managers import TaskResultManager, transaction_retry
 
@@ -102,6 +103,8 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
         }
         from nautobot.extras.models.jobs import Job
 
+        User = get_user_model()
+
         # Need to have a try/except block here
         # because sometimes job_model_id will be None.
         try:
@@ -112,7 +115,10 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
         except Job.DoesNotExist:
             pass
 
-        with maybe_with_branch(branch_name=celery_kwargs.get("nautobot_job_branch_name", None)):
+        with maybe_with_branch(
+            branch_name=celery_kwargs.get("nautobot_job_branch_name", None),
+            user=User.objects.get(id=user_id) if user_id else None,
+        ):
             obj, created = self.get_or_create(id=task_id, defaults=fields)
 
             if not created:
