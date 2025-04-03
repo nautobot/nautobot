@@ -1154,7 +1154,6 @@ class VLANGroupUIViewSet(NautobotUIViewSet):
                     "bulk_querystring": f"vlan_group={instance.pk}",
                     "vlan_table": vlan_table,
                     "vlans_count": vlans_count,
-                    "filtered_vlans": excluded_vlans,
                     "badge_count_override": len(excluded_vlans),
                 }
             )
