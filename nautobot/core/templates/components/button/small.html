@@ -1,0 +1,14 @@
+{% if render_as_button and link %}
+    <button type="button" class="btn btn-{{ color }} btn-xs" action-url="{{link}}" {% for key, value in attributes.items %}{{ key }}="{{ value }}" {% endfor %}>
+    {% if icon %}<span class="mdi {{ icon }}" aria-hidden="true"></span>{% endif %}
+    {{ label }}
+    </button>
+{% else %}
+    {% if link %}<a href="{{ link }}" {% else %}<button type="button"{% endif %}
+    class="btn btn-{{ color }} btn-xs"
+    {% for key, value in attributes.items %}{{ key }}="{{ value }}" {% endfor %}>
+
+    {% if icon %}<span class="mdi {{ icon }}" aria-hidden="true"></span>{% endif %}
+    {{ label }}
+    {% if link %}</a>{% else %}</button>{% endif %}
+{% endif %}

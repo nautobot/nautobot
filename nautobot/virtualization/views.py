@@ -118,16 +118,20 @@ class ClusterUIViewSet(NautobotUIViewSet):
                 footer_buttons=[
                     object_detail.Button(
                         link_name="virtualization:cluster_remove_devices",
-                        label="Remove Device",
+                        label="Remove Devices",
                         weight=100,
                         color=ButtonActionColorChoices.DELETE,
                         render_as_button=True,
+                        template_path="components/button/small.html",
+                        icon="mdi mdi-trash-can-outline",
                     ),
                     object_detail.Button(
                         link_name="virtualization:cluster_add_devices",
-                        label="Add Device",
+                        label="Add Devices",
                         weight=200,
                         color=ButtonActionColorChoices.ADD,
+                        template_path="components/button/small.html",
+                        icon="mdi mdi-plus",
                     ),
                 ],
             ),
