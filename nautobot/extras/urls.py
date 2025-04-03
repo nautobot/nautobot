@@ -17,7 +17,6 @@ from nautobot.extras.models import (
     Note,
     Relationship,
     SecretsGroup,
-    Status,
     Tag,
     Webhook,
 )
@@ -37,6 +36,7 @@ router.register("roles", views.RoleUIViewSet)
 router.register("saved-views", views.SavedViewUIViewSet)
 router.register("secrets", views.SecretUIViewSet)
 router.register("static-group-associations", views.StaticGroupAssociationUIViewSet)
+router.register("statuses", views.StatusUIViewSet)
 router.register("teams", views.TeamUIViewSet)
 
 urlpatterns = [
@@ -575,35 +575,6 @@ urlpatterns = [
         views.ObjectNotesView.as_view(),
         name="secretsgroup_notes",
         kwargs={"model": SecretsGroup},
-    ),
-    # Custom statuses
-    path("statuses/", views.StatusListView.as_view(), name="status_list"),
-    path("statuses/add/", views.StatusEditView.as_view(), name="status_add"),
-    path("statuses/edit/", views.StatusBulkEditView.as_view(), name="status_bulk_edit"),
-    path(
-        "statuses/delete/",
-        views.StatusBulkDeleteView.as_view(),
-        name="status_bulk_delete",
-    ),
-    path("statuses/import/", views.StatusBulkImportView.as_view(), name="status_import"),  # 3.0 TODO: remove, unused
-    path("statuses/<uuid:pk>/", views.StatusView.as_view(), name="status"),
-    path("statuses/<uuid:pk>/edit/", views.StatusEditView.as_view(), name="status_edit"),
-    path(
-        "statuses/<uuid:pk>/delete/",
-        views.StatusDeleteView.as_view(),
-        name="status_delete",
-    ),
-    path(
-        "statuses/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="status_changelog",
-        kwargs={"model": Status},
-    ),
-    path(
-        "statuses/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="status_notes",
-        kwargs={"model": Status},
     ),
     # Tags
     path("tags/", views.TagListView.as_view(), name="tag_list"),

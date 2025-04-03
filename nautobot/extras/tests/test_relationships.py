@@ -1,10 +1,13 @@
+import contextlib
 import logging
 import uuid
 
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django.utils.html import format_html
+import redis.exceptions
 
 from nautobot.circuits.models import CircuitType
 from nautobot.core.forms import (
@@ -178,6 +181,12 @@ class RelationshipBaseTest:
                 type=RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
             ),
         ]
+
+    def tearDown(self):
+        """Ensure that relationship caches are cleared to avoid leakage into other tests."""
+        with contextlib.suppress(redis.exceptions.ConnectionError):
+            cache.delete_pattern(f"{Relationship.objects.get_for_model_source.cache_key_prefix}.*")
+            cache.delete_pattern(f"{Relationship.objects.get_for_model_destination.cache_key_prefix}.*")
 
 
 class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
