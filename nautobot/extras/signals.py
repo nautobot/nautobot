@@ -125,6 +125,17 @@ def invalidate_relationship_models_cache(sender, **kwargs):
             cache.delete_pattern(f"{method.cache_key_prefix}.*")
 
 
+@receiver(post_save, sender=CustomField)
+@receiver(post_delete, sender=CustomField)
+@receiver(post_save, sender=Relationship)
+@receiver(m2m_changed, sender=Relationship)
+@receiver(post_delete, sender=Relationship)
+def invalidate_openapi_schema_cache(sender, **kwargs):
+    """Invalidate the openapi schema cache."""
+    with contextlib.suppress(redis.exceptions.ConnectionError):
+        cache.delete_pattern("openapi_schema_cache_*")
+
+
 @receiver(post_save)
 @receiver(m2m_changed)
 def _handle_changed_object(sender, instance, raw=False, **kwargs):
