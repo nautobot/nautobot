@@ -8,7 +8,7 @@ import logging
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 from django.db import models
-from django.db.models import CharField, JSONField, URLField
+from django.db.models import CharField, JSONField, Q, URLField
 from django.db.models.fields.related import ManyToManyField
 from django.template import Context
 from django.template.defaultfilters import truncatechars
@@ -789,7 +789,14 @@ class ObjectsTablePanel(Panel):
             if self.table_attribute:
                 body_content_table_queryset = getattr(instance, self.table_attribute)
             else:
-                body_content_table_queryset = body_content_table_model.objects.filter(**{self.table_filter: instance})
+                if isinstance(self.table_filter, str):
+                    table_filters = [self.table_filter]
+                else:
+                    table_filters = self.table_filter
+                query = Q()
+                for table_filter in table_filters:
+                    query = query | Q(**{table_filter: instance})
+                body_content_table_queryset = body_content_table_model.objects.filter(query)
 
             body_content_table_queryset = body_content_table_queryset.restrict(request.user, "view")
             if self.select_related_fields:
