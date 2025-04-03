@@ -794,7 +794,6 @@ class ManufacturerFilterForm(NautobotFilterForm):
 class PlatformBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Platform.objects.all(), widget=forms.MultipleHiddenInput())
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
-    name = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
 

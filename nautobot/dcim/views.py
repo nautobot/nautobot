@@ -1667,6 +1667,26 @@ class ModuleBayTemplateUIViewSet(
 #
 # Platforms
 #
+
+
+class PlatformCustomKeyValueTablePanel(object_detail.KeyValueTablePanel):
+    def render_key(self, key, value, context):
+        """
+        Override the render_key method to avoid transforming machine-significant keys.
+
+        If the key is machine-significant (e.g., "network_driver_tool_names"), return it as-is.
+        Otherwise, apply the default transformation (replace underscores and title-case).
+        """
+        # Define a list of keys that should not be transformed
+        NO_TRANSFORM_KEYS = ["network_driver_tool_names"]
+
+        if key in NO_TRANSFORM_KEYS:
+            return key  # Return the key as-is, without applying transformations
+
+        # Default transformation: Replace underscores with spaces, and title-case the key
+        return super().render_key(key, value, context)
+
+
 class PlatformUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.PlatformBulkEditForm
     filterset_class = filters.PlatformFilterSet
@@ -1683,7 +1703,7 @@ class PlatformUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 fields=["description", "manufacturer", "napalm_driver", "napalm_args", "network_driver"],
             ),
-            object_detail.KeyValueTablePanel(
+            PlatformCustomKeyValueTablePanel(
                 weight=100,
                 section=SectionChoices.RIGHT_HALF,
                 context_data_key="network_driver_tool_names",
@@ -1703,6 +1723,7 @@ class PlatformUIViewSet(NautobotUIViewSet):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
             context["network_driver_tool_names"] = instance.fetch_network_driver_mappings()
+            context["network_driver_tool_names_key"] = "network_driver_tool_names"
         return context
 
 

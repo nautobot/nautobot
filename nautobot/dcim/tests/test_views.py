@@ -2054,7 +2054,6 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestC
             "description": "A new platform",
         }
         cls.bulk_edit_data = {
-            "name": "Updated Platform Name",
             "manufacturer": manufacturer.pk,
             "napalm_driver": "iosxr",
             "napalm_args": '{"timeout": 30, "retries": 3}',
