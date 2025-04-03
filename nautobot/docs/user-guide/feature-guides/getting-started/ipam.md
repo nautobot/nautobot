@@ -68,8 +68,8 @@ To assign an IP Address to a specific Device and Interface:
 
 1. Click on **Devices** in the left side navigation menu
 2. Click on **Devices** to go to the main page for Devices
-3. Find the Device whose Interface you wish to associate to an IP Address and click on it
-4. Go to the `Interfaces` tab and look for the row with the Interface you are interested in
+3. Find the Device whose Interface you wish to associate to an IP Address and click on it, for example `ams01-leaf-01`
+4. Go to the `Interfaces` tab and look for the row with the Interface you are interested in, such as `Ethernet3`
 5. Click on the edit button for the Interface (a pencil icon)
 
 ![Assign IP address 1](../images/getting-started-nautobot-ui/33-assign-address.png)
@@ -78,7 +78,7 @@ To assign an IP Address to a specific Device and Interface:
 
 Once on the `Editing Interface` page:
 
-1. Select an `IP Address` from the drop-down selector
+1. Select an `IP Address` from the drop-down selector, such as `10.0.1.0/32`
 2. Click on the `Update` button
     * This will take you back to the Interfaces page for the Device, where you will see the assignment shown under the `IP Addresses` column
 
@@ -99,7 +99,7 @@ To find information on a particular Prefix:
 
 1. Click on **IPAM** in the left side navigation menu
 2. Click on **Prefixes** to get to the Prefixes main page
-3. Find the Prefix you are interested in and click on the link
+3. Find the Prefix you are interested in and click on the link, such as `10.10.10.0/24`
 4. To view the available and allocated IP Addresses, click on the `IP Addresses` tab
 
 ![Verify prefix 1](../images/getting-started-nautobot-ui/37-verify-prefix.png)

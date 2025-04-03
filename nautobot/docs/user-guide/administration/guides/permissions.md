@@ -109,3 +109,29 @@ Multiple permissions can be assigned to a user group.
 
 !!! info
     Group permission relationships can be managed in the Admin UI by modifying the group (superusers only) or the permission.
+
+## Recipes
+
+Below are examples of common permissions that a Nautobot admin may want to grant.
+
+### Export Job
+
+As of Nautobot 2.1, the Export action has been converted into a Job and requires
+permissions with constraints. ([#4745](https://github.com/nautobot/nautobot/issues/4745))
+
+Create a Permission to allow users to start an Export job:
+
+- Permission Name: `Start Export job`
+- Action: `run`
+- Users/Groups: Any user or restrict as needed
+- Constraints: `[{"module_name": "nautobot.core.jobs", "job_class_name": "ExportObjectList"}]`
+
+Create a Permission to allow users to view the results of Export jobs they ran:
+
+- Permission Name: `View Export results`
+- Action: `View`
+- Users/Groups: Any user or restrict as needed
+- Constraints: `[{"user": "$user", "task_name": "nautobot.core.jobs.ExportObjectList"}]`
+
+!!! info
+    Export jobs run with the permissions of the user that start the job.

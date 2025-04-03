@@ -1,10 +1,10 @@
 # Celery Task Queues
 
-If you're planning to run multiple jobs, leverage job hooks or are finding that your jobs are taking too long to complete you may want to consider deploying multiple celery workers with different queues for different types of tasks.
+If you're planning to run multiple jobs, leverage job hooks or are finding that your jobs are taking too long to complete you may want to consider deploying multiple Celery workers with different queues for different types of tasks.
 
 ## How Celery Task Queues Work
 
-The default celery behavior is:
+The default Celery behavior is:
 
 - [`--queue celery`](https://docs.celeryq.dev/en/stable/reference/cli.html#cmdoption-celery-worker-Q)
 - [`--concurrency`](https://docs.celeryq.dev/en/stable/reference/cli.html#cmdoption-celery-worker-c) set to the number of CPUs detected on the system
@@ -20,10 +20,10 @@ Each environment is unique but it's generally a good idea to add at least one ex
 ExecStart=/opt/nautobot/bin/nautobot-server celery worker --loglevel INFO --pidfile /var/tmp/nautobot-worker-jobqueue.pid --queues job_queue
 ```
 
-This will create a worker that will only process tasks sent to the `job_queue` celery queue. You can use this worker to run jobs while the rest of Nautobot's background tasks will be processed by the default celery worker listening to the `celery` queue.
+This will create a worker that will only process tasks sent to the `job_queue` Celery queue. You can use this worker to run jobs while the rest of Nautobot's background tasks will be processed by the default Celery worker listening to the `celery` queue.
 
 !!! info
-    Workers can be configured to listen to multiple queues by supplying a comma separated list of queues to the `--queues` argument. See the [celery workers guide](https://docs.celeryq.dev/en/stable/userguide/workers.html#queues) for more information.
+    Workers can be configured to listen to multiple queues by supplying a comma separated list of queues to the `--queues` argument. See the [Celery workers guide](https://docs.celeryq.dev/en/stable/userguide/workers.html#queues) for more information.
 
 !!! warning
     If a job is sent to a queue that no workers are listening to, that job will remain in pending status until it's purged or a worker starts listening to that queue and processes the job. Be sure that the queue name on the worker and jobs match.
@@ -42,7 +42,7 @@ ExecStart=/opt/nautobot/bin/nautobot-server celery worker --loglevel INFO --pidf
 You may have to change this setting multiple times to find what works best in your environment.
 
 !!! warning
-    Modifying your concurrency setting may increase the CPU and will increase the memory load on your celery worker by at least 175MB per concurrent thread. Only change this setting if you have monitoring systems in place to monitor the system resources on your worker.
+    Modifying your concurrency setting may increase the CPU and will increase the memory load on your Celery worker by at least 175MB per concurrent thread. Only change this setting if you have monitoring systems in place to monitor the system resources on your worker.
 
 !!! tip
     If you have long-running Jobs in general, you may also want to adjust the [`CELERY_WORKER_PREFETCH_MULTIPLIER` setting](../configuration/settings.md#celery_worker_prefetch_multiplier) so that a worker executing one long-running Job doesn't prefetch and reserve other tasks, preventing those tasks from executing until the current Job is completed.

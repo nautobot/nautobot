@@ -8,8 +8,13 @@
                 </div>
                 <table class="table table-hover panel-body attr-table">
                     <tr>
-                        <td>Device</td>
-                        <td>{{ object.device|hyperlinked_object }}</td>
+                        {% if object.device %}
+                            <td>Device</td>
+                            <td>{{ object.device|hyperlinked_object }}</td>
+                        {% else %}
+                            <td>Module</td>
+                            <td>{{ object.module|hyperlinked_object }}</td>
+                        {% endif %}
                     </tr>
                     <tr>
                         <td>Name</td>
@@ -57,8 +62,13 @@
                         </tr>
                         {% if object.connected_endpoint %}
                             <tr>
-                                <td>Device</td>
-                                <td>{{ object.connected_endpoint.device|hyperlinked_object }}</td>
+                                {% if object.connected_endpoint.device %}
+                                    <td>Device</td>
+                                    <td>{{ object.connected_endpoint.device|hyperlinked_object }}</td>
+                                {% else %}
+                                    <td>Module</td>
+                                    <td>{{ object.connected_endpoint.module|hyperlinked_object }}</td>
+                                {% endif %}
                             </tr>
                             <tr>
                                 <td>Power Port</td>

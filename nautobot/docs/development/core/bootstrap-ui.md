@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Nautobot's current primary UI is based on [Bootstrap 3](https://getbootstrap.com/docs/3.4/). Since Nautobot 2.1.0, this UI has used a Nautobot-specific custom Bootstrap theme built in the [nautobot-bootstrap](https://github.com/nautobot/nautobot-bootstrap/) GitHub repository and then customized further in the main [nautobot](https://github.com/nautobot/nautobot/) GitHub repository.
+Nautobot's current primary UI is based on [Bootstrap 3](https://getbootstrap.com/docs/3.4/). Since Nautobot 2.1.0, this UI has used a Nautobot-specific custom Bootstrap theme built in the [`nautobot-bootstrap`](https://github.com/nautobot/nautobot-bootstrap/) GitHub repository and then customized further in the main [`nautobot`](https://github.com/nautobot/nautobot/) GitHub repository.
 
 ## Theme Files
 

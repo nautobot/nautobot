@@ -17,7 +17,7 @@ To create a Tenant:
 
 ## Assigning a Tenant to an Object
 
-It is simple to assign a Tenant to an existing object. This next example will add a Tenant to an existing Device.
+To add a Tenant to an existing Device:
 
 1. Click on **Devices** in the left sidebar menu
 2. Look for the **Devices** option and click on it

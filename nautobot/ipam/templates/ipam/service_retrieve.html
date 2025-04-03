@@ -1,0 +1,7 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block extra_breadcrumbs %}
+            <li>{{ object.parent|hyperlinked_object }}</li>
+{% endblock extra_breadcrumbs %}
+

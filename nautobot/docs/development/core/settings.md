@@ -4,7 +4,7 @@ Best practices when adding, updating, and deprecating/removing Nautobot configur
 
 ## Consider Constance
 
-If the setting is one that would be desirable to configure at run time rather than install time, and the nature of the setting is such that it *can* be changed at run time without requiring a server reload or similar operations to fully take effect, consider implementing it as a [django-constance](https://django-constance.readthedocs.io/en/latest/) setting.
+If the setting is one that would be desirable to configure at run time rather than install time, and the nature of the setting is such that it *can* be changed at run time without requiring a server reload or similar operations to fully take effect, consider implementing it as a [`django-constance`](https://django-constance.readthedocs.io/en/latest/) setting.
 
 ### Constance Advantages
 

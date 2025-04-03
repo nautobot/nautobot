@@ -2,9 +2,9 @@
 
 +++ 2.4.0
 
-JobQueue instances represent the queues that nautobot [jobs](./index.md) can be run on. It is introduced as an alternative to `task_queues` attribute on the Job model to define the eligible queues for this job.
+JobQueue instances represent the queues that Nautobot [jobs](./index.md) can be run on. It is introduced as an alternative to `task_queues` attribute on the Job model to define the eligible queues for this job.
 
-The JobQueue model has `name` and `queue_type` as required attributes. The `name` attribute has to be unique on each Job Queue and there are currently two supported queue types: "celery" and "kubernetes". The user can optionally assign a [tenant](../../core-data-model/tenancy/tenant.md) instance to a Job Queue.
+The JobQueue model has `name` and `queue_type` as required attributes. The `name` attribute has to be unique on each Job Queue and there are currently two supported queue types: `"celery"` and `"kubernetes"`. The user can optionally assign a [tenant](../../core-data-model/tenancy/tenant.md) instance to a Job Queue.
 
 You can access the Job instances that the Job Queue is assigned to through the `jobs` attribute from the Job Queue side.
 

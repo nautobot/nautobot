@@ -204,7 +204,7 @@ Communication among the contributors should always occur via public channels. Th
 
 ### Slack
 
-* [**#nautobot** on Network to Code Slack](http://slack.networktocode.com/) - Good for quick chats. Avoid any discussion that might need to be referenced later on, as the chat history is not retained long.
+* [`#nautobot` on Network to Code Slack](http://slack.networktocode.com/) - Good for quick chats. Avoid any discussion that might need to be referenced later on, as the chat history is not retained long.
 
 ### GitHub
 

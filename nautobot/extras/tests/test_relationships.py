@@ -1,10 +1,13 @@
+import contextlib
 import logging
 import uuid
 
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django.utils.html import format_html
+import redis.exceptions
 
 from nautobot.circuits.models import CircuitType
 from nautobot.core.forms import (
@@ -178,6 +181,12 @@ class RelationshipBaseTest:
                 type=RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
             ),
         ]
+
+    def tearDown(self):
+        """Ensure that relationship caches are cleared to avoid leakage into other tests."""
+        with contextlib.suppress(redis.exceptions.ConnectionError):
+            cache.delete_pattern(f"{Relationship.objects.get_for_model_source.cache_key_prefix}.*")
+            cache.delete_pattern(f"{Relationship.objects.get_for_model_destination.cache_key_prefix}.*")
 
 
 class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
@@ -1784,7 +1793,7 @@ class RelationshipJobTestCase(RequiredRelationshipTestMixin, TransactionTestCase
 
         pk_list = [str(vlan.id) for vlan in vlans]
         job_result = self.create_job(pk_list)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         error_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
         self.assertIn("VLANs require at least one device, but no devices exist yet.", error_log.message)
 
@@ -1793,7 +1802,7 @@ class RelationshipJobTestCase(RequiredRelationshipTestMixin, TransactionTestCase
 
         # Try editing all 6 VLANs without adding the required device(fails):
         job_result = self.create_job(pk_list)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         error_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
         self.assertIn(
             '6 VLANs require a device for the required relationship \\"VLANs require at least one Device',
@@ -1802,7 +1811,7 @@ class RelationshipJobTestCase(RequiredRelationshipTestMixin, TransactionTestCase
 
         # Try editing 3 VLANs without adding the required device(fails):
         job_result = self.create_job(pk_list[:3])
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         error_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
         self.assertIn(
             'These VLANs require a device for the required relationship \\"VLANs require at least one Device',
@@ -1813,11 +1822,11 @@ class RelationshipJobTestCase(RequiredRelationshipTestMixin, TransactionTestCase
 
         # Try editing 6 VLANs and adding the required device (succeeds):
         job_result = self.create_job(pk_list, add_cr_vlans_devices_m2m__source=[str(device_for_association.id)])
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
 
         # Try editing 6 VLANs and removing the required device (fails):
         job_result = self.create_job(pk_list, remove_cr_vlans_devices_m2m__source=[str(device_for_association.id)])
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         error_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
         self.assertIn(
             '6 VLANs require a device for the required relationship \\"VLANs require at least one Device',

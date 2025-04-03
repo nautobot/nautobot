@@ -12,15 +12,6 @@ class SupportedDataRateTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        models.SupportedDataRate.objects.create(
-            rate=1000, standard=choices.SupportedDataRateStandardChoices.B, mcs_index=1
-        )
-        models.SupportedDataRate.objects.create(
-            rate=6000, standard=choices.SupportedDataRateStandardChoices.G, mcs_index=2
-        )
-        models.SupportedDataRate.objects.create(
-            rate=54000, standard=choices.SupportedDataRateStandardChoices.N, mcs_index=3
-        )
         cls.create_data = [
             {
                 "rate": 200000,
@@ -106,6 +97,11 @@ class RadioProfileTest(APIViewTestCases.APIViewTestCase):
                 "regulatory_domain": "CA",
                 "tx_power_min": 20,
                 "allowed_channel_list": [],
+            },
+            {
+                "name": "Radio Profile 7",
+                "frequency": "6GHz",
+                "regulatory_domain": "US",
             },
         ]
         cls.bulk_update_data = {

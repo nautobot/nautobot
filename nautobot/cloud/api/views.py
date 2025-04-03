@@ -1,5 +1,5 @@
 from nautobot.cloud import filters, models
-from nautobot.extras.api.views import NautobotModelViewSet
+from nautobot.extras.api.views import ModelViewSet, NautobotModelViewSet
 
 from . import serializers
 
@@ -26,7 +26,7 @@ class CloudNetworkViewSet(NautobotModelViewSet):
     filterset_class = filters.CloudNetworkFilterSet
 
 
-class CloudNetworkPrefixAssignmentViewSet(NautobotModelViewSet):
+class CloudNetworkPrefixAssignmentViewSet(ModelViewSet):
     queryset = models.CloudNetworkPrefixAssignment.objects.all()
     serializer_class = serializers.CloudNetworkPrefixAssignmentSerializer
     filterset_class = filters.CloudNetworkPrefixAssignmentFilterSet
@@ -38,7 +38,7 @@ class CloudServiceViewSet(NautobotModelViewSet):
     filterset_class = filters.CloudServiceFilterSet
 
 
-class CloudServiceNetworkAssignmentViewSet(NautobotModelViewSet):
+class CloudServiceNetworkAssignmentViewSet(ModelViewSet):
     queryset = models.CloudServiceNetworkAssignment.objects.all()
     serializer_class = serializers.CloudServiceNetworkAssignmentSerializer
     filterset_class = filters.CloudServiceNetworkAssignmentFilterSet

@@ -41,20 +41,27 @@ def get_add_available_prefixes_callback(show_available: bool, parent: Prefix):
 
 def add_available_ipaddresses(prefix: netaddr.IPNetwork, ipaddress_list: Iterable[IPAddress], is_pool: bool = False):
     """
-    Annotate ranges of available IP addresses within a given prefix. If is_pool is True, the first and last IP will be
-    considered usable (regardless of mask length).
-    """
+    Annotate ranges of available IP addresses within a given prefix.
 
+    Args:
+        prefix (netaddr.IPNetwork): The network to calculate available addresses within.
+        ipaddress_list (Iterable[IPAddress]): List or QuerySet of extant IPAddress objects.
+        is_pool (bool): If True, the first/last IPs in the prefix will be considered usable, regardless of mask length.
+
+    Returns:
+        The contents of `ipaddress_list` interleaved with tuples of the form
+        `(number_of_available_addresses, first_such_address)`.
+    """
     output = []
     prev_ip = None
 
     # Ignore the network and broadcast addresses for non-pool IPv4 prefixes larger than /31.
     if prefix.version == 4 and prefix.prefixlen < 31 and not is_pool:
-        first_ip_in_prefix = netaddr.IPAddress(prefix.first + 1)
-        last_ip_in_prefix = netaddr.IPAddress(prefix.last - 1)
+        first_ip_in_prefix = netaddr.IPAddress(prefix.first + 1, version=prefix.version)
+        last_ip_in_prefix = netaddr.IPAddress(prefix.last - 1, version=prefix.version)
     else:
-        first_ip_in_prefix = netaddr.IPAddress(prefix.first)
-        last_ip_in_prefix = netaddr.IPAddress(prefix.last)
+        first_ip_in_prefix = netaddr.IPAddress(prefix.first, version=prefix.version)
+        last_ip_in_prefix = netaddr.IPAddress(prefix.last, version=prefix.version)
 
     if not ipaddress_list:
         return [
@@ -71,15 +78,15 @@ def add_available_ipaddresses(prefix: netaddr.IPNetwork, ipaddress_list: Iterabl
         ipaddress_list.sort(key=lambda ip: ip.host)
 
     # Account for any available IPs before the first real IP
-    if ipaddress_list[0].address.ip > first_ip_in_prefix:
-        skipped_count = int(ipaddress_list[0].address.ip - first_ip_in_prefix)
+    if ipaddress_list[0].address.ip.value > first_ip_in_prefix.value:
+        skipped_count = ipaddress_list[0].address.ip.value - first_ip_in_prefix.value
         first_skipped = f"{first_ip_in_prefix}/{prefix.prefixlen}"
         output.append((skipped_count, first_skipped))
 
     # Iterate through existing IPs and annotate free ranges
     for ip in ipaddress_list:
         if prev_ip:
-            diff = int(ip.address.ip - prev_ip.address.ip)
+            diff = ip.address.ip.value - prev_ip.address.ip.value
             if diff > 1:
                 first_skipped = f"{prev_ip.address.ip + 1}/{prefix.prefixlen}"
                 output.append((diff - 1, first_skipped))
@@ -88,7 +95,7 @@ def add_available_ipaddresses(prefix: netaddr.IPNetwork, ipaddress_list: Iterabl
 
     # Include any remaining available IPs
     if prev_ip.address.ip < last_ip_in_prefix:
-        skipped_count = int(last_ip_in_prefix - prev_ip.address.ip)
+        skipped_count = last_ip_in_prefix.value - prev_ip.address.ip.value
         first_skipped = f"{prev_ip.address.ip + 1}/{prefix.prefixlen}"
         output.append((skipped_count, first_skipped))
 

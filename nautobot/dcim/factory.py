@@ -64,7 +64,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.models import ExternalIntegration, Role, Status
 from nautobot.extras.utils import FeatureQuery
-from nautobot.ipam.models import Prefix, VLAN, VLANGroup
+from nautobot.ipam.models import Prefix, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster
 
@@ -680,6 +680,7 @@ class SoftwareImageFileFactory(PrimaryModelFactory):
         has_hashing_algorithm = NautobotBoolIterator()
         has_image_file_size = NautobotBoolIterator()
         has_download_url = NautobotBoolIterator()
+        has_external_integration = NautobotBoolIterator()
 
     status = random_instance(
         lambda: Status.objects.get_for_model(SoftwareImageFile),
@@ -698,6 +699,7 @@ class SoftwareImageFileFactory(PrimaryModelFactory):
     default_image = factory.LazyAttribute(
         lambda o: not o.software_version.software_image_files.filter(default_image=True).exists()
     )
+    external_integration = factory.Maybe("has_external_integration", random_instance(ExternalIntegration))
 
 
 class SoftwareVersionFactory(PrimaryModelFactory):
@@ -1008,3 +1010,11 @@ class VirtualDeviceContextFactory(PrimaryModelFactory):
                 self.interfaces.set(extracted)
             else:
                 self.interfaces.set(get_random_instances(Interface.objects.filter(device=self.device)))
+
+    @factory.post_generation
+    def vrfs(self, create, extracted, **kwargs):
+        if create:
+            if extracted:
+                self.vrfs.set(extracted)
+            else:
+                self.vrfs.set(get_random_instances(VRF.objects.all()))

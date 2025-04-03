@@ -6,7 +6,7 @@ In a future release, we should delete this file.
 
 <div class="panel panel-default">
     <div class="panel-heading">
-        {% include 'circuits/inc/circuit_termination_header_extra_content.html' with termination=termination %}
+        {% include 'circuits/inc/circuit_termination_header_extra_content.html' with termination=termination side=side %}
         <strong>Termination - {{ side }} Side</strong>
     </div>
     {% if termination %}

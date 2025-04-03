@@ -1,0 +1,13 @@
+---
+name: "Security Checks"
+description: "Custom action to stack repo security checks"
+runs:
+  using: "composite"
+  steps:
+    - name: "Ensure using Github actions pinned to a hash"
+      uses: "zgosalvez/github-actions-ensure-sha-pinned-actions@25ed13d0628a1601b4b44048e63cc4328ed03633" # v3
+      with:
+        allowlist: |
+          actions/
+          networktocode/
+          nautobot/

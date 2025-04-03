@@ -15,7 +15,7 @@ Nautobot is a Network Source of Truth and Network Automation Platform built as a
 
 The complete documentation for Nautobot can be found at [Read the Docs](https://docs.nautobot.com/).
 
-Questions? Comments? Start by perusing our [GitHub discussions](https://github.com/nautobot/nautobot/discussions) for the topic you have in mind, or join the **#nautobot** channel on [Network to Code's Slack community](https://slack.networktocode.com/)!
+Questions? Comments? Start by perusing our [GitHub discussions](https://github.com/nautobot/nautobot/discussions) for the topic you have in mind, or join the `#nautobot` channel on [Network to Code's Slack community](https://slack.networktocode.com/)!
 
 ## Build Status
 

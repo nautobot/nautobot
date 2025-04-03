@@ -28,13 +28,13 @@ CACHES = {
 +++ 2.2.1
     In case the `/metrics` endpoint is not performant or not required, you can disable specific apps with the [`METRICS_DISABLED_APPS`](../configuration/settings.md#metrics_disabled_apps) configuration setting.
 
-For more information see the [django-prometheus](https://github.com/korfuri/django-prometheus) docs.
+For more information see the [`django-prometheus`](https://github.com/korfuri/django-prometheus) docs.
 
 ## Authentication
 
 +++ 2.1.5
 
-Metrics by default do not require authentication to view. Authentication can be toggled with the `METRICS_AUTHENTICATION` configuration setting. If set to `True`, this will require the user to be logged in or to use an API token. See [Rest API Authentication](../../platform-functionality/rest-api/authentication.md) for more details on API authentication.
+Metrics by default do not require authentication to view. Authentication can be toggled with the `METRICS_AUTHENTICATION` configuration setting. If set to `True`, this will require the user to be logged in or to use an API token. See [REST API Authentication](../../platform-functionality/rest-api/authentication.md) for more details on API authentication.
 
 ### Sample Telegraf configuration
 
@@ -47,7 +47,7 @@ http_headers = {"Authorization" = "Token 0123456789abcdef0123456789abcdef0123456
 
 ## Metric Types
 
-Nautobot makes use of the [django-prometheus](https://github.com/korfuri/django-prometheus) library to export a number of different types of metrics, including:
+Nautobot makes use of the [`django-prometheus`](https://github.com/korfuri/django-prometheus) library to export a number of different types of metrics, including:
 
 - Per model insert, update, and delete counters
 - Per view request counters
@@ -70,4 +70,4 @@ When deploying Nautobot in a multi-process manner (e.g. running multiple uWSGI w
     If having accurate long-term metrics in a multi-process environment is crucial to your deployment, it's recommended you use the `uwsgi` library instead of `gunicorn`. The issue lies in the way `gunicorn` tracks worker processes (vs `uwsgi`) which helps manage the metrics files created by the above configurations. If you're using Nautobot with gunicorn in a containerized environment following the one-process-per-container methodology, then you will likely not need to change to `uwsgi`. More details can be found in  [issue #3779](https://github.com/netbox-community/netbox/issues/3779#issuecomment-590547562).
 
 !!! note
-    Metrics from the celery worker are not available from Nautobot at this time.  However, additional tools such as [flower](https://flower.readthedocs.io/en/latest/) can be used to monitor the celery workers until these metrics are exposed through Nautobot.
+    Metrics from the Celery worker are not available from Nautobot at this time.  However, additional tools such as [flower](https://flower.readthedocs.io/en/latest/) can be used to monitor the Celery workers until these metrics are exposed through Nautobot.

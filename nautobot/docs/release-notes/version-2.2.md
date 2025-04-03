@@ -377,7 +377,7 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 
 ### Housekeeping in v2.2.1
 
-- [#5531](https://github.com/nautobot/nautobot/issues/5531) - Removed `nautobot-server pylint` management command from the `example_app`, as pylint can be invoked directly with an appropriate `--init-hook` instead.
+- [#5531](https://github.com/nautobot/nautobot/issues/5531) - Removed `nautobot-server pylint` management command from the `example_app`, as Pylint can be invoked directly with an appropriate `--init-hook` instead.
 - [#5547](https://github.com/nautobot/nautobot/issues/5547) - Fixed TransactionTestCase inheritance order so that `test.client` works in test cases using this class.
 
 ## v2.2.0 (2024-03-29)

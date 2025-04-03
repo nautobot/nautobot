@@ -40,7 +40,7 @@ from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
-from nautobot.core.views import generic, mixins as view_mixins
+from nautobot.core.views import generic
 from nautobot.core.views.mixins import (
     GetReturnURLMixin,
     ObjectBulkDestroyViewMixin,
@@ -61,7 +61,7 @@ from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_dri
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
-from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable
+from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable, VRFTable
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.wireless.forms import ControllerManagedDeviceGroupWirelessNetworkFormSet
 from nautobot.wireless.models import (
@@ -213,21 +213,13 @@ class BaseDeviceComponentTemplatesBulkRenameView(generic.BulkRenameView):
 #
 
 
-class LocationTypeUIViewSet(
-    view_mixins.ObjectDetailViewMixin,
-    view_mixins.ObjectListViewMixin,
-    view_mixins.ObjectEditViewMixin,
-    view_mixins.ObjectDestroyViewMixin,
-    view_mixins.ObjectBulkDestroyViewMixin,
-    view_mixins.ObjectBulkCreateViewMixin,  # 3.0 TODO: remove this mixin as it's no longer used
-    view_mixins.ObjectChangeLogViewMixin,
-    view_mixins.ObjectNotesViewMixin,
-):
+class LocationTypeUIViewSet(NautobotUIViewSet):
     queryset = LocationType.objects.all()
     filterset_class = filters.LocationTypeFilterSet
     filterset_form_class = forms.LocationTypeFilterForm
     table_class = tables.LocationTypeTable
     form_class = forms.LocationTypeForm
+    bulk_update_form_class = forms.LocationTypeBulkEditForm
     serializer_class = serializers.LocationSerializer
 
     object_detail_content = object_detail.ObjectDetailContent(
@@ -1755,16 +1747,21 @@ class DeviceListView(generic.ObjectListView):
 
 class DeviceView(generic.ObjectView):
     queryset = Device.objects.select_related(
+        "cluster__cluster_group",
+        "controller_managed_device_group__controller",
+        "device_redundancy_group",
+        "device_type__device_family",
         "location",
-        "rack__rack_group",
-        "tenant__tenant_group",
-        "role",
         "platform",
         "primary_ip4",
         "primary_ip6",
+        "rack__rack_group",
+        "role",
+        "secrets_group",
         "software_version",
         "status",
-    )
+        "tenant__tenant_group",
+    ).prefetch_related("images", "software_image_files")
 
     object_detail_content = object_detail.ObjectDetailContent(
         extra_buttons=(
@@ -1772,6 +1769,7 @@ class DeviceView(generic.ObjectView):
                 weight=100,
                 color=ButtonColorChoices.BLUE,
                 label="Add Components",
+                attributes={"id": "device-add-components-button"},
                 icon="mdi-plus-thick",
                 required_permissions=["dcim.change_device"],
                 children=(
@@ -1925,7 +1923,7 @@ class DeviceView(generic.ObjectView):
 
         # VRF assignments
         vrf_assignments = instance.vrf_assignments.restrict(request.user, "view")
-        vrf_table = VRFDeviceAssignmentTable(vrf_assignments, exclude=("virtual_machine", "device"))
+        vrf_table = VRFDeviceAssignmentTable(vrf_assignments)
 
         # Software images
         if instance.software_version is not None:
@@ -3439,7 +3437,7 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
     model_form_class = forms.ModuleBayForm
     serializer_class = serializers.ModuleBaySerializer
     table_class = tables.ModuleBayTable
-    create_template_name = "dcim/modulebay_create.html"
+    create_template_name = "dcim/device_component_add.html"
 
     def get_extra_context(self, request, instance):
         if instance:
@@ -4516,15 +4514,25 @@ class VirtualDeviceContextUIViewSet(NautobotUIViewSet):
     queryset = VirtualDeviceContext.objects.all()
     serializer_class = serializers.VirtualDeviceContextSerializer
     table_class = tables.VirtualDeviceContextTable
-
-    def get_extra_context(self, request, instance):
-        if self.action == "retrieve":
-            interfaces_table = tables.InterfaceTable(
-                instance.interfaces.restrict(request.user, "view"), orderable=False, exclude=("device",)
-            )
-
-            return {
-                "interfaces_table": interfaces_table,
-                **super().get_extra_context(request, instance),
-            }
-        return super().get_extra_context(request, instance)
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                table_class=tables.InterfaceTable,
+                table_attribute="interfaces",
+                section=SectionChoices.FULL_WIDTH,
+                exclude_columns=["device"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=300,
+                table_class=VRFTable,
+                table_attribute="vrfs",
+                section=SectionChoices.FULL_WIDTH,
+            ),
+        ),
+    )

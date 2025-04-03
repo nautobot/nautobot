@@ -16,6 +16,7 @@ from .models import (
     DeviceRedundancyGroup,
     Interface,
     InterfaceVDCAssignment,
+    LocationType,
     PathEndpoint,
     PowerPanel,
     Rack,
@@ -355,3 +356,28 @@ def handle_controller_managed_device_group_controller_change(instance, raw=False
             group.controller = instance.controller
             group.save()
             logger.debug("Updated controller from parent %s for child %s", instance, group)
+
+
+@receiver(m2m_changed, sender=LocationType.content_types.through)
+def content_type_changed(instance, action, **kwargs):
+    """
+    Prevents removal of a ContentType from LocationType if it's in use by any models
+    associated with the locations.
+    """
+
+    if action != "pre_remove":
+        return
+
+    removed_content_types = ContentType.objects.filter(pk__in=kwargs.get("pk_set", []))
+
+    for content_type in removed_content_types:
+        model_class = content_type.model_class()
+
+        if model_class.objects.filter(location__location_type=instance).exists():
+            raise ValidationError(
+                {
+                    "content_types": (
+                        f"Cannot remove the content type {content_type} as currently at least one {model_class._meta.verbose_name} is associated to a location of this location type. "
+                    )
+                }
+            )

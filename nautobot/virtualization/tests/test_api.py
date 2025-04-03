@@ -239,7 +239,7 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         schema = ConfigContextSchema.objects.create(
             name="Schema 1", data_schema={"type": "object", "properties": {"A": {"type": "integer"}}}
         )
-        self.add_permissions("virtualization.change_virtualmachine")
+        self.add_permissions("virtualization.change_virtualmachine", "extras.view_configcontextschema")
 
         patch_data = {"local_config_context_schema": str(schema.pk)}
 
@@ -346,7 +346,12 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
 
     def test_untagged_vlan_requires_mode(self):
         """Test that when an `untagged_vlan` is specified, `mode` is also required."""
-        self.add_permissions("virtualization.add_vminterface")
+        self.add_permissions(
+            "virtualization.add_vminterface",
+            "virtualization.view_virtualmachine",
+            "extras.view_status",
+            "ipam.view_vlan",
+        )
 
         # This will fail.
         url = self._get_list_url()
@@ -361,7 +366,13 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
         )
 
     def test_tagged_vlan_raise_error_if_mode_not_set_to_tagged(self):
-        self.add_permissions("virtualization.add_vminterface", "virtualization.change_vminterface")
+        self.add_permissions(
+            "virtualization.add_vminterface",
+            "virtualization.change_vminterface",
+            "virtualization.view_virtualmachine",
+            "extras.view_status",
+            "ipam.view_vlan",
+        )
         vlan = VLAN.objects.get(name="VLAN 1")
         virtualmachine = VirtualMachine.objects.first()
         with self.subTest("On create, assert 400 status."):

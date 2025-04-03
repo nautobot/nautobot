@@ -17,6 +17,7 @@ from nautobot.core.forms import (
     AutoPositionPatternField,
     BootstrapMixin,
     BulkEditNullBooleanSelect,
+    ClearableFileInput,
     ColorSelect,
     CommentField,
     DatePicker,
@@ -35,6 +36,7 @@ from nautobot.core.forms import (
     TagFilterField,
 )
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.core.forms.fields import LaxURLField
 from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
     LocatableModelFilterFormMixin,
@@ -307,6 +309,17 @@ class LocationTypeFilterForm(NautobotFilterForm):
     content_types = MultipleContentTypeField(feature="locations", choices_as_strings=True, required=False)
 
 
+class LocationTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=LocationType.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    nestable = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    add_content_types = MultipleContentTypeField(feature="locations", required=False)
+    remove_content_types = MultipleContentTypeField(feature="locations", required=False)
+
+    class Meta:
+        nullable_fields = []
+
+
 #
 # Locations
 #
@@ -498,7 +511,7 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
     rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
-        query_params={"location": "$location"},
+        query_params={"ancestors": "$location"},
     )
     comments = CommentField()
 
@@ -784,6 +797,7 @@ class DeviceFamilyForm(NautobotModelForm):
         fields = [
             "name",
             "description",
+            "tags",
         ]
 
 
@@ -838,12 +852,8 @@ class DeviceTypeForm(NautobotModelForm):
         widgets = {
             "subdevice_role": StaticSelect2(),
             # Exclude SVG images (unsupported by PIL)
-            "front_image": forms.ClearableFileInput(
-                attrs={"accept": "image/bmp,image/gif,image/jpeg,image/png,image/tiff"}
-            ),
-            "rear_image": forms.ClearableFileInput(
-                attrs={"accept": "image/bmp,image/gif,image/jpeg,image/png,image/tiff"}
-            ),
+            "front_image": ClearableFileInput(attrs={"accept": "image/bmp,image/gif,image/jpeg,image/png,image/tiff"}),
+            "rear_image": ClearableFileInput(attrs={"accept": "image/bmp,image/gif,image/jpeg,image/png,image/tiff"}),
         }
 
 
@@ -4764,7 +4774,11 @@ class SoftwareImageFileBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFo
     )
     image_file_size = forms.IntegerField(required=False)
     default_image = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect, label="Is default image")
-    download_url = forms.URLField(required=False)
+    download_url = LaxURLField(required=False)
+    external_integration = DynamicModelChoiceField(
+        queryset=ExternalIntegration.objects.all(),
+        required=False,
+    )
 
     class Meta:
         model = SoftwareImageFile
@@ -4773,6 +4787,7 @@ class SoftwareImageFileBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFo
             "hashing_algorithm",
             "image_file_size",
             "download_url",
+            "external_integration",
         ]
 
 
@@ -4807,6 +4822,10 @@ class SoftwareImageFileFilterForm(NautobotFilterForm, StatusModelFilterFormMixin
         label="Has device types",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
+    external_integration = DynamicModelChoiceField(
+        queryset=ExternalIntegration.objects.all(),
+        required=False,
+    )
 
     tags = TagFilterField(model)
 
@@ -4820,6 +4839,7 @@ class SoftwareImageFileFilterForm(NautobotFilterForm, StatusModelFilterFormMixin
         "download_url",
         "device_types",
         "has_device_types",
+        "external_integration",
         "status",
         "tags",
     ]
@@ -4832,6 +4852,11 @@ class SoftwareImageFileForm(NautobotModelForm):
         queryset=DeviceType.objects.all(),
         required=False,
         label="Device Types",
+    )
+
+    external_integration = DynamicModelChoiceField(
+        queryset=ExternalIntegration.objects.all(),
+        required=False,
     )
 
     field_order = [
@@ -5289,6 +5314,11 @@ class VirtualDeviceContextForm(NautobotModelForm):
         required=True,
         query_params={"content_types": VirtualDeviceContext._meta.label_lower},
     )
+    vrfs = DynamicModelMultipleChoiceField(
+        queryset=VRF.objects.all(),
+        required=False,
+        label="VRFs",
+    )
 
     class Meta:
         model = VirtualDeviceContext
@@ -5299,6 +5329,7 @@ class VirtualDeviceContextForm(NautobotModelForm):
             "status",
             "identifier",
             "interfaces",
+            "vrfs",
             "primary_ip4",
             "primary_ip6",
             "tenant",
@@ -5314,11 +5345,15 @@ class VirtualDeviceContextForm(NautobotModelForm):
             self.fields["device"].disabled = True
             self.fields["device"].required = False
 
+        self.initial["vrfs"] = self.instance.vrfs.values_list("id", flat=True)
+
     def save(self, commit=True):
         instance = super().save(commit)
         if commit:
             interfaces = self.cleaned_data["interfaces"]
             instance.interfaces.set(interfaces)
+            vrfs = self.cleaned_data["vrfs"]
+            instance.vrfs.set(vrfs)
         return instance
 
 
@@ -5336,6 +5371,8 @@ class VirtualDeviceContextBulkEditForm(
     remove_interfaces = DynamicModelMultipleChoiceField(
         queryset=Interface.objects.all(), required=False, query_params={"device": "$device"}
     )
+    add_vrfs = DynamicModelMultipleChoiceField(queryset=VRF.objects.all(), required=False)
+    remove_vrfs = DynamicModelMultipleChoiceField(queryset=VRF.objects.all(), required=False)
 
     class Meta:
         model = VirtualDeviceContext

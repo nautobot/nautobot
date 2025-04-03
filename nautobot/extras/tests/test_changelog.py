@@ -277,7 +277,7 @@ class ChangeLogAPITest(APITestCase):
             ],
         }
         url = reverse("dcim-api:location-list")
-        self.add_permissions("dcim.add_location", "extras.view_status")
+        self.add_permissions("dcim.add_location", "dcim.view_locationtype", "extras.view_tag", "extras.view_status")
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
@@ -310,7 +310,7 @@ class ChangeLogAPITest(APITestCase):
             },
             "tags": [{"name": self.tags[2].name}],
         }
-        self.add_permissions("dcim.change_location", "extras.view_status")
+        self.add_permissions("dcim.change_location", "extras.view_status", "dcim.view_locationtype", "extras.view_tag")
         url = reverse("dcim-api:location-detail", kwargs={"pk": location.pk})
 
         response = self.client.put(url, data, format="json", **self.header)
@@ -457,7 +457,7 @@ class ChangeLogAPITest(APITestCase):
             "status": self.statuses[0].pk,
             "location_type": location_type.pk,
         }
-        self.add_permissions("dcim.add_location")
+        self.add_permissions("dcim.add_location", "dcim.view_locationtype", "extras.view_status")
         url = reverse("dcim-api:location-list")
 
         response = self.client.post(url, location_payload, format="json", **self.header)
@@ -492,7 +492,7 @@ class ChangeLogAPITest(APITestCase):
         )
 
         payload = {"tagged_vlans": [str(tagged_vlan.pk)], "description": "test vm interface m2m change"}
-        self.add_permissions("virtualization.change_vminterface", "ipam.change_vlan")
+        self.add_permissions("virtualization.change_vminterface", "ipam.change_vlan", "ipam.view_vlan")
         url = reverse("virtualization-api:vminterface-detail", kwargs={"pk": vm_interface.pk})
         response = self.client.patch(url, payload, format="json", **self.header)
         vm_interface.refresh_from_db()

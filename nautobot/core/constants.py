@@ -64,7 +64,6 @@ HTML_ALLOWED_TAGS = nh3.ALLOWED_TAGS - {
 # at present we just copy nh3.ALLOWED_ATTRIBUTES but we can modify this later as desired and appropriate
 HTML_ALLOWED_ATTRIBUTES = deepcopy(nh3.ALLOWED_ATTRIBUTES)
 
-
 #
 # Reserved Names
 #

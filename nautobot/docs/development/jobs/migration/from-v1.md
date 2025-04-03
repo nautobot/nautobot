@@ -6,10 +6,10 @@
 * [`self.test_*` and `self.post_run()` methods were removed](#test_-and-post_run-methods)
 * [`read_only` no longer changes the behavior of Nautobot core](#read-only-meta-attribute)
 * [`self.job_result` should no longer be modified or saved from within a Job](#tracking-job-state)
-* [Jobs must be registered in the celery task registry](#job-registration)
+* [Jobs must be registered in the Celery task registry](#job-registration)
 * [`self.failed` removed](#tracking-job-state)
 * [The job logging methods have been renamed and their signature changed](#job-logging)
-* [The `request` property has been changed to a celery request instead of a Django request](#request-property)
+* [The `request` property has been changed to a Celery request instead of a Django request](#request-property)
 
 ## Overview
 
@@ -80,6 +80,7 @@ The `test_*` and `post_run` methods, previously provided for backwards compatibi
 
 Jobs no longer run in a single atomic [database transaction](https://docs.djangoproject.com/en/stable/topics/db/transactions/) by default. If a Job needs to run in a database transaction, you can use the `@transaction.atomic` decorator on the `run()` method or wrap parts of your Job code in the `with transaction.atomic()` context manager.
 
+<!-- pyml disable-num-lines 10 proper-names -->
 !!! example
     ```py
     from django.db import transaction

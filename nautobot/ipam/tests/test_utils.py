@@ -1,9 +1,10 @@
 from django.test import TestCase
+import netaddr
 
 from nautobot.core.forms.utils import parse_numeric_range
 from nautobot.extras.models import Status
-from nautobot.ipam.models import VLAN, VLANGroup
-from nautobot.ipam.utils import add_available_vlans
+from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
+from nautobot.ipam.utils import add_available_ipaddresses, add_available_vlans
 
 
 class AddAvailableVlansTest(TestCase):
@@ -24,6 +25,44 @@ class AddAvailableVlansTest(TestCase):
         self.assertEqual(
             list(add_available_vlans(vlan_group=vlan_group, vlans=vlan_group.vlans.all())),
             [vlan_100, vlan_102, vlan_103, vlan_104, vlan_110, vlan_111, vlan_112, vlan_115],
+        )
+
+
+class AddAvailableIPsTest(TestCase):
+    """Tests for add_available_ipaddresses()."""
+
+    def test_add_available_ipaddresses_ipv4(self):
+        prefix = Prefix.objects.create(prefix="22.22.22.0/24", status=Status.objects.get_for_model(Prefix).first())
+        ip_status = Status.objects.get_for_model(IPAddress).first()
+        # .0 isn't available since this isn't a Pool prefix
+        available_1 = (9, "22.22.22.1/24")
+        ip_1 = IPAddress.objects.create(address="22.22.22.10/24", status=ip_status)
+        available_2 = (10, "22.22.22.11/24")
+        ip_2 = IPAddress.objects.create(address="22.22.22.21/24", status=ip_status)
+        available_3 = (233, "22.22.22.22/24")
+        # .255 isn't available since this isn't a Pool prefix
+        self.assertEqual(
+            add_available_ipaddresses(prefix=netaddr.IPNetwork(prefix.prefix), ipaddress_list=(ip_1, ip_2)),
+            [available_1, ip_1, available_2, ip_2, available_3],
+        )
+
+    def test_add_available_ipaddresses_ipv6(self):
+        namespace = Namespace.objects.create(name="add_available_ipv6")
+        prefix = Prefix.objects.create(
+            prefix="::/0", status=Status.objects.get_for_model(Prefix).first(), namespace=namespace
+        )
+        ip_status = Status.objects.get_for_model(IPAddress).first()
+        # .0 is available in IPv6
+        available_1 = (10, "::/0")
+        ip_1 = IPAddress.objects.create(address="::a/0", status=ip_status, namespace=namespace)
+        available_2 = (2**128 - 10 - 10 - 2, "::b/0")
+        ip_2 = IPAddress.objects.create(
+            address="ffff:ffff:ffff:ffff:ffff:ffff:ffff:fff5/0", status=ip_status, namespace=namespace
+        )
+        available_3 = (10, "ffff:ffff:ffff:ffff:ffff:ffff:ffff:fff6/0")
+        self.assertEqual(
+            add_available_ipaddresses(prefix=netaddr.IPNetwork(prefix.prefix), ipaddress_list=(ip_1, ip_2)),
+            [available_1, ip_1, available_2, ip_2, available_3],
         )
 
 

@@ -317,7 +317,7 @@ class JobTransactionTest(TransactionTestCase):
             pk_list=pk_list,
             username=self.user.username,
         )
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         error_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
         self.assertIn(
             f"Unable to delete Job {system_job_queryset.first()}. System Job cannot be deleted", error_log.message
@@ -346,7 +346,7 @@ class JobTransactionTest(TransactionTestCase):
             },
             username=self.user.username,
         )
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertEqual(Job.objects.filter(description=job_description).count(), queryset.count())
         self.assertFalse(
             JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
@@ -389,7 +389,7 @@ class JobTransactionTest(TransactionTestCase):
             },
             username=self.user.username,
         )
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertEqual(Job.objects.filter(description=job_description).count(), queryset.count())
         self.assertFalse(
             JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
@@ -426,7 +426,7 @@ class JobTransactionTest(TransactionTestCase):
         module = "pass"
         name = "TestPassJob"
         job_result = create_job_result_and_run_job(module, name)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertEqual(job_result.result, True)
         logs = job_result.job_log_entries
         self.assertGreater(logs.count(), 0)
@@ -449,7 +449,7 @@ class JobTransactionTest(TransactionTestCase):
         name = "TestHasSensitiveVariables"
         # This function create_job_result_and_run_job and the subsequent functions' arguments are very messy
         job_result = create_job_result_and_run_job(module, name, "local", 1, 2, "3", kwarg_1=1, kwarg_2="2")
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertEqual(job_result.task_args, [])
         self.assertEqual(job_result.task_kwargs, {})
 
@@ -458,21 +458,22 @@ class JobTransactionTest(TransactionTestCase):
         Job test with fail result.
         """
         module = "fail"
-        name = "TestFailJob"
-        job_result = create_job_result_and_run_job(module, name)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
-        logs = job_result.job_log_entries
-        self.assertGreater(logs.count(), 0)
-        try:
-            logs.get(message="before_start() was called as expected")
-            logs.get(message="I'm a test job that fails!")
-            logs.get(message="on_failure() was called as expected")
-            logs.get(message="after_return() was called as expected")
-        except models.JobLogEntry.DoesNotExist:
-            for log in logs.all():
-                print(log.message)
-            print(job_result.traceback)
-            raise
+        for name in ["TestFailJob", "TestFailInBeforeStart", "TestFailCleanly", "TestFailCleanlyInBeforeStart"]:
+            with self.subTest(job=name):
+                job_result = create_job_result_and_run_job(module, name)
+                self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+                logs = job_result.job_log_entries
+                self.assertGreater(logs.count(), 0)
+                try:
+                    logs.get(message="before_start() was called as expected")
+                    logs.get(message="I'm a test job that fails!")
+                    logs.get(message="on_failure() was called as expected")
+                    logs.get(message="after_return() was called as expected")
+                except models.JobLogEntry.DoesNotExist:
+                    for log in logs.all():
+                        print(log.message)
+                    print(job_result.traceback)
+                    raise
 
     def test_job_fail_with_sanitization(self):
         """
@@ -482,7 +483,7 @@ class JobTransactionTest(TransactionTestCase):
         name = "TestFailWithSanitization"
         job_result = create_job_result_and_run_job(module, name)
         json_result = json.dumps(job_result.result)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         self.assertIn("(redacted)@github.com", json_result)
         self.assertNotIn("abc123@github.com", json_result)
         self.assertIn("(redacted)@github.com", job_result.traceback)
@@ -495,7 +496,7 @@ class JobTransactionTest(TransactionTestCase):
         module = "atomic_transaction"
         name = "TestAtomicDecorator"
         job_result = create_job_result_and_run_job(module, name)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         # Ensure DB transaction was not aborted
         self.assertTrue(models.Status.objects.filter(name="Test database atomic rollback 1").exists())
         # Ensure the correct job log messages were saved
@@ -513,7 +514,7 @@ class JobTransactionTest(TransactionTestCase):
         module = "atomic_transaction"
         name = "TestAtomicContextManager"
         job_result = create_job_result_and_run_job(module, name)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         # Ensure DB transaction was not aborted
         self.assertTrue(models.Status.objects.filter(name="Test database atomic rollback 2").exists())
         # Ensure the correct job log messages were saved
@@ -530,8 +531,8 @@ class JobTransactionTest(TransactionTestCase):
         """
         module = "atomic_transaction"
         name = "TestAtomicDecorator"
-        job_result = create_job_result_and_run_job(module, name, fail=True)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        job_result = create_job_result_and_run_job(module, name, should_fail=True)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         # Ensure DB transaction was aborted
         self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 1").exists())
         # Ensure the correct job log messages were saved
@@ -547,8 +548,8 @@ class JobTransactionTest(TransactionTestCase):
         """
         module = "atomic_transaction"
         name = "TestAtomicContextManager"
-        job_result = create_job_result_and_run_job(module, name, fail=True)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        job_result = create_job_result_and_run_job(module, name, should_fail=True)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         # Ensure DB transaction was aborted
         self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 2").exists())
         # Ensure the correct job log messages were saved
@@ -596,7 +597,7 @@ class JobTransactionTest(TransactionTestCase):
         job_result_data = json.loads(log_info.log_object) if log_info.log_object else None
 
         # Assert stuff
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertEqual(form_data, job_result_data)
 
     @override_settings(
@@ -651,7 +652,7 @@ class JobTransactionTest(TransactionTestCase):
         ).first()
 
         # Assert stuff
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertEqual(info_log.log_object, "")
         self.assertEqual(info_log.message, f"Role: {role.name}")
         self.assertEqual(job_result.result, "Nice Roles!")
@@ -670,7 +671,7 @@ class JobTransactionTest(TransactionTestCase):
         ).first()
 
         # Assert stuff
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertEqual(info_log.log_object, "")
         self.assertEqual(info_log.message, "The Location if any that the user provided.")
         self.assertEqual(job_result.result, "Nice Location (or not)!")
@@ -685,7 +686,7 @@ class JobTransactionTest(TransactionTestCase):
         job_result = create_job_result_and_run_job(module, name, **data)
 
         # Assert stuff
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         self.assertIn("location is a required field", job_result.traceback)
 
     def test_job_latest_result_property(self):
@@ -695,9 +696,9 @@ class JobTransactionTest(TransactionTestCase):
         module = "pass"
         name = "TestPassJob"
         job_result_1 = create_job_result_and_run_job(module, name)
-        self.assertEqual(job_result_1.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result_1)
         job_result_2 = create_job_result_and_run_job(module, name)
-        self.assertEqual(job_result_2.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result_2)
         _job_class, job_model = get_job_class_and_model(module, name)
         self.assertGreaterEqual(job_model.job_results.count(), 2)
         latest_job_result = job_model.latest_result
@@ -710,11 +711,7 @@ class JobTransactionTest(TransactionTestCase):
         # The job itself contains the 'assert' by loading the resulting profiling file from the workers filesystem
         job_result = create_job_result_and_run_job(module, name, profile=True)
 
-        self.assertEqual(
-            job_result.status,
-            JobResultStatusChoices.STATUS_SUCCESS,
-            msg="Profiling test job errored, this indicates that either no profiling file was created or it is malformed.",
-        )
+        self.assertJobResultStatus(job_result)
 
         profiling_result = Path(f"{tempfile.gettempdir()}/nautobot-jobresult-{job_result.id}.pstats")
         self.assertTrue(profiling_result.exists())
@@ -727,12 +724,17 @@ class JobTransactionTest(TransactionTestCase):
         job_class, _ = get_job_class_and_model(module, name, "local")
         self.assertTrue(job_class.is_singleton)
         cache.set(job_class.singleton_cache_key, 1)
-        failed_job_result = create_job_result_and_run_job(module, name)
+        try:
+            failed_job_result = create_job_result_and_run_job(module, name)
 
-        self.assertEqual(
-            failed_job_result.status, JobResultStatusChoices.STATUS_FAILURE, msg="Duplicate singleton job didn't error."
-        )
-        self.assertIsNone(cache.get(job_class.singleton_cache_key, None))
+            self.assertEqual(
+                failed_job_result.status,
+                JobResultStatusChoices.STATUS_FAILURE,
+                msg="Duplicate singleton job didn't error.",
+            )
+        finally:
+            # Clean up after ourselves
+            cache.delete(job_class.singleton_cache_key)
 
     def test_job_ignore_singleton(self):
         module = "singleton"
@@ -741,16 +743,21 @@ class JobTransactionTest(TransactionTestCase):
         job_class, _ = get_job_class_and_model(module, name, "local")
         self.assertTrue(job_class.is_singleton)
         cache.set(job_class.singleton_cache_key, 1)
-        passed_job_result = create_job_result_and_run_job(
-            module, name, celery_kwargs={"nautobot_job_ignore_singleton_lock": True}
-        )
+        try:
+            passed_job_result = create_job_result_and_run_job(
+                module, name, celery_kwargs={"nautobot_job_ignore_singleton_lock": True}
+            )
 
-        self.assertEqual(
-            passed_job_result.status,
-            JobResultStatusChoices.STATUS_SUCCESS,
-            msg="Duplicate singleton job didn't succeed with nautobot_job_ignore_singleton_lock=True.",
-        )
-        self.assertIsNone(cache.get(job_class.singleton_cache_key, None))
+            self.assertEqual(
+                passed_job_result.status,
+                JobResultStatusChoices.STATUS_SUCCESS,
+                msg="Duplicate singleton job didn't succeed with nautobot_job_ignore_singleton_lock=True.",
+            )
+            # Singleton cache key should be cleared when the job completes
+            self.assertIsNone(cache.get(job_class.singleton_cache_key, None))
+        finally:
+            # Clean up after ourselves, just in case
+            cache.delete(job_class.singleton_cache_key)
 
     @mock.patch("nautobot.extras.context_managers.enqueue_webhooks")
     def test_job_fires_webhooks(self, mock_enqueue_webhooks):
@@ -762,7 +769,7 @@ class JobTransactionTest(TransactionTestCase):
         webhook.content_types.set([status_ct])
 
         job_result = create_job_result_and_run_job(module, name)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
 
         mock_enqueue_webhooks.assert_called_once()
 
@@ -865,7 +872,7 @@ class JobFileOutputTest(TransactionTestCase):
         data = {"lines": 3}
         job_result = create_job_result_and_run_job(module, name, **data)
 
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS, job_result.traceback)
+        self.assertJobResultStatus(job_result)
         # JobResult should have one attached file
         self.assertEqual(1, job_result.files.count())
         self.assertEqual(job_result.files.first().name, "output.txt")
@@ -896,7 +903,7 @@ class JobFileOutputTest(TransactionTestCase):
         # Exactly JOB_CREATE_FILE_MAX_SIZE bytes should be okay:
         with override_config(JOB_CREATE_FILE_MAX_SIZE=len("Hello world!\n")):
             job_result = create_job_result_and_run_job(module, name, **data)
-            self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS, job_result.traceback)
+            self.assertJobResultStatus(job_result)
             self.assertEqual(1, job_result.files.count())
             self.assertEqual(job_result.files.first().name, "output.txt")
             self.assertEqual(job_result.files.first().file.read().decode("utf-8"), "Hello World!\n")
@@ -904,7 +911,7 @@ class JobFileOutputTest(TransactionTestCase):
         # Even one byte over is too much:
         with override_config(JOB_CREATE_FILE_MAX_SIZE=len("Hello world!\n") - 1):
             job_result = create_job_result_and_run_job(module, name, **data)
-            self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+            self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
             self.assertIn("ValueError", job_result.traceback)
             self.assertEqual(0, job_result.files.count())
 
@@ -912,7 +919,7 @@ class JobFileOutputTest(TransactionTestCase):
         with override_config(JOB_CREATE_FILE_MAX_SIZE=10 << 20):
             with override_settings(JOB_CREATE_FILE_MAX_SIZE=len("Hello world!\n") - 1):
                 job_result = create_job_result_and_run_job(module, name, **data)
-                self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+                self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
                 self.assertIn("ValueError", job_result.traceback)
                 self.assertEqual(0, job_result.files.count())
 
@@ -945,7 +952,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
 
         out, err = self.run_command("--local", "--no-color", "--username", self.user.username, job_model.class_path)
         self.assertIn(f"Running {job_model.class_path}...", out)
-        self.assertIn("run: 0 debug, 1 info, 0 warning, 0 error, 0 critical", out)
+        self.assertIn("run: 0 debug, 1 info, 0 success, 0 warning, 0 failure, 0 error, 0 critical", out)
         self.assertIn("info: Success", out)
         self.assertIn(f"{job_model.class_path}: SUCCESS", out)
         self.assertEqual("", err)
@@ -967,7 +974,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
         out, err = self.run_command("--local", "--no-color", "--username", self.user.username, job_model.class_path)
         self.assertIn(f"Running {job_model.class_path}...", out)
         # Changed job to actually log data. Can't display empty results if no logs were created.
-        self.assertIn("run: 0 debug, 1 info, 0 warning, 0 error, 0 critical", out)
+        self.assertIn("run: 0 debug, 1 info, 0 success, 0 warning, 0 failure, 0 error, 0 critical", out)
         self.assertIn(f"{job_model.class_path}: SUCCESS", out)
         self.assertEqual("", err)
 
@@ -999,7 +1006,7 @@ class JobLocationCustomFieldTest(TransactionTestCase):
         job_result = create_job_result_and_run_job(module, name)
         job_result.refresh_from_db()
 
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
 
         # Test location with a value for custom_field
         location_1 = Location.objects.filter(name="Test Location One")
@@ -1077,7 +1084,7 @@ class JobButtonReceiverTransactionTest(TransactionTestCase):
         module = "job_button_receiver"
         name = "TestJobButtonReceiverFail"
         job_result = create_job_result_and_run_job(module, name, **self.data)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
 
 
 class JobHookReceiverTest(TestCase):
@@ -1149,7 +1156,7 @@ class JobHookReceiverTransactionTest(TransactionTestCase):
         module = "job_hook_receiver"
         name = "TestJobHookReceiverFail"
         job_result = create_job_result_and_run_job(module, name, **self.data)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
 
 
 class JobHookTest(TestCase):

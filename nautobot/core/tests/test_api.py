@@ -609,7 +609,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             dcim_models.LocationType.objects.get(name="Building"),
         ]
         for location_type in self.locations_types:
-            location_type.content_types.set([vlan_group_ct, vlan_ct])
+            location_type.content_types.add(vlan_group_ct, vlan_ct)
 
         self.statuses = extras_models.Status.objects.get_for_model(dcim_models.Location)
         self.location1 = dcim_models.Location.objects.create(
@@ -639,7 +639,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             "vlan_group": self.vlan_group1.pk,
         }
         url = reverse("ipam-api:vlan-list")
-        self.add_permissions("ipam.add_vlan")
+        self.add_permissions("ipam.add_vlan", "ipam.view_vlangroup", "extras.view_status")
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
@@ -672,7 +672,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             "vlan_group": {"name": self.vlan_group1.name},
         }
         url = reverse("ipam-api:vlan-list")
-        self.add_permissions("ipam.add_vlan")
+        self.add_permissions("ipam.add_vlan", "ipam.view_vlangroup", "extras.view_status")
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
@@ -708,7 +708,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             },
         }
         url = reverse("ipam-api:vlan-list")
-        self.add_permissions("ipam.add_vlan")
+        self.add_permissions("ipam.add_vlan", "ipam.view_vlangroup", "extras.view_status")
 
         with testing.disable_warnings("django.request"):
             response = self.client.post(url, data, format="json", **self.header)
@@ -775,7 +775,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             "vlan_group": self.vlan_group1.pk,
         }
         url = reverse("ipam-api:vlan-list")
-        self.add_permissions("ipam.add_vlan")
+        self.add_permissions("ipam.add_vlan", "ipam.view_vlangroup", "extras.view_status")
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)

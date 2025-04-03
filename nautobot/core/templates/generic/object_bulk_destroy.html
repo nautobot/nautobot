@@ -7,7 +7,7 @@
 {% block content %}
     <div class="row">
         <div class="col-md-8 col-md-offset-2">
-            <div class="panel panel-danger">
+            <div class="panel panel-danger" id="confirm-bulk-deletion">
                 <div class="panel-heading"><strong>Confirm Bulk Deletion</strong></div>
                 <div class="panel-body">
                     <p><strong>Warning:</strong> The following operation will delete {{ total_objs_to_delete }} {{ obj_type_plural }}. {% if not delete_all %}Please carefully review the {{ obj_type_plural }} to be deleted and confirm below.{% endif %}</p>

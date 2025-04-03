@@ -12,6 +12,7 @@ The Invoke tasks have some default [configuration](http://docs.pyinvoke.org/en/s
 - `compose_dir`: the full path to the directory containing the Docker Compose YAML files (default: `"<nautobot source directory>/development"`)
 - `compose_files`: the Docker Compose YAML file(s) to use (default: `["docker-compose.yml", "docker-compose.postgres.yml", "docker-compose.dev.yml"]`)
 - `docker_image_names_main` and `docker_image_names_develop`: Used when [building Docker images for publication](release-checklist.md#publish-docker-images); you shouldn't generally need to change these.
+- `ephemeral_ports`: Setting this value to `True` will make all Nautobot containers with published ports expose themselves with dynamic ports. This is useful when running multiple Nautobot versions at the same time on the same machine so you won't experience system port conflicts.
 
 These setting may be overridden several different ways (from highest to lowest precedence):
 
@@ -140,11 +141,11 @@ Once all steps are completed Nautobot should now have the `Continue to SSO` butt
 
 Keycloak admin console is reachable via `http://localhost:8087/admin/` with user `admin` and password `admin`. The below users are pre-configured within Keycloak, at this time their permissions are not directly mapped to any permissions provided by default by Nautobot. This will be a later enhancement to the local development environment.
 
-| Username         | Password  |
-+------------------+-----------+
-| nautobot_unpriv  | unpriv123 |
-| nautobot_admin   | admin123  |
-| nautobot_auditor | audit123  |
+| Username           | Password    |
++--------------------+-------------+
+| `nautobot_unpriv`  | `unpriv123` |
+| `nautobot_admin`   | `admin123`  |
+| `nautobot_auditor` | `audit123`  |
 
 ## Microsoft Visual Studio Code Integration
 
@@ -158,7 +159,7 @@ For users of Microsoft Visual Studio Code, several files are included to ease de
 
 +/- 2.1.2
 
-#### PYTHON_VER Environment Variable
+#### `PYTHON_VER` Environment Variable
 
 The `PYTHON_VER` environment variable must be set in the `development/.env` file or the container build will fail.
 
@@ -195,9 +196,17 @@ docker compose -f docker-compose.yml -f docker-compose.debug.yml up
 
 ### Remote Debugging Configuration
 
-Using the Remote-Attach functionality of VS Code debugger is an alternative to debugging in a development container. This allows a local VS Code instance to connect to a remote container and debug the code running in the container the same way as when debugging locally.
+Using the [Remote-Attach functionality of VS Code](https://code.visualstudio.com/docs/python/debugging#_debugging-by-attaching-over-a-network-connection) debugger is an alternative to debugging in a development container. This allows a local VS Code instance to connect to a remote container and debug the code running in the container the same way as when debugging locally. To learn more about debugging in VSCode, please [follow the official docs](https://code.visualstudio.com/docs/editor/debugging).
 
-Follow the steps below to configure VS Code to debug Nautobot and Celery Worker running in a remote container:
+Follow either of the options below to configure VS Code to debug Nautobot and Celery Worker running in a remote container:
+
+#### Running inside the Nautobot workspace
+
+If you have opened the project via the workspace file `nautobot.code-workspace` then there are two debug configurations for remote debugging available. These can be run via one of the debug tasks:
+- `Python: Nautobot (Remote)` or
+- `Python: Nautobot-Celery (Remote)`
+
+#### Adding Nautobot folder to an existing workspace
 
 1. **Configure `invoke.yml` to use the `docker-compose.vscode-rdb.yml` file.**
 
@@ -224,7 +233,7 @@ Follow the steps below to configure VS Code to debug Nautobot and Celery Worker 
     If you have opened the workspace file `nautobot.code-workspace` then there are two debug
     configurations for remote debugging already available.
 
-    If you add nautobot to an existing VS Code workspace (Menu: _File > Add Folder to Workspace..._)
+    If you add `nautobot` to an existing VS Code workspace (Menu: _File > Add Folder to Workspace..._)
     then copy the `launch:` values to the `.vscode/launch.json` file.
 
     - Debug Configurations for Remote Debugging:
@@ -245,6 +254,6 @@ Follow the steps below to configure VS Code to debug Nautobot and Celery Worker 
       }
       ```
 
-It is now possible to debug the containerized Nautobot and Celery Worker using the VS Code debugger.
+    It is now possible to debug the containerized Nautobot and Celery Worker using the VS Code debugger.
 
-After restarting the Celery-Worker container you need to restart the debug session.
+    After restarting the Celery-Worker container you need to restart the debug session.

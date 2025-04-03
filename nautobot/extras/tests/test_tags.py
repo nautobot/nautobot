@@ -46,7 +46,7 @@ class TaggedItemTest(APITestCase):
             "location_type": self.location_type.pk,
         }
         url = reverse("dcim-api:location-list")
-        self.add_permissions("dcim.add_location")
+        self.add_permissions("dcim.add_location", "dcim.view_locationtype", "extras.view_tag", "extras.view_status")
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
@@ -67,7 +67,7 @@ class TaggedItemTest(APITestCase):
                 {"name": self.tags[3].name},
             ]
         }
-        self.add_permissions("dcim.change_location")
+        self.add_permissions("dcim.change_location", "extras.view_tag")
         url = reverse("dcim-api:location-detail", kwargs={"pk": location.pk})
 
         response = self.client.patch(url, data, format="json", **self.header)

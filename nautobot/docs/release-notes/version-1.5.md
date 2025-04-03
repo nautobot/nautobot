@@ -21,10 +21,10 @@ Custom fields can now be assigned to a free-text "grouping" to improve usability
 
 #### Custom Celery Task Queues ([#2421](https://github.com/nautobot/nautobot/pull/2421))
 
-A new optional job property `task_queues` has been introduced to allow Nautobot to leverage custom celery queues for jobs. This will allow you to send jobs to specific workers based on which queue is selected. This property can be set on the job class and overridden in the job model, similar to other overridable job fields. If `task_queues` is not defined on the job class or job model, the job will only be able to use the default queue. A new field has been added to the job run form to allow you to select a queue when you run the job and  an optional field `task_queue` has been added to the REST API [job run endpoint](../user-guide/platform-functionality/jobs/index.md#via-the-rest-api) for the same purpose.
+A new optional job property `task_queues` has been introduced to allow Nautobot to leverage custom Celery queues for jobs. This will allow you to send jobs to specific workers based on which queue is selected. This property can be set on the job class and overridden in the job model, similar to other overridable job fields. If `task_queues` is not defined on the job class or job model, the job will only be able to use the default queue. A new field has been added to the job run form to allow you to select a queue when you run the job and  an optional field `task_queue` has been added to the REST API [job run endpoint](../user-guide/platform-functionality/jobs/index.md#via-the-rest-api) for the same purpose.
 
 !!! important
-    The default celery queue name has been changed from `celery` to `default`. If you have any workers or tasks hard coded to use `celery` you will need to update those workers/tasks or change the [`CELERY_TASK_DEFAULT_QUEUE`](../user-guide/administration/configuration/settings.md#celery_task_default_queue) setting in your `nautobot_config.py`.
+    The default Celery queue name has been changed from `celery` to `default`. If you have any workers or tasks hard coded to use `celery` you will need to update those workers/tasks or change the [`CELERY_TASK_DEFAULT_QUEUE`](../user-guide/administration/configuration/settings.md#celery_task_default_queue) setting in your `nautobot_config.py`.
 
 #### Device Redundancy Groups ([#1892](https://github.com/nautobot/nautobot/issues/1892))
 
@@ -244,7 +244,7 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 
 - [#3806](https://github.com/nautobot/nautobot/issues/3806) - Added instructions and examples for SAML SSO using Okta as the IdP.
 - [#3811](https://github.com/nautobot/nautobot/issues/3811) - Added a note that addresses UWSGI buffer size concerns with Azure SSO in `nautobot/docs/user-guide/administration/configuration/authentication/sso.md`.
-- [#3888](https://github.com/nautobot/nautobot/issues/3888) - Changed note for celery concurrency in the docs.
+- [#3888](https://github.com/nautobot/nautobot/issues/3888) - Changed note for Celery concurrency in the docs.
 
 ## v1.5.20 (2023-05-30)
 
@@ -403,7 +403,7 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 ### Documentation in v1.5.15
 
 - [#3384](https://github.com/nautobot/nautobot/issues/3384) - Removed documentation about `block sidebar` from `docs/development/templates.md`.
-- [#3446](https://github.com/nautobot/nautobot/issues/3446) - Added documentation links for Device Onboarding and LifeCycle Management plugins to docs.nautobot.com menu.
+- [#3446](https://github.com/nautobot/nautobot/issues/3446) - Added documentation links for Device Onboarding and LifeCycle Management plugins to `docs.nautobot.com` menu.
 
 ### Housekeeping in v1.5.15
 
@@ -566,7 +566,7 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 
 - [#3114](https://github.com/nautobot/nautobot/issues/3114) - Fixed Navbar scroll through top-level menu in low resolution desktop screens.
 - [#3155](https://github.com/nautobot/nautobot/issues/3155) - Aligned buttons on device component create page.
-- [#3169](https://github.com/nautobot/nautobot/issues/3169) - Fixed data mismatch in `ScheduledJob` causing celery workers to fail when running scheduled jobs created in versions prior to `v1.5.8`. ⚠ **NOTE**: If your celery workers are failing on startup after upgrading to `v1.5.8`, you may need to purge the celery queue with `nautobot-server celery purge` or `nautobot-server celery purge -Q <queues>` to purge custom queues.
+- [#3169](https://github.com/nautobot/nautobot/issues/3169) - Fixed data mismatch in `ScheduledJob` causing Celery workers to fail when running scheduled jobs created in versions prior to `v1.5.8`. ⚠ **NOTE**: If your Celery workers are failing on startup after upgrading to `v1.5.8`, you may need to purge the Celery queue with `nautobot-server celery purge` or `nautobot-server celery purge -Q <queues>` to purge custom queues.
 
 ### Dependencies in v1.5.9
 
@@ -760,8 +760,8 @@ Unchanged from v1.5.0-beta.1.
 - [#899](https://github.com/nautobot/nautobot/issues/899) - Added support for grouping of Custom Fields.
 - [#1468](https://github.com/nautobot/nautobot/issues/1468) - Added relationship columns to ObjectListTableView and disabled sorting.
 - [#1892](https://github.com/nautobot/nautobot/issues/1892) - Added `DeviceRedundancyGroup` model for representing a logical grouping of physical hardware for the purposes of high-availability.
-- [#2063](https://github.com/nautobot/nautobot/issues/2063) - Added documentation and initial support for custom celery queues.
-- [#2064](https://github.com/nautobot/nautobot/issues/2064) - Added `task_queues` job property to support custom celery queues.
+- [#2063](https://github.com/nautobot/nautobot/issues/2063) - Added documentation and initial support for custom Celery queues.
+- [#2064](https://github.com/nautobot/nautobot/issues/2064) - Added `task_queues` job property to support custom Celery queues.
 - [#2460](https://github.com/nautobot/nautobot/issues/2460) - Added search box filter form to generic list views.
 - [#2518](https://github.com/nautobot/nautobot/issues/2518) - Added `base_site` and `subtree` filters to `LocationFilterSet`, allowing for filtering Locations by their root ancestor or its Site.
 - [#2536](https://github.com/nautobot/nautobot/issues/2536) - Added `nautobot-server generate_test_data` command.
@@ -774,7 +774,7 @@ Unchanged from v1.5.0-beta.1.
 - [#1892](https://github.com/nautobot/nautobot/issues/1892) - Updated `Device` to have `device_redundancy_group` relationship, `device_redundancy_group_priority` numeric property.
 - [#1892](https://github.com/nautobot/nautobot/issues/1892) - Updated `ConfigContext` to have `ManyToManyField` to `dcim.DeviceRedundancyGroup` for the purposes of applying a `ConfigContext` based upon a `Device`s `DeviceRedundancyGroup` membership.
 - [#1998](https://github.com/nautobot/nautobot/issues/1998) - Added DynamicFilterForm to list views.
-- [#2064](https://github.com/nautobot/nautobot/issues/2064) - Changed default celery queue name from `celery` to `default`.
+- [#2064](https://github.com/nautobot/nautobot/issues/2064) - Changed default Celery queue name from `celery` to `default`.
 - [#2615](https://github.com/nautobot/nautobot/issues/2615) - Changed `ConfigContextFilterForm`s `schema` filter form field to support added filter field on `ConfigContextFilterSet`.
 - [#2615](https://github.com/nautobot/nautobot/issues/2615) - Changed `BaseNetworkQuerySet` and `IPAddressQuerySet` to search both IPv6 and IPv4 when given search string is ambiguous.
 

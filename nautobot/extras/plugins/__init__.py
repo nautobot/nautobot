@@ -728,6 +728,31 @@ def register_plugin_menu_items(section_name, menu_items):
 #
 
 
+class CustomValidatorContext(dict):
+    def __init__(self, obj):
+        """
+        If there is an active change context, meaning we are in a web request context,
+        we have access to the current user object. Otherwise, we are likely running inside
+        a management command or other non-web or non-Job context, and we should use an AnonymousUser.
+        This ensures people's custom validators don't outright break when running in non-web
+        contexts, and should generally provide a sane default, given validation based on the
+        user is commonly going to be least-privelege based, and thus the AnonymousUser will
+        cause such validation logic to fail closed.
+        """
+        from django.contrib.auth.models import AnonymousUser
+
+        from nautobot.extras.signals import change_context_state
+
+        change_context = change_context_state.get()
+        user = None
+        if change_context:
+            user = change_context.get_user()
+        if user is None:
+            user = AnonymousUser()
+
+        super().__init__(object=obj, user=user)
+
+
 class CustomValidator:
     """
     This class is used to register plugin custom model validators which act on specified models. It contains the clean
@@ -742,7 +767,7 @@ class CustomValidator:
     model = None
 
     def __init__(self, obj):
-        self.context = {"object": obj}
+        self.context = CustomValidatorContext(obj)
 
     def validation_error(self, message):
         """

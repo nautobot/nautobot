@@ -137,10 +137,10 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
                 elif cf.type == CustomFieldTypeChoices.TYPE_DATE:
                     field_info["format"] = mark_safe("<code>YYYY-MM-DD</code>")  # noqa: S308
                 elif cf.type == CustomFieldTypeChoices.TYPE_SELECT:
-                    field_info["choices"] = {cfc.value: cfc.value for cfc in cf.custom_field_choices.all()}
+                    field_info["choices"] = {value: value for value in cf.choices}
                 elif cf.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
                     field_info["format"] = mark_safe('<code>"value,value"</code>')  # noqa: S308
-                    field_info["choices"] = {cfc.value: cfc.value for cfc in cf.custom_field_choices.all()}
+                    field_info["choices"] = {value: value for value in cf.choices}
                 fields.append(field_info)
             continue
 

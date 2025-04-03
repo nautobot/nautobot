@@ -72,7 +72,7 @@ CACHES = {
 }
 ```
 
-For more details on configuring django-redis with Redis Sentinel, please see the documentation for [Django Redis](https://github.com/jazzband/django-redis#use-the-sentinel-connection-factory).
+For more details on configuring `django-redis` with Redis Sentinel, please see the documentation for [Django Redis](https://github.com/jazzband/django-redis#use-the-sentinel-connection-factory).
 
 ### `celery` Sentinel Configuration
 

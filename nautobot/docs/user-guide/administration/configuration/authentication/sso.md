@@ -1,7 +1,7 @@
 # Single Sign On
 
 Nautobot supports several different authentication mechanisms including OAuth (1 and 2), OpenID, SAML, and others.
-To accomplish this, Nautobot comes preinstalled with the [social-auth-app-django](https://python-social-auth.readthedocs.io/en/latest/configuration/django.html) Python module.
+To accomplish this, Nautobot comes preinstalled with the [`social-auth-app-django`](https://python-social-auth.readthedocs.io/en/latest/configuration/django.html) Python module.
 
 This module supports several [authentication backends](https://python-social-auth.readthedocs.io/en/latest/backends/index.html) by default including:
 
@@ -63,7 +63,7 @@ AUTHENTICATION_BACKENDS = [
 
 ### Custom Authentication Backends
 
-The default external authentication supported is [social-auth-app-django](https://python-social-auth.readthedocs.io/en/latest/configuration/django.html) as stated above. If you have developed your own external authentication backend, you will need to configure `SOCIAL_AUTH_BACKEND_PREFIX` to use your backend instead and correctly enable the SSO redirect when the login button is clicked. For example, if your custom authentication backend is available at `custom_auth.backends.custom.Oauth2`, you would set things as follows:
+The default external authentication supported is [`social-auth-app-django`](https://python-social-auth.readthedocs.io/en/latest/configuration/django.html) as stated above. If you have developed your own external authentication backend, you will need to configure `SOCIAL_AUTH_BACKEND_PREFIX` to use your backend instead and correctly enable the SSO redirect when the login button is clicked. For example, if your custom authentication backend is available at `custom_auth.backends.custom.Oauth2`, you would set things as follows:
 
 ```python
 SOCIAL_AUTH_BACKEND_PREFIX = "custom_auth.backends"
@@ -285,7 +285,7 @@ A group syncing function is provided and but needs to be configured. See [Group 
 The following instructions guide you through the process of configuring Google for OAuth2 authentication.
 
 !!! important
-    Please note there is further guidance provided by [python-social-auth](https://python-social-auth.readthedocs.io/en/latest/backends/google.html#google-oauth2) as well as [Google](https://developers.google.com/identity/protocols/oauth2?csw=1). For more
+    Please note there is further guidance provided by [`python-social-auth`](https://python-social-auth.readthedocs.io/en/latest/backends/google.html#google-oauth2) as well as [Google](https://developers.google.com/identity/protocols/oauth2?csw=1). For more
 information please utilize these additional resources.
 
 1. In the [Google API Console](https://console.developers.google.com/) create a new project or select an existing one.
@@ -326,7 +326,7 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ['openid']
 This guide will walk you through configuring Nautobot to authenticate using SAML with Google as the identity provider.
 
 !!! important
-    Please note that there is further guidance provided by [python-social-auth](https://python-social-auth.readthedocs.io/en/latest/backends/saml.html) and [Google](https://support.google.com/a/answer/6087519?hl=en). For more information please utilize these additional resources.
+    Please note that there is further guidance provided by [`python-social-auth`](https://python-social-auth.readthedocs.io/en/latest/backends/saml.html) and [Google](https://support.google.com/a/answer/6087519?hl=en). For more information please utilize these additional resources.
 
 #### Prerequisites
 

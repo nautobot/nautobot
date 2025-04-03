@@ -152,6 +152,7 @@ As of Nautobot 2.4.0, the current list of reserved names (not including low-leve
 | `description_first_line`  | [metadata property](#description)                       |
 | `deserialize_data`        | internal class method                                   |
 | `dryrun_default`          | [metadata property](#dryrun_default)                    |
+| `fail`                    | [helper method](#marking-a-job-as-failed)               |
 | `file_path`               | deprecated class property                               |
 | `field_order`             | [metadata property](#field_order)                       |
 | `grouping`                | [module metadata property](#module-metadata-attributes) |
@@ -249,8 +250,6 @@ A list of strings (field names) representing the order your Job [variables](#var
 
 #### `has_sensitive_variables`
 
-+++ 1.3.10
-
 Default: `True`
 
 Unless set to False, it prevents the Job's input parameters from being saved to the database. This defaults to True so as to protect against inadvertent database exposure of input parameters that may include sensitive data such as passwords or other user credentials. Review whether each Job's inputs contain any such variables before setting this to False; if a Job *does* contain sensitive inputs, if possible you should consider whether the Job could be re-implemented using Nautobot's [`Secrets`](../../user-guide/platform-functionality/secret.md) feature as a way to ensure that the sensitive data is not directly provided as a Job variable at all.
@@ -293,8 +292,6 @@ Important notes about singleton jobs:
 
 #### `read_only`
 
-+++ 1.1.0
-
 +/- 2.0.0 "No automatic functionality"
     The `read_only` flag no longer changes the behavior of Nautobot core and is up to the Job author to decide whether their Job should be considered read only.
 
@@ -303,8 +300,6 @@ Default: `False`
 A boolean that can be set by the Job author to indicate that the Job does not make any changes to the environment. What behavior makes each Job "read only" is up to the individual Job author to decide. Note that user input may still be optionally collected with read-only Jobs via Job variables, as described below.
 
 #### `soft_time_limit`
-
-+++ 1.3.0
 
 An int or float value, in seconds, which can be used to override the default [soft time limit](../../user-guide/administration/configuration/settings.md#celery_task_soft_time_limit) for a Job task to complete.
 
@@ -331,8 +326,6 @@ class ExampleJobWithSoftTimeLimit(Job):
 
 #### `task_queues`
 
-+++ 1.5.0
-
 Default: `[]`
 
 A list of Job Queue names that the Job can be routed to. An empty list will default to only allowing the user to select the [default Celery queue](../../user-guide/administration/configuration/settings.md#celery_task_default_queue) (`default` unless changed by an administrator). The queue specified in the Job's `default_job_queue` will be used if a queue is not specified in a Job run API call.
@@ -344,8 +337,6 @@ A list of Job Queue names that the Job can be routed to. An empty list will defa
     A worker must be listening on the requested queue or the Job will not run. See the documentation on [task queues](../../user-guide/administration/guides/celery-queues.md) for more information.
 
 #### `template_name`
-
-+++ 1.4.0
 
 A path relative to the Job source code containing a Django template which provides additional code to customize the Job's submission form. This template should extend the existing Job template, `extras/job.html`, otherwise the base form and functionality may not be available.
 
@@ -374,8 +365,6 @@ A template can provide additional JavaScript, CSS, or even display HTML. A good 
 For another example checkout [the template used in the Example App](https://github.com/nautobot/nautobot/blob/main/examples/example_app/example_app/templates/example_app/example_with_custom_template.html) in the GitHub repo.
 
 #### `time_limit`
-
-+++ 1.3.0
 
 An int or float value, in seconds, which can be used to override the
 default [hard time limit](../../user-guide/administration/configuration/settings.md#celery_task_time_limit) (10 minutes by default) for a Job task to complete.
@@ -605,7 +594,7 @@ As Jobs are Python classes, you are of course free to define any number of other
 
 The `before_start()` method may optionally be implemented to perform any appropriate Job-specific setup before the `run()` method is called. It has the signature `before_start(self, task_id, args, kwargs)` for historical reasons; the `task_id` parameter will always be identical to `self.request.id`, the `args` parameter will generally be empty, and any user-specified variables passed into the Job execution will be present in the `kwargs` parameter.
 
-The return value from `before_start()` is ignored, but if it raises any exception, the Job execution will be marked as a failure and `run()` will not be called.
+The return value from `before_start()` is ignored, but if it raises any exception, the Job result status will be marked as `FAILURE` and `run()` will not be called.
 
 #### The `run()` Method
 
@@ -631,7 +620,7 @@ Again, defining user variables is totally optional; you may create a Job with a 
 !!! warning "Be cautious around bulk operations"
     The Django ORM provides methods to create/edit many objects at once, namely `bulk_create()` and `update()`. These are best avoided in most cases as they bypass a model's built-in validation and can easily lead to database corruption if not used carefully.
 
-If `run()` returns any value (even the implicit `None`), the Job execution will be marked as a success and the returned value will be stored in the associated JobResult database record. Conversely, if `run()` raises any exception, the Job execution will be marked as a failure and the traceback will be stored in the JobResult.
+If `run()` returns any value (even the implicit `None`), the returned value will be stored in the associated JobResult database record. (The Job Result will be marked as `SUCCESS` unless the `fail()` method was called at some point during `run()`, in which case it will be marked as `FAILURE`.) Conversely, if `run()` raises any exception, the Job execution will be marked as `FAILURE` and the traceback will be stored in the JobResult.
 
 #### The `on_success()` Method
 
@@ -639,11 +628,11 @@ If both `before_start()` and `run()` are successful, the `on_success()` method w
 
 #### The `on_failure()` Method
 
-If either `before_start()` or `run()` raises any unhandled exception, the `on_failure()` method will be called next, if implemented. It has the signature `on_failure(self, exc, task_id, args, kwargs, einfo)`; of these parameters, the `exc` will contain the exception that was raised, and `kwargs` will contain the user-specified variables passed into the Job.
+If either `before_start()` or `run()` raises any unhandled exception, or reports a failure overall through `fail()`, the `on_failure()` method will be called next, if implemented. It has the signature `on_failure(self, exc, task_id, args, kwargs, einfo)`; of these parameters, the `exc` will contain the exception that was raised (if any) or the return value from `before_start()` or `run()` (otherwise), and `kwargs` will contain the user-specified variables passed into the Job.
 
 #### The `after_return()` Method
 
-Regardless of the overall Job execution success or failure, the `after_return()` method will be called after `on_success()` or `on_failure()`. It has the signature `after_return(self, status, retval, task_id, args, kwargs, einfo)`; the `status` will indicate success or failure (using the `JobResultStatusChoices` enum), `retval` is *either* the return value from `run()` (on success) or the exception raised (on failure), and once again `kwargs` contains the user variables.
+Regardless of the overall Job execution success or failure, the `after_return()` method will be called after `on_success()` or `on_failure()`. It has the signature `after_return(self, status, retval, task_id, args, kwargs, einfo)`; the `status` will indicate success or failure (using the `JobResultStatusChoices` enum), `retval` is *either* the return value from `run()` or the exception raised, and once again `kwargs` contains the user variables.
 
 ### Logging
 
@@ -661,29 +650,31 @@ The logger accepts an `extra` kwarg that you can optionally set for the followin
 
 If a `grouping` is not provided it will default to the function name that logged the message. The `object` will default to `None`.
 
+<!-- pyml disable-num-lines 10 proper-names -->
 !!! example
     ```py
     from nautobot.apps.jobs import Job
 
     class MyJob(Job):
         def run(self):
-            logger.info("This job is running!", extra={"grouping": "myjobisrunning", "object": self.job_result})
+            self.logger.info("This job is running!", extra={"grouping": "myjobisrunning", "object": self.job_result})
     ```
 
 To skip writing a log entry to the database, set the `skip_db_logging` key in the "extra" kwarg to `True` when calling the log function. The output will still be written to the console.
 
+<!-- pyml disable-num-lines 10 proper-names -->
 !!! example
     ```py
     from nautobot.apps.jobs import Job
 
     class MyJob(Job):
         def run(self):
-            logger.info("This job is running!", extra={"skip_db_logging": True})
+            self.logger.info("This job is running!", extra={"skip_db_logging": True})
     ```
 
 Markdown rendering is supported for log messages, as well as [a limited subset of HTML](../../user-guide/platform-functionality/template-filters.md#render_markdown).
 
-+/- 1.3.4 "Log entry sanitization"
+!!! warning
     As a security measure, the `message` passed to any of these methods will be passed through the `nautobot.core.utils.logging.sanitize()` function in an attempt to strip out information such as usernames/passwords that should not be saved to the logs. This is of course best-effort only, and Job authors should take pains to ensure that such information is not passed to the logging APIs in the first place. The set of redaction rules used by the `sanitize()` function can be configured as [`settings.SANITIZER_PATTERNS`](../../user-guide/administration/configuration/settings.md#sanitizer_patterns).
 
 +/- 2.0.0 "Significant API changes"
@@ -692,8 +683,11 @@ Markdown rendering is supported for log messages, as well as [a limited subset o
 +/- 2.0.0
     The `AbortTransaction` class was moved from the `nautobot.utilities.exceptions` module to `nautobot.core.exceptions`. Jobs should generally import it from `nautobot.apps.exceptions` if needed.
 
-+++ 2.4.0
-    You can now use `self.logger.success()` to set the log level to `SUCCESS`.
++++ 2.4.0 "`logger.success()` added"
+    You can now use `self.logger.success()` to log a message at the level `SUCCESS`, which is located between the standard `INFO` and `WARNING` log levels.
+
++++ 2.4.5 "`logger.failure()` added"
+    You can now use `self.logger.failure()` to log a message at the level `FAILURE`, which is located between the standard `WARNING` and `ERROR` log levels.
 
 ### File Output
 
@@ -716,20 +710,26 @@ The maximum size of any single created file (or in other words, the maximum numb
 
 ### Marking a Job as Failed
 
-To mark a Job as failed, raise an exception from within the `run()` method. The exception message will be logged to the traceback of the Job Result. The Job Result status will be set to `failed`. To output a Job log message you can use the `self.logger.error()` method.
+Any uncaught exception raised from within the `run()` method will abort the `run()` method immediately (as usual in Python), and will result in the Job Result status being marked as `FAILURE`. The exception message and traceback will be recorded in the Job Result.
 
-As an example, the following Job will fail if the user does not put the word "Taco" in `var1`:
+Alternatively, in Nautobot v2.4.5 and later, you can more "cleanly" fail a Job by calling `self.fail(...)` and then either returning immediately from the `run()` method or continuing with the execution of the Job, as desired. In this case, after the `run()` method completes, the Job Result status will be automatically marked as `FAILURE` and no exception or traceback will be recorded.
+
+As an example, the following Job will abort if the user does not put the word "Taco" in `occasion`, and fail (but not abort) if the variable does not additionally contain "Tuesday":
 
 ```python
 from nautobot.apps.jobs import Job, StringVar
 
 class MyJob(Job):
-    var1 = StringVar(...)
+    occasion = StringVar(...)
 
-    def run(self, var1):
-        if var1 != "Taco":
-            self.logger.error("var1 must be 'Taco'")
+    def run(self, occasion):
+        if not occasion.startswith("Taco"):
+            self.logger.failure("The occasion must begin with 'Taco'")
             raise Exception("Argument input validation failed.")
+        if not occasion.endswith(" Tuesday"):
+            self.fail("It's supposed to be Tuesday")
+        self.logger.info("Today is %s", occasion)
+        return occasion
 ```
 
 ### Accessing User and Job Result
@@ -760,10 +760,6 @@ Jobs are Python code and can be tested as such, usually via [Django unit-test fe
 
 While individual methods within your Job can and should be tested in isolation, you'll likely also want to test the entire execution of the Job.
 
-+++ 1.3.3
-    Entire Job execution testing was only introduced in 1.3.3 and newer.
-    However the import paths used in the examples requires 1.5.2 and newer.
-
 The simplest way to test the entire execution of Jobs is via calling the `nautobot.apps.testing.run_job_for_testing()` method, which is a helper wrapper around the `JobResult.enqueue_job` function used to execute a Job via Nautobot's Celery worker process.
 
 Because of the way `run_job_for_testing` and more specifically Celery tasks work, which is somewhat complex behind the scenes, you need to inherit from `nautobot.apps.testing.TransactionTestCase` instead of `django.test.TestCase` (Refer to the [Django documentation](https://docs.djangoproject.com/en/stable/topics/testing/tools/#provided-test-case-classes) if you're interested in the differences between these classes - `TransactionTestCase` from Nautobot is a small wrapper around Django's `TransactionTestCase`).
@@ -780,7 +776,7 @@ from nautobot.extras.models import Job, JobLogEntry
 class MyJobTestCase(TransactionTestCase):
     def test_my_job(self):
         # Testing of Job "MyJob" in file "my_job_file.py" in $JOBS_ROOT
-        job = Job.objects.get(job_class_name="MyJob", module_name="my_job_file", source="local")
+        job = Job.objects.get(job_class_name="MyJob", module_name="my_job_file")
         # or, job = Job.objects.get_for_class_path("local/my_job_file/MyJob")
         job_result = run_job_for_testing(job, var1="abc", var2=123)
 
@@ -790,12 +786,15 @@ class MyJobTestCase(TransactionTestCase):
             self.assertEqual(log_entry.message, "...")
 ```
 
+The test files should be placed under the `tests` folder in the app's directory or under JOBS_ROOT. The test can be run via `nautobot-server test [path to test in dotted directory format]` or `pytest [path to test in slash directory format]`.
+
+!!! tip
+    For running tests directly in the JOBS_ROOT, make sure the `JOBS_ROOT` environment variable is set.
+
 !!! tip
     For more advanced examples refer to the Nautobot source code, specifically `nautobot/extras/tests/test_jobs.py`.
 
 ## Debugging Job Performance
-
-+++ 1.5.17
 
 Debugging the performance of Nautobot Jobs can be tricky, because they are executed in the worker context. In order to gain extra visibility, [cProfile](https://docs.python.org/3/library/profile.html) can be used to profile the Job execution.
 

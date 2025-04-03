@@ -28,6 +28,7 @@ from nautobot.extras.models import (
     ComputedField,
     ContactAssociation,
     CustomField,
+    CustomFieldChoice,
     DynamicGroup,
     DynamicGroupMembership,
     GitRepository,
@@ -97,6 +98,19 @@ def invalidate_models_cache(sender, **kwargs):
             cache.delete_pattern(f"{manager.keys_for_model.cache_key_prefix}.*")
 
 
+@receiver(post_delete, sender=CustomField)
+@receiver(post_delete, sender=CustomFieldChoice)
+@receiver(post_save, sender=CustomFieldChoice)
+@receiver(post_save, sender=CustomField)
+def invalidate_choices_cache(sender, instance, **kwargs):
+    """Invalidate the choices cache for CustomFields."""
+    with contextlib.suppress(redis.exceptions.ConnectionError):
+        if sender is CustomField:
+            cache.delete(instance.choices_cache_key)
+        else:
+            cache.delete(instance.custom_field.choices_cache_key)
+
+
 @receiver(post_save, sender=Relationship)
 @receiver(m2m_changed, sender=Relationship)
 @receiver(post_delete, sender=Relationship)
@@ -109,6 +123,17 @@ def invalidate_relationship_models_cache(sender, **kwargs):
         with contextlib.suppress(redis.exceptions.ConnectionError):
             # TODO: *maybe* target more narrowly, e.g. only clear the cache for specific related content-types?
             cache.delete_pattern(f"{method.cache_key_prefix}.*")
+
+
+@receiver(post_save, sender=CustomField)
+@receiver(post_delete, sender=CustomField)
+@receiver(post_save, sender=Relationship)
+@receiver(m2m_changed, sender=Relationship)
+@receiver(post_delete, sender=Relationship)
+def invalidate_openapi_schema_cache(sender, **kwargs):
+    """Invalidate the openapi schema cache."""
+    with contextlib.suppress(redis.exceptions.ConnectionError):
+        cache.delete_pattern("openapi_schema_cache_*")
 
 
 @receiver(post_save)
@@ -376,7 +401,7 @@ def git_repository_pre_delete(instance, **kwargs):
         app.control.broadcast("discard_git_repository", repository_slug=instance.slug)
         # But we don't have an equivalent way to broadcast to any other Django instances.
         # For now we just delete the one that we have locally and rely on other methods,
-        # such as the import_jobs() signal that runs on server startup,
+        # such as the import_jobs() signal that runs on post migrate,
         # to clean up other clones as they're encountered.
         if os.path.isdir(instance.filesystem_path):
             shutil.rmtree(instance.filesystem_path)

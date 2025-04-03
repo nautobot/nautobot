@@ -9,7 +9,7 @@ Like other Nautobot features, it is possible to create, read, update, and delete
 
 ## Supported Providers
 
-The feature uses the concept of a `provides` field to identify the provided data types and therefore map a repository to a use case. A list of the supported options is provided below.
+This feature uses the concept of a `provides` field to identify the provided data types and therefore map a repository to a use case. A list of the supported options is provided below.
 
 ### Core Functionality
 
@@ -298,7 +298,7 @@ graphql_queries
 
 ## Additional Git Data Sources
 
-As seen in [Fill out Repository Details](#fill-out-repository-details), the standard installation of Nautobot will come natively with export templates, jobs, and config contexts.  Additional data sources can be incorporated using the Nautobot App system.  For example, the [nautobot-golden-config](https://github.com/nautobot/nautobot-app-golden-config) App implements four additional data sources.
+As seen in [Fill out Repository Details](#fill-out-repository-details), the standard installation of Nautobot will come natively with export templates, jobs, and config contexts.  Additional data sources can be incorporated using the Nautobot App system.  For example, the [Golden Configuration](https://github.com/nautobot/nautobot-app-golden-config) App implements four additional data sources.
 
 - Config Contexts
 - Backup Configs

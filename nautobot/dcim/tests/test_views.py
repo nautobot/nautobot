@@ -161,7 +161,7 @@ def create_test_device(name):
     return device
 
 
-class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = LocationType
     sort_on_field = "nestable"
 
@@ -192,6 +192,13 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
                 ContentType.objects.get_for_model(Device).pk,
             ],
             "nestable": True,
+        }
+
+        cls.bulk_edit_data = {
+            "description": "A generic description",
+            "add_content_types": [
+                ContentType.objects.get_for_model(CircuitTermination).pk,
+            ],
         }
 
     def _get_queryset(self):
@@ -743,6 +750,7 @@ class DeviceFamilyTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.form_data = {
             "name": "New Device Family",
             "description": "A new device family",
+            "tags": [t.pk for t in Tag.objects.get_for_model(DeviceFamily)],
         }
         cls.bulk_edit_data = {
             "description": "A new device family",
@@ -4571,6 +4579,7 @@ class SoftwareImageFileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         device_types = DeviceType.objects.all()[:2]
         statuses = Status.objects.get_for_model(SoftwareImageFile)
         software_versions = SoftwareVersion.objects.all()
+        external_integration = ExternalIntegration.objects.first()
 
         cls.form_data = {
             "software_version": software_versions[0].pk,
@@ -4580,6 +4589,7 @@ class SoftwareImageFileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "image_file_size": 1234567890,
             "hashing_algorithm": SoftwareImageFileHashingAlgorithmChoices.SHA512,
             "download_url": "https://example.com/software_image_file_test_case.bin",
+            "external_integration": external_integration.pk,
             "device_types": [device_types[0].pk, device_types[1].pk],
         }
 
@@ -4590,6 +4600,7 @@ class SoftwareImageFileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "hashing_algorithm": SoftwareImageFileHashingAlgorithmChoices.SHA512,
             "image_file_size": 1234567890,
             "download_url": "https://example.com/software_image_file_test_case.bin",
+            "external_integration": external_integration.pk,
         }
 
 

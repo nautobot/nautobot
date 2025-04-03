@@ -7,7 +7,7 @@
             <span class="pull-right" title="{{ result.date_created }}">{% include 'extras/inc/job_label.html' %}</span>
             <br>
             <small>
-                <span class="text-muted">{{ result.user }} - {{ result.date_done|date:'SHORT_DATETIME_FORMAT' }}</span>
+                <span class="text-muted">{{ result.user }} - {{ result.date_done|date:settings.SHORT_DATETIME_FORMAT }}</span>
             </small>
         </div>
         {% if forloop.last %}

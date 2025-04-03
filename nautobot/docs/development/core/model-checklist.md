@@ -137,7 +137,7 @@ Most new models should use the `custom_links`, `custom_validators`, `export_temp
     - Add field testing in `test_views.<Model>TestCase`
     - _optional_ Add field testing in `test_forms.<Model>TestCase` if applicable
 - Validate that the field appears correctly in GraphQL
-    - If the field is not compatible with GraphQL or shouldn't be included in GraphQL it's possible to exclude a specific field in the GraphQL Type Object associated with this specific model. You can refer to the [graphene-django documentation](https://docs.graphene-python.org/projects/django/en/latest/queries/#specifying-which-fields-to-include) for additional information.
+    - If the field is not compatible with GraphQL or shouldn't be included in GraphQL it's possible to exclude a specific field in the GraphQL Type Object associated with this specific model. You can refer to the [`graphene-django` documentation](https://docs.graphene-python.org/projects/django/en/latest/queries/#specifying-which-fields-to-include) for additional information.
 - Add field to model documentation with an appropriate version annotation
 - _optional_ Add field to `<Model>Serializer` if default representation isn't optimal
 - _optional_ Add field to `<Model>Serializer.fields` if it's not using `fields = ["__all__"]`

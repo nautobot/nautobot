@@ -9,7 +9,7 @@ By defining an object with the same identifier, a developer can modify existing 
 A tab object is being created with the same identifier as an existing object using the `name` attribute. Then a group is being created with a weight of `150`, which means it will appear between the already defined `Circuits` and `Provider` groups.
 
 !!! tip
-    Weights for already existing items can be found in the nautobot source code (in `navigation.py`) or with a web session open to your nautobot instance, you can inspect an element of the navbar using the developer tools. Each type of element will have an attribute `data-{type}-weight`. The type can be `tab`, `group`, `item` or `button`.
+    Weights for already existing items can be found in the Nautobot source code (in `navigation.py`) or with a web session open to your Nautobot instance, you can inspect an element of the navbar using the developer tools. Each type of element will have an attribute `data-{type}-weight`. The type can be `tab`, `group`, `item` or `button`.
 
 This pattern works for modifying all objects in the tree. New items can be added to existing groups and new buttons can be added to existing items.
 

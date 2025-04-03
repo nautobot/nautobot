@@ -76,7 +76,7 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 ### Security in v1.6.29
 
 - [#5911](https://github.com/nautobot/nautobot/issues/5911) - Updated `zipp` to `3.19.2` to address `CVE-2024-5569`. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
-- [#6625](https://github.com/nautobot/nautobot/issues/6625) - Patched `set_values()` method of Query class from django.db.models.sql.query to address `CVE-2024-42005`.
+- [#6625](https://github.com/nautobot/nautobot/issues/6625) - Patched `set_values()` method of `Query` class from `django.db.models.sql.query` to address `CVE-2024-42005`.
 
 ### Fixed in v1.6.29
 
@@ -311,7 +311,7 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 
 ### Added in v1.6.11
 
-- [#5169](https://github.com/nautobot/nautobot/issues/5169) - Added support for user session profiling via django-silk.
+- [#5169](https://github.com/nautobot/nautobot/issues/5169) - Added support for user session profiling via `django-silk`.
 
 ### Fixed in v1.6.11
 
@@ -551,8 +551,8 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 
 ### Dependencies in v1.6.0
 
-- [#4208](https://github.com/nautobot/nautobot/issues/4208) - Updated django-rq to 2.8.1.
-- [#4209](https://github.com/nautobot/nautobot/issues/4209) - Relaxed constraint on prometheus-client minimum version to `0.14.1`.
+- [#4208](https://github.com/nautobot/nautobot/issues/4208) - Updated `django-rq` to 2.8.1.
+- [#4209](https://github.com/nautobot/nautobot/issues/4209) - Relaxed constraint on `prometheus-client` minimum version to `0.14.1`.
 - [#4173](https://github.com/nautobot/nautobot/issues/4173) - Updated `drf-spectacular` to `0.26.4`.
 - [#4199](https://github.com/nautobot/nautobot/issues/4199) - Updated `cryptography` to `~41.0.3`. As this is not a direct dependency of Nautobot, it will not auto-update when upgrading. Please be sure to upgrade your local environment.
 - [#4215](https://github.com/nautobot/nautobot/issues/4215) - Broadened the range of acceptable `packaging` dependency versions.

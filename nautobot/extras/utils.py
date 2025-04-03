@@ -6,6 +6,7 @@ import hmac
 import logging
 import re
 import sys
+from typing import Optional
 
 from django.apps import apps
 from django.conf import settings
@@ -13,7 +14,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.validators import ValidationError
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Model, Q
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
 import kubernetes.client
@@ -21,9 +22,12 @@ import redis.exceptions
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import find_models_with_matching_fields
 from nautobot.core.utils.data import is_uuid
+from nautobot.core.utils.lookup import get_filterset_for_model, get_model_for_view_name
+from nautobot.core.utils.requests import is_single_choice_field
 from nautobot.extras.choices import DynamicGroupTypeChoices, JobQueueTypeChoices, ObjectChangeActionChoices
 from nautobot.extras.constants import (
     CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL,
@@ -36,16 +40,24 @@ from nautobot.extras.registry import registry
 logger = logging.getLogger(__name__)
 
 
-def get_base_template(base_template, model):
+def get_base_template(base_template: Optional[str], model: type[Model]) -> str:
     """
-    Returns the name of the base template, if the base_template is not None
-    Otherwise, default to using "<app>/<model>.html" as the base template, if it exists.
-    Otherwise, check if "<app>/<model>_retrieve.html" used in `NautobotUIViewSet` exists.
-    If both templates do not exist, fall back to "base.html".
+    Attempt to locate the correct base template for an object detail view and related views, if one was not specified.
+
+    Args:
+        base_template (str, optional): If not None, this explicitly specified template will be preferred.
+        model (Model): The model to identify a base template for, if base_template is None.
+
+    Returns the specified `base_template`, if not `None`.
+    Otherwise, if `"<app>/<model_name>.html"` exists (legacy ObjectView pattern), returns that string.
+    Otherwise, if `"<app>/<model_name>_retrieve.html"` exists (as used in `NautobotUIViewSet`), returns that string.
+    If all else fails, returns `"generic/object_retrieve.html"`.
+
+    Note: before Nautobot 2.4.2, this API would default to "base.html" rather than "generic/object_retrieve.html".
+    This behavior was changed to the current behavior to address issue #6550 and similar incorrect behavior.
     """
     if base_template is None:
         base_template = f"{model._meta.app_label}/{model._meta.model_name}.html"
-        # 2.0 TODO(Hanlin): This can be removed once an object view has been established for every model.
         try:
             get_template(base_template)
         except TemplateDoesNotExist:
@@ -53,7 +65,7 @@ def get_base_template(base_template, model):
             try:
                 get_template(base_template)
             except TemplateDoesNotExist:
-                base_template = "base.html"
+                base_template = "generic/object_retrieve.html"
     return base_template
 
 
@@ -871,3 +883,30 @@ def bulk_delete_with_bulk_change_logging(qs, batch_size=1000):
         finally:
             change_context.defer_object_changes = False
             change_context.reset_deferred_object_changes()
+
+
+def fixup_filterset_query_params(param_dict, view_name, non_filter_params):
+    """
+    Called before saving query filter parameters to a SavedView's config. This function will format
+    single value query parameters to be saved as a single values instead of lists of singles values.
+
+    Args:
+        param_dict (dict): key-value pairs of query parameters.
+        view_name (str): The name of the view that the saved view is associated with. "dcim:location_list" for example.
+        non_filter_params (list): List of non-query parameters that should not be formatted.
+    """
+    model = get_model_for_view_name(view_name)
+    try:
+        filterset_class = get_filterset_for_model(model)
+    except TypeError:
+        return param_dict
+
+    filterset = filterset_class()
+
+    for filter_field, value in param_dict.items():
+        try:
+            if filter_field not in non_filter_params and is_single_choice_field(filterset, filter_field):
+                param_dict[filter_field] = value[0]
+        except FilterSetFieldNotFound:
+            pass
+    return param_dict

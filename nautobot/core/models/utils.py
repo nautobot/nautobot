@@ -112,7 +112,12 @@ def serialize_object(obj, extra=None, exclude=None):
 
     # Include any tags. Check for tags cached on the instance; fall back to using the manager.
     if is_taggable(obj):
-        tags = getattr(obj, "_tags", []) or obj.tags.all()
+        # Note that when upgrading from Nautobot 1.x to 2.0, this method may be called during data migrations,
+        # specifically ipam_0022 and dcim_0034, to create ObjectChange records.
+        # This can be problematic (see issue #6952) as the Tag records in the DB still have `created` as a `DateField`,
+        # but the 2.x code expects this to be a `DateTimeField` (as it will be after the upgrade completes in full).
+        # We "cleverly" bypass that issue by using `.only("name")` since that's the only actual Tag field we need here.
+        tags = getattr(obj, "_tags", []) or obj.tags.only("name")
         data["tags"] = [tag.name for tag in tags]
 
     # Append any extra data

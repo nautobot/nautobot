@@ -23,6 +23,12 @@
             {% endif %}
         </div>
     </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>VRF Assignments</strong></div>
+        <div class="panel-body">
+            {% render_field form.vrfs %}
+        </div>
+    </div>
     {% include 'inc/tenancy_form_panel.html' %}
     {% include 'inc/extras_features_edit_form_fields.html' %}
 {% endblock %}

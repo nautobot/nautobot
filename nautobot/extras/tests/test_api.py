@@ -196,20 +196,6 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
 
 class ConfigContextTest(APIViewTestCases.APIViewTestCase):
     model = ConfigContext
-    create_data = [
-        {
-            "name": "Config Context 4",
-            "data": {"more_foo": True},
-        },
-        {
-            "name": "Config Context 5",
-            "data": {"more_bar": False},
-        },
-        {
-            "name": "Config Context 6",
-            "data": {"more_baz": None},
-        },
-    ]
     bulk_update_data = {
         "description": "New description",
     }
@@ -220,6 +206,21 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         ConfigContext.objects.create(name="Config Context 1", weight=100, data={"foo": 123})
         ConfigContext.objects.create(name="Config Context 2", weight=200, data={"bar": 456})
         ConfigContext.objects.create(name="Config Context 3", weight=300, data={"baz": 789})
+        cls.create_data = [
+            {
+                "name": "Config Context 4",
+                "data": {"more_foo": True},
+                "tags": [tag.pk for tag in Tag.objects.get_for_model(Device)],
+            },
+            {
+                "name": "Config Context 5",
+                "data": {"more_bar": False},
+            },
+            {
+                "name": "Config Context 6",
+                "data": {"more_baz": None},
+            },
+        ]
 
     def test_render_configcontext_for_object(self):
         """
@@ -291,7 +292,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         schema = ConfigContextSchema.objects.create(
             name="Schema 1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
         )
-        self.add_permissions("extras.add_configcontext")
+        self.add_permissions("extras.add_configcontext", "extras.view_configcontextschema")
 
         data = {
             "name": "Config Context with schema",
@@ -1207,6 +1208,10 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
         response = self.client.post(url, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIn("message", response.data)
+        self.assertIn("job_result", response.data)
+        self.assertEqual(response.data["message"], f"Repository {self.repos[0].name} sync job added to queue.")
+        self.assertIsInstance(response.data["job_result"], dict)
 
     def test_create_with_app_provided_contents(self):
         """Test that `provided_contents` published by an App works."""
@@ -1793,7 +1798,7 @@ class JobTest(
         )
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertIn(
-            "task_queue and job_queue are both specified. Please specifiy only one or another.", str(response.content)
+            "task_queue and job_queue are both specified. Please specify only one or another.", str(response.content)
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1912,7 +1917,7 @@ class JobTest(
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
 
-        job_model = Job.objects.get(job_class_name="ExampleJob")
+        job_model = Job.objects.get(job_class_name="TestHasSensitiveVariables")
         job_model.enabled = True
         job_model.validated_save()
 
@@ -2243,7 +2248,7 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
             "type_delete": True,
         }
 
-        self.add_permissions("extras.add_jobhook")
+        self.add_permissions("extras.add_jobhook", "extras.view_job")
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertContains(
             response,
@@ -2259,7 +2264,7 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
             "type_delete": True,
         }
 
-        self.add_permissions("extras.change_jobhook")
+        self.add_permissions("extras.change_jobhook", "extras.view_job")
         job_hook2 = JobHook.objects.get(name="JobHook2")
         response = self.client.patch(self._get_detail_url(job_hook2), data, format="json", **self.header)
         self.assertContains(
@@ -2548,7 +2553,7 @@ class UserSavedViewAssociationTest(APIViewTestCases.APIViewTestCase):
             "saved_view": saved_view.pk,
             "view_name": duplicate_view_name,
         }
-        self.add_permissions("extras.add_usersavedviewassociation")
+        self.add_permissions("extras.add_usersavedviewassociation", "users.view_user", "extras.view_savedview")
         response = self.client.post(
             self._get_list_url(), duplicate_user_to_savedview_create_data, format="json", **self.header
         )
@@ -3235,7 +3240,15 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
             location=existing_location_2,
         )
 
-        self.add_permissions("dcim.view_location", "dcim.add_location", "extras.add_relationshipassociation")
+        self.add_permissions(
+            "dcim.view_location",
+            "dcim.view_locationtype",
+            "dcim.view_device",
+            "dcim.add_location",
+            "extras.view_relationship",
+            "extras.add_relationshipassociation",
+            "extras.view_status",
+        )
         response = self.client.post(
             reverse("dcim-api:location-list"),
             data={
@@ -3559,7 +3572,9 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
             ),
         ]
 
-        self.add_permissions("extras.add_relationshipassociation")
+        self.add_permissions(
+            "extras.add_relationshipassociation", "dcim.view_device", "dcim.view_location", "extras.view_relationship"
+        )
 
         for side, field_error_name, data in associations:
             response = self.client.post(self._get_list_url(), data, format="json", **self.header)
@@ -3580,7 +3595,9 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
             "destination_id": self.devices[2].pk,
         }
 
-        self.add_permissions("extras.add_relationshipassociation")
+        self.add_permissions(
+            "extras.add_relationshipassociation", "extras.view_relationship", "dcim.view_device", "dcim.view_location"
+        )
 
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
@@ -3631,8 +3648,11 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         Check that relationship-associations can be updated via the 'relationships' field.
         """
         self.add_permissions(
+            "dcim.view_device",
             "dcim.view_location",
             "dcim.change_location",
+            "extras.view_relationship",
+            "extras.view_relationshipassociation",
             "extras.add_relationshipassociation",
             "extras.delete_relationshipassociation",
         )

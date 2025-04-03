@@ -880,6 +880,8 @@ class JobFilterSetTestCase(FilterTestCases.FilterTestCase):
     generic_filter_tests = (
         ("grouping",),
         ("job_class_name",),
+        ("job_queues", "job_queues__id"),
+        ("job_queues", "job_queues__name"),
         ("module_name",),
         ("name",),
     )

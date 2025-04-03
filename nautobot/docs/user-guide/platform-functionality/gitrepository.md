@@ -10,9 +10,6 @@ Some text-based content is more conveniently stored in a separate Git repository
 !!! important
     Nautobot's Git integration depends on the availability of the `git` program. If `git` is not installed, Nautobot will be unable to pull data from Git repositories.
 
-+/- 1.6.2
-    To proactively avoid conflicts in data, it is no longer possible to configure multiple Git repository entries that both have the same `remote_url` and also provide the same data type(s). Configuration of multiple entries with the same `remote_url` is still permitted if they are configured to provide entirely distinct types of data.
-
 ## Repository Configuration
 
 When defining a Git repository for Nautobot to consume, the `name`, `remote URL`, and `branch` parameters are mandatory - the name acts as a unique identifier, and the remote URL and branch are needed for Nautobot to be able to locate and access the specified repository. Additionally, if the repository is private you may specify a `secrets group` that can be used to gain access to the repository.
@@ -62,9 +59,6 @@ Config contexts may be provided as JSON or YAML files located in `/config_contex
 * **Explicit**: Defined as JSON or YAML files at the root of the `/config_contexts/` folder. Multiple config contexts can be specified within the each file. The metadata regarding the naming and scoping of the config context is determined by the `_metadata` key for each list element.
 * **Implicit**: They're defined using a specific folder and file structure to apply the config context to a specific scope.
 * **Local**: Defined at the device/virtual machine level and only being applied to the specific device/virtual machine.
-
-+++ 1.5.6
-    Config contexts provided in a Git repository can now be filtered by `locations` in addition to all previously supported filters.
 
 #### Metadata
 
@@ -437,14 +431,50 @@ curl -s -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
 -H "Accept: application/json; version=2.4" \
-http://nautobot/api/extras/git-repositories/2ecb8556-db58-466d-8278-860b8fd74627/sync/
+http://nautobot/api/extras/git-repositories/2ecb8556-db58-466d-8278-860b8fd74627/sync/ | jq '.'
 ```
 
 Which returns, for example:
 
 ```no-highlight
 {
-  "message": "Repository demo-git-datasource sync job added to queue."
+  "message": "Repository demo-git-datasource sync job added to queue.",
+  "job_result": {
+    "id": "68500ca5-27c3-488c-a24a-e98858bf52a1",
+    "object_type": "extras.jobresult",
+    "display": "Git Repository: Sync started at 2025-01-30 19:35:14.120625+00:00 (PENDING)",
+    "url": "http://nautobot/api/extras/job-results/68500ca5-27c3-488c-a24a-e98858bf52a1/",
+    "natural_slug": "68500ca5-27c3-488c-a24a-e98858bf52a1_6850",
+    "status": {
+      "value": "PENDING",
+      "label": "PENDING"
+    },
+    "name": "Git Repository: Sync",
+    "task_name": null,
+    "date_created": "2025-01-30T19:35:14.120625Z",
+    "date_done": null,
+    "result": null,
+    "worker": null,
+    "task_args": [],
+    "task_kwargs": {},
+    "celery_kwargs": {},
+    "traceback": null,
+    "meta": null,
+    "job_model": {
+      "id": "ad2b27c8-adf0-4e23-a4d3-a37fe3c42abd",
+      "object_type": "extras.job",
+      "url": "http://nautobot/api/extras/jobs/ad2b27c8-adf0-4e23-a4d3-a37fe3c42abd/"
+    },
+    "user": {
+      "id": "569138fe-f0b9-4abf-9812-c85a7ec73bbd",
+      "object_type": "users.user",
+      "url": "http://nautobot/api/users/users/569138fe-f0b9-4abf-9812-c85a7ec73bbd/"
+    },
+    "scheduled_job": null,
+    "custom_fields": {},
+    "computed_fields": {},
+    "files": []
+  }
 }
 ```
 
@@ -457,7 +487,7 @@ curl -s -X GET \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
 -H "Accept: application/json; version=2.4" \
-http://nautobot/api/extras/jobs/?module_name__isw=demo_git_datasource. | jq .
+http://nautobot/api/extras/jobs/?module_name__isw=demo_git_datasource. | jq '.'
 ```
 
 Here are the first 20 lines of JSON returned:
@@ -527,7 +557,7 @@ curl -s -X GET \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
 -H "Accept: application/json; version=2.4" \
-http://nautobot/api/extras/config-contexts/?owner_object_id=2ecb8556-db58-466d-8278-860b8fd74627 | jq .
+http://nautobot/api/extras/config-contexts/?owner_object_id=2ecb8556-db58-466d-8278-860b8fd74627 | jq '.'
 ```
 
 Here's the first part of the output:

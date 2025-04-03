@@ -5,7 +5,7 @@ The instructions below detail the process for installing and enabling a Nautobot
 You must be **absolutely** sure to install the app within Nautobot's virtual environment.
 
 !!! note
-    If you installed Nautobot in a production environment, you'll want to sudo to the nautobot user first using `sudo -iu nautobot`.
+    If you installed Nautobot in a production environment, you'll want to sudo to the `nautobot` user first using `sudo -iu nautobot`.
 
 ## Install the Package
 

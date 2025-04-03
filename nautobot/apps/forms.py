@@ -53,6 +53,7 @@ from nautobot.core.forms.utils import (
 from nautobot.core.forms.widgets import (
     APISelect,
     APISelectMultiple,
+    AutoPopulateWidget,
     BulkEditNullBooleanSelect,
     ColorSelect,
     ContentTypeSelect,
@@ -102,6 +103,7 @@ __all__ = (
     "APISelect",
     "APISelectMultiple",
     "AddressFieldMixin",
+    "AutoPopulateWidget",
     "BootstrapMixin",
     "BulkEditForm",
     "BulkEditNullBooleanSelect",

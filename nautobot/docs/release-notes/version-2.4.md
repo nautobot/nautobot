@@ -76,6 +76,21 @@ Jobs can now log `success` messages as a new logging level which will be appropr
 self.logger.success("All data is valid.")
 ```
 
++++ 2.4.5
+
+In Nautobot v2.4.5 and later, Jobs can now log `failure` messages as well:
+
+```python
+self.logger.failure("Something went wrong.")
+```
+
+In Nautobot v2.4.5 and later, Jobs can also mark their result as failed without raising an uncaught exception by calling the new `Job.fail(message)` API:
+
+```python
+self.fail("Something went wrong, and we'll fail in the end, but we can continue for now.")
+self.logger.info("Continuing...")
+```
+
 #### Kubernetes Job Execution and Job Queue Data Model (Experimental)
 
 *Please note that this functionality is considered Experimental in the v2.4.0 release and is subject to change in the future.*
@@ -145,11 +160,275 @@ With the introduction of the UI Component Framework (described [above](#ui-compo
 
 #### Removed Python 3.8 Support
 
-As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python 3.9. Note that existing installs using Python 3.8 will need to upgrade their Python version prior to initiating the Nautobot v2.4 upgrade.
+As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python 3.9, and Nautobot 2.4.6 and later specifically require a minimum of Python 3.9.2. Note that existing installs using older Python versions will need to upgrade their Python version prior to initiating the Nautobot v2.4 upgrade.
 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 
 <!-- towncrier release notes start -->
+
+## v2.4.6 (2025-03-31)
+
+### Security in v2.4.6
+
+- [#7039](https://github.com/nautobot/nautobot/issues/7039) - Updated `cryptography` to `44.0.2` to address `CVE-2024-12797`.
+
+### Added in v2.4.6
+
+- [#4181](https://github.com/nautobot/nautobot/issues/4181) - Added `last_updated` column to Note table.
+- [#4181](https://github.com/nautobot/nautobot/issues/4181) - Added display for number of notes attached to each object on the Notes tab header in Object Detail View.
+- [#5780](https://github.com/nautobot/nautobot/issues/5780) - Added object permission enforcement to related objects when modifying records through the REST API.
+- [#6957](https://github.com/nautobot/nautobot/issues/6957) - Added optional `display_field` parameter to `LinkedCountColumn`.
+- [#7003](https://github.com/nautobot/nautobot/issues/7003) - Added `external_integration` foreign key field to `SoftwareImageFile` model, which allows the enrichment of file data to include download options, secrets, etc.
+- [#7041](https://github.com/nautobot/nautobot/issues/7041) - Added bulk-edit support for the ClusterType model.
+- [#7044](https://github.com/nautobot/nautobot/issues/7044) - Added bulk-edit support for the ClusterGroup model.
+- [#7088](https://github.com/nautobot/nautobot/issues/7088) - Added support for removing content types in Status bulk-edit and Role bulk-edit.
+- [#7091](https://github.com/nautobot/nautobot/issues/7091) - Added Nautobot DNS Models app to the Apps Marketplace.
+
+### Changed in v2.4.6
+
+- [#4181](https://github.com/nautobot/nautobot/issues/4181) - Changed the default column ordering of Note table.
+- [#6379](https://github.com/nautobot/nautobot/issues/6379) - Changed `SoftwareImageFile.download_url` to allow additional URI Schemas, such as `sftp://`, `tftp://`.
+- [#6957](https://github.com/nautobot/nautobot/issues/6957) - Changed "Locations" column in Prefix table to show `location.name` instead of `location.display` to avoid verbose location hierarchy in tables.
+
+### Fixed in v2.4.6
+
+- [#6902](https://github.com/nautobot/nautobot/issues/6902) - Fixed bug with formatting date in templates.
+- [#6962](https://github.com/nautobot/nautobot/issues/6962) - Fixed a Validation error with empty ports field in Service Bulk Edit Form.
+- [#6987](https://github.com/nautobot/nautobot/issues/6987) - Improved speed of IPAM 1.x-to-2.x data migration `0031_ipam___data_migrations` by about 20% when working with large data sets.
+- [#7088](https://github.com/nautobot/nautobot/issues/7088) - Fixed bulk assignment and bulk removal of content types.
+- [#7092](https://github.com/nautobot/nautobot/issues/7092) - Added graceful handling for route-lookup errors when constructing a DynamicModelChoiceField or a DynamicModelMultipleChoiceField.
+
+### Dependencies in v2.4.6
+
+- [#6993](https://github.com/nautobot/nautobot/issues/6993) - Update dependency `kubernetes` to `^32.0.1`.
+- [#6993](https://github.com/nautobot/nautobot/issues/6993) - Update dependency `nh3` to `~0.2.21`.
+- [#7019](https://github.com/nautobot/nautobot/issues/7019) - Added `cryptography` as a directly specified dependency of Nautobot to make it easier to protect against various security issues in older versions of `cryptography`.
+- [#7019](https://github.com/nautobot/nautobot/issues/7019) - Removed support for Python 3.9.0 and 3.9.1 due to dependencies such as `cryptography` requiring newer Python versions.
+
+### Documentation in v2.4.6
+
+- [#6944](https://github.com/nautobot/nautobot/issues/6944) - Updated the "Installation" section of the documentation to more clearly describe the various deployment approaches recommended for Nautobot and their respective pros and cons.
+- [#6995](https://github.com/nautobot/nautobot/issues/6995) - Added content to User Guide `index.md` to give overview of options in the documentation of the guide.
+- [#7014](https://github.com/nautobot/nautobot/issues/7014) - Added "Recipe" section to permissions documentation with an "Export" example.
+- [#7020](https://github.com/nautobot/nautobot/issues/7020) - Improving issues found in various User Guide Getting Started typos and unclear references.
+- [#7030](https://github.com/nautobot/nautobot/issues/7030) - Improved Nautobot Webhooks documentation with additional context and examples.
+- [#7051](https://github.com/nautobot/nautobot/issues/7051) - Clarified developer "best practices" documentation regarding base classes for forms in Nautobot.
+
+### Housekeeping in v2.4.6
+
+- [#6962](https://github.com/nautobot/nautobot/issues/6962) - Refactored Service model related UI views to use `NautobotUIViewSet` and `UI component framework`.
+- [#6970](https://github.com/nautobot/nautobot/issues/6970) - Added selenium helper. Fixed selenium VNC port bug.
+- [#6987](https://github.com/nautobot/nautobot/issues/6987) - Added `django-test-migrations` as a testing dependency.
+- [#6987](https://github.com/nautobot/nautobot/issues/6987) - Added `nautobot.ipam.tests.test_migrations.IPAMDataMigration0031TestCase` that can be run to reproducibly test IPAM data migration `0031_ipam___data_migrations` for correctness and performance.
+- [#6987](https://github.com/nautobot/nautobot/issues/6987) - Renamed `invoke tests` task to `invoke lint` and renamed `invoke unittest` task to `invoke tests`.
+- [#6987](https://github.com/nautobot/nautobot/issues/6987) - Changed `invoke tests` task to default to _not_ measuring and reporting code coverage by default, since doing so slows test performance.
+- [#6987](https://github.com/nautobot/nautobot/issues/6987) - Removed `django-slowtests` as a development dependency and removed associated test-performance-measuring functionality.
+- [#6987](https://github.com/nautobot/nautobot/issues/6987) - Removed distinct `invoke integration-test`, `invoke performance-test`, and `invoke unittest-coverage` tasks; integration tests should now be run with `invoke tests --tag integration` and test coverage is reported when running `invoke tests --coverage`.
+- [#6987](https://github.com/nautobot/nautobot/issues/6987) - Refactored `nautobot.ipam.tests.test_migrations.AggregateToPrefixMigrationTestCase` to use `django-test-migrations` and be runnable.
+- [#7013](https://github.com/nautobot/nautobot/issues/7013) - Refactored Namespace model related UI views to use `UI component framework`.
+- [#7017](https://github.com/nautobot/nautobot/issues/7017) - Fixed conflicts between factory data and bespoke test data involving VRF assignments to Virtual Device Contexts.
+- [#7017](https://github.com/nautobot/nautobot/issues/7017) - Fixed state leakage from custom-validation test cases potentially causing failures of other test cases.
+- [#7037](https://github.com/nautobot/nautobot/issues/7037) - Adds github action linter to CI.
+- [#7041](https://github.com/nautobot/nautobot/issues/7041) - Refactored ClusterType model related UI views to use `NautobotUIViewSet` and `UI component framework`.
+- [#7044](https://github.com/nautobot/nautobot/issues/7044) - Refactored ClusterGroup model related UI views to use `NautobotUIViewSet` and `UI component framework`.
+- [#7055](https://github.com/nautobot/nautobot/issues/7055) - Updated development dependencies `pylint` to `~3.3.6` and `pymarkdownlnt` to `~0.9.29`.
+- [#7064](https://github.com/nautobot/nautobot/issues/7064) - Updated CI to use Poetry 1.8.5.
+- [#7064](https://github.com/nautobot/nautobot/issues/7064) - Updated "upstream testing" CI to use Python 3.11.
+- [#7071](https://github.com/nautobot/nautobot/issues/7071) - Refactored Status model related UI views to use `NautobotUIViewSet` and `UI component framework`.
+
+## v2.4.5 (2025-03-10)
+
+### Security in v2.4.5
+
+- [#6983](https://github.com/nautobot/nautobot/issues/6983) - Updated dependency `Jinja2` to `~3.1.6` to address `CVE-2025-27516`.
+- [#7000](https://github.com/nautobot/nautobot/issues/7000) - Updated dependency `Django` to `~4.2.20` to address `CVE-2025-26699`.
+
+### Added in v2.4.5
+
+- [#6384](https://github.com/nautobot/nautobot/issues/6384) - Added `Job.logger.failure()` API for Job logging, using custom `FAILURE` log level (between `WARNING` and `ERROR`).
+- [#6384](https://github.com/nautobot/nautobot/issues/6384) - Added `Job.fail()` API, which can be used to fail a Job more gracefully than by raising an uncaught exception.
+- [#6384](https://github.com/nautobot/nautobot/issues/6384) - Added `NautobotTestCaseMixin.assertJobResultStatus()` testing helper API.
+- [#7001](https://github.com/nautobot/nautobot/issues/7001) - Added bulk-edit support for the RIR model.
+
+### Changed in v2.4.5
+
+- [#6384](https://github.com/nautobot/nautobot/issues/6384) - Changed output of `nautobot-server runjob` command to include the traceback (if any) and count of `success`/`failure` log messages.
+
+### Removed in v2.4.5
+
+- [#6384](https://github.com/nautobot/nautobot/issues/6384) - Removed the (undocumented) requirement for Jobs that implement a custom `before_start()` or `after_return()` method to call `super()` for the Job to execute successfully.
+
+### Fixed in v2.4.5
+
+- [#6384](https://github.com/nautobot/nautobot/issues/6384) - Fixed rendering of "actions" column in the JobResult table view.
+- [#6384](https://github.com/nautobot/nautobot/issues/6384) - Fixed incorrect `stacklevel` default value in Job `logger.success()` API.
+- [#6906](https://github.com/nautobot/nautobot/issues/6906) - `GitRepository.clone_to_directory` now uses configured Secrets for Repository to prepare correct `from_url`.
+- [#6972](https://github.com/nautobot/nautobot/issues/6972) - Fixed IPAddress get_or_create not working with the address argument.
+
+### Housekeeping in v2.4.5
+
+- [#6384](https://github.com/nautobot/nautobot/issues/6384) - Added `init: true` to development `docker-compose.yml` to avoid failed health-checks from remaining as zombie processes.
+- [#6384](https://github.com/nautobot/nautobot/issues/6384) - Added `ExampleFailingJob` to example app to demonstrate the two different ways to fail a Job.
+- [#6971](https://github.com/nautobot/nautobot/issues/6971) - Fixed invoke commands requiring pyyaml.
+- [#7001](https://github.com/nautobot/nautobot/issues/7001) - Refactored RIR model related UI views to use `NautobotUIViewSet` and `UI component framework`.
+
+## v2.4.4 (2025-03-03)
+
+### Added in v2.4.4
+
+- [#5851](https://github.com/nautobot/nautobot/issues/5851) - Added `PrefixFilter` helper class to `nautobot.apps.filters`.
+- [#5851](https://github.com/nautobot/nautobot/issues/5851) - Enhanced `prefixes` filter on `CloudNetwork` and `Tenant` filtersets to support filtering by literal prefix string (`10.0.0.0/8`) as an alternative to filtering by primary key.
+- [#5851](https://github.com/nautobot/nautobot/issues/5851) - Enhanced `prefix` filter on `CloudNetworkPrefixAssignment`, `VRF`, and `VRFPrefixAssignment` filtersets to support filtering by literal prefix string (`10.0.0.0/8`) as an alternative to filtering by primary key.
+- [#5851](https://github.com/nautobot/nautobot/issues/5851) - Enhanced `parent` filter on `Prefix` filtersets to support filtering by literal prefix string (`10.0.0.0/8`) as an alternative to filtering by primary key.
+- [#5851](https://github.com/nautobot/nautobot/issues/5851) - Enhanced `prefix` filter on `PrefixLocationAssignment` filtersets to support filtering by primary key as an alternative to filtering by literal prefix string.
+- [#5851](https://github.com/nautobot/nautobot/issues/5851) - Added `q` search filter to `VRFPrefixAssignment` filterset.
+- [#6635](https://github.com/nautobot/nautobot/issues/6635) - Added Monaco Editor integration to object change view for improved visualization of structured data differences including JSON, YAML, XML, tags, custom fields, and config contexts.
+- [#6924](https://github.com/nautobot/nautobot/issues/6924) - Added optional VRF relationship to Virtual Device Context.
+- [#6925](https://github.com/nautobot/nautobot/issues/6925) - Added colors next to Devices to indicate Device status in Rack Elevation view.
+- [#6966](https://github.com/nautobot/nautobot/issues/6966) - Added support for accessing the current user within Custom Validators via `self.context["user"]`.
+
+### Changed in v2.4.4
+
+- [#6829](https://github.com/nautobot/nautobot/issues/6829) - Enabled assignment of a Device to a Rack that belongs to a child Location of the device's location; for example, a Device located in a "Building" can now be assigned to a Rack located in a "Room" within that building.
+
+### Fixed in v2.4.4
+
+- [#3041](https://github.com/nautobot/nautobot/issues/3041) - Fixed inability to assign a parent bay when creating a Device via the REST API.
+- [#5006](https://github.com/nautobot/nautobot/issues/5006) - Added a validation check to prevent removing an in-use content type from a LocationType.
+- [#5193](https://github.com/nautobot/nautobot/issues/5193) - Fixed an erroneous `ValidationError` when attempting to apply Tags to an object via the REST API.
+- [#5851](https://github.com/nautobot/nautobot/issues/5851) - Fixed `VRFPrefixAssignment` REST API endpoint incorrectly advertising support for Notes.
+- [#5851](https://github.com/nautobot/nautobot/issues/5851) - Fixed incorrect `Meta.model` value on `ControllerManagedDeviceGroupWirelessNetworkAssignmentTable` and `ControllerManagedDeviceGroupRadioProfileAssignmentTable`.
+- [#6848](https://github.com/nautobot/nautobot/issues/6848) - Fixed a `DoesNotExist` error in the GUI at `/extras/git-repositories/X/result/` when a Git repository was created via API and not yet synced.
+- [#6861](https://github.com/nautobot/nautobot/issues/6861) - Fixed the data population of the Rack Group dropdown to include Rack Groups from the Rack's parent locations in Rack Edit View.
+- [#6910](https://github.com/nautobot/nautobot/issues/6910) - Fixed CSV export job to add a UTF-8 BOM (byte order mark) to the created file to ensure Excel will correctly handle any Unicode data.
+- [#6920](https://github.com/nautobot/nautobot/issues/6920) - Added log messages to help troubleshoot failures when rendering UI Component Framework `extra_buttons`.
+- [#6920](https://github.com/nautobot/nautobot/issues/6920) - Fixed logic in UI Component Framework `StatsPanel` that incorrectly disallowed use of FilterSet filters implicitly defined through `fields = "__all__"`.
+- [#6920](https://github.com/nautobot/nautobot/issues/6920) - Fixed logic in generic `FormTestCase` class that would incorrectly fail if form fields used FilterSet filters implicitly defined through `fields = "__all__"`.
+- [#6939](https://github.com/nautobot/nautobot/issues/6939) - Fixed an error in testing Jobs in `JOBS_ROOT` by forcing registration of `taggit` and `social_django` models before unregistering them from the admin site.
+- [#6950](https://github.com/nautobot/nautobot/issues/6950) - Added missing `job_queues` filter field to `JobFilterSet`.
+- [#6952](https://github.com/nautobot/nautobot/issues/6952) - Fixed an `AttributeError` exception when upgrading from v1.x to v2.x with certain existing data in the database.
+
+### Dependencies in v2.4.4
+
+- [#6927](https://github.com/nautobot/nautobot/issues/6927) - Updated dependency `django-filter` to `~25.1`.
+
+### Documentation in v2.4.4
+
+- [#6903](https://github.com/nautobot/nautobot/issues/6903) - Removed documentation references to Nautobot 1.x behavior and feature changes within the 1.x release series.
+- [#6951](https://github.com/nautobot/nautobot/issues/6951) - Fixed typo in v2 migration documentation.
+
+### Housekeeping in v2.4.4
+
+- [#5851](https://github.com/nautobot/nautobot/issues/5851) - Enhanced `PrefixFactory` and `VRFFactory` test helpers to automatically create appropriate `VRFPrefixAssignment` records.
+- [#6857](https://github.com/nautobot/nautobot/issues/6857) - Added `.yarn` directory to `.gitignore`.
+- [#6857](https://github.com/nautobot/nautobot/issues/6857) - Changed CI for integration tests to use `--no-keepdb`.
+- [#6858](https://github.com/nautobot/nautobot/issues/6858) - Fixed generation of performance test endpoints for Nautobot apps.
+- [#6893](https://github.com/nautobot/nautobot/issues/6893) - Added an option for ephemeral ports, and streamlined debug settings for VSCode developers.
+- [#6943](https://github.com/nautobot/nautobot/issues/6943) - Updated `debug` invoke task to restore previous behavior.
+
+## v2.4.3 (2025-02-18)
+
+### Added in v2.4.3
+
+- [#6836](https://github.com/nautobot/nautobot/issues/6836) - Added management command `generate_performance_test_endpoints` to generate performance test endpoints.
+- [#6865](https://github.com/nautobot/nautobot/issues/6865) - Added Bulk Edit functionality for the Tenant Group model.
+
+### Changed in v2.4.3
+
+- [#5568](https://github.com/nautobot/nautobot/issues/5568) - Added hyperlink to the total device count number under device family.
+
+### Fixed in v2.4.3
+
+- [#5539](https://github.com/nautobot/nautobot/issues/5539) - Fixed incorrect error message in Controller `clean()` method.
+- [#6113](https://github.com/nautobot/nautobot/issues/6113) - Menus inside responsive tables are fixed to be visible by dynamically mounting them to the body and positioning them absolutely.
+- [#6667](https://github.com/nautobot/nautobot/issues/6667) - Adds custom clearable file input form widget.
+- [#6764](https://github.com/nautobot/nautobot/issues/6764) - Fixed global and user default saved views incorrectly overriding filtered views.
+- [#6785](https://github.com/nautobot/nautobot/issues/6785) - Fixed Saved Views throwing an unexpected error when they contain boolean filter parameters.
+- [#6805](https://github.com/nautobot/nautobot/issues/6805) - Fixed an exception when saving a Dynamic Group of IP Addresses.
+- [#6806](https://github.com/nautobot/nautobot/issues/6806) - Fixed a bug that prevented users from accessing the detail views of Location related Dynamic Groups.
+- [#6836](https://github.com/nautobot/nautobot/issues/6836) - Fixed various Component Template models incorrectly assume `Notes` support in the API.
+- [#6836](https://github.com/nautobot/nautobot/issues/6836) - Fixed CloudNetworkPrefixAssignment, CloudServiceNetworkAssignment, InterfaceVDCAssignment, JobQueueAssignment, ObjectMetadata, PrefixLocationAssignment, VLANLocationAssignment, ControllerManagedDeviceGroupWirelessNetworkAssignment, and ControllerManagedDeviceGroupRadioProfileAssignment models incorrectly assume `Notes` support in the API.
+- [#6841](https://github.com/nautobot/nautobot/issues/6841) - Fixed missing termination side when creating from Circuit detail page.
+- [#6860](https://github.com/nautobot/nautobot/issues/6860) - Fixed incorrect marking of `channel_width` and `allowed_channel_list` as required fields in the Wireless Radio Profile REST API.
+- [#6901](https://github.com/nautobot/nautobot/issues/6901) - Fixed incorrect rendering of cable traces in the case where Modules are part of the hardware definition.
+- [#6901](https://github.com/nautobot/nautobot/issues/6901) - Fixed incorrect rendering of device-component (Interface, Front Port, etc.) detail views when Modules are involved.
+
+### Dependencies in v2.4.3
+
+- [#6658](https://github.com/nautobot/nautobot/issues/6658) - Updated dependency `django-constance` to `~4.3.0`.
+- [#6658](https://github.com/nautobot/nautobot/issues/6658) - Updated dependency `kubernetes` to `^32.0.0`.
+- [#6869](https://github.com/nautobot/nautobot/issues/6869) - Updated dependency `Django` to `~4.2.19`.
+- [#6869](https://github.com/nautobot/nautobot/issues/6869) - Updated dependency `django-structlog` to `^9.0.1`.
+- [#6894](https://github.com/nautobot/nautobot/issues/6894) - Updated dependency `social-auth-app-django` to `~5.4.3`.
+- [#6894](https://github.com/nautobot/nautobot/issues/6894) - Updated dependency `social-auth-core` to `~4.5.6`.
+
+### Documentation in v2.4.3
+
+- [#6894](https://github.com/nautobot/nautobot/issues/6894) - Enabled PyMarkdown `proper-names` checking for some relevant proper nouns and corrected documentation accordingly.
+
+### Housekeeping in v2.4.3
+
+- [#6618](https://github.com/nautobot/nautobot/issues/6618) - Updated GitHub Actions to use ubuntu-24.04 since ubuntu-20.04 is deprecated.
+- [#6658](https://github.com/nautobot/nautobot/issues/6658) - Updated development dependency `faker` to `~36.1.0`.
+- [#6658](https://github.com/nautobot/nautobot/issues/6658) - Updated development dependency `django-debug-toolbar` to `~5.0.1`.
+- [#6846](https://github.com/nautobot/nautobot/issues/6846) - Fixed integration test task to allow passing in pattern match.
+- [#6865](https://github.com/nautobot/nautobot/issues/6865) - Refactored `tenancy` app to use `NautobotUIViewSet` and UI component framework.
+- [#6869](https://github.com/nautobot/nautobot/issues/6869) - Updated development dependency `factory-boy` to `~3.3.3`.
+- [#6894](https://github.com/nautobot/nautobot/issues/6894) - Updated development dependency `faker` to `~36.1.1`.
+- [#6894](https://github.com/nautobot/nautobot/issues/6894) - Updated linting dependency `pymarkdownlnt` to `~0.9.28`.
+
+## v2.4.2 (2025-02-03)
+
+### Added in v2.4.2
+
+- [#3319](https://github.com/nautobot/nautobot/issues/3319) - Added the appropriate Namespace to the link for adding a new IP address from an existing Prefix's detail view.
+- [#4702](https://github.com/nautobot/nautobot/issues/4702) - Added support for loading GraphQL queries from a Git repository.
+- [#5622](https://github.com/nautobot/nautobot/issues/5622) - Added `tags` field on `DeviceFamilyForm`.
+- [#6347](https://github.com/nautobot/nautobot/issues/6347) - Added Bulk Edit functionality for LocationType model.
+- [#6487](https://github.com/nautobot/nautobot/issues/6487) - Added the ability to perform a shallow copy of a GitRepository instance and to optionally checkout a different branch and/or a specific commit hash.
+- [#6767](https://github.com/nautobot/nautobot/issues/6767) - Added cacheable `CustomField.choices` property for retrieving the list of permissible values for a select/multiselect Custom Field.
+
+### Changed in v2.4.2
+
+- [#5781](https://github.com/nautobot/nautobot/issues/5781) - Removed unnecessary `import_jobs()` call during system startup.
+- [#6650](https://github.com/nautobot/nautobot/issues/6650) - Changed the `nautobot.apps.utils.get_base_template()` function's fallback behavior to return `"generic/object_retrieve.html"` instead of `"base.html"` in order to more correctly align with its usage throughout Nautobot core.
+- [#6650](https://github.com/nautobot/nautobot/issues/6650) - Replaced references to `generic/object_detail.html` with `generic/object_retrieve.html` throughout the code and docs, as `generic/object_detail.html` has been a deprecated alias since v1.4.0.
+- [#6808](https://github.com/nautobot/nautobot/issues/6808) - Improved returned data when syncing a Git repository via the REST API.
+
+### Fixed in v2.4.2
+
+- [#3319](https://github.com/nautobot/nautobot/issues/3319) - Fixed an exception when retrieving available IP addresses within a Prefix for certain IPv6 networks.
+- [#3319](https://github.com/nautobot/nautobot/issues/3319) - Fixed incorrect potential inclusion of IPv4 IP addresses from the same Namespace when calling `.get_all_ips()` or `.get_utilization()` on an IPv6 Prefix.
+- [#6650](https://github.com/nautobot/nautobot/issues/6650) - Fixed rendering of "notes" and "changelog" tabs for object detail views that do not provide a custom HTML template.
+- [#6767](https://github.com/nautobot/nautobot/issues/6767) - Improved performance of object detail views when a large number of select/multiselect Custom Fields and also filtered Relationships are defined on the model class.
+- [#6767](https://github.com/nautobot/nautobot/issues/6767) - Improved performance of Device detail view by adding appropriate `select_related`/`prefetch_related` calls.
+- [#6767](https://github.com/nautobot/nautobot/issues/6767) - Fixed display of Cluster Group in Device detail view.
+- [#6810](https://github.com/nautobot/nautobot/issues/6810) - Fixed Bulk Edit Objects job failure when passing a single value to `add_*`/`remove_*` fields.
+- [#6812](https://github.com/nautobot/nautobot/issues/6812) - Fixed the incorrect rendering of the Relationship panel in Object Detail View.
+- [#6821](https://github.com/nautobot/nautobot/issues/6821) - Fixed the rendering of `Location` in the `RackReservation` detail page.
+- [#6825](https://github.com/nautobot/nautobot/issues/6825) - Added links to the `manufacturer` column of the Platform table.
+- [#6838](https://github.com/nautobot/nautobot/issues/6838) - Added missing `key` and `label` fields to Relationship Detail View.
+
+### Dependencies in v2.4.2
+
+- [#6717](https://github.com/nautobot/nautobot/issues/6717) - Updated `GitPython` dependency to `~3.1.44`.
+- [#6717](https://github.com/nautobot/nautobot/issues/6717) - Updated `django-silk` dependency to `~5.3.2`.
+- [#6717](https://github.com/nautobot/nautobot/issues/6717) - Updated `django-tables2` dependency to `~2.7.5`.
+- [#6717](https://github.com/nautobot/nautobot/issues/6717) - Updated `mysqlclient` optional dependency to `~2.2.7`.
+
+### Documentation in v2.4.2
+
+- [#346](https://github.com/nautobot/nautobot/issues/346) - Added documentation about Git repository REST API.
+- [#6621](https://github.com/nautobot/nautobot/issues/6621) - Added "Security Notices" document to the documentation under **User Guide --> Administration**.
+
+### Housekeeping in v2.4.2
+
+- [#6717](https://github.com/nautobot/nautobot/issues/6717) - Updated `mkdocs-material` documentation dependency to `9.5.50`.
+- [#6717](https://github.com/nautobot/nautobot/issues/6717) - Updated `faker` development dependency to `~33.3.1`.
+- [#6717](https://github.com/nautobot/nautobot/issues/6717) - Updated `pylint` development dependency to `~3.3.4`.
+- [#6779](https://github.com/nautobot/nautobot/issues/6779) - Added integration tests for bulk edit/delete operations for Devices and Locations.
+- [#6779](https://github.com/nautobot/nautobot/issues/6779) - Added `BulkOperationsTestCases` class with built-in standard test cases for testing bulk operations.
+- [#6842](https://github.com/nautobot/nautobot/issues/6842) - Fix `invoke integration-test` to run standalone, without running the `invoke start` first.
 
 ## v2.4.1 (2025-01-21)
 

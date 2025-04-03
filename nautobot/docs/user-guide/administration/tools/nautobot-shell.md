@@ -6,7 +6,7 @@ Nautobot includes a Python management shell within which objects can be directly
 nautobot-server nbshell
 ```
 
-This will launch a lightly customized version of [the django-extensions `shell_plus` shell](https://django-extensions.readthedocs.io/en/latest/shell_plus.html), which is an extension of [the built-in Django shell](https://docs.djangoproject.com/en/stable/ref/django-admin/#shell) with all relevant Nautobot models pre-loaded.
+This will launch a lightly customized version of [the `django-extensions` `shell_plus` shell](https://django-extensions.readthedocs.io/en/latest/shell_plus.html), which is an extension of [the built-in Django shell](https://docs.djangoproject.com/en/stable/ref/django-admin/#shell) with all relevant Nautobot models pre-loaded.
 
 ```no-highlight
 nautobot-server nbshell

@@ -250,7 +250,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 ### Documentation in v1.4.8
 
-- [#2578](https://github.com/nautobot/nautobot/issues/2578) - Added a warning in the documentation about django-cryptography and changing `SECRET_KEY`.
+- [#2578](https://github.com/nautobot/nautobot/issues/2578) - Added a warning in the documentation about `django-cryptography` and changing `SECRET_KEY`.
 - [#2591](https://github.com/nautobot/nautobot/issues/2591) - Updated README.md to include additional information about the Nautobot project.
 - [#2619](https://github.com/nautobot/nautobot/issues/2619) - Added notes about restarting the Nautobot server after creating relationships, custom fields, and computed fields to show them in GraphQL.
 - [#2677](https://github.com/nautobot/nautobot/issues/2677) - Fixed a documentation error by adding an import statement to a code example in `nautobot/docs/plugins/development.md`.
@@ -328,7 +328,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 ### Documentation in v1.4.5
 
-- [#2539](https://github.com/nautobot/nautobot/issues/2539) - Updated links from nautobot.readthedocs.io to docs.nautobot.com.
+- [#2539](https://github.com/nautobot/nautobot/issues/2539) - Updated links from `nautobot.readthedocs.io` to `docs.nautobot.com`.
 
 ### Housekeeping in v1.4.5
 
@@ -517,7 +517,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 ### Dependencies in v1.4.0
 
-- [#2183](https://github.com/nautobot/nautobot/pull/2183) - Update dependency django to ~3.2.15.
+- [#2183](https://github.com/nautobot/nautobot/pull/2183) - Update dependency `django` to `~3.2.15`.
 
 ### Documentation in v1.4.0
 
@@ -590,7 +590,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 ### Dependencies in v1.4.0b1
 
-- [#2116](https://github.com/nautobot/nautobot/pull/2116) - Updated package dependencies: Pillow `~9.1.1` -> `~9.2.0`, black `~22.3.0` -> `~22.6.0`, coverage `6.4.1` -> `6.4.2`, django-cacheops `6.0` -> `6.1`, django-cryptography `1.0` -> `1.1`, django-debug-toolbar `~3.4.0` -> `~3.5.0`, django-extensions `~3.1.5` -> `~3.2.0`, drf-yasg `~1.20.0` -> `^1.20.0`, importlib-metadata `~4.4` -> `^4.4.0`, jsonschema `~4.4.0` -> `~4.8.0`, mkdocs `1.3.0` -> `1.3.1`, mkdocs `==1.3.0` -> `==1.3.1`, mkdocs-include-markdown-plugin `~3.2.3` -> `~3.6.0`, mkdocs-include-markdown-plugin `==3.2.3` -> `==3.6.1`, social-auth-core `~4.2.0` -> `~4.3.0`, svgwrite `1.4.2` -> `1.4.3`
+- [#2116](https://github.com/nautobot/nautobot/pull/2116) - Updated package dependencies: `Pillow` `~9.1.1` -> `~9.2.0`, `black` `~22.3.0` -> `~22.6.0`, `coverage` `6.4.1` -> `6.4.2`, `django-cacheops` `6.0` -> `6.1`, `django-cryptography` `1.0` -> `1.1`, `django-debug-toolbar` `~3.4.0` -> `~3.5.0`, `django-extensions` `~3.1.5` -> `~3.2.0`, `drf-yasg` `~1.20.0` -> `^1.20.0`, `importlib-metadata` `~4.4` -> `^4.4.0`, `jsonschema` `~4.4.0` -> `~4.8.0`, `mkdocs` `1.3.0` -> `1.3.1`, `mkdocs` `==1.3.0` -> `==1.3.1`, `mkdocs-include-markdown-plugin` `~3.2.3` -> `~3.6.0`, `mkdocs-include-markdown-plugin` `==3.2.3` -> `==3.6.1`, `social-auth-core` `~4.2.0` -> `~4.3.0`, `svgwrite` `1.4.2` -> `1.4.3`.
 
 ### Documentation in v1.4.0b1
 
@@ -633,19 +633,19 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 ### Dependencies in v1.4.0a2
 
-- [#1908](https://github.com/nautobot/nautobot/pull/1908) - Update dependency Markdown to ~3.3.7
-- [#1909](https://github.com/nautobot/nautobot/pull/1909) - Update dependency MarkupSafe to ~2.1.1
-- [#1912](https://github.com/nautobot/nautobot/pull/1912) - Update dependency celery to ~5.2.7
-- [#1913](https://github.com/nautobot/nautobot/pull/1913) - Update dependency django-jinja to ~2.10.2
-- [#1915](https://github.com/nautobot/nautobot/pull/1915) - Update dependency invoke to ~1.7.1
-- [#1917](https://github.com/nautobot/nautobot/pull/1917) - Update dependency svgwrite to ~1.4.2
-- [#1919](https://github.com/nautobot/nautobot/pull/1919) - Update dependency Pillow to ~9.1.1
-- [#1920](https://github.com/nautobot/nautobot/pull/1920) - Update dependency coverage to ~6.4.1
-- [#1921](https://github.com/nautobot/nautobot/pull/1921) - Update dependency django-auth-ldap to ~4.1.0
-- [#1924](https://github.com/nautobot/nautobot/pull/1924) - Update dependency django-cors-headers to ~3.13.0
-- [#1925](https://github.com/nautobot/nautobot/pull/1925) - Update dependency django-debug-toolbar to ~3.4.0
-- [#1928](https://github.com/nautobot/nautobot/pull/1928) - Update dependency napalm to ~3.4.1
-- [#1929](https://github.com/nautobot/nautobot/pull/1929) - Update dependency selenium to ~4.2.0
+- [#1908](https://github.com/nautobot/nautobot/pull/1908) - Update dependency `Markdown` to `~3.3.7`
+- [#1909](https://github.com/nautobot/nautobot/pull/1909) - Update dependency `MarkupSafe` to `~2.1.1`
+- [#1912](https://github.com/nautobot/nautobot/pull/1912) - Update dependency `celery` to `~5.2.7`
+- [#1913](https://github.com/nautobot/nautobot/pull/1913) - Update dependency `django-jinja` to `~2.10.2`
+- [#1915](https://github.com/nautobot/nautobot/pull/1915) - Update dependency `invoke` to `~1.7.1`
+- [#1917](https://github.com/nautobot/nautobot/pull/1917) - Update dependency `svgwrite` to `~1.4.2`
+- [#1919](https://github.com/nautobot/nautobot/pull/1919) - Update dependency `Pillow` to `~9.1.1`
+- [#1920](https://github.com/nautobot/nautobot/pull/1920) - Update dependency `coverage` to `~6.4.1`
+- [#1921](https://github.com/nautobot/nautobot/pull/1921) - Update dependency `django-auth-ldap` to `~4.1.0`
+- [#1924](https://github.com/nautobot/nautobot/pull/1924) - Update dependency `django-cors-headers` to `~3.13.0`
+- [#1925](https://github.com/nautobot/nautobot/pull/1925) - Update dependency `django-debug-toolbar` to `~3.4.0`
+- [#1928](https://github.com/nautobot/nautobot/pull/1928) - Update dependency `napalm` to `~3.4.1`
+- [#1929](https://github.com/nautobot/nautobot/pull/1929) - Update dependency `selenium` to `~4.2.0`
 
 ### Housekeeping in v1.4.0a2
 

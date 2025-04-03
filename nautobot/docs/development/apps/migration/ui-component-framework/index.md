@@ -71,7 +71,7 @@ class SecretBulkDeleteView(generic.BulkDeleteView):
 1. Note the repetition of information such as `queryset` across each distinct view class here. Reducing this repetition is one of the key benefits of moving to use `NautobotUIViewSet`.
 
 ```html title="nautobot/extras/templates/extras/secret.html"
-{% extends 'generic/object_detail.html' %}
+{% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
 
 {% block extra_buttons %}

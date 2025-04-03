@@ -1,3 +1,4 @@
+import codecs
 from datetime import timedelta
 import json
 from pathlib import Path
@@ -47,7 +48,7 @@ class ExportObjectListTest(TransactionTestCase):
             username=self.user.username,  # otherwise run_job_for_testing defaults to a superuser account
             content_type=ContentType.objects.get_for_model(Status).pk,
         )
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         log_error = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
         self.assertEqual(log_error.message, f'User "{self.user}" does not have permission to view status objects')
         self.assertFalse(job_result.files.exists())
@@ -69,10 +70,12 @@ class ExportObjectListTest(TransactionTestCase):
             username=self.user.username,  # otherwise run_job_for_testing defaults to a superuser account
             content_type=ContentType.objects.get_for_model(Status).pk,
         )
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertTrue(job_result.files.exists())
         self.assertEqual(Path(job_result.files.first().file.name).name, "nautobot_statuses.csv")
-        csv_data = job_result.files.first().file.read().decode("utf-8")
+        csv_bytes = job_result.files.first().file.read()
+        self.assertTrue(csv_bytes.startswith(codecs.BOM_UTF8), csv_bytes)
+        csv_data = csv_bytes.decode("utf-8")
         self.assertIn(str(instance1.pk), csv_data)
         self.assertNotIn(str(instance2.pk), csv_data)
 
@@ -83,7 +86,7 @@ class ExportObjectListTest(TransactionTestCase):
             "ExportObjectList",
             content_type=ContentType.objects.get_for_model(Status).pk,
         )
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertTrue(job_result.files.exists())
         self.assertEqual(Path(job_result.files.first().file.name).name, "nautobot_statuses.csv")
         csv_data = job_result.files.first().file.read().decode("utf-8")
@@ -104,7 +107,7 @@ class ExportObjectListTest(TransactionTestCase):
             content_type=ContentType.objects.get_for_model(Status).pk,
             export_template=et.pk,
         )
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertTrue(job_result.files.exists())
         self.assertEqual(Path(job_result.files.first().file.name).name, "nautobot_statuses.txt")
         text_data = job_result.files.first().file.read().decode("utf-8")
@@ -126,7 +129,7 @@ class ExportObjectListTest(TransactionTestCase):
             content_type=ContentType.objects.get_for_model(DeviceType).pk,
             export_format="yaml",
         )
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertTrue(job_result.files.exists())
         self.assertEqual(Path(job_result.files.first().file.name).name, "nautobot_device_types.yaml")
         yaml_data = job_result.files.first().file.read().decode("utf-8")
@@ -156,7 +159,7 @@ class ImportObjectsTestCase(TransactionTestCase):
             content_type=ContentType.objects.get_for_model(Status).pk,
             csv_data=self.csv_data,
         )
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         log_error = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
         self.assertEqual(log_error.message, f'User "{self.user}" does not have permission to create status objects')
         self.assertFalse(Status.objects.filter(name__startswith="test_status").exists())
@@ -169,7 +172,7 @@ class ImportObjectsTestCase(TransactionTestCase):
             username=self.user.username,  # otherwise run_job_for_testing defaults to a superuser account
             content_type=ContentType.objects.get_for_model(Status).pk,
         )
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
 
     def test_csv_import_with_constrained_permission(self):
         """Job should only allow the user to import objects they have permission to add."""
@@ -188,7 +191,7 @@ class ImportObjectsTestCase(TransactionTestCase):
             content_type=ContentType.objects.get_for_model(Status).pk,
             csv_data=self.csv_data,
         )
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         log_successes = JobLogEntry.objects.filter(
             job_result=job_result, log_level=LogLevelChoices.LOG_INFO, message__icontains="created"
         )
@@ -217,7 +220,7 @@ class ImportObjectsTestCase(TransactionTestCase):
             content_type=ContentType.objects.get_for_model(Status).pk,
             csv_data=self.csv_data,
         )
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertFalse(
             JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
         )
@@ -243,7 +246,7 @@ class ImportObjectsTestCase(TransactionTestCase):
             content_type=ContentType.objects.get_for_model(Prefix).pk,
             csv_file=csv_file.id,
         )
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertFalse(
             JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
         )
@@ -284,7 +287,7 @@ class ImportObjectsTestCase(TransactionTestCase):
             content_type=ContentType.objects.get_for_model(Device).pk,
             csv_file=csv_file.id,
         )
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertFalse(
             JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
         )
@@ -310,7 +313,7 @@ class ImportObjectsTestCase(TransactionTestCase):
                 csv_data=csv_data,
                 roll_back_if_error=True,
             )
-            self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+            self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
             log_info = JobLogEntry.objects.filter(
                 job_result=job_result, log_level=LogLevelChoices.LOG_INFO, message__icontains="created"
             )
@@ -332,7 +335,7 @@ class ImportObjectsTestCase(TransactionTestCase):
                 content_type=ContentType.objects.get_for_model(Status).pk,
                 csv_data=csv_data,
             )
-            self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+            self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
             log_errors = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
             self.assertEqual(log_errors[0].message, "Row 1: `color`: `Enter a valid hexadecimal RGB color code.`")
             self.assertFalse(Status.objects.filter(name="test_status0").exists())
@@ -350,6 +353,13 @@ class ImportObjectsTestCase(TransactionTestCase):
             self.assertEqual(log_successes[4].message, "Created 4 status object(s) from 5 row(s) of data")
 
     def test_csv_import_contact_assignment(self):
+        self.add_permissions(
+            "dcim.view_locationtype",
+            "extras.view_status",
+            "dcim.view_location",
+            "extras.add_role",
+            "extras.add_contact",
+        )
         location_types_csv = "\n".join(["name", "ContactAssignmentImportTestLocationType"])
         locations_csv = "\n".join(
             [
@@ -372,7 +382,7 @@ class ImportObjectsTestCase(TransactionTestCase):
             content_type=ContentType.objects.get_for_model(LocationType).pk,
             csv_data=location_types_csv,
         )
-        self.assertEqual(location_types_job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(location_types_job_result)
 
         location_type_count = LocationType.objects.filter(name="ContactAssignmentImportTestLocationType").count()
         self.assertEqual(location_type_count, 1, f"Unexpected count of LocationTypes {location_type_count}")
@@ -383,7 +393,7 @@ class ImportObjectsTestCase(TransactionTestCase):
             content_type=ContentType.objects.get_for_model(Location).pk,
             csv_data=locations_csv,
         )
-        self.assertEqual(locations_job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(locations_job_result)
 
         location_count = Location.objects.filter(location_type__name="ContactAssignmentImportTestLocationType").count()
         self.assertEqual(location_count, 2, f"Unexpected count of Locations {location_count}")
@@ -394,7 +404,7 @@ class ImportObjectsTestCase(TransactionTestCase):
             content_type=ContentType.objects.get_for_model(Contact).pk,
             csv_data=contacts_csv,
         )
-        self.assertEqual(contacts_job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(contacts_job_result)
 
         contact_count = Contact.objects.filter(name="Bob-ContactAssignmentImportTestLocation").count()
         self.assertEqual(contact_count, 1, f"Unexpected number of contacts {contact_count}")
@@ -405,7 +415,7 @@ class ImportObjectsTestCase(TransactionTestCase):
             content_type=ContentType.objects.get_for_model(Role).pk,
             csv_data=roles_csv,
         )
-        self.assertEqual(roles_job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(roles_job_result)
 
         role_count = Role.objects.filter(name="ContactAssignmentImportTestLocation-On Site").count()
         self.assertEqual(role_count, 1, f"Unexpected number of role values {role_count}")
@@ -423,8 +433,7 @@ class ImportObjectsTestCase(TransactionTestCase):
             content_type=ContentType.objects.get_for_model(ContactAssociation).pk,
             csv_data=associations_csv,
         )
-
-        self.assertEqual(associations_job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(associations_job_result)
 
 
 class LogsCleanupTestCase(TransactionTestCase):
@@ -466,7 +475,7 @@ class LogsCleanupTestCase(TransactionTestCase):
             cleanup_types=[CleanupTypes.JOB_RESULT],
             max_age=0,
         )
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         log_error = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
         self.assertEqual(log_error.message, f'User "{self.user}" does not have permission to delete JobResult records')
         self.assertEqual(JobResult.objects.count(), job_result_count + 1)
@@ -481,7 +490,7 @@ class LogsCleanupTestCase(TransactionTestCase):
                 cleanup_types=[CleanupTypes.OBJECT_CHANGE],
                 max_age=0,
             )
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         log_error = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
         self.assertEqual(
             log_error.message, f'User "{self.user}" does not have permission to delete ObjectChange records'
@@ -529,7 +538,7 @@ class LogsCleanupTestCase(TransactionTestCase):
             cleanup_types=[CleanupTypes.JOB_RESULT, CleanupTypes.OBJECT_CHANGE],
             max_age=0,
         )
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertEqual(job_result.result["extras.JobResult"], 1)
         self.assertEqual(job_result.result["extras.ObjectChange"], 1)
         with self.assertRaises(JobResult.DoesNotExist):
@@ -626,7 +635,7 @@ class BulkEditTestCase(TransactionTestCase):
             tag.content_types.add(self.namespace_ct)
 
     def _common_no_error_test_assertion(self, model, job_result, expected_count, **filter_params):
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertEqual(model.objects.filter(**filter_params).count(), expected_count)
         self.assertFalse(
             JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
@@ -647,7 +656,7 @@ class BulkEditTestCase(TransactionTestCase):
             form_data={"pk": pk_list, "color": "aa1409"},
             username=self.user.username,
         )
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         job_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
         self.assertEqual(job_log.message, f'User "{self.user}" does not have permission to update status objects')
 
@@ -750,15 +759,47 @@ class BulkEditTestCase(TransactionTestCase):
             description="Example description for bulk edit",
         )
 
-        # Assert Namespaces withing pk_list updated tags
+        # Assert Namespaces within pk_list get updated tags
         for namespace in namespaces[:3]:
             self.assertTrue(namespace.tags.filter(pk__in=[tag.pk for tag in self.tags[:3]]).exists())
             self.assertFalse(namespace.tags.filter(pk__in=[tag.pk for tag in self.tags[3:]]).exists())
 
-        # Assert Namespaces not withing pk_list tags did not get updated
+        # Assert Namespaces not within pk_list did not get updated tags
         for namespace in namespaces[3:]:
             self.assertFalse(namespace.tags.filter(pk__in=[tag.pk for tag in self.tags[:3]]).exists())
             self.assertTrue(namespace.tags.filter(pk__in=[tag.pk for tag in self.tags[3:]]).exists())
+
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkEditObjects",
+            content_type=self.namespace_ct.id,
+            edit_all=False,
+            filter_query_params={},
+            form_data={
+                "pk": pk_list,
+                "description": "Example description for bulk edit",
+                "add_tags": [str(self.tags[0].id)],
+                "remove_tags": [str(self.tags[-1].id)],
+            },
+            username=self.user.username,
+        )
+
+        self._common_no_error_test_assertion(
+            Namespace,
+            job_result,
+            3,
+            description="Example description for bulk edit",
+        )
+
+        # Assert Namespaces within pk_list get updated tag
+        for namespace in namespaces[:3]:
+            self.assertTrue(namespace.tags.filter(pk__in=[self.tags[0].pk]).exists())
+            self.assertFalse(namespace.tags.filter(pk__in=[self.tags[-1].pk]).exists())
+
+        # Assert Namespaces not within pk_list did not get updated tag
+        for namespace in namespaces[3:]:
+            self.assertFalse(namespace.tags.filter(pk__in=[self.tags[0].pk]).exists())
+            self.assertTrue(namespace.tags.filter(pk__in=[self.tags[-1].pk]).exists())
 
     def test_bulk_edit_objects_filter_all(self):
         """
@@ -926,7 +967,7 @@ class BulkDeleteTestCase(TransactionTestCase):
         )
 
     def _common_no_error_test_assertion(self, model, job_result, **filter_params):
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertJobResultStatus(job_result)
         self.assertEqual(model.objects.filter(**filter_params).count(), 0)
         self.assertFalse(
             JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
@@ -944,7 +985,7 @@ class BulkDeleteTestCase(TransactionTestCase):
             pk_list=statuses_to_delete,
             username=self.user.username,
         )
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         job_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
         self.assertEqual(job_log.message, f'User "{self.user}" does not have permission to delete status objects')
         self.assertEqual(Status.objects.filter(pk__in=statuses_to_delete).count(), len(statuses_to_delete))
@@ -967,7 +1008,7 @@ class BulkDeleteTestCase(TransactionTestCase):
             pk_list=statuses_to_delete,
             username=self.user.username,
         )
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         error_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
         self.assertEqual(
             error_log.message, "You do not have permissions to delete some of the objects provided in `pk_list`."

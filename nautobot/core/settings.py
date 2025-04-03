@@ -288,20 +288,6 @@ TEST_USE_FACTORIES = is_truthy(os.getenv("NAUTOBOT_TEST_USE_FACTORIES", "False")
 TEST_FACTORY_SEED = os.getenv("NAUTOBOT_TEST_FACTORY_SEED", None)
 
 #
-# django-slowtests
-#
-
-# Performance test uses `NautobotPerformanceTestRunner` to run, which is only available once you have `django-slowtests` installed in your dev environment.
-# `invoke performance-test` and adding `--performance-report` or `--performance-snapshot` at the end of the `invoke` command
-# will automatically opt to NautobotPerformanceTestRunner to run the tests.
-
-# The baseline file that the performance test is running against
-# TODO we need to replace the baselines in this file with more consistent results at least for CI
-TEST_PERFORMANCE_BASELINE_FILE = os.getenv(
-    "NAUTOBOT_TEST_PERFORMANCE_BASELINE_FILE", "nautobot/core/tests/performance_baselines.yml"
-)
-
-#
 # Django Prometheus
 #
 

@@ -41,6 +41,7 @@ def parse_numeric_range(input_string, base=10):
                 raise TypeError("Input value must be a string using a range format.")
         except ValueError:
             begin, end = dash_range, dash_range
+
         begin, end = int(begin.strip(), base=base), int(end.strip(), base=base) + 1
         values.extend(range(begin, end))
     # Remove duplicates and sort

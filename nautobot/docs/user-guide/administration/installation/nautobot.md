@@ -73,7 +73,7 @@ echo "export NAUTOBOT_ROOT=/opt/nautobot" | sudo tee -a ~nautobot/.bashrc
     export NAUTOBOT_ROOT=/opt/nautobot
     ```
 
-## Sudo to nautobot
+## Sudo to `nautobot` user
 
 It is critical to install Nautobot as the `nautobot` user so that we don't have to worry about fixing permissions later.
 
@@ -233,8 +233,7 @@ nautobot-server init
     Configuration file created at /opt/nautobot/nautobot_config.py
     ```
 
-+++ 1.6.0 "Installation metrics selection"
-    The `nautobot-server init` command will now prompt you to set the initial value for the [`INSTALLATION_METRICS_ENABLED`](../configuration/settings.md#installation_metrics_enabled) setting. See the [`send_installation_metrics`](../tools/nautobot-server.md#send_installation_metrics) command for more information about the feature that this setting toggles.
+The `nautobot-server init` command will prompt you to set the initial value for the [`INSTALLATION_METRICS_ENABLED`](../configuration/settings.md#installation_metrics_enabled) setting. See the [`send_installation_metrics`](../tools/nautobot-server.md#send_installation_metrics) command for more information about the feature that this setting toggles.
 
 ### Required Settings
 
@@ -371,7 +370,7 @@ Checks are ran automatically when running a development server using `nautobot-s
 nautobot-server check
 ```
 
-??? example "nautobot-server check output"
+??? example "`nautobot-server check` output"
 
     ```no title="Example nautobot-server check output"
     System check identified no issues (0 silenced).

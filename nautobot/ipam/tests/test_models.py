@@ -827,6 +827,24 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
 
         self.assertEqual(parent_prefix.get_first_available_ip(), "10.0.3.2/29")
 
+    def test_get_all_ips_issue_3319(self):
+        # https://github.com/nautobot/nautobot/issues/3319
+        # Confirm that IPv4 addresses aren't caught up in the IPv6 ::/96 subnet by accident, and vice versa.
+        prefix_v6 = Prefix.objects.create(
+            prefix="::/0", type=PrefixTypeChoices.TYPE_CONTAINER, status=self.status, namespace=self.namespace
+        )
+        prefix_v4 = Prefix.objects.create(
+            prefix="0.0.0.0/0", type=PrefixTypeChoices.TYPE_CONTAINER, status=self.status, namespace=self.namespace
+        )
+        IPAddress.objects.create(address="::0102:0304/128", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(address="1.2.3.4/32", status=self.status, namespace=self.namespace)
+        self.assertQuerysetEqualAndNotEmpty(
+            prefix_v6.get_all_ips(), IPAddress.objects.filter(ip_version=6, parent__namespace=self.namespace)
+        )
+        self.assertQuerysetEqualAndNotEmpty(
+            prefix_v4.get_all_ips(), IPAddress.objects.filter(ip_version=4, parent__namespace=self.namespace)
+        )
+
     def test_get_utilization(self):
         # Container Prefix
         prefix = Prefix.objects.create(
@@ -981,6 +999,12 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         # 100% utilization
         Prefix.objects.create(prefix="ab80::/9", status=self.status, namespace=self.namespace)
         self.assertEqual(large_prefix_v6.get_utilization(), (2**120, 2**120))
+
+        # https://github.com/nautobot/nautobot/issues/3319
+        v4_10dot_address_space_in_v6 = Prefix.objects.create(
+            prefix="0a00::/8", type=PrefixTypeChoices.TYPE_NETWORK, status=self.status, namespace=self.namespace
+        )
+        self.assertSequenceEqual(v4_10dot_address_space_in_v6.get_utilization(), (0, 2**120))
 
     #
     # Uniqueness enforcement tests
@@ -1276,6 +1300,22 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
                 f"{ipaddress.host}/5712 does not appear to be an IPv4 or IPv6 network.",
                 str(err.exception),
             )
+
+    def test_get_or_create_address_kwarg(self):
+        status = Status.objects.get(name="Active")
+        namespace = Namespace.objects.create(name="Test IPAddress get_or_create with address kwarg")
+        Prefix.objects.create(prefix="10.0.0.0/24", namespace=namespace, status=status)
+        ip_address, created = IPAddress.objects.get_or_create(
+            address="10.0.0.40/32", namespace=namespace, defaults={"status": status}
+        )
+        self.assertEqual(ip_address.host, "10.0.0.40")
+        self.assertEqual(ip_address.mask_length, 32)
+        self.assertTrue(created)
+        _, created = IPAddress.objects.get_or_create(
+            address="10.0.0.40/32", namespace=namespace, defaults={"status": status}
+        )
+        self.assertFalse(created)
+        self.assertTrue(IPAddress.objects.filter(address="10.0.0.40/32", parent__namespace=namespace).exists())
 
     def test_create_field_population(self):
         """Test that the various ways of creating an IPAddress result in correctly populated fields."""

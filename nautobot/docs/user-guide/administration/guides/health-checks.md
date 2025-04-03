@@ -29,7 +29,7 @@ Similarly, but not identically, the CLI command `nautobot-server health_check` s
 Note the differences between these two. In some situations you'll want to use both for different types of checks. More on this later in this document.
 
 ??? info "Background information"
-    Nautobot uses the [django-health-check](https://github.com/KristianOellegaard/django-health-check) project and some custom health checks (database connection and cache availability). Additional health checks are available as part of that  project and can be added to the [`EXTRA_INSTALLED_APPS`](../configuration/settings.md#extra-applications) configuration variable as desired.
+    Nautobot uses the [`django-health-check`](https://github.com/KristianOellegaard/django-health-check) project and some custom health checks (database connection and cache availability). Additional health checks are available as part of that project and can be added to the [`EXTRA_INSTALLED_APPS`](../configuration/settings.md#extra-applications) configuration variable as desired.
 
 ### Nautobot Celery Worker
 
