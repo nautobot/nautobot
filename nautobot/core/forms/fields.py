@@ -457,7 +457,7 @@ class AutoPositionField(django_forms.CharField):
             source (str, tuple): Name of the field (or a list of field names) that will be used to suggest a position.
         """
         kwargs.setdefault("label", "Position")
-        kwargs.setdefault("widget", forms.SlugWidget)
+        kwargs.setdefault("widget", forms.AutoPopulateWidget)
         super().__init__(*args, **kwargs)
         if isinstance(source, (tuple, list)):
             source = " ".join(source)
@@ -473,7 +473,7 @@ class AutoPositionPatternField(ExpandableNameField):
             source (str, tuple): Name pattern of the field (or a list of field names) that will be used to suggest a position pattern.
         """
         kwargs.setdefault("label", "Position")
-        kwargs.setdefault("widget", forms.SlugWidget)
+        kwargs.setdefault("widget", forms.AutoPopulateWidget(attrs={"title": "Regenerate position"}))
         super().__init__(*args, **kwargs)
         if isinstance(source, (tuple, list)):
             source = " ".join(source)
