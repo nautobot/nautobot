@@ -60,6 +60,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     Job,
     JobButton,
+    JobHook,
     JobLogEntry,
     JobQueue,
     JobResult,
@@ -3283,6 +3284,83 @@ class JobCustomTemplateTestCase(TestCase):
         obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
         with self.assertTemplateUsed("example_app/custom_job_form.html"):
             self.client.get(self.run_url)
+
+
+class JobHookTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
+):
+    model = JobHook
+
+    @classmethod
+    def setUpTestData(cls):
+        # Create a Job object that will be used in all JobHooks
+        job = Job.objects.create(
+            name="Test Job",
+            installed=True,
+            enabled=True,
+            is_job_hook_receiver=True,
+        )
+
+        # Create ContentType for ConsolePort (or any model you're targeting for JobHook)
+        obj_type = ContentType.objects.get_for_model(ConsolePort)
+
+        # Create JobHook objects for different types (create, update, delete)
+        cls.job_hooks = (
+            JobHook(
+                name="jobhook-1",
+                enabled=True,
+                job=job,
+                type_create=True,
+                content_types=[obj_type],
+            ),
+            JobHook(
+                name="jobhook-2",
+                enabled=True,
+                job=job,
+                type_update=True,
+                content_types=[obj_type],
+            ),
+            JobHook(
+                name="jobhook-3",
+                enabled=True,
+                job=job,
+                type_delete=True,
+                content_types=[obj_type],
+            ),
+        )
+
+        # Save the JobHooks to the database
+        for job_hook in cls.job_hooks:
+            job_hook.save()
+
+        # Form data for creating a new JobHook
+        cls.form_data = {
+            "name": "jobhook-4",
+            "content_types": [obj_type.pk],
+            "enabled": True,
+            "type_create": True,
+            "type_update": False,
+            "type_delete": False,
+            "job": job.pk,
+        }
+
+        # Bulk edit data for all created JobHooks
+        cls.bulk_edit_data = [
+            {
+                "id": job_hook.pk,
+                "enabled": False,  # Disable all job hooks
+                "type_create": False,  # Remove create action
+                "type_update": True,  # Enable update action
+                "type_delete": True,  # Enable delete action
+            }
+            for job_hook in cls.job_hooks
+        ]
 
 
 # TODO: Convert to StandardTestCases.Views
