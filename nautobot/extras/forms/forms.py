@@ -2088,9 +2088,9 @@ class WebhookBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin):
     ssl_verification = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
 
     # Editable string fields
-    payload_url = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
+    payload_url = forms.CharField(required=False, max_length=500)
     secret = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
-    ca_file_path = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
+    ca_file_path = forms.CharField(required=False, max_length=4096)
     http_content_type = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
 
     # Choice field
