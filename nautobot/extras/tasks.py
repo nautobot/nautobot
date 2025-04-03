@@ -121,6 +121,7 @@ def delete_custom_field_data(field_key, content_type_pk_set, change_context=None
     for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
         model = ct.model_class()
         queryset = model.objects.filter(**{f"_custom_field_data__{field_key}__isnull": False})
+        pk_list = []
         if change_context is not None:
             pk_list = list(queryset.values_list("pk", flat=True))
         task_logger.info("Deleting existing values for custom field `%s` from %s records...", field_key, ct.model)
@@ -155,6 +156,7 @@ def provision_field(field_id, content_type_pk_set, change_context=None):
     for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
         model = ct.model_class()
         queryset = model.objects.filter(**{f"_custom_field_data__{field.key}__isnull": True})
+        pk_list =[]
         if change_context is not None:
             pk_list = list(queryset.values_list("pk", flat=True))
         task_logger.info(
