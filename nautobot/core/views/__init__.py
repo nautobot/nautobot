@@ -1,5 +1,6 @@
 import os
 import platform
+import posixpath
 import sys
 import time
 
@@ -17,6 +18,7 @@ from django.views.decorators.csrf import requires_csrf_token
 from django.views.defaults import ERROR_500_TEMPLATE_NAME, page_not_found
 from django.views.csrf import csrf_failure as _csrf_failure
 from django.views.generic import TemplateView, View
+from django.views.static import serve
 from packaging import version
 from graphene_django.views import GraphQLView
 from prometheus_client import multiprocess
@@ -108,6 +110,25 @@ class HomeView(AccessMixin, TemplateView):
                                 )
 
         return self.render_to_response(context)
+
+
+class MediaView(AccessMixin, View):
+    """
+    Serves media files while enforcing login restrictions.
+
+    This view wraps Django's `serve()` function to ensure that access to media files (with the exception of
+    branding files defined in `settings.BRANDING_FILEPATHS`) is restricted to authenticated users.
+    """
+
+    def get(self, request, path):
+        if request.user.is_authenticated:
+            return serve(request, path, document_root=settings.MEDIA_ROOT)
+
+        # Unauthenticated users can access BRANDING_FILEPATHS only
+        if posixpath.normpath(path).lstrip("/") in settings.BRANDING_FILEPATHS.values():
+            return serve(request, path, document_root=settings.MEDIA_ROOT)
+
+        return self.handle_no_permission()
 
 
 class SearchView(AccessMixin, View):
