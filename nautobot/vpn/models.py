@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from nautobot.apps.constants import CHARFIELD_MAX_LENGTH
@@ -298,30 +299,43 @@ class VPN(PrimaryModel):  # pylint: disable=too-many-ancestors
 class VPNTunnel(PrimaryModel):  # pylint: disable=too-many-ancestors
     """VPNTunnel model for nautobot_vpn_models."""
 
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True, help_text="Name")
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Description")
     vpn_profile = models.ForeignKey(
         to="vpn.VPNProfile",
         on_delete=models.PROTECT,
         related_name="vpn_tunnels",
-        blank=False,
-        null=False,
+        blank=True,
+        null=True,
         verbose_name="VPN Profile",
     )
     vpn = models.ForeignKey(
         to="vpn.VPN",
         on_delete=models.CASCADE,
         related_name="vpn_tunnels",
-        blank=False,
-        null=False,
+        blank=True,
+        null=True,
         verbose_name="VPN",
     )
-    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True, help_text="Name")
-    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Description")
     tunnel_id = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Tunnel ID")
     encapsulation = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
         choices=choices.EncapsulationChoices,
         blank=True,
-        help_text="IPsec - Transport, IPsec - Tunnel, IP-in-IP, GRE, WireGuard, L2TP, PPTP, OpenVPN, EoIP",
+    )
+    endpoint_a = models.ForeignKey(
+        to="vpn.VPNTunnelEndpoint",
+        on_delete=models.SET_NULL,
+        related_name="endpoint_a_vpn_tunnels",
+        blank=True,
+        null=True,
+    )
+    endpoint_z = models.ForeignKey(
+        to="vpn.VPNTunnelEndpoint",
+        on_delete=models.SET_NULL,
+        related_name="endpoint_z_vpn_tunnels",
+        blank=True,
+        null=True,
     )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
@@ -330,24 +344,14 @@ class VPNTunnel(PrimaryModel):  # pylint: disable=too-many-ancestors
         blank=True,
         null=True,
     )
-    role = RoleField(blank=False, null=False)
-    # contact_associations = models.ManyToManyField(
-    #     to="extras.ContactAssociations",
-    #     related_name="vpn_tunnels",
-    #     verbose_name="Contact Associations",
-    #     blank=True,
-    #     null=True,
-    #     help_text="Contact Associations"
-    # )  # TODO should come from PrimaryModel
+    role = RoleField(blank=True, null=True)
     status = StatusField(blank=False, null=False)
 
     class Meta:
         """Meta class for VPNTunnel."""
 
-        # TODO INIT Confirm the verbose_name of the model
         verbose_name = "VPN Tunnel"
 
-    # TODO INIT Confirm the string representation of the model
     def __str__(self):
         """Stringify instance."""
         return self.name
@@ -367,17 +371,19 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
         to="vpn.VPNProfile",
         on_delete=models.PROTECT,
         related_name="vpn_tunnel_endpoints",
-        blank=False,
-        null=False,
+        blank=True,
+        null=True,
         verbose_name="VPN Profile",
     )
-    vpn_tunnel = models.ForeignKey(
-        to="vpn.VPNTunnel",
-        on_delete=models.CASCADE,  # TODO add protection mechanism for hub and spoke.
-        related_name="vpn_tunnel_endpoints",
-        blank=False,
-        null=False,
-        verbose_name="VPN Tunnel",
+    source_interface = models.OneToOneField(
+        to="dcim.Interface",
+        on_delete=models.SET_NULL,
+        related_name="vpn_tunnel_endpoints_src_int",
+        blank=True,
+        null=True,
+        verbose_name="Source Interface",
+        help_text="Mutually Exclusive with Source IP Address.",
+        # TODO add validation source_ipaddress or source_interface must be defined.
     )
     source_ipaddress = models.ForeignKey(
         to="ipam.IPAddress",
@@ -386,14 +392,7 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
         blank=True,
         null=True,
         verbose_name="Source IP Address",
-    )  # TODO add validation source_ipaddress or source_interface must be defined.
-    source_interface = models.OneToOneField(
-        to="dcim.Interface",
-        on_delete=models.SET_NULL,
-        related_name="vpn_tunnel_endpoints_src_int",
-        blank=True,
-        null=True,
-        verbose_name="Source Interface",
+        help_text="Mutually Exclusive with Source IP Address.",
     )
     destination_ipaddress = models.ForeignKey(
         to="ipam.IPAddress",
@@ -402,8 +401,14 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
         blank=True,
         null=True,
         verbose_name="Destination IP Address",
+        help_text="Mutually Exclusive with Destination FQDN.",
     )
-    destination_fqdn = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Destination FQDN")
+    destination_fqdn = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        blank=True,
+        verbose_name="Destination FQDN",
+        help_text="Mutually Exclusive with Destination IP Address.",
+    )
     tunnel_interface = models.OneToOneField(
         to="dcim.Interface",
         on_delete=models.SET_NULL,
@@ -427,14 +432,6 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
         help_text="Protected Prefixes",
     )
     role = RoleField(blank=True, null=True)
-    # contact_associations = models.ManyToManyField(
-    #     to="extras.ContactAssociations",
-    #     related_name="vpn_tunnel_endpoints",
-    #     verbose_name="Contact Associations",
-    #     blank=True,
-    #     null=True,
-    #     help_text="Contact Associations"
-    # )
     # TODO INIT Nautobot recommends that all models have a tenant field, unless you have a good reason not to.
     # tenant = models.ForeignKey(
     #     to="tenancy.Tenant",
@@ -447,15 +444,27 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
     class Meta:
         """Meta class for VPNTunnelEndpoint."""
 
-        # TODO INIT Confirm the verbose_name of the model
         verbose_name = "VPN Tunnel Endpoint"
-
-    # TODO INIT Confirm the string representation of the model
 
     @property
     def name(self):
-        return f"{self.vpn_tunnel.name} --> {self.source_ipaddress.address}"  # TODO IP or source interface.
+        source = f"{self.source_interface.device.name if self.source_interface else self.source_ipaddress.address}"
+        destination = f"{self.destination_ipaddress.address if self.destination_ipaddress else self.destination_fqdn}"
+        return f"{source} --> {destination}"
 
     def __str__(self):
         """Stringify instance."""
         return self.name
+
+    def clean(self):
+        if not (self.source_interface or self.source_ipaddress):
+            raise ValidationError("Source Interface or Source IP Address is required.")
+        if self.source_interface and self.source_ipaddress:
+            raise ValidationError(
+                "Source Interface and Source IP Address are mutually exclusive fields. Select only one."
+            )
+        if self.destination_ipaddress and self.destination_fqdn:
+            raise ValidationError(
+                "Destination IP Address and Destination FQDN are mutually exclusive fields. Select only one."
+            )
+        return super().clean()
