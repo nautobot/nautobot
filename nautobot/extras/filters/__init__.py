@@ -14,6 +14,7 @@ from nautobot.core.filters import (
     BaseFilterSet,
     ContentTypeFilter,
     ContentTypeMultipleChoiceFilter,
+    MultiValueDateFilter,
     MultiValueUUIDFilter,
     NameSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
@@ -54,6 +55,11 @@ from nautobot.extras.filters.mixins import (
     StatusModelFilterSetMixin,
 )
 from nautobot.extras.models import (
+    ApprovalWorkflow,
+    ApprovalWorkflowInstance,
+    ApprovalWorkflowStage,
+    ApprovalWorkflowStageInstance,
+    ApprovalWorkflowStageInstanceResponse,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -107,6 +113,11 @@ from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup
 
 __all__ = (
+    "ApprovalWorkflowFilterSet",
+    "ApprovalWorkflowInstanceFilterSet",
+    "ApprovalWorkflowStageFilterSet",
+    "ApprovalWorkflowStageInstanceFilterSet",
+    "ApprovalWorkflowStageInstanceResponseFilterSet",
     "ComputedFieldFilterSet",
     "ConfigContextFilterSet",
     "ContactFilterSet",
@@ -173,6 +184,114 @@ class CreatedUpdatedFilterSet(CreatedUpdatedModelFilterSetMixin):
 @class_deprecated_in_favor_of(RelationshipModelFilterSetMixin)
 class RelationshipModelFilterSet(RelationshipModelFilterSetMixin):
     pass
+
+
+#
+# Approval Workflows
+#
+
+
+class ApprovalWorkflowFilterSet(BaseFilterSet):
+    """Filter for ApprovalWorkflow."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "model_content_type__app_label": "icontains",
+            "model_content_type__model": "icontains",
+        }
+    )
+    model_content_type = ContentTypeMultipleChoiceFilter(
+        choices=FeatureQuery("approval_workflows").get_choices,
+        label="Object types allowed to be associated with this Approval Workflow",
+    )
+
+    class Meta:
+        """Meta attributes for filter."""
+
+        model = ApprovalWorkflow
+        fields = "__all__"
+
+
+class ApprovalWorkflowStageFilterSet(BaseFilterSet):
+    """Filter for ApprovalWorkflowStage."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "sequence_weight": {
+                "lookup_expr": "exact",
+                "preprocessor": int,
+            },
+            "name": "icontains",
+            "min_approvers": {
+                "lookup_expr": "exact",
+                "preprocessor": int,
+            },
+            "denial_message": "icontains",
+        }
+    )
+
+    class Meta:
+        """Meta attributes for filter."""
+
+        model = ApprovalWorkflowStage
+        fields = "__all__"
+
+
+class ApprovalWorkflowInstanceFilterSet(BaseFilterSet):  # pylint: disable=too-many-ancestors
+    """Filter for ApprovalWorkflowInstance."""
+
+    # TODO INIT Validate the filter_predicates below. If the only field you want to search is `name`, you can remove the SearchFilter
+    # and instead use the NameSearchFilterSet in the class inheritance.
+    q = SearchFilter(
+        filter_predicates={
+            "current_state": "icontains",
+        }
+    )
+
+    class Meta:
+        """Meta attributes for filter."""
+
+        model = ApprovalWorkflowInstance
+        fields = "__all__"
+
+
+class ApprovalWorkflowStageInstanceFilterSet(BaseFilterSet):
+    """Filter for ApprovalWorkflowStageInstance."""
+
+    # TODO INIT Validate the filter_predicates below. If the only field you want to search is `name`, you can remove the SearchFilter
+    # and instead use the NameSearchFilterSet in the class inheritance.
+    q = SearchFilter(
+        filter_predicates={
+            "state": "icontains",
+        }
+    )
+    decision_date = MultiValueDateFilter()
+
+    class Meta:
+        """Meta attributes for filter."""
+
+        model = ApprovalWorkflowStageInstance
+        fields = "__all__"
+
+
+class ApprovalWorkflowStageInstanceResponseFilterSet(BaseFilterSet):
+    """Filter for ApprovalWorkflowStageInstanceResponse."""
+
+    # TODO INIT Validate the filter_predicates below. If the only field you want to search is `name`, you can remove the SearchFilter
+    # and instead use the NameSearchFilterSet in the class inheritance.
+    q = SearchFilter(
+        filter_predicates={
+            "comments": "icontains",
+            "state": "icontains",
+        }
+    )
+
+    class Meta:
+        """Meta attributes for filter."""
+
+        model = ApprovalWorkflowStageInstanceResponse
+        fields = "__all__"
 
 
 #

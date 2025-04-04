@@ -4,6 +4,25 @@ from nautobot.core.choices import ChoiceSet
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 
 #
+# Approval Workflows
+#
+
+
+class ApprovalWorkflowStateChoices(ChoiceSet):
+    """Choices for the current_state field on the ApprovalWorkflowInstance model."""
+
+    PENDING = "Pending"
+    APPROVED = "Approved"
+    DENIED = "Denied"
+
+    CHOICES = (
+        (PENDING, "Pending"),
+        (APPROVED, "Approved"),
+        (DENIED, "Denied"),
+    )
+
+
+#
 # Banners (currently plugin-specific)
 #
 
