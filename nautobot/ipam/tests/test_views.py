@@ -1078,7 +1078,7 @@ class VLANGroupTestCase(
     @classmethod
     def setUpTestData(cls):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        location_other = Location.objects.exclude(id=location.id).first()
+        location_2 = Location.objects.filter(location_type=LocationType.objects.get(name="Building")).first()
 
         cls.form_data = {
             "name": "VLAN Group X",
@@ -1089,7 +1089,7 @@ class VLANGroupTestCase(
         }
 
         cls.bulk_edit_data = {
-            "location": location_other.pk,
+            "location": location_2.pk,
             "description": "Updated description for bulk edit",
             "range": "1-4094",
         }
