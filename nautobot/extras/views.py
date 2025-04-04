@@ -1,4 +1,3 @@
-import json
 import logging
 from typing import Optional
 from urllib.parse import parse_qs
@@ -34,6 +33,7 @@ from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query, serialize_object_v2
 from nautobot.core.tables import ButtonsColumn
 from nautobot.core.templatetags import helpers
+from nautobot.core.templatetags.helpers import pre_tag
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectTextPanel
@@ -3074,7 +3074,6 @@ class WebhookHTTPFieldsPanel(ObjectFieldsPanel):
         if key == "additional_headers":
             return pre_tag(value)
 
-            return format_html("<pre>{}</pre>", value)
         return super().render_value(key, value, context)
 
 
