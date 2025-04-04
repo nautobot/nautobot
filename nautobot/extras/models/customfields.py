@@ -822,16 +822,17 @@ class CustomField(
 
         super().delete(*args, **kwargs)
 
-        # Circular Import
-        from nautobot.extras.signals import change_context_state
+        if content_types:
+            # Circular Import
+            from nautobot.extras.signals import change_context_state
 
-        change_context = change_context_state.get()
-        if change_context is None:
-            context = None
-        else:
-            context = change_context.as_dict(instance=self)
-            context["context_detail"] = "delete custom field data"
-        delete_custom_field_data.delay(self.key, content_types, context)
+            change_context = change_context_state.get()
+            if change_context is None:
+                context = None
+            else:
+                context = change_context.as_dict(instance=self)
+                context["context_detail"] = "delete custom field data"
+            delete_custom_field_data.delay(self.key, content_types, context)
 
     def add_prefix_to_cf_key(self):
         return "cf_" + str(self.key)
