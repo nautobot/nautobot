@@ -447,6 +447,7 @@ nav:
                   - Power Port: "user-guide/core-data-model/dcim/powerport.md"
                   - Power Outlet: "user-guide/core-data-model/dcim/poweroutlet.md"
                   - Rear Port: "user-guide/core-data-model/dcim/rearport.md"
+              - Module Family: "user-guide/core-data-model/dcim/modulefamily.md"
               - Module Type:
                   - "user-guide/core-data-model/dcim/moduletype.md"
                   - Console Port Template: "user-guide/core-data-model/dcim/consoleporttemplate.md"

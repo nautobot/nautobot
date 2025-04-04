@@ -52,6 +52,7 @@ from nautobot.dcim.filters import (
     ManufacturerFilterSet,
     ModuleBayFilterSet,
     ModuleBayTemplateFilterSet,
+    ModuleFamilyFilterSet,
     ModuleFilterSet,
     ModuleTypeFilterSet,
     PlatformFilterSet,
@@ -100,6 +101,7 @@ from nautobot.dcim.models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     Platform,
     PowerFeed,
@@ -573,12 +575,20 @@ def common_test_data(cls):
         label="devicebay3",
         description="Device Bay Description 3",
     )
+    # Create module families for testing
+    module_families = (
+        ModuleFamily.objects.create(name="Module Family 1"),
+        ModuleFamily.objects.create(name="Module Family 2"),
+        ModuleFamily.objects.create(name="Module Family 3"),
+    )
+
     ModuleBayTemplate.objects.create(
         device_type=device_types[0],
         name="device test module bay 1",
         position=1,
         label="devicemodulebay1",
         description="device test module bay 1 description",
+        module_family=module_families[0],
     )
     ModuleBayTemplate.objects.create(
         device_type=device_types[1],
@@ -586,6 +596,7 @@ def common_test_data(cls):
         position=2,
         label="devicemodulebay2",
         description="device test module bay 2 description",
+        module_family=module_families[1],
     )
     ModuleBayTemplate.objects.create(
         device_type=device_types[2],
@@ -4097,6 +4108,7 @@ class ModuleBayTemplateTestCase(FilterTestCases.FilterTestCase):
         ("label",),
         ("module_type", "module_type__id"),
         ("module_type", "module_type__model"),
+        ("module_family", "module_family__id"),
         ("name",),
         ("position",),
     ]
@@ -4267,4 +4279,36 @@ class InterfaceVDCAssignmentTestCase(FilterTestCases.FilterTestCase):
                 name="Interface 000",
                 status=interface_status,
             ),
+        )
+
+
+class ModuleFamilyTestCase(FilterTestCases.FilterTestCase):
+    """Test cases for the ModuleFamilyFilterSet."""
+
+    queryset = ModuleFamily.objects.all()
+    filterset = ModuleFamilyFilterSet
+    generic_filter_tests = [
+        ("name",),
+        ("description",),
+        ("module_types", "module_types__id"),
+        ("module_types", "module_types__model"),
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create test data for filter tests."""
+        manufacturers = (
+            Manufacturer.objects.create(name="Manufacturer 1"),
+            Manufacturer.objects.create(name="Manufacturer 2"),
+        )
+
+        module_families = (
+            ModuleFamily.objects.create(name="Module Family 1", description="First family"),
+            ModuleFamily.objects.create(name="Module Family 2", description="Second family"),
+            ModuleFamily.objects.create(name="Module Family 3", description="Third family"),
+        )
+
+        cls.module_types = (
+            ModuleType.objects.create(manufacturer=manufacturers[0], model="Model 1", module_family=module_families[0]),
+            ModuleType.objects.create(manufacturer=manufacturers[1], model="Model 2", module_family=module_families[1]),
         )

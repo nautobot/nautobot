@@ -14,6 +14,7 @@ class DCIMConfig(NautobotConfig):
         "devicetype",
         "location",
         "module",
+        "modulefamily",
         "moduletype",
         "powerfeed",
         "rack",

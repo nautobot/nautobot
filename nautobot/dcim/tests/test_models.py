@@ -50,6 +50,7 @@ from nautobot.dcim.models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     Platform,
     PowerOutlet,
@@ -3494,3 +3495,24 @@ class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):
             vdc.validated_save()
 
         self.assertIn("Virtual Device Context's device cannot be changed once created", str(err.exception))
+
+
+class ModuleFamilyTestCase(ModelTestCases.BaseModelTestCase):
+    """Test cases for the ModuleFamily model."""
+
+    model = ModuleFamily
+
+    def setUp(self):
+        """Create a ModuleFamily for use in test methods."""
+        self.module_family = ModuleFamily.objects.create(
+            name="Test Module Family", description="A module family for testing"
+        )
+
+    def test_create_modulefamily(self):
+        """Test the creation of a ModuleFamily instance."""
+        self.assertEqual(self.module_family.name, "Test Module Family")
+        self.assertEqual(self.module_family.description, "A module family for testing")
+
+    def test_modulefamily_str(self):
+        """Test string representation of ModuleFamily."""
+        self.assertEqual(str(self.module_family), "Test Module Family")
