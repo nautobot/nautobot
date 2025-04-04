@@ -18,8 +18,8 @@ router.register("namespaces", views.NamespaceUIViewSet)
 router.register("rirs", views.RIRUIViewSet)
 router.register("route-targets", views.RouteTargetUIViewSet)
 router.register("services", views.ServiceUIViewSet)
-router.register("vrfs", views.VRFUIViewSet)
 router.register("vlan-groups", views.VLANGroupUIViewSet)
+router.register("vrfs", views.VRFUIViewSet)
 
 urlpatterns = [
     # Prefixes

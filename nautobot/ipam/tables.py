@@ -737,7 +737,6 @@ class VLANDetailTable(VLANTable):
     tags = TagColumn(url_name="ipam:vlan_list")
 
     class Meta(VLANTable.Meta):
-        model = VLAN
         fields = (
             "pk",
             "vid",

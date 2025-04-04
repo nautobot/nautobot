@@ -744,13 +744,11 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
 #
 
 
-class VLANGroupBulkEditForm(NautobotBulkEditForm):
+class VLANGroupBulkEditForm(LocatableModelBulkEditFormMixin, NautobotBulkEditForm):
     """Bulk edit form for VLANGroup objects."""
 
     pk = forms.ModelMultipleChoiceField(queryset=VLANGroup.objects.all(), widget=forms.MultipleHiddenInput())
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
-    name = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
-    location = forms.ModelChoiceField(queryset=Location.objects.all(), required=False)
     range = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
