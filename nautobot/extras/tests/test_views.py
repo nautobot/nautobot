@@ -3658,23 +3658,28 @@ class StatusTestCase(
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = Status
 
     @classmethod
     def setUpTestData(cls):
         # Status objects to test.
-        content_type = ContentType.objects.get_for_model(Device)
+        device_ct = ContentType.objects.get_for_model(Device)
+        circuit_ct = ContentType.objects.get_for_model(Circuit)
+        interface_ct = ContentType.objects.get_for_model(Interface)
 
         cls.form_data = {
             "name": "new_status",
             "description": "I am a new status object.",
             "color": "ffcc00",
-            "content_types": [content_type.pk],
+            "content_types": [device_ct.pk],
         }
 
         cls.bulk_edit_data = {
             "color": "000000",
+            "add_content_types": [interface_ct.pk, circuit_ct.pk],
+            "remove_content_types": [device_ct.pk],
         }
 
 
@@ -3864,25 +3869,29 @@ class WebhookTestCase(
         }
 
 
-class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = Role
 
     @classmethod
     def setUpTestData(cls):
-        # Status objects to test.
-        content_type = ContentType.objects.get_for_model(Device)
+        # Role objects to test.
+        device_ct = ContentType.objects.get_for_model(Device)
+        ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
+        prefix_ct = ContentType.objects.get_for_model(Prefix)
 
         cls.form_data = {
             "name": "New Role",
             "description": "I am a new role object.",
             "color": ColorChoices.COLOR_GREY,
-            "content_types": [content_type.pk],
+            "content_types": [device_ct.pk],
         }
 
         cls.bulk_edit_data = {
             "color": "000000",
             "description": "I used to be a new role object.",
             "weight": 255,
+            "add_content_types": [ipaddress_ct.pk, prefix_ct.pk],
+            "remove_content_types": [device_ct.pk],
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])

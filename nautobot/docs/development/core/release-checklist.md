@@ -273,7 +273,7 @@ nautobot:
 for ver in 3.9 3.10 3.11 3.12; do
   export INVOKE_NAUTOBOT_PYTHON_VER=$ver
   invoke stop
-  invoke integration-tests
+  invoke tests --tag integration
 done
 ```
 
