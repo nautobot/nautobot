@@ -3376,7 +3376,6 @@ class RelationshipTestCase(
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
     RequiredRelationshipTestMixin,
-    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = Relationship
     slug_source = "label"
@@ -3413,19 +3412,6 @@ class RelationshipTestCase(
         cls.form_data = {
             "label": "VLAN-to-Interface",
             "key": "vlan_to_interface",
-            "type": "many-to-many",
-            "source_type": vlan_type.pk,
-            "source_label": "Interfaces",
-            "source_hidden": False,
-            "source_filter": '{"status": ["' + status.name + '"]}',
-            "destination_type": interface_type.pk,
-            "destination_label": "VLANs",
-            "destination_hidden": True,
-            "destination_filter": None,
-        }
-        cls.bulk_edit_data = {
-            "key": "vlan_to_interface",
-            "description": "This is a relationship between VLANs and Interfaces.",
             "type": "many-to-many",
             "source_type": vlan_type.pk,
             "source_label": "Interfaces",

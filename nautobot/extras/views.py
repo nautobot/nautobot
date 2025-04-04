@@ -2403,15 +2403,16 @@ class ObjectNotesView(generic.GenericView):
 #
 
 
-class RelationshipUIViewSet(NautobotUIViewSet):
-    bulk_update_form_class = forms.RelationshipBulkEditForm
-    filterset_class = filters.RelationshipFilterSet
-    filterset_form_class = forms.RelationshipFilterForm
-    form_class = forms.RelationshipForm
-    serializer_class = serializers.RelationshipSerializer
-    table_class = tables.RelationshipTable
+class RelationshipListView(generic.ObjectListView):
     queryset = Relationship.objects.all()
+    filterset = filters.RelationshipFilterSet
+    filterset_form = forms.RelationshipFilterForm
+    table = tables.RelationshipTable
+    action_buttons = ("add",)
 
+
+class RelationshipView(generic.ObjectView):
+    queryset = Relationship.objects.all()
     object_detail_content = ObjectDetailContent(
         panels=(
             ObjectFieldsPanel(
@@ -2444,6 +2445,22 @@ class RelationshipUIViewSet(NautobotUIViewSet):
             ),
         )
     )
+
+
+class RelationshipEditView(generic.ObjectEditView):
+    queryset = Relationship.objects.all()
+    model_form = forms.RelationshipForm
+    template_name = "extras/relationship_edit.html"
+
+
+class RelationshipBulkDeleteView(generic.BulkDeleteView):
+    queryset = Relationship.objects.all()
+    table = tables.RelationshipTable
+    filterset = filters.RelationshipFilterSet
+
+
+class RelationshipDeleteView(generic.ObjectDeleteView):
+    queryset = Relationship.objects.all()
 
 
 class RelationshipAssociationListView(generic.ObjectListView):
