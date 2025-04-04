@@ -180,6 +180,7 @@ class Button(Component):
         required_permissions=None,
         javascript_template_path=None,
         attributes=None,
+        render_as_button=False,
         **kwargs,
     ):
         """
@@ -208,6 +209,7 @@ class Button(Component):
         self.required_permissions = required_permissions or []
         self.javascript_template_path = javascript_template_path
         self.attributes = attributes
+        self.render_as_button = render_as_button
         super().__init__(**kwargs)
 
     def should_render(self, context: Context):
@@ -234,6 +236,7 @@ class Button(Component):
             "color": self.color,
             "icon": self.icon,
             "attributes": self.attributes,
+            "render_as_button": self.render_as_button,
         }
 
     def render(self, context: Context):
@@ -656,6 +659,8 @@ class ObjectsTablePanel(Panel):
         body_content_template_path="components/panel/body_content_objects_table.html",
         header_extra_content_template_path="components/panel/header_extra_content_table.html",
         footer_content_template_path="components/panel/footer_content_table.html",
+        footer_buttons=None,
+        form_id=None,
         **kwargs,
     ):
         """Instantiate an ObjectsTable panel.
@@ -736,6 +741,8 @@ class ObjectsTablePanel(Panel):
         self.hide_hierarchy_ui = hide_hierarchy_ui
         self.related_field_name = related_field_name
         self.enable_bulk_actions = enable_bulk_actions
+        self.footer_buttons = footer_buttons
+        self.form_id = form_id
 
         super().__init__(
             body_wrapper_template_path=body_wrapper_template_path,
@@ -774,6 +781,14 @@ class ObjectsTablePanel(Panel):
                 body_content_table_add_url = f"{add_route}?{related_field_name}={obj.pk}&return_url={return_url}"
 
         return body_content_table_add_url
+
+    def get_buttons_render(self, context: Context):
+        buttons_render = []
+        for button in self.footer_buttons:
+            # Call render method on each button
+            _render = button.render(context)
+            buttons_render.append(_render)
+        return buttons_render
 
     def get_extra_context(self, context: Context):
         """Add additional context for rendering the table panel.
@@ -851,6 +866,7 @@ class ObjectsTablePanel(Panel):
 
         body_content_table_add_url = self._get_table_add_url(context)
         body_content_table_verbose_name_plural = self.table_title or body_content_table_model._meta.verbose_name_plural
+        buttons_render = self.get_buttons_render(context) if self.footer_buttons else None
 
         return {
             "body_content_table": body_content_table,
@@ -858,6 +874,8 @@ class ObjectsTablePanel(Panel):
             "body_content_table_list_url": body_content_table_list_url,
             "body_content_table_verbose_name": body_content_table_model._meta.verbose_name,
             "body_content_table_verbose_name_plural": body_content_table_verbose_name_plural,
+            "buttons_render": buttons_render,
+            "form_id": self.form_id,
             "more_queryset_count": more_queryset_count,
         }
 

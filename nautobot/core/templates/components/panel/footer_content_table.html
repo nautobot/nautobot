@@ -4,11 +4,30 @@
     </a>
 {% endif %}
 
+<div class="pull-left">
+    {% for button_render in buttons_render %}
+        {{button_render}}
+    {% endfor %}
+</div>
+<div class="clearfix"></div>
 {% if body_content_table_add_url %}
     <div class="pull-right">
         <a href="{{ body_content_table_add_url }}" class="btn btn-xs btn-primary">
             <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add {{ body_content_table_verbose_name }}
         </a>
     </div>
+
     <div class="clearfix"></div>
 {% endif %}
+
+<script>
+    const buttons = document.querySelectorAll('button');
+    buttons.forEach(button => {
+        button.addEventListener('click', function() {
+            const actionUrl = button.getAttribute('action-url');
+            const form = document.getElementById('{{form_id}}'  );
+            form.action = actionUrl;
+            form.submit();
+        });
+    });
+</script>
