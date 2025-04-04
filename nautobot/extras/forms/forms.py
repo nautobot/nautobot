@@ -180,6 +180,7 @@ __all__ = (
     "ObjectMetadataFilterForm",
     "PasswordInputWithPlaceholder",
     "RelationshipAssociationFilterForm",
+    "RelationshipBulkEditForm",
     "RelationshipFilterForm",
     "RelationshipForm",
     "RoleBulkEditForm",
@@ -1772,6 +1773,41 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
 #
 # Relationship
 #
+
+
+class RelationshipBulkEditForm(BootstrapMixin, CustomFieldModelBulkEditFormMixin, NoteModelBulkEditFormMixin):
+    pk = forms.ModelMultipleChoiceField(queryset=Relationship.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    type = forms.ChoiceField(choices=RelationshipTypeChoices, required=False)
+    source_hidden = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    destination_hidden = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    key = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    source_filter = forms.JSONField(required=False, widget=forms.Textarea, help_text="Filter for the source")
+    destination_filter = forms.JSONField(required=False, widget=forms.Textarea, help_text="Filter for the destination")
+    source_type = CSVContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()), required=False
+    )
+    destination_type = CSVContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()), required=False
+    )
+    source_label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    destination_label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    class Meta:
+        model = Relationship
+        fields = [
+            "description",
+            "type",
+            "source_hidden",
+            "destination_hidden",
+            "key",
+            "source_filter",
+            "destination_filter",
+            "source_type",
+            "destination_type",
+            "source_label",
+            "destination_label",
+        ]
 
 
 class RelationshipForm(BootstrapMixin, forms.ModelForm):

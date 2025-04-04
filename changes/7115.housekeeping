@@ -1,0 +1,1 @@
+Refactored Relationship model related UI views to use `NautobotUIViewSet` and `UI Component Framework`.
