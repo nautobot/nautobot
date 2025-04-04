@@ -3050,12 +3050,7 @@ class WebhookHTTPFieldsPanel(ObjectFieldsPanel):
     def render_value(self, key, value, context):
         """Overrides 'additional_headers' rendering as preformatted text; defaults for others."""
         if key == "additional_headers":
-            if not value:  # Handles None, empty string, etc.
-                return format_html("<span style='color: #888;'>—</span>")  # A subtle dash
-            try:
-                value = json.dumps(json.loads(value), indent=2)
-            except (json.JSONDecodeError, TypeError) as e:
-                logger.debug(f"Invalid JSON in additional_headers: {e}")
+            return pre_tag(value)
 
             return format_html("<pre>{}</pre>", value)
         return super().render_value(key, value, context)
