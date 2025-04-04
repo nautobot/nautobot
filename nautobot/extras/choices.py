@@ -488,6 +488,8 @@ class SecretsGroupSecretTypeChoices(ChoiceSet):
     TYPE_SECRET = "secret"  # noqa: S105  # hardcoded-password-string -- false positive
     TYPE_TOKEN = "token"  # noqa: S105  # hardcoded-password-string -- false positive
     TYPE_USERNAME = "username"
+    TYPE_URL = "url"
+    TYPE_NOTES = "notes"
 
     CHOICES = (
         (TYPE_KEY, "Key"),
@@ -495,6 +497,8 @@ class SecretsGroupSecretTypeChoices(ChoiceSet):
         (TYPE_SECRET, "Secret"),
         (TYPE_TOKEN, "Token"),
         (TYPE_USERNAME, "Username"),
+        (TYPE_URL, "URL"),
+        (TYPE_NOTES, "Notes"),
     )
 
 
