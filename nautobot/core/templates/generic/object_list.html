@@ -6,8 +6,14 @@
 {% load static %}
 
 {% block breadcrumbs %}
-    {% include 'inc/breadcrumbs.html' with title=title %}
+    {% format_title_with_saved_view title as formatted_title %}
+    {% include 'inc/breadcrumbs.html' with title=formatted_title %}
 {% endblock breadcrumbs %}
+
+{% block title %}
+    {% format_title_with_saved_view title as formatted_title %}
+    {{ formatted_title }}
+{% endblock %}
 
 {% block content %}
 <div class="pull-right noprint">
@@ -120,17 +126,7 @@
         {% endblock export_button %}
     {% endif %}
 </div>
-<h1>{% block title %}
-        {% if current_saved_view %}
-            —
-            {% if new_changes_not_applied %}
-                <i title="Pending changes not saved">{{ current_saved_view.name }}</i>
-            {% else %}
-                {{ current_saved_view.name }}
-            {% endif %}
-        {% endif %}
-    {% endblock %}
-</h1>
+
 {% block header_extra %}{% endblock %}
 {% if filter_params %}
 <div class="filters-applied">

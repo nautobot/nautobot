@@ -47,6 +47,7 @@
         {% block header %}{% endblock header %}
     </header>
     <div class="container-fluid wrapper" id="main-content">
+        {% block page_top %}{% endblock %}
         {% block content %}{% endblock content %}
         <div class="push"></div>
         {% if request.user.is_authenticated %}

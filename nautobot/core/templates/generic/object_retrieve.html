@@ -10,38 +10,18 @@
 {% load tz %}
 {% load ui_framework %}
 
+{% block breadcrumbs %}
+    {% format_title_with_saved_view object.display|default:object as formatted_title %}
+    {% get_breadcrumbs as crumbs %}
+    {% include 'inc/breadcrumbs.html' with title=formatted_title copy_title=True crumbs=crumbs %}
+{% endblock breadcrumbs %}
+
+{% block title %}
+    {% format_title_with_saved_view object.display|default:object as formatted_title %}
+    {{ formatted_title }}
+{% endblock %}
+
 {% block header %}
-    <div class="row noprint">
-        {% with list_url=object|validated_viewname:"list" %}
-        <div class="col-sm-8 col-md-9">
-            <ol class="breadcrumb">
-            {% block breadcrumbs %}
-                {% if list_url %}
-                <li><a href="{% url list_url %}">
-                    {{ verbose_name_plural|bettertitle }}
-                </a></li>
-                {% endif %}
-                {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
-                <li>{{ object|hyperlinked_object }}</li>
-            {% endblock breadcrumbs %}
-            </ol>
-        </div>
-        {% if list_url %}
-        <div class="col-sm-4 col-md-3">
-            <form action="{% url list_url %}" method="get">
-                <div class="input-group">
-                    <input type="text" name="q" class="form-control" placeholder="Search {{ verbose_name_plural }}" />
-                    <span class="input-group-btn">
-                        <button type="submit" class="btn btn-primary">
-                            <span class="mdi mdi-magnify" aria-hidden="true"></span>
-                        </button>
-                    </span>
-                </div>
-            </form>
-        </div>
-        {% endif %}
-        {% endwith %}
-    </div>
 
     <div class="pull-right noprint">
     {% block buttons %}
@@ -52,16 +32,6 @@
     {% endblock buttons %}
     </div>
 
-    {% block masthead %}
-        <h1>
-            <span class="hover_copy">
-                <span id="copy_title">{% block title %}{{object.display|default:object}}{% endblock %}</span>
-                <button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-text="{{ object.display | default:object }}">
-                    <span class="mdi mdi-content-copy"></span>
-                </button>
-            </span>
-        </h1>
-    {% endblock masthead %}
     {% include 'inc/created_updated.html' %}
     <div class="pull-right noprint">
         {% custom_links object %}

@@ -9,12 +9,25 @@
             src="{% static 'img/nautobot_chevron.svg' %}"
             style="width: 1.5rem;"
         />
-        {{ title }}
+        {% if copy_title %}
+        <span class="hover_copy">
+            <span id="copy_title">{{ title }}</span>
+            <button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-text="{{ title }}">
+                <span class="mdi mdi-content-copy"></span>
+            </button>
+        </span>
+        {% else %}
+            {{ title }}
+        {% endif %}
     </h1>
 
     {% if crumbs %}
         <nav aria-label="Breadcrumbs" class="mt-4">
-            <ol class="breadcrumb">{{ crumbs }}</ol>
+            <ol class="breadcrumb">
+                {% for url, title in crumbs %}
+                    <li><a href="{{ url }}">{{ title }}</a></li>
+                {% endfor %}
+            </ol>
         </nav>
     {% endif %}
 </div>
