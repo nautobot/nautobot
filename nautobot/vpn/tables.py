@@ -1,19 +1,19 @@
-"""Tables for nautobot_vpn_models."""
+"""Tables for the vpn models."""
 
 import django_tables2 as tables
-from nautobot.apps.tables import BaseTable, ButtonsColumn, LinkedCountColumn, TagColumn, ToggleColumn
+
+from nautobot.apps.tables import (
+    BaseTable,
+    ButtonsColumn,
+    LinkedCountColumn,
+    RoleTableMixin,
+    StatusTableMixin,
+    TagColumn,
+    ToggleColumn,
+)
 from nautobot.tenancy.tables import TenantColumn
 
-from nautobot_vpn_models import models
-
-
-
-
-
-
-
-
-
+from . import models
 
 
 class VPNProfileTable(RoleTableMixin, BaseTable):
@@ -21,20 +21,21 @@ class VPNProfileTable(RoleTableMixin, BaseTable):
     """Table for VPNProfile list view."""
 
     pk = ToggleColumn()
+    name = tables.Column(linkify=True)
     vpn_phase1_policy_count = LinkedCountColumn(
-        viewname="plugins:nautobot_vpn_models:vpnphase1policy_list",
+        viewname="vpn:vpnphase1policy_list",
         verbose_name="VPN Phase 1 Policy",
         # TODO INIT Add the URL Params below, and optionally the reverse_lookup.
-        url_params={},
+        url_params={"vpn_profiles": "pk"},
     )
     vpn_phase2_policy_count = LinkedCountColumn(
-        viewname="plugins:nautobot_vpn_models:vpnphase2policy_list",
+        viewname="vpn:vpnphase2policy_list",
         verbose_name="VPN Phase 2 Policy",
         # TODO INIT Add the URL Params below, and optionally the reverse_lookup.
-        url_params={},
+        url_params={"vpn_profiles": "pk"},
     )
     actions = ButtonsColumn(models.VPNProfile)
-    tags = TagColumn(url_name="plugins:nautobot_vpn_models:vpnprofile_list")
+    tags = TagColumn(url_name="vpn:vpnprofile_list")
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -42,9 +43,9 @@ class VPNProfileTable(RoleTableMixin, BaseTable):
         model = models.VPNProfile
         fields = (
             "pk",
+            "name",
             "vpn_phase1_policy_count",
             "vpn_phase2_policy_count",
-            "name",
             "description",
             "keepalive_enabled",
             "keepalive_interval",
@@ -56,9 +57,9 @@ class VPNProfileTable(RoleTableMixin, BaseTable):
         # TODO INIT Add or Remove the columns below to change the list view default columns.
         default_columns = (
             "pk",
+            "name",
             "vpn_phase1_policy_count",
             "vpn_phase2_policy_count",
-            "name",
             "description",
             "keepalive_enabled",
             "keepalive_interval",
@@ -75,8 +76,9 @@ class VPNPhase1PolicyTable(BaseTable):
     """Table for VPNPhase1Policy list view."""
 
     pk = ToggleColumn()
+    name = tables.Column(linkify=True)
     actions = ButtonsColumn(models.VPNPhase1Policy)
-    tags = TagColumn(url_name="plugins:nautobot_vpn_models:vpnphase1policy_list")
+    tags = TagColumn(url_name="vpn:vpnphase1policy_list")
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -117,8 +119,9 @@ class VPNPhase2PolicyTable(BaseTable):
     """Table for VPNPhase2Policy list view."""
 
     pk = ToggleColumn()
+    name = tables.Column(linkify=True)
     actions = ButtonsColumn(models.VPNPhase2Policy)
-    tags = TagColumn(url_name="plugins:nautobot_vpn_models:vpnphase2policy_list")
+    tags = TagColumn(url_name="vpn:vpnphase2policy_list")
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -146,20 +149,74 @@ class VPNPhase2PolicyTable(BaseTable):
         )
 
 
+class VPNProfilePhase1PolicyAssignmentTable(BaseTable):
+    # pylint: disable=too-few-public-methods
+    """Table for VPNProfile list view."""
+
+    pk = ToggleColumn()
+    vpn_phase1_policy = tables.Column(linkify=True)
+    actions = ButtonsColumn(models.VPNProfilePhase1PolicyAssignment)
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = models.VPNProfilePhase1PolicyAssignment
+        fields = (
+            "pk",
+            "vpn_phase1_policy",
+            "weight",
+        )
+        default_columns = (
+            "pk",
+            "vpn_phase1_policy",
+            "weight",
+        )
+
+
+class VPNProfilePhase2PolicyAssignmentTable(BaseTable):
+    # pylint: disable=too-few-public-methods
+    """Table for VPNProfile list view."""
+
+    pk = ToggleColumn()
+    vpn_phase2_policy = tables.Column(linkify=True)
+    actions = ButtonsColumn(models.VPNProfilePhase2PolicyAssignment)
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = models.VPNProfilePhase2PolicyAssignment
+        fields = (
+            "pk",
+            "vpn_phase2_policy",
+            "weight",
+        )
+        default_columns = (
+            "pk",
+            "vpn_phase2_policy",
+            "weight",
+        )
+
+
 class VPNTable(RoleTableMixin, BaseTable):
     # pylint: disable=too-few-public-methods
     """Table for VPN list view."""
 
     pk = ToggleColumn()
-    tenant = TenantColumn()
-    contact_associations_count = LinkedCountColumn(
-        viewname="plugins:nautobot_vpn_models:contactassociations_list",
-        verbose_name="Contact Associations",
-        # TODO INIT Add the URL Params below, and optionally the reverse_lookup.
-        url_params={},
+    name = tables.Column(linkify=True)
+    tunnel_count = LinkedCountColumn(
+        viewname="vpn:vpntunnel_list",
+        verbose_name="VPN Tunnels",
+        url_params={"vpn": "pk"},
     )
+    tenant = TenantColumn()
+    # contact_associations_count = LinkedCountColumn(
+    #     viewname="vpn:contactassociations_list",
+    #     verbose_name="Contact Associations",
+    #     # TODO INIT Add the URL Params below, and optionally the reverse_lookup.
+    #     url_params={},
+    # )
     actions = ButtonsColumn(models.VPN)
-    tags = TagColumn(url_name="plugins:nautobot_vpn_models:vpn_list")
+    tags = TagColumn(url_name="vpn:vpn_list")
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -167,13 +224,14 @@ class VPNTable(RoleTableMixin, BaseTable):
         model = models.VPN
         fields = (
             "pk",
-            "vpn_profile",
             "name",
             "description",
+            "tunnel_count",
+            "vpn_profile",
             "vpn_id",
             "tenant",
             "role",
-            "contact_associations_count",
+            # "contact_associations_count",
         )
         # TODO INIT Add or Remove the columns below to change the list view default columns.
         default_columns = (
@@ -181,12 +239,14 @@ class VPNTable(RoleTableMixin, BaseTable):
             "vpn_profile",
             "name",
             "description",
+            "tunnel_count",
             "vpn_id",
             "tenant",
             "role",
-            "contact_associations_count",
+            # "contact_associations_count",
             "actions",
         )
+        order_by = ["name"]
 
 
 class VPNTunnelTable(StatusTableMixin, RoleTableMixin, BaseTable):
@@ -194,15 +254,10 @@ class VPNTunnelTable(StatusTableMixin, RoleTableMixin, BaseTable):
     """Table for VPNTunnel list view."""
 
     pk = ToggleColumn()
+    name = tables.Column(linkify=True)
     tenant = TenantColumn()
-    contact_associations_count = LinkedCountColumn(
-        viewname="plugins:nautobot_vpn_models:contactassociations_list",
-        verbose_name="Contact Associations",
-        # TODO INIT Add the URL Params below, and optionally the reverse_lookup.
-        url_params={},
-    )
     actions = ButtonsColumn(models.VPNTunnel)
-    tags = TagColumn(url_name="plugins:nautobot_vpn_models:vpntunnel_list")
+    tags = TagColumn(url_name="vpn:vpntunnel_list")
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -210,30 +265,35 @@ class VPNTunnelTable(StatusTableMixin, RoleTableMixin, BaseTable):
         model = models.VPNTunnel
         fields = (
             "pk",
-            "vpn_profile",
-            "vpn",
             "name",
             "description",
+            "vpn",
+            "vpn_profile",
             "tunnel_id",
+            "endpoint_a",
+            "endpoint_z",
             "encapsulation",
             "tenant",
             "role",
-            "contact_associations_count",
+            "status",
         )
         # TODO INIT Add or Remove the columns below to change the list view default columns.
         default_columns = (
             "pk",
-            "vpn_profile",
-            "vpn",
             "name",
             "description",
+            "vpn",
+            "vpn_profile",
             "tunnel_id",
+            "endpoint_a",
+            "endpoint_z",
             "encapsulation",
             "tenant",
             "role",
-            "contact_associations_count",
+            "status",
             "actions",
         )
+        order_by = ["name"]
 
 
 class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
@@ -241,28 +301,22 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
     """Table for VPNTunnelEndpoint list view."""
 
     pk = ToggleColumn()
+    name = tables.Column(linkify=True)
     source_interface = tables.Column(linkify=True)
-    tunnel_interface = tables.Column(linkify=True)
     protected_prefixes_dg_count = LinkedCountColumn(
-        viewname="plugins:nautobot_vpn_models:dynamicgroup_list",
+        viewname="extras:dynamicgroup_list",
         verbose_name="Dynamic Group",
         # TODO INIT Add the URL Params below, and optionally the reverse_lookup.
-        url_params={},
+        url_params={"dynamicgroups": "pk"},
     )
     protected_prefixes_count = LinkedCountColumn(
-        viewname="plugins:nautobot_vpn_models:prefix_list",
+        viewname="ipam:prefix_list",
         verbose_name="Prefix",
         # TODO INIT Add the URL Params below, and optionally the reverse_lookup.
-        url_params={},
-    )
-    contact_associations_count = LinkedCountColumn(
-        viewname="plugins:nautobot_vpn_models:contactassociations_list",
-        verbose_name="Contact Associations",
-        # TODO INIT Add the URL Params below, and optionally the reverse_lookup.
-        url_params={},
+        url_params={"prefixes": "pk"},
     )
     actions = ButtonsColumn(models.VPNTunnelEndpoint)
-    tags = TagColumn(url_name="plugins:nautobot_vpn_models:vpntunnelendpoint_list")
+    tags = TagColumn(url_name="vpn:vpntunnelendpoint_list")
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -270,32 +324,28 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
         model = models.VPNTunnelEndpoint
         fields = (
             "pk",
+            "name",
             "vpn_profile",
-            "vpn_tunnel",
             "source_ipaddress",
             "source_interface",
             "destination_ipaddress",
             "destination_fqdn",
-            "tunnel_interface",
             "protected_prefixes_dg_count",
             "protected_prefixes_count",
             "role",
-            "contact_associations_count",
+            "status",
         )
         # TODO INIT Add or Remove the columns below to change the list view default columns.
         default_columns = (
             "pk",
+            "name",
             "vpn_profile",
-            "vpn_tunnel",
             "source_ipaddress",
             "source_interface",
             "destination_ipaddress",
             "destination_fqdn",
-            "tunnel_interface",
             "protected_prefixes_dg_count",
             "protected_prefixes_count",
             "role",
-            "contact_associations_count",
             "actions",
         )
-
