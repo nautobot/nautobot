@@ -60,7 +60,7 @@ Bootstrap 5:
 ## Label to Badge
 
 - `.label` is replaced with `.badge`
-- The contextual classes (e.g., `.label-primary`, `.label-success`) are now `.badge-primary`, `.badge-success`, etc
+- The contextual classes (e.g., `.label-primary`, `.label-success`) now use the general-purpose classes `.bg-primary`, `.bg-success`, etc.
 
 Bootstrap 3:
 
