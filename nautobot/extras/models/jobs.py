@@ -859,7 +859,13 @@ class JobResult(BaseModel, CustomFieldModel):
             "queue": task_queue,
         }
 
+        if branch_name is None and "nautobot_version_control" in settings.PLUGINS:
+            from nautobot_version_control.utils import active_branch
+
+            branch_name = active_branch()
+
         if branch_name is not None:
+            logger.warning("Enqueueing job to execute against branch %s", branch_name)
             job_celery_kwargs["nautobot_job_branch_name"] = branch_name
         if schedule is not None:
             job_celery_kwargs["nautobot_job_schedule_id"] = schedule.id
@@ -986,13 +992,12 @@ class JobResult(BaseModel, CustomFieldModel):
         # instead of within transaction.atomic(). This allows us to be able to report logs when the jobs
         # are running, and allow us to rollback the database without losing the log entries.
         if not self.use_job_logs_db or not JOB_LOGS:
-            with maybe_with_branch(
-                branch_name=self.celery_kwargs.get("nautobot_job_branch_name", None), user=self.user
-            ):
-                log.save()
+            log.save()
         else:
+            # When version-control is enabled, we need to be sure that the logs are written to the correct branch,
+            # but do NOT create a separate Commit for every such log entry. We'll commit when the job completes.
             with maybe_with_branch(
-                branch_name=self.celery_kwargs.get("nautobot_job_branch_name", None), using=JOB_LOGS, user=self.user
+                branch_name=self.celery_kwargs.get("nautobot_job_branch_name", None), using=JOB_LOGS, autocommit=False
             ):
                 log.save()
 
@@ -1364,6 +1369,10 @@ class ScheduledJob(BaseModel):
             "queue": task_queue,
             "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
         }
+        if branch_name is None and "nautobot_version_control" in settings.PLUGINS:
+            from nautobot_version_control.utils import active_branch
+
+            branch_name = active_branch()
         if branch_name:
             # TODO: what do we do when merging a branch's ScheduledJob down to main?
             celery_kwargs["nautobot_job_branch_name"] = branch_name
