@@ -1,6 +1,5 @@
 """Filtering for the vpn models."""
 
-
 from nautobot.apps.filters import (
     BaseFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
