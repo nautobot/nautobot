@@ -8,7 +8,7 @@ import logging
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 from django.db import models
-from django.db.models import CharField, JSONField, URLField
+from django.db.models import CharField, JSONField, Q, URLField
 from django.db.models.fields.related import ManyToManyField
 from django.template import Context
 from django.template.defaultfilters import truncatechars
@@ -665,10 +665,14 @@ class ObjectsTablePanel(Panel):
                 Table (`BaseTable`) instance. Mutually exclusive with `table_class`, `table_filter`, `table_attribute`.
             table_class (obj): The table class that will be instantiated and rendered e.g. CircuitTable, DeviceTable.
                 Mutually exclusive with `context_table_key`.
-            table_filter (str, optional): The name of the filter to apply to the queryset to initialize the table class.
+            table_filter (str, list, optional): The filter(s) to apply to the queryset to initialize the table class.
                 For example, in a LocationType detail view, for an ObjectsTablePanel of related Locations, this would
                 be `location_type`, because `Location.objects.filter(location_type=obj)` gives the desired queryset.
                 Mutually exclusive with `table_attribute`.
+                For example, in ProviderNetwork detail view, for an ObjectsTablePanel of related Circuits, this would
+                be `["circuit_termination_a__provider_network", "circuit_termination_z__provider_network"]` because
+                `Circuit.objects.filter(Q(circuit_termination_a__provider_network=instance)
+                | Q(circuit_termination_z__provider_network=instance))` gives the desired queryset.
             table_attribute (str, optional): The attribute of the detail view instance that contains the queryset to
                 initialize the table class. e.g. `dynamic_groups`.
                 Mutually exclusive with `table_filter`.
@@ -791,7 +795,16 @@ class ObjectsTablePanel(Panel):
             if self.table_attribute:
                 body_content_table_queryset = getattr(instance, self.table_attribute)
             else:
-                body_content_table_queryset = body_content_table_model.objects.filter(**{self.table_filter: instance})
+                if isinstance(self.table_filter, str):
+                    table_filters = [self.table_filter]
+                elif isinstance(self.table_filter, list):
+                    table_filters = self.table_filter
+                else:
+                    table_filters = []
+                query = Q()
+                for table_filter in table_filters:
+                    query = query | Q(**{table_filter: instance})
+                body_content_table_queryset = body_content_table_model.objects.filter(query)
 
             body_content_table_queryset = body_content_table_queryset.restrict(request.user, "view")
             if self.select_related_fields:
