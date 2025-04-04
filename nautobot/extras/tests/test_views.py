@@ -3287,11 +3287,12 @@ class JobCustomTemplateTestCase(TestCase):
 
 
 class JobHookTestCase(
-    ViewTestCases.CreateObjectViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.EditObjectViewTestCase,
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.GetObjectNotesViewTestCase,
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
     ViewTestCases.BulkEditObjectsViewTestCase,
 ):
@@ -3306,10 +3307,8 @@ class JobHookTestCase(
             enabled=True,
             is_job_hook_receiver=True,
         )
-
         # Create ContentType for ConsolePort (or any model you're targeting for JobHook)
         obj_type = ContentType.objects.get_for_model(ConsolePort)
-
         # Create JobHook objects for different types (create, update, delete)
         cls.job_hooks = (
             JobHook(
@@ -3334,11 +3333,9 @@ class JobHookTestCase(
                 content_types=[obj_type],
             ),
         )
-
         # Save the JobHooks to the database
         for job_hook in cls.job_hooks:
             job_hook.save()
-
         # Form data for creating a new JobHook
         cls.form_data = {
             "name": "jobhook-4",
@@ -3349,7 +3346,6 @@ class JobHookTestCase(
             "type_delete": False,
             "job": job.pk,
         }
-
         # Bulk edit data for all created JobHooks
         cls.bulk_edit_data = [
             {
