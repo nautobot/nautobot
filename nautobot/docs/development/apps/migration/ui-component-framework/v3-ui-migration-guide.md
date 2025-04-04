@@ -223,7 +223,7 @@ Above is a short summary for the positioning and layout changes in Bootstrap 5, 
 ## JavaScript Plugin Updates
 
 - No more jQuery dependency; Bootstrap v5 javascript now use vanilla JavaScript
-- Ensure that your custom scripts do not rey on jQuery-based Bootstrap functions
+- Ensure that your custom scripts do not rely on jQuery-based Bootstrap 3 functions
 - Data attributes renamed:
     - `data-toggle` is now `data-bs-toggle`
     - `data-dismiss` is now `data-bs-dismiss`
