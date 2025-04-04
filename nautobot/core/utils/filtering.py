@@ -140,6 +140,14 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
             plural_name = "cable_terminations"
         elif plural_name == "metadata_types":
             plural_name = "metadata"
+        elif plural_name in [
+            "data_compliance",
+            "min_max_validation_rules",
+            "regular_expression_validation_rules",
+            "required_validation_rules",
+            "unique_validation_rules",
+        ]:
+            plural_name = "custom_validators"
         try:
             form_field = MultipleContentTypeField(choices_as_strings=True, feature=plural_name)
         except KeyError:

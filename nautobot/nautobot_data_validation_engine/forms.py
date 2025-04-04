@@ -3,14 +3,10 @@
 from django import forms
 from django.contrib.contenttypes.models import ContentType
 
-try:
-    from nautobot.apps.constants import CHARFIELD_MAX_LENGTH
-except ImportError:
-    CHARFIELD_MAX_LENGTH = 255
+from nautobot.apps.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
     BootstrapMixin,
     BulkEditNullBooleanSelect,
-    CSVMultipleContentTypeField,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     MultipleContentTypeField,
@@ -94,12 +90,10 @@ class RegularExpressionValidationRuleFilterForm(NautobotFilterForm):
         "error_message",
     ]
     q = forms.CharField(required=False, label="Search")
-    # "CSV" field is being used here because it is using the slug-form input for
-    # content-types, which improves UX.
-    content_type = CSVMultipleContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("custom_validators").get_query()).order_by(
-            "app_label", "model"
-        ),
+    content_type = MultipleContentTypeField(
+        feature="custom_validators",
+        queryset=ContentType.objects.all().order_by("app_label", "model"),
+        choices_as_strings=True,
         required=False,
     )
     tags = TagFilterField(model)
@@ -151,12 +145,10 @@ class MinMaxValidationRuleFilterForm(NautobotFilterForm):
     model = MinMaxValidationRule
     field_order = ["q", "name", "enabled", "content_type", "field", "min", "max", "error_message"]
     q = forms.CharField(required=False, label="Search")
-    # "CSV" field is being used here because it is using the slug-form input for
-    # content-types, which improves UX.
-    content_type = CSVMultipleContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("custom_validators").get_query()).order_by(
-            "app_label", "model"
-        ),
+    content_type = MultipleContentTypeField(
+        feature="custom_validators",
+        queryset=ContentType.objects.all().order_by("app_label", "model"),
+        choices_as_strings=True,
         required=False,
     )
     min = forms.IntegerField(required=False)
@@ -217,12 +209,10 @@ class RequiredValidationRuleFilterForm(NautobotFilterForm):
         "error_message",
     ]
     q = forms.CharField(required=False, label="Search")
-    # "CSV" field is being used here because it is using the slug-form input for
-    # content-types, which improves UX.
-    content_type = CSVMultipleContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("custom_validators").get_query()).order_by(
-            "app_label", "model"
-        ),
+    content_type = MultipleContentTypeField(
+        feature="custom_validators",
+        queryset=ContentType.objects.all().order_by("app_label", "model"),
+        choices_as_strings=True,
         required=False,
     )
     tags = TagFilterField(model)
@@ -281,12 +271,10 @@ class UniqueValidationRuleFilterForm(NautobotFilterForm):
         "error_message",
     ]
     q = forms.CharField(required=False, label="Search")
-    # "CSV" field is being used here because it is using the slug-form input for
-    # content-types, which improves UX.
-    content_type = CSVMultipleContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("custom_validators").get_query()).order_by(
-            "app_label", "model"
-        ),
+    content_type = MultipleContentTypeField(
+        feature="custom_validators",
+        queryset=ContentType.objects.all().order_by("app_label", "model"),
+        choices_as_strings=True,
         required=False,
     )
     max_instances = forms.IntegerField(required=False)
@@ -306,7 +294,7 @@ class DataComplianceFilterForm(BootstrapMixin, forms.Form):
     validated_attribute = MultiValueCharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     valid = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     content_type = MultipleContentTypeField(
-        feature=None,
+        feature="custom_validators",
         queryset=ContentType.objects.all().order_by("app_label", "model"),
         choices_as_strings=True,
         required=False,

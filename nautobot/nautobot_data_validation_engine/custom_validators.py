@@ -11,17 +11,18 @@ validation rules that have been defined for the given model.
 
 import inspect
 import logging
-import pkgutil
+import os
 import re
-import sys
 from typing import Optional
 
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.template.defaultfilters import pluralize
 from django.utils import timezone
 
 from nautobot.core.utils.data import render_jinja2
+from nautobot.core.utils.module_loading import import_modules_privately
 from nautobot.extras.datasources import ensure_git_repository
 from nautobot.extras.models import GitRepository
 from nautobot.extras.plugins import CustomValidator
@@ -140,9 +141,9 @@ class BaseValidator(CustomValidator):
             compliance_class(obj).clean()
 
         for repo in GitRepository.objects.filter(
-            provided_contents__contains="nautobot.nautobot_data_validation_engine.data_compliance_rules"  # TODO(john): data migration for this? used to be data_validation_engine.data_compliance_rules
+            provided_contents__contains="nautobot.nautobot_data_validation_engine.data_compliance_rule"  # TODO(john): data migration for this? used to be data_validation_engine.data_compliance_rules
         ):
-            for compliance_class in get_classes_from_git_repo(repo):
+            for compliance_class in get_data_compliance_classes_from_git_repo(repo):
                 if (
                     f"{self.context['object']._meta.app_label}.{self.context['object']._meta.model_name}"
                     != compliance_class.model
@@ -189,17 +190,29 @@ def get_data_compliance_rules_map():
     return compliance_rulesets
 
 
-def get_classes_from_git_repo(repo: GitRepository):
+def get_data_compliance_classes_from_git_repo(repo: GitRepository, ignore_import_errors=True):
     """Get list of DataComplianceRule classes found within the custom_validators folder of the given repo."""
     ensure_git_repository(repo, head=repo.current_head)
     class_list = []
-    for importer, discovered_module_name, _ in pkgutil.iter_modules([f"{repo.filesystem_path}/custom_validators"]):
-        if discovered_module_name in sys.modules:
-            del sys.modules[discovered_module_name]
-        module = importer.find_module(discovered_module_name).load_module(discovered_module_name)
-        for _, complance_class in inspect.getmembers(module, is_data_compliance_rule):
-            class_list.append(complance_class)
-    return class_list
+    if "nautobot_data_validation_engine.data_compliance_rule" in repo.provided_contents:
+        if not (
+            os.path.isdir(os.path.join(repo.filesystem_path, "custom_validators"))
+            or os.path.isfile(os.path.join(repo.filesystem_path, "custom_validators.py"))
+        ):
+            LOGGER.error("No `custom_validators` submodule found in Git repository %s", repo)
+            if not ignore_import_errors:
+                raise FileNotFoundError(f"No `custom_validators` submodule found in Git repository {repo}")
+        else:
+            modules = import_modules_privately(
+                settings.GIT_ROOT,
+                module_path=[repo.slug.replace("-", "_"), "custom_validators"],
+                ignore_import_errors=ignore_import_errors,
+            )
+            for module in modules:
+                for _, compliance_class in inspect.getmembers(module, is_data_compliance_rule):
+                    class_list.append(compliance_class)
+            return class_list
+    return []
 
 
 class ComplianceError(ValidationError):
@@ -303,6 +316,21 @@ class DataComplianceRule(CustomValidator):
         result.validated_save()
 
 
+class CustomValidatorIterator:
+    """Iterator that generates PluginCustomValidator classes for each model registered in the extras feature query registry 'custom_validators'."""
+
+    def __iter__(self):
+        """Return a generator of PluginCustomValidator classes for each registered model."""
+        for app_label, models in registry["model_features"]["custom_validators"].items():
+            for model in models:
+                yield type(
+                    f"{app_label.capitalize()}{model.capitalize()}CustomValidator",
+                    (BaseValidator,),
+                    {"model": f"{app_label}.{model}"},
+                )
+
+
+custom_validators = CustomValidatorIterator()
 #
 # Note that with the move to core, DVE no longer registers its own custom validators via the apps API.
 # Instead, BaseValidator instances are automatically added via nautobot.extras.plugins.validators.custom_validator_clean

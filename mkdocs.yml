@@ -397,7 +397,7 @@ nav:
               - VLANS and VLAN Groups: "user-guide/feature-guides/getting-started/vlans-and-vlan-groups.md"
               - IP Address Management: "user-guide/feature-guides/getting-started/ipam.md"
               - The Search Bar: "user-guide/feature-guides/getting-started/search-bar.md"
-          - Data Complilance: "user-guide/feature-guides/data-compliance.md"
+          - Data Compliance: "user-guide/feature-guides/data-compliance.md"
           - Contacts and Teams: "user-guide/feature-guides/contacts-and-teams.md"
           - Custom Fields: "user-guide/feature-guides/custom-fields.md"
           - Git as a Data Source: "user-guide/feature-guides/git-data-source.md"
@@ -521,7 +521,7 @@ nav:
           - Computed Fields: "user-guide/platform-functionality/computedfield.md"
           - Custom Fields: "user-guide/platform-functionality/customfield.md"
           - Custom Links: "user-guide/platform-functionality/customlink.md"
-          - Data Validation Engine: "user-guide/platform-functionality/data-validation-engine.md"
+          - Data Validation: "user-guide/platform-functionality/data-validation.md"
           - Dynamic Groups:
               - "user-guide/platform-functionality/dynamicgroup.md"
               - Static Group Associations: "user-guide/platform-functionality/staticgroupassociation.md"

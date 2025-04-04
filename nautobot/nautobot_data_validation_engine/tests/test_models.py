@@ -2,6 +2,8 @@
 Model test cases
 """
 
+import re
+
 from django.contrib.contenttypes.models import ContentType
 from django.core.validators import ValidationError
 from django.db.utils import IntegrityError
@@ -31,7 +33,7 @@ class RegularExpressionValidationRuleModelTestCase(TestCase):
             regular_expression="^.*$",
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "Not a valid field for content type dcim.device."):
             rule.clean()
 
     def test_private_fields_cannot_be_used(self):
@@ -43,7 +45,9 @@ class RegularExpressionValidationRuleModelTestCase(TestCase):
             regular_expression="^.*$",
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(
+            ValidationError, "This field's type does not support regular expression validation."
+        ):
             rule.clean()
 
     def test_non_editable_fields_cannot_be_used(self):
@@ -55,7 +59,9 @@ class RegularExpressionValidationRuleModelTestCase(TestCase):
             regular_expression="^.*$",
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(
+            ValidationError, "This field's type does not support regular expression validation."
+        ):
             rule.clean()
 
     def test_blacklisted_fields_cannot_be_used(self):
@@ -67,7 +73,9 @@ class RegularExpressionValidationRuleModelTestCase(TestCase):
             regular_expression="^.*$",
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(
+            ValidationError, "This field's type does not support regular expression validation."
+        ):
             rule.clean()
 
     def test_invalid_regex_fails_validation(self):
@@ -79,11 +87,12 @@ class RegularExpressionValidationRuleModelTestCase(TestCase):
             regular_expression="[",  # this is an invalid regex pattern
         )
 
-        with self.assertRaises(ValidationError):
+        escaped_regex = re.escape(rule.regular_expression)
+        with self.assertRaisesRegex(ValidationError, f"{escaped_regex} is not a valid regular expression."):
             rule.full_clean()
 
     def test_regex_is_only_validataed_if_context_processing_is_disabled(self):
-        """Test that an invalid regex string fails validation."""
+        """Test regular expression is only validated if context processing is disabled."""
         rule = RegularExpressionValidationRule.objects.create(
             name="Regex rule 1",
             content_type=ContentType.objects.get_for_model(Device),
@@ -112,7 +121,7 @@ class MinMaxValidationRuleModelTestCase(TestCase):
             min=1,
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "Not a valid field for content type dcim.powerfeed."):
             rule.clean()
 
     def test_private_fields_cannot_be_used(self):
@@ -124,7 +133,7 @@ class MinMaxValidationRuleModelTestCase(TestCase):
             min=1,
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "This field's type does not support min/max validation."):
             rule.clean()
 
     def test_blacklisted_fields_cannot_be_used(self):
@@ -136,22 +145,22 @@ class MinMaxValidationRuleModelTestCase(TestCase):
             min=1,
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "This field's type does not support min/max validation."):
             rule.clean()
 
     def test_min_or_max_must_be_set(self):
-        """Test that a blacklisted model field is rejected."""
+        """Test that at least min or max value must be specified."""
         rule = MinMaxValidationRule.objects.create(
             name="Min max rule 1",
             content_type=ContentType.objects.get_for_model(PowerFeed),
             field="amperage",
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "At least a minimum or maximum value must be specified."):
             rule.clean()
 
     def test_min_must_be_less_than_max(self):
-        """Test that a blacklisted model field is rejected."""
+        """Test that the min value set must be less than the max value."""
         rule = MinMaxValidationRule.objects.create(
             name="Min max rule 1",
             content_type=ContentType.objects.get_for_model(PowerFeed),
@@ -160,11 +169,11 @@ class MinMaxValidationRuleModelTestCase(TestCase):
             max=0,
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "Minimum value cannot be more than the maximum value."):
             rule.clean()
 
-    def test_min__and_max_can_be_equal(self):
-        """Test that a blacklisted model field is rejected."""
+    def test_min_and_max_can_be_equal(self):
+        """Test that min and max values can be equal."""
         rule = MinMaxValidationRule.objects.create(
             name="Min max rule 1",
             content_type=ContentType.objects.get_for_model(PowerFeed),
@@ -192,7 +201,7 @@ class RequiredValidationRuleModelTestCase(TestCase):
             field="afieldthatdoesnotexist",
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "Not a valid field for content type dcim.powerfeed."):
             rule.clean()
 
     def test_private_fields_cannot_be_used(self):
@@ -203,7 +212,7 @@ class RequiredValidationRuleModelTestCase(TestCase):
             field="_abs_length",  # this is a private field used for caching a denormalized value
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "This field's type does not support required validation."):
             rule.clean()
 
     def test_blacklisted_fields_cannot_be_used(self):
@@ -214,7 +223,7 @@ class RequiredValidationRuleModelTestCase(TestCase):
             field="id",  # Job.id is an AutoField which is blacklisted
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "This field's type does not support required validation."):
             rule.clean()
 
     def test_default_required_field_cannot_be_used(self):
@@ -225,7 +234,7 @@ class RequiredValidationRuleModelTestCase(TestCase):
             field="name",
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "This field is already required by default."):
             rule.clean()
 
     def test_null_false_blank_true_can_be_used(self):
@@ -255,7 +264,7 @@ class UniqueValidationRuleModelTestCase(TestCase):
             field="afieldthatdoesnotexist",
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "Not a valid field for content type dcim.powerfeed."):
             rule.clean()
 
     def test_private_fields_cannot_be_used(self):
@@ -266,7 +275,7 @@ class UniqueValidationRuleModelTestCase(TestCase):
             field="_abs_length",  # this is a private field used for caching a denormalized value
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "This field's type does not support uniqueness validation."):
             rule.clean()
 
     def test_blacklisted_fields_cannot_be_used(self):
@@ -277,7 +286,7 @@ class UniqueValidationRuleModelTestCase(TestCase):
             field="id",  # Job.id is an AutoField which is blacklisted
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "This field's type does not support uniqueness validation."):
             rule.clean()
 
     def test_default_unique_field_cannot_be_used(self):

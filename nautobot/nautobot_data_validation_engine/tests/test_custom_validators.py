@@ -2,6 +2,8 @@
 Model test cases
 """
 
+import re
+
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.test import TestCase
@@ -30,7 +32,7 @@ class RegularExpressionValidationRuleModelTestCase(TestCase):
         return super().setUp()
 
     def test_invalid_regex_matches_raise_validation_error(self):
-        RegularExpressionValidationRule.objects.create(
+        rule = RegularExpressionValidationRule.objects.create(
             name="Regex rule 1",
             content_type=ContentType.objects.get_for_model(Location),
             field="name",
@@ -42,8 +44,8 @@ class RegularExpressionValidationRuleModelTestCase(TestCase):
             location_type=LocationType.objects.get_by_natural_key("Region"),
             status=Status.objects.get_by_natural_key("Active"),
         )
-
-        with self.assertRaises(ValidationError):
+        escaped_regex = re.escape(rule.regular_expression)
+        with self.assertRaisesRegex(ValidationError, f"Value does not conform to regex: {escaped_regex}"):
             location.clean()
 
     def test_valid_regex_matches_do_not_raise_validation_error(self):
@@ -66,7 +68,7 @@ class RegularExpressionValidationRuleModelTestCase(TestCase):
             self.fail(f"rule.clean() failed validation: {e}")
 
     def test_empty_field_values_coerced_to_empty_string(self):
-        RegularExpressionValidationRule.objects.create(
+        rule = RegularExpressionValidationRule.objects.create(
             name="Regex rule 1",
             content_type=ContentType.objects.get_for_model(Location),
             field="description",
@@ -74,13 +76,14 @@ class RegularExpressionValidationRuleModelTestCase(TestCase):
         )
 
         location = Location(
-            name="does not match the regex",
+            name="Location 1",
             location_type=LocationType.objects.get_by_natural_key("Region"),
-            description=None,  # empty value not allowed by the regex
+            description="",  # empty value not allowed by the regex
             status=Status.objects.get_by_natural_key("Active"),
         )
 
-        with self.assertRaises(ValidationError):
+        escaped_regex = re.escape(rule.regular_expression)
+        with self.assertRaisesRegex(ValidationError, f"Value does not conform to regex: {escaped_regex}"):
             location.clean()
 
     def test_context_processing_happy_path(self):
@@ -120,7 +123,7 @@ class RegularExpressionValidationRuleModelTestCase(TestCase):
             status=Status.objects.get_by_natural_key("Active"),
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "Value does not conform to regex: AMS.*"):
             location.clean()
 
     def test_context_processing_invalid_regex_fails_validation(self):
@@ -138,7 +141,10 @@ class RegularExpressionValidationRuleModelTestCase(TestCase):
             status=Status.objects.get_by_natural_key("Active"),
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(
+            ValidationError,
+            "There was an error rendering the regular expression in the data validation rule 'Regex rule 1'. Either fix the validation rule or disable it in order to save this data.",
+        ):
             location.clean()
 
 
@@ -163,13 +169,13 @@ class MinMaxValidationRuleModelTestCase(TestCase):
         )
 
         location = Location(
-            name="does not match the regex",
+            name="Location without a latitude",
             location_type=LocationType.objects.get_by_natural_key("Region"),
             latitude=None,  # empty value not allowed by the rule
             status=Status.objects.get_by_natural_key("Active"),
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "Value does not conform to mix/max validation: min 1.0, max 1.0"):
             location.clean()
 
     def test_field_value_type_raise_validation_error(self):
@@ -182,13 +188,16 @@ class MinMaxValidationRuleModelTestCase(TestCase):
         )
 
         location = Location(
-            name="does not match the regex",
+            name="Location with an invalid latitude",
             location_type=LocationType.objects.get_by_natural_key("Region"),
             latitude="foobar",  # wrong type
             status=Status.objects.get_by_natural_key("Active"),
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(
+            ValidationError,
+            "Unable to validate against min/max rule Min max rule 1 because the field value is not numeric.",
+        ):
             location.clean()
 
     def test_min_violation_raise_validation_error(self):
@@ -201,13 +210,13 @@ class MinMaxValidationRuleModelTestCase(TestCase):
         )
 
         location = Location(
-            name="does not match the regex",
+            name="Location with latitude less than min",
             location_type=LocationType.objects.get_by_natural_key("Region"),
             latitude=4,  # less than min of 5
             status=Status.objects.get_by_natural_key("Active"),
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "Value is less than minimum value: 5.0"):
             location.clean()
 
     def test_max_violation_raise_validation_error(self):
@@ -220,13 +229,13 @@ class MinMaxValidationRuleModelTestCase(TestCase):
         )
 
         location = Location(
-            name="does not match the regex",
+            name="Location with a latitude more than max",
             location_type=LocationType.objects.get_by_natural_key("Region"),
             latitude=11,  # more than max of 10
             status=Status.objects.get_by_natural_key("Active"),
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "Value is more than maximum value: 10.0"):
             location.clean()
 
     def test_unbounded_min_does_not_raise_validation_error(self):
@@ -239,7 +248,7 @@ class MinMaxValidationRuleModelTestCase(TestCase):
         )
 
         location = Location(
-            name="does not match the regex",
+            name="Location with a valid latitude",
             location_type=LocationType.objects.get_by_natural_key("Region"),
             latitude=-5,
             status=Status.objects.get_by_natural_key("Active"),
@@ -260,7 +269,7 @@ class MinMaxValidationRuleModelTestCase(TestCase):
         )
 
         location = Location(
-            name="does not match the regex",
+            name="Location with a valid latitude",
             location_type=LocationType.objects.get_by_natural_key("Region"),
             latitude=30,
             status=Status.objects.get_by_natural_key("Active"),
@@ -281,7 +290,7 @@ class MinMaxValidationRuleModelTestCase(TestCase):
         )
 
         location = Location(
-            name="does not match the regex",
+            name="Location with a valid latitude",
             location_type=LocationType.objects.get_by_natural_key("Region"),
             latitude=8,  # within bounds
             status=Status.objects.get_by_natural_key("Active"),
@@ -318,7 +327,7 @@ class RequiredValidationRuleModelTestCase(TestCase):
             status=Status.objects.get_by_natural_key("Active"),
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "This field cannot be blank."):
             location.clean()
 
     def test_provided_values_no_not_raise_error(self):
@@ -354,7 +363,7 @@ class RequiredValidationRuleModelTestCase(TestCase):
             description="",
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "This field cannot be blank."):
             location.clean()
 
     def test_falsy_values_do_not_raise_error(self):
@@ -395,7 +404,7 @@ class UniqueValidationRuleModelTestCase(TestCase):
         self.location_type.validated_save()
         return super().setUp()
 
-    def test_blank_value_does_not_raise_error(self):
+    def test_null_value_does_not_raise_error(self):
         UniqueValidationRule.objects.create(
             name="Unique rule 1",
             content_type=ContentType.objects.get_for_model(Location),
@@ -456,5 +465,5 @@ class UniqueValidationRuleModelTestCase(TestCase):
         location1.validated_save()
         location2.validated_save()
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "There can only be 2 instances with this value."):
             location3.clean()

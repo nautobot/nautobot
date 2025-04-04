@@ -1,8 +1,5 @@
 """Filtering for nautobot_data_validation_engine."""
 
-from django.db import models
-import django_filters as filters
-
 from nautobot.apps.filters import NautobotFilterSet
 from nautobot.core.filters import ContentTypeMultipleChoiceFilter, SearchFilter
 from nautobot.extras.utils import FeatureQuery
@@ -29,8 +26,7 @@ class RegularExpressionValidationRuleFilterSet(NautobotFilterSet):
         }
     )
     content_type = ContentTypeMultipleChoiceFilter(
-        choices=FeatureQuery("custom_validators").get_choices,
-        conjoined=False,  # Make this an OR with multi-values
+        choices=FeatureQuery("custom_validators").get_choices, conjoined=False
     )
 
     class Meta:
@@ -53,8 +49,7 @@ class MinMaxValidationRuleFilterSet(NautobotFilterSet):
         }
     )
     content_type = ContentTypeMultipleChoiceFilter(
-        choices=FeatureQuery("custom_validators").get_choices,
-        conjoined=False,  # Make this an OR with multi-values
+        choices=FeatureQuery("custom_validators").get_choices, conjoined=False
     )
 
     class Meta:
@@ -77,8 +72,7 @@ class RequiredValidationRuleFilterSet(NautobotFilterSet):
         }
     )
     content_type = ContentTypeMultipleChoiceFilter(
-        choices=FeatureQuery("custom_validators").get_choices,
-        conjoined=False,  # Make this an OR with multi-values
+        choices=FeatureQuery("custom_validators").get_choices, conjoined=False
     )
 
     class Meta:
@@ -101,8 +95,7 @@ class UniqueValidationRuleFilterSet(NautobotFilterSet):
         }
     )
     content_type = ContentTypeMultipleChoiceFilter(
-        choices=FeatureQuery("custom_validators").get_choices,
-        conjoined=False,  # Make this an OR with multi-values
+        choices=FeatureQuery("custom_validators").get_choices, conjoined=False
     )
 
     class Meta:
@@ -117,30 +110,6 @@ class UniqueValidationRuleFilterSet(NautobotFilterSet):
 #
 
 
-class CustomContentTypeFilter(filters.MultipleChoiceFilter):
-    """Filter for ContentType that doesn't rely on the model's plural name to be in the registry."""
-
-    def filter(self, qs, value):
-        """Filter on value, which should be list of content-type names.
-
-        e.g. `['dcim.device', 'dcim.rack']`
-        """
-        q = models.Q()
-        for v in value:
-            try:
-                app_label, model = v.lower().split(".")
-            except ValueError:
-                continue
-            q |= models.Q(
-                **{
-                    f"{self.field_name}__app_label": app_label,
-                    f"{self.field_name}__model": model,
-                }
-            )
-        qs = qs.filter(q)
-        return qs
-
-
 class DataComplianceFilterSet(NautobotFilterSet):
     """Base filterset for DataComplianceRule model."""
 
@@ -153,8 +122,8 @@ class DataComplianceFilterSet(NautobotFilterSet):
             "object_id": "icontains",
         }
     )
-    content_type = CustomContentTypeFilter(
-        choices=FeatureQuery("custom_validators").get_choices,
+    content_type = ContentTypeMultipleChoiceFilter(
+        choices=FeatureQuery("custom_validators").get_choices, conjoined=False
     )
 
     class Meta:
