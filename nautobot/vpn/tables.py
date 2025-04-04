@@ -303,7 +303,6 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     source_interface = tables.Column(linkify=True)
-    tunnel_interface = tables.Column(linkify=True)
     protected_prefixes_dg_count = LinkedCountColumn(
         viewname="extras:dynamicgroup_list",
         verbose_name="Dynamic Group",
@@ -316,12 +315,6 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
         # TODO INIT Add the URL Params below, and optionally the reverse_lookup.
         url_params={"prefixes": "pk"},
     )
-    # contact_associations_count = LinkedCountColumn(
-    #     viewname="vpn:contactassociations_list",
-    #     verbose_name="Contact Associations",
-    #     # TODO INIT Add the URL Params below, and optionally the reverse_lookup.
-    #     url_params={},
-    # )
     actions = ButtonsColumn(models.VPNTunnelEndpoint)
     tags = TagColumn(url_name="vpn:vpntunnelendpoint_list")
 
@@ -337,7 +330,6 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
             "source_interface",
             "destination_ipaddress",
             "destination_fqdn",
-            "tunnel_interface",
             "protected_prefixes_dg_count",
             "protected_prefixes_count",
             "role",
@@ -352,7 +344,6 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
             "source_interface",
             "destination_ipaddress",
             "destination_fqdn",
-            "tunnel_interface",
             "protected_prefixes_dg_count",
             "protected_prefixes_count",
             "role",
