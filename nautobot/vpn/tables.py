@@ -255,18 +255,7 @@ class VPNTunnelTable(StatusTableMixin, RoleTableMixin, BaseTable):
 
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    tunnel_endpoints_count = LinkedCountColumn(
-        viewname="vpn:vpntunnelendpoint_list",
-        verbose_name="VPN Tunnel Endpoints",
-        url_params={"vpn_tunnel": "pk"},
-    )
     tenant = TenantColumn()
-    # contact_associations_count = LinkedCountColumn(
-    #     viewname="vpn:contactassociations_list",
-    #     verbose_name="Contact Associations",
-    #     # TODO INIT Add the URL Params below, and optionally the reverse_lookup.
-    #     url_params={},
-    # )
     actions = ButtonsColumn(models.VPNTunnel)
     tags = TagColumn(url_name="vpn:vpntunnel_list")
 
@@ -281,12 +270,12 @@ class VPNTunnelTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "vpn",
             "vpn_profile",
             "tunnel_id",
-            "tunnel_endpoints_count",
+            "endpoint_a",
+            "endpoint_z",
             "encapsulation",
             "tenant",
             "role",
             "status",
-            # "contact_associations_count",
         )
         # TODO INIT Add or Remove the columns below to change the list view default columns.
         default_columns = (
@@ -296,12 +285,12 @@ class VPNTunnelTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "vpn",
             "vpn_profile",
             "tunnel_id",
-            "tunnel_endpoints_count",
+            "endpoint_a",
+            "endpoint_z",
             "encapsulation",
             "tenant",
             "role",
             "status",
-            # "contact_associations_count",
             "actions",
         )
         order_by = ["name"]
@@ -344,7 +333,6 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
             "pk",
             "name",
             "vpn_profile",
-            "vpn_tunnel",
             "source_ipaddress",
             "source_interface",
             "destination_ipaddress",
@@ -353,14 +341,13 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
             "protected_prefixes_dg_count",
             "protected_prefixes_count",
             "role",
-            # "contact_associations_count",
+            "status",
         )
         # TODO INIT Add or Remove the columns below to change the list view default columns.
         default_columns = (
             "pk",
             "name",
             "vpn_profile",
-            "vpn_tunnel",
             "source_ipaddress",
             "source_interface",
             "destination_ipaddress",
@@ -369,6 +356,5 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
             "protected_prefixes_dg_count",
             "protected_prefixes_count",
             "role",
-            # "contact_associations_count",
             "actions",
         )

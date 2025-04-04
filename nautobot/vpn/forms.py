@@ -29,38 +29,13 @@ logger = logging.getLogger(__name__)
 class VPNProfileForm(NautobotModelForm):  # pylint: disable=too-many-ancestors
     """Form for creating and updating VPNProfile."""
 
-    # vpn_phase1_policy = DynamicModelMultipleChoiceField(
-    #     queryset=models.VPNPhase1Policy.objects.all(),
-    #     required=False,
-    #     label="VPN Phase 1 Policy",
-    #     # TODO INIT defaulting to the common field `name`, you may want to change this.
-    #     to_field_name="name",
-    # )
-    # vpn_phase2_policy = DynamicModelMultipleChoiceField(
-    #     queryset=models.VPNPhase2Policy.objects.all(),
-    #     required=False,
-    #     label="VPN Phase 2 Policy",
-    #     # TODO INIT defaulting to the common field `name`, you may want to change this.
-    #     to_field_name="name",
-    # )
-    # weight = forms.IntegerField()
     extra_options = JSONField(required=False, label="Extra Options")
-
-    # def clean(self):
-    #     logger.debug(self.data)
-    #     logger.debug(self.cleaned_data)
-    #     super().clean()
-    #     logger.debug(self.cleaned_data)
-    #     return super().clean()
 
     class Meta:
         """Meta attributes."""
 
         model = models.VPNProfile
         fields = [
-            # TODO INIT Add any fields that should be nullable
-            # "vpn_phase1_policy",
-            # "vpn_phase2_policy",
             "name",
             "description",
             "keepalive_interval",
@@ -113,67 +88,9 @@ class VPNProfileBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # py
         ]
 
 
-# class VPNProfilePolicy1AssignmentForm(BootstrapMixin, forms.ModelForm):
-#     vpn_phase1_policy = DynamicModelChoiceField(
-#         queryset=models.VPNPhase1Policy.objects.all(),
-#         required=False,
-#         label="VPN Phase 1 Policy",
-#         # # TODO INIT defaulting to the common field `name`, you may want to change this.
-#         # to_field_name="name",
-#     )
-#     weight = forms.IntegerField(required=False)
-#
-#     class Meta:
-#         model = models.VPNProfilePhase1PolicyAssignment
-#         fields = [
-#             "vpn_phase1_policy",
-#             "weight",
-#         ]
-#         field_order = [
-#             "vpn_phase1_policy",
-#             "weight",
-#         ]
-#
-#     def clean(self):
-#         cleaned_data = self.cleaned_data
-#         logger.debug("cleaned_data")
-#         logger.debug(cleaned_data)
-#
-#         return self.cleaned_data
-#
-# class VPNProfilePolicy2AssignmentForm(BootstrapMixin, forms.ModelForm):
-#     vpn_phase2_policy = DynamicModelChoiceField(
-#         queryset=models.VPNPhase2Policy.objects.all(),
-#         required=False,
-#         label="VPN Phase 2 Policy",
-#         # # TODO INIT defaulting to the common field `name`, you may want to change this.
-#         # to_field_name="name",
-#     )
-#     weight = forms.IntegerField(required=False)
-#
-#     class Meta:
-#         model = models.VPNProfilePhase2PolicyAssignment
-#         fields = [
-#             "vpn_phase2_policy",
-#             "weight",
-#         ]
-#         field_order = [
-#             "vpn_phase2_policy",
-#             "weight",
-#         ]
-#
-#     def clean(self):
-#         cleaned_data = self.cleaned_data
-#         logger.debug("cleaned_data")
-#         logger.debug(cleaned_data)
-#
-#         return self.cleaned_data
-
 VPNProfilePh1FormSet = forms.inlineformset_factory(
     parent_model=models.VPNProfile,
     model=models.VPNProfilePhase1PolicyAssignment,
-    # form=VPNProfilePolicy1AssignmentForm,
-    # exclude=[],
     fields=("vpn_phase1_policy", "weight"),
     extra=1,
     widgets={
@@ -186,8 +103,6 @@ VPNProfilePh1FormSet = forms.inlineformset_factory(
 VPNProfilePh2FormSet = forms.inlineformset_factory(
     parent_model=models.VPNProfile,
     model=models.VPNProfilePhase2PolicyAssignment,
-    # form=VPNProfilePolicy2AssignmentForm,
-    # exclude=[],
     fields=("vpn_phase2_policy", "weight"),
     extra=1,
     widgets={
@@ -338,14 +253,6 @@ class VPNPhase2PolicyFilterForm(NautobotFilterForm):  # pylint: disable=too-many
 class VPNForm(NautobotModelForm, TenancyForm):  # pylint: disable=too-many-ancestors
     """Form for creating and updating VPN."""
 
-    # contact_associations = DynamicModelMultipleChoiceField(
-    #     queryset=ContactAssociations.objects.all(),
-    #     required=False,
-    #     label="Contact Associations",
-    #     # TODO INIT defaulting to the common field `name`, you may want to change this.
-    #     to_field_name="name",
-    # )
-
     class Meta:
         """Meta attributes."""
 
@@ -394,14 +301,6 @@ class VPNFilterForm(NautobotFilterForm, TenancyFilterForm):  # pylint: disable=t
 class VPNTunnelForm(NautobotModelForm, TenancyForm):  # pylint: disable=too-many-ancestors
     """Form for creating and updating VPNTunnel."""
 
-    # contact_associations = DynamicModelMultipleChoiceField(
-    #     queryset=ContactAssociations.objects.all(),
-    #     required=False,
-    #     label="Contact Associations",
-    #     # TODO INIT defaulting to the common field `name`, you may want to change this.
-    #     to_field_name="name",
-    # )
-
     class Meta:
         """Meta attributes."""
 
@@ -422,13 +321,6 @@ class VPNTunnelBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # pyl
         widget=StaticSelect2,
         label="Encapsulation",
     )
-    # contact_associations = DynamicModelMultipleChoiceField(
-    #     queryset=ContactAssociations.objects.all(),
-    #     required=False,
-    #     label="Contact Associations",
-    #     # TODO INIT defaulting to the common field `name`, you may want to change this.
-    #     to_field_name="name",
-    # )
 
     class Meta:
         """Meta attributes."""
@@ -443,7 +335,6 @@ class VPNTunnelBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # pyl
             "encapsulation",
             "tenant",
             "role",
-            # "contact_associations",
         ]
 
 
@@ -474,13 +365,6 @@ class VPNTunnelEndpointForm(NautobotModelForm):  # pylint: disable=too-many-ance
         to_field_name="name",
         help_text="Protected Prefixes behind the tunnel endpoint.",
     )
-    # contact_associations = DynamicModelMultipleChoiceField(
-    #     queryset=ContactAssociations.objects.all(),
-    #     required=False,
-    #     label="Contact Associations",
-    #     # TODO INIT defaulting to the common field `name`, you may want to change this.
-    #     to_field_name="name",
-    # )
 
     class Meta:
         """Meta attributes."""
@@ -510,13 +394,6 @@ class VPNTunnelEndpointBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm)
         # TODO INIT defaulting to the common field `name`, you may want to change this.
         to_field_name="name",
     )
-    # contact_associations = DynamicModelMultipleChoiceField(
-    #     queryset=ContactAssociations.objects.all(),
-    #     required=False,
-    #     label="Contact Associations",
-    #     # TODO INIT defaulting to the common field `name`, you may want to change this.
-    #     to_field_name="name",
-    # )
 
     class Meta:
         """Meta attributes."""
@@ -525,7 +402,6 @@ class VPNTunnelEndpointBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm)
         nullable_fields = [
             # TODO INIT Add any fields that should be nullable
             "vpn_profile",
-            "vpn_tunnel",
             "source_ipaddress",
             "source_interface",
             "destination_ipaddress",
@@ -534,7 +410,7 @@ class VPNTunnelEndpointBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm)
             "protected_prefixes_dg",
             "protected_prefixes",
             "role",
-            # "contact_associations",
+            "status",
         ]
 
 
