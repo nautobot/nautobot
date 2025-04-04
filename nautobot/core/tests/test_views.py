@@ -104,11 +104,11 @@ class HomeViewTestCase(TestCase):
         url = reverse("home")
         response = self.client.get(url)
 
-        # Search bar in nav
-        nav_search_bar_pattern = re.compile(
-            '<nav.*<form action="/search/" method="get" class="navbar-form" id="navbar_search" role="search">.*</form>.*</nav>'
+        # Search bar in header
+        header_search_bar_pattern = re.compile(
+            '<header.*<form action="/search/" class="col text-center" method="get" id="navbar_search" role="search">.*</form>.*</header>'
         )
-        nav_search_bar_result = nav_search_bar_pattern.search(
+        header_search_bar_result = header_search_bar_pattern.search(
             response.content.decode(response.charset).replace("\n", "")
         )
 
@@ -122,20 +122,20 @@ class HomeViewTestCase(TestCase):
             response.content.decode(response.charset).replace("\n", "")
         )
 
-        return nav_search_bar_result, body_search_bar_result
+        return header_search_bar_result, body_search_bar_result
 
     def test_search_bar_not_visible_if_user_not_authenticated(self):
         self.client.logout()
 
-        nav_search_bar_result, body_search_bar_result = self.make_request()
+        header_search_bar_result, body_search_bar_result = self.make_request()
 
-        self.assertIsNone(nav_search_bar_result)
+        self.assertIsNone(header_search_bar_result)
         self.assertIsNone(body_search_bar_result)
 
     def test_search_bar_visible_if_user_authenticated(self):
-        nav_search_bar_result, body_search_bar_result = self.make_request()
+        header_search_bar_result, body_search_bar_result = self.make_request()
 
-        self.assertIsNotNone(nav_search_bar_result)
+        self.assertIsNotNone(header_search_bar_result)
         self.assertIsNotNone(body_search_bar_result)
 
     @override_settings(VERSION="1.2.3")

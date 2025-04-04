@@ -1,0 +1,42 @@
+{% load helpers %}
+
+{% if request.user.is_authenticated %}
+    <form action="{% url 'search' %}" class="col text-center" method="get" id="header_search" role="search">
+        <label class="position-relative w-100">
+            <input class="form-control" />
+            <span class="align-items-center pe-none position-absolute d-flex gap-6 mx-12 my-6 top-0">
+                <i class="mdi mdi-magnify text-secondary"></i>
+                <span class="align-items-center d-inline-flex gap-4 text-secondary">
+                    Press <kbd>⌘K</kbd> to search
+                </span>
+            </span>
+        </label>
+    </form>
+
+    <div class="col text-end">
+        <div class="dropdown">
+            <button class="btn dropdown-toggle align-items-center d-inline-flex gap-6" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="align-items-center bg-primary d-inline-flex justify-content-center rounded text-white" style="height: 1.5rem; width: 1.5rem;">
+                    {% if request.user.get_full_name %}
+                        {% for name in request.user.get_full_name|split:" " %}<!--
+                            -->{{ name|first|upper }}<!--
+                        -->{% endfor %}
+                    {% else %}
+                        {{ request.user.username|first|upper }}
+                    {% endif %}
+                </span>
+                {% firstof request.user.get_full_name request.user.username %}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{% url 'about' %}"><i class="mdi mdi-information"></i>About</a></li>
+                <li><a class="dropdown-item" href="{% url 'user:profile' %}"><i class="mdi mdi-account-box"></i>Profile</a></li>
+                {% if request.user.is_staff %}
+                    <li><a class="dropdown-item" href="{% url 'worker_status' %}"><i class="mdi mdi-server-network"></i>Worker Status</a></li>
+                    <li><a class="dropdown-item" href="{% url 'admin:index' %}"><i class="mdi mdi-cogs"></i>Admin</a></li>
+                {% endif %}
+                <li class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="mdi mdi-logout"></i>Log out</a></li>
+            </ul>
+        </div>
+    </div>
+{% endif %}
