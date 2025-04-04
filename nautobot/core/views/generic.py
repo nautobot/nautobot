@@ -106,6 +106,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
             (dict): Additional context data
         """
         return {
+            "object_detail_content": self.object_detail_content,
             "active_tab": request.GET.get("tab", "main"),
         }
 
