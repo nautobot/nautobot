@@ -3048,7 +3048,7 @@ class WebhookHTTPFieldsPanel(ObjectFieldsPanel):
     """Displays HTTP fields and pretty-prints 'additional_headers' JSON in <pre> format."""
 
     def render_value(self, key, value, context):
-        """Overrides 'additional_headers' rendering as indented JSON; defaults for others."""
+        """Overrides 'additional_headers' rendering as preformatted text; defaults for others."""
         if key == "additional_headers":
             if not value:  # Handles None, empty string, etc.
                 return format_html("<span style='color: #888;'>—</span>")  # A subtle dash
