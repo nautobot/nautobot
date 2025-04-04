@@ -21,6 +21,11 @@ from nautobot.tenancy.tables import TenantColumn
 
 from .choices import MetadataTypeDataTypeChoices
 from .models import (
+    ApprovalWorkflow,
+    ApprovalWorkflowInstance,
+    ApprovalWorkflowStage,
+    ApprovalWorkflowStageInstance,
+    ApprovalWorkflowStageInstanceResponse,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -59,6 +64,14 @@ from .models import (
     Webhook,
 )
 from .registry import registry
+
+APPROVAL_WORKFLOW_OBJECT = """
+{% if record.object_under_review and record.object_under_review.get_absolute_url %}
+    <a href="{{ record.object_under_review.get_absolute_url }}">{{ record.object_under_review }}</a>
+{% else %}
+    {{ record.object_under_review }}
+{% endif %}
+"""
 
 ASSIGNED_OBJECT = """
 {% load helpers %}
@@ -185,6 +198,151 @@ SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS = """
     <i class="mdi mdi-close"></i>
 </button>
 """
+
+#
+# Approval Workflow
+#
+
+
+class ApprovalWorkflowTable(BaseTable):
+    """Table for ApprovalWorkflow list view."""
+
+    pk = ToggleColumn()
+    actions = ButtonsColumn(ApprovalWorkflow)
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = ApprovalWorkflow
+        fields = (
+            "pk",
+            "name",
+            "model_content_type",
+        )
+        # TODO INIT Add or Remove the columns below to change the list view default columns.
+        default_columns = (
+            "pk",
+            "name",
+            "model_content_type",
+            "actions",
+        )
+
+
+class ApprovalWorkflowStageTable(BaseTable):
+    """Table for ApprovalWorkflowStage list view."""
+
+    pk = ToggleColumn()
+    actions = ButtonsColumn(ApprovalWorkflowStage)
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStage
+        fields = (
+            "pk",
+            "approval_workflow",
+            "sequence_weight",
+            "name",
+            "min_approvers",
+            "denial_message",
+            "approver_group",
+        )
+        default_columns = (
+            "pk",
+            "approval_workflow",
+            "sequence_weight",
+            "name",
+            "min_approvers",
+            "denial_message",
+            "approver_group",
+            "actions",
+        )
+
+
+class ApprovalWorkflowInstanceTable(BaseTable):
+    """Table for ApprovalWorkflowInstance list view."""
+
+    pk = ToggleColumn()
+    object_under_review_content_type = tables.Column(verbose_name="Object Type Under Review")
+    object_under_review = tables.TemplateColumn(
+        template_code=APPROVAL_WORKFLOW_OBJECT, verbose_name="Object Under Review"
+    )
+    actions = ButtonsColumn(ApprovalWorkflowInstance)
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = ApprovalWorkflowInstance
+        fields = (
+            "pk",
+            "approval_workflow",
+            "object_under_review_content_type",
+            "object_under_review",
+            "current_state",
+        )
+        default_columns = (
+            "pk",
+            "approval_workflow",
+            "object_under_review_content_type",
+            "object_under_review",
+            "current_state",
+            "actions",
+        )
+
+
+class ApprovalWorkflowStageInstanceTable(BaseTable):
+    """Table for ApprovalWorkflowStageInstance list view."""
+
+    pk = ToggleColumn()
+    actions = ButtonsColumn(ApprovalWorkflowStageInstance)
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStageInstance
+        fields = (
+            "pk",
+            "approval_workflow_instance",
+            "approval_workflow_stage",
+            "state",
+            "decision_date",
+        )
+        # TODO INIT Add or Remove the columns below to change the list view default columns.
+        default_columns = (
+            "pk",
+            "approval_workflow_instance",
+            "approval_workflow_stage",
+            "state",
+            "decision_date",
+            "actions",
+        )
+
+
+class ApprovalWorkflowStageInstanceResponseTable(BaseTable):
+    """Table for ApprovalWorkflowStageInstanceResponse list view."""
+
+    pk = ToggleColumn()
+    actions = ButtonsColumn(ApprovalWorkflowStageInstanceResponse)
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStageInstanceResponse
+        fields = (
+            "pk",
+            "approval_workflow_stage_instance",
+            "user",
+            "comments",
+            "state",
+        )
+        default_columns = (
+            "pk",
+            "approval_workflow_stage_instance",
+            "user",
+            "comments",
+            "state",
+            "actions",
+        )
 
 
 class ComputedFieldTable(BaseTable):

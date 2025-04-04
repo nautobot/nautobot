@@ -45,6 +45,11 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
+    ApprovalWorkflow,
+    ApprovalWorkflowInstance,
+    ApprovalWorkflowStage,
+    ApprovalWorkflowStageInstance,
+    ApprovalWorkflowStageInstanceResponse,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -103,6 +108,60 @@ from .fields import MultipleChoiceJSONField
 #
 
 logger = logging.getLogger(__name__)
+
+#
+# Approval Workflows
+#
+
+
+class ApprovalWorkflowSerializer(NautobotModelSerializer):
+    """ApprovalWorkflow Serializer."""
+
+    class Meta:
+        """Meta attributes."""
+
+        model = ApprovalWorkflow
+        fields = "__all__"
+
+
+class ApprovalWorkflowStageSerializer(NautobotModelSerializer):
+    """ApprovalWorkflowStage Serializer."""
+
+    class Meta:
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStage
+        fields = "__all__"
+
+
+class ApprovalWorkflowInstanceSerializer(NautobotModelSerializer):
+    """ApprovalWorkflowInstance Serializer."""
+
+    class Meta:
+        """Meta attributes."""
+
+        model = ApprovalWorkflowInstance
+        fields = "__all__"
+
+
+class ApprovalWorkflowStageInstanceSerializer(NautobotModelSerializer):
+    """ApprovalWorkflowStageInstance Serializer."""
+
+    class Meta:
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStageInstance
+        fields = "__all__"
+
+
+class ApprovalWorkflowStageInstanceResponseSerializer(ValidatedModelSerializer):
+    """ApprovalWorkflowStageInstanceResponse Serializer."""
+
+    class Meta:
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStageInstanceResponse
+        fields = "__all__"
 
 
 #
