@@ -1,0 +1,1 @@
+Changed "Locations" column in VLAN table to show `location.name` instead of `location.display` to avoid verbose location hierarchy.
