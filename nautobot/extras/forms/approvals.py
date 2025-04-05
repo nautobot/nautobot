@@ -1,10 +1,12 @@
 """Forms for Approval Workflow"""
 
 from django import forms
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 
 from nautobot.core.forms import (
     add_blank_choice,
+    DynamicModelChoiceField,
     JSONField,
     StaticSelect2,
 )
@@ -20,13 +22,13 @@ from nautobot.extras.models import (
 )
 
 
-class ApprovalWorkflowForm(NautobotModelForm):  # pylint: disable=too-many-ancestors
+class ApprovalWorkflowForm(NautobotModelForm):
     """Form for creating and updating ApprovalWorkflow."""
 
     model_content_type = forms.ModelChoiceField(
         queryset=ContentType.objects.filter(APPROVAL_WORKFLOW_MODELS).order_by("app_label", "model"),
         required=True,
-        label="Content Type",
+        label="Model Content Type",
     )
     model_constraints = JSONField(required=False, label="Model Constraints")
 
@@ -37,7 +39,7 @@ class ApprovalWorkflowForm(NautobotModelForm):  # pylint: disable=too-many-ances
         fields = "__all__"
 
 
-class ApprovalWorkflowBulkEditForm(NautobotBulkEditForm):  # pylint: disable=too-many-ancestors
+class ApprovalWorkflowBulkEditForm(NautobotBulkEditForm):
     """ApprovalWorkflow bulk edit form."""
 
     pk = forms.ModelMultipleChoiceField(queryset=ApprovalWorkflow.objects.all(), widget=forms.MultipleHiddenInput)
@@ -49,15 +51,27 @@ class ApprovalWorkflowBulkEditForm(NautobotBulkEditForm):  # pylint: disable=too
         nullable_fields = ["model_constraints"]
 
 
-class ApprovalWorkflowFilterForm(NautobotFilterForm):  # pylint: disable=too-many-ancestors
+class ApprovalWorkflowFilterForm(NautobotFilterForm):
     """Filter form for ApprovalWorkflow."""
 
     model = ApprovalWorkflow
     q = forms.CharField(required=False, label="Search")
 
 
-class ApprovalWorkflowStageForm(NautobotModelForm):  # pylint: disable=too-many-ancestors
+class ApprovalWorkflowStageForm(NautobotModelForm):
     """Form for creating and updating ApprovalWorkflowStage."""
+
+    approval_workflow = DynamicModelChoiceField(
+        queryset=ApprovalWorkflow.objects.all(),
+        required=True,
+        label="Approval Workflow",
+    )
+    approver_group = DynamicModelChoiceField(
+        queryset=Group.objects.all(),
+        required=True,
+        label="Approver Group",
+        help_text="User group that can approve this stage.",
+    )
 
     class Meta:
         """Meta attributes."""
@@ -66,7 +80,7 @@ class ApprovalWorkflowStageForm(NautobotModelForm):  # pylint: disable=too-many-
         fields = "__all__"
 
 
-class ApprovalWorkflowStageBulkEditForm(NautobotBulkEditForm):  # pylint: disable=too-many-ancestors
+class ApprovalWorkflowStageBulkEditForm(NautobotBulkEditForm):
     """ApprovalWorkflowStage bulk edit form."""
 
     pk = forms.ModelMultipleChoiceField(queryset=ApprovalWorkflowStage.objects.all(), widget=forms.MultipleHiddenInput)
@@ -81,15 +95,26 @@ class ApprovalWorkflowStageBulkEditForm(NautobotBulkEditForm):  # pylint: disabl
         nullable_fields = ["denial_message"]
 
 
-class ApprovalWorkflowStageFilterForm(NautobotFilterForm):  # pylint: disable=too-many-ancestors
+class ApprovalWorkflowStageFilterForm(NautobotFilterForm):
     """Filter form for ApprovalWorkflowStage."""
 
     model = ApprovalWorkflowStage
     q = forms.CharField(required=False, label="Search")
 
 
-class ApprovalWorkflowInstanceForm(NautobotModelForm):  # pylint: disable=too-many-ancestors
+class ApprovalWorkflowInstanceForm(NautobotModelForm):
     """Form for creating and updating ApprovalWorkflowInstance."""
+
+    approval_workflow = DynamicModelChoiceField(
+        queryset=ApprovalWorkflow.objects.all(),
+        required=True,
+        label="Approval Workflow",
+    )
+    object_under_review_content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(APPROVAL_WORKFLOW_MODELS).order_by("app_label", "model"),
+        required=True,
+        label="Object Under Review Content Type",
+    )
 
     class Meta:
         """Meta attributes."""
@@ -98,7 +123,7 @@ class ApprovalWorkflowInstanceForm(NautobotModelForm):  # pylint: disable=too-ma
         fields = "__all__"
 
 
-class ApprovalWorkflowInstanceBulkEditForm(NautobotBulkEditForm):  # pylint: disable=too-many-ancestors
+class ApprovalWorkflowInstanceBulkEditForm(NautobotBulkEditForm):
     """ApprovalWorkflowInstance bulk edit form."""
 
     pk = forms.ModelMultipleChoiceField(
@@ -124,15 +149,27 @@ class ApprovalWorkflowInstanceBulkEditForm(NautobotBulkEditForm):  # pylint: dis
         ]
 
 
-class ApprovalWorkflowInstanceFilterForm(NautobotFilterForm):  # pylint: disable=too-many-ancestors
+class ApprovalWorkflowInstanceFilterForm(NautobotFilterForm):
     """Filter form for ApprovalWorkflowInstance."""
 
     model = ApprovalWorkflowInstance
     q = forms.CharField(required=False, label="Search")
 
 
-class ApprovalWorkflowStageInstanceForm(NautobotModelForm):  # pylint: disable=too-many-ancestors
+class ApprovalWorkflowStageInstanceForm(NautobotModelForm):
     """Form for creating and updating ApprovalWorkflowStageInstance."""
+
+    approval_workflow_instance = DynamicModelChoiceField(
+        queryset=ApprovalWorkflowInstance.objects.all(),
+        required=True,
+        label="Approval Workflow Instance",
+    )
+    approval_workflow_stage = DynamicModelChoiceField(
+        queryset=ApprovalWorkflowStage.objects.all(),
+        required=True,
+        label="Approval Workflow Stage",
+        query_params={"approval_workflow_instance": "$approval_workflow_instance"},
+    )
 
     class Meta:
         """Meta attributes."""
@@ -141,7 +178,7 @@ class ApprovalWorkflowStageInstanceForm(NautobotModelForm):  # pylint: disable=t
         fields = "__all__"
 
 
-class ApprovalWorkflowStageInstanceBulkEditForm(NautobotBulkEditForm):  # pylint: disable=too-many-ancestors
+class ApprovalWorkflowStageInstanceBulkEditForm(NautobotBulkEditForm):
     """ApprovalWorkflowStageInstance bulk edit form."""
 
     pk = forms.ModelMultipleChoiceField(
@@ -168,14 +205,14 @@ class ApprovalWorkflowStageInstanceBulkEditForm(NautobotBulkEditForm):  # pylint
         ]
 
 
-class ApprovalWorkflowStageInstanceFilterForm(NautobotFilterForm):  # pylint: disable=too-many-ancestors
+class ApprovalWorkflowStageInstanceFilterForm(NautobotFilterForm):
     """Filter form for ApprovalWorkflowStageInstance."""
 
     model = ApprovalWorkflowStageInstance
     q = forms.CharField(required=False, label="Search")
 
 
-class ApprovalWorkflowStageInstanceResponseForm(NautobotModelForm):  # pylint: disable=too-many-ancestors
+class ApprovalWorkflowStageInstanceResponseForm(NautobotModelForm):
     """Form for creating and updating ApprovalWorkflowStageInstanceResponse."""
 
     class Meta:
@@ -185,7 +222,7 @@ class ApprovalWorkflowStageInstanceResponseForm(NautobotModelForm):  # pylint: d
         fields = "__all__"
 
 
-class ApprovalWorkflowStageInstanceResponseBulkEditForm(NautobotBulkEditForm):  # pylint: disable=too-many-ancestors
+class ApprovalWorkflowStageInstanceResponseBulkEditForm(NautobotBulkEditForm):
     """ApprovalWorkflowStageInstanceResponse bulk edit form."""
 
     pk = forms.ModelMultipleChoiceField(
@@ -212,7 +249,7 @@ class ApprovalWorkflowStageInstanceResponseBulkEditForm(NautobotBulkEditForm):  
         ]
 
 
-class ApprovalWorkflowStageInstanceResponseFilterForm(NautobotFilterForm):  # pylint: disable=too-many-ancestors
+class ApprovalWorkflowStageInstanceResponseFilterForm(NautobotFilterForm):
     """Filter form for ApprovalWorkflowStageInstanceResponse."""
 
     model = ApprovalWorkflowStageInstanceResponse

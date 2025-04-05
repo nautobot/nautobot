@@ -230,6 +230,31 @@ class ApprovalWorkflowStageFilterSet(BaseFilterSet):
             "denial_message": "icontains",
         }
     )
+    approval_workflow_instance = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ApprovalWorkflowInstance.objects.all(),
+        to_field_name="pk",
+        method="_approval_workflow_instance",
+        label="Filter approval workflow stages by approval workflow instance",
+    )
+
+    def generate_query__approval_workflow_instance(self, queryset, approval_workflow_instances):
+        """Helper method used by _approval_workflow_instance() method."""
+        query_params = Q()
+        for approval_workflow_instance in approval_workflow_instances:
+            approval_workflow = approval_workflow_instance.approval_workflow
+            query_params |= Q(approval_workflow=approval_workflow)
+        return query_params
+
+    @extend_schema_field({"type": "string"})
+    def _approval_workflow_instance(self, queryset, name, value):
+        """FilterSet method for getting approval workflow stages belong to an approval workflow instance"""
+        if value:
+            params = self.generate_query__approval_workflow_instance(queryset, value)
+            if len(params) > 0:
+                return queryset.filter(params)
+            else:
+                return queryset.none()
+        return queryset
 
     class Meta:
         """Meta attributes for filter."""

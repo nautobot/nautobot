@@ -208,6 +208,7 @@ class ApprovalWorkflowTable(BaseTable):
     """Table for ApprovalWorkflow list view."""
 
     pk = ToggleColumn()
+    name = tables.Column(linkify=True)
     actions = ButtonsColumn(ApprovalWorkflow)
 
     class Meta(BaseTable.Meta):
@@ -232,6 +233,8 @@ class ApprovalWorkflowStageTable(BaseTable):
     """Table for ApprovalWorkflowStage list view."""
 
     pk = ToggleColumn()
+    approval_workflow = tables.Column(linkify=True)
+    name = tables.Column(linkify=True)
     actions = ButtonsColumn(ApprovalWorkflowStage)
 
     class Meta(BaseTable.Meta):
@@ -263,6 +266,7 @@ class ApprovalWorkflowInstanceTable(BaseTable):
     """Table for ApprovalWorkflowInstance list view."""
 
     pk = ToggleColumn()
+    approval_workflow = tables.Column(linkify=True)
     object_under_review_content_type = tables.Column(verbose_name="Object Type Under Review")
     object_under_review = tables.TemplateColumn(
         template_code=APPROVAL_WORKFLOW_OBJECT, verbose_name="Object Under Review"
