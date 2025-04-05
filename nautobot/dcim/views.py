@@ -304,7 +304,7 @@ class LocationView(generic.ObjectView):
             .select_related("parent", "location_type")
         )
 
-        children_table = tables.LocationTable(children)
+        children_table = tables.LocationTable(children, hide_hierarchy_ui=True)
 
         paginate = {
             "paginator_class": EnhancedPaginator,
