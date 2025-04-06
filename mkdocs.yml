@@ -118,6 +118,9 @@ plugins:
   - "gen-files":
       scripts:
         - docs/generate_code_reference_pages.py
+        - docs/generate_error_codes.py
+  - literate-nav:
+      nav_file: entry-point.md
   - "glightbox":
       manual: true # See https://blueswen.github.io/mkdocs-glightbox/flexibility/enable-by-image-or-page/
   - "macros":
@@ -386,6 +389,7 @@ nav:
           - Security:
               - "user-guide/administration/security/index.md"
               - Notices: "user-guide/administration/security/notices.md"
+          - Troubleshooting: "user-guide/administration/troubleshooting/"
       - Feature Guides:
           - Getting Started:
               - "user-guide/feature-guides/getting-started/index.md"
