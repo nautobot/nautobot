@@ -21,13 +21,18 @@
 {% endif %}
 
 <script>
-    const buttons = document.querySelectorAll('button');
-    buttons.forEach(button => {
-        button.addEventListener('click', function() {
-            const actionUrl = button.getAttribute('action-url');
-            const form = document.getElementById('{{form_id}}'  );
-            form.action = actionUrl;
-            form.submit();
+    document.querySelectorAll('button[data-form-id="{{ form_id }}"]').forEach(button => {
+        button.addEventListener('click', function () {
+            const actionUrl = button.getAttribute('action-urls');
+            const form = document.getElementById('{{ form_id }}');
+            if (form && actionUrl) {
+                form.action = actionUrl;
+                form.submit();
+            }
+            else {
+                console.warn('Missing form_id or action_url:', button);
+                return;
+            }
         });
     });
 </script>
