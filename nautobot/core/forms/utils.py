@@ -5,6 +5,7 @@ from django import forms as django_forms
 from django.forms.models import fields_for_model
 
 from nautobot.core import forms
+from nautobot.core.error_codes import error_message
 from nautobot.core.models import querysets
 
 __all__ = (
@@ -38,7 +39,7 @@ def parse_numeric_range(input_string, base=10):
         try:
             begin, end = dash_range.split("-")
             if begin == "" or end == "":
-                raise TypeError("Input value must be a string using a range format.")
+                raise TypeError(error_message("E0001", input_string=input_string))
         except ValueError:
             begin, end = dash_range, dash_range
 
