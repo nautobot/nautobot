@@ -23,7 +23,7 @@
 <script>
     document.querySelectorAll('button[data-form-id="{{ form_id }}"]').forEach(button => {
         button.addEventListener('click', function () {
-            const actionUrl = button.getAttribute('action-urls');
+            const actionUrl = button.getAttribute('action-url');
             const form = document.getElementById('{{ form_id }}');
             if (form && actionUrl) {
                 form.action = actionUrl;
