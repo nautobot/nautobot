@@ -2,7 +2,7 @@ import datetime
 import json
 import logging
 import re
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, quote_plus
 
 from django import template
 from django.conf import settings
@@ -709,6 +709,21 @@ def render_ancestor_hierarchy(value):
     result += append_to_result
 
     return result
+
+
+@library.filter()
+@register.filter()
+def render_address(address):
+    if address:
+        address = format_html("<br>".join(address.split("\n")))
+        map_link = format_html(
+            '<a href="https://maps.google.com/?q={}" target="_blank" class="btn btn-primary btn-xs">'
+            '<i class="mdi mdi-map-marker"></i> Map it</a>',
+            quote_plus(address),
+        )
+        address_display = format_html("<span>{}</span>", address)
+        return format_html('<div class="pull-right noprint">{}</div>{}', map_link, address_display)
+    return HTML_NONE
 
 
 #

@@ -31,6 +31,7 @@ from nautobot.core.forms import restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query, serialize_object_v2
 from nautobot.core.tables import ButtonsColumn
+from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel
@@ -3027,6 +3028,7 @@ class TeamUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
+                value_transforms={"address": [helpers.render_address]},
             ),
             object_detail.ObjectsTablePanel(
                 weight=100,
