@@ -6,9 +6,7 @@ from celery.utils.functional import maybe_list
 from celery.utils.nodenames import gethostname
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.db import connection
 from kombu.utils.uuid import uuid
-
 
 from nautobot.core.branching import BranchContext
 

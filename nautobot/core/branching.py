@@ -16,7 +16,9 @@ class BranchContext:
     def __enter__(self):
         if self.branch_name is None or "nautobot_version_control" not in settings.PLUGINS:
             if self.branch_name is not None:
-                LOGGER.warning("nautobot_version_control is not installed, ignoring requested branch %s", branch_name)
+                LOGGER.warning(
+                    "nautobot_version_control is not installed, ignoring requested branch %s", self.branch_name
+                )
             return
 
         from nautobot_version_control.utils import active_branch  # pylint: disable=import-error
