@@ -4,10 +4,10 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.extras.choices import ApprovalWorkflowStateChoices
 from nautobot.extras.constants import APPROVAL_WORKFLOW_MODELS
-from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.utils import extras_features
 from nautobot.users.models import User
 
@@ -191,7 +191,7 @@ class ApprovalWorkflowStageInstance(PrimaryModel):
     "graphql",
     "webhooks",
 )
-class ApprovalWorkflowStageInstanceResponse(ChangeLoggedModel):
+class ApprovalWorkflowStageInstanceResponse(BaseModel):
     """ApprovalWorkflowStageInstanceResponse model."""
 
     approval_workflow_stage_instance = models.ForeignKey(

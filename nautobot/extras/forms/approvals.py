@@ -9,10 +9,11 @@ from nautobot.core.forms import (
     DynamicModelChoiceField,
     JSONField,
     StaticSelect2,
+    TagFilterField,
 )
 from nautobot.extras.choices import ApprovalWorkflowStateChoices
 from nautobot.extras.constants import APPROVAL_WORKFLOW_MODELS
-from nautobot.extras.forms import NautobotBulkEditForm, NautobotFilterForm, NautobotModelForm
+from nautobot.extras.forms import NautobotBulkEditForm, NautobotFilterForm, NautobotModelForm, TagsBulkEditFormMixin
 from nautobot.extras.models import (
     ApprovalWorkflow,
     ApprovalWorkflowInstance,
@@ -39,7 +40,7 @@ class ApprovalWorkflowForm(NautobotModelForm):
         fields = "__all__"
 
 
-class ApprovalWorkflowBulkEditForm(NautobotBulkEditForm):
+class ApprovalWorkflowBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     """ApprovalWorkflow bulk edit form."""
 
     pk = forms.ModelMultipleChoiceField(queryset=ApprovalWorkflow.objects.all(), widget=forms.MultipleHiddenInput)
@@ -56,6 +57,7 @@ class ApprovalWorkflowFilterForm(NautobotFilterForm):
 
     model = ApprovalWorkflow
     q = forms.CharField(required=False, label="Search")
+    tags = TagFilterField(model)
 
 
 class ApprovalWorkflowStageForm(NautobotModelForm):
@@ -80,7 +82,7 @@ class ApprovalWorkflowStageForm(NautobotModelForm):
         fields = "__all__"
 
 
-class ApprovalWorkflowStageBulkEditForm(NautobotBulkEditForm):
+class ApprovalWorkflowStageBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     """ApprovalWorkflowStage bulk edit form."""
 
     pk = forms.ModelMultipleChoiceField(queryset=ApprovalWorkflowStage.objects.all(), widget=forms.MultipleHiddenInput)
@@ -100,6 +102,7 @@ class ApprovalWorkflowStageFilterForm(NautobotFilterForm):
 
     model = ApprovalWorkflowStage
     q = forms.CharField(required=False, label="Search")
+    tags = TagFilterField(model)
 
 
 class ApprovalWorkflowInstanceForm(NautobotModelForm):
@@ -123,7 +126,7 @@ class ApprovalWorkflowInstanceForm(NautobotModelForm):
         fields = "__all__"
 
 
-class ApprovalWorkflowInstanceBulkEditForm(NautobotBulkEditForm):
+class ApprovalWorkflowInstanceBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     """ApprovalWorkflowInstance bulk edit form."""
 
     pk = forms.ModelMultipleChoiceField(
@@ -154,6 +157,7 @@ class ApprovalWorkflowInstanceFilterForm(NautobotFilterForm):
 
     model = ApprovalWorkflowInstance
     q = forms.CharField(required=False, label="Search")
+    tags = TagFilterField(model)
 
 
 class ApprovalWorkflowStageInstanceForm(NautobotModelForm):
@@ -178,7 +182,7 @@ class ApprovalWorkflowStageInstanceForm(NautobotModelForm):
         fields = "__all__"
 
 
-class ApprovalWorkflowStageInstanceBulkEditForm(NautobotBulkEditForm):
+class ApprovalWorkflowStageInstanceBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     """ApprovalWorkflowStageInstance bulk edit form."""
 
     pk = forms.ModelMultipleChoiceField(
@@ -210,6 +214,7 @@ class ApprovalWorkflowStageInstanceFilterForm(NautobotFilterForm):
 
     model = ApprovalWorkflowStageInstance
     q = forms.CharField(required=False, label="Search")
+    tags = TagFilterField(model)
 
 
 class ApprovalWorkflowStageInstanceResponseForm(NautobotModelForm):
