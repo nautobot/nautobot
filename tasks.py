@@ -180,12 +180,19 @@ def docker_compose(context, command, **kwargs):
 
     # Determine which ports mapping strategy to use
     if context.nautobot.ephemeral_ports:
-        ports_type = "ephemeral"
-    else:
-        ports_type = "static"
-    compose_command_tokens.append(
-        f'-f "{os.path.join(context.nautobot.compose_dir, f"docker-compose.{ports_type}-ports.yml")}"'
-    )
+        compose_ephemeral_cmd = (
+            f'-f "{os.path.join(context.nautobot.compose_dir, "docker-compose.ephemeral-ports.yml")}"'
+        )
+        override_found = False
+        # We have to grapple with the override.yml file if it exists.
+        for index, token in enumerate(compose_command_tokens):
+            print(index, token)
+            if re.search(r"docker-compose\.override\.yml", token):
+                compose_command_tokens.insert(index, compose_ephemeral_cmd)
+                override_found = True
+                break
+        if not override_found:
+            compose_command_tokens.append(compose_ephemeral_cmd)
 
     compose_command_tokens.append(command)
 
