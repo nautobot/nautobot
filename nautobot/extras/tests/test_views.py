@@ -85,6 +85,7 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
+from nautobot.extras.tests.test_jobs import get_job_class_and_model
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import RoleModelsQuery, TaggableClassesQuery
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup, VRF
@@ -3286,77 +3287,72 @@ class JobCustomTemplateTestCase(TestCase):
             self.client.get(self.run_url)
 
 
-class JobHookTestCase(
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
-    ViewTestCases.GetObjectNotesViewTestCase,
-    ViewTestCases.CreateObjectViewTestCase,
-    ViewTestCases.EditObjectViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkEditObjectsViewTestCase,
-):
+class JobHookTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = JobHook
 
     @classmethod
     def setUpTestData(cls):
-        # Create a Job object that will be used in all JobHooks
-        job = Job.objects.create(
-            name="Test Job",
-            installed=True,
-            enabled=True,
-            is_job_hook_receiver=True,
-        )
-        # Create ContentType for ConsolePort (or any model you're targeting for JobHook)
+        # Get valid job from registered job modules
+        module = "job_hook_receiver"
+        name = "TestJobHookReceiverLog"
+        _job_class, job = get_job_class_and_model(module, name)
+
+        # ✅ Ensure it's marked as a valid JobHook receiver
+        job.is_job_hook_receiver = True
+        job.save()
+
+        # Create content type for ConsolePort
         obj_type = ContentType.objects.get_for_model(ConsolePort)
-        # Create JobHook objects for different types (create, update, delete)
+        device_ct = ContentType.objects.get_for_model(Device)
+        ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
+        prefix_ct = ContentType.objects.get_for_model(Prefix)
+
+        # Create JobHook instances
         cls.job_hooks = (
             JobHook(
                 name="jobhook-1",
                 enabled=True,
                 job=job,
                 type_create=True,
-                content_types=[obj_type],
             ),
             JobHook(
                 name="jobhook-2",
                 enabled=True,
                 job=job,
                 type_update=True,
-                content_types=[obj_type],
             ),
             JobHook(
                 name="jobhook-3",
                 enabled=True,
                 job=job,
                 type_delete=True,
-                content_types=[obj_type],
             ),
         )
-        # Save the JobHooks to the database
+
         for job_hook in cls.job_hooks:
             job_hook.save()
-        # Form data for creating a new JobHook
+            job_hook.content_types.set([obj_type])  # Set after save
+
+        # Form data for create test
         cls.form_data = {
             "name": "jobhook-4",
-            "content_types": [obj_type.pk],
+            "content_types": [obj_type.pk],  # Use int PK
             "enabled": True,
             "type_create": True,
             "type_update": False,
             "type_delete": False,
             "job": job.pk,
         }
-        # Bulk edit data for all created JobHooks
-        cls.bulk_edit_data = [
-            {
-                "id": job_hook.pk,
-                "enabled": False,  # Disable all job hooks
-                "type_create": False,  # Remove create action
-                "type_update": True,  # Enable update action
-                "type_delete": True,  # Enable delete action
-            }
-            for job_hook in cls.job_hooks
-        ]
+
+        # Bulk edit data
+        cls.bulk_edit_data = {
+            "enabled": False,
+            "type_create": True,  # Make sure these change values
+            "type_update": True,
+            "type_delete": True,
+            "add_content_types": [ipaddress_ct.pk, prefix_ct.pk],
+            "remove_content_types": [device_ct.pk],
+        }
 
 
 # TODO: Convert to StandardTestCases.Views

@@ -1283,8 +1283,9 @@ class JobFilterForm(BootstrapMixin, forms.Form):
 
 class JobHookBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=JobHook.objects.all(), widget=forms.MultipleHiddenInput())
-    job = forms.ModelChoiceField(
-        queryset=Job.objects.filter(is_job_hook_receiver=True),
+    job = DynamicModelChoiceField(
+        queryset=Job.objects.all(),
+        query_params={"is_job_hook_receiver": True},
         required=False,
         label="Job",
     )
@@ -1292,6 +1293,12 @@ class JobHookBulkEditForm(NautobotBulkEditForm):
     type_create = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
     type_update = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
     type_delete = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    add_content_types = MultipleContentTypeField(
+        queryset=RoleModelsQuery().as_queryset(), required=False, label="Add Content Type(s)"
+    )
+    remove_content_types = MultipleContentTypeField(
+        queryset=RoleModelsQuery().as_queryset(), required=False, label="Remove Content Type(s)"
+    )
 
     class Meta:
         model = JobHook
@@ -1301,6 +1308,8 @@ class JobHookBulkEditForm(NautobotBulkEditForm):
             "type_create",
             "type_update",
             "type_delete",
+            "add_content_types",
+            "remove_content_types",
         )
 
 
