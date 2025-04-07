@@ -745,7 +745,7 @@ def table_config_button(table, table_name=None, extra_classes="", disabled=False
         table_name = table.__class__.__name__
     html_template = (
         '<button type="button" class="btn btn-default {}'
-        '" data-toggle="modal" data-target="#{}_config" {} title="Configure table">'
+        '" data-bs-toggle="modal" data-bs-target="#{}_config" {} title="Configure table">'
         '<i class="mdi mdi-cog"></i> Configure</button>'
     )
     return format_html(html_template, extra_classes, table_name, 'disabled="disabled"' if disabled else "")
@@ -1075,7 +1075,7 @@ def tree_hierarchy_ui_representation(tree_depth, hide_hierarchy_ui, base_depth=0
 def hyperlinked_object_with_color(obj):
     """Render the display view of an object."""
     if obj:
-        content = f'<span class="label" style="color: {fgcolor(obj.color)}; background-color: #{obj.color}">{hyperlinked_object(obj)}</span>'
+        content = f'<span class="badge" style="color: {fgcolor(obj.color)}; background-color: #{obj.color}">{hyperlinked_object(obj)}</span>'
         return format_html(content)
     return HTML_NONE
 

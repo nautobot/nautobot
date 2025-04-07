@@ -1,15 +1,18 @@
-<div class="panel panel-default">
+<div class="card mb-10">
     {% if label.strip or header_extra_content.strip %}
-        <div class="panel-heading">
+        <div class="card-header">
             {% if label %}
                 <strong>{{ label }}</strong>
             {% endif %}
+            <a class="float-end text-reset text-decoration-none" data-bs-toggle="collapse" panel-id="{{body_id}}" href="#{{body_id}}" role="button" aria-expanded="true" aria-controls="{{body_id}}">
+                <span class="mdi mdi-chevron-down"></span>
+            </a>
             {{ header_extra_content }}
         </div>
     {% endif %}
     {{ body }}
     {% if footer_content.strip %}
-        <div class="panel-footer">
+        <div class="card-footer">
             {{ footer_content }}
         </div>
     {% endif %}

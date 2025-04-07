@@ -65,24 +65,37 @@ function initializeStaticChoiceSelection(context, dropdownParent=null){
 
 // Static choice selection
 function initializeCheckboxes(context){
-    this_context = $(context);
     // "Toggle" checkbox for object lists (PK column)
-    this_context.find('input:checkbox.toggle').click(function() {
-        $(this).closest('table').find('input:checkbox[name=pk]:visible').prop('checked', $(this).prop('checked'));
+    document.querySelectorAll('input[type="checkbox"].toggle').forEach(toggleCheckbox => {
+        toggleCheckbox.addEventListener('click', function () {
+            const isChecked = this.checked;
+            // Check/uncheck all pk column checkboxes in the table
+            this.closest('table')
+                .querySelectorAll('input[type="checkbox"][name="pk"]:not([visually-hidden])')
+                .forEach(checkbox => checkbox.checked = isChecked);
 
-        // Show the "select all" box if present
-        if ($(this).is(':checked')) {
-            $('#select_all_box').removeClass('hidden');
-        } else {
-            $('#select_all').prop('checked', false);
-        }
+            // Show the "select all" box if present
+            const selectAllBox = document.getElementById('select_all_box');
+            if (selectAllBox) {
+                if (isChecked) {
+                    // unhide the select all objects form that contains the bulk action buttons
+                    selectAllBox.classList.remove('visually-hidden');
+                } else {
+                    const selectAll = document.getElementById('select_all');
+                    if (selectAll) selectAll.checked = false;
+                }
+            }
+        });
     });
 
     // Uncheck the "toggle" and "select all" checkboxes if an item is unchecked
-    this_context.find('input:checkbox[name=pk]').click(function (event) {
-        if (!$(this).attr('checked')) {
-            $('input:checkbox.toggle, #select_all').prop('checked', false);
-        }
+    document.querySelectorAll('input[type="checkbox"][name="pk"]').forEach(itemCheckbox => {
+        itemCheckbox.addEventListener('click', function () {
+            if (!this.checked) {
+                document.querySelectorAll('input[type="checkbox"].toggle, #select_all')
+                    .forEach(checkbox => checkbox.checked = false);
+            }
+        });
     });
 }
 
@@ -862,14 +875,20 @@ function initializeImagePreview(context){
 }
 
 function initializeSelectAllForm(context){
-    this_context = $(context);
-    this_context.find('#select_all').click(function() {
-        if ($(this).is(':checked')) {
-            $('#select_all_box').find('button').prop('disabled', '');
-        } else {
-            $('#select_all_box').find('button').prop('disabled', 'disabled');
-        }
-    });
+    // selectAll is the checkbox that selects all objects
+    const selectAll = document.querySelector('#select_all');
+    // selectAllBox is the div that contains the form bulk action buttons
+    const selectAllBox = document.querySelector('#select_all_box');
+
+    if (selectAll && selectAllBox) {
+        selectAll.addEventListener('click', function () {
+            // If the selectAll checkbox is checked, enable all form bulk action buttons
+            const isChecked = this.checked;
+            selectAllBox.querySelectorAll('button').forEach(button => {
+                button.disabled = !isChecked;
+            });
+        });
+    }
 }
 
 function initializeResultPerPageSelection(context){

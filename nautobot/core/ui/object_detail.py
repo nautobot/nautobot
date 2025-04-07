@@ -4,6 +4,7 @@ import contextlib
 from dataclasses import dataclass
 from enum import Enum
 import logging
+import uuid
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
@@ -453,6 +454,8 @@ class Panel(Component):
         """
         if not self.should_render(context):
             return ""
+        if not self.body_id:
+            self.body_id = self._get_body_id(context)
         with context.update(self.get_extra_context(context)):
             return render_component_template(
                 self.template_path,
@@ -461,11 +464,21 @@ class Panel(Component):
                 header_extra_content=self.render_header_extra_content(context),
                 body=self.render_body(context),
                 footer_content=self.render_footer_content(context),
+                body_id=self.body_id,
             )
+
+    def _get_body_id(self, context: Context):
+        """Retreive the `body_id` attribute to the rendered components, used for the collapsible panel feature."""
+        if self.body_id:
+            return self.body_id
+        if self.label:
+            return slugify(self.label)
+
+        return str(uuid.uuid4())
 
     def render_label(self, context: Context):
         """Render the label of this panel, if any."""
-        return self.label
+        return self.label.upper()
 
     def render_header_extra_content(self, context: Context):
         """
@@ -1059,7 +1072,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
     def render_label(self, context: Context):
         """Default to rendering the provided object's `verbose_name` if no more specific `label` was defined."""
         if self.label is None:
-            return bettertitle(get_obj_from_context(context, self.context_object_key)._meta.verbose_name)
+            return get_obj_from_context(context, self.context_object_key)._meta.verbose_name.upper()
         return super().render_label(context)
 
     def render_value(self, key, value, context: Context):
@@ -1747,6 +1760,7 @@ class _ObjectDetailContactsTab(Tab):
                     # TODO: we should provide a standard reusable component template for bulk-actions in the footer
                     footer_content_template_path="components/panel/footer_contacts_table.html",
                     header_extra_content_template_path=None,
+                    label="Contacts/Teams",
                 ),
             )
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
@@ -1832,6 +1846,7 @@ class _ObjectDetailMetadataTab(Tab):
                     add_button_route=None,
                     related_field_name="assigned_object_id",
                     header_extra_content_template_path=None,
+                    label="Object Metadata",
                 ),
             )
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)

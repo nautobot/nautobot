@@ -37,7 +37,7 @@ class BaseTable(django_tables2.Table):
 
     class Meta:
         attrs = {
-            "class": "table table-hover table-headings",
+            "class": "table table-hover table-headings mb-0",
         }
 
     def __init__(
@@ -470,7 +470,7 @@ class ColoredLabelColumn(django_tables2.TemplateColumn):
 
     template_code = """
     {% load helpers %}
-    {% if value %}<label class="label" style="color: {{ value.color|fgcolor }}; background-color: #{{ value.color }}">{{ value }}</label>{% else %}&mdash;{% endif %}
+    {% if value %}<span class="badge" style="color: {{ value.color|fgcolor }}; background-color: #{{ value.color }}">{{ value }}</label>{% else %}&mdash;{% endif %}
     """
 
     def __init__(self, *args, **kwargs):
