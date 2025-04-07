@@ -189,7 +189,6 @@ class ApprovalWorkflowStageInstance(PrimaryModel):
     "custom_validators",
     "export_templates",
     "graphql",
-    "webhooks",
 )
 class ApprovalWorkflowStageInstanceResponse(BaseModel):
     """ApprovalWorkflowStageInstanceResponse model."""
