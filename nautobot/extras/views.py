@@ -234,10 +234,14 @@ class ApprovalWorkflowStageInstanceUIViewSet(NautobotUIViewSet):
     )
 
 
-class ApprovalWorkflowStageInstanceResponseUIViewSet(NautobotUIViewSet):
+class ApprovalWorkflowStageInstanceResponseUIViewSet(
+    ObjectBulkDestroyViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+):
     """ViewSet for ApprovalWorkflowStageInstanceResponse."""
 
-    bulk_update_form_class = forms.ApprovalWorkflowStageInstanceResponseBulkEditForm
     filterset_class = filters.ApprovalWorkflowStageInstanceResponseFilterSet
     filterset_form_class = forms.ApprovalWorkflowStageInstanceResponseFilterForm
     form_class = forms.ApprovalWorkflowStageInstanceResponseForm

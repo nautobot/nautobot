@@ -263,11 +263,9 @@ class ApprovalWorkflowStageFilterSet(BaseFilterSet):
         fields = "__all__"
 
 
-class ApprovalWorkflowInstanceFilterSet(BaseFilterSet):  # pylint: disable=too-many-ancestors
+class ApprovalWorkflowInstanceFilterSet(BaseFilterSet):
     """Filter for ApprovalWorkflowInstance."""
 
-    # TODO INIT Validate the filter_predicates below. If the only field you want to search is `name`, you can remove the SearchFilter
-    # and instead use the NameSearchFilterSet in the class inheritance.
     q = SearchFilter(
         filter_predicates={
             "current_state": "icontains",
@@ -284,8 +282,6 @@ class ApprovalWorkflowInstanceFilterSet(BaseFilterSet):  # pylint: disable=too-m
 class ApprovalWorkflowStageInstanceFilterSet(BaseFilterSet):
     """Filter for ApprovalWorkflowStageInstance."""
 
-    # TODO INIT Validate the filter_predicates below. If the only field you want to search is `name`, you can remove the SearchFilter
-    # and instead use the NameSearchFilterSet in the class inheritance.
     q = SearchFilter(
         filter_predicates={
             "state": "icontains",
@@ -303,8 +299,6 @@ class ApprovalWorkflowStageInstanceFilterSet(BaseFilterSet):
 class ApprovalWorkflowStageInstanceResponseFilterSet(BaseFilterSet):
     """Filter for ApprovalWorkflowStageInstanceResponse."""
 
-    # TODO INIT Validate the filter_predicates below. If the only field you want to search is `name`, you can remove the SearchFilter
-    # and instead use the NameSearchFilterSet in the class inheritance.
     q = SearchFilter(
         filter_predicates={
             "comments": "icontains",

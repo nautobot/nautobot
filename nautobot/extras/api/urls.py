@@ -6,10 +6,10 @@ router = OrderedDefaultRouter(view_name="Extras")
 
 # Approval Workflows
 router.register("approval-workflows", views.ApprovalWorkflowViewSet)
-router.register("approval-workflow-stages", views.ApprovalWorkflowStageViewSet)
 router.register("approval-workflow-instances", views.ApprovalWorkflowInstanceViewSet)
-router.register("approval-workflow-stage-instances", views.ApprovalWorkflowStageInstanceViewSet)
 router.register("approval-workflow-stage-instance-responses", views.ApprovalWorkflowStageInstanceResponseViewSet)
+router.register("approval-workflow-stage-instances", views.ApprovalWorkflowStageInstanceViewSet)
+router.register("approval-workflow-stages", views.ApprovalWorkflowStageViewSet)
 
 # Computed Fields
 router.register("computed-fields", views.ComputedFieldViewSet)

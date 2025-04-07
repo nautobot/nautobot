@@ -6,11 +6,14 @@ from django.contrib.contenttypes.models import ContentType
 
 from nautobot.core.forms import (
     add_blank_choice,
+    DatePicker,
     DynamicModelChoiceField,
     JSONField,
+    MultipleContentTypeField,
     StaticSelect2,
     TagFilterField,
 )
+from nautobot.core.forms.fields import MultiValueCharField
 from nautobot.extras.choices import ApprovalWorkflowStateChoices
 from nautobot.extras.constants import APPROVAL_WORKFLOW_MODELS
 from nautobot.extras.forms import NautobotBulkEditForm, NautobotFilterForm, NautobotModelForm, TagsBulkEditFormMixin
@@ -44,6 +47,11 @@ class ApprovalWorkflowBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     """ApprovalWorkflow bulk edit form."""
 
     pk = forms.ModelMultipleChoiceField(queryset=ApprovalWorkflow.objects.all(), widget=forms.MultipleHiddenInput)
+    model_content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(APPROVAL_WORKFLOW_MODELS).order_by("app_label", "model"),
+        required=True,
+        label="Model Content Type",
+    )
 
     class Meta:
         """Meta attributes."""
@@ -57,6 +65,10 @@ class ApprovalWorkflowFilterForm(NautobotFilterForm):
 
     model = ApprovalWorkflow
     q = forms.CharField(required=False, label="Search")
+    name = MultiValueCharField(required=False)
+    model_content_type = MultipleContentTypeField(
+        queryset=ContentType.objects.filter(APPROVAL_WORKFLOW_MODELS).order_by("app_label", "model"), required=False
+    )
     tags = TagFilterField(model)
 
 
@@ -102,6 +114,20 @@ class ApprovalWorkflowStageFilterForm(NautobotFilterForm):
 
     model = ApprovalWorkflowStage
     q = forms.CharField(required=False, label="Search")
+    name = MultiValueCharField(required=False)
+    approval_workflow = DynamicModelChoiceField(
+        queryset=ApprovalWorkflow.objects.all(),
+        required=False,
+        label="Approval Workflow",
+    )
+    sequence_weight = forms.IntegerField(required=False, label="Sequence Weight")
+    min_approvers = forms.IntegerField(required=False, label="Min Approvers")
+    approver_group = DynamicModelChoiceField(
+        queryset=Group.objects.all(),
+        required=False,
+        label="Approver Group",
+        help_text="User group that can approve this stage.",
+    )
     tags = TagFilterField(model)
 
 
@@ -143,13 +169,7 @@ class ApprovalWorkflowInstanceBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEd
         """Meta attributes."""
 
         model = ApprovalWorkflowInstance
-        nullable_fields = [
-            # TODO INIT Add any fields that should be nullable
-            "approval_workflow",
-            "object_under_review_content_type",
-            "object_under_review_object_id",
-            "current_state",
-        ]
+        nullable_fields = []
 
 
 class ApprovalWorkflowInstanceFilterForm(NautobotFilterForm):
@@ -157,6 +177,22 @@ class ApprovalWorkflowInstanceFilterForm(NautobotFilterForm):
 
     model = ApprovalWorkflowInstance
     q = forms.CharField(required=False, label="Search")
+    approval_workflow = DynamicModelChoiceField(
+        queryset=ApprovalWorkflow.objects.all(),
+        required=False,
+        label="Approval Workflow",
+    )
+    object_under_review_content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(APPROVAL_WORKFLOW_MODELS).order_by("app_label", "model"),
+        required=False,
+        label="Object Under Review Content Type",
+    )
+    current_state = forms.ChoiceField(
+        required=False,
+        choices=add_blank_choice(ApprovalWorkflowStateChoices),
+        widget=StaticSelect2,
+        label="Current State",
+    )
     tags = TagFilterField(model)
 
 
@@ -200,13 +236,7 @@ class ApprovalWorkflowStageInstanceBulkEditForm(TagsBulkEditFormMixin, NautobotB
         """Meta attributes."""
 
         model = ApprovalWorkflowStageInstance
-        nullable_fields = [
-            # TODO INIT Add any fields that should be nullable
-            "approval_workflow_instance",
-            "approval_workflow_stage",
-            "state",
-            "decision_date",
-        ]
+        nullable_fields = ["decision_date"]
 
 
 class ApprovalWorkflowStageInstanceFilterForm(NautobotFilterForm):
@@ -214,6 +244,23 @@ class ApprovalWorkflowStageInstanceFilterForm(NautobotFilterForm):
 
     model = ApprovalWorkflowStageInstance
     q = forms.CharField(required=False, label="Search")
+    approval_workflow_instance = DynamicModelChoiceField(
+        queryset=ApprovalWorkflowInstance.objects.all(),
+        required=False,
+        label="Approval Workflow Instance",
+    )
+    approval_workflow_stage = DynamicModelChoiceField(
+        queryset=ApprovalWorkflowStage.objects.all(),
+        required=False,
+        label="Approval Workflow Stage",
+    )
+    state = forms.ChoiceField(
+        required=False,
+        choices=add_blank_choice(ApprovalWorkflowStateChoices),
+        widget=StaticSelect2,
+        label="State",
+    )
+    decision_date = forms.DateField(widget=DatePicker(), required=False, label="Decision Date")
     tags = TagFilterField(model)
 
 
@@ -225,33 +272,6 @@ class ApprovalWorkflowStageInstanceResponseForm(NautobotModelForm):
 
         model = ApprovalWorkflowStageInstanceResponse
         fields = "__all__"
-
-
-class ApprovalWorkflowStageInstanceResponseBulkEditForm(NautobotBulkEditForm):
-    """ApprovalWorkflowStageInstanceResponse bulk edit form."""
-
-    pk = forms.ModelMultipleChoiceField(
-        queryset=ApprovalWorkflowStageInstanceResponse.objects.all(), widget=forms.MultipleHiddenInput
-    )
-    comments = forms.CharField(required=False, label="Comments")
-    state = forms.ChoiceField(
-        required=False,
-        choices=add_blank_choice(ApprovalWorkflowStateChoices),
-        widget=StaticSelect2,
-        label="State",
-    )
-
-    class Meta:
-        """Meta attributes."""
-
-        model = ApprovalWorkflowStageInstanceResponse
-        nullable_fields = [
-            # TODO INIT Add any fields that should be nullable
-            "approval_workflow_stage_instance",
-            "user",
-            "comments",
-            "state",
-        ]
 
 
 class ApprovalWorkflowStageInstanceResponseFilterForm(NautobotFilterForm):

@@ -220,7 +220,6 @@ class ApprovalWorkflowTable(BaseTable):
             "name",
             "model_content_type",
         )
-        # TODO INIT Add or Remove the columns below to change the list view default columns.
         default_columns = (
             "pk",
             "name",
@@ -311,7 +310,6 @@ class ApprovalWorkflowStageInstanceTable(BaseTable):
             "state",
             "decision_date",
         )
-        # TODO INIT Add or Remove the columns below to change the list view default columns.
         default_columns = (
             "pk",
             "approval_workflow_instance",
