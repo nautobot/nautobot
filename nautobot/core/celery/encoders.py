@@ -43,7 +43,7 @@ class NautobotKombuJSONEncoder(JSONEncoder):
             }
 
             if "nautobot_version_control" in settings.PLUGINS:
-                from nautobot_version_control.utils import active_branch
+                from nautobot_version_control.utils import active_branch  # pylint: disable=import-error
 
                 data["__nautobot_branch__"] = active_branch()
 

@@ -18,8 +18,8 @@ def maybe_with_branch(branch_name=None, using=None, user=None, autocommit=True):
 
     LOGGER.warning("Switching to branch %s", branch_name)
 
-    from nautobot_version_control.middleware import AutoDoltCommit
-    from nautobot_version_control.utils import query_on_branch
+    from nautobot_version_control.middleware import AutoDoltCommit  # pylint: disable=import-error
+    from nautobot_version_control.utils import query_on_branch  # pylint: disable=import-error
 
     if using is not None:
         with transaction.atomic(using=using):

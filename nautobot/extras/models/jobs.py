@@ -860,7 +860,7 @@ class JobResult(BaseModel, CustomFieldModel):
         }
 
         if branch_name is None and "nautobot_version_control" in settings.PLUGINS:
-            from nautobot_version_control.utils import active_branch
+            from nautobot_version_control.utils import active_branch  # pylint: disable=import-error
 
             branch_name = active_branch()
 
@@ -1370,7 +1370,7 @@ class ScheduledJob(BaseModel):
             "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
         }
         if branch_name is None and "nautobot_version_control" in settings.PLUGINS:
-            from nautobot_version_control.utils import active_branch
+            from nautobot_version_control.utils import active_branch  # pylint: disable=import-error
 
             branch_name = active_branch()
         if branch_name:
