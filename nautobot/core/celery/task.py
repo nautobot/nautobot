@@ -4,11 +4,46 @@ from celery.exceptions import Retry
 from celery.result import EagerResult
 from celery.utils.functional import maybe_list
 from celery.utils.nodenames import gethostname
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.db import connection
 from kombu.utils.uuid import uuid
 
 
 class NautobotTask(Task):
     """Nautobot extensions to tasks for integrating with Job machinery."""
+
+    def before_start(self, task_id, args, kwargs):
+        if "nautobot_version_control" in settings.PLUGINS:
+            self._nautobot_cursor = connection.cursor()
+            if "nautobot_job_branch_name" in self.request.properties:
+                from nautobot_version_control.utils import active_branch  # pylint: disable=import-error
+
+                self._nautobot_original_branch = active_branch()
+                self._nautobot_cursor.execute(
+                    "CALL dolt_checkout(%s);", [self.request.properties["nautobot_job_branch_name"]]
+                )
+                self._nautobot_cursor.__enter__()
+
+            if "nautobot_job_user_id" in self.request.properties:
+                from nautobot_version_control.middleware import AutoDoltCommit  # pylint: disable=import-error
+
+                User = get_user_model()
+                self._nautobot_autocommit = AutoDoltCommit(
+                    user=User.objects.get(id=self.request.properties["nautobot_job_user_id"])
+                )
+                self._nautobot_autocommit.__enter__()
+
+    def after_return(self, status, retval, task_id, args, kwargs, einfo):
+        if "nautobot_version_control" in settings.PLUGINS:
+            if hasattr(self, "_nautobot_autocommit"):
+                self._nautobot_autocommit.__exit__(None, None, None)  # TODO: good enough?
+                delattr(self, "_nautobot_autocommit")
+
+            if hasattr(self, "_nautobot_original_branch"):
+                self._nautobot_cursor.execute("CALL dolt_checkout(%s);", [self._nautobot_original_branch])
+                self._nautobot_cursor.__exit__(None, None, None)  # TODO: good enough?
+                delattr(self, "_nautobot_original_branch")
 
     def apply(
         self,

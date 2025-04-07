@@ -30,7 +30,6 @@ from django.utils.functional import classproperty
 import netaddr
 import yaml
 
-from nautobot.core.branching import maybe_with_branch
 from nautobot.core.celery import import_jobs, nautobot_task
 from nautobot.core.events import publish_event
 from nautobot.core.forms import (
@@ -1275,67 +1274,64 @@ def run_job(self, job_class_path, *args, **kwargs):
 
     Finally, it either returns any data returned from `Job.run()` or re-raises any exception encountered.
     """
-    with maybe_with_branch(
-        branch_name=self.request.properties.get("nautobot_job_branch_name", None),
-        user=User.objects.get(id=self.request.properties["nautobot_job_user_id"]),
-    ):
-        job, event_payload = _prepare_job(job_class_path, self.request, kwargs)
 
-        result = None
-        status = None
-        try:
-            before_start_result = job.before_start(self.request.id, args, kwargs)
-            if not job._failed:
-                # Call job(), which automatically calls job.run():
-                result = job(*args, **kwargs)
-            else:
-                # don't run the job if before_start() reported a failure, and report the before_start() return value
-                result = before_start_result
+    job, event_payload = _prepare_job(job_class_path, self.request, kwargs)
 
-            event_payload["job_output"] = result
-            status = JobResultStatusChoices.STATUS_SUCCESS if not job._failed else JobResultStatusChoices.STATUS_FAILURE
+    result = None
+    status = None
+    try:
+        before_start_result = job.before_start(self.request.id, args, kwargs)
+        if not job._failed:
+            # Call job(), which automatically calls job.run():
+            result = job(*args, **kwargs)
+        else:
+            # don't run the job if before_start() reported a failure, and report the before_start() return value
+            result = before_start_result
 
-            if status == JobResultStatusChoices.STATUS_SUCCESS:
-                job.on_success(result, self.request.id, args, kwargs)
-            else:
-                job.on_failure(result, self.request.id, args, kwargs, None)
+        event_payload["job_output"] = result
+        status = JobResultStatusChoices.STATUS_SUCCESS if not job._failed else JobResultStatusChoices.STATUS_FAILURE
 
-            job.after_return(status, result, self.request.id, args, kwargs, None)
+        if status == JobResultStatusChoices.STATUS_SUCCESS:
+            job.on_success(result, self.request.id, args, kwargs)
+        else:
+            job.on_failure(result, self.request.id, args, kwargs, None)
 
-            if status == JobResultStatusChoices.STATUS_SUCCESS:
-                return result
+        job.after_return(status, result, self.request.id, args, kwargs, None)
 
-            # Report a failure, but with a result rather than an exception and einfo:
-            self.update_state(
-                state=status,
-                meta=result,
-            )
-            # If we return a result, Celery automatically applies STATUS_SUCCESS.
-            # If we raise an exception *other than* `Ignore` or `Reject`, Celery automatically applies STATUS_FAILURE.
-            # We don't want to overwrite the manual state update that we did above, so:
-            raise Ignore()
+        if status == JobResultStatusChoices.STATUS_SUCCESS:
+            return result
 
-        except Reject:
-            status = status or JobResultStatusChoices.STATUS_REJECTED
-            raise
+        # Report a failure, but with a result rather than an exception and einfo:
+        self.update_state(
+            state=status,
+            meta=result,
+        )
+        # If we return a result, Celery automatically applies STATUS_SUCCESS.
+        # If we raise an exception *other than* `Ignore` or `Reject`, Celery automatically applies STATUS_FAILURE.
+        # We don't want to overwrite the manual state update that we did above, so:
+        raise Ignore()
 
-        except Ignore:
-            status = status or JobResultStatusChoices.STATUS_IGNORED
-            raise
+    except Reject:
+        status = status or JobResultStatusChoices.STATUS_REJECTED
+        raise
 
-        except Exception as exc:
-            status = JobResultStatusChoices.STATUS_FAILURE
-            einfo = ExceptionInfo(sys.exc_info())
-            job.on_failure(exc, self.request.id, args, kwargs, einfo)
-            job.after_return(JobResultStatusChoices.STATUS_FAILURE, exc, self.request.id, args, kwargs, einfo)
-            event_payload["einfo"] = {
-                "exc_type": type(exc).__name__,
-                "exc_message": sanitize(str(exc)),
-            }
-            raise
+    except Ignore:
+        status = status or JobResultStatusChoices.STATUS_IGNORED
+        raise
 
-        finally:
-            _cleanup_job(job, event_payload, status, kwargs)
+    except Exception as exc:
+        status = JobResultStatusChoices.STATUS_FAILURE
+        einfo = ExceptionInfo(sys.exc_info())
+        job.on_failure(exc, self.request.id, args, kwargs, einfo)
+        job.after_return(JobResultStatusChoices.STATUS_FAILURE, exc, self.request.id, args, kwargs, einfo)
+        event_payload["einfo"] = {
+            "exc_type": type(exc).__name__,
+            "exc_message": sanitize(str(exc)),
+        }
+        raise
+
+    finally:
+        _cleanup_job(job, event_payload, status, kwargs)
 
 
 def enqueue_job_hooks(object_change, may_reload_jobs=True, jobhook_queryset=None):
