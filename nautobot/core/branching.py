@@ -21,22 +21,12 @@ def maybe_with_branch(branch_name=None, using=None, user=None, autocommit=True):
     from nautobot_version_control.middleware import AutoDoltCommit  # pylint: disable=import-error
     from nautobot_version_control.utils import query_on_branch  # pylint: disable=import-error
 
-    if using is not None:
-        with transaction.atomic(using=using):
-            if autocommit:
-                with query_on_branch(branch_name):
-                    with AutoDoltCommit(user=user):
-                        yield
-            else:
-                with query_on_branch(branch_name):
-                    yield
-    else:
-        if autocommit:
-            with query_on_branch(branch_name):
-                with AutoDoltCommit(user=user):
-                    yield
-        else:
-            with query_on_branch(branch_name):
+    if autocommit:
+        with query_on_branch(branch_name, using=using):
+            with AutoDoltCommit(user=user):
                 yield
+    else:
+        with query_on_branch(branch_name, using=using):
+            yield
 
     LOGGER.warning("Returned to default branch")
