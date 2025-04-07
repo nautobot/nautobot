@@ -15,7 +15,7 @@ from kombu.serialization import register
 from prometheus_client import CollectorRegistry, multiprocess, start_http_server
 
 from nautobot import add_failure_logger, add_success_logger
-from nautobot.core.branching import maybe_with_branch
+from nautobot.core.branching import BranchContext
 from nautobot.core.celery.control import discard_git_repository, refresh_git_repository  # noqa: F401  # unused-import
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.celery.log import NautobotDatabaseHandler
@@ -202,7 +202,7 @@ def nautobot_kombu_json_loads_hook(data):
         if cls:
 
             def get_object():
-                with maybe_with_branch(branch_name=branch_name, autocommit=False):
+                with BranchContext(branch_name=branch_name, autocommit=False):
                     return cls.objects.get(id=data["id"])
 
             return SimpleLazyObject(get_object)

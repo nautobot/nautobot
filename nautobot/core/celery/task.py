@@ -10,40 +10,42 @@ from django.db import connection
 from kombu.utils.uuid import uuid
 
 
+from nautobot.core.branching import BranchContext
+
+
 class NautobotTask(Task):
     """Nautobot extensions to tasks for integrating with Job machinery."""
 
     def before_start(self, task_id, args, kwargs):
-        if "nautobot_version_control" in settings.PLUGINS:
-            self._nautobot_cursor = connection.cursor()
-            if "nautobot_job_branch_name" in self.request.properties:
-                from nautobot_version_control.utils import active_branch  # pylint: disable=import-error
-
-                self._nautobot_original_branch = active_branch()
-                self._nautobot_cursor.execute(
-                    "CALL dolt_checkout(%s);", [self.request.properties["nautobot_job_branch_name"]]
-                )
-                self._nautobot_cursor.__enter__()
-
-            if "nautobot_job_user_id" in self.request.properties:
-                from nautobot_version_control.middleware import AutoDoltCommit  # pylint: disable=import-error
-
-                User = get_user_model()
-                self._nautobot_autocommit = AutoDoltCommit(
-                    user=User.objects.get(id=self.request.properties["nautobot_job_user_id"])
-                )
-                self._nautobot_autocommit.__enter__()
+        User = get_user_model()
+        user_id = self.request.properties.get("nautobot_job_user_id", None)
+        self._nautobot_branch_context = BranchContext(
+            branch_name=self.request.properties.get("nautobot_job_branch_name", None),
+            user=User.objects.get(id=user_id) if user_id else None,
+        )
+        self._nautobot_branch_context.__enter__()
 
     def after_return(self, status, retval, task_id, args, kwargs, einfo):
-        if "nautobot_version_control" in settings.PLUGINS:
-            if hasattr(self, "_nautobot_autocommit"):
-                self._nautobot_autocommit.__exit__(None, None, None)  # TODO: good enough?
-                delattr(self, "_nautobot_autocommit")
+        self._nautobot_branch_context.__exit__(None, None, None)  # TODO: good enough?
+        delattr(self, "_nautobot_branch_context")
 
-            if hasattr(self, "_nautobot_original_branch"):
-                self._nautobot_cursor.execute("CALL dolt_checkout(%s);", [self._nautobot_original_branch])
-                self._nautobot_cursor.__exit__(None, None, None)  # TODO: good enough?
-                delattr(self, "_nautobot_original_branch")
+    def apply_async(
+        self,
+        args=None,
+        kwargs=None,
+        task_id=None,
+        producer=None,
+        link=None,
+        link_error=None,
+        shadow=None,
+        **options,
+    ):
+        if "nautobot_version_control" in settings.PLUGINS and "nautobot_job_branch_name" not in options:
+            from nautobot_version_control.utils import active_branch  # pylint: disable=import-error
+
+            options["nautobot_job_branch_name"] = active_branch()
+
+        return super().apply_async(args, kwargs, task_id, producer, link, link_error, shadow, **options)
 
     def apply(
         self,

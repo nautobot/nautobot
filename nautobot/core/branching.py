@@ -1,32 +1,53 @@
-from contextlib import contextmanager
 import logging
 
 from django.conf import settings
-from django.db import transaction
+from django.db import connections
 
 LOGGER = logging.getLogger(__name__)
 
 
-@contextmanager
-def maybe_with_branch(branch_name=None, using=None, user=None, autocommit=True):
-    """Possibly wrap some code in a Version Control branch-aware transaction, or gracefully just run the code."""
-    if branch_name is None or "nautobot_version_control" not in settings.PLUGINS:
-        if branch_name is not None:
-            LOGGER.warning("nautobot_version_control is not installed, ignoring requested branch %s", branch_name)
-        yield
-        return
+class BranchContext:
+    def __init__(self, branch_name=None, using=None, user=None, autocommit=True):
+        self.branch_name = branch_name
+        self.using = using or "default"
+        self.user = user
+        self.autocommit = autocommit
 
-    LOGGER.warning("Switching to branch %s", branch_name)
+    def __enter__(self):
+        if self.branch_name is None or "nautobot_version_control" not in settings.PLUGINS:
+            if self.branch_name is not None:
+                LOGGER.warning("nautobot_version_control is not installed, ignoring requested branch %s", branch_name)
+            return
 
-    from nautobot_version_control.middleware import AutoDoltCommit  # pylint: disable=import-error
-    from nautobot_version_control.utils import query_on_branch  # pylint: disable=import-error
+        from nautobot_version_control.utils import active_branch  # pylint: disable=import-error
 
-    if autocommit:
-        with query_on_branch(branch_name, using=using):
-            with AutoDoltCommit(user=user):
-                yield
-    else:
-        with query_on_branch(branch_name, using=using):
-            yield
+        self.cursor = connections[self.using].cursor()
+        self.original_branch = active_branch()
+        self.cursor.__enter__()
 
-    LOGGER.warning("Returned to default branch")
+        if self.branch_name != self.original_branch:
+            if self.using == "default":
+                LOGGER.debug("Switching to branch %s", self.branch_name)
+
+            self.cursor.execute("CALL dolt_checkout(%s);", [self.branch_name])
+
+            if self.autocommit:
+                from nautobot_version_control.middleware import AutoDoltCommit  # pylint: disable=import-error
+
+                self.auto_dolt_commit = AutoDoltCommit(user=self.user)
+                self.auto_dolt_commit.__enter__()
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self.branch_name is None or "nautobot_version_control" not in settings.PLUGINS:
+            return
+
+        if self.branch_name != self.original_branch:
+            if self.autocommit:
+                self.auto_dolt_commit.__exit__(exc_type, exc_value, traceback)
+
+            self.cursor.execute("CALL dolt_checkout(%s);", [self.original_branch])
+
+            if self.using == "default":
+                LOGGER.debug("Returned to branch %s", self.original_branch)
+
+        self.cursor.__exit__(exc_type, exc_value, traceback)

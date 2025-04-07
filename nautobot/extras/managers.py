@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django_celery_results.managers import TaskResultManager, transaction_retry
 
-from nautobot.core.branching import maybe_with_branch
+from nautobot.core.branching import BranchContext
 from nautobot.core.models import BaseManager
 from nautobot.core.models.querysets import RestrictedQuerySet
 
@@ -115,9 +115,10 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
         except Job.DoesNotExist:
             pass
 
-        with maybe_with_branch(
+        with BranchContext(
             branch_name=celery_kwargs.get("nautobot_job_branch_name", None),
             user=User.objects.get(id=user_id) if user_id else None,
+            using=using,
         ):
             obj, created = self.get_or_create(id=task_id, defaults=fields)
 
