@@ -979,7 +979,7 @@ class ExportTemplateUIViewSet(NautobotUIViewSet):
             ObjectFieldsPanel(
                 label="Template",
                 section=SectionChoices.LEFT_HALF,
-                weight=100,
+                weight=200,
                 fields=["content_type", "mime_type", "file_extension"],
             ),
             ObjectTextPanel(
