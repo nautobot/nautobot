@@ -1,0 +1,2 @@
+Fixed various cases where CustomField-related `provision_field` and `delete_custom_field_data` background tasks were unnecessarily triggered.
+Added missing signal handler to remove custom field data from affected objects when `CustomField.content_types.clear()` is called.
