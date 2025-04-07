@@ -521,10 +521,11 @@ class CustomFieldBulkDeleteForm(ConfirmationForm):
         else:
             context = change_context.as_dict(queryset)
             context["context_detail"] = "bulk delete custom field data"
-        tasks = [
-            delete_custom_field_data.si(obj.key, set(obj.content_types.values_list("pk", flat=True)), context)
-            for obj in queryset
-        ]
+        tasks = []
+        for obj in queryset:
+            pk_set = set(obj.content_types.values_list("pk", flat=True))
+            if pk_set:
+                tasks.append(delete_custom_field_data.si(obj.key, pk_set, context))
         return tasks
 
     def perform_pre_delete(self, queryset):
@@ -535,10 +536,11 @@ class CustomFieldBulkDeleteForm(ConfirmationForm):
             logger.error("Celery worker process not running. Object custom fields may fail to reflect this deletion.")
             return
         tasks = self.construct_custom_field_delete_tasks(queryset)
-        # Executing the tasks in the background sequentially using chain() aligns with how a single
-        # CustomField object is deleted.  We decided to not check the result because it needs at least one worker
-        # to be active and comes with extra performance penalty.
-        chain(*tasks).apply_async()
+        if tasks:
+            # Executing the tasks in the background sequentially using chain() aligns with how a single
+            # CustomField object is deleted.  We decided to not check the result because it needs at least one worker
+            # to be active and comes with extra performance penalty.
+            chain(*tasks).apply_async()
 
 
 #
