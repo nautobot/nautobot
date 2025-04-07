@@ -435,6 +435,7 @@ class ContactUIViewSet(NautobotUIViewSet):
                 table_class=tables.ContactAssociationTable,
                 table_filter="contact",
                 table_title="Contact For",
+                add_button_route=None,
             ),
         ),
     )
