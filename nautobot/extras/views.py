@@ -3028,7 +3028,11 @@ class TeamUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
-                value_transforms={"address": [helpers.render_address]},
+                value_transforms={
+                    "address": [helpers.render_address],
+                    "email": [helpers.hyperlinked_email],
+                    "phone": [helpers.hyperlinked_phone_number],
+                },
             ),
             object_detail.ObjectsTablePanel(
                 weight=100,
