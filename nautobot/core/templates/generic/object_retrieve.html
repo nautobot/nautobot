@@ -10,13 +10,18 @@
 {% load tz %}
 {% load ui_framework %}
 
+
 {% block breadcrumbs %}
-    {% get_breadcrumbs as crumbs %}
-    {% include 'inc/breadcrumbs.html' with title=title copy_title=True crumbs=crumbs %}
+    {% with title=object.display|default:object %}
+        {% get_breadcrumbs as crumbs %}
+        {% include 'inc/breadcrumbs.html' with title=title copy_title=True crumbs=crumbs %}
+    {% endwith %}
 {% endblock breadcrumbs %}
 
 {% block title %}
-    {{ title }}
+    {% with title=object.display|default:object %}
+        {{ title }}
+    {% endwith %}
 {% endblock %}
 
 {% block header %}
