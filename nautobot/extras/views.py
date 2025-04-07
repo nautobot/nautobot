@@ -31,6 +31,7 @@ from nautobot.core.forms import restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query, serialize_object_v2
 from nautobot.core.tables import ButtonsColumn
+from nautobot.core.templatetags.helpers import pre_tag
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel
@@ -666,30 +667,56 @@ class CustomFieldBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class CustomLinkListView(generic.ObjectListView):
+class CustomLinkFieldsPanel(ObjectFieldsPanel):
+    def render_value(self, key, value, context):
+        if key == "target_url":
+            return pre_tag(value)
+
+        if key == "button_class" and value:
+            return format_html('<button class="btn btn-sm btn-{}">{}</button>', value.lower(), value.lower())
+
+        return super().render_value(key, value, context)
+
+    def render_key(self, key, value, context):
+        if key == "target_url":
+            return "Target URL"
+        return super().render_key(key, value, context)
+
+
+class CustomLinkUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.CustomLinkBulkEditForm
+    filterset_class = filters.CustomLinkFilterSet
+    filterset_form_class = forms.CustomLinkFilterForm
+    form_class = forms.CustomLinkForm
     queryset = CustomLink.objects.all()
-    table = tables.CustomLinkTable
-    filterset = filters.CustomLinkFilterSet
-    filterset_form = forms.CustomLinkFilterForm
-    action_buttons = ("add",)
+    serializer_class = serializers.CustomLinkSerializer
+    table_class = tables.CustomLinkTable
 
-
-class CustomLinkView(generic.ObjectView):
-    queryset = CustomLink.objects.all()
-
-
-class CustomLinkEditView(generic.ObjectEditView):
-    queryset = CustomLink.objects.all()
-    model_form = forms.CustomLinkForm
-
-
-class CustomLinkDeleteView(generic.ObjectDeleteView):
-    queryset = CustomLink.objects.all()
-
-
-class CustomLinkBulkDeleteView(generic.BulkDeleteView):
-    queryset = CustomLink.objects.all()
-    table = tables.CustomLinkTable
+    object_detail_content = ObjectDetailContent(
+        panels=[
+            CustomLinkFieldsPanel(
+                label="Webhook",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=[
+                    "content_type",
+                    "name",
+                    "group_name",
+                    "weight",
+                    "target_url",
+                    "button_class",
+                    "new_window",
+                ],
+            ),
+            object_detail.ObjectTextPanel(
+                label="Text",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                object_field="text",
+                render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
+            ),
+        ]
+    )
 
 
 #

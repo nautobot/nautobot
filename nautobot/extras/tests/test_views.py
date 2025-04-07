@@ -555,6 +555,7 @@ class CustomLinkTestCase(
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = CustomLink
 
@@ -603,6 +604,13 @@ class CustomLinkTestCase(
             "weight": 100,
             "button_class": "default",
             "new_window": False,
+        }
+        cls.bulk_edit_data = {
+            "weight": 200,
+            "button_class": "success",
+            "new_window": True,
+            "text": "Updated customlink text",
+            "target_url": "http://bulk-edit-link.com",
         }
 
 
