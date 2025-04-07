@@ -715,12 +715,12 @@ def render_ancestor_hierarchy(value):
 @register.filter()
 def render_address(address):
     if address:
-        address = format_html("<br>".join(address.split("\n")))
         map_link = format_html(
             '<a href="https://maps.google.com/?q={}" target="_blank" class="btn btn-primary btn-xs">'
             '<i class="mdi mdi-map-marker"></i> Map it</a>',
             quote_plus(address),
         )
+        address = format_html("<br>".join(address.split("\n")))
         address_display = format_html("<span>{}</span>", address)
         return format_html('<div class="pull-right noprint">{}</div>{}', map_link, address_display)
     return HTML_NONE
