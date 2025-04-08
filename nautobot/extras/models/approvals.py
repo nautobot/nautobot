@@ -35,7 +35,8 @@ class ApprovalWorkflow(PrimaryModel):
     )
     model_constraints = models.JSONField(
         blank=True,
-        null=True,
+        default=dict,
+        help_text="Constraints to filter the objects that can be approved using this workflow.",
     )
 
     class Meta:

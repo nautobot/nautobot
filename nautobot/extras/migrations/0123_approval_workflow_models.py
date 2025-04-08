@@ -36,7 +36,7 @@ class Migration(migrations.Migration):
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
                 ("name", models.CharField(max_length=255, unique=True)),
-                ("model_constraints", models.JSONField(blank=True, null=True)),
+                ("model_constraints", models.JSONField(blank=True, default=dict)),
                 (
                     "model_content_type",
                     models.ForeignKey(
