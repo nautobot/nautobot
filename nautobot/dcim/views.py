@@ -745,7 +745,8 @@ class ManufacturerUIViewSet(NautobotUIViewSet):
             object_detail.ObjectsTablePanel(
                 weight=100,
                 section=SectionChoices.FULL_WIDTH,
-                context_table_key="device_table",
+                table_class=tables.DeviceTable,
+                table_filter="device_type__manufacturer",
                 related_field_name="manufacturer",
                 exclude_columns=["manufacturer"],
             ),
@@ -758,33 +759,6 @@ class ManufacturerUIViewSet(NautobotUIViewSet):
             ),
         ),
     )
-
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-
-        if self.action == "retrieve":
-            # Devices related to the manufacturer
-            devices = (
-                Device.objects.restrict(request.user, "view")
-                .filter(device_type__manufacturer=instance)  # Ensure the manufacturer is correctly filtered
-                .select_related("status", "location", "tenant", "role", "rack", "device_type")
-            )
-            device_table = tables.DeviceTable(devices)
-
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(device_table)
-
-            # Add the device table to the context
-            context.update(
-                {
-                    "device_table": device_table,
-                }
-            )
-
-        return context
 
 
 #
