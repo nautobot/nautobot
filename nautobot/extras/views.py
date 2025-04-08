@@ -673,7 +673,7 @@ class CustomLinkFieldsPanel(ObjectFieldsPanel):
             return pre_tag(value)
 
         if key == "button_class" and value:
-            return format_html('<button class="btn btn-sm btn-{}">{}</button>', value.lower(), value.lower())
+            return format_html('<button class="btn btn-{}">{}</button>', value.lower(), value.lower())
 
         return super().render_value(key, value, context)
 

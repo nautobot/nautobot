@@ -606,6 +606,7 @@ class CustomLinkTestCase(
             "new_window": False,
         }
         cls.bulk_edit_data = {
+            "content_type": obj_type.pk,
             "weight": 200,
             "button_class": "success",
             "new_window": True,
