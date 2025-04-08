@@ -10,6 +10,7 @@ from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.staticfiles.finders import find
 from django.core.exceptions import ObjectDoesNotExist
+from django.template.defaulttags import url
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, format_html_join
@@ -1187,11 +1188,10 @@ def format_title_with_saved_view(context, title):
         return title
 
     if new_changes_not_applied:
-        new_title = f"{title} — <i title='Pending changes not saved'>{current_saved_view.name}</i>"
+        new_title = format_html("{} — <i title='Pending changes not saved'>{}</i>", title, current_saved_view.name)
     else:
-        new_title = f"{title} — {current_saved_view.name}"
+        new_title = format_html("{} — {}", title, current_saved_view.name)
 
-    new_title = mark_safe(new_title)
     return new_title
 
 
@@ -1201,7 +1201,7 @@ def get_breadcrumbs(context):
 
     if object := context.get("object"):
         list_url = validated_viewname(object, "list")
-        crumbs.append((list_url, bettertitle(context.get("verbose_name_plural", ""))))
+        crumbs.append((url(list_url), bettertitle(context.get("verbose_name_plural", ""))))
         crumbs.append((get_object_link(object), str(object)))
 
     return crumbs
