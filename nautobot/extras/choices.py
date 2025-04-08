@@ -444,13 +444,18 @@ class RelationshipTypeChoices(ChoiceSet):
     TYPE_MANY_TO_MANY_SYMMETRIC = "symmetric-many-to-many"
 
     CHOICES = (
-        ("", "---------"),
         (TYPE_ONE_TO_ONE, "One to One"),
         (TYPE_ONE_TO_ONE_SYMMETRIC, "Symmetric One to One"),
         (TYPE_ONE_TO_MANY, "One to Many"),
         (TYPE_MANY_TO_MANY, "Many to Many"),
         (TYPE_MANY_TO_MANY_SYMMETRIC, "Symmetric Many to Many"),
     )
+
+    @staticmethod
+    def add_blank_choice(choices):
+        return [("", "---------"), *choices]
+
+    choices = add_blank_choice(CHOICES)
 
 
 #

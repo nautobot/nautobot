@@ -1778,7 +1778,7 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
 class RelationshipBulkEditForm(BootstrapMixin, CustomFieldModelBulkEditFormMixin, NoteModelBulkEditFormMixin):
     pk = forms.ModelMultipleChoiceField(queryset=Relationship.objects.all(), widget=forms.MultipleHiddenInput())
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
-    type = forms.ChoiceField(choices=RelationshipTypeChoices, required=False)
+    type = forms.ChoiceField(choices=RelationshipTypeChoices.CHOICES, required=False)
     source_hidden = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
     destination_hidden = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
     key = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
@@ -1808,6 +1808,11 @@ class RelationshipBulkEditForm(BootstrapMixin, CustomFieldModelBulkEditFormMixin
             "source_label",
             "destination_label",
         ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields["type"].choices = RelationshipTypeChoices.add_blank_choice(RelationshipTypeChoices.CHOICES)
 
 
 class RelationshipForm(BootstrapMixin, forms.ModelForm):
