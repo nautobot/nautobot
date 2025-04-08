@@ -233,7 +233,7 @@ jobs:
           poetry-version: "1.8.5"
           python-version: "3.12"
       - name: "Run unittest"
-        run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel"
+        run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel --no-buffer"
     needs:
       - "check-migrations"
       - "check-schema"
