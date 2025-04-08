@@ -1900,6 +1900,8 @@ class SavedViewUIViewSet(
         The detail view for a saved view should the related ObjectListView with saved configurations applied
         """
         instance = self.get_object()
+        print(instance)
+        print(instance.view)
         list_view_url = reverse(instance.view) + f"?saved_view={instance.pk}"
         return redirect(list_view_url)
 
