@@ -3426,7 +3426,7 @@ class RelationshipTestCase(
         cls.bulk_edit_data = {
             "key": "vlan_to_interface",
             "description": "This is a relationship between VLANs and Interfaces.",
-            "type": "many-to-many",
+            "type": "",
             "source_type": vlan_type.pk,
             "source_label": "Interfaces",
             "source_hidden": False,
