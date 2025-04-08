@@ -3352,11 +3352,9 @@ class JobHookTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCa
 
     def test_create_object_with_permission(self):
         self.add_permissions("extras.view_job")
-        super().test_create_object_with_permission
 
     def test_create_object_with_constrained_permission(self):
         self.add_permissions("extras.view_job")
-        super().test_create_object_with_constrained_permission
 
 
 # TODO: Convert to StandardTestCases.Views
