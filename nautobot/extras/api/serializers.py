@@ -43,6 +43,7 @@ from nautobot.extras.choices import (
     JobResultStatusChoices,
     ObjectChangeActionChoices,
 )
+from nautobot.extras.constants import APPROVAL_WORKFLOW_MODELS
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
     ApprovalWorkflow,
@@ -116,6 +117,10 @@ logger = logging.getLogger(__name__)
 
 class ApprovalWorkflowSerializer(NautobotModelSerializer):
     """ApprovalWorkflow Serializer."""
+
+    model_content_type = ContentTypeField(
+        queryset=ContentType.objects.filter(APPROVAL_WORKFLOW_MODELS).order_by("app_label", "model"),
+    )
 
     class Meta:
         """Meta attributes."""
