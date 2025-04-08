@@ -10,7 +10,6 @@ from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.staticfiles.finders import find
 from django.core.exceptions import ObjectDoesNotExist
-from django.template.defaulttags import url
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, format_html_join
@@ -1201,7 +1200,7 @@ def get_breadcrumbs(context):
 
     if object := context.get("object"):
         list_url = validated_viewname(object, "list")
-        crumbs.append((url(list_url), bettertitle(context.get("verbose_name_plural", ""))))
+        crumbs.append((reverse(list_url), bettertitle(context.get("verbose_name_plural", ""))))
         crumbs.append((get_object_link(object), str(object)))
 
     return crumbs
