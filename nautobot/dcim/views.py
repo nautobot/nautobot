@@ -738,9 +738,7 @@ class ManufacturerUIViewSet(NautobotUIViewSet):
             object_detail.ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
-                fields=[
-                    "description",
-                ],
+                fields="__all__",
             ),
             object_detail.ObjectsTablePanel(
                 weight=100,
