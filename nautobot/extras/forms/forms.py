@@ -550,7 +550,7 @@ class CustomLinkBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin):
     """Bulk edit form for CustomLink objects."""
 
     pk = forms.ModelMultipleChoiceField(queryset=CustomLink.objects.all(), widget=forms.MultipleHiddenInput())
-    group_name = forms.CharField(max_length=255, required=False)
+    group_name = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     weight = forms.IntegerField(required=False)
     target_url = forms.CharField(max_length=500, required=False)
     text = forms.CharField(max_length=500, required=False)
