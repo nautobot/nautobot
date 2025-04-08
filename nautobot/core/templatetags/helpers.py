@@ -720,7 +720,7 @@ def render_address(address):
             '<i class="mdi mdi-map-marker"></i> Map it</a>',
             quote_plus(address),
         )
-        address = format_html_join("","{}<br>",((line,) for line in address.split("\n")))
+        address = format_html_join("", "{}<br>", ((line,) for line in address.split("\n")))
         return format_html('<div class="pull-right noprint">{}</div>{}', map_link, address)
     return HTML_NONE
 
