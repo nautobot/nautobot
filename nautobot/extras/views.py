@@ -695,7 +695,7 @@ class CustomLinkUIViewSet(NautobotUIViewSet):
     object_detail_content = ObjectDetailContent(
         panels=[
             CustomLinkFieldsPanel(
-                label="Webhook",
+                label="Custom Link",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields=[
