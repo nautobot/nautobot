@@ -711,7 +711,7 @@ class CustomLinkUIViewSet(NautobotUIViewSet):
             object_detail.ObjectTextPanel(
                 label="Text",
                 section=SectionChoices.LEFT_HALF,
-                weight=100,
+                weight=200,
                 object_field="text",
                 render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
             ),
