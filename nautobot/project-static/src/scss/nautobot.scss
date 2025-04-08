@@ -225,6 +225,8 @@ $headings-line-height:   $line-height-base;
 
 $small-font-size: $font-size-sm;
 
+$hr-opacity: 1;
+
 /* Tables */
 $table-cell-padding-y:    map.get($spacers, 8);
 $table-cell-padding-x:    map.get($spacers, 10);
@@ -341,6 +343,13 @@ $dropdown-dark-link-active-color:   $primary-text-emphasis-dark;
 $dropdown-dark-link-active-bg:      $primary-bg-subtle-dark;
 $dropdown-dark-link-disabled-color: $body-tertiary-color-dark;
 $dropdown-dark-header-color:        $body-secondary-color-dark;
+
+/* Badges */
+$badge-font-size:   $font-size-base;
+$badge-font-weight: 400;
+$badge-color:       $body-color;
+$badge-padding-y:   map.get($spacers, 2);
+$badge-padding-x:   map.get($spacers, 8);
 
 /* Breadcrumbs */
 $breadcrumb-item-padding-x: map.get($spacers, 4);
@@ -566,7 +575,9 @@ $btn-variants: (
   --#{$prefix}nav-link-hover-color: var(--#{$prefix}body-color);
   --#{$prefix}nav-link-disabled-color: var(--#{$prefix}tertiary-color);
 
-  padding-inline: #{map.get($spacers, 20)};;
+  background: inherit;
+  padding-inline: #{map.get($spacers, 20)};
+  position: relative;
 
   .nav-item:not(:first-child) {
     margin-inline-start: #{map.get($spacers, 8)};
@@ -601,6 +612,28 @@ $btn-variants: (
   /* TODO(norbert-mieczkowski-codilime): replace `i.mdi` with new icons pattern when ready to use. */
   &:not(:where(.active, :active,.disabled, :disabled)) > i.mdi {
     color: var(--#{$prefix}secondary-color);
+  }
+}
+
+/* Badges */
+.badge {
+  --#{$prefix}badge-color: var(--#{$prefix}body-color);
+
+  color: var(--#{$prefix}badge-color);
+
+  &.bg-danger,
+  &.bg-primary,
+  &.bg-success,
+  &.bg-warning,
+  &.text-bg-danger,
+  &.text-bg-primary,
+  &.text-bg-success,
+  &.text-bg-warning {
+    --#{$prefix}badge-color: var(--#{$prefix}body-bg);
+  }
+
+  a {
+    color: inherit;
   }
 }
 
@@ -955,6 +988,11 @@ body {
   }
 }
 
+/* Main content */
+#main-content {
+  box-shadow: $box-shadow-sm;
+  padding-top: map.get($spacers, 16);
+}
 
 /* Footer */
 #footer {

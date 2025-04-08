@@ -10,7 +10,7 @@
             style="width: 1.5rem;"
         />
         {% if copy_title %}
-        <span class="hover_copy">
+        <span class="hover_copy d-flex gap-4">
             <span id="copy_title">{{ title }}</span>
             <button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-text="{{ title }}">
                 <span class="mdi mdi-content-copy"></span>
@@ -25,7 +25,7 @@
         <nav aria-label="Breadcrumbs" class="mt-4">
             <ol class="breadcrumb">
                 {% for url, title in crumbs %}
-                    <li><a href="{{ url }}">{{ title }}</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url }}">{{ title }}</a></li>
                 {% endfor %}
             </ol>
         </nav>

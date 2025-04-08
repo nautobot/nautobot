@@ -688,25 +688,6 @@ a.tile.clickable:visited {
     justify-content: space-between;
     padding-top: 10px;
 }
-
-/* Buttons inside dropdown menus */
-.dropdown-menu button {
-    background: none;
-    border: none;
-    display: block;
-    width: 100%;
-    text-align: left;
-    padding: 3px 20px;
-    cursor: pointer;
-    text-wrap: nowrap;
-}
-.dropdown-menu button:focus,
-.dropdown-menu button:hover {
-    color: #ffffff;
-    text-decoration: none;
-    background-color: #646464;
-}
-
 /* Monaco Editor container */
 .editor-container {
     display: flex;  /* Use flexbox for layout */

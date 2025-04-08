@@ -25,40 +25,24 @@
 {% endblock %}
 
 {% block header %}
-
-    <div class="float-end noprint">
-    {% block buttons %}
-        {% plugin_buttons object %}
-        {% render_detail_view_extra_buttons %}
-        {% block extra_buttons %}{% endblock extra_buttons %}
-        {% consolidate_detail_view_action_buttons %}
-    {% endblock buttons %}
-    </div>
-
-    {% include 'inc/created_updated.html' %}
-    <div class="float-end noprint">
-        {% custom_links object %}
-        {% job_buttons object %}
-        {% block panel_buttons %}{% endblock panel_buttons %}
-    </div>
     <ul id="tabs" class="nav nav-tabs" role="tablist">
     {% block nav_tabs %}
       {% if object_detail_content %}
         {% render_tabs_labels object_detail_content.tabs %}
       {% else %}
         <li class="nav-item" role="presentation">
-            <a class="nav-link{% if active_tab == 'main' or request.GET.tab == 'main' %} active{% endif %}" href="{{ object.get_absolute_url }}#main" onclick="switch_tab(this.href)" aria-controls="main" role="tab" data-toggle="tab">
+            <a class="nav-link{% if active_tab == 'main' or request.GET.tab == 'main' %} active{% endif %}" href="{{ object.get_absolute_url }}#main" onclick="switch_tab(this.href)" aria-controls="main" role="tab" data-bs-toggle="tab">
                 {{ verbose_name|bettertitle }}
             </a>
         </li>
         <li class="nav-item" role="presentation">
-            <a class="nav-link{% if request.GET.tab == 'advanced' %} active{% endif %}" href="{{ object.get_absolute_url }}#advanced" onclick="switch_tab(this.href)" aria-controls="advanced" role="tab" data-toggle="tab">
+            <a class="nav-link{% if request.GET.tab == 'advanced' %} active{% endif %}" href="{{ object.get_absolute_url }}#advanced" onclick="switch_tab(this.href)" aria-controls="advanced" role="tab" data-bs-toggle="tab">
                 Advanced
             </a>
         </li>
         {% if object.is_contact_associable_model %}
             <li class="nav-item" role="presentation">
-                <a class="nav-link{% if request.GET.tab == 'contacts' %} active{% endif %}" href="{{ object.get_absolute_url }}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">
+                <a class="nav-link{% if request.GET.tab == 'contacts' %} active{% endif %}" href="{{ object.get_absolute_url }}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-bs-toggle="tab">
                     Contacts
                 </a>
             </li>
@@ -67,7 +51,7 @@
             {% with object.dynamic_groups.count as dg_count %}
                 {% if dg_count %}
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link{% if request.GET.tab == 'dynamic_groups' %} active{% endif %}" href="{{ object.get_absolute_url }}#dynamic_groups" onclick="switch_tab(this.href)" aria-controls="dynamic_groups" role="tab" data-toggle="tab">
+                        <a class="nav-link{% if request.GET.tab == 'dynamic_groups' %} active{% endif %}" href="{{ object.get_absolute_url }}#dynamic_groups" onclick="switch_tab(this.href)" aria-controls="dynamic_groups" role="tab" data-bs-toggle="tab">
                             Dynamic Groups {% badge dg_count %}
                         </a>
                     </li>
@@ -78,7 +62,7 @@
             {% with object.associated_object_metadata.count as om_count %}
                 {% if om_count %}
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link{% if request.GET.tab == 'object_metadata' %} active{% endif %}" href="{{ object.get_absolute_url }}#object_metadata" onclick="switch_tab(this.href)" aria-controls="object_metadata" role="tab" data-toggle="tab">
+                        <a class="nav-link{% if request.GET.tab == 'object_metadata' %} active{% endif %}" href="{{ object.get_absolute_url }}#object_metadata" onclick="switch_tab(this.href)" aria-controls="object_metadata" role="tab" data-bs-toggle="tab">
                             Object Metadata {% badge om_count %}
                         </a>
                     </li>
@@ -124,6 +108,20 @@
         {% render_components object_detail_content.tabs %}
       {% else %}
         <div id="main" role="tabpanel" class="tab-pane {% if active_tab == "main" or request.GET.tab == "main" %}active{% else %}fade{% endif %}">
+            <div class="align-items-center d-flex flex-wrap mb-16">
+                {% include 'inc/created_updated.html' %}
+                <div class="flex-grow-0 flex-shrink-0 noprint">
+                    {% block buttons %}
+                        {% plugin_buttons object %}
+                        {% render_detail_view_extra_buttons %}
+                        {% block extra_buttons %}{% endblock extra_buttons %}
+                        {% consolidate_detail_view_action_buttons %}
+                    {% endblock buttons %}
+                    {% custom_links object %}
+                    {% job_buttons object %}
+                    {% block panel_buttons %}{% endblock panel_buttons %}
+                </div>
+            </div>
             <div class="row">
                 <div class="col-md-6">
                     {% block content_left_page %}{% endblock content_left_page %}
