@@ -3287,7 +3287,7 @@ class JobCustomTemplateTestCase(TestCase):
             self.client.get(self.run_url)
 
 
-class JobHookTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+class JobHookTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = JobHook
 
     @classmethod
@@ -3296,10 +3296,6 @@ class JobHookTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         module = "job_hook_receiver"
         name = "TestJobHookReceiverLog"
         _job_class, job = get_job_class_and_model(module, name)
-
-        # ✅ Ensure it's marked as a valid JobHook receiver
-        job.is_job_hook_receiver = True
-        job.save()
 
         # Create content type for ConsolePort
         obj_type = ContentType.objects.get_for_model(ConsolePort)
@@ -3353,6 +3349,14 @@ class JobHookTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "add_content_types": [ipaddress_ct.pk, prefix_ct.pk],
             "remove_content_types": [device_ct.pk],
         }
+
+    def test_create_object_with_permission(self):
+        self.add_permissions("extras.view_job")
+        super().test_create_object_with_permission
+
+    def test_create_object_with_constrained_permission(self):
+        self.add_permissions("extras.view_job")
+        super().test_create_object_with_constrained_permission
 
 
 # TODO: Convert to StandardTestCases.Views

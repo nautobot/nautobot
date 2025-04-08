@@ -2019,14 +2019,7 @@ class JobHookUIViewSet(NautobotUIViewSet):
             ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
-                fields=(
-                    "content_types",
-                    "job",
-                    "type_create",
-                    "type_delete",
-                    "type_update",
-                    "enabled",
-                ),
+                fields="__all__",
             ),
         )
     )
