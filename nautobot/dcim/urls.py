@@ -17,7 +17,6 @@ from .models import (
     Interface,
     InventoryItem,
     Location,
-    Manufacturer,
     Platform,
     PowerFeed,
     PowerOutlet,
@@ -208,19 +207,6 @@ urlpatterns = [
         ImageAttachmentEditView.as_view(),
         name="rack_add_image",
         kwargs={"model": Rack},
-    ),
-    # Manufacturers
-    path(
-        "manufacturers/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="manufacturer_changelog",
-        kwargs={"model": Manufacturer},
-    ),
-    path(
-        "manufacturers/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="manufacturer_notes",
-        kwargs={"model": Manufacturer},
     ),
     # Device types
     path("device-types/", views.DeviceTypeListView.as_view(), name="devicetype_list"),
