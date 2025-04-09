@@ -555,12 +555,14 @@ class CustomLinkTestCase(
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = CustomLink
 
     @classmethod
     def setUpTestData(cls):
         obj_type = ContentType.objects.get_for_model(Location)
+        obj_type1 = ContentType.objects.get_for_model(Interface)
 
         customlinks = (
             CustomLink(
@@ -603,6 +605,14 @@ class CustomLinkTestCase(
             "weight": 100,
             "button_class": "default",
             "new_window": False,
+        }
+        cls.bulk_edit_data = {
+            "content_type": obj_type1.pk,
+            "weight": 200,
+            "button_class": "success",
+            "new_window": True,
+            "text": "Updated customlink text",
+            "target_url": "http://bulk-edit-link.com",
         }
 
 
