@@ -1780,10 +1780,13 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
 class RelationshipBulkEditForm(BootstrapMixin, CustomFieldModelBulkEditFormMixin, NoteModelBulkEditFormMixin):
     pk = forms.ModelMultipleChoiceField(queryset=Relationship.objects.all(), widget=forms.MultipleHiddenInput())
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
-    type = forms.ChoiceField(choices=RelationshipTypeChoices.CHOICES, required=False)
+    type = forms.ChoiceField(
+        required=False,
+        label="type",
+        choices=add_blank_choice(RelationshipTypeChoices),
+    )
     source_hidden = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
     destination_hidden = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
-    key = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     source_filter = forms.JSONField(required=False, widget=forms.Textarea, help_text="Filter for the source")
     destination_filter = forms.JSONField(required=False, widget=forms.Textarea, help_text="Filter for the destination")
     source_type = CSVContentTypeField(
@@ -1794,6 +1797,7 @@ class RelationshipBulkEditForm(BootstrapMixin, CustomFieldModelBulkEditFormMixin
     )
     source_label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     destination_label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    advanced_ui = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
 
     class Meta:
         model = Relationship
@@ -1802,19 +1806,14 @@ class RelationshipBulkEditForm(BootstrapMixin, CustomFieldModelBulkEditFormMixin
             "type",
             "source_hidden",
             "destination_hidden",
-            "key",
             "source_filter",
             "destination_filter",
             "source_type",
             "destination_type",
             "source_label",
             "destination_label",
+            "advanced_ui",
         ]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.fields["type"].choices = RelationshipTypeChoices.add_blank_choice(RelationshipTypeChoices.CHOICES)
 
 
 class RelationshipForm(BootstrapMixin, forms.ModelForm):

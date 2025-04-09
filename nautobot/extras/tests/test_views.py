@@ -3424,9 +3424,8 @@ class RelationshipTestCase(
             "destination_filter": None,
         }
         cls.bulk_edit_data = {
-            "key": "vlan_to_interface",
             "description": "This is a relationship between VLANs and Interfaces.",
-            "type": "",
+            "type": "many-to-many",
             "source_type": vlan_type.pk,
             "source_label": "Interfaces",
             "source_hidden": False,
@@ -3435,6 +3434,7 @@ class RelationshipTestCase(
             "destination_label": "VLANs",
             "destination_hidden": True,
             "destination_filter": None,
+            "advanced_ui": True,
         }
 
         cls.slug_test_object = "Primary Interface"

@@ -451,12 +451,6 @@ class RelationshipTypeChoices(ChoiceSet):
         (TYPE_MANY_TO_MANY_SYMMETRIC, "Symmetric Many to Many"),
     )
 
-    @staticmethod
-    def add_blank_choice(choices):
-        return [("", "---------"), *choices]
-
-    choices = add_blank_choice(CHOICES)
-
 
 #
 # Secrets
