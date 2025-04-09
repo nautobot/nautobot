@@ -21,7 +21,6 @@ from .models import (
     Platform,
     PowerFeed,
     PowerOutlet,
-    PowerPanel,
     PowerPort,
     Rack,
     RackGroup,
@@ -44,6 +43,7 @@ router.register("module-bays", views.ModuleBayUIViewSet)
 router.register("module-bay-templates", views.ModuleBayTemplateUIViewSet)
 router.register("modules", views.ModuleUIViewSet)
 router.register("module-types", views.ModuleTypeUIViewSet)
+router.register("power-panels", views.PowerPanelUIViewSet)
 router.register("software-image-files", views.SoftwareImageFileUIViewSet)
 router.register("software-versions", views.SoftwareVersionUIViewSet)
 router.register("virtual-device-contexts", views.VirtualDeviceContextUIViewSet)
@@ -1476,47 +1476,6 @@ urlpatterns = [
         "virtual-chassis-members/<uuid:pk>/delete/",
         views.VirtualChassisRemoveMemberView.as_view(),
         name="virtualchassis_remove_member",
-    ),
-    # Power panels
-    path("power-panels/", views.PowerPanelListView.as_view(), name="powerpanel_list"),
-    path("power-panels/add/", views.PowerPanelEditView.as_view(), name="powerpanel_add"),
-    path(
-        "power-panels/import/",
-        views.PowerPanelBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="powerpanel_import",
-    ),
-    path(
-        "power-panels/edit/",
-        views.PowerPanelBulkEditView.as_view(),
-        name="powerpanel_bulk_edit",
-    ),
-    path(
-        "power-panels/delete/",
-        views.PowerPanelBulkDeleteView.as_view(),
-        name="powerpanel_bulk_delete",
-    ),
-    path("power-panels/<uuid:pk>/", views.PowerPanelView.as_view(), name="powerpanel"),
-    path(
-        "power-panels/<uuid:pk>/edit/",
-        views.PowerPanelEditView.as_view(),
-        name="powerpanel_edit",
-    ),
-    path(
-        "power-panels/<uuid:pk>/delete/",
-        views.PowerPanelDeleteView.as_view(),
-        name="powerpanel_delete",
-    ),
-    path(
-        "power-panels/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="powerpanel_changelog",
-        kwargs={"model": PowerPanel},
-    ),
-    path(
-        "power-panels/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="powerpanel_notes",
-        kwargs={"model": PowerPanel},
     ),
     # Power feeds
     path("power-feeds/", views.PowerFeedListView.as_view(), name="powerfeed_list"),
