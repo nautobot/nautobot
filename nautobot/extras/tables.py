@@ -19,7 +19,7 @@ from nautobot.core.tables import (
 from nautobot.core.templatetags.helpers import render_boolean, render_json, render_markdown
 from nautobot.tenancy.tables import TenantColumn
 
-from .choices import MetadataTypeDataTypeChoices
+from .choices import LogLevelChoices, MetadataTypeDataTypeChoices
 from .models import (
     ComputedField,
     ConfigContext,
@@ -907,17 +907,36 @@ class JobResultTable(BaseTable):
         """
         Define custom rendering for the summary column.
         """
+        # Normally the *_log_count attributes will be generated efficiently via queryset annotation in the view,
+        # however, we cannot assume that will always be the case. Calculate them inefficiently as a fallback.
+        if not hasattr(record, "debug_log_count"):
+            record.debug_log_count = record.job_log_entries.filter(log_level=LogLevelChoices.LOG_DEBUG).count()
+        if not hasattr(record, "success_log_count"):
+            record.success_log_count = record.job_log_entries.filter(log_level=LogLevelChoices.LOG_SUCCESS).count()
+        if not hasattr(record, "info_log_count"):
+            record.info_log_count = record.job_log_entries.filter(log_level=LogLevelChoices.LOG_INFO).count()
+        if not hasattr(record, "warning_log_count"):
+            record.warning_log_count = record.job_log_entries.filter(log_level=LogLevelChoices.LOG_WARNING).count()
+        if not hasattr(record, "error_log_count"):
+            record.error_log_count = record.job_log_entries.filter(
+                log_level__in=[
+                    LogLevelChoices.LOG_FAILURE,
+                    LogLevelChoices.LOG_ERROR,
+                    LogLevelChoices.LOG_CRITICAL,
+                ]
+            ).count()
+
         return format_html(
             """<label class="label label-default">{}</label>
             <label class="label label-success">{}</label>
             <label class="label label-info">{}</label>
             <label class="label label-warning">{}</label>
             <label class="label label-danger">{}</label>""",
-            getattr(record, "debug_log_count", 0),
-            getattr(record, "success_log_count", 0),
-            getattr(record, "info_log_count", 0),
-            getattr(record, "warning_log_count", 0),
-            getattr(record, "error_log_count", 0),
+            record.debug_log_count,
+            record.success_log_count,
+            record.info_log_count,
+            record.warning_log_count,
+            record.error_log_count,
         )
 
     class Meta(BaseTable.Meta):
