@@ -1671,20 +1671,7 @@ class ModuleBayTemplateUIViewSet(
 
 class PlatformCustomKeyValueTablePanel(object_detail.KeyValueTablePanel):
     def render_key(self, key, value, context):
-        """
-        Override the render_key method to avoid transforming machine-significant keys.
-
-        If the key is machine-significant (e.g., "network_driver_tool_names"), return it as-is.
-        Otherwise, apply the default transformation (replace underscores and title-case).
-        """
-        # Define a list of keys that should not be transformed
-        NO_TRANSFORM_KEYS = ["network_driver_tool_names"]
-
-        if key in NO_TRANSFORM_KEYS:
-            return key  # Return the key as-is, without applying transformations
-
-        # Default transformation: Replace underscores with spaces, and title-case the key
-        return super().render_key(key, value, context)
+        return key
 
 
 class PlatformUIViewSet(NautobotUIViewSet):

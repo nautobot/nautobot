@@ -802,7 +802,7 @@ class PlatformBulkEditForm(NautobotBulkEditForm):
     napalm_args = forms.JSONField(required=False, widget=forms.Textarea(attrs={"rows": 4}))
 
     class Meta:
-        nullable_fields = ["manufacturer", "napalm_args"]
+        nullable_fields = ["manufacturer", "network_driver", "napalm_driver", "napalm_args"]
 
 
 #
