@@ -768,6 +768,16 @@ class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
 #
 
 
+class ManufacturerBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=Manufacturer.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    class Meta:
+        nullable_fields = [
+            "description",
+        ]
+
+
 class ManufacturerForm(NautobotModelForm):
     class Meta:
         model = Manufacturer
