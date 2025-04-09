@@ -17,7 +17,6 @@ from .models import (
     Interface,
     InventoryItem,
     Location,
-    Manufacturer,
     Platform,
     PowerFeed,
     PowerOutlet,
@@ -40,6 +39,7 @@ router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet
 router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
 router.register("interface-redundancy-groups-associations", views.InterfaceRedundancyGroupAssociationUIViewSet)
 router.register("location-types", views.LocationTypeUIViewSet)
+router.register("manufacturers", views.ManufacturerUIViewSet)
 router.register("module-bays", views.ModuleBayUIViewSet)
 router.register("module-bay-templates", views.ModuleBayTemplateUIViewSet)
 router.register("modules", views.ModuleUIViewSet)
@@ -207,50 +207,6 @@ urlpatterns = [
         ImageAttachmentEditView.as_view(),
         name="rack_add_image",
         kwargs={"model": Rack},
-    ),
-    # Manufacturers
-    path("manufacturers/", views.ManufacturerListView.as_view(), name="manufacturer_list"),
-    path(
-        "manufacturers/add/",
-        views.ManufacturerEditView.as_view(),
-        name="manufacturer_add",
-    ),
-    path(
-        "manufacturers/import/",
-        views.ManufacturerBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="manufacturer_import",
-    ),
-    path(
-        "manufacturers/delete/",
-        views.ManufacturerBulkDeleteView.as_view(),
-        name="manufacturer_bulk_delete",
-    ),
-    path(
-        "manufacturers/<uuid:pk>/",
-        views.ManufacturerView.as_view(),
-        name="manufacturer",
-    ),
-    path(
-        "manufacturers/<uuid:pk>/edit/",
-        views.ManufacturerEditView.as_view(),
-        name="manufacturer_edit",
-    ),
-    path(
-        "manufacturers/<uuid:pk>/delete/",
-        views.ManufacturerDeleteView.as_view(),
-        name="manufacturer_delete",
-    ),
-    path(
-        "manufacturers/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="manufacturer_changelog",
-        kwargs={"model": Manufacturer},
-    ),
-    path(
-        "manufacturers/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="manufacturer_notes",
-        kwargs={"model": Manufacturer},
     ),
     # Device types
     path("device-types/", views.DeviceTypeListView.as_view(), name="devicetype_list"),
