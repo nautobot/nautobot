@@ -766,6 +766,14 @@ class ExportTemplateBulkEditForm(NautobotBulkEditForm):
         max_length=CHARFIELD_MAX_LENGTH, required=False, help_text="Extension to append to the rendered filename"
     )
 
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("export_templates").get_query()).order_by(
+            "app_label", "model"
+        ),
+        required=False,
+        label="Content Type",
+    )
+
     class Meta:
         model = ExportTemplate
         nullable_fields = ["description", "mime_type", "file_extension"]
