@@ -24,8 +24,8 @@ class BranchContext:
         from nautobot_version_control.utils import active_branch  # pylint: disable=import-error
 
         self.cursor = connections[self.using].cursor()
-        self.original_branch = active_branch()
         self.cursor.__enter__()
+        self.original_branch = active_branch(using=self.using)
 
         if self.branch_name != self.original_branch:
             if self.using == "default":

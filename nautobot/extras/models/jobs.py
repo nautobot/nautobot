@@ -989,7 +989,7 @@ class JobResult(BaseModel, CustomFieldModel):
             with BranchContext(
                 branch_name=self.celery_kwargs.get("nautobot_job_branch_name", None), using=JOB_LOGS, autocommit=False
             ):
-                log.save()
+                log.save(using=JOB_LOGS)
 
 
 #

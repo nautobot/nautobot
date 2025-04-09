@@ -120,7 +120,7 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
             user=User.objects.get(id=user_id) if user_id else None,
             using=using,
         ):
-            obj, created = self.get_or_create(id=task_id, defaults=fields)
+            obj, created = self.using(using).get_or_create(id=task_id, defaults=fields)
 
             if not created:
                 # Make sure `date_done` is allowed to stay null until the task reacheas a ready state.
@@ -141,7 +141,7 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
                 for k, v in fields.items():
                     setattr(obj, k, v)
 
-                obj.save()
+                obj.save(using=using)
 
         return obj
 

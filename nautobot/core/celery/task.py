@@ -74,6 +74,11 @@ class NautobotTask(Task):
         # Make sure we get the task instance, not class.
         task = app._tasks[self.name]
 
+        if "nautobot_version_control" in settings.PLUGINS and "nautobot_job_branch_name" not in options:
+            from nautobot_version_control.utils import active_branch  # pylint: disable=import-error
+
+            options["nautobot_job_branch_name"] = active_branch()
+
         request = {
             "id": task_id,
             "retries": retries,
