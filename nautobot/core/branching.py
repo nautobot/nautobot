@@ -21,7 +21,7 @@ class BranchContext:
                 )
             return
 
-        from nautobot_version_control.utils import active_branch  # pylint: disable=import-error
+        from nautobot_version_control.utils import active_branch, checkout_branch  # pylint: disable=import-error
 
         self.cursor = connections[self.using].cursor()
         self.cursor.__enter__()
@@ -31,7 +31,7 @@ class BranchContext:
             if self.using == "default":
                 LOGGER.debug("Switching to branch %s", self.branch_name)
 
-            self.cursor.execute("CALL dolt_checkout(%s);", [self.branch_name])
+            checkout_branch(self.branch_name, using=self.using)
 
             if self.autocommit:
                 from nautobot_version_control.middleware import AutoDoltCommit  # pylint: disable=import-error
@@ -47,7 +47,9 @@ class BranchContext:
             if self.autocommit:
                 self.auto_dolt_commit.__exit__(exc_type, exc_value, traceback)
 
-            self.cursor.execute("CALL dolt_checkout(%s);", [self.original_branch])
+            from nautobot_version_control.utils import checkout_branch  # pylint: disable=import-error
+
+            checkout_branch(self.original_branch, using=self.using)
 
             if self.using == "default":
                 LOGGER.debug("Returned to branch %s", self.original_branch)
