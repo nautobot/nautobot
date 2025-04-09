@@ -13,7 +13,6 @@ from nautobot.extras.models import (
     GitRepository,
     GraphQLQuery,
     Job,
-    JobHook,
     Note,
     Relationship,
     SecretsGroup,
@@ -465,13 +464,6 @@ urlpatterns = [
     path("jobs/<str:class_path>/run/", views.JobRunView.as_view(), name="job_run_by_class_path"),
     path("jobs/edit/", views.JobBulkEditView.as_view(), name="job_bulk_edit"),
     path("jobs/delete/", views.JobBulkDeleteView.as_view(), name="job_bulk_delete"),
-    # Job hooks
-    path(
-        "job-hooks/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="jobhook_changelog",
-        kwargs={"model": JobHook},
-    ),
     # Generic job results
     path("job-results/", views.JobResultListView.as_view(), name="jobresult_list"),
     path("job-results/<uuid:pk>/", views.JobResultView.as_view(), name="jobresult"),

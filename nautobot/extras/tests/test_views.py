@@ -3297,7 +3297,7 @@ class JobHookTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCa
         name = "TestJobHookReceiverLog"
         _job_class, job = get_job_class_and_model(module, name)
 
-        # Create content type for ConsolePort
+        # Create content type for Job Hooks
         obj_type = ContentType.objects.get_for_model(ConsolePort)
         device_ct = ContentType.objects.get_for_model(Device)
         ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
@@ -3352,9 +3352,11 @@ class JobHookTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCa
 
     def test_create_object_with_permission(self):
         self.add_permissions("extras.view_job")
+        super().test_create_object_with_permission()
 
     def test_create_object_with_constrained_permission(self):
         self.add_permissions("extras.view_job")
+        super().test_create_object_with_permission()
 
 
 # TODO: Convert to StandardTestCases.Views
