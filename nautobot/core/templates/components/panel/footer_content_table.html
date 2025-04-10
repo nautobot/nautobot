@@ -4,11 +4,35 @@
     </a>
 {% endif %}
 
+<div class="pull-left">
+    {% for button_render in buttons_render %}
+        {{button_render}}
+    {% endfor %}
+</div>
+<div class="clearfix"></div>
 {% if body_content_table_add_url %}
     <div class="pull-right">
         <a href="{{ body_content_table_add_url }}" class="btn btn-xs btn-primary">
             <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add {{ body_content_table_verbose_name }}
         </a>
     </div>
+
     <div class="clearfix"></div>
 {% endif %}
+
+<script>
+    document.querySelectorAll('button[data-form-id="{{ form_id }}"]').forEach(button => {
+        button.addEventListener('click', function () {
+            const actionUrl = button.getAttribute('action-url');
+            const form = document.getElementById('{{ form_id }}');
+            if (form && actionUrl) {
+                form.action = actionUrl;
+                form.submit();
+            }
+            else {
+                console.warn('Missing form_id or action_url:', button);
+                return;
+            }
+        });
+    });
+</script>
