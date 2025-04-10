@@ -1,6 +1,7 @@
 import logging
 
 from django.conf import settings
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema_field
@@ -19,6 +20,7 @@ from nautobot.core.api import (
     ValidatedModelSerializer,
 )
 from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.fields import GroupField
 from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import (
     get_nested_serializer_depth,
@@ -131,6 +133,11 @@ class ApprovalWorkflowSerializer(NautobotModelSerializer):
 
 class ApprovalWorkflowStageSerializer(NautobotModelSerializer):
     """ApprovalWorkflowStage Serializer."""
+
+    approver_group = GroupField(
+        queryset=Group.objects.all(),
+        help_text="The group that will be assigned to approve this stage.",
+    )
 
     class Meta:
         """Meta attributes."""

@@ -1,5 +1,6 @@
 """Unit tests for Approval Workflow models."""
 
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 
 from nautobot.core.testing import APIViewTestCases
@@ -55,54 +56,87 @@ class ApprovalWorkflowAPITest(APIViewTestCases.APIViewTestCase):
         }
 
 
+class ApprovalWorkflowStageAPITest(APIViewTestCases.APIViewTestCase):
+    """ApprovalWorkflowStage API tests."""
+
+    model = models.ApprovalWorkflowStage
+    choices_fields = ()
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        approval_workflow_1 = models.ApprovalWorkflow.objects.create(
+            name="Test Approval Workflow 1",
+            model_content_type=ContentType.objects.get(app_label="extras", model="job"),
+            model_constraints={"name": "Bulk Delete Objects"},
+        )
+        approval_workflow_2 = models.ApprovalWorkflow.objects.create(
+            name="Test Approval Workflow 2",
+            model_content_type=ContentType.objects.get(app_label="extras", model="scheduledjob"),
+            model_constraints={"name": "Bulk Delete Objects"},
+        )
+        approver_group_1 = Group.objects.create(name="Approver Group 1")
+        approver_group_2 = Group.objects.create(name="Approver Group 2")
+        models.ApprovalWorkflowStage.objects.create(
+            approval_workflow=approval_workflow_1,
+            sequence_weight=100,
+            name="Test Approval Workflow 1 Stage 1",
+            min_approvers=2,
+            denial_message="Stage 1 Denial Message",
+            approver_group=approver_group_1,
+        )
+        models.ApprovalWorkflowStage.objects.create(
+            approval_workflow=approval_workflow_1,
+            sequence_weight=200,
+            name="Test Approval Workflow 1 Stage 2",
+            min_approvers=2,
+            denial_message="Stage 2 Denial Message",
+            approver_group=approver_group_2,
+        )
+        models.ApprovalWorkflowStage.objects.create(
+            approval_workflow=approval_workflow_1,
+            sequence_weight=300,
+            name="Test Approval Workflow 1 Stage 3",
+            min_approvers=1,
+            denial_message="Stage 3 Denial Message",
+            approver_group=approver_group_2,
+        )
+
+        cls.create_data = [
+            {
+                "approval_workflow": approval_workflow_2.pk,
+                "sequence_weight": 100,
+                "name": "Test Approval Workflow 2 Stage 1",
+                "min_approvers": 3,
+                "denial_message": "Stage 1 Denial Message",
+                "approver_group": approver_group_1.pk,
+            },
+            {
+                "approval_workflow": approval_workflow_2.pk,
+                "sequence_weight": 200,
+                "name": "Test Approval Workflow 2 Stage 2",
+                "min_approvers": 2,
+                "denial_message": "Stage 2 Denial Message",
+                "approver_group": approver_group_2.pk,
+            },
+            {
+                "approval_workflow": approval_workflow_2.pk,
+                "sequence_weight": 300,
+                "name": "Test Approval Workflow 2 Stage 3",
+                "min_approvers": 1,
+                "denial_message": "Stage 3 Denial Message",
+                "approver_group": approver_group_1.pk,
+            },
+        ]
+
+        cls.update_data = {
+            "approval_workflow": approval_workflow_2.pk,
+            "min_approvers": 4,
+            "denial_message": "Updated Denial Message",
+            "approver_group": approver_group_1.pk,
+        }
+
 # TODO Enable the following tests
-# class ApprovalWorkflowStageAPITest(APIViewTestCases.APIViewTestCase):
-#     """ApprovalWorkflowStage API tests."""
-
-#     model = models.ApprovalWorkflowStage
-#     choices_fields = ()
-
-#     @classmethod
-#     def setUpTestData(cls):
-#         super().setUpTestData()
-
-#         cls.create_data = [
-#             {
-#                 "approval_workflow": "replaceme",
-#                 "sequence_weight": "replaceme",
-#                 "name": "replaceme",
-#                 "min_approvers": "replaceme",
-#                 "denial_message": "replaceme",
-#                 "approver_group": "replaceme",
-#             },
-#             {
-#                 "approval_workflow": "replaceme",
-#                 "sequence_weight": "replaceme",
-#                 "name": "replaceme",
-#                 "min_approvers": "replaceme",
-#                 "denial_message": "replaceme",
-#                 "approver_group": "replaceme",
-#             },
-#             {
-#                 "approval_workflow": "replaceme",
-#                 "sequence_weight": "replaceme",
-#                 "name": "replaceme",
-#                 "min_approvers": "replaceme",
-#                 "denial_message": "replaceme",
-#                 "approver_group": "replaceme",
-#             },
-#         ]
-
-#         cls.update_data = {
-#             "approval_workflow": "replaceme",
-#             "sequence_weight": "replaceme",
-#             "name": "replaceme",
-#             "min_approvers": "replaceme",
-#             "denial_message": "replaceme",
-#             "approver_group": "replaceme",
-#         }
-
-
 # class ApprovalWorkflowInstanceAPITest(APIViewTestCases.APIViewTestCase):
 #     """ApprovalWorkflowInstance API tests."""
 
