@@ -2758,51 +2758,30 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
 #
 
 
-class ConsolePortListView(generic.ObjectListView):
-    queryset = ConsolePort.objects.all()
-    filterset = filters.ConsolePortFilterSet
-    filterset_form = forms.ConsolePortFilterForm
-    table = tables.ConsolePortTable
-    action_buttons = ("import", "export")
-
-
-class ConsolePortView(generic.ObjectView):
+class ConsolePortUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ConsolePortBulkEditForm
+    filterset_class = filters.ConsolePortFilterSet
+    filterset_form_class = forms.ConsolePortFilterForm
+    form_class = forms.ConsolePortForm
+    serializer_class = serializers.ConsolePortSerializer
+    table_class = tables.ConsolePortTable
     queryset = ConsolePort.objects.all()
 
-    def get_extra_context(self, request, instance):
-        return {
-            "device_breadcrumb_url": "dcim:device_consoleports",
-            "module_breadcrumb_url": "dcim:module_consoleports",
-            **super().get_extra_context(request, instance),
-        }
-
-
-class ConsolePortCreateView(generic.ComponentCreateView):
-    queryset = ConsolePort.objects.all()
-    form = forms.ConsolePortCreateForm
-    model_form = forms.ConsolePortForm
-
-
-class ConsolePortEditView(generic.ObjectEditView):
-    queryset = ConsolePort.objects.all()
-    model_form = forms.ConsolePortForm
-    template_name = "dcim/device_component_edit.html"
-
-
-class ConsolePortDeleteView(generic.ObjectDeleteView):
-    queryset = ConsolePort.objects.all()
-
-
-class ConsolePortBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = ConsolePort.objects.all()
-    table = tables.ConsolePortTable
-
-
-class ConsolePortBulkEditView(generic.BulkEditView):
-    queryset = ConsolePort.objects.all()
-    filterset = filters.ConsolePortFilterSet
-    table = tables.ConsolePortTable
-    form = forms.ConsolePortBulkEditForm
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=(
+                    "device",  # Device associated with the console port
+                    "name",  # Name of the console port
+                    "label",
+                    "type",
+                    "description",
+                ),
+            ),
+        )
+    )
 
 
 class ConsolePortBulkRenameView(BaseDeviceComponentsBulkRenameView):
@@ -2811,12 +2790,6 @@ class ConsolePortBulkRenameView(BaseDeviceComponentsBulkRenameView):
 
 class ConsolePortBulkDisconnectView(BulkDisconnectView):
     queryset = ConsolePort.objects.all()
-
-
-class ConsolePortBulkDeleteView(generic.BulkDeleteView):
-    queryset = ConsolePort.objects.all()
-    filterset = filters.ConsolePortFilterSet
-    table = tables.ConsolePortTable
 
 
 #

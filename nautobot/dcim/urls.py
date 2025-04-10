@@ -33,6 +33,7 @@ from .models import (
 app_name = "dcim"
 
 router = NautobotUIViewSetRouter()
+router.register("console-ports", views.ConsolePortUIViewSet)
 router.register("controller-managed-device-groups", views.ControllerManagedDeviceGroupUIViewSet)
 router.register("controllers", views.ControllerUIViewSet)
 router.register("device-families", views.DeviceFamilyUIViewSet)
@@ -752,22 +753,6 @@ urlpatterns = [
         name="device_wireless",
     ),
     # Console ports
-    path("console-ports/", views.ConsolePortListView.as_view(), name="consoleport_list"),
-    path(
-        "console-ports/add/",
-        views.ConsolePortCreateView.as_view(),
-        name="consoleport_add",
-    ),
-    path(
-        "console-ports/import/",
-        views.ConsolePortBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="consoleport_import",
-    ),
-    path(
-        "console-ports/edit/",
-        views.ConsolePortBulkEditView.as_view(),
-        name="consoleport_bulk_edit",
-    ),
     path(
         "console-ports/rename/",
         views.ConsolePortBulkRenameView.as_view(),
@@ -777,34 +762,6 @@ urlpatterns = [
         "console-ports/disconnect/",
         views.ConsolePortBulkDisconnectView.as_view(),
         name="consoleport_bulk_disconnect",
-    ),
-    path(
-        "console-ports/delete/",
-        views.ConsolePortBulkDeleteView.as_view(),
-        name="consoleport_bulk_delete",
-    ),
-    path("console-ports/<uuid:pk>/", views.ConsolePortView.as_view(), name="consoleport"),
-    path(
-        "console-ports/<uuid:pk>/edit/",
-        views.ConsolePortEditView.as_view(),
-        name="consoleport_edit",
-    ),
-    path(
-        "console-ports/<uuid:pk>/delete/",
-        views.ConsolePortDeleteView.as_view(),
-        name="consoleport_delete",
-    ),
-    path(
-        "console-ports/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="consoleport_changelog",
-        kwargs={"model": ConsolePort},
-    ),
-    path(
-        "console-ports/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="consoleport_notes",
-        kwargs={"model": ConsolePort},
     ),
     path(
         "console-ports/<uuid:pk>/trace/",
