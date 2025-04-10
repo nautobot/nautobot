@@ -161,6 +161,7 @@ __all__ = (
     "JobEditForm",
     "JobFilterForm",
     "JobForm",
+    "JobHookBulkEditForm",
     "JobHookFilterForm",
     "JobHookForm",
     "JobQueueBulkEditForm",
@@ -1307,6 +1308,43 @@ class JobFilterForm(BootstrapMixin, forms.Form):
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     tags = TagFilterField(model)
+
+
+class JobHookBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=JobHook.objects.all(), widget=forms.MultipleHiddenInput())
+    job = DynamicModelChoiceField(
+        queryset=Job.objects.all(),
+        query_params={"is_job_hook_receiver": True},
+        required=False,
+        label="Job",
+    )
+    enabled = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    type_create = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    type_update = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    type_delete = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    add_content_types = MultipleContentTypeField(
+        queryset=ChangeLoggedModelsQuery().as_queryset(),
+        required=False,
+        label="Add Content Type(s)",
+    )
+
+    remove_content_types = MultipleContentTypeField(
+        queryset=ChangeLoggedModelsQuery().as_queryset(),
+        required=False,
+        label="Remove Content Type(s)",
+    )
+
+    class Meta:
+        model = JobHook
+        fields = (
+            "job",
+            "enabled",
+            "type_create",
+            "type_update",
+            "type_delete",
+            "add_content_types",
+            "remove_content_types",
+        )
 
 
 class JobHookForm(BootstrapMixin, forms.ModelForm):
