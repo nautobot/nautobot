@@ -28,7 +28,6 @@ from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.response import Response
 
 from nautobot.circuits.models import Circuit
-from nautobot.cloud.models import CloudAccount
 from nautobot.cloud.tables import CloudAccountTable
 from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.exceptions import AbortTransaction
@@ -725,71 +724,40 @@ class RackReservationBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class ManufacturerListView(generic.ObjectListView):
-    queryset = Manufacturer.objects.all()
-    filterset = filters.ManufacturerFilterSet
-    filterset_form = forms.ManufacturerFilterForm
-    table = tables.ManufacturerTable
-
-
-class ManufacturerView(generic.ObjectView):
-    queryset = Manufacturer.objects.all()
-
-    def get_extra_context(self, request, instance):
-        # Devices
-        devices = (
-            Device.objects.restrict(request.user, "view")
-            .filter(device_type__manufacturer=instance)
-            .select_related("status", "location", "tenant", "role", "rack", "device_type")
-        )
-
-        device_table = tables.DeviceTable(devices)
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(device_table)
-
-        # Cloud Accounts
-        cloud_accounts = (
-            CloudAccount.objects.restrict(request.user, "view")
-            .filter(provider=instance)
-            .select_related("secrets_group")
-        )
-
-        cloud_account_table = CloudAccountTable(cloud_accounts)
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(cloud_account_table)
-
-        return {
-            "device_table": device_table,
-            "cloud_account_table": cloud_account_table,
-            **super().get_extra_context(request, instance),
-        }
-
-
-class ManufacturerEditView(generic.ObjectEditView):
-    queryset = Manufacturer.objects.all()
-    model_form = forms.ManufacturerForm
-
-
-class ManufacturerDeleteView(generic.ObjectDeleteView):
+class ManufacturerUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ManufacturerBulkEditForm
+    filterset_class = filters.ManufacturerFilterSet
+    filterset_form_class = forms.ManufacturerFilterForm
+    form_class = forms.ManufacturerForm
+    serializer_class = serializers.ManufacturerSerializer
+    table_class = tables.ManufacturerTable
     queryset = Manufacturer.objects.all()
 
-
-class ManufacturerBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Manufacturer.objects.all()
-    table = tables.ManufacturerTable
-
-
-class ManufacturerBulkDeleteView(generic.BulkDeleteView):
-    queryset = Manufacturer.objects.all()
-    table = tables.ManufacturerTable
-    filterset = filters.ManufacturerFilterSet
+    # Object detail content with devices and cloud accounts related to the manufacturer
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.DeviceTable,
+                table_filter="device_type__manufacturer",
+                related_field_name="manufacturer",
+                exclude_columns=["manufacturer"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=CloudAccountTable,
+                table_filter="provider",
+                exclude_columns=["provider"],
+            ),
+        ),
+    )
 
 
 #
