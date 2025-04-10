@@ -136,6 +136,7 @@ class ApprovalWorkflowStageAPITest(APIViewTestCases.APIViewTestCase):
             "approver_group": approver_group_1.pk,
         }
 
+
 # TODO Enable the following tests
 # class ApprovalWorkflowInstanceAPITest(APIViewTestCases.APIViewTestCase):
 #     """ApprovalWorkflowInstance API tests."""
