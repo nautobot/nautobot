@@ -293,7 +293,7 @@ def get_table_class_string_from_view_name(view_name):
     view_class = getattr(view_func, "cls", getattr(view_func, "view_class", None))
     if hasattr(view_class, "table_class"):
         return view_class.table_class.__name__
-    if hasattr(view_class, "table"):
+    if hasattr(view_class, "table") and view_class.table:
         return view_class.table.__name__
     return None
 
