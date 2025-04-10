@@ -1,0 +1,1 @@
+Fixed the filter in Graphene v3 for description, which previously required the use of `_description` but now allows `description`.
