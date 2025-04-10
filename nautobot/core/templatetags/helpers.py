@@ -692,24 +692,62 @@ def render_content_types(value):
     return output
 
 
+@register.filter()
+def location_hierarchy_with_location_type(value):
+    return render_ancestor_hierarchy(value, include_location_type=True)
+
+
 @library.filter()
 @register.filter()
-def render_ancestor_hierarchy(value):
-    """Renders a nested HTML list representing the hierarchy of ancestors for a given object."""
+def render_ancestor_hierarchy(value, include_location_type=False):
+    """Renders a nested HTML list representing the hierarchy of ancestors for a given object, with an optional location type."""
+
+    if not value or not hasattr(value, "ancestors"):
+        return ""
+
     result = format_html('<ul class="tree-hierarchy">')
     append_to_result = format_html("</ul>")
+
     for ancestor in value.ancestors():
         nestable_tag = format_html('<span title="nestable">↺</span>' if getattr(ancestor, "nestable", False) else "")
-        result += format_html(
-            "<li>{value} {nestable_tag}<ul>", value=hyperlinked_object(ancestor, "name"), nestable_tag=nestable_tag
-        )
+
+        if include_location_type:
+            location_type = (
+                hyperlinked_object(ancestor.location_type, "name") if getattr(ancestor, "location_type", False) else ""
+            )
+            result += format_html(
+                "<li>{value} ({location_type}) {nestable_tag}<ul>",
+                value=hyperlinked_object(ancestor, "name"),
+                location_type=location_type,
+                nestable_tag=nestable_tag,
+            )
+        else:
+            result += format_html(
+                "<li>{value} {nestable_tag} <ul>",
+                value=hyperlinked_object(ancestor, "name"),
+                nestable_tag=nestable_tag,
+            )
         append_to_result += format_html("</ul></li>")
-    nestable_tag = format_html('<span title="nestable">↺</span>' if getattr(value, "nestable", False) else "")
-    result += format_html(
-        "<li><strong>{value} {nestable_tag}</strong></li>",
-        value=hyperlinked_object(value, "name"),
-        nestable_tag=nestable_tag,
-    )
+
+    nestable_tag = format_html('<span title="nestable">↺</span>') if getattr(value, "nestable", False) else ""
+
+    if include_location_type:
+        location_type = (
+            hyperlinked_object(value.location_type, "name") if getattr(value, "location_type", False) else ""
+        )
+        result += format_html(
+            "<li><strong>{value} ({location_type}) {nestable_tag}</strong></li>",
+            value=hyperlinked_object(value, "name"),
+            location_type=location_type,
+            nestable_tag=nestable_tag,
+        )
+
+    else:
+        result += format_html(
+            "<li><strong>{value}{nestable_tag}</strong></li>",
+            value=hyperlinked_object(value, "name"),
+            nestable_tag=nestable_tag,
+        )
     result += append_to_result
 
     return result
