@@ -17,7 +17,6 @@ from .models import (
     Interface,
     InventoryItem,
     Location,
-    Platform,
     PowerFeed,
     PowerOutlet,
     PowerPanel,
