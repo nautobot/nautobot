@@ -31,6 +31,7 @@ router.register("job-hooks", views.JobHookUIViewSet)
 router.register("job-queues", views.JobQueueUIViewSet)
 router.register("metadata-types", views.MetadataTypeUIViewSet)
 router.register("object-metadata", views.ObjectMetadataUIViewSet)
+router.register("relationships", views.RelationshipUIViewSet)
 router.register("roles", views.RoleUIViewSet)
 router.register("saved-views", views.SavedViewUIViewSet)
 router.register("secrets", views.SecretUIViewSet)
@@ -448,32 +449,6 @@ urlpatterns = [
     path("notes/<uuid:pk>/edit/", views.NoteEditView.as_view(), name="note_edit"),
     path("notes/<uuid:pk>/delete/", views.NoteDeleteView.as_view(), name="note_delete"),
     # Custom relationships
-    path("relationships/", views.RelationshipListView.as_view(), name="relationship_list"),
-    path(
-        "relationships/add/",
-        views.RelationshipEditView.as_view(),
-        name="relationship_add",
-    ),
-    path(
-        "relationships/delete/",
-        views.RelationshipBulkDeleteView.as_view(),
-        name="relationship_bulk_delete",
-    ),
-    path(
-        "relationships/<uuid:pk>/",
-        views.RelationshipView.as_view(),
-        name="relationship",
-    ),
-    path(
-        "relationships/<uuid:pk>/edit/",
-        views.RelationshipEditView.as_view(),
-        name="relationship_edit",
-    ),
-    path(
-        "relationships/<uuid:pk>/delete/",
-        views.RelationshipDeleteView.as_view(),
-        name="relationship_delete",
-    ),
     path(
         "relationships/<uuid:pk>/changelog/",
         views.ObjectChangeLogView.as_view(),
