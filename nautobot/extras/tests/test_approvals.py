@@ -4,7 +4,7 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 
 from nautobot.core.testing import APIViewTestCases
-from nautobot.extras import models
+from nautobot.extras import choices, models
 
 
 class ApprovalWorkflowAPITest(APIViewTestCases.APIViewTestCase):
@@ -15,19 +15,20 @@ class ApprovalWorkflowAPITest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        job_ct = ContentType.objects.get(app_label="extras", model="job")
         models.ApprovalWorkflow.objects.create(
             name="Test Approval Workflow 1",
-            model_content_type=ContentType.objects.get(app_label="extras", model="job"),
+            model_content_type=job_ct,
             model_constraints={"name": "Bulk Delete Objects"},
         )
         models.ApprovalWorkflow.objects.create(
             name="Test Approval Workflow 2",
-            model_content_type=ContentType.objects.get(app_label="extras", model="job"),
+            model_content_type=job_ct,
             model_constraints={"name": "Bulk Delete Objects"},
         )
         models.ApprovalWorkflow.objects.create(
             name="Test Approval Workflow 3",
-            model_content_type=ContentType.objects.get(app_label="extras", model="job"),
+            model_content_type=job_ct,
             model_constraints={"name": "Bulk Delete Objects"},
         )
 
@@ -65,9 +66,10 @@ class ApprovalWorkflowStageAPITest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
+        job_ct = ContentType.objects.get(app_label="extras", model="job")
         approval_workflow_1 = models.ApprovalWorkflow.objects.create(
             name="Test Approval Workflow 1",
-            model_content_type=ContentType.objects.get(app_label="extras", model="job"),
+            model_content_type=job_ct,
             model_constraints={"name": "Bulk Delete Objects"},
         )
         approval_workflow_2 = models.ApprovalWorkflow.objects.create(
@@ -137,46 +139,77 @@ class ApprovalWorkflowStageAPITest(APIViewTestCases.APIViewTestCase):
         }
 
 
+class ApprovalWorkflowInstanceAPITest(APIViewTestCases.APIViewTestCase):
+    """ApprovalWorkflowInstance API tests."""
+
+    model = models.ApprovalWorkflowInstance
+    choices_fields = (
+        "current_state",
+        "object_under_review_content_type",
+    )
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        job_ct = ContentType.objects.get(app_label="extras", model="job")
+        approval_workflow_1 = models.ApprovalWorkflow.objects.create(
+            name="Test Approval Workflow 1",
+            model_content_type=job_ct,
+        )
+        approval_workflow_2 = models.ApprovalWorkflow.objects.create(
+            name="Test Approval Workflow 2",
+            model_content_type=job_ct,
+        )
+        jobs = list(models.Job.objects.all())
+        job_1 = jobs[0]
+        job_2 = jobs[1]
+        models.ApprovalWorkflowInstance.objects.create(
+            approval_workflow=approval_workflow_1,
+            object_under_review_content_type=job_ct,
+            object_under_review_object_id=job_1.pk,
+            current_state=choices.ApprovalWorkflowStateChoices.PENDING,
+        )
+        models.ApprovalWorkflowInstance.objects.create(
+            approval_workflow=approval_workflow_1,
+            object_under_review_content_type=job_ct,
+            object_under_review_object_id=job_2.pk,
+            current_state=choices.ApprovalWorkflowStateChoices.PENDING,
+        )
+        models.ApprovalWorkflowInstance.objects.create(
+            approval_workflow=approval_workflow_1,
+            object_under_review_content_type=job_ct,
+            object_under_review_object_id=job_2.pk,
+            current_state=choices.ApprovalWorkflowStateChoices.PENDING,
+        )
+
+        cls.create_data = [
+            {
+                "approval_workflow": approval_workflow_1.pk,
+                "object_under_review_content_type": "extras.job",
+                "object_under_review_object_id": jobs[3].pk,
+                "current_state": choices.ApprovalWorkflowStateChoices.PENDING,
+            },
+            {
+                "approval_workflow": approval_workflow_1.pk,
+                "object_under_review_content_type": "extras.job",
+                "object_under_review_object_id": jobs[4].pk,
+                "current_state": choices.ApprovalWorkflowStateChoices.PENDING,
+            },
+            {
+                "approval_workflow": approval_workflow_1.pk,
+                "object_under_review_content_type": "extras.job",
+                "object_under_review_object_id": jobs[3].pk,
+                "current_state": choices.ApprovalWorkflowStateChoices.PENDING,
+            },
+        ]
+
+        cls.update_data = {
+            "approval_workflow": approval_workflow_2.pk,
+            "current_state": choices.ApprovalWorkflowStateChoices.APPROVED,
+        }
+
+
 # TODO Enable the following tests
-# class ApprovalWorkflowInstanceAPITest(APIViewTestCases.APIViewTestCase):
-#     """ApprovalWorkflowInstance API tests."""
-
-#     model = models.ApprovalWorkflowInstance
-#     choices_fields = ("current_state",)
-
-#     @classmethod
-#     def setUpTestData(cls):
-#         super().setUpTestData()
-
-#         cls.create_data = [
-#             {
-#                 "approval_workflow": "replaceme",
-#                 "object_under_review_content_type": "replaceme",
-#                 "object_under_review_object_id": "replaceme",
-#                 "current_state": "replaceme",
-#             },
-#             {
-#                 "approval_workflow": "replaceme",
-#                 "object_under_review_content_type": "replaceme",
-#                 "object_under_review_object_id": "replaceme",
-#                 "current_state": "replaceme",
-#             },
-#             {
-#                 "approval_workflow": "replaceme",
-#                 "object_under_review_content_type": "replaceme",
-#                 "object_under_review_object_id": "replaceme",
-#                 "current_state": "replaceme",
-#             },
-#         ]
-
-#         cls.update_data = {
-#             "approval_workflow": "replaceme",
-#             "object_under_review_content_type": "replaceme",
-#             "object_under_review_object_id": "replaceme",
-#             "current_state": "replaceme",
-#         }
-
-
 # class ApprovalWorkflowStageInstanceAPITest(APIViewTestCases.APIViewTestCase):
 #     """ApprovalWorkflowStageInstance API tests."""
 

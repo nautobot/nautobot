@@ -149,6 +149,10 @@ class ApprovalWorkflowStageSerializer(NautobotModelSerializer):
 class ApprovalWorkflowInstanceSerializer(NautobotModelSerializer):
     """ApprovalWorkflowInstance Serializer."""
 
+    object_under_review_content_type = ContentTypeField(
+        queryset=ContentType.objects.filter(APPROVAL_WORKFLOW_MODELS).order_by("app_label", "model"),
+    )
+
     class Meta:
         """Meta attributes."""
 
