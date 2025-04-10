@@ -1069,12 +1069,14 @@ class ExportTemplateTestCase(
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = ExportTemplate
 
     @classmethod
     def setUpTestData(cls):
         obj_type = ContentType.objects.get_for_model(Location)
+        obj_type_1 = ContentType.objects.get_for_model(Interface)
 
         templates = (
             ExportTemplate(
@@ -1101,6 +1103,12 @@ class ExportTemplateTestCase(
             "name": "template-4",
             "content_type": obj_type.pk,
             "template_code": "template-4 test4",
+        }
+        cls.bulk_edit_data = {
+            "content_type": obj_type_1.pk,
+            "description": "Updated template description",
+            "mime_type": "application/json",
+            "file_extension": "json",
         }
 
 
