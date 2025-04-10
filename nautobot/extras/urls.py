@@ -9,7 +9,6 @@ from nautobot.extras.models import (
     CustomField,
     CustomLink,
     DynamicGroup,
-    ExportTemplate,
     GitRepository,
     GraphQLQuery,
     Job,
@@ -26,6 +25,7 @@ app_name = "extras"
 router = NautobotUIViewSetRouter()
 router.register("contacts", views.ContactUIViewSet)
 router.register("contact-associations", views.ContactAssociationUIViewSet)
+router.register("export-templates", views.ExportTemplateUIViewSet)
 router.register("external-integrations", views.ExternalIntegrationUIViewSet)
 router.register("job-buttons", views.JobButtonUIViewSet)
 router.register("job-queues", views.JobQueueUIViewSet)
@@ -268,49 +268,6 @@ urlpatterns = [
         views.ObjectNotesView.as_view(),
         name="dynamicgroup_notes",
         kwargs={"model": DynamicGroup},
-    ),
-    # Export Templates
-    path(
-        "export-templates/",
-        views.ExportTemplateListView.as_view(),
-        name="exporttemplate_list",
-    ),
-    path(
-        "export-templates/add/",
-        views.ExportTemplateEditView.as_view(),
-        name="exporttemplate_add",
-    ),
-    path(
-        "export-templates/delete/",
-        views.ExportTemplateBulkDeleteView.as_view(),
-        name="exporttemplate_bulk_delete",
-    ),
-    path(
-        "export-templates/<uuid:pk>/",
-        views.ExportTemplateView.as_view(),
-        name="exporttemplate",
-    ),
-    path(
-        "export-templates/<uuid:pk>/edit/",
-        views.ExportTemplateEditView.as_view(),
-        name="exporttemplate_edit",
-    ),
-    path(
-        "export-templates/<uuid:pk>/delete/",
-        views.ExportTemplateDeleteView.as_view(),
-        name="exporttemplate_delete",
-    ),
-    path(
-        "export-templates/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="exporttemplate_changelog",
-        kwargs={"model": ExportTemplate},
-    ),
-    path(
-        "export-templates/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="exporttemplate_notes",
-        kwargs={"model": ExportTemplate},
     ),
     # Git repositories
     path(

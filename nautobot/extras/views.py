@@ -34,7 +34,7 @@ from nautobot.core.tables import ButtonsColumn
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
-from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel
+from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectTextPanel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
@@ -975,30 +975,38 @@ class ObjectDynamicGroupsView(generic.GenericView):
 #
 
 
-class ExportTemplateListView(generic.ObjectListView):
+class ExportTemplateUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ExportTemplateBulkEditForm
+    filterset_class = filters.ExportTemplateFilterSet
+    filterset_form_class = forms.ExportTemplateFilterForm
+    form_class = forms.ExportTemplateForm
     queryset = ExportTemplate.objects.all()
-    table = tables.ExportTemplateTable
-    filterset = filters.ExportTemplateFilterSet
-    filterset_form = forms.ExportTemplateFilterForm
-    action_buttons = ("add",)
+    serializer_class = serializers.ExportTemplateSerializer
+    table_class = tables.ExportTemplateTable
 
-
-class ExportTemplateView(generic.ObjectView):
-    queryset = ExportTemplate.objects.all()
-
-
-class ExportTemplateEditView(generic.ObjectEditView):
-    queryset = ExportTemplate.objects.all()
-    model_form = forms.ExportTemplateForm
-
-
-class ExportTemplateDeleteView(generic.ObjectDeleteView):
-    queryset = ExportTemplate.objects.all()
-
-
-class ExportTemplateBulkDeleteView(generic.BulkDeleteView):
-    queryset = ExportTemplate.objects.all()
-    table = tables.ExportTemplateTable
+    object_detail_content = ObjectDetailContent(
+        panels=[
+            ObjectFieldsPanel(
+                label="Details",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=["name", "owner", "description"],
+            ),
+            ObjectFieldsPanel(
+                label="Template",
+                section=SectionChoices.LEFT_HALF,
+                weight=200,
+                fields=["content_type", "mime_type", "file_extension"],
+            ),
+            ObjectTextPanel(
+                label="Code Template",
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                object_field="template_code",
+                render_as=ObjectTextPanel.RenderOptions.CODE,
+            ),
+        ]
+    )
 
 
 #
