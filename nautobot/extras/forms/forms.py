@@ -1322,13 +1322,13 @@ class JobHookBulkEditForm(NautobotBulkEditForm):
     type_update = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
     type_delete = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
     add_content_types = MultipleContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("job_hooks").get_query()),
+        queryset=ChangeLoggedModelsQuery().as_queryset(),
         required=False,
         label="Add Content Type(s)",
     )
 
     remove_content_types = MultipleContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("job_hooks").get_query()),
+        queryset=ChangeLoggedModelsQuery().as_queryset(),
         required=False,
         label="Remove Content Type(s)",
     )

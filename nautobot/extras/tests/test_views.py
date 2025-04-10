@@ -3340,7 +3340,7 @@ class JobHookTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCa
         # Form data for create test
         cls.form_data = {
             "name": "jobhook-4",
-            "content_types": [obj_type.pk],  # Use int PK
+            "content_types": [device_ct.pk],  # Use int PK
             "enabled": True,
             "type_create": True,
             "type_update": False,
@@ -3357,14 +3357,6 @@ class JobHookTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCa
             "add_content_types": [ipaddress_ct.pk, prefix_ct.pk],
             "remove_content_types": [device_ct.pk],
         }
-
-    def test_create_object_with_permission(self):
-        self.add_permissions("extras.view_job")
-        super().test_create_object_with_permission()
-
-    def test_create_object_with_constrained_permission(self):
-        self.add_permissions("extras.view_job")
-        super().test_create_object_with_permission()
 
 
 # TODO: Convert to StandardTestCases.Views
