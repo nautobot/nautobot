@@ -489,54 +489,54 @@ class MigrateLocationDataToContactView(generic.ObjectEditView):
 #
 
 
-class RackGroupListView(generic.ObjectListView):
+class RackGroupUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.RackGroupBulkEditForm
+    filterset_class = filters.RackGroupFilterSet
+    filterset_form_class = forms.RackGroupFilterForm
+    form_class = forms.RackGroupForm
+    serializer_class = serializers.RackGroupSerializer
+    table_class = tables.RackGroupTable
     queryset = RackGroup.objects.all()
-    filterset = filters.RackGroupFilterSet
-    filterset_form = forms.RackGroupFilterForm
-    table = tables.RackGroupTable
 
-
-class RackGroupView(generic.ObjectView):
-    queryset = RackGroup.objects.all()
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            object_detail.ObjectFieldsPanel(
+                label="Rack Group",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=["description", "parent", "location"],
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=200,
+                related_field_name="rack_group",
+                context_table_key="rack_table",
+            ),
+        ]
+    )
 
     def get_extra_context(self, request, instance):
-        # Racks
-        racks = (
-            Rack.objects.restrict(request.user, "view")
-            .filter(rack_group__in=instance.descendants(include_self=True))
-            .select_related("role", "location", "tenant")
-        )
+        context = super().get_extra_context(request, instance)
 
-        rack_table = tables.RackTable(racks)
-        rack_table.columns.hide("rack_group")
+        if self.action == "retrieve" and instance:
+            racks = (
+                Rack.objects.restrict(request.user, "view")
+                .filter(rack_group__in=instance.descendants(include_self=True))
+                .select_related("role", "location", "tenant")
+            )
 
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(rack_table)
+            rack_table = tables.RackTable(racks)
+            rack_table.columns.hide("rack_group")
 
-        return {"rack_table": rack_table, **super().get_extra_context(request, instance)}
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(rack_table)
 
+            context["rack_table"] = rack_table
 
-class RackGroupEditView(generic.ObjectEditView):
-    queryset = RackGroup.objects.all()
-    model_form = forms.RackGroupForm
-
-
-class RackGroupDeleteView(generic.ObjectDeleteView):
-    queryset = RackGroup.objects.all()
-
-
-class RackGroupBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = RackGroup.objects.all()
-    table = tables.RackGroupTable
-
-
-class RackGroupBulkDeleteView(generic.BulkDeleteView):
-    queryset = RackGroup.objects.all()
-    filterset = filters.RackGroupFilterSet
-    table = tables.RackGroupTable
+        return context
 
 
 #

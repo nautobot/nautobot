@@ -23,7 +23,6 @@ from .models import (
     PowerPanel,
     PowerPort,
     Rack,
-    RackGroup,
     RackReservation,
     RearPort,
     VirtualChassis,
@@ -44,6 +43,7 @@ router.register("module-bays", views.ModuleBayUIViewSet)
 router.register("module-bay-templates", views.ModuleBayTemplateUIViewSet)
 router.register("modules", views.ModuleUIViewSet)
 router.register("module-types", views.ModuleTypeUIViewSet)
+router.register("rack-groups", views.RackGroupUIViewSet)
 router.register("software-image-files", views.SoftwareImageFileUIViewSet)
 router.register("software-versions", views.SoftwareVersionUIViewSet)
 router.register("virtual-device-contexts", views.VirtualDeviceContextUIViewSet)
@@ -80,42 +80,6 @@ urlpatterns = [
         ImageAttachmentEditView.as_view(),
         name="location_add_image",
         kwargs={"model": Location},
-    ),
-    # Rack groups
-    path("rack-groups/", views.RackGroupListView.as_view(), name="rackgroup_list"),
-    path("rack-groups/add/", views.RackGroupEditView.as_view(), name="rackgroup_add"),
-    path(
-        "rack-groups/import/",
-        views.RackGroupBulkImportView.as_view(),  # 3.0 TODO: remove
-        name="rackgroup_import",
-    ),
-    path(
-        "rack-groups/delete/",
-        views.RackGroupBulkDeleteView.as_view(),
-        name="rackgroup_bulk_delete",
-    ),
-    path("rack-groups/<uuid:pk>/", views.RackGroupView.as_view(), name="rackgroup"),
-    path(
-        "rack-groups/<uuid:pk>/edit/",
-        views.RackGroupEditView.as_view(),
-        name="rackgroup_edit",
-    ),
-    path(
-        "rack-groups/<uuid:pk>/delete/",
-        views.RackGroupDeleteView.as_view(),
-        name="rackgroup_delete",
-    ),
-    path(
-        "rack-groups/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="rackgroup_changelog",
-        kwargs={"model": RackGroup},
-    ),
-    path(
-        "rack-groups/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="rackgroup_notes",
-        kwargs={"model": RackGroup},
     ),
     # Rack reservations
     path(
