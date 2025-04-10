@@ -34,7 +34,7 @@ from nautobot.core.tables import ButtonsColumn
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
-from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel
+from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectTextPanel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
@@ -408,22 +408,37 @@ class ContactUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.ContactSerializer
     table_class = tables.ContactTable
 
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            teams = instance.teams.restrict(request.user, "view")
-            teams_table = tables.TeamTable(teams, orderable=False)
-            teams_table.columns.hide("actions")
-            paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-            RequestConfig(request, paginate).configure(teams_table)
-            context["teams_table"] = teams_table
-
-            # TODO: need some consistent ordering of contact_associations
-            associations = instance.contact_associations.restrict(request.user, "view")
-            associations_table = tables.ContactAssociationTable(associations, orderable=False)
-            RequestConfig(request, paginate).configure(associations_table)
-            context["contact_associations_table"] = associations_table
-        return context
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                value_transforms={
+                    "address": [helpers.render_address],
+                    "email": [helpers.hyperlinked_email],
+                    "phone": [helpers.hyperlinked_phone_number],
+                },
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                table_class=tables.TeamTable,
+                table_filter="contacts",
+                table_title="Assigned Teams",
+                exclude_columns=["actions"],
+                add_button_route=None,
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.ContactAssociationTable,
+                table_filter="contact",
+                table_title="Contact For",
+                add_button_route=None,
+            ),
+        ),
+    )
 
 
 class ContactAssociationUIViewSet(
@@ -960,30 +975,38 @@ class ObjectDynamicGroupsView(generic.GenericView):
 #
 
 
-class ExportTemplateListView(generic.ObjectListView):
+class ExportTemplateUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ExportTemplateBulkEditForm
+    filterset_class = filters.ExportTemplateFilterSet
+    filterset_form_class = forms.ExportTemplateFilterForm
+    form_class = forms.ExportTemplateForm
     queryset = ExportTemplate.objects.all()
-    table = tables.ExportTemplateTable
-    filterset = filters.ExportTemplateFilterSet
-    filterset_form = forms.ExportTemplateFilterForm
-    action_buttons = ("add",)
+    serializer_class = serializers.ExportTemplateSerializer
+    table_class = tables.ExportTemplateTable
 
-
-class ExportTemplateView(generic.ObjectView):
-    queryset = ExportTemplate.objects.all()
-
-
-class ExportTemplateEditView(generic.ObjectEditView):
-    queryset = ExportTemplate.objects.all()
-    model_form = forms.ExportTemplateForm
-
-
-class ExportTemplateDeleteView(generic.ObjectDeleteView):
-    queryset = ExportTemplate.objects.all()
-
-
-class ExportTemplateBulkDeleteView(generic.BulkDeleteView):
-    queryset = ExportTemplate.objects.all()
-    table = tables.ExportTemplateTable
+    object_detail_content = ObjectDetailContent(
+        panels=[
+            ObjectFieldsPanel(
+                label="Details",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=["name", "owner", "description"],
+            ),
+            ObjectFieldsPanel(
+                label="Template",
+                section=SectionChoices.LEFT_HALF,
+                weight=200,
+                fields=["content_type", "mime_type", "file_extension"],
+            ),
+            ObjectTextPanel(
+                label="Code Template",
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                object_field="template_code",
+                render_as=ObjectTextPanel.RenderOptions.CODE,
+            ),
+        ]
+    )
 
 
 #

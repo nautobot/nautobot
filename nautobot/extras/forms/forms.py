@@ -142,6 +142,7 @@ __all__ = (
     "DynamicGroupFilterForm",
     "DynamicGroupForm",
     "DynamicGroupMembershipFormSet",
+    "ExportTemplateBulkEditForm",
     "ExportTemplateFilterForm",
     "ExportTemplateForm",
     "ExternalIntegrationBulkEditForm",
@@ -752,6 +753,31 @@ class StaticGroupAssociationFilterForm(NautobotFilterForm):
 #
 # Export Templates
 #
+class ExportTemplateBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=ExportTemplate.objects.all(), widget=forms.MultipleHiddenInput())
+
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    mime_type = forms.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        required=False,
+        label="MIME type",
+        help_text="Defaults to <code>text/plain</code>",
+    )
+    file_extension = forms.CharField(
+        max_length=CHARFIELD_MAX_LENGTH, required=False, help_text="Extension to append to the rendered filename"
+    )
+
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("export_templates").get_query()).order_by(
+            "app_label", "model"
+        ),
+        required=False,
+        label="Content Type",
+    )
+
+    class Meta:
+        model = ExportTemplate
+        nullable_fields = ["description", "mime_type", "file_extension"]
 
 
 class ExportTemplateForm(BootstrapMixin, forms.ModelForm):
