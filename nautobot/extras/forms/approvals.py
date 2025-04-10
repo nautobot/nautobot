@@ -98,7 +98,7 @@ class ApprovalWorkflowStageBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditF
     """ApprovalWorkflowStage bulk edit form."""
 
     pk = forms.ModelMultipleChoiceField(queryset=ApprovalWorkflowStage.objects.all(), widget=forms.MultipleHiddenInput)
-    sequence_weight = forms.IntegerField(required=False, label="Sequence Weight")
+    weight = forms.IntegerField(required=False, label="Weight")
     min_approvers = forms.IntegerField(required=False, label="Min Approvers")
     denial_message = forms.CharField(required=False, label="Denial Message")
 
@@ -120,7 +120,7 @@ class ApprovalWorkflowStageFilterForm(NautobotFilterForm):
         required=False,
         label="Approval Workflow",
     )
-    sequence_weight = forms.IntegerField(required=False, label="Sequence Weight")
+    weight = forms.IntegerField(required=False, label="Weight")
     min_approvers = forms.IntegerField(required=False, label="Min Approvers")
     approver_group = DynamicModelChoiceField(
         queryset=Group.objects.all(),

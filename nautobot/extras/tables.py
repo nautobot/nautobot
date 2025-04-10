@@ -243,7 +243,7 @@ class ApprovalWorkflowStageTable(BaseTable):
         fields = (
             "pk",
             "approval_workflow",
-            "sequence_weight",
+            "weight",
             "name",
             "min_approvers",
             "denial_message",
@@ -252,7 +252,7 @@ class ApprovalWorkflowStageTable(BaseTable):
         default_columns = (
             "pk",
             "approval_workflow",
-            "sequence_weight",
+            "weight",
             "name",
             "min_approvers",
             "denial_message",

@@ -218,7 +218,7 @@ class ApprovalWorkflowStageFilterSet(BaseFilterSet):
 
     q = SearchFilter(
         filter_predicates={
-            "sequence_weight": {
+            "weight": {
                 "lookup_expr": "exact",
                 "preprocessor": int,
             },

@@ -117,7 +117,7 @@ class Migration(migrations.Migration):
                     "_custom_field_data",
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
-                ("sequence_weight", models.PositiveIntegerField()),
+                ("weight", models.PositiveIntegerField()),
                 ("name", models.CharField(max_length=255)),
                 ("min_approvers", models.PositiveIntegerField()),
                 ("denial_message", models.CharField(blank=True, max_length=255)),
@@ -141,7 +141,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 "verbose_name": "Approval Workflow Stage",
-                "unique_together": {("approval_workflow", "name"), ("approval_workflow", "sequence_weight")},
+                "unique_together": {("approval_workflow", "name"), ("approval_workflow", "weight")},
             },
             bases=(
                 nautobot.extras.models.mixins.DynamicGroupMixin,

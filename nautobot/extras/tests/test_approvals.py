@@ -81,7 +81,7 @@ class ApprovalWorkflowStageAPITest(APIViewTestCases.APIViewTestCase):
         approver_group_2 = Group.objects.create(name="Approver Group 2")
         models.ApprovalWorkflowStage.objects.create(
             approval_workflow=approval_workflow_1,
-            sequence_weight=100,
+            weight=100,
             name="Test Approval Workflow 1 Stage 1",
             min_approvers=2,
             denial_message="Stage 1 Denial Message",
@@ -89,7 +89,7 @@ class ApprovalWorkflowStageAPITest(APIViewTestCases.APIViewTestCase):
         )
         models.ApprovalWorkflowStage.objects.create(
             approval_workflow=approval_workflow_1,
-            sequence_weight=200,
+            weight=200,
             name="Test Approval Workflow 1 Stage 2",
             min_approvers=2,
             denial_message="Stage 2 Denial Message",
@@ -97,7 +97,7 @@ class ApprovalWorkflowStageAPITest(APIViewTestCases.APIViewTestCase):
         )
         models.ApprovalWorkflowStage.objects.create(
             approval_workflow=approval_workflow_1,
-            sequence_weight=300,
+            weight=300,
             name="Test Approval Workflow 1 Stage 3",
             min_approvers=1,
             denial_message="Stage 3 Denial Message",
@@ -107,7 +107,7 @@ class ApprovalWorkflowStageAPITest(APIViewTestCases.APIViewTestCase):
         cls.create_data = [
             {
                 "approval_workflow": approval_workflow_2.pk,
-                "sequence_weight": 100,
+                "weight": 100,
                 "name": "Test Approval Workflow 2 Stage 1",
                 "min_approvers": 3,
                 "denial_message": "Stage 1 Denial Message",
@@ -115,7 +115,7 @@ class ApprovalWorkflowStageAPITest(APIViewTestCases.APIViewTestCase):
             },
             {
                 "approval_workflow": approval_workflow_2.pk,
-                "sequence_weight": 200,
+                "weight": 200,
                 "name": "Test Approval Workflow 2 Stage 2",
                 "min_approvers": 2,
                 "denial_message": "Stage 2 Denial Message",
@@ -123,7 +123,7 @@ class ApprovalWorkflowStageAPITest(APIViewTestCases.APIViewTestCase):
             },
             {
                 "approval_workflow": approval_workflow_2.pk,
-                "sequence_weight": 300,
+                "weight": 300,
                 "name": "Test Approval Workflow 2 Stage 3",
                 "min_approvers": 1,
                 "denial_message": "Stage 3 Denial Message",

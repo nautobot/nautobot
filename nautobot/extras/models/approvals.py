@@ -66,7 +66,7 @@ class ApprovalWorkflowStage(PrimaryModel):
         on_delete=models.PROTECT,
         help_text="Approval workflow to which this stage belongs.",
     )
-    sequence_weight = models.PositiveIntegerField(
+    weight = models.PositiveIntegerField(
         help_text="The weight dictates the order in which this stage will need to be approved. The lower the number, the earlier it will be.",
     )
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
@@ -88,7 +88,7 @@ class ApprovalWorkflowStage(PrimaryModel):
         """Meta class for ApprovalWorkflowStage."""
 
         verbose_name = "Approval Workflow Stage"
-        unique_together = [["approval_workflow", "name"], ["approval_workflow", "sequence_weight"]]
+        unique_together = [["approval_workflow", "name"], ["approval_workflow", "weight"]]
 
     def __str__(self):
         """Stringify instance."""
