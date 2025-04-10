@@ -1,0 +1,1 @@
+Fixed an exception when rendering Nautobot Version Control app diffs that include GitRepository or JobResult records.

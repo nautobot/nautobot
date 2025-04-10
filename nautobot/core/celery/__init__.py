@@ -15,6 +15,7 @@ from kombu.serialization import register
 from prometheus_client import CollectorRegistry, multiprocess, start_http_server
 
 from nautobot import add_failure_logger, add_success_logger
+from nautobot.core.branching import BranchContext
 from nautobot.core.celery.control import discard_git_repository, refresh_git_repository  # noqa: F401  # unused-import
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.celery.log import NautobotDatabaseHandler
@@ -195,10 +196,16 @@ def nautobot_kombu_json_loads_hook(data):
     """
     if "__nautobot_type__" in data:
         qual_name = data.pop("__nautobot_type__")
+        branch_name = data.pop("__nautobot_branch__", None)
         logger.debug("Performing nautobot deserialization for type %s", qual_name)
         cls = import_string(qual_name)  # fully qualified dotted import path
         if cls:
-            return SimpleLazyObject(lambda: cls.objects.get(id=data["id"]))
+
+            def get_object():
+                with BranchContext(branch_name=branch_name, autocommit=False):
+                    return cls.objects.get(id=data["id"])
+
+            return SimpleLazyObject(get_object)
         else:
             raise TypeError(f"Unable to import {qual_name} during nautobot deserialization")
     else:
