@@ -473,6 +473,13 @@ class LocationMigrateDataToContactForm(NautobotModelForm):
 #
 # Rack groups
 #
+class RackGroupBulkEditForm(LocatableModelBulkEditFormMixin, NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=RackGroup.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    class Meta:
+        model = RackGroup
+        nullable_fields = ["description"]
 
 
 class RackGroupForm(LocatableModelFormMixin, NautobotModelForm):
