@@ -24,7 +24,6 @@ from .models import (
     PowerPort,
     Rack,
     RackGroup,
-    RackReservation,
     RearPort,
     VirtualChassis,
 )
@@ -44,6 +43,7 @@ router.register("module-bays", views.ModuleBayUIViewSet)
 router.register("module-bay-templates", views.ModuleBayTemplateUIViewSet)
 router.register("modules", views.ModuleUIViewSet)
 router.register("module-types", views.ModuleTypeUIViewSet)
+router.register("rack-reservations", views.RackReservationUIViewSet)
 router.register("software-image-files", views.SoftwareImageFileUIViewSet)
 router.register("software-versions", views.SoftwareVersionUIViewSet)
 router.register("virtual-device-contexts", views.VirtualDeviceContextUIViewSet)
@@ -116,59 +116,6 @@ urlpatterns = [
         ObjectNotesView.as_view(),
         name="rackgroup_notes",
         kwargs={"model": RackGroup},
-    ),
-    # Rack reservations
-    path(
-        "rack-reservations/",
-        views.RackReservationListView.as_view(),
-        name="rackreservation_list",
-    ),
-    path(
-        "rack-reservations/add/",
-        views.RackReservationEditView.as_view(),
-        name="rackreservation_add",
-    ),
-    path(
-        "rack-reservations/import/",
-        views.RackReservationImportView.as_view(),
-        name="rackreservation_import",
-    ),
-    path(
-        "rack-reservations/edit/",
-        views.RackReservationBulkEditView.as_view(),
-        name="rackreservation_bulk_edit",
-    ),
-    path(
-        "rack-reservations/delete/",
-        views.RackReservationBulkDeleteView.as_view(),
-        name="rackreservation_bulk_delete",
-    ),
-    path(
-        "rack-reservations/<uuid:pk>/",
-        views.RackReservationView.as_view(),
-        name="rackreservation",
-    ),
-    path(
-        "rack-reservations/<uuid:pk>/edit/",
-        views.RackReservationEditView.as_view(),
-        name="rackreservation_edit",
-    ),
-    path(
-        "rack-reservations/<uuid:pk>/delete/",
-        views.RackReservationDeleteView.as_view(),
-        name="rackreservation_delete",
-    ),
-    path(
-        "rack-reservations/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="rackreservation_changelog",
-        kwargs={"model": RackReservation},
-    ),
-    path(
-        "rack-reservations/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="rackreservation_notes",
-        kwargs={"model": RackReservation},
     ),
     # Racks
     path("racks/", views.RackListView.as_view(), name="rack_list"),

@@ -1,0 +1,79 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+{% load static %}
+
+{% block extra_breadcrumbs %}
+                <li>{{ object.rack|hyperlinked_object }}</li>
+{% endblock extra_breadcrumbs %}
+
+{% block content_left_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Rack</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                {% with rack=object.rack %}
+                    <tr>
+                        <td>Location</td>
+                        <td>{% include 'dcim/inc/location_hierarchy.html' with location=rack.location %}</td>
+                    </tr>
+                    <tr>
+                        <td>Group</td>
+                        <td>
+                            {% if rack.rack_group %}
+                                <a href="{% url 'dcim:rack_list' %}?location={{ rack.location.pk }}&rack_group={{ rack.rack_group.pk }}">{{ rack.rack_group }}</a>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Rack</td>
+                        <td>{{ rack|hyperlinked_object }}</td>
+                    </tr>
+                {% endwith %}
+            </table>
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Reservation Details</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Units</td>
+                    <td>{{ object.unit_list }}</td>
+                </tr>
+                {% include 'inc/tenant_table_row.html' %}
+                <tr>
+                    <td>User</td>
+                    <td>{{ object.user }}</td>
+                </tr>
+                <tr>
+                    <td>Description</td>
+                    <td>{{ object.description }}</td>
+                </tr>
+            </table>
+        </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+        <div class="row" style="margin-bottom: 20px">
+            <div class="col-md-6 col-sm-6 col-xs-12">
+                <div class="rack_header">
+                    <h4>Front</h4>
+                </div>
+                {% include 'dcim/inc/rack_elevation.html' with object=object.rack face='front' %}
+            </div>
+            <div class="col-md-6 col-sm-6 col-xs-12">
+                <div class="rack_header">
+                    <h4>Rear</h4>
+                </div>
+                {% include 'dcim/inc/rack_elevation.html' with object=object.rack face='rear' %}
+            </div>
+        </div>
+{% endblock content_right_page %}
+
+{% block javascript %}
+    {{ block.super }}
+    <script src="{% versioned_static 'js/rack_elevations.js' %}"></script>
+{% endblock javascript %}

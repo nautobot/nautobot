@@ -55,7 +55,14 @@ from nautobot.core.views.mixins import (
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
-from nautobot.dcim.forms import LocationMigrateDataToContactForm
+from nautobot.dcim.filters import RackReservationFilterSet
+from nautobot.dcim.forms import (
+    LocationMigrateDataToContactForm,
+    RackReservationBulkEditForm,
+    RackReservationFilterForm,
+    RackReservationForm,
+)
+from nautobot.dcim.tables import RackReservationTable
 from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_driver_mapping_tool_names
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
@@ -672,50 +679,13 @@ class RackBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class RackReservationListView(generic.ObjectListView):
+class RackReservationUIViewSet(NautobotUIViewSet):
     queryset = RackReservation.objects.all()
-    filterset = filters.RackReservationFilterSet
-    filterset_form = forms.RackReservationFilterForm
-    table = tables.RackReservationTable
-
-
-class RackReservationView(generic.ObjectView):
-    queryset = RackReservation.objects.select_related("rack")
-
-
-class RackReservationEditView(generic.ObjectEditView):
-    queryset = RackReservation.objects.all()
-    model_form = forms.RackReservationForm
-    template_name = "dcim/rackreservation_edit.html"
-
-    def alter_obj(self, obj, request, url_args, url_kwargs):
-        if not obj.present_in_database:
-            if "rack" in request.GET:
-                obj.rack = get_object_or_404(Rack, pk=request.GET.get("rack"))
-            obj.user = request.user
-        return obj
-
-
-class RackReservationDeleteView(generic.ObjectDeleteView):
-    queryset = RackReservation.objects.all()
-
-
-class RackReservationImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = RackReservation.objects.all()
-    table = tables.RackReservationTable
-
-
-class RackReservationBulkEditView(generic.BulkEditView):
-    queryset = RackReservation.objects.select_related("rack", "user")
-    filterset = filters.RackReservationFilterSet
-    table = tables.RackReservationTable
-    form = forms.RackReservationBulkEditForm
-
-
-class RackReservationBulkDeleteView(generic.BulkDeleteView):
-    queryset = RackReservation.objects.select_related("rack", "user")
-    filterset = filters.RackReservationFilterSet
-    table = tables.RackReservationTable
+    table_class = RackReservationTable
+    form_class = RackReservationForm
+    bulk_update_form_class = RackReservationBulkEditForm
+    filterset_class = RackReservationFilterSet
+    filterset_form_class = RackReservationFilterForm
 
 
 #
