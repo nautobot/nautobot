@@ -6,6 +6,8 @@ from django.core.exceptions import ValidationError
 
 from nautobot.apps.ui import ObjectDetailContent, ObjectFieldsPanel, ObjectsTablePanel, SectionChoices
 from nautobot.apps.views import NautobotUIViewSet
+from nautobot.extras.tables import DynamicGroupTable
+from nautobot.ipam.tables import PrefixTable
 
 from . import filters, forms, models, tables
 from .api import serializers
@@ -178,7 +180,6 @@ class VPNUIViewSet(NautobotUIViewSet):
 
     object_detail_content = ObjectDetailContent(
         panels=[
-            # TODO INIT ensure these are the fields you want to show
             ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
@@ -268,16 +269,29 @@ class VPNTunnelEndpointUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields=[
+                    "name",
                     "vpn_profile",
                     "source_ipaddress",
                     "source_interface",
                     "destination_ipaddress",
                     "destination_fqdn",
                     "tunnel_interface",
-                    "protected_prefixes_dg",
-                    "protected_prefixes",
                     "role",
                 ],
+            ),
+            ObjectsTablePanel(
+                weight=100,
+                table_class=DynamicGroupTable,
+                table_filter="vpn_tunnel_endpoints",
+                section=SectionChoices.FULL_WIDTH,
+                exclude_columns=[],
+            ),
+            ObjectsTablePanel(
+                weight=200,
+                table_class=PrefixTable,
+                table_filter="vpn_tunnel_endpoints",
+                section=SectionChoices.FULL_WIDTH,
+                exclude_columns=[],
             ),
         ],
     )
