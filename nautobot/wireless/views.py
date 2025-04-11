@@ -1,6 +1,8 @@
 from django.core.exceptions import ValidationError
 from django_tables2 import RequestConfig
 
+from nautobot.core.ui.choices import SectionChoices
+from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.wireless.api.serializers import (
@@ -65,6 +67,15 @@ class SupportedDataRateUIViewSet(NautobotUIViewSet):
     table_class = SupportedDataRateTable
     form_class = SupportedDataRateForm
     bulk_update_form_class = SupportedDataRateBulkEditForm
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+        )
+    )
 
 
 class WirelessNetworkUIViewSet(NautobotUIViewSet):
