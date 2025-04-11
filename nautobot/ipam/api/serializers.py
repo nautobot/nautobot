@@ -194,7 +194,7 @@ class VLANLocationAssignmentSerializer(ValidatedModelSerializer):
 
 class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     prefix = IPFieldSerializer()
-    type = ChoiceField(choices=PrefixTypeChoices, default=PrefixTypeChoices.TYPE_NETWORK)
+    type = ChoiceField(choices=PrefixTypeChoices, required=False)
     # for backward compatibility with 2.0-2.1 where a Prefix had only a single Location
     location = NautobotHyperlinkedRelatedField(
         allow_null=True,

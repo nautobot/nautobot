@@ -982,9 +982,9 @@ class PowerFeedSerializer(
     PathEndpointModelSerializerMixin,
     NautobotModelSerializer,
 ):
-    type = ChoiceField(choices=PowerFeedTypeChoices, default=PowerFeedTypeChoices.TYPE_PRIMARY)
-    supply = ChoiceField(choices=PowerFeedSupplyChoices, default=PowerFeedSupplyChoices.SUPPLY_AC)
-    phase = ChoiceField(choices=PowerFeedPhaseChoices, default=PowerFeedPhaseChoices.PHASE_SINGLE)
+    type = ChoiceField(choices=PowerFeedTypeChoices, required=False)
+    supply = ChoiceField(choices=PowerFeedSupplyChoices, required=False)
+    phase = ChoiceField(choices=PowerFeedPhaseChoices, required=False)
 
     class Meta:
         model = PowerFeed

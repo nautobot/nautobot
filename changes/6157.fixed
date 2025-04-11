@@ -1,1 +1,1 @@
-Fixed swagger schema showing null defaults incorrectly for fields that set the default value to a blank string.
+Fixed multiple invalid default values in the swagger schema.
