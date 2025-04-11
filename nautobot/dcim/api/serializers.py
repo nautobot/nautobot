@@ -768,7 +768,6 @@ class DeviceRedundancyGroupSerializer(TaggedModelSerializerMixin, NautobotModelS
     failover_strategy = ChoiceField(
         choices=DeviceRedundancyGroupFailoverStrategyChoices,
         allow_blank=True,
-        default=DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_UNSPECIFIED,
     )
 
     class Meta:

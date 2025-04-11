@@ -1,0 +1,1 @@
+Fixed swagger schema showing null defaults incorrectly for fields that set the default value to a blank string.

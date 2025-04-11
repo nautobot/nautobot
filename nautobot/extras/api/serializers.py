@@ -1126,8 +1126,8 @@ class TeamSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         fields = "__all__"
         extra_kwargs = {
             "contacts": {"required": False},
-            "email": {"default": ""},
-            "phone": {"default": ""},
+            "email": {"required": False},
+            "phone": {"required": False},
         }
         # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
         validators = []
