@@ -1,0 +1,143 @@
+- rule:
+    name: B071
+    message: .pull-left is now .float-start
+    flags: re.DOTALL
+    patterns:
+      - \.pull-left
+      - pull-left
+- rule:
+    name: B072
+    message: .pull-right is now .float-end
+    flags: re.DOTALL
+    patterns:
+      - \.pull-right
+      - pull-right
+- rule:
+    name: B073
+    message: .center-block is now .mx-auto
+    flags: re.DOTALL
+    patterns:
+      - \.center-block
+      - center-block
+- rule:
+    name: B081
+    message: data-toggle is now data-bs-toggle
+    flags: re.DOTALL
+    patterns:
+      - data-toggle
+- rule:
+    name: B082
+    message: data-dismiss is now data-bs-dismiss
+    flags: re.DOTALL
+    patterns:
+      - data-dismiss
+- rule:
+    name: B083
+    message: data-target is now data-bs-target
+    flags: re.DOTALL
+    patterns:
+      - data-target
+- rule:
+    name: B084
+    message: data-title is now data-bs-title
+    flags: re.DOTALL
+    patterns:
+      - data-title
+- rule:
+    name: B011
+    message: btn-default is now btn-secondary
+    flags: re.DOTALL
+    patterns:
+      - \.btn-default
+      - btn-default
+- rule:
+    name: B012
+    message: close is now btn-close
+    flags: re.DOTALL
+    patterns:
+      - \.close
+      - close
+- rule:
+    name: B013
+    message: btn-xs no longer exists. btn-sm is the smallest size.
+    flags: re.DOTALL
+    patterns:
+      - \.btn-xs
+      - btn-xs
+- rule:
+    name: B021
+    message: hidden is now d-none
+    flags: re.DOTALL
+    patterns:
+      - hidden\w
+- rule:
+    name: B022
+    message: visible- is replaced by d-block or d-inline.
+    flags: re.DOTALL
+    patterns:
+      - visible-.*
+- rule:
+    name: B023
+    message: hidden-xs is replaced by d-block d-sm-none (hide on extra small).
+    flags: re.DOTALL
+    patterns:
+      - hidden-xs
+- rule:
+    name: B024
+    message: visible-xs is replaced by d-none d-sm-block (show on extra small).
+    flags: re.DOTALL
+    patterns:
+      - visible-xs
+- rule:
+    name: B024
+    message: visible- is replaced by d-block or d-inline.
+    flags: re.DOTALL
+    patterns:
+      - visible-.*
+- rule:
+    name: B032
+    message: The contextual classes (e.g., label-primary, label-success) now use the general-purpose classes bg-primary, bg-success, etc.
+    flags: re.DOTALL
+    patterns:
+      - label-.*
+- rule:
+    name: B061
+    message: panel is no longer available; use card instead.
+    flags: re.DOTALL
+    patterns:
+      - panel\w
+      - panel panel-default
+- rule:
+    name: B062
+    message: panel-heading is no longer available; use card-header instead.
+    flags: re.DOTALL
+    patterns:
+      - panel-heading
+- rule:
+    name: B063
+    message: panel-body is no longer available; use card-body instead.
+    flags: re.DOTALL
+    patterns:
+      - panel-body
+- rule:
+    name: B064
+    message: panel-footer is no longer available; use card-footer instead.
+    flags: re.DOTALL
+    patterns:
+      - panel-footer
+- rule:
+    name: B001
+    message: Breadcrumb Item is changed from <li> to <li class="breadcrumb-item">
+    python_module: scripts.djlint_b001
+- rule:
+    name: B002
+    message: Active breadcrumb item is changed from <li class="active">Data</li> to <li class="breadcrumb-item active" aria-current="page">Data</li>
+    python_module: scripts.djlint_b002
+- rule:
+    name: B041
+    message: Nav Item is changed from <li> to <li class="nav-item">
+    python_module: scripts.djlint_b041
+- rule:
+    name: B042
+    message: Nav Link is changed from <a href> to <a class="nav-link" href>
+    python_module: scripts.djlint_b042
