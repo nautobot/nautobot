@@ -1,26 +1,2 @@
 {% extends 'generic/object_retrieve.html' %}
-{% load helpers %}
-
-{% block content_left_page %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
-            <strong>Supported Data Rate</strong>
-        </div>
-        <table class="table table-hover panel-body attr-table">
-            <tr>
-                <td>Rate</td>
-                <td>
-                    {{ object.rate|humanize_speed }}
-                </td>
-            </tr>
-            <tr>
-                <td>Standard</td>
-                <td>{{ object.standard }}</td>
-            </tr>
-            <tr>
-                <td>Modulation and Coding Scheme (MCS) Index</td>
-                <td>{{ object.mcs_index }}</td>
-            </tr>
-        </table>
-    </div>
-{% endblock content_left_page %}
+{% comment %}3.0 TODO: remove this template, which only exists for backward compatibility with 2.4 and earlier{% endcomment %}
