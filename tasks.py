@@ -841,6 +841,14 @@ def markdownlint(context, fix=False):
     command = "pymarkdown scan --recurse nautobot/docs examples *.md"
     run_command(context, command)
 
+@task
+def djlint(context, fix=False):
+    """Lint HTML files."""
+    if fix:
+        command = "djlint . --reformat"
+        run_command(context, command)
+    command = "djlint ."
+    run_command(context, command)
 
 @task
 def check_migrations(context):

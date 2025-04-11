@@ -212,6 +212,8 @@ pymarkdownlnt = "~0.9.28"
 ruff = "~0.8.6"
 # YAML linting
 yamllint = "~1.35.1"
+# HTML linting
+djlint = "~1.36.4"
 
 [tool.poetry.group.testing.dependencies]
 # Test code coverage measurement - pinned to 6.4.0 to resolve https://github.com/nedbat/coveragepy/issues/1420
@@ -362,6 +364,9 @@ plugins.proper-names.names = "Celery,Django,Nautobot,Pylint,PyMarkdown,Python,RE
 plugins.proper-names.code_blocks = false  # don't check proper nouns inside ```code blocks```
 plugins.proper-names.code_spans = false  # don't check proper nouns inside `code spans`
 plugins.ul-indent.enabled = false  # doesn't work well with MkDocs expectations, use list-anchored-indent instead
+
+[tool.djlint]
+ignore = "H005,H006,H008,H011,H012,H013,H014,H015,H016,H019,H020,H021,H022,H023,H025,H026,H030,H031,H037"
 
 [tool.ruff]
 line-length = 120
