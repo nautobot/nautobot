@@ -116,6 +116,11 @@ PAGINATE_COUNT_DEFAULT = 50
 # Models excluded from the global search list
 GLOBAL_SEARCH_EXCLUDE_LIST = [
     "anotherexamplemodel",
+    "approvalworkflow",
+    "approvalworkflowinstance",
+    "approvalworkflowstage",
+    "approvalworkflowstageinstance",
+    "approvalworkflowstageinstanceresponse",
     "cablepath",
     "circuittermination",
     "circuittype",

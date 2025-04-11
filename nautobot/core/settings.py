@@ -404,6 +404,7 @@ SPECTACULAR_SETTINGS = {
         # These choice enums need to be overridden because they get assigned to different names with the same choice set and
         # result in this error:
         #   encountered multiple names for the same choice set
+        "ApprovalWorkflowStateChoices": "nautobot.extras.choices.ApprovalWorkflowStateChoices",
         "JobExecutionTypeIntervalChoices": "nautobot.extras.choices.JobExecutionType",
         # These choice enums need to be overridden because they get assigned to the `protocol` field and
         # result in this error:

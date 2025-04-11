@@ -7,6 +7,65 @@ from nautobot.core.apps import (
 
 menu_items = (
     NavMenuTab(
+        name="Approvals",
+        groups=(
+            NavMenuGroup(
+                name="Approval Workflows",
+                weight=50,
+                items=(
+                    NavMenuItem(
+                        link="extras:approvalworkflow_list",
+                        name="Approval Workflows",
+                        weight=100,
+                        permissions=["extras.view_approvalworkflow"],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:approvalworkflow_add",
+                                permissions=["extras.add_approvalworkflow"],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="extras:approvalworkflowstage_list",
+                        name="Approval Workflow Stages",
+                        weight=200,
+                        permissions=["extras.view_approvalworkflowstage"],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:approvalworkflowstage_add",
+                                permissions=["extras.add_approvalworkflowstage"],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="extras:approvalworkflowinstance_list",
+                        name="Approval Workflow Instances",
+                        weight=300,
+                        permissions=["extras.view_approvalworkflowinstance"],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:approvalworkflowinstance_add",
+                                permissions=["extras.add_approvalworkflowinstance"],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="extras:approvalworkflowstageinstance_list",
+                        name="Approval Workflow Stage Instances",
+                        weight=400,
+                        permissions=["extras.view_approvalworkflowstageinstance"],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:approvalworkflowstageinstance_add",
+                                permissions=["extras.add_approvalworkflowstageinstance"],
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    ),
+    NavMenuTab(
         name="Organization",
         weight=100,
         groups=(
