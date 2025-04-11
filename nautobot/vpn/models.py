@@ -356,6 +356,12 @@ class VPNTunnel(PrimaryModel):  # pylint: disable=too-many-ancestors
         """Stringify instance."""
         return self.name
 
+    def clean(self):
+        if self.endpoint_a and self.endpoint_z and self.endpoint_a == self.endpoint_z:
+            raise ValidationError(
+                "EndPoint A and EndPoint Z cannot be the same."
+            )
+        return super().clean()
 
 @extras_features(
     "custom_links",
@@ -377,13 +383,11 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
     )
     source_interface = models.OneToOneField(
         to="dcim.Interface",
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         related_name="vpn_tunnel_endpoints_src_int",
-        blank=True,
-        null=True,
+        blank=False,
+        null=False,
         verbose_name="Source Interface",
-        help_text="Mutually Exclusive with Source IP Address.",
-        # TODO add validation source_ipaddress or source_interface must be defined.
     )
     source_ipaddress = models.ForeignKey(
         to="ipam.IPAddress",
@@ -392,7 +396,6 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
         blank=True,
         null=True,
         verbose_name="Source IP Address",
-        help_text="Mutually Exclusive with Source IP Address.",
     )
     destination_ipaddress = models.ForeignKey(
         to="ipam.IPAddress",
@@ -448,21 +451,18 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
 
     @property
     def name(self):
-        source = f"{self.source_interface.device.name if self.source_interface else self.source_ipaddress.address}"
-        destination = f"{self.destination_ipaddress.address if self.destination_ipaddress else self.destination_fqdn}"
-        return f"{source} --> {destination}"
+        """Name property."""
+        arrow = "\u2192"
+        device_intf = f"{self.source_interface.device.name} {arrow} {self.source_interface.name}"
+        if self.source_ipaddress:
+            return f"{device_intf}({self.source_ipaddress.address})"
+        return device_intf
 
     def __str__(self):
         """Stringify instance."""
         return self.name
 
     def clean(self):
-        if not (self.source_interface or self.source_ipaddress):
-            raise ValidationError("Source Interface or Source IP Address is required.")
-        if self.source_interface and self.source_ipaddress:
-            raise ValidationError(
-                "Source Interface and Source IP Address are mutually exclusive fields. Select only one."
-            )
         if self.destination_ipaddress and self.destination_fqdn:
             raise ValidationError(
                 "Destination IP Address and Destination FQDN are mutually exclusive fields. Select only one."
