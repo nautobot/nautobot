@@ -306,14 +306,14 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
     protected_prefixes_dg_count = LinkedCountColumn(
         viewname="extras:dynamicgroup_list",
         verbose_name="Dynamic Group",
-        # TODO INIT Add the URL Params below, and optionally the reverse_lookup.
         url_params={"dynamicgroups": "pk"},
+        reverse_lookup="vpn_tunnel_endpoints",
     )
     protected_prefixes_count = LinkedCountColumn(
         viewname="ipam:prefix_list",
         verbose_name="Prefix",
-        # TODO INIT Add the URL Params below, and optionally the reverse_lookup.
         url_params={"prefixes": "pk"},
+        reverse_lookup="vpn_tunnel_endpoints",
     )
     actions = ButtonsColumn(models.VPNTunnelEndpoint)
     tags = TagColumn(url_name="vpn:vpntunnelendpoint_list")
