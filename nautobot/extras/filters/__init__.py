@@ -526,6 +526,12 @@ class ContactTeamFilterSet(NameSearchFilterSet, NautobotFilterSet):
 
 
 class ContactFilterSet(ContactTeamFilterSet):
+    teams = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Team.objects.all(),
+        to_field_name="name",
+        label="Team (name or ID)",
+    )
+
     class Meta:
         model = Contact
         fields = "__all__"
