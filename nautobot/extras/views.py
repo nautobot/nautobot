@@ -93,6 +93,11 @@ from .datasources import (
 )
 from .jobs import get_job
 from .models import (
+    ApprovalWorkflow,
+    ApprovalWorkflowInstance,
+    ApprovalWorkflowStage,
+    ApprovalWorkflowStageInstance,
+    ApprovalWorkflowStageInstanceResponse,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -135,6 +140,124 @@ from .models import (
 from .registry import registry
 
 logger = logging.getLogger(__name__)
+
+#
+# Approval Workflows
+#
+
+
+class ApprovalWorkflowUIViewSet(NautobotUIViewSet):
+    """ViewSet for ApprovalWorkflow."""
+
+    bulk_update_form_class = forms.ApprovalWorkflowBulkEditForm
+    filterset_class = filters.ApprovalWorkflowFilterSet
+    filterset_form_class = forms.ApprovalWorkflowFilterForm
+    form_class = forms.ApprovalWorkflowForm
+    queryset = ApprovalWorkflow.objects.all()
+    serializer_class = serializers.ApprovalWorkflowSerializer
+    table_class = tables.ApprovalWorkflowTable
+
+    object_detail_content = ObjectDetailContent(
+        panels=[
+            ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+        ],
+    )
+
+
+class ApprovalWorkflowStageUIViewSet(NautobotUIViewSet):
+    """ViewSet for ApprovalWorkflowStage."""
+
+    bulk_update_form_class = forms.ApprovalWorkflowStageBulkEditForm
+    filterset_class = filters.ApprovalWorkflowStageFilterSet
+    filterset_form_class = forms.ApprovalWorkflowStageFilterForm
+    form_class = forms.ApprovalWorkflowStageForm
+    queryset = ApprovalWorkflowStage.objects.all()
+    serializer_class = serializers.ApprovalWorkflowStageSerializer
+    table_class = tables.ApprovalWorkflowStageTable
+
+    object_detail_content = ObjectDetailContent(
+        panels=[
+            ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+        ],
+    )
+
+
+class ApprovalWorkflowInstanceUIViewSet(NautobotUIViewSet):
+    """ViewSet for ApprovalWorkflowInstance."""
+
+    bulk_update_form_class = forms.ApprovalWorkflowInstanceBulkEditForm
+    filterset_class = filters.ApprovalWorkflowInstanceFilterSet
+    filterset_form_class = forms.ApprovalWorkflowInstanceFilterForm
+    form_class = forms.ApprovalWorkflowInstanceForm
+    queryset = ApprovalWorkflowInstance.objects.all()
+    serializer_class = serializers.ApprovalWorkflowInstanceSerializer
+    table_class = tables.ApprovalWorkflowInstanceTable
+
+    object_detail_content = ObjectDetailContent(
+        panels=[
+            ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+        ],
+    )
+
+
+class ApprovalWorkflowStageInstanceUIViewSet(NautobotUIViewSet):
+    """ViewSet for ApprovalWorkflowStageInstance."""
+
+    bulk_update_form_class = forms.ApprovalWorkflowStageInstanceBulkEditForm
+    filterset_class = filters.ApprovalWorkflowStageInstanceFilterSet
+    filterset_form_class = forms.ApprovalWorkflowStageInstanceFilterForm
+    form_class = forms.ApprovalWorkflowStageInstanceForm
+    queryset = ApprovalWorkflowStageInstance.objects.all()
+    serializer_class = serializers.ApprovalWorkflowStageInstanceSerializer
+    table_class = tables.ApprovalWorkflowStageInstanceTable
+
+    object_detail_content = ObjectDetailContent(
+        panels=[
+            ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+        ],
+    )
+
+
+class ApprovalWorkflowStageInstanceResponseUIViewSet(
+    ObjectBulkDestroyViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+):
+    """ViewSet for ApprovalWorkflowStageInstanceResponse."""
+
+    filterset_class = filters.ApprovalWorkflowStageInstanceResponseFilterSet
+    filterset_form_class = forms.ApprovalWorkflowStageInstanceResponseFilterForm
+    form_class = forms.ApprovalWorkflowStageInstanceResponseForm
+    queryset = ApprovalWorkflowStageInstanceResponse.objects.all()
+    serializer_class = serializers.ApprovalWorkflowStageInstanceResponseSerializer
+    table_class = tables.ApprovalWorkflowStageInstanceResponseTable
+
+    object_detail_content = ObjectDetailContent(
+        panels=[
+            ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+        ],
+    )
 
 
 #
