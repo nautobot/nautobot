@@ -1,18 +1,9 @@
-"""API views for nautobot_vpn_models."""
+"""API views for the vpn models."""
 
 from nautobot.apps.api import NautobotModelViewSet
 
-from nautobot_vpn_models import filters, models
-from nautobot_vpn_models.api import serializers
-
-
-
-
-
-
-
-
-
+from .. import filters, models
+from ..api import serializers
 
 
 class VPNProfileViewSet(NautobotModelViewSet):  # pylint: disable=too-many-ancestors
@@ -39,6 +30,22 @@ class VPNPhase2PolicyViewSet(NautobotModelViewSet):  # pylint: disable=too-many-
     filterset_class = filters.VPNPhase2PolicyFilterSet
 
 
+class VPNProfilePhase1PolicyAssignmentViewSet(NautobotModelViewSet):  # pylint: disable=too-many-ancestors
+    """VPNProfilePhase1PolicyAssignment viewset."""
+
+    queryset = models.VPNProfilePhase1PolicyAssignment.objects.all()
+    serializer_class = serializers.VPNProfilePhase1PolicyAssignmentSerializer
+    filterset_class = filters.VPNProfilePhase1PolicyAssignmentFilterSet
+
+
+class VPNProfilePhase2PolicyAssignmentViewSet(NautobotModelViewSet):  # pylint: disable=too-many-ancestors
+    """VPNProfilePhase2PolicyAssignment viewset."""
+
+    queryset = models.VPNProfilePhase2PolicyAssignment.objects.all()
+    serializer_class = serializers.VPNProfilePhase2PolicyAssignmentSerializer
+    filterset_class = filters.VPNProfilePhase2PolicyAssignmentFilterSet
+
+
 class VPNViewSet(NautobotModelViewSet):  # pylint: disable=too-many-ancestors
     """VPN viewset."""
 
@@ -61,4 +68,3 @@ class VPNTunnelEndpointViewSet(NautobotModelViewSet):  # pylint: disable=too-man
     queryset = models.VPNTunnelEndpoint.objects.all()
     serializer_class = serializers.VPNTunnelEndpointSerializer
     filterset_class = filters.VPNTunnelEndpointFilterSet
-
