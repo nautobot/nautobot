@@ -32,8 +32,8 @@ from nautobot.cloud.tables import CloudAccountTable
 from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
-from nautobot.core.templatetags import helpers
 from nautobot.core.models.querysets import count_related
+from nautobot.core.templatetags import helpers
 from nautobot.core.templatetags.helpers import has_perms
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
@@ -488,6 +488,7 @@ class MigrateLocationDataToContactView(generic.ObjectEditView):
 #
 # Rack groups
 #
+
 
 class RackGroupUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.RackGroupBulkEditForm
