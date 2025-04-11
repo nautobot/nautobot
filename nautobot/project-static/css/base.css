@@ -278,15 +278,9 @@ table.report th a {
     border-bottom-left-radius: 9px;
     border-bottom-right-radius: 9px;
 }
-ul.nav-tabs, ul.nav-pills {
+ul.nav-pills {
     margin-bottom: 20px;
 }
-ul.nav-tabs li a {
-    padding: 8px 10px;
-    border: none;
-}
-ul.nav-tabs li a:hover,
-ul.nav-tabs li a:focus,
 ul.nav-pills li a:hover,
 ul.nav-pills li.active a:hover,
 ul.nav-pills li a:focus {
@@ -295,7 +289,6 @@ ul.nav-pills li a:focus {
 ul.nav-pills li.active a {
     background-color: #eaf2f9;
 }
-ul.nav-tabs li a:hover,
 .label a {
     color: inherit;
 }
@@ -471,16 +464,6 @@ h1 .btn-inline {
     left: -2px;
     position: relative;
     top: 2px;
-}
-.breadcrumb .mdi::before {
-    position: relative;
-    top: 4px;
-}
-.breadcrumb a:hover {
-    text-decoration: none;
-}
-.breadcrumb a:hover span {
-    text-decoration: underline;
 }
 .alert .mdi::before {
     position: relative;
@@ -705,25 +688,6 @@ a.tile.clickable:visited {
     justify-content: space-between;
     padding-top: 10px;
 }
-
-/* Buttons inside dropdown menus */
-.dropdown-menu button {
-    background: none;
-    border: none;
-    display: block;
-    width: 100%;
-    text-align: left;
-    padding: 3px 20px;
-    cursor: pointer;
-    text-wrap: nowrap;
-}
-.dropdown-menu button:focus,
-.dropdown-menu button:hover {
-    color: #ffffff;
-    text-decoration: none;
-    background-color: #646464;
-}
-
 /* Monaco Editor container */
 .editor-container {
     display: flex;  /* Use flexbox for layout */

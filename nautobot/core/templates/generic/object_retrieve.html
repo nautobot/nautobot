@@ -10,86 +10,39 @@
 {% load tz %}
 {% load ui_framework %}
 
+
+{% block breadcrumbs %}
+    {% with title=object.display|default:object %}
+        {% get_breadcrumbs as crumbs %}
+        {% include 'inc/breadcrumbs.html' with title=title copy_title=True crumbs=crumbs %}
+    {% endwith %}
+{% endblock breadcrumbs %}
+
+{% block title %}
+    {% with title=object.display|default:object %}
+        {{ title }}
+    {% endwith %}
+{% endblock %}
+
 {% block header %}
-    <div class="row noprint">
-        {% with list_url=object|validated_viewname:"list" %}
-        {% if list_url %}
-        <div class="col-sm-4 col-md-3">
-            <form action="{% url list_url %}" method="get">
-                <div class="input-group">
-                    <input type="text" name="q" class="form-control" placeholder="Search {{ verbose_name_plural }}" />
-                    <span class="input-group-btn">
-                        <button type="submit" class="btn btn-primary">
-                            <span class="mdi mdi-magnify" aria-hidden="true"></span>
-                        </button>
-                    </span>
-                </div>
-            </form>
-        </div>
-        {% endif %}
-        {% endwith %}
-    </div>
-
-    <div class="float-end noprint">
-    {% block buttons %}
-        {% plugin_buttons object %}
-        {% render_detail_view_extra_buttons %}
-        {% block extra_buttons %}{% endblock extra_buttons %}
-        {% consolidate_detail_view_action_buttons %}
-    {% endblock buttons %}
-    </div>
-
-    {% block masthead %}
-        <h1>
-            <span class="hover_copy">
-                <span id="copy_title">{% block title %}{{object.display|default:object}}{% endblock %}</span>
-                <button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-text="{{ object.display | default:object }}">
-                    <span class="mdi mdi-content-copy"></span>
-                </button>
-            </span>
-        </h1>
-        {% with list_url=object|validated_viewname:"list" %}
-        {% if list_url %}
-            <nav class="col-sm-8 col-md-9" aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                {% block breadcrumbs %}
-                    {% if list_url %}
-                    <li class="breadcrumb-item"><a href="{% url list_url %}">
-                        {{ verbose_name_plural|bettertitle }}
-                    </a></li>
-                    {% endif %}
-                    {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
-                    <li class="breadcrumb-item active" aria-current="page">{{ object|hyperlinked_object }}</li>
-                {% endblock breadcrumbs %}
-                </ol>
-            </nav>
-        {% endif %}
-        {% endwith %}
-        {% include 'inc/created_updated.html' %}
-    {% endblock masthead %}
-    <div class="float-end noprint">
-        {% custom_links object %}
-        {% job_buttons object %}
-        {% block panel_buttons %}{% endblock panel_buttons %}
-    </div>
     <ul id="tabs" class="nav nav-tabs" role="tablist">
     {% block nav_tabs %}
       {% if object_detail_content %}
         {% render_tabs_labels object_detail_content.tabs %}
       {% else %}
-        <li role="presentation"{% if active_tab == "main" or request.GET.tab == "main" %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}#main" onclick="switch_tab(this.href)" aria-controls="main" role="tab" data-toggle="tab">
+        <li class="nav-item" role="presentation">
+            <a class="nav-link{% if active_tab == 'main' or request.GET.tab == 'main' %} active{% endif %}" href="{{ object.get_absolute_url }}#main" onclick="switch_tab(this.href)" aria-controls="main" role="tab" data-bs-toggle="tab">
                 {{ verbose_name|bettertitle }}
             </a>
         </li>
-        <li role="presentation"{% if request.GET.tab == 'advanced' %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}#advanced" onclick="switch_tab(this.href)" aria-controls="advanced" role="tab" data-toggle="tab">
+        <li class="nav-item" role="presentation">
+            <a class="nav-link{% if request.GET.tab == 'advanced' %} active{% endif %}" href="{{ object.get_absolute_url }}#advanced" onclick="switch_tab(this.href)" aria-controls="advanced" role="tab" data-bs-toggle="tab">
                 Advanced
             </a>
         </li>
         {% if object.is_contact_associable_model %}
-            <li role="presentation"{% if request.GET.tab == 'contacts' %} class="active"{% endif %}>
-                <a href="{{ object.get_absolute_url }}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">
+            <li class="nav-item" role="presentation">
+                <a class="nav-link{% if request.GET.tab == 'contacts' %} active{% endif %}" href="{{ object.get_absolute_url }}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-bs-toggle="tab">
                     Contacts
                 </a>
             </li>
@@ -97,8 +50,8 @@
         {% if object.is_dynamic_group_associable_model and perms.extras.view_dynamicgroup %}
             {% with object.dynamic_groups.count as dg_count %}
                 {% if dg_count %}
-                    <li role="presentation"{% if request.GET.tab == 'dynamic_groups' %} class="active"{% endif %}>
-                        <a href="{{ object.get_absolute_url }}#dynamic_groups" onclick="switch_tab(this.href)" aria-controls="dynamic_groups" role="tab" data-toggle="tab">
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link{% if request.GET.tab == 'dynamic_groups' %} active{% endif %}" href="{{ object.get_absolute_url }}#dynamic_groups" onclick="switch_tab(this.href)" aria-controls="dynamic_groups" role="tab" data-bs-toggle="tab">
                             Dynamic Groups {% badge dg_count %}
                         </a>
                     </li>
@@ -108,8 +61,8 @@
         {% if object.is_metadata_associable_model and perms.extras.view_objectmetadata %}
             {% with object.associated_object_metadata.count as om_count %}
                 {% if om_count %}
-                    <li role="presentation"{% if request.GET.tab == 'object_metadata' %} class="active"{% endif %}>
-                        <a href="{{ object.get_absolute_url }}#object_metadata" onclick="switch_tab(this.href)" aria-controls="object_metadata" role="tab" data-toggle="tab">
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link{% if request.GET.tab == 'object_metadata' %} active{% endif %}" href="{{ object.get_absolute_url }}#object_metadata" onclick="switch_tab(this.href)" aria-controls="object_metadata" role="tab" data-bs-toggle="tab">
                             Object Metadata {% badge om_count %}
                         </a>
                     </li>
@@ -132,7 +85,7 @@
         {% endif %}
         {% if perms.extras.view_objectchange %}
             {% if active_tab != 'changelog' and object.get_changelog_url or active_tab == 'changelog' %}
-                <li role="presentation">
+                <li class="nav-item" role="presentation">
                     <a
                         class="nav-link {% if active_tab == 'changelog' %}active{% endif %}"
                         {% if active_tab == 'changelog' %} aria-current="page"{% endif %}"
@@ -155,6 +108,20 @@
         {% render_components object_detail_content.tabs %}
       {% else %}
         <div id="main" role="tabpanel" class="tab-pane {% if active_tab == "main" or request.GET.tab == "main" %}active{% else %}fade{% endif %}">
+            <div class="align-items-center d-flex flex-wrap mb-16">
+                {% include 'inc/created_updated.html' %}
+                <div class="flex-grow-0 flex-shrink-0 noprint">
+                    {% block buttons %}
+                        {% plugin_buttons object %}
+                        {% render_detail_view_extra_buttons %}
+                        {% block extra_buttons %}{% endblock extra_buttons %}
+                        {% consolidate_detail_view_action_buttons %}
+                    {% endblock buttons %}
+                    {% custom_links object %}
+                    {% job_buttons object %}
+                    {% block panel_buttons %}{% endblock panel_buttons %}
+                </div>
+            </div>
             <div class="row">
                 <div class="col-md-6">
                     {% block content_left_page %}{% endblock content_left_page %}
