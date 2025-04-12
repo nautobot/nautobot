@@ -687,6 +687,18 @@ class RackReservationUIViewSet(NautobotUIViewSet):
     filterset_class = RackReservationFilterSet
     filterset_form_class = RackReservationFilterForm
 
+    def get_object(self):
+        obj = super().get_object()
+
+        if not obj.present_in_database:
+            obj.user = self.request.user
+
+            rack_id = self.request.GET.get("rack")
+            if rack_id:
+                obj.rack_id = rack_id
+
+        return obj
+
 
 #
 # Manufacturers
