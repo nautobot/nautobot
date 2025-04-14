@@ -3,6 +3,7 @@ from io import StringIO
 from typing import Optional, Sequence, Union
 
 from django.conf import settings
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import connections, DEFAULT_DB_ALIAS
@@ -246,7 +247,7 @@ class APIViewTestCases:
                 if not field.name.startswith("_"):
                     if isinstance(field, (ForeignKey, GenericForeignKey, ManyToManyField, core_fields.TagsField)) and (
                         # we represent content-types as "app_label.modelname" rather than as FKs
-                        field.related_model != ContentType
+                        field.related_model not in [ContentType, Group]
                         # user is a model field on Token but not a field on TokenSerializer
                         and not (field.name == "user" and self.model == users_models.Token)
                     ):
