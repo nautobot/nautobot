@@ -31,6 +31,8 @@ from nautobot.cloud.forms import (
 )
 from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudResourceType, CloudService
 from nautobot.cloud.tables import CloudAccountTable, CloudNetworkTable, CloudResourceTypeTable, CloudServiceTable
+from nautobot.core.ui import object_detail
+from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.ipam.tables import PrefixTable
@@ -44,6 +46,16 @@ class CloudAccountUIViewSet(NautobotUIViewSet):
     serializer_class = CloudAccountSerializer
     table_class = CloudAccountTable
     form_class = CloudAccountForm
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+        )
+    )
 
 
 class CloudNetworkUIViewSet(NautobotUIViewSet):
