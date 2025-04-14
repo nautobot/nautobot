@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -89,6 +91,7 @@ class ApprovalWorkflowStage(PrimaryModel):
 
         verbose_name = "Approval Workflow Stage"
         unique_together = [["approval_workflow", "name"], ["approval_workflow", "weight"]]
+        ordering = ["approval_workflow", "weight"]
 
     def __str__(self):
         """Stringify instance."""
@@ -138,6 +141,48 @@ class ApprovalWorkflowInstance(PrimaryModel):
         """Stringify instance."""
         return f"{self.approval_workflow.name}: {self.object_under_review} ({self.current_state})"
 
+    @property
+    def current_stage(self):
+        """
+        Return the current stage of the workflow.
+        1. Return the stage that is denied if there is a stage that has been denied.
+        2. Return the first stage that is pending, if there is no stage that has been approved or denied.
+        3. Return the stage that is pending that is immediately after the last stage that has been approved.
+        4. Return None, if all stages are approved.
+        """
+        # Check if there is a stage that is denied
+        denied_stage = self.approval_workflow_stage_instances.filter(state=ApprovalWorkflowStateChoices.DENIED)
+        if denied_stage.exists():
+            return denied_stage.first()
+        # Get the pending stage with the lowest weight
+        pending_stages = self.approval_workflow_stage_instances.filter(
+            state=ApprovalWorkflowStateChoices.PENDING
+        ).order_by("approval_workflow_stage__weight")
+        if pending_stages.exists():
+            return pending_stages.first()
+
+        # No pending or denied stages at this point, so return None because all stages are approved
+        return None
+
+    def save(self, *args, **kwargs):
+        """
+        Override the save() method to
+        1. Update its status to denied, if one of the approval workflow stage instances is denied.
+        2. Update its status to approved, if all of the approval workflow stage instances are approved.
+        Args:
+            *args: positional arguments
+            **kwargs: keyword arguments
+        """
+        # Check if there is one or more denied response for this stage instance
+        denied_stages = self.approval_workflow_stage_instances.filter(state=ApprovalWorkflowStateChoices.DENIED)
+        if denied_stages.exists():
+            self.current_state = ApprovalWorkflowStateChoices.DENIED
+        # Check if all stages are approved
+        approved_stages = self.approval_workflow_stage_instances.filter(state=ApprovalWorkflowStateChoices.APPROVED)
+        if approved_stages.count() == self.approval_workflow.approval_workflow_stages.count():
+            self.current_state = ApprovalWorkflowStateChoices.APPROVED
+        super().save(*args, **kwargs)
+
 
 @extras_features(
     "custom_links",
@@ -184,6 +229,40 @@ class ApprovalWorkflowStageInstance(PrimaryModel):
         """Stringify instance."""
         return f"{self.approval_workflow_stage}: {self.state}"
 
+    def save(self, *args, **kwargs):
+        """
+        Override save method:
+        1. set the stage as denied if one user denies it.
+        2. set the stage as approved if min number of eligibl users approve it.
+        3. set decision_date when state is changed to APPROVED or DENIED.
+        4. call save() on the parent ApprovalWorkflowInstance to potentially update its state as well.
+
+        Args:
+            *args: positional arguments
+            **kwargs: keyword arguments
+        """
+        # Check if there is one or more denied response for this stage instance
+        denied_responses = self.approval_workflow_stage_instance_responses.filter(
+            state=ApprovalWorkflowStateChoices.DENIED
+        )
+        if denied_responses.exists():
+            self.state = ApprovalWorkflowStateChoices.DENIED
+
+        # Check if the number of approvers is met
+        approved_responses = self.approval_workflow_stage_instance_responses.filter(
+            state=ApprovalWorkflowStateChoices.APPROVED
+        )
+        if approved_responses.count() >= self.approval_workflow_stage.min_approvers:
+            self.state = ApprovalWorkflowStateChoices.APPROVED
+
+        # Set the decision date if the state is changed to APPROVED or DENIED
+        decision_made = self.state in [ApprovalWorkflowStateChoices.APPROVED, ApprovalWorkflowStateChoices.DENIED]
+        if decision_made:
+            self.decision_date = date.today()
+        super().save(*args, **kwargs)
+        if decision_made:
+            self.approval_workflow_instance.save()
+
 
 @extras_features(
     "custom_links",
@@ -226,3 +305,18 @@ class ApprovalWorkflowStageInstanceResponse(BaseModel):
     def __str__(self):
         """Stringify instance."""
         return f"{self.approval_workflow_stage_instance}: {self.user}"
+
+    def save(self, *args, **kwargs):
+        """
+        Override the save method to call save() on the parent ApprovalWorkflowStageInstance as well.
+        Args:
+            *args: positional arguments
+            **kwargs: keyword arguments
+        """
+        super().save(*args, **kwargs)
+        # Call save() on the parent ApprovalWorkflowStageInstance to potentially update its state as well
+        if self.state in [
+            ApprovalWorkflowStateChoices.APPROVED,
+            ApprovalWorkflowStateChoices.DENIED,
+        ]:
+            self.approval_workflow_stage_instance.save()
