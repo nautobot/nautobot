@@ -1126,13 +1126,13 @@ class TeamSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         fields = "__all__"
         extra_kwargs = {
             "contacts": {"required": False},
-            "email": {"required": False},
-            "phone": {"required": False},
         }
         # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
         validators = []
 
     def validate(self, attrs):
+        attrs.setdefault("phone", "")
+        attrs.setdefault("email", "")
         validator = UniqueTogetherValidator(queryset=Team.objects.all(), fields=("name", "phone", "email"))
         validator(attrs, self)
         return super().validate(attrs)
