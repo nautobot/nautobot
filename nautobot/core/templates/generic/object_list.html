@@ -5,35 +5,15 @@
 {% load plugins %}
 {% load static %}
 
-{% block header %}
-    <div class="row noprint">
-        <div class="{% if search_form %}col-sm-8 col-md-9 {% else %} col-md-12 {% endif %}">
-            <ol class="breadcrumb">
-            {% block breadcrumbs %}
-                {% if list_url %}
-                <li><a href="{% url list_url %}">{{ title }}</a></li>
-                {% endif %}
-                {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
-            {% endblock breadcrumbs %}
-            </ol>
-        </div>
-        {% if search_form %}
-        <div class="col-sm-4 col-md-3">
-            <form action="#" method="get" id="search-form">
-                <div class="input-group">
-                    {{ search_form.q }}
-                    <span class="input-group-btn">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="mdi mdi-magnify"></i>
-                        </button>
-                    </span>
-                </div>
-            </form>
-        </div>
-        {% endif %}
-    </div>
-{% endblock header %}
+{% block breadcrumbs %}
+    {% format_title_with_saved_view title as formatted_title %}
+    {% include 'inc/breadcrumbs.html' with title=formatted_title %}
+{% endblock breadcrumbs %}
 
+{% block title %}
+    {% format_title_with_saved_view title as formatted_title %}
+    {{ formatted_title }}
+{% endblock %}
 
 {% block content %}
 <div class="float-end noprint">
@@ -145,18 +125,7 @@
         {% endblock export_button %}
     {% endif %}
 </div>
-<h1>{% block title %}
-    {{ title }}
-        {% if current_saved_view %}
-            —
-            {% if new_changes_not_applied %}
-                <i title="Pending changes not saved">{{ current_saved_view.name }}</i>
-            {% else %}
-                {{ current_saved_view.name }}
-            {% endif %}
-        {% endif %}
-    {% endblock %}
-</h1>
+
 {% block header_extra %}{% endblock %}
 {% if filter_params %}
 <div class="filters-applied">

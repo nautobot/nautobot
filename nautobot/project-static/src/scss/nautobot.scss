@@ -55,6 +55,26 @@ $danger-border-subtle:    $red-2;
 $light-border-subtle:     $gray-05;
 $dark-border-subtle:      $gray-05;
 
+$primary-dark:   $blue-0-dark;
+$secondary-dark: $gray-3-dark;
+$success-dark:   $green-0-dark;
+$info-dark:      $blue-0-dark;
+$warning-dark:   $orange-0-dark;
+$danger-dark:    $red-0-dark;
+$light-dark:     $gray-3-dark;
+$dark-dark:      $gray-3-dark;
+
+$theme-colors-dark: (
+  "primary":   $primary-dark,
+  "secondary": $secondary-dark,
+  "success":   $success-dark,
+  "info":      $info-dark,
+  "warning":   $warning-dark,
+  "danger":    $danger-dark,
+  "light":     $light-dark,
+  "dark":      $dark-dark
+);
+
 $primary-text-emphasis-dark:   $blue-0-dark;
 $secondary-text-emphasis-dark: $gray-3-dark;
 $success-text-emphasis-dark:   $green-0-dark;
@@ -198,10 +218,14 @@ $h2-font-size: 1.25rem;         /* 20px */
 $h3-font-size: $font-size-lg;   /* 18px */
 $h4-font-size: $font-size-base; /* 14px */
 $h5-font-size: $font-size-sm;   /* 12px */
-$h6-font-size: 0.675rem;        /* 10px */
+$h6-font-size: 0.625rem;        /* 10px */
 
 $headings-margin-bottom: map.get($spacers, 0);
 $headings-line-height:   $line-height-base;
+
+$small-font-size: $font-size-sm;
+
+$hr-opacity: 1;
 
 /* Tables */
 $table-cell-padding-y:    map.get($spacers, 8);
@@ -320,11 +344,29 @@ $dropdown-dark-link-active-bg:      $primary-bg-subtle-dark;
 $dropdown-dark-link-disabled-color: $body-tertiary-color-dark;
 $dropdown-dark-header-color:        $body-secondary-color-dark;
 
+/* Badges */
+$badge-font-size:   $font-size-base;
+$badge-font-weight: 400;
+$badge-color:       $body-color;
+$badge-padding-y:   map.get($spacers, 2);
+$badge-padding-x:   map.get($spacers, 8);
+
+/* Breadcrumbs */
+$breadcrumb-item-padding-x: map.get($spacers, 4);
+$breadcrumb-margin-bottom:  0;
+
+/* Code */
+$kbd-padding-y: map.get($spacers, 1);
+$kbd-padding-x: map.get($spacers, 4);
+$kbd-color:     var(--#{$prefix}secondary-color);
+$kbd-bg:        var(--#{$prefix}secondary-bg);
+
 /* 3. Include remainder of required Bootstrap stylesheets (including any separate color mode stylesheets) */
 @import "bootstrap/scss/variables";
 @import "bootstrap/scss/variables-dark";
 
 /* 4. Include any default map overrides here */
+$theme-colors-rgb-dark: map-loop($theme-colors-dark, to-rgb, "$value");
 
 /* 5. Include remainder of required parts */
 @import "bootstrap/scss/maps";
@@ -373,6 +415,15 @@ $dropdown-dark-header-color:        $body-secondary-color-dark;
 /* 8. Add additional custom code here */
 @if $enable-dark-mode {
   @include color-mode(dark, true) {
+    /* Colors */
+    @each $color, $value in $theme-colors-dark {
+      --#{$prefix}#{$color}: #{$value};
+    }
+
+    @each $color, $value in $theme-colors-rgb-dark {
+      --#{$prefix}#{$color}-rgb: #{$value};
+    }
+
     /* Focus styles */
     --#{$prefix}focus-ring-color: #{$focus-ring-color-dark};
   }
@@ -400,6 +451,7 @@ button {
 .btn {
   --#{$prefix}btn-box-shadow: #{$btn-box-shadow};
   --#{$prefix}btn-focus-box-shadow: 0 0 0 #{$btn-focus-width} var(--#{$prefix}primary-border-subtle);
+  --#{$prefix}btn-active-border-color: var(--#{$prefix}primary-text-emphasis);
 }
 
 $btn-variant-primary: (
@@ -523,7 +575,9 @@ $btn-variants: (
   --#{$prefix}nav-link-hover-color: var(--#{$prefix}body-color);
   --#{$prefix}nav-link-disabled-color: var(--#{$prefix}tertiary-color);
 
-  padding-inline: #{map.get($spacers, 20)};;
+  background: inherit;
+  padding-inline: #{map.get($spacers, 20)};
+  position: relative;
 
   .nav-item:not(:first-child) {
     margin-inline-start: #{map.get($spacers, 8)};
@@ -550,6 +604,61 @@ $btn-variants: (
   text-transform: uppercase;
 }
 
+.dropdown-item {
+  align-items: center;
+  display: flex;
+  gap: map.get($spacers, 8);
+
+  /* TODO(norbert-mieczkowski-codilime): replace `i.mdi` with new icons pattern when ready to use. */
+  &:not(:where(.active, :active,.disabled, :disabled)) > i.mdi {
+    color: var(--#{$prefix}secondary-color);
+  }
+}
+
+/* Badges */
+.badge {
+  --#{$prefix}badge-color: var(--#{$prefix}body-color);
+
+  color: var(--#{$prefix}badge-color);
+
+  &.bg-danger,
+  &.bg-primary,
+  &.bg-success,
+  &.bg-warning,
+  &.text-bg-danger,
+  &.text-bg-primary,
+  &.text-bg-success,
+  &.text-bg-warning {
+    --#{$prefix}badge-color: var(--#{$prefix}body-bg);
+  }
+
+  a {
+    color: inherit;
+  }
+}
+
+/* Breadcrumbs */
+.breadcrumb-item {
+  align-items: center;
+  color: var(--#{$prefix}secondary-color);
+  display: inline-flex;
+
+  + .breadcrumb-item {
+    &::before { // The separator between breadcrumbs (by default, a forward-slash: "/")
+      @include font-size($h6-font-size);
+    }
+  }
+
+  a {
+    color: inherit;
+
+    &:focus-visible,
+    &:hover {
+      color: var(--#{$prefix}primary-text-emphasis);
+    }
+  }
+}
+
 /* Sidenav (a.k.a. navbar, nav menu, sidebar) */
 body {
   display: grid;
@@ -562,6 +671,10 @@ body {
 
   #sidenav {
     grid-area: sidenav;
+  }
+
+  #header {
+    grid-area: header;
   }
 
   #main-content {
@@ -905,6 +1018,22 @@ body {
       @include fade-out;
     }
   }
+}
+
+/* Header */
+#header {
+  background: var(--#{$prefix}secondary-bg);
+
+  .alert {
+    --bs-alert-border-radius: 0;
+    --bs-alert-padding-x: #{$grid-gutter-width};
+  }
+}
+
+/* Main content */
+#main-content {
+  box-shadow: $box-shadow-sm;
+  padding-top: map.get($spacers, 16);
 }
 
 /* Footer */
