@@ -1,8 +1,2 @@
 {% extends 'generic/object_create.html' %}
-
-{% block javascript %}
-{{ block.super }}
-<script type="text/javascript">
-    const slugify_prefer_underscores = true; // Computed fields work better in GraphQL (etc.) with underscore-based slugs
-</script>
-{% endblock javascript %}
+{% comment %}3.0 TODO: remove this template, which only exists for backward compatibility with 2.4 and earlier{% endcomment %}
