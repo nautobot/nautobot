@@ -142,6 +142,7 @@ class Migration(migrations.Migration):
             options={
                 "verbose_name": "Approval Workflow Stage",
                 "unique_together": {("approval_workflow", "name"), ("approval_workflow", "weight")},
+                "ordering": ["approval_workflow", "weight"],
             },
             bases=(
                 nautobot.extras.models.mixins.DynamicGroupMixin,
