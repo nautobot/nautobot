@@ -1,4 +1,4 @@
-"""Forms for nautobot_data_validation_engine."""
+"""Forms for data_validation."""
 
 from django import forms
 from django.contrib.contenttypes.models import ContentType
@@ -22,7 +22,7 @@ from nautobot.extras.forms import (
     TagsBulkEditFormMixin,
 )
 from nautobot.extras.utils import FeatureQuery
-from nautobot.nautobot_data_validation_engine.models import (
+from nautobot.data_validation.models import (
     DataCompliance,
     MinMaxValidationRule,
     RegularExpressionValidationRule,

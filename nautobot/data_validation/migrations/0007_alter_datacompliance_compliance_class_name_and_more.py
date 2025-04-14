@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("nautobot_data_validation_engine", "0006_add_field_defaults"),
+        ("data_validation", "0006_add_field_defaults"),
     ]
 
     operations = [

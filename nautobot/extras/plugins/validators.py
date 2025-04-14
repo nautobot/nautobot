@@ -5,7 +5,7 @@ from django.apps import apps
 from nautobot.extras.plugins import CustomValidator
 from nautobot.extras.registry import registry
 from nautobot.extras.utils import FeatureQuery
-from nautobot.nautobot_data_validation_engine.custom_validators import BaseValidator
+from nautobot.data_validation.custom_validators import BaseValidator
 
 
 def custom_validator_clean(model_clean_func):

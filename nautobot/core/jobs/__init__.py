@@ -45,8 +45,8 @@ from nautobot.extras.jobs import (
 from nautobot.extras.models import ExportTemplate, GitRepository
 from nautobot.extras.plugins import CustomValidator, ValidationError
 from nautobot.extras.registry import registry
-from nautobot.nautobot_data_validation_engine import models
-from nautobot.nautobot_data_validation_engine.custom_validators import (
+from nautobot.data_validation import models
+from nautobot.data_validation.custom_validators import (
     BaseValidator,
     get_data_compliance_classes_from_git_repo,
     get_data_compliance_rules_map,
@@ -381,7 +381,7 @@ def get_data_compliance_rules():
 
     # Get rules from Git Repositories
     for repo in GitRepository.objects.all():
-        if "nautobot_data_validation_engine.data_compliance_rule" in repo.provided_contents:
+        if "data_validation.data_compliance_rule" in repo.provided_contents:
             validators.extend(get_data_compliance_classes_from_git_repo(repo))
     return validators
 
@@ -467,7 +467,7 @@ class RunRegisteredDataComplianceRules(Job):
             self.logger.info("Running user created data validation rules")
             self.report_for_validation_rules()
 
-        result_url = reverse("nautobot_data_validation_engine:datacompliance_list")
+        result_url = reverse("data_validation:datacompliance_list")
         self.logger.info(f"View Data Compliance results [here]({result_url})")
 
     @staticmethod

@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ("extras", "0053_relationship_required_on"),
         ("contenttypes", "0002_remove_content_type_name"),
-        ("nautobot_data_validation_engine", "0002_required_unique_types_regex_context"),
+        ("data_validation", "0002_required_unique_types_regex_context"),
     ]
 
     operations = [

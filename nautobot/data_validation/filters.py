@@ -1,9 +1,9 @@
-"""Filtering for nautobot_data_validation_engine."""
+"""Filtering for data_validation."""
 
 from nautobot.apps.filters import NautobotFilterSet
 from nautobot.core.filters import ContentTypeMultipleChoiceFilter, SearchFilter
 from nautobot.extras.utils import FeatureQuery
-from nautobot.nautobot_data_validation_engine.models import (
+from nautobot.data_validation.models import (
     DataCompliance,
     MinMaxValidationRule,
     RegularExpressionValidationRule,

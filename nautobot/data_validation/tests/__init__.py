@@ -1,1 +1,1 @@
-"""Unit tests for nautobot_data_validation_engine app."""
+"""Unit tests for data_validation app."""

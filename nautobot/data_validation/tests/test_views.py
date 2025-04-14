@@ -1,4 +1,4 @@
-"""Unit tests for nautobot_data_validation_engine views."""
+"""Unit tests for data_validation views."""
 
 from unittest.mock import MagicMock, patch
 
@@ -8,16 +8,16 @@ from django.http.request import QueryDict
 from nautobot.core.testing import TestCase, ViewTestCases
 from nautobot.dcim.models import Device, Location, LocationType, PowerFeed
 from nautobot.extras.models import Status
-from nautobot.nautobot_data_validation_engine.models import (
+from nautobot.data_validation.models import (
     DataCompliance,
     MinMaxValidationRule,
     RegularExpressionValidationRule,
     RequiredValidationRule,
     UniqueValidationRule,
 )
-from nautobot.nautobot_data_validation_engine.tables import DataComplianceTableTab
-from nautobot.nautobot_data_validation_engine.tests.test_data_compliance_rules import TestFailedDataComplianceRule
-from nautobot.nautobot_data_validation_engine.views import DataComplianceObjectView
+from nautobot.data_validation.tables import DataComplianceTableTab
+from nautobot.data_validation.tests.test_data_compliance_rules import TestFailedDataComplianceRule
+from nautobot.data_validation.views import DataComplianceObjectView
 
 
 class RegularExpressionValidationRuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -261,9 +261,9 @@ class DataComplianceObjectTestCase(TestCase):
         view = DataComplianceObjectView()
         location = Location.objects.first()
         mock_request = MagicMock()
-        mock_request.GET = QueryDict("tab=nautobot_data_validation_engine:1")
+        mock_request.GET = QueryDict("tab=data_validation:1")
         result = view.get_extra_context(mock_request, location)
-        self.assertEqual(result["active_tab"], "nautobot_data_validation_engine:1")
+        self.assertEqual(result["active_tab"], "data_validation:1")
         self.assertIsInstance(result["table"], DataComplianceTableTab)
 
     @patch("nautobot.core.views.generic.ObjectView.dispatch")

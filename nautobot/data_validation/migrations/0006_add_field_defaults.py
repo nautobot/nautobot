@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("nautobot_data_validation_engine", "0005_remove_slugs_alter_tags"),
+        ("data_validation", "0005_remove_slugs_alter_tags"),
     ]
 
     operations = [

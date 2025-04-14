@@ -11,53 +11,53 @@ menu_items = (
                 weight=200,
                 items=(
                     NavMenuItem(
-                        link="nautobot_data_validation_engine:minmaxvalidationrule_list",
+                        link="data_validation:minmaxvalidationrule_list",
                         name="Min/Max Rules",
-                        permissions=["nautobot_data_validation_engine.view_minmaxvalidationrule"],
+                        permissions=["data_validation.view_minmaxvalidationrule"],
                         buttons=(
                             NavMenuAddButton(
-                                link="nautobot_data_validation_engine:minmaxvalidationrule_add",
-                                permissions=["nautobot_data_validation_engine.add_minmaxvalidationrule"],
+                                link="data_validation:minmaxvalidationrule_add",
+                                permissions=["data_validation.add_minmaxvalidationrule"],
                             ),
                         ),
                     ),
                     NavMenuItem(
-                        link="nautobot_data_validation_engine:regularexpressionvalidationrule_list",
+                        link="data_validation:regularexpressionvalidationrule_list",
                         name="Regex Rules",
-                        permissions=["nautobot_data_validation_engine.view_regularexpressionvalidationrule"],
+                        permissions=["data_validation.view_regularexpressionvalidationrule"],
                         buttons=(
                             NavMenuAddButton(
-                                link="nautobot_data_validation_engine:regularexpressionvalidationrule_add",
-                                permissions=["nautobot_data_validation_engine.add_regularexpressionvalidationrule"],
+                                link="data_validation:regularexpressionvalidationrule_add",
+                                permissions=["data_validation.add_regularexpressionvalidationrule"],
                             ),
                         ),
                     ),
                     NavMenuItem(
-                        link="nautobot_data_validation_engine:requiredvalidationrule_list",
+                        link="data_validation:requiredvalidationrule_list",
                         name="Required Rules",
-                        permissions=["nautobot_data_validation_engine.view_requiredvalidationrule"],
+                        permissions=["data_validation.view_requiredvalidationrule"],
                         buttons=(
                             NavMenuAddButton(
-                                link="nautobot_data_validation_engine:requiredvalidationrule_add",
-                                permissions=["nautobot_data_validation_engine.add_requiredvalidationrule"],
+                                link="data_validation:requiredvalidationrule_add",
+                                permissions=["data_validation.add_requiredvalidationrule"],
                             ),
                         ),
                     ),
                     NavMenuItem(
-                        link="nautobot_data_validation_engine:uniquevalidationrule_list",
+                        link="data_validation:uniquevalidationrule_list",
                         name="Unique Rules",
-                        permissions=["nautobot_data_validation_engine.view_uniquevalidationrule"],
+                        permissions=["data_validation.view_uniquevalidationrule"],
                         buttons=(
                             NavMenuAddButton(
-                                link="nautobot_data_validation_engine:uniquevalidationrule_add",
-                                permissions=["nautobot_data_validation_engine.add_uniquevalidationrule"],
+                                link="data_validation:uniquevalidationrule_add",
+                                permissions=["data_validation.add_uniquevalidationrule"],
                             ),
                         ),
                     ),
                     NavMenuItem(
-                        link="nautobot_data_validation_engine:datacompliance_list",
+                        link="data_validation:datacompliance_list",
                         name="Data Compliance",
-                        permissions=["nautobot_data_validation_engine.view_datacompliance"],
+                        permissions=["data_validation.view_datacompliance"],
                     ),
                 ),
             ),

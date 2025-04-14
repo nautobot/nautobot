@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("nautobot_data_validation_engine", "0008_update_data_validation_engine_job_module_name"),
+        ("data_validation", "0008_update_data_validation_engine_job_module_name"),
     ]
 
     operations = [

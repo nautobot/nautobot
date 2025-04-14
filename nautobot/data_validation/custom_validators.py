@@ -27,7 +27,7 @@ from nautobot.extras.datasources import ensure_git_repository
 from nautobot.extras.models import GitRepository
 from nautobot.extras.plugins import CustomValidator
 from nautobot.extras.registry import registry
-from nautobot.nautobot_data_validation_engine.models import (
+from nautobot.data_validation.models import (
     DataCompliance,
     MinMaxValidationRule,
     RegularExpressionValidationRule,
@@ -141,7 +141,7 @@ class BaseValidator(CustomValidator):
             compliance_class(obj).clean()
 
         for repo in GitRepository.objects.filter(
-            provided_contents__contains="nautobot.nautobot_data_validation_engine.data_compliance_rule"  # TODO(john): data migration for this? used to be data_validation_engine.data_compliance_rules
+            provided_contents__contains="nautobot.data_validation.data_compliance_rule"  # TODO(john): data migration for this? used to be data_validation_engine.data_compliance_rules
         ):
             for compliance_class in get_data_compliance_classes_from_git_repo(repo):
                 if (
@@ -194,7 +194,7 @@ def get_data_compliance_classes_from_git_repo(repo: GitRepository, ignore_import
     """Get list of DataComplianceRule classes found within the custom_validators folder of the given repo."""
     ensure_git_repository(repo, head=repo.current_head)
     class_list = []
-    if "nautobot_data_validation_engine.data_compliance_rule" in repo.provided_contents:
+    if "data_validation.data_compliance_rule" in repo.provided_contents:
         if not (
             os.path.isdir(os.path.join(repo.filesystem_path, "custom_validators"))
             or os.path.isfile(os.path.join(repo.filesystem_path, "custom_validators.py"))

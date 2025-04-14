@@ -6,7 +6,7 @@ from django.db import migrations, models
 import django.db.models.deletion
 
 import nautobot.extras.utils
-import nautobot.nautobot_data_validation_engine.models
+import nautobot.data_validation.models
 
 
 class Migration(migrations.Migration):
@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
                 ("field", models.CharField(max_length=50)),
                 (
                     "regular_expression",
-                    models.TextField(validators=[nautobot.nautobot_data_validation_engine.models.validate_regex]),
+                    models.TextField(validators=[nautobot.data_validation.models.validate_regex]),
                 ),
                 (
                     "content_type",

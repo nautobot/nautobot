@@ -1,4 +1,4 @@
-"""Views for nautobot_data_validation_engine."""
+"""Views for data_validation."""
 
 from django.apps import apps as global_apps
 from django.contrib.contenttypes.models import ContentType
@@ -21,9 +21,9 @@ from nautobot.core.views.mixins import (
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.extras.utils import get_base_template
-from nautobot.nautobot_data_validation_engine import filters, forms, tables
-from nautobot.nautobot_data_validation_engine.api import serializers
-from nautobot.nautobot_data_validation_engine.models import (
+from nautobot.data_validation import filters, forms, tables
+from nautobot.data_validation.api import serializers
+from nautobot.data_validation.models import (
     DataCompliance,
     MinMaxValidationRule,
     RegularExpressionValidationRule,
@@ -171,7 +171,7 @@ class DataComplianceUIViewSet(  # pylint: disable=W0223
 class DataComplianceObjectView(ObjectView):
     """View for the Audit Results tab dynamically generated on specific object detail views."""
 
-    template_name = "nautobot_data_validation_engine/datacompliance_tab.html"
+    template_name = "data_validation/datacompliance_tab.html"
     queryset = None
 
     def dispatch(self, request, *args, **kwargs):

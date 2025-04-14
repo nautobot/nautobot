@@ -11,7 +11,7 @@ from django.test import TestCase
 
 from nautobot.dcim.models import Cable, Device, Location, PowerFeed
 from nautobot.extras.models import Job
-from nautobot.nautobot_data_validation_engine.models import (
+from nautobot.data_validation.models import (
     MinMaxValidationRule,
     RegularExpressionValidationRule,
     RequiredValidationRule,

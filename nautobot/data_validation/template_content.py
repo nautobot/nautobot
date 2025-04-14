@@ -1,4 +1,4 @@
-"""Template content for nautobot_data_validation_engine."""
+"""Template content for data_validation."""
 
 from django.urls import reverse
 
@@ -19,7 +19,7 @@ def tab_factory(content_type_label):
                 {
                     "title": "Data Compliance",
                     "url": reverse(
-                        "plugins:nautobot_data_validation_engine:data-compliance-tab",
+                        "data_validation:data-compliance-tab",
                         kwargs={"id": self.context["object"].id, "model": self.model},
                     ),
                 },
@@ -29,10 +29,10 @@ def tab_factory(content_type_label):
 
 
 class ComplianceTemplateIterator:
-    """Iterator that generates PluginCustomValidator classes for each model registered in the extras feature query registry 'custom_validators'."""
+    """Iterator to yield DataComplianceTab classes for each model in the extras feature registry 'custom_validators'."""
 
     def __iter__(self):
-        """Return a generator of PluginCustomValidator classes for each registered model."""
+        """Return a generator of DataComplianceTab classes for each registered model."""
         for app_label, models in registry["model_features"]["custom_validators"].items():
             for model in models:
                 label = f"{app_label}.{model}"

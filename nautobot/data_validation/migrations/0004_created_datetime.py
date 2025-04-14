@@ -3,7 +3,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("nautobot_data_validation_engine", "0003_datacompliance"),
+        ("data_validation", "0003_datacompliance"),
     ]
 
     operations = [

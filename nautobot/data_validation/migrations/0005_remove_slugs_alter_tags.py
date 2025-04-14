@@ -8,7 +8,7 @@ import nautobot.core.models.fields
 class Migration(migrations.Migration):
     dependencies = [
         ("extras", "0098_rename_data_jobresult_result"),
-        ("nautobot_data_validation_engine", "0004_created_datetime"),
+        ("data_validation", "0004_created_datetime"),
     ]
 
     operations = [

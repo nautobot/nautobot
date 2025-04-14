@@ -1,10 +1,10 @@
-"""Unit tests for nautobot_data_validation_engine."""
+"""Unit tests for data_validation."""
 
 from django.contrib.contenttypes.models import ContentType
 
 from nautobot.core.testing import APIViewTestCases
 from nautobot.dcim.models import Location, Manufacturer, Platform, PowerFeed
-from nautobot.nautobot_data_validation_engine.models import (
+from nautobot.data_validation.models import (
     MinMaxValidationRule,
     RegularExpressionValidationRule,
     RequiredValidationRule,
