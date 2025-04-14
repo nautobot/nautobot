@@ -1278,12 +1278,12 @@ class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
         url = reverse("extras-api:graphqlquery-run", kwargs={"pk": self.graphqlqueries[0].pk})
         response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual({"data": {"locations": []}}, response.data)
+        self.assertEqual({"data": {"locations": []}, "errors": None}, response.data)
 
         url = reverse("extras-api:graphqlquery-run", kwargs={"pk": self.graphqlqueries[2].pk})
         response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual({"data": {"devices": []}}, response.data)
+        self.assertEqual({"data": {"devices": []}, "errors": None}, response.data)
 
 
 # TODO(Glenn): Standardize to APIViewTestCase (needs create & update tests)

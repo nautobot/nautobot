@@ -37,6 +37,7 @@ urlpatterns = [
     # Apps
     path("circuits/", include("nautobot.circuits.urls")),
     path("cloud/", include("nautobot.cloud.urls")),
+    path("data-validation-engine/", include("nautobot.nautobot_data_validation_engine.urls")),
     path("dcim/", include("nautobot.dcim.urls")),
     path("extras/", include("nautobot.extras.urls")),
     path("ipam/", include("nautobot.ipam.urls")),

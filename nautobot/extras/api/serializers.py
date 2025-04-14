@@ -1,6 +1,7 @@
 import logging
 
 from django.conf import settings
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema_field
@@ -19,6 +20,7 @@ from nautobot.core.api import (
     ValidatedModelSerializer,
 )
 from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.fields import GroupField
 from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import (
     get_nested_serializer_depth,
@@ -43,8 +45,14 @@ from nautobot.extras.choices import (
     JobResultStatusChoices,
     ObjectChangeActionChoices,
 )
+from nautobot.extras.constants import APPROVAL_WORKFLOW_MODELS
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
+    ApprovalWorkflow,
+    ApprovalWorkflowInstance,
+    ApprovalWorkflowStage,
+    ApprovalWorkflowStageInstance,
+    ApprovalWorkflowStageInstanceResponse,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -103,6 +111,73 @@ from .fields import MultipleChoiceJSONField
 #
 
 logger = logging.getLogger(__name__)
+
+#
+# Approval Workflows
+#
+
+
+class ApprovalWorkflowSerializer(NautobotModelSerializer):
+    """ApprovalWorkflow Serializer."""
+
+    model_content_type = ContentTypeField(
+        queryset=ContentType.objects.filter(APPROVAL_WORKFLOW_MODELS).order_by("app_label", "model"),
+    )
+
+    class Meta:
+        """Meta attributes."""
+
+        model = ApprovalWorkflow
+        fields = "__all__"
+
+
+class ApprovalWorkflowStageSerializer(NautobotModelSerializer):
+    """ApprovalWorkflowStage Serializer."""
+
+    approver_group = GroupField(
+        queryset=Group.objects.all(),
+        help_text="The group that will be assigned to approve this stage.",
+    )
+
+    class Meta:
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStage
+        fields = "__all__"
+
+
+class ApprovalWorkflowInstanceSerializer(NautobotModelSerializer):
+    """ApprovalWorkflowInstance Serializer."""
+
+    object_under_review_content_type = ContentTypeField(
+        queryset=ContentType.objects.filter(APPROVAL_WORKFLOW_MODELS).order_by("app_label", "model"),
+    )
+
+    class Meta:
+        """Meta attributes."""
+
+        model = ApprovalWorkflowInstance
+        fields = "__all__"
+
+
+class ApprovalWorkflowStageInstanceSerializer(NautobotModelSerializer):
+    """ApprovalWorkflowStageInstance Serializer."""
+
+    class Meta:
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStageInstance
+        fields = "__all__"
+
+
+class ApprovalWorkflowStageInstanceResponseSerializer(ValidatedModelSerializer):
+    """ApprovalWorkflowStageInstanceResponse Serializer."""
+
+    class Meta:
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStageInstanceResponse
+        fields = "__all__"
 
 
 #
@@ -513,6 +588,7 @@ class GraphQLQueryInputSerializer(serializers.Serializer):
 
 class GraphQLQueryOutputSerializer(serializers.Serializer):
     data = serializers.DictField(default={})
+    errors = serializers.ListField(default=None)
 
 
 #
