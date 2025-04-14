@@ -70,3 +70,20 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 });
+
+const toggleFavorite = (element, event) => {
+    if(event.detail.successful){
+        element.classList.toggle('favorite-item')
+    }
+}
+
+const showEmpty = () => {
+    const favoritesEmpty = document.getElementById('favorites-empty');
+    if(document.querySelectorAll('#sidenav-flyout-favorites > ul > li').length - 1 === 1){
+        favoritesEmpty.classList.remove('d-none')
+    }
+}
+
+window.toggleFavorite = toggleFavorite
+window.showEmpty = showEmpty
+

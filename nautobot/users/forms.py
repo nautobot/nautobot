@@ -75,6 +75,14 @@ class PreferenceProfileSettingsForm(BootstrapMixin, forms.Form):
     timezone = TimeZoneFormField(required=False, help_text="Set your default timezone", widget=StaticSelect2)
 
 
+class NavbarFavoritesForm(forms.Form):
+    link = forms.CharField()
+    name = forms.CharField(required=False)
+    tab_name = forms.CharField(required=False)
+    group_name = forms.CharField(required=False)
+    remove = forms.BooleanField(required=False)
+
+
 class AdminPasswordChangeForm(_AdminPasswordChangeForm):
     def save(self, commit=True):
         # Override `_AdminPasswordChangeForm.save()` to publish admin change user password event

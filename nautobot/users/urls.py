@@ -12,6 +12,7 @@ router = NautobotUIViewSetRouter()
 urlpatterns = [
     path("profile/", views.ProfileView.as_view(), name="profile"),
     path("preferences/", views.UserConfigView.as_view(), name="preferences"),
+    path("navbar-favorites/", views.UserNavbarFavoritesView.as_view(), name="navbar_favorites"),
     path("password/", views.ChangePasswordView.as_view(), name="change_password"),
     path("api-tokens/", views.TokenListView.as_view(), name="token_list"),
     path("api-tokens/add/", views.TokenEditView.as_view(), name="token_add"),

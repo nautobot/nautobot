@@ -1,6 +1,7 @@
 {% load static %}
 {% load helpers %}
 {% load plugins %}
+{% load django_htmx %}
 
 <!DOCTYPE html>
 <html lang="en"{% if request.COOKIES|get_item:"theme" == 'dark' %} data-theme="dark"{% endif %}>
@@ -8,8 +9,9 @@
     <title>{% block title %}Home{% endblock %} - {{ settings.BRANDING_TITLE }}</title>
     {% include 'inc/media.html' %}
     {% block extra_styles %}{% endblock %}
+    {% htmx_script %}
 </head>
-<body>
+<body hx-headers='{"x-csrftoken": "{{ csrf_token }}"}'>
     {% include 'inc/nav_menu.html' %}
     <div class="container-fluid wrapper" id="main-content">
         <div class="banner-alert-area">
