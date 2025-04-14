@@ -171,6 +171,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 ### Added in v2.4.7
 
 - [#4171](https://github.com/nautobot/nautobot/issues/4171) - Added `TYPE_NOTES` and `TYPE_URL` to SecretsGroupSecretTypeChoices.
+- [#6923](https://github.com/nautobot/nautobot/issues/6923) - Added `AutoPopulateWidget` to support form fields with auto-population logic.
 - [#6998](https://github.com/nautobot/nautobot/issues/6998) - Added browser and backend caching for `/api/swagger` openapi endpoint to speed up Swagger and Redoc loading time.
 - [#7115](https://github.com/nautobot/nautobot/issues/7115) - Added bulk-edit support for the Relationship model.
 - [#7127](https://github.com/nautobot/nautobot/issues/7127) - Added Bulk Edit functionality for the ExportTemplate model.
