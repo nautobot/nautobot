@@ -269,7 +269,7 @@ class ApprovalWorkflowStageInstance(PrimaryModel):
                 approval_workflow_instance.current_state = ApprovalWorkflowStateChoices.DENIED
             # Check if all stages are approved
             approved_stages = approval_workflow_instance.filter(state=ApprovalWorkflowStateChoices.APPROVED)
-            if approved_stages.count() == self.approval_workflow.approval_workflow_stages.count():
+            if approved_stages.count() == approval_workflow_instance.approval_workflow.approval_workflow_stages.count():
                 approval_workflow_instance.current_state = ApprovalWorkflowStateChoices.APPROVED
             approval_workflow_instance.save()
 
