@@ -166,6 +166,42 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.7 (2025-04-14)
+
+### Added in v2.4.7
+
+- [#4171](https://github.com/nautobot/nautobot/issues/4171) - Added `TYPE_NOTES` and `TYPE_URL` to SecretsGroupSecretTypeChoices.
+- [#6998](https://github.com/nautobot/nautobot/issues/6998) - Added browser and backend caching for `/api/swagger` openapi endpoint to speed up Swagger and Redoc loading time.
+- [#7115](https://github.com/nautobot/nautobot/issues/7115) - Added bulk-edit support for the Relationship model.
+- [#7127](https://github.com/nautobot/nautobot/issues/7127) - Added Bulk Edit functionality for the ExportTemplate model.
+- [#7134](https://github.com/nautobot/nautobot/issues/7134) - Added bulk-edit support for the Manufacturer model.
+
+### Changed in v2.4.7
+
+- [#6753](https://github.com/nautobot/nautobot/issues/6753) - Removed indentation of child locations on location details page.
+- [#7114](https://github.com/nautobot/nautobot/issues/7114) - Changed "Locations" column in VLAN table to show `location.name` instead of `location.display` to avoid verbose location hierarchy.
+
+### Fixed in v2.4.7
+
+- [#5287](https://github.com/nautobot/nautobot/issues/5287) - Fixed text to be selectable on homepage panels.
+- [#6923](https://github.com/nautobot/nautobot/issues/6923) - Fixed auto populating position field when creating Module Bay from Device Type details and bulk creating from Devices or Modules list.
+- [#7101](https://github.com/nautobot/nautobot/issues/7101) - Fixed saving a new rack elevation view.
+- [#7108](https://github.com/nautobot/nautobot/issues/7108) - Fixed various cases where CustomField-related `provision_field` and `delete_custom_field_data` background tasks were unnecessarily triggered.
+- [#7108](https://github.com/nautobot/nautobot/issues/7108) - Added missing signal handler to remove custom field data from affected objects when `CustomField.content_types.clear()` is called.
+- [#7152](https://github.com/nautobot/nautobot/issues/7152) - Location.display now honors LOCATION_NAME_AS_NATURAL_KEY - meaning the display of location names will not render the full hierarchy, in places where only the name is relevant.
+
+### Housekeeping in v2.4.7
+
+- [#6923](https://github.com/nautobot/nautobot/issues/6923) - `forms.js` refactor of `initializeSlugField` to use common logic with auto populate field like Module Bay position.
+- [#7099](https://github.com/nautobot/nautobot/issues/7099) - Removed jQuery from documentation builds as it's not needed anymore for the ReadTheDocs version selection flyout menu.
+- [#7103](https://github.com/nautobot/nautobot/issues/7103) - Refactored ProviderNetwork model related UI views to use `UI component framework`.
+- [#7111](https://github.com/nautobot/nautobot/issues/7111) - Refactored Team model related UI views to use `UI component framework`.
+- [#7115](https://github.com/nautobot/nautobot/issues/7115) - Refactored Relationship model related UI views to use `NautobotUIViewSet`.
+- [#7127](https://github.com/nautobot/nautobot/issues/7127) - Refactored ExportTemplate model related UI views to use `NautobotUIViewSet` and `UI component framework`.
+- [#7130](https://github.com/nautobot/nautobot/issues/7130) - Refactored Contact model related UI views to use `UI component framework`.
+- [#7134](https://github.com/nautobot/nautobot/issues/7134) - Refactored Manufacturer model related UI views to use `NautobotUIViewSet` and `UI component framework`.
+- [#7144](https://github.com/nautobot/nautobot/issues/7144) - Refactored CloudAccount model related UI views to use `UI component framework`.
+
 ## v2.4.6 (2025-03-31)
 
 ### Security in v2.4.6
