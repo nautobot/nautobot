@@ -267,59 +267,46 @@
 
 {% block javascript %}
 <script>
-    var clipboard = new ClipboardJS('.btn');
+    const clipboard = new ClipboardJS('.btn');
+    clipboard.on('success', function (event) {});
+    clipboard.on('error', function (event) {});
 
-    clipboard.on('success', function (e) {});
-
-    clipboard.on('error', function (e) {});
-
-
-    // Set initial history state
-    if (location.pathname == "{{ object.get_absolute_url }}"){
-        var tab_id = "main";
-        var tab_url = location.origin + location.pathname
-        var query_string = location.search.replace("?", "")
-
-        if(query_string.includes("tab")){
-            query_params = query_string.split("&")
-
-            tab_query_string = query_params.find(params => params.startsWith("tab"))
-            tab_id = tab_query_string.split("=")[1]
-
-            query_string_excluding_tab = query_params.filter(params => !params.startsWith("tab"))
-            query_string = query_string_excluding_tab.join("&")
-        }
-
-        final_query_string = query_string ? "&" + query_string : ""
-
-        window.history.replaceState({id: tab_id}, document.title, `${tab_url}?tab=${tab_id}${final_query_string}`);
+    function show_tab(tab_id) {
+        const tabs = document.querySelectorAll(`.nav.nav-tabs a[href="${location.pathname}#${tab_id}"]`);
+        [...tabs].forEach(tab => (bootstrap.Tab.getInstance(tab) || new bootstrap.Tab(tab)).show());
     }
 
+    function switch_tab(tab_href, reload = false) {
+        const [tab_url, tab_id] = tab_href.split("#");
 
-    function switch_tab(tab_href, reload=false) {
-
-        let [tab_url, tab_id] = tab_href.split("#")
-
-        if (location.pathname != "{{ object.get_absolute_url }}")
-            window.location.href = `${tab_url}?tab=${tab_id}`;
-        else if (window.history.state["id"] != tab_id){
-            window.history.pushState({id: tab_id}, document.title, `${tab_url}?tab=${tab_id}`);
+        if (window.location.pathname !== '{{ object.get_absolute_url }}') {
+            window.location.href = `${tab_url}?${new URLSearchParams({ tab: tab_id })}`;
+        } else if (window.history.state.id !== tab_id) {
+            window.history.pushState({ id: tab_id }, document.title, `${tab_url}?${new URLSearchParams({ tab: tab_id })}`);
         }
 
         // If set, reload the page after asserting state.
-        reload && window.location.reload();
-    }
-
-    window.onpopstate = function(event) {
-        if(event) {
-            var tabLink = document.querySelector(`#tabs a[href="${location.pathname}#${event.state.id}"]`);
-            // Check if the tab link exists
-            if (tabLink) {
-                // click on the tab link
-                tabLink.click();
-            }
+        if (reload) {
+            window.location.reload();
         }
     }
+
+    // Set initial history state
+    if (window.location.pathname === '{{ object.get_absolute_url }}') {
+        const tab_url = window.location.origin + window.location.pathname
+        const search_params = new URLSearchParams(window.location.search);
+
+        const tab_id = search_params.has("tab") ? search_params.get('tab') : 'main';
+
+        const next_search_params = new URLSearchParams(search_params);
+        next_search_params.set('tab', tab_id);
+
+        window.history.replaceState({ id: tab_id }, document.title, `${tab_url}?${next_search_params}`);
+        show_tab(tab_id);
+    }
+
+    window.addEventListener('popstate', (event) => show_tab(event.state.id));
+
     document.addEventListener("DOMContentLoaded", function () {
         var collapseIcons = document.querySelectorAll('[data-bs-toggle="collapse"]');
         collapseIcons.forEach(function (button) {

@@ -1,6 +1,7 @@
 import '../scss/nautobot.scss';
 
 import * as bootstrap from 'bootstrap';
+window.bootstrap = bootstrap;
 
 import ClipboardJS from 'clipboard';
 window.ClipboardJS = ClipboardJS;
