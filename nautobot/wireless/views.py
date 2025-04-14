@@ -1,5 +1,4 @@
 from django.core.exceptions import ValidationError
-from django.utils.html import format_html
 from django_tables2 import RequestConfig
 
 from nautobot.core.templatetags import helpers
@@ -61,13 +60,6 @@ class RadioProfileUIViewSet(NautobotUIViewSet):
         return context
 
 
-class SupportedDataRateCustomFieldsPanel(ObjectFieldsPanel):
-    def render_key(self, key, value, context):
-        if key == "mcs_index":
-            return format_html("<span>Modulation and Coding Scheme (MCS) Index</span>")
-        return super().render_key(key, value, context)
-
-
 class SupportedDataRateUIViewSet(NautobotUIViewSet):
     queryset = SupportedDataRate.objects.all()
     filterset_class = SupportedDataRateFilterSet
@@ -78,7 +70,7 @@ class SupportedDataRateUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = SupportedDataRateBulkEditForm
     object_detail_content = ObjectDetailContent(
         panels=(
-            SupportedDataRateCustomFieldsPanel(
+            ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
