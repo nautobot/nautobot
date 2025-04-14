@@ -3,13 +3,13 @@
 from django.contrib.contenttypes.models import ContentType
 
 from nautobot.core.testing import APIViewTestCases
-from nautobot.dcim.models import Location, Manufacturer, Platform, PowerFeed
 from nautobot.data_validation.models import (
     MinMaxValidationRule,
     RegularExpressionValidationRule,
     RequiredValidationRule,
     UniqueValidationRule,
 )
+from nautobot.dcim.models import Location, Manufacturer, Platform, PowerFeed
 
 
 class RegularExpressionValidationRuleTest(APIViewTestCases.APIViewTestCase):

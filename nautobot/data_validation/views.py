@@ -20,7 +20,6 @@ from nautobot.core.views.mixins import (
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.extras.utils import get_base_template
 from nautobot.data_validation import filters, forms, tables
 from nautobot.data_validation.api import serializers
 from nautobot.data_validation.models import (
@@ -30,6 +29,7 @@ from nautobot.data_validation.models import (
     RequiredValidationRule,
     UniqueValidationRule,
 )
+from nautobot.extras.utils import get_base_template
 
 #
 # RegularExpressionValidationRules

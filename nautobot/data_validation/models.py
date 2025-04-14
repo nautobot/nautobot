@@ -87,6 +87,7 @@ class RegularExpressionValidationRule(ValidationRule):
     class Meta:
         """Model metadata for the RegularExpressionValidationRule model."""
 
+        db_table = "data_validation_regexrule"
         ordering = ("name",)
         unique_together = [["content_type", "field"]]
 
@@ -151,6 +152,7 @@ class MinMaxValidationRule(ValidationRule):
     class Meta:
         """Model metadata for the MinMaxValidationRule model."""
 
+        db_table = "data_validation_minmaxrule"
         ordering = ("name",)
         unique_together = [["content_type", "field"]]
 
@@ -209,6 +211,7 @@ class RequiredValidationRule(ValidationRule):
     class Meta:
         """Model metadata for the RequiredValidationRule model."""
 
+        db_table = "data_validation_requiredrule"
         ordering = ("name",)
         unique_together = [["content_type", "field"]]
 
@@ -262,6 +265,7 @@ class UniqueValidationRule(ValidationRule):
     class Meta:
         """Model metadata for the UniqueValidationRule model."""
 
+        db_table = "data_validation_uniquerule"
         ordering = ("name",)
         unique_together = [["content_type", "field"]]
 

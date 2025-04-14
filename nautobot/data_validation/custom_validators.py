@@ -23,10 +23,6 @@ from django.utils import timezone
 
 from nautobot.core.utils.data import render_jinja2
 from nautobot.core.utils.module_loading import import_modules_privately
-from nautobot.extras.datasources import ensure_git_repository
-from nautobot.extras.models import GitRepository
-from nautobot.extras.plugins import CustomValidator
-from nautobot.extras.registry import registry
 from nautobot.data_validation.models import (
     DataCompliance,
     MinMaxValidationRule,
@@ -35,6 +31,10 @@ from nautobot.data_validation.models import (
     UniqueValidationRule,
     validate_regex,
 )
+from nautobot.extras.datasources import ensure_git_repository
+from nautobot.extras.models import GitRepository
+from nautobot.extras.plugins import CustomValidator
+from nautobot.extras.registry import registry
 
 LOGGER = logging.getLogger(__name__)
 

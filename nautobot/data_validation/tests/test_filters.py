@@ -6,8 +6,6 @@ from django.contrib.contenttypes.models import ContentType
 
 from nautobot.circuits.models import Provider
 from nautobot.core.testing.filters import FilterTestCases
-from nautobot.dcim.models import Location, Manufacturer, Platform, PowerFeed, Rack
-from nautobot.extras.models import Tag
 from nautobot.data_validation.filters import (
     MinMaxValidationRuleFilterSet,
     RegularExpressionValidationRuleFilterSet,
@@ -20,6 +18,8 @@ from nautobot.data_validation.models import (
     RequiredValidationRule,
     UniqueValidationRule,
 )
+from nautobot.dcim.models import Location, Manufacturer, Platform, PowerFeed, Rack
+from nautobot.extras.models import Tag
 
 
 class ValidationRuleTestMixin:

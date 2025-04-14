@@ -15,13 +15,6 @@ from nautobot.core.forms import (
     TagFilterField,
 )
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
-from nautobot.extras.forms import (
-    NautobotBulkEditForm,
-    NautobotFilterForm,
-    NautobotModelForm,
-    TagsBulkEditFormMixin,
-)
-from nautobot.extras.utils import FeatureQuery
 from nautobot.data_validation.models import (
     DataCompliance,
     MinMaxValidationRule,
@@ -29,6 +22,13 @@ from nautobot.data_validation.models import (
     RequiredValidationRule,
     UniqueValidationRule,
 )
+from nautobot.extras.forms import (
+    NautobotBulkEditForm,
+    NautobotFilterForm,
+    NautobotModelForm,
+    TagsBulkEditFormMixin,
+)
+from nautobot.extras.utils import FeatureQuery
 
 #
 # RegularExpressionValidationRules

@@ -6,8 +6,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.http.request import QueryDict
 
 from nautobot.core.testing import TestCase, ViewTestCases
-from nautobot.dcim.models import Device, Location, LocationType, PowerFeed
-from nautobot.extras.models import Status
 from nautobot.data_validation.models import (
     DataCompliance,
     MinMaxValidationRule,
@@ -18,6 +16,8 @@ from nautobot.data_validation.models import (
 from nautobot.data_validation.tables import DataComplianceTableTab
 from nautobot.data_validation.tests.test_data_compliance_rules import TestFailedDataComplianceRule
 from nautobot.data_validation.views import DataComplianceObjectView
+from nautobot.dcim.models import Device, Location, LocationType, PowerFeed
+from nautobot.extras.models import Status
 
 
 class RegularExpressionValidationRuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):

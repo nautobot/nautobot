@@ -2,7 +2,6 @@
 
 from nautobot.apps.filters import NautobotFilterSet
 from nautobot.core.filters import ContentTypeMultipleChoiceFilter, SearchFilter
-from nautobot.extras.utils import FeatureQuery
 from nautobot.data_validation.models import (
     DataCompliance,
     MinMaxValidationRule,
@@ -10,6 +9,7 @@ from nautobot.data_validation.models import (
     RequiredValidationRule,
     UniqueValidationRule,
 )
+from nautobot.extras.utils import FeatureQuery
 
 
 class RegularExpressionValidationRuleFilterSet(NautobotFilterSet):

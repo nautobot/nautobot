@@ -2,10 +2,10 @@
 
 from django.test import TestCase
 
-from nautobot.dcim.models import Location, LocationType
-from nautobot.extras.models import Status
 from nautobot.data_validation.custom_validators import ComplianceError, DataComplianceRule
 from nautobot.data_validation.models import DataCompliance
+from nautobot.dcim.models import Location, LocationType
+from nautobot.extras.models import Status
 
 
 class TestFailedDataComplianceRule(DataComplianceRule):
