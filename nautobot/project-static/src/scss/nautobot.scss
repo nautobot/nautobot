@@ -579,12 +579,19 @@ $btn-variants: (
   padding-inline: #{map.get($spacers, 20)};
   position: relative;
 
-  .nav-item:not(:first-child) {
-    margin-inline-start: #{map.get($spacers, 8)};
+  .nav-item {
+    white-space: nowrap;
+
+    &:not(:first-child) {
+      margin-inline-start: #{map.get($spacers, 8)};
+    }
   }
 
   .nav-link {
+    align-items: center;
     cursor: pointer;
+    display: flex;
+    gap: map.get($spacers, 6);
 
     &:hover,
     &:focus {

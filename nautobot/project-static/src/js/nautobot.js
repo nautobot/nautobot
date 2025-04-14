@@ -26,7 +26,9 @@ window.$ = window.jQuery;
 import 'jquery-ui';
 import 'select2';
 
-document.addEventListener('DOMContentLoaded', function() {
+import { observeCollapseTabs } from './tabs';
+
+document.addEventListener('DOMContentLoaded', function () {
   // Tooltips
   // https://getbootstrap.com/docs/5.3/components/tooltips/#enable-tooltips
   [...document.querySelectorAll('[data-bs-toggle="tooltip"]')].forEach(tooltip => new bootstrap.Tooltip(tooltip));
@@ -44,8 +46,8 @@ document.addEventListener('DOMContentLoaded', function() {
     sidenav.classList.toggle('sidenav-collapsed', expanded)
   });
 
-  [...document.querySelectorAll('.sidenav-list-item')].forEach(sidenavListItem => {
-    sidenavListItem.addEventListener('click', (event) => {
+  [...document.querySelectorAll('.sidenav-list-item')].forEach((sidenavListItem) => {
+    sidenavListItem.addEventListener('click', () => {
       const controls = sidenavListItem.getAttribute('aria-controls');
       const expanded = sidenavListItem.getAttribute('aria-expanded') === 'true';
 
@@ -69,4 +71,18 @@ document.addEventListener('DOMContentLoaded', function() {
         : document.addEventListener('click', onClickDocument);
     });
   });
+
+  // Tabs
+  /*
+   * TODO(norbert-mieczkowski-codilime): listen for proper event type(s) to re-initialize collapse tabs observers when
+   *   htmx dynamic content reloading is implemented. Said re-initialization should be as simple as something like:
+   *   ```js
+   *   let unobserveCollapseTabs = observeCollapseTabs();
+   *   document.body.addEventListener('htmx:xhr:loadend', () => unobserveCollapseTabs());
+   *   document.body.addEventListener('htmx:load', () => {
+   *     unobserveCollapseTabs = observeCollapseTabs();
+   *   });
+   *   ```
+   */
+  let unobserveCollapseTabs = observeCollapseTabs();
 });
