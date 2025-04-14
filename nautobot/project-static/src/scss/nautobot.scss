@@ -889,17 +889,12 @@ body {
   }
 
   .sidenav-favorite-list {
-    //padding-block: 0.3125rem; /* 5px */
-    //padding-inline: #{map.get($spacers, 20)};
-    //width: $sidenav-link-width;
 
     li:last-child > .sidenav-link::before {
       background: none;
     }
 
     .sidenav-link {
-      //padding-block: 0.3125rem; /* 5px */
-      //padding-inline: #{map.get($spacers, 20)};
       padding-inline-start: map.get($spacers, 20);
       display: flex;
       flex-direction: column;
