@@ -1,5 +1,7 @@
 from django.db.models import Q
 from django_tables2 import RequestConfig
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from nautobot.circuits.models import Circuit
 from nautobot.circuits.tables import CircuitTable
@@ -31,6 +33,8 @@ from nautobot.cloud.forms import (
 )
 from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudResourceType, CloudService
 from nautobot.cloud.tables import CloudAccountTable, CloudNetworkTable, CloudResourceTypeTable, CloudServiceTable
+from nautobot.core.ui import object_detail
+from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.ipam.tables import PrefixTable
@@ -110,31 +114,76 @@ class CloudResourceTypeUIViewSet(NautobotUIViewSet):
     form_class = CloudResourceTypeForm
     bulk_update_form_class = CloudResourceTypeBulkEditForm
 
-    def get_extra_context(self, request, instance=None):
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=("name", "provider", "content_types", "description"),
+            ),
+            object_detail.ObjectTextPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                object_field="config_schema",
+                label="Config Schema",
+                render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+            ),
+        ),
+        extra_tabs=(
+            object_detail.DistinctViewTab(
+                weight=900,
+                tab_id="networks",
+                label="Cloud Networks",
+                url_name="cloud:cloudresourcetype_networks",
+                related_object_attribute="cloud_networks",
+            ),
+            object_detail.DistinctViewTab(
+                weight=1000,
+                tab_id="services",
+                label="Cloud Services",
+                url_name="cloud:cloudresourcetype_services",
+                related_object_attribute="cloud_services",
+            ),
+        ),
+    )
+
+    def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-
-            networks = instance.cloud_networks.restrict(request.user, "view")
-            networks_table = CloudNetworkTable(networks)
-            networks_table.columns.hide("cloud_resource_type")
-            RequestConfig(request, paginate).configure(networks_table)
-
-            services = instance.cloud_services.restrict(request.user, "view")
-            services_table = CloudServiceTable(services)
-            services_table.columns.hide("cloud_resource_type")
-            RequestConfig(request, paginate).configure(services_table)
-
-            context.update(
-                {
-                    "networks_count": networks.count(),
-                    "networks_table": networks_table,
-                    "services_count": services.count(),
-                    "services_table": services_table,
-                }
-            )
-
+        context.update({"object_detail_content": self.object_detail_content})
         return context
+
+    @action(detail=True, url_path="networks")
+    def networks(self, request, *args, **kwargs):
+        instance = self.get_object()
+        networks = instance.cloud_networks.restrict(request.user, "view")
+        networks_table = CloudNetworkTable(networks)
+        networks_table.columns.hide("cloud_resource_type")
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(networks_table)
+        return Response(
+            {
+                "networks_table": networks_table,
+                "active_tab": "networks",
+            }
+        )
+
+    @action(detail=True, url_path="services", url_name="services")
+    def services(self, request, *args, **kwargs):
+        instance = self.get_object()
+        services = instance.cloud_services.restrict(request.user, "view")
+        services_table = CloudServiceTable(services)
+        services_table.columns.hide("cloud_resource_type")
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(services_table)
+
+        return Response(
+            {
+                "services_table": services_table,
+                "active_tab": "cloudservices",
+            }
+        )
 
 
 class CloudServiceUIViewSet(NautobotUIViewSet):
