@@ -33,6 +33,7 @@ from nautobot.cloud.forms import (
 )
 from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudResourceType, CloudService
 from nautobot.cloud.tables import CloudAccountTable, CloudNetworkTable, CloudResourceTypeTable, CloudServiceTable
+from nautobot.core.tables import ButtonsColumn
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
@@ -125,9 +126,10 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
     def children(self, request, *args, **kwargs):
         instance = self.get_object()
         children = instance.children.restrict(request.user, "view")
-        children_table = CloudNetworkTable(children)
+        children_table = CloudNetworkTable(
+            data=children, extra_columns=[("actions", ButtonsColumn(model=CloudNetwork, buttons=("changelog",)))]
+        )
         children_table.columns.hide("parent")
-        children_table.columns.hide("actions")
         RequestConfig(
             request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
         ).configure(children_table)
@@ -178,7 +180,10 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
     def cloud_services(self, request, *args, **kwargs):
         instance = self.get_object()
         cloud_services = instance.cloud_services.restrict(request.user, "view")
-        cloud_services_table = CloudServiceTable(cloud_services)
+        cloud_services_table = CloudServiceTable(
+            data=cloud_services,
+            extra_columns=[("actions", ButtonsColumn(model=CloudService, return_url_extra="?tab=cloud_services"))],
+        )
         cloud_services_table.columns.hide("cloud_network_count")
         RequestConfig(
             request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
