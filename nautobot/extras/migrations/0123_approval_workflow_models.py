@@ -49,6 +49,7 @@ class Migration(migrations.Migration):
                 ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={
+                "ordering": ["name"],
                 "verbose_name": "Approval Workflow",
             },
             bases=(
@@ -98,6 +99,7 @@ class Migration(migrations.Migration):
                 "unique_together": {
                     ("approval_workflow", "object_under_review_content_type", "object_under_review_object_id")
                 },
+                "ordering": ["approval_workflow"],
             },
             bases=(
                 nautobot.extras.models.mixins.DynamicGroupMixin,

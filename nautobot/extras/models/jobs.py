@@ -47,7 +47,7 @@ from nautobot.extras.constants import (
 )
 from nautobot.extras.managers import JobResultManager, ScheduledJobsManager
 from nautobot.extras.models import ChangeLoggedModel, GitRepository
-from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin
+from nautobot.extras.models.mixins import ApprovalWorkflowMixin, ContactMixin, DynamicGroupsModelMixin, NotesMixin
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
@@ -83,7 +83,7 @@ JOB_RESULT_METRIC = Histogram(
     "job_results",
     "webhooks",
 )
-class Job(PrimaryModel):
+class Job(ApprovalWorkflowMixin, PrimaryModel):
     """
     Database model representing an installed Job class.
     """
@@ -1087,7 +1087,7 @@ class ScheduledJobs(models.Model):
             return None
 
 
-class ScheduledJob(BaseModel):
+class ScheduledJob(ApprovalWorkflowMixin, BaseModel):
     """Model representing a periodic task."""
 
     name = models.CharField(

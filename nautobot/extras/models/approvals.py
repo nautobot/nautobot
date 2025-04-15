@@ -45,6 +45,7 @@ class ApprovalWorkflow(PrimaryModel):
         """Meta class for ApprovalWorkflow."""
 
         verbose_name = "Approval Workflow"
+        ordering = ["name"]
 
     def __str__(self):
         """Stringify instance."""
@@ -138,6 +139,7 @@ class ApprovalWorkflowInstance(PrimaryModel):
 
         verbose_name = "Approval Workflow Instance"
         unique_together = ["approval_workflow", "object_under_review_content_type", "object_under_review_object_id"]
+        ordering = ["approval_workflow"]
 
     def __str__(self):
         """Stringify instance."""
@@ -173,7 +175,8 @@ class ApprovalWorkflowInstance(PrimaryModel):
             self.current_state = ApprovalWorkflowStateChoices.DENIED
         # Check if all stages are approved
         approved_stages = self.approval_workflow_stage_instances.filter(state=ApprovalWorkflowStateChoices.APPROVED)
-        if approved_stages.count() == self.approval_workflow.approval_workflow_stages.count():
+        approval_workflow_stage_count = self.approval_workflow.approval_workflow_stages.count()
+        if approval_workflow_stage_count and approved_stages.count() == approval_workflow_stage_count:
             self.current_state = ApprovalWorkflowStateChoices.APPROVED
         super().save(*args, **kwargs)
 

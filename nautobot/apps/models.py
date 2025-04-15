@@ -45,6 +45,7 @@ from nautobot.extras.models import (
     StatusModel,
 )
 from nautobot.extras.models.mixins import (
+    ApprovalWorkflowMixin,
     ContactMixin,
     DynamicGroupMixin,
     DynamicGroupsModelMixin,
@@ -59,6 +60,7 @@ from nautobot.ipam.models import get_default_namespace, get_default_namespace_pk
 from nautobot.nautobot_data_validation_engine.custom_validators import ComplianceError, DataComplianceRule
 
 __all__ = (
+    "ApprovalWorkflowMixin",
     "AttributeSetter",
     "AutoSlugField",
     "BaseManager",
