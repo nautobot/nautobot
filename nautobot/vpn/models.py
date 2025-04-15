@@ -78,11 +78,6 @@ class VPNProfile(PrimaryModel):  # pylint: disable=too-many-ancestors
         """Stringify instance."""
         return self.name
 
-    @property
-    def priority_ph1_policy(self):
-        # TODO add trough-table with weight.
-        return "return with highest prio"
-
 
 @extras_features(
     "custom_links",
@@ -358,10 +353,9 @@ class VPNTunnel(PrimaryModel):  # pylint: disable=too-many-ancestors
 
     def clean(self):
         if self.endpoint_a and self.endpoint_z and self.endpoint_a == self.endpoint_z:
-            raise ValidationError(
-                "EndPoint A and EndPoint Z cannot be the same."
-            )
+            raise ValidationError("EndPoint A and EndPoint Z cannot be the same.")
         return super().clean()
+
 
 @extras_features(
     "custom_links",
@@ -380,6 +374,14 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
         blank=True,
         null=True,
         verbose_name="VPN Profile",
+    )
+    device = models.ForeignKey(
+        to="dcim.Device",
+        on_delete=models.CASCADE,
+        related_name="vpn_tunnel_endpoints",
+        blank=True,
+        null=True,  # TODO change to False
+        verbose_name="Device",
     )
     source_interface = models.OneToOneField(
         to="dcim.Interface",
@@ -452,8 +454,7 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
     @property
     def name(self):
         """Name property."""
-        arrow = "\u2192"
-        device_intf = f"{self.source_interface.device.name} {arrow} {self.source_interface.name}"
+        device_intf = f"{self.source_interface.device.name} {self.source_interface.name}"
         if self.source_ipaddress:
             return f"{device_intf}({self.source_ipaddress.address})"
         return device_intf

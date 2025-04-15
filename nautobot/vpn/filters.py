@@ -190,6 +190,16 @@ class VPNTunnelEndpointFilterSet(NautobotFilterSet):  # pylint: disable=too-many
             "destination_fqdn": "icontains",
         }
     )
+    endpoint_a_vpn_tunnels = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.VPNTunnel.objects.all(),
+        to_field_name="name",
+        label="Endpoint A",
+    )
+    endpoint_z_vpn_tunnels = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.VPNTunnel.objects.all(),
+        to_field_name="name",
+        label="Endpoint Z",
+    )
 
     class Meta:
         """Meta attributes for filter."""
