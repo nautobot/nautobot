@@ -46,7 +46,7 @@ def group_sync(uid, user=None, response=None, *args, **kwargs):
         if GROUPS_SCOPE:
             group_memberships = [x for x in sso_memberships if x in GROUPS_SCOPE]
         else:
-            groups_memberships = sso_memberships
+            group_memberships = sso_memberships
         sync_user(user, group_memberships)
     # if groups are not coming via userinfo, try to fetch from JWT id_token claim
     elif user and response and CLAIMS_GROUP_NAME and not response.get(CLAIMS_GROUP_NAME, False):
@@ -70,7 +70,7 @@ def group_sync(uid, user=None, response=None, *args, **kwargs):
         if GROUPS_SCOPE:
             group_memberships = [x for x in sso_memberships if x in GROUPS_SCOPE]
         else:
-            groups_memberships = sso_memberships
+            group_memberships = sso_memberships
         sync_user(user, group_memberships)
     else:
         logger.debug(f"Did not receive groups from OAuth2/OIDC, response: {response}")
