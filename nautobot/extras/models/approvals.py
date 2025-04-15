@@ -131,11 +131,13 @@ class ApprovalWorkflowInstance(PrimaryModel):
         default=ApprovalWorkflowStateChoices.PENDING,
         help_text="Current state of the approval workflow instance. Eligible values are: Pending, Approved, Denied.",
     )
+    documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
 
     class Meta:
         """Meta class for ApprovalWorkflowInstance."""
 
         verbose_name = "Approval Workflow Instance"
+        unique_together = ["approval_workflow", "object_under_review_content_type", "object_under_review_object_id"]
 
     def __str__(self):
         """Stringify instance."""
@@ -149,9 +151,11 @@ class ApprovalWorkflowInstance(PrimaryModel):
         Returns:
             ApprovalWorkflowStageInstance: The current stage of the workflow.
         """
-        first_nonapproved_stage = self.approval_workflow_stage_instances.filter(
-            state__n=ApprovalWorkflowStateChoices.APPROVED
-        ).first()
+        first_nonapproved_stage = (
+            self.approval_workflow_stage_instances.exclude(state=ApprovalWorkflowStateChoices.APPROVED)
+            .order_by("approval_workflow_stage__weight")
+            .first()
+        )
         return first_nonapproved_stage
 
     def save(self, *args, **kwargs):
@@ -214,6 +218,7 @@ class ApprovalWorkflowStageInstance(PrimaryModel):
         """Meta class for ApprovalWorkflowStageInstance."""
 
         verbose_name = "Approval Workflow Stage Instance"
+        unique_together = [["approval_workflow_instance", "approval_workflow_stage"]]
 
     def __str__(self):
         """Stringify instance."""
@@ -268,7 +273,9 @@ class ApprovalWorkflowStageInstance(PrimaryModel):
             if denied_stages.exists():
                 approval_workflow_instance.current_state = ApprovalWorkflowStateChoices.DENIED
             # Check if all stages are approved
-            approved_stages = approval_workflow_instance.filter(state=ApprovalWorkflowStateChoices.APPROVED)
+            approved_stages = approval_workflow_instance.approval_workflow_stage_instances.filter(
+                state=ApprovalWorkflowStateChoices.APPROVED
+            )
             if approved_stages.count() == approval_workflow_instance.approval_workflow.approval_workflow_stages.count():
                 approval_workflow_instance.current_state = ApprovalWorkflowStateChoices.APPROVED
             approval_workflow_instance.save()
@@ -323,16 +330,11 @@ class ApprovalWorkflowStageInstanceResponse(BaseModel):
             *args: positional arguments
             **kwargs: keyword arguments
         """
-        previous_state = self.state
         super().save(*args, **kwargs)
         # Call save() on the parent ApprovalWorkflowStageInstance to potentially update its state as well
         # If this stage is approved or denied and the state has just been updated.
-        if (
-            self.state
-            in [
-                ApprovalWorkflowStateChoices.APPROVED,
-                ApprovalWorkflowStateChoices.DENIED,
-            ]
-            and previous_state != self.state
-        ):
+        if self.state in [
+            ApprovalWorkflowStateChoices.APPROVED,
+            ApprovalWorkflowStateChoices.DENIED,
+        ]:
             self.approval_workflow_stage_instance.save()

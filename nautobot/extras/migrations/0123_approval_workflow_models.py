@@ -95,6 +95,9 @@ class Migration(migrations.Migration):
             ],
             options={
                 "verbose_name": "Approval Workflow Instance",
+                "unique_together": {
+                    ("approval_workflow", "object_under_review_content_type", "object_under_review_object_id")
+                },
             },
             bases=(
                 nautobot.extras.models.mixins.DynamicGroupMixin,
@@ -187,6 +190,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 "verbose_name": "Approval Workflow Stage Instance",
+                "unique_together": {("approval_workflow_instance", "approval_workflow_stage")},
             },
             bases=(
                 nautobot.extras.models.mixins.DynamicGroupMixin,
