@@ -1,4 +1,5 @@
 from django.db.models import Q
+from django.urls import reverse
 from django_tables2 import RequestConfig
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -33,6 +34,7 @@ from nautobot.cloud.forms import (
 )
 from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudResourceType, CloudService
 from nautobot.cloud.tables import CloudAccountTable, CloudNetworkTable, CloudResourceTypeTable, CloudServiceTable
+from nautobot.core.tables import ButtonsColumn
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
@@ -156,32 +158,40 @@ class CloudResourceTypeUIViewSet(NautobotUIViewSet):
     def networks(self, request, *args, **kwargs):
         instance = self.get_object()
         networks = instance.cloud_networks.restrict(request.user, "view")
-        networks_table = CloudNetworkTable(networks)
+        networks_table = CloudNetworkTable(
+            data=networks,
+            extra_columns=[("actions", ButtonsColumn(model=CloudNetwork, return_url_extra="?tab=networks"))],
+        )
         networks_table.columns.hide("cloud_resource_type")
         RequestConfig(
             request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
         ).configure(networks_table)
+        network_url = reverse("cloud:cloudnetwork_add")
+        network_table_add_url = f"{network_url}?cloud_resource_type={instance.id}"
         return Response(
-            {
-                "networks_table": networks_table,
-                "active_tab": "networks",
-            }
+            {"networks_table": networks_table, "active_tab": "networks", "network_table_add_url": network_table_add_url}
         )
 
     @action(detail=True, url_path="services", url_name="services")
     def services(self, request, *args, **kwargs):
         instance = self.get_object()
         services = instance.cloud_services.restrict(request.user, "view")
-        services_table = CloudServiceTable(services)
+        services_table = CloudServiceTable(
+            data=services,
+            extra_columns=[("actions", ButtonsColumn(model=CloudService, return_url_extra="?tab=services"))],
+        )
         services_table.columns.hide("cloud_resource_type")
         RequestConfig(
             request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
         ).configure(services_table)
+        service_url = reverse("cloud:cloudservice_add")
+        service_table_add_url = f"{service_url}?cloud_resource_type={instance.id}"
 
         return Response(
             {
                 "services_table": services_table,
                 "active_tab": "cloudservices",
+                "service_table_add_url": service_table_add_url,
             }
         )
 

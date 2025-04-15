@@ -1,11 +1,9 @@
 {% extends 'cloud/cloudresourcetype_retrieve.html' %}
- 
 {% block title %}{{ block.super }} - Cloud Networks {% endblock %}
- 
 {% block content %}
     <div class="row">
         <div class="col-md-12">
-            {% include 'utilities/obj_table.html' with table=networks_table table_template='panel_table.html' heading='Cloud Networks' %}
+            {% include 'utilities/obj_table.html' with table=networks_table table_template='panel_table.html' add_obj_url=network_table_add_url heading='Cloud Networks' %}
         </div>
     </div>
 {% endblock %}
