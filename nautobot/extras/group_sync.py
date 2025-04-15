@@ -40,14 +40,12 @@ def sync_user(user, group_memberships):
 
 def group_sync(uid, user=None, response=None, *args, **kwargs):
     """Sync the users groups from OAuth2/OIDC auth and set staff/superuser as appropriate."""
-    # if GROUPS FILTER is not set, by default join STAFF and SUSER
-    if not GROUPS_SCOPE:
-        groups_filter = SUPERUSER_GROUPS.extend(STAFF_GROUPS)
-    else:
-        groups_filter = GROUPS_SCOPE
     if user and response and CLAIMS_GROUP_NAME and response.get(CLAIMS_GROUP_NAME, False):
         sso_memberships = response.get(CLAIMS_GROUP_NAME)
-        group_memberships = [x for x in sso_memberships if x in groups_filter]
+        if GROUPS_SCOPE:
+            group_memberships = [x for x in sso_memberships if x in GROUPS_SCOPE]
+        else:
+            groups_memberships = sso_memberships
         sync_user(user, group_memberships)
     # if groups are not coming via userinfo, try to fetch from JWT id_token claim
     elif user and response and CLAIMS_GROUP_NAME and not response.get(CLAIMS_GROUP_NAME, False):
@@ -61,7 +59,10 @@ def group_sync(uid, user=None, response=None, *args, **kwargs):
         if not sso_memberships:
             logger.debug(f"Did not receive groups from OAuth2/OIDC, id_token: {id_token}")
             return
-        group_memberships = [x for x in sso_memberships if x in groups_filter]
+        if GROUPS_SCOPE:
+            group_memberships = [x for x in sso_memberships if x in GROUPS_SCOPE]
+        else:
+            groups_memberships = sso_memberships
         sync_user(user, group_memberships)
     else:
         logger.debug(f"Did not receive groups from OAuth2/OIDC, response: {response}")
