@@ -9,23 +9,27 @@ from django.contrib.auth import get_user_model
 from kombu.utils.uuid import uuid
 
 from nautobot.core.branching import BranchContext
+from nautobot.extras.models.jobs import JOB_LOGS
 
 
 class NautobotTask(Task):
     """Nautobot extensions to tasks for integrating with Job machinery."""
 
     def before_start(self, task_id, args, kwargs):
+        super().before_start(task_id, args, kwargs)
         User = get_user_model()
         user_id = self.request.properties.get("nautobot_job_user_id", None)
         self._nautobot_branch_context = BranchContext(
             branch_name=self.request.properties.get("nautobot_job_branch_name", None),
             user=User.objects.get(id=user_id) if user_id else None,
+            using=["default", JOB_LOGS],
         )
         self._nautobot_branch_context.__enter__()
 
     def after_return(self, status, retval, task_id, args, kwargs, einfo):
         self._nautobot_branch_context.__exit__(None, None, None)  # TODO: good enough?
         delattr(self, "_nautobot_branch_context")
+        super().after_return(status, retval, task_id, args, kwargs, einfo)
 
     def apply_async(
         self,

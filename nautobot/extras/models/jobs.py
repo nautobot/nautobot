@@ -22,7 +22,6 @@ from django_celery_beat.tzcrontab import TzAwareCrontab
 from prometheus_client import Histogram
 from timezone_field import TimeZoneField
 
-from nautobot.core.branching import BranchContext
 from nautobot.core.celery import (
     app,
     NautobotKombuJSONEncoder,
@@ -984,12 +983,7 @@ class JobResult(BaseModel, CustomFieldModel):
         if not self.use_job_logs_db or not JOB_LOGS:
             log.save()
         else:
-            # When version-control is enabled, we need to be sure that the logs are written to the correct branch,
-            # but do NOT create a separate Commit for every such log entry. We'll commit when the job completes.
-            with BranchContext(
-                branch_name=self.celery_kwargs.get("nautobot_job_branch_name", None), using=JOB_LOGS, autocommit=False
-            ):
-                log.save(using=JOB_LOGS)
+            log.save(using=JOB_LOGS)
 
 
 #

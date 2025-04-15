@@ -811,14 +811,14 @@ class GitRepositoryTable(BaseTable):
 
     def render_last_sync_time(self, record):
         if hasattr(self, "context"):
-            if record.name in self.context.get("job_results", {}):  # pylint: disable=no-member
-                return self.context["job_results"][record.name].date_done  # pylint: disable=no-member
+            if record.name in self.context.get("job_results", {}):
+                return self.context["job_results"][record.name].date_done
         return self.default
 
     def render_last_sync_user(self, record):
         if hasattr(self, "context"):
-            if record.name in self.context.get("job_results", {}):  # pylint: disable=no-member
-                user = self.context["job_results"][record.name].user  # pylint: disable=no-member
+            if record.name in self.context.get("job_results", {}):
+                user = self.context["job_results"][record.name].user
                 return user
         return self.default
 
