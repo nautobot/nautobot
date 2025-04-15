@@ -32,9 +32,7 @@ from nautobot.core.forms import restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query, serialize_object_v2
 from nautobot.core.tables import ButtonsColumn
-from nautobot.core.templatetags.helpers import pre_tag
 from nautobot.core.templatetags import helpers
-from nautobot.core.templatetags.helpers import pre_tag
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectTextPanel
@@ -3073,7 +3071,7 @@ class WebhookHTTPFieldsPanel(ObjectFieldsPanel):
     def render_value(self, key, value, context):
         """Overrides 'additional_headers' rendering as preformatted text; defaults for others."""
         if key == "additional_headers":
-            return pre_tag(value)
+            return helpers.pre_tag(value)
 
         return super().render_value(key, value, context)
 
