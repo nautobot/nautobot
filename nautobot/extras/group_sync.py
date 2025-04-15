@@ -22,6 +22,7 @@ SUPERUSER_GROUPS = getattr(settings, "SSO_SUPERUSER_GROUPS", [])
 STAFF_GROUPS = getattr(settings, "SSO_STAFF_GROUPS", [])
 GROUPS_SCOPE = getattr(settings, "SSO_GROUPS_FILTER", [])
 
+
 def sync_user(user, group_memberships):
     logger.debug(f"Adding user {user.id} as a member of {', '.join(group_memberships)}")
     # Make sure all groups exist in Nautobot
@@ -38,6 +39,7 @@ def sync_user(user, group_memberships):
     user.is_superuser = is_superuser
     user.is_staff = is_staff
     user.save()
+
 
 def group_sync(uid, user=None, response=None, *args, **kwargs):
     """Sync the users groups from OAuth2/OIDC auth and set staff/superuser as appropriate."""
