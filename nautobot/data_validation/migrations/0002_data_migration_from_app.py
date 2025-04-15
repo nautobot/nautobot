@@ -22,7 +22,7 @@ def update_data_validation_engine_git_repo_contents(apps, schema_editor):
     for repo in GitRepository.objects.all():
         if "nautobot_data_validation_engine.data_compliance_rules" in repo.provided_contents:
             repo.provided_contents.remove("nautobot_data_validation_engine.data_compliance_rules")
-            repo.provided_contents.append("data_validation.data_compliance_rules")
+            repo.provided_contents.append("data_validation.data_compliance_rule")
             repo.save()
 
 
@@ -153,8 +153,8 @@ def revert_data_validation_engine_git_repo_contents(apps, schema_editor):
     """
     GitRepository = apps.get_model("extras", "gitrepository")
     for repo in GitRepository.objects.all():
-        if "data_validation.data_compliance_rules" in repo.provided_contents:
-            repo.provided_contents.remove("data_validation.data_compliance_rules")
+        if "data_validation.data_compliance_rule" in repo.provided_contents:
+            repo.provided_contents.remove("data_validation.data_compliance_rule")
             repo.provided_contents.append("nautobot_data_validation_engine.data_compliance_rules")
             repo.save()
 

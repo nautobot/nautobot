@@ -141,7 +141,7 @@ class BaseValidator(CustomValidator):
             compliance_class(obj).clean()
 
         for repo in GitRepository.objects.filter(
-            provided_contents__contains="nautobot.data_validation.data_compliance_rule"  # TODO(john): data migration for this? used to be data_validation_engine.data_compliance_rules
+            provided_contents__contains="data_validation.data_compliance_rule"
         ):
             for compliance_class in get_data_compliance_classes_from_git_repo(repo):
                 if (
