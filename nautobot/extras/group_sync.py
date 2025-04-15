@@ -22,7 +22,7 @@ STAFF_GROUPS = getattr(settings, "SSO_STAFF_GROUPS", [])
 GROUPS_SCOPE = getattr(settings, "SSO_GROUPS_FILTER", [])
 
 def sync_user(user, group_memberships):
-    logger.debug(f"Adding user {uid} as a member of {', '.join(group_memberships)}")
+    logger.debug(f"Adding user {user.id} as a member of {', '.join(group_memberships)}")
     # Make sure all groups exist in Nautobot
     is_staff = False
     is_superuser = False
