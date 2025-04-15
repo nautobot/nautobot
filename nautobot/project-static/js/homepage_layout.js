@@ -52,9 +52,18 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Function to handle the start of a drag event
     function handleDragStart(e) {
-        e.dataTransfer.clearData("text/plain");
-        e.dataTransfer.setData("text/plain", e.target.id);
-        e.target.classList.add("dragging");
+
+        // Get the element the user clicked on
+        const clickedElement = document.elementFromPoint(e.clientX, e.clientY);
+
+        // Only allow drag if the handle is in the panel-heading
+        if (!clickedElement || !clickedElement.closest(".panel-heading")) {
+            e.preventDefault();
+            return;
+        }
+            e.dataTransfer.clearData("text/plain");
+            e.dataTransfer.setData("text/plain", e.target.id);
+            e.target.classList.add("dragging");
     }
 
     function handleDragEnd(e) {

@@ -51,6 +51,16 @@ class CloudAccountUIViewSet(NautobotUIViewSet):
     table_class = CloudAccountTable
     form_class = CloudAccountForm
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+        )
+    )
+
 
 class CloudNetworkUIViewSet(NautobotUIViewSet):
     queryset = CloudNetwork.objects.all()
