@@ -764,6 +764,7 @@ class InterfaceTypeChoices(ChoiceSet):
     TYPE_VIRTUAL = "virtual"
     TYPE_BRIDGE = "bridge"
     TYPE_LAG = "lag"
+    TYPE_TUNNEL = "tunel"
 
     # Ethernet
     TYPE_100ME_FX = "100base-fx"
@@ -932,6 +933,7 @@ class InterfaceTypeChoices(ChoiceSet):
                 (TYPE_VIRTUAL, "Virtual"),
                 (TYPE_BRIDGE, "Bridge"),
                 (TYPE_LAG, "Link Aggregation Group (LAG)"),
+                (TYPE_TUNNEL, "Tunnel"),
             ),
         ),
         (

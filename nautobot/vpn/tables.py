@@ -231,7 +231,6 @@ class VPNTable(RoleTableMixin, BaseTable):
             "vpn_id",
             "tenant",
             "role",
-            # "contact_associations_count",
         )
         # TODO INIT Add or Remove the columns below to change the list view default columns.
         default_columns = (
@@ -243,7 +242,6 @@ class VPNTable(RoleTableMixin, BaseTable):
             "vpn_id",
             "tenant",
             "role",
-            # "contact_associations_count",
             "actions",
         )
         order_by = ["name"]
@@ -302,7 +300,10 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
 
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
+    device = tables.Column(linkify=True)
     source_interface = tables.Column(linkify=True)
+    source_ipaddress = tables.Column(linkify=True)
+    tunnel_interface = tables.Column(linkify=True)
     protected_prefixes_dg_count = LinkedCountColumn(
         viewname="extras:dynamicgroup_list",
         verbose_name="Dynamic Group",
@@ -326,8 +327,10 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
             "pk",
             "name",
             "vpn_profile",
-            "source_ipaddress",
+            "device",
             "source_interface",
+            "source_ipaddress",
+            "tunnel_interface",
             "destination_ipaddress",
             "destination_fqdn",
             "protected_prefixes_dg_count",
@@ -340,8 +343,10 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
             "pk",
             "name",
             "vpn_profile",
-            "source_ipaddress",
+            "device",
             "source_interface",
+            "source_ipaddress",
+            "tunnel_interface",
             "destination_ipaddress",
             "destination_fqdn",
             "protected_prefixes_dg_count",

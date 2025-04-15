@@ -18,6 +18,7 @@ from nautobot.apps.forms import (
     TagFilterField,
     TagsBulkEditFormMixin,
 )
+from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import DynamicGroup
 from nautobot.ipam.models import IPAddress, Prefix
@@ -353,10 +354,11 @@ class VPNTunnelFilterForm(NautobotFilterForm, TenancyFilterForm):  # pylint: dis
 
 class VPNTunnelEndpointForm(NautobotModelForm):  # pylint: disable=too-many-ancestors
     """Form for creating and updating VPNTunnelEndpoint."""
+
     device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
-        required=False,
-        label="Device (filter)",
+        required=True,
+        label="Device",
     )
     source_interface = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
@@ -378,6 +380,21 @@ class VPNTunnelEndpointForm(NautobotModelForm):  # pylint: disable=too-many-ance
         queryset=IPAddress.objects.all(),
         required=False,
         label="Destination IP Address",
+    )
+    tunnel_device = DynamicModelChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+        label="Tunnel Device (filter)",
+    )
+    tunnel_interface = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+        label="Tunnel Interface",
+        query_params={
+            "device": "$tunnel_device",
+            "type": InterfaceTypeChoices.TYPE_TUNNEL,
+        },
+        help_text="Interface must be of type Tunnel",
     )
     protected_prefixes_dg = DynamicModelMultipleChoiceField(
         queryset=DynamicGroup.objects.all(),
@@ -403,6 +420,7 @@ class VPNTunnelEndpointForm(NautobotModelForm):  # pylint: disable=too-many-ance
             "source_ipaddress",
             "destination_ipaddress",
             "destination_fqdn",
+            "tunnel_device",
             "tunnel_interface",
             "protected_prefixes_dg",
             "protected_prefixes",
