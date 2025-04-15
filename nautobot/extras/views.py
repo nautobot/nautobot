@@ -32,6 +32,7 @@ from nautobot.core.forms import restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query, serialize_object_v2
 from nautobot.core.tables import ButtonsColumn
+from nautobot.core.templatetags.helpers import pre_tag
 from nautobot.core.templatetags import helpers
 from nautobot.core.templatetags.helpers import pre_tag
 from nautobot.core.ui import object_detail
