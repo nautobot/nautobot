@@ -5,6 +5,7 @@ import logging
 from django.conf import settings
 from django.contrib.auth.models import Group
 import jwt
+from jwt.exceptions import DecodeError
 from social_django.models import UserSocialAuth
 
 logger = logging.getLogger(__name__)
@@ -52,9 +53,16 @@ def group_sync(uid, user=None, response=None, *args, **kwargs):
         sso_user = UserSocialAuth.objects.filter(user=user).first()
         try:
             id_token = sso_user.extra_data.get("id_token", False)
+            provider = user.social_auth.values()[0].get("provider").upper()
         except AttributeError:
             logger.debug(f"User {uid} not synced from SSO or extra_data not present.")
-        decoded_id_token = jwt.decode(id_token, options={"verify_signature": False})
+        except IndexError:
+            logger.debug(f"User {uid} is a local or non-existent user")
+        verify_ssl = getattr(settings, f"SOCIAL_AUTH_{provider}_VERIFY_SSL", True)
+        try:
+            decoded_id_token = jwt.decode(id_token, options={"verify_signature": verify_ssl})
+        except DecodeError as err:
+            logger.debug(f"Unable to decode User {uid} JWT Id Token, {err}")
         sso_memberships = decoded_id_token.get(CLAIMS_GROUP_NAME, False)
         if not sso_memberships:
             logger.debug(f"Did not receive groups from OAuth2/OIDC, id_token: {id_token}")
