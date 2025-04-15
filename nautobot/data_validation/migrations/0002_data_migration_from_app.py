@@ -71,6 +71,7 @@ def copy_app_data_to_core_data(apps, schema_editor):
         old_ct = ContentType.objects.get(app_label="nautobot_data_validation_engine", model="minmaxvalidationrule")
         new_ct = ContentType.objects.get_for_model(apps.get_model("data_validation", "minmaxvalidationrule"))
         migrate_content_type_references_to_new_model(apps, old_ct, new_ct)
+        schema_editor.execute("DELETE FROM nautobot_data_validation_engine_minmaxvalidationrule;")
 
     if "nautobot_data_validation_engine_regularexpressionvalidationrule" in table_names:
         print("  Migrating Nautobot Data Validation Engine RegularExpressionValidationRule records...")
@@ -87,6 +88,7 @@ def copy_app_data_to_core_data(apps, schema_editor):
         )
         new_ct = ContentType.objects.get_for_model(apps.get_model("data_validation", "regularexpressionvalidationrule"))
         migrate_content_type_references_to_new_model(apps, old_ct, new_ct)
+        schema_editor.execute("DELETE FROM nautobot_data_validation_engine_regularexpressionvalidationrule;")
 
     if "nautobot_data_validation_engine_requiredvalidationrule" in table_names:
         print("  Migrating Nautobot Data Validation Engine RequiredValidationRule records...")
@@ -101,6 +103,7 @@ def copy_app_data_to_core_data(apps, schema_editor):
         old_ct = ContentType.objects.get(app_label="nautobot_data_validation_engine", model="requiredvalidationrule")
         new_ct = ContentType.objects.get_for_model(apps.get_model("data_validation", "requiredvalidationrule"))
         migrate_content_type_references_to_new_model(apps, old_ct, new_ct)
+        schema_editor.execute("DELETE FROM nautobot_data_validation_engine_requiredvalidationrule;")
 
     if "nautobot_data_validation_engine_uniquevalidationrule" in table_names:
         print("  Migrating Nautobot Data Validation Engine UniqueValidationRule records...")
@@ -115,6 +118,7 @@ def copy_app_data_to_core_data(apps, schema_editor):
         old_ct = ContentType.objects.get(app_label="nautobot_data_validation_engine", model="uniquevalidationrule")
         new_ct = ContentType.objects.get_for_model(apps.get_model("data_validation", "uniquevalidationrule"))
         migrate_content_type_references_to_new_model(apps, old_ct, new_ct)
+        schema_editor.execute("DELETE FROM nautobot_data_validation_engine_uniquevalidationrule;")
 
     if "nautobot_data_validation_engine_datacompliance" in table_names:
         print("  Migrating Nautobot Data Validation Engine DataCompliance records...")
@@ -131,6 +135,7 @@ def copy_app_data_to_core_data(apps, schema_editor):
         old_ct = ContentType.objects.get(app_label="nautobot_data_validation_engine", model="datacompliance")
         new_ct = ContentType.objects.get_for_model(apps.get_model("data_validation", "datacompliance"))
         migrate_content_type_references_to_new_model(apps, old_ct, new_ct)
+        schema_editor.execute("DELETE FROM nautobot_data_validation_engine_datacompliance;")
 
 
 def revert_data_validation_engine_job_module_name(apps, schema_editor):
@@ -169,8 +174,10 @@ def copy_core_data_to_app_data(apps, schema_editor):
             "FROM data_validation_minmaxrule;"
         )
         new_ct = ContentType.objects.get(app_label="nautobot_data_validation_engine", model="minmaxvalidationrule")
-        old_ct = ContentType.objects.get_for_model(apps.get_model("data_validation", "minmaxvalidationrule"))
+        MinMaxValidationRule = apps.get_model("data_validation", "minmaxvalidationrule")
+        old_ct = ContentType.objects.get_for_model(MinMaxValidationRule)
         migrate_content_type_references_to_new_model(apps, old_ct, new_ct)
+        MinMaxValidationRule.objects.all().delete()
 
     if "nautobot_data_validation_engine_regularexpressionvalidationrule" in table_names:
         print("  Migrating Nautobot Data Validation Engine RegularExpressionValidationRule records...")
@@ -185,8 +192,10 @@ def copy_core_data_to_app_data(apps, schema_editor):
         new_ct = ContentType.objects.get(
             app_label="nautobot_data_validation_engine", model="regularexpressionvalidationrule"
         )
-        old_ct = ContentType.objects.get_for_model(apps.get_model("data_validation", "regularexpressionvalidationrule"))
+        RegularExpressionValidationRule = apps.get_model("data_validation", "regularexpressionvalidationrule")
+        old_ct = ContentType.objects.get_for_model(RegularExpressionValidationRule)
         migrate_content_type_references_to_new_model(apps, old_ct, new_ct)
+        RegularExpressionValidationRule.objects.all().delete()
 
     if "nautobot_data_validation_engine_requiredvalidationrule" in table_names:
         print("  Migrating Nautobot Data Validation Engine RequiredValidationRule records...")
@@ -199,8 +208,10 @@ def copy_core_data_to_app_data(apps, schema_editor):
             "FROM data_validation_requiredrule;"
         )
         new_ct = ContentType.objects.get(app_label="nautobot_data_validation_engine", model="requiredvalidationrule")
-        old_ct = ContentType.objects.get_for_model(apps.get_model("data_validation", "requiredvalidationrule"))
+        RequiredValidationRule = apps.get_model("data_validation", "requiredvalidationrule")
+        old_ct = ContentType.objects.get_for_model(RequiredValidationRule)
         migrate_content_type_references_to_new_model(apps, old_ct, new_ct)
+        RequiredValidationRule.objects.all().delete()
 
     if "nautobot_data_validation_engine_uniquevalidationrule" in table_names:
         print("  Migrating Nautobot Data Validation Engine UniqueValidationRule records...")
@@ -213,8 +224,10 @@ def copy_core_data_to_app_data(apps, schema_editor):
             "FROM data_validation_uniquerule;"
         )
         new_ct = ContentType.objects.get(app_label="nautobot_data_validation_engine", model="uniquevalidationrule")
-        old_ct = ContentType.objects.get_for_model(apps.get_model("data_validation", "uniquevalidationrule"))
+        UniqueValidationRule = apps.get_model("data_validation", "uniquevalidationrule")
+        old_ct = ContentType.objects.get_for_model(UniqueValidationRule)
         migrate_content_type_references_to_new_model(apps, old_ct, new_ct)
+        UniqueValidationRule.objects.all().delete()
 
     if "nautobot_data_validation_engine_datacompliance" in table_names:
         print("  Migrating Nautobot Data Validation Engine DataCompliance records...")
@@ -229,8 +242,10 @@ def copy_core_data_to_app_data(apps, schema_editor):
             "FROM data_validation_datacompliance;"
         )
         new_ct = ContentType.objects.get(app_label="nautobot_data_validation_engine", model="datacompliance")
-        old_ct = ContentType.objects.get_for_model(apps.get_model("data_validation", "datacompliance"))
+        DataCompliance = apps.get_model("data_validation", "datacompliance")
+        old_ct = ContentType.objects.get_for_model(DataCompliance)
         migrate_content_type_references_to_new_model(apps, old_ct, new_ct)
+        DataCompliance.objects.all().delete()
 
 
 class Migration(migrations.Migration):
