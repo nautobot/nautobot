@@ -890,6 +890,11 @@ td span.hover_copy:hover .hover_copy_button {
     cursor: move;
 }
 
+/* Make text in homepage panels selectable */
+#draggable-homepage-panels .list-group-item {
+    user-select: text !important;
+}
+
 /* Make panel being dragged opaque */
 .dragging {
     opacity: 0.5;
