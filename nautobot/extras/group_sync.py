@@ -2,9 +2,9 @@
 
 import logging
 
-import jwt
 from django.conf import settings
 from django.contrib.auth.models import Group
+import jwt
 from social_django.models import UserSocialAuth
 
 logger = logging.getLogger(__name__)
