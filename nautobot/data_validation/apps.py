@@ -7,6 +7,7 @@ class DataValidationEngineConfig(NautobotConfig):
     name = "nautobot.data_validation"
     verbose_name = "Data Validation Engine"
     searchable_models = []
+    base_url = "data-validation"  # used in generate_performance_test_endpoints
 
     def ready(self):
         super().ready()
