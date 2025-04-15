@@ -1,8 +1,8 @@
 """Additional functions to process an OAuth2/OIDC user."""
 
-import jwt
 import logging
 
+import jwt
 from django.conf import settings
 from django.contrib.auth.models import Group
 from social_django.models import UserSocialAuth
