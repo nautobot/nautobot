@@ -4123,7 +4123,7 @@ class PowerPanelUIViewSet(NautobotUIViewSet):
                 weight=100,
                 fields="__all__",
                 value_transforms={
-                    "location": [helpers.location_hierarchy_with_location_type],
+                    "location": [helpers.render_ancestor_hierarchy],
                     "rack_group": [helpers.render_ancestor_hierarchy],
                 },
             ),
