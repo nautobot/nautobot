@@ -1,6 +1,5 @@
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.html import format_html
 from django_tables2 import RequestConfig
@@ -300,28 +299,26 @@ class ProviderNetworkUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.ProviderNetworkSerializer
     table_class = tables.ProviderNetworkTable
 
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            circuits = (
-                Circuit.objects.restrict(request.user, "view")
-                .filter(
-                    Q(circuit_termination_a__provider_network=instance.pk)
-                    | Q(circuit_termination_z__provider_network=instance.pk)
-                )
-                .select_related("circuit_type", "tenant")
-                .prefetch_related("circuit_terminations__location")
-            )
-
-            circuits_table = tables.CircuitTable(circuits)
-            circuits_table.columns.hide("circuit_termination_a")
-            circuits_table.columns.hide("circuit_termination_z")
-
-            paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-            RequestConfig(request, paginate).configure(circuits_table)
-
-            context["circuits_table"] = circuits_table
-        return context
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.CircuitTable,
+                table_filter=["circuit_termination_a__provider_network", "circuit_termination_z__provider_network"],
+                prefetch_related_fields=["circuit_terminations__location"],
+                select_related_fields=["circuit_type", "tenant"],
+                exclude_columns=["provider_network", "circuit_termination_a", "circuit_termination_z"],
+                related_field_name="provider_network",
+                add_button_route=None,
+            ),
+        )
+    )
 
 
 class CircuitSwapTerminations(generic.ObjectEditView):
