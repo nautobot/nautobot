@@ -142,6 +142,7 @@ __all__ = (
     "DynamicGroupFilterForm",
     "DynamicGroupForm",
     "DynamicGroupMembershipFormSet",
+    "ExportTemplateBulkEditForm",
     "ExportTemplateFilterForm",
     "ExportTemplateForm",
     "ExternalIntegrationBulkEditForm",
@@ -180,6 +181,7 @@ __all__ = (
     "ObjectMetadataFilterForm",
     "PasswordInputWithPlaceholder",
     "RelationshipAssociationFilterForm",
+    "RelationshipBulkEditForm",
     "RelationshipFilterForm",
     "RelationshipForm",
     "RoleBulkEditForm",
@@ -520,10 +522,11 @@ class CustomFieldBulkDeleteForm(ConfirmationForm):
         else:
             context = change_context.as_dict(queryset)
             context["context_detail"] = "bulk delete custom field data"
-        tasks = [
-            delete_custom_field_data.si(obj.key, set(obj.content_types.values_list("pk", flat=True)), context)
-            for obj in queryset
-        ]
+        tasks = []
+        for obj in queryset:
+            pk_set = set(obj.content_types.values_list("pk", flat=True))
+            if pk_set:
+                tasks.append(delete_custom_field_data.si(obj.key, pk_set, context))
         return tasks
 
     def perform_pre_delete(self, queryset):
@@ -534,10 +537,11 @@ class CustomFieldBulkDeleteForm(ConfirmationForm):
             logger.error("Celery worker process not running. Object custom fields may fail to reflect this deletion.")
             return
         tasks = self.construct_custom_field_delete_tasks(queryset)
-        # Executing the tasks in the background sequentially using chain() aligns with how a single
-        # CustomField object is deleted.  We decided to not check the result because it needs at least one worker
-        # to be active and comes with extra performance penalty.
-        chain(*tasks).apply_async()
+        if tasks:
+            # Executing the tasks in the background sequentially using chain() aligns with how a single
+            # CustomField object is deleted.  We decided to not check the result because it needs at least one worker
+            # to be active and comes with extra performance penalty.
+            chain(*tasks).apply_async()
 
 
 #
@@ -750,6 +754,31 @@ class StaticGroupAssociationFilterForm(NautobotFilterForm):
 #
 # Export Templates
 #
+class ExportTemplateBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=ExportTemplate.objects.all(), widget=forms.MultipleHiddenInput())
+
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    mime_type = forms.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        required=False,
+        label="MIME type",
+        help_text="Defaults to <code>text/plain</code>",
+    )
+    file_extension = forms.CharField(
+        max_length=CHARFIELD_MAX_LENGTH, required=False, help_text="Extension to append to the rendered filename"
+    )
+
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("export_templates").get_query()).order_by(
+            "app_label", "model"
+        ),
+        required=False,
+        label="Content Type",
+    )
+
+    class Meta:
+        model = ExportTemplate
+        nullable_fields = ["description", "mime_type", "file_extension"]
 
 
 class ExportTemplateForm(BootstrapMixin, forms.ModelForm):
@@ -1773,6 +1802,45 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
 #
 # Relationship
 #
+
+
+class RelationshipBulkEditForm(BootstrapMixin, CustomFieldModelBulkEditFormMixin, NoteModelBulkEditFormMixin):
+    pk = forms.ModelMultipleChoiceField(queryset=Relationship.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    type = forms.ChoiceField(
+        required=False,
+        label="type",
+        choices=add_blank_choice(RelationshipTypeChoices),
+    )
+    source_hidden = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    destination_hidden = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    source_filter = forms.JSONField(required=False, widget=forms.Textarea, help_text="Filter for the source")
+    destination_filter = forms.JSONField(required=False, widget=forms.Textarea, help_text="Filter for the destination")
+    source_type = CSVContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()), required=False
+    )
+    destination_type = CSVContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()), required=False
+    )
+    source_label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    destination_label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    advanced_ui = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+
+    class Meta:
+        model = Relationship
+        fields = [
+            "description",
+            "type",
+            "source_hidden",
+            "destination_hidden",
+            "source_filter",
+            "destination_filter",
+            "source_type",
+            "destination_type",
+            "source_label",
+            "destination_label",
+            "advanced_ui",
+        ]
 
 
 class RelationshipForm(BootstrapMixin, forms.ModelForm):

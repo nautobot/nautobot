@@ -220,6 +220,15 @@ class Location(TreeModel, PrimaryModel):
     def __str__(self):
         return self.name
 
+    @property
+    def display(self):
+        """
+        Honor LOCATION_NAME_AS_NATURAL_KEY for display value rendering, else fallback to TreeModel.display().
+        """
+        if get_settings_or_config("LOCATION_NAME_AS_NATURAL_KEY"):
+            return self.name
+        return super().display
+
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def natural_key_field_lookups(cls):  # pylint: disable=no-self-argument
         """

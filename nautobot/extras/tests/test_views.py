@@ -1069,12 +1069,14 @@ class ExportTemplateTestCase(
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = ExportTemplate
 
     @classmethod
     def setUpTestData(cls):
         obj_type = ContentType.objects.get_for_model(Location)
+        obj_type_1 = ContentType.objects.get_for_model(Interface)
 
         templates = (
             ExportTemplate(
@@ -1101,6 +1103,12 @@ class ExportTemplateTestCase(
             "name": "template-4",
             "content_type": obj_type.pk,
             "template_code": "template-4 test4",
+        }
+        cls.bulk_edit_data = {
+            "content_type": obj_type_1.pk,
+            "description": "Updated template description",
+            "mime_type": "application/json",
+            "file_extension": "json",
         }
 
 
@@ -3376,6 +3384,7 @@ class RelationshipTestCase(
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
     RequiredRelationshipTestMixin,
+    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = Relationship
     slug_source = "label"
@@ -3421,6 +3430,19 @@ class RelationshipTestCase(
             "destination_label": "VLANs",
             "destination_hidden": True,
             "destination_filter": None,
+        }
+        cls.bulk_edit_data = {
+            "description": "This is a relationship between VLANs and Interfaces.",
+            "type": "many-to-many",
+            "source_type": vlan_type.pk,
+            "source_label": "Interfaces",
+            "source_hidden": False,
+            "source_filter": '{"status": ["' + status.name + '"]}',
+            "destination_type": interface_type.pk,
+            "destination_label": "VLANs",
+            "destination_hidden": True,
+            "destination_filter": None,
+            "advanced_ui": True,
         }
 
         cls.slug_test_object = "Primary Interface"
