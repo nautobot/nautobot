@@ -1,1 +1,0 @@
-Location.display now honors LOCATION_NAME_AS_NATURAL_KEY - meaning the display of location names will not render the full hierarchy, in places where only the name is relevant.
