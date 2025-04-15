@@ -62,6 +62,8 @@ from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, 
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable, VRFTable
 from nautobot.virtualization.models import VirtualMachine
+from nautobot.vpn.models import VPNTunnelEndpoint
+from nautobot.vpn.tables import VPNTunnelEndpointTable
 from nautobot.wireless.forms import ControllerManagedDeviceGroupWirelessNetworkFormSet
 from nautobot.wireless.models import (
     ControllerManagedDeviceGroupRadioProfileAssignment,
@@ -2267,39 +2269,20 @@ class DeviceWirelessView(generic.ObjectView):
         }
 
 
-class DeviceVpnView(generic.ObjectView):
+class DeviceVpnEndpointView(generic.ObjectView):
     queryset = Device.objects.all()
-    template_name = "dcim/device/vpn.html"
+    template_name = "dcim/device/vpn_endpoints.html"
 
     def get_extra_context(self, request, instance):
-        controller_managed_device_group = instance.controller_managed_device_group
-        wireless_networks = ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
-            controller_managed_device_group=controller_managed_device_group
-        ).select_related("wireless_network", "controller_managed_device_group", "vlan")
-        wireless_networks_table = ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
-            data=wireless_networks, user=request.user, orderable=False
-        )
-        wireless_networks_table.columns.hide("controller_managed_device_group")
-        wireless_networks_table.columns.hide("controller")
+        vpn_endpoints = VPNTunnelEndpoint.objects.filter(device=instance).select_related("source_interface", "role")
+        vpn_endpoints_table = VPNTunnelEndpointTable(data=vpn_endpoints, user=request.user, orderable=False)
         RequestConfig(
             request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-        ).configure(wireless_networks_table)
-
-        radio_profiles = ControllerManagedDeviceGroupRadioProfileAssignment.objects.filter(
-            controller_managed_device_group=controller_managed_device_group
-        ).select_related("radio_profile", "controller_managed_device_group")
-        radio_profiles_table = ControllerManagedDeviceGroupRadioProfileAssignmentTable(
-            data=radio_profiles, user=request.user, orderable=False
-        )
-        radio_profiles_table.columns.hide("controller_managed_device_group")
-        RequestConfig(
-            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-        ).configure(radio_profiles_table)
+        ).configure(vpn_endpoints_table)
 
         return {
-            "wireless_networks_table": wireless_networks_table,
-            "radio_profiles_table": radio_profiles_table,
-            "active_tab": "wireless",
+            "vpn_endpoints_table": vpn_endpoints_table,
+            "active_tab": "vpn-endpoints",
         }
 
 

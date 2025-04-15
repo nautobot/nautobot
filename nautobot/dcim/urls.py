@@ -583,6 +583,11 @@ urlpatterns = [
         views.DeviceWirelessView.as_view(),
         name="device_wireless",
     ),
+    path(
+        "devices/<uuid:pk>/vpn-endpoints/",
+        views.DeviceVpnEndpointView.as_view(),
+        name="device_vpn_endpoints",
+    ),
     # Console ports
     path("console-ports/", views.ConsolePortListView.as_view(), name="consoleport_list"),
     path(

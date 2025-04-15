@@ -228,21 +228,35 @@ class VPNTunnelUIViewSet(NautobotUIViewSet):
                     "status",
                 ],
             ),
-            ObjectFieldsPanel(
-                label="Endpoint A",
+            ObjectsTablePanel(
                 weight=100,
+                label="A",
+                table_class=tables.VPNTunnelEndpointTable,
+                table_filter="endpoint_a_vpn_tunnels",
                 section=SectionChoices.RIGHT_HALF,
-                fields=[
-                    "endpoint_a",
+                include_columns=[
+                    "device",
+                    "source_interface",
+                    "source_ipaddress",
+                    "tunnel_interface",
+                    "role",
                 ],
+                add_button_route=None,
             ),
-            ObjectFieldsPanel(
-                label="Endpoint Z",
-                weight=100,
+            ObjectsTablePanel(
+                weight=200,
+                label="Z",
+                table_class=tables.VPNTunnelEndpointTable,
+                table_filter="endpoint_z_vpn_tunnels",
                 section=SectionChoices.RIGHT_HALF,
-                fields=[
-                    "endpoint_z",
+                include_columns=[
+                    "device",
+                    "source_interface",
+                    "source_ipaddress",
+                    "tunnel_interface",
+                    "role",
                 ],
+                add_button_route=None,
             ),
         ],
     )
@@ -271,8 +285,9 @@ class VPNTunnelEndpointUIViewSet(NautobotUIViewSet):
                 fields=[
                     "name",
                     "vpn_profile",
-                    "source_ipaddress",
+                    "device",
                     "source_interface",
+                    "source_ipaddress",
                     "destination_ipaddress",
                     "destination_fqdn",
                     "tunnel_interface",
@@ -281,10 +296,37 @@ class VPNTunnelEndpointUIViewSet(NautobotUIViewSet):
             ),
             ObjectsTablePanel(
                 weight=100,
+                label="A-EndPoint",
+                table_class=tables.VPNTunnelTable,
+                table_filter="endpoint_a",
+                section=SectionChoices.RIGHT_HALF,
+                exclude_columns=[
+                    "endpoint_a",
+                    "endpoint_z",
+                    "actions",
+                ],
+                add_button_route=None,
+            ),
+            ObjectsTablePanel(
+                weight=100,
+                label="Z-EndPoint",
+                table_class=tables.VPNTunnelTable,
+                table_filter="endpoint_z",
+                section=SectionChoices.RIGHT_HALF,
+                exclude_columns=[
+                    "endpoint_a",
+                    "endpoint_z",
+                    "actions",
+                ],
+                add_button_route=None,
+            ),
+            ObjectsTablePanel(
+                weight=100,
                 table_class=DynamicGroupTable,
                 table_filter="vpn_tunnel_endpoints",
                 section=SectionChoices.FULL_WIDTH,
                 exclude_columns=[],
+                add_button_route=None,
             ),
             ObjectsTablePanel(
                 weight=200,
@@ -292,6 +334,7 @@ class VPNTunnelEndpointUIViewSet(NautobotUIViewSet):
                 table_filter="vpn_tunnel_endpoints",
                 section=SectionChoices.FULL_WIDTH,
                 exclude_columns=[],
+                add_button_route=None,
             ),
         ],
     )

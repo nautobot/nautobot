@@ -98,6 +98,13 @@
                 <a href="{% url 'dcim:device_wireless' pk=object.pk %}">Wireless</a>
             </li>
         {% endif %}
+        {% with vpn_endpoint_count=object.vpn_tunnel_endpoints.count %}
+            {% if vpn_endpoint_count %}
+                <li role="presentation" {% if active_tab == 'vpn-endpoints' %} class="active"{% endif %}>
+                    <a href="{% url 'dcim:device_vpn_endpoints' pk=object.pk %}">VPN EndPoints {% badge vpn_endpoint_count %}</a>
+                </li>
+            {% endif %}
+        {% endwith %}
         {% if perms.dcim.napalm_read_device %}
             {% if not object.platform %}
                 {% include 'dcim/inc/device_napalm_tabs.html' with disabled_message='No platform assigned to this device' %}
