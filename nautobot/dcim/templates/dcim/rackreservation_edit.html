@@ -1,2 +1,24 @@
 {% extends 'generic/object_create.html' %}
-{% comment %}3.0 TODO: remove this template, which only exists for backward compatibility with 2.4 and earlier{% endcomment %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Rack Reservation</strong></div>
+        <div class="panel-body">
+            {% render_field form.location %}
+            {% render_field form.rack_group %}
+            {% render_field form.rack %}
+            {% render_field form.units %}
+            {% render_field form.user %}
+            {% render_field form.description %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Tenant Assignment</strong></div>
+        <div class="panel-body">
+            {% render_field form.tenant_group %}
+            {% render_field form.tenant %}
+        </div>
+    </div>
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+{% endblock %}
