@@ -151,6 +151,7 @@ class ComputedFieldUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.ComputedFieldSerializer
     table_class = tables.ComputedFieldTable
     queryset = ComputedField.objects.all()
+    action_buttons = ("add",)
 
 
 #

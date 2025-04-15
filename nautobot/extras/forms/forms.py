@@ -228,11 +228,14 @@ class ComputedFieldBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin):
         required=False,
         help_text="Fallback value (if any) to be output for the field in the case of a template rendering error.",
     )
-    weight = forms.IntegerField(required=False)
-    advanced_ui = forms.BooleanField(
+    weight = forms.IntegerField(required=False, min_value=0)
+    advanced_ui = forms.NullBooleanField(
         required=False,
         label="Move to Advanced tab",
         help_text="Hide this field from the object's primary information tab. It will appear in the 'Advanced' tab instead.",
+    )
+    template = forms.CharField(
+        max_length=500, widget=forms.Textarea, required=False, help_text="Jinja2 template code for field value"
     )
 
     content_type = forms.ModelChoiceField(
