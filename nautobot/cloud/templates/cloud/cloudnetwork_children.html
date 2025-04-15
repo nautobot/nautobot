@@ -5,7 +5,7 @@
 {% block content %}
     <div class="row">
         <div class="col-md-12">
-            {% include 'utilities/obj_table.html' with table=children_table table_template='panel_table.html' heading='Children' %}
+            {% include 'utilities/obj_table.html' with table=children_table table_template='panel_table.html' add_obj_url=child_table_add_url heading='Children' %}
         </div>
     </div>
 {% endblock %}

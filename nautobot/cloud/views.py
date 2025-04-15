@@ -1,4 +1,5 @@
 from django.db.models import Q
+from django.urls import reverse
 from django_tables2 import RequestConfig
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -133,11 +134,10 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
         RequestConfig(
             request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
         ).configure(children_table)
+        child_url = reverse("cloud:cloudnetwork_add")
+        child_table_add_url = f"{child_url}?parent={instance.id}"
         return Response(
-            {
-                "children_table": children_table,
-                "active_tab": "children",
-            }
+            {"children_table": children_table, "active_tab": "children", "child_table_add_url": child_table_add_url}
         )
 
     @action(detail=True, url_path="prefixes")
