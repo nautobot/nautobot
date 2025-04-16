@@ -711,6 +711,27 @@ def render_ancestor_hierarchy(value):
     return result
 
 
+@library.filter()
+@register.filter()
+def render_button_class(value):
+    """
+    Render a string as a styled HTML button using Bootstrap classes.
+
+    Args:
+        value (str): A string representing the button class (e.g., 'primary').
+
+    Returns:
+        str: HTML string for a button with the given class.
+
+    Example:
+        >>> render_button_class("primary")
+        '<button class="btn btn-primary">primary</button>'
+    """
+    if value:
+        return format_html('<button class="btn btn-{}">{}</button>', value.lower(), value.lower())
+    return ""
+
+
 #
 # Tags
 #
