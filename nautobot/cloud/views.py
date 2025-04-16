@@ -198,7 +198,7 @@ class CloudServiceUIViewSet(NautobotUIViewSet):
         networks = instance.cloud_networks.restrict(request.user, "view")
         networks_table = CloudNetworkTable(
             data=networks,
-            extra_columns=[("actions", ButtonsColumn(model=CloudNetwork, buttons=("changelog")))],
+            extra_columns=[("actions", ButtonsColumn(model=CloudNetwork, return_url_extra="?tab=cloud_networks"))],
         )
         RequestConfig(
             request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
