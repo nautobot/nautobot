@@ -44,6 +44,7 @@ router.register("module-bays", views.ModuleBayUIViewSet)
 router.register("module-bay-templates", views.ModuleBayTemplateUIViewSet)
 router.register("modules", views.ModuleUIViewSet)
 router.register("module-types", views.ModuleTypeUIViewSet)
+router.register("power-feeds", views.PowerFeedUIViewSet)
 router.register("software-image-files", views.SoftwareImageFileUIViewSet)
 router.register("software-versions", views.SoftwareVersionUIViewSet)
 router.register("virtual-device-contexts", views.VirtualDeviceContextUIViewSet)
@@ -1475,34 +1476,6 @@ urlpatterns = [
         kwargs={"model": PowerPanel},
     ),
     # Power feeds
-    path("power-feeds/", views.PowerFeedListView.as_view(), name="powerfeed_list"),
-    path("power-feeds/add/", views.PowerFeedEditView.as_view(), name="powerfeed_add"),
-    path(
-        "power-feeds/import/",
-        views.PowerFeedBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="powerfeed_import",
-    ),
-    path(
-        "power-feeds/edit/",
-        views.PowerFeedBulkEditView.as_view(),
-        name="powerfeed_bulk_edit",
-    ),
-    path(
-        "power-feeds/delete/",
-        views.PowerFeedBulkDeleteView.as_view(),
-        name="powerfeed_bulk_delete",
-    ),
-    path("power-feeds/<uuid:pk>/", views.PowerFeedView.as_view(), name="powerfeed"),
-    path(
-        "power-feeds/<uuid:pk>/edit/",
-        views.PowerFeedEditView.as_view(),
-        name="powerfeed_edit",
-    ),
-    path(
-        "power-feeds/<uuid:pk>/delete/",
-        views.PowerFeedDeleteView.as_view(),
-        name="powerfeed_delete",
-    ),
     path(
         "power-feeds/<uuid:pk>/trace/",
         views.PathTraceView.as_view(),
