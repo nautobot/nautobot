@@ -230,7 +230,7 @@ class ApprovalWorkflowStageInstanceBulkEditForm(TagsBulkEditFormMixin, NautobotB
         widget=StaticSelect2,
         label="State",
     )
-    decision_date = forms.DateField(required=False, label="Decision Date")
+    decision_date = forms.DateTimeField(required=False, label="Decision Date")
 
     class Meta:
         """Meta attributes."""
@@ -262,16 +262,6 @@ class ApprovalWorkflowStageInstanceFilterForm(NautobotFilterForm):
     )
     decision_date = forms.DateField(widget=DatePicker(), required=False, label="Decision Date")
     tags = TagFilterField(model)
-
-
-class ApprovalWorkflowStageInstanceResponseForm(NautobotModelForm):
-    """Form for creating and updating ApprovalWorkflowStageInstanceResponse."""
-
-    class Meta:
-        """Meta attributes."""
-
-        model = ApprovalWorkflowStageInstanceResponse
-        fields = "__all__"
 
 
 class ApprovalWorkflowStageInstanceResponseFilterForm(NautobotFilterForm):
