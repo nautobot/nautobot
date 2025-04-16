@@ -2,11 +2,14 @@
 Model test cases
 """
 
+import contextlib
 import re
 
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+import redis.exceptions
 
 from nautobot.data_validation.models import (
     MinMaxValidationRule,
@@ -30,6 +33,13 @@ class RegularExpressionValidationRuleModelTestCase(TestCase):
         self.location_type.validated_save()
         self.location_type.content_types.set([ContentType.objects.get_for_model(Rack)])
         return super().setUp()
+
+    def tearDown(self):
+        """Ensure that custom validator caches are cleared to avoid leakage into other tests."""
+        with contextlib.suppress(redis.exceptions.ConnectionError):
+            cache.delete_pattern(f"{RegularExpressionValidationRule.objects.get_for_model.cache_key_prefix}.*")
+            cache.delete_pattern(f"{RegularExpressionValidationRule.objects.get_enabled_for_model.cache_key_prefix}.*")
+        super().tearDown()
 
     def test_invalid_regex_matches_raise_validation_error(self):
         rule = RegularExpressionValidationRule.objects.create(
@@ -158,6 +168,13 @@ class MinMaxValidationRuleModelTestCase(TestCase):
         self.location_type = LocationType(name="Region")
         self.location_type.validated_save()
         return super().setUp()
+
+    def tearDown(self):
+        """Ensure that custom validator caches are cleared to avoid leakage into other tests."""
+        with contextlib.suppress(redis.exceptions.ConnectionError):
+            cache.delete_pattern(f"{MinMaxValidationRule.objects.get_for_model.cache_key_prefix}.*")
+            cache.delete_pattern(f"{MinMaxValidationRule.objects.get_enabled_for_model.cache_key_prefix}.*")
+        super().tearDown()
 
     def test_empty_field_values_raise_validation_error(self):
         MinMaxValidationRule.objects.create(
@@ -314,6 +331,13 @@ class RequiredValidationRuleModelTestCase(TestCase):
         self.location_type.content_types.set([ContentType.objects.get_for_model(Rack)])
         return super().setUp()
 
+    def tearDown(self):
+        """Ensure that custom validator caches are cleared to avoid leakage into other tests."""
+        with contextlib.suppress(redis.exceptions.ConnectionError):
+            cache.delete_pattern(f"{RequiredValidationRule.objects.get_for_model.cache_key_prefix}.*")
+            cache.delete_pattern(f"{RequiredValidationRule.objects.get_enabled_for_model.cache_key_prefix}.*")
+        super().tearDown()
+
     def test_blank_value_raises_error(self):
         RequiredValidationRule.objects.create(
             name="Required rule 1",
@@ -403,6 +427,13 @@ class UniqueValidationRuleModelTestCase(TestCase):
         self.location_type = LocationType(name="Region")
         self.location_type.validated_save()
         return super().setUp()
+
+    def tearDown(self):
+        """Ensure that custom validator caches are cleared to avoid leakage into other tests."""
+        with contextlib.suppress(redis.exceptions.ConnectionError):
+            cache.delete_pattern(f"{UniqueValidationRule.objects.get_for_model.cache_key_prefix}.*")
+            cache.delete_pattern(f"{UniqueValidationRule.objects.get_enabled_for_model.cache_key_prefix}.*")
+        super().tearDown()
 
     def test_null_value_does_not_raise_error(self):
         UniqueValidationRule.objects.create(
