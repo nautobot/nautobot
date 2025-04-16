@@ -186,19 +186,19 @@ class ApprovalWorkflowTestMixin:
             approval_workflow_stage_instance=cls.approval_workflow_1_stage_instance_1,
             user=User.objects.first(),
             comments="Approved by user 1",
-            state=choices.ApprovalWorkflowStateChoices.APPROVED,
+            state=choices.ApprovalWorkflowStateChoices.PENDING,
         )
         models.ApprovalWorkflowStageInstanceResponse.objects.create(
             approval_workflow_stage_instance=cls.approval_workflow_1_stage_instance_2,
             user=User.objects.last(),
             comments="Denied by user 2",
-            state=choices.ApprovalWorkflowStateChoices.DENIED,
+            state=choices.ApprovalWorkflowStateChoices.PENDING,
         )
         models.ApprovalWorkflowStageInstanceResponse.objects.create(
             approval_workflow_stage_instance=cls.approval_workflow_1_stage_instance_1,
             user=User.objects.last(),
             comments="Approved by user 2",
-            state=choices.ApprovalWorkflowStateChoices.APPROVED,
+            state=choices.ApprovalWorkflowStateChoices.PENDING,
         )
 
 
@@ -356,7 +356,6 @@ class ApprovalWorkflowStageInstanceAPITest(ApprovalWorkflowTestMixin, APIViewTes
 
         cls.update_data = {
             "state": choices.ApprovalWorkflowStateChoices.APPROVED,
-            "decision_date": datetime.datetime(2021, 3, 21, 17, 0, tzinfo=ZoneInfo("UTC")),
         }
 
 
