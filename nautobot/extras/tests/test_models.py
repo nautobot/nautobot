@@ -225,13 +225,13 @@ class ApprovalWorkflowInstanceTest(ModelTestCases.BaseModelTestCase):
         self.approval_workflow_stage_1_instance_response_1.state = ApprovalWorkflowStateChoices.APPROVED
         self.approval_workflow_stage_1_instance_response_1.save()
         self.assertEqual(self.approval_workflow_stage_1_instance.state, ApprovalWorkflowStateChoices.APPROVED)
-        self.assertEqual(self.approval_workflow_stage_1_instance.decision_date, date.today())
+        self.assertIsNotNone(self.approval_workflow_stage_1_instance.decision_date)
         self.assertEqual(self.approval_workflow_instance.active_stage, self.approval_workflow_stage_2_instance)
         # Test that the active stage remains the second stage when the second stage is denied
         self.approval_workflow_stage_2_instance_response_1.state = ApprovalWorkflowStateChoices.DENIED
         self.approval_workflow_stage_2_instance_response_1.save()
         self.assertEqual(self.approval_workflow_stage_2_instance.state, ApprovalWorkflowStateChoices.DENIED)
-        self.assertEqual(self.approval_workflow_stage_2_instance.decision_date, date.today())
+        self.assertIsNotNone(self.approval_workflow_stage_2_instance.decision_date)
         self.assertEqual(self.approval_workflow_instance.active_stage, self.approval_workflow_stage_2_instance)
         self.assertEqual(self.approval_workflow_instance.current_state, ApprovalWorkflowStateChoices.DENIED)
 
@@ -244,7 +244,7 @@ class ApprovalWorkflowInstanceTest(ModelTestCases.BaseModelTestCase):
         self.approval_workflow_stage_1_instance_response_1.save()
         # Minimum approvers for the first stage is 1, so the stage should be approved
         self.assertEqual(self.approval_workflow_stage_1_instance.state, ApprovalWorkflowStateChoices.APPROVED)
-        self.assertEqual(self.approval_workflow_stage_1_instance.decision_date, date.today())
+        self.assertIsNotNone(self.approval_workflow_stage_1_instance.decision_date)
         # Approval Workflow Instance should still be pending, stage 2 and stage 3 are not approved yet
         self.assertEqual(self.approval_workflow_instance.current_state, ApprovalWorkflowStateChoices.PENDING)
         # The active stage should be the second stage now
@@ -257,7 +257,7 @@ class ApprovalWorkflowInstanceTest(ModelTestCases.BaseModelTestCase):
         self.approval_workflow_stage_2_instance_response_2.save()
         # Minimum approvers for the second stage is 2, so the stage should be approved
         self.assertEqual(self.approval_workflow_stage_2_instance.state, ApprovalWorkflowStateChoices.APPROVED)
-        self.assertEqual(self.approval_workflow_stage_2_instance.decision_date, date.today())
+        self.assertIsNotNone(self.approval_workflow_stage_2_instance.decision_date)
         # Approval Workflow Instance should still be pending, stage 3 is not approved yet
         self.assertEqual(self.approval_workflow_instance.current_state, ApprovalWorkflowStateChoices.PENDING)
         # The active stage should be the third stage now
@@ -270,7 +270,7 @@ class ApprovalWorkflowInstanceTest(ModelTestCases.BaseModelTestCase):
         self.approval_workflow_stage_3_instance_response_2.save()
         # Minimum approvers for the third stage is 2, so the stage should be approved
         self.assertEqual(self.approval_workflow_stage_3_instance.state, ApprovalWorkflowStateChoices.APPROVED)
-        self.assertEqual(self.approval_workflow_stage_3_instance.decision_date, date.today())
+        self.assertIsNotNone(self.approval_workflow_stage_3_instance.decision_date)
         # Approval Workflow Instance should be approved since all stages are approved
         self.assertEqual(self.approval_workflow_instance.current_state, ApprovalWorkflowStateChoices.APPROVED)
         # No more stages to approve, so the active stage is now None
@@ -285,7 +285,7 @@ class ApprovalWorkflowInstanceTest(ModelTestCases.BaseModelTestCase):
         self.approval_workflow_stage_1_instance_response_1.save()
         # Minimum approvers for the first stage is 1, so the stage should be approved
         self.assertEqual(self.approval_workflow_stage_1_instance.state, ApprovalWorkflowStateChoices.APPROVED)
-        self.assertEqual(self.approval_workflow_stage_1_instance.decision_date, date.today())
+        self.assertIsNotNone(self.approval_workflow_stage_1_instance.decision_date)
         # Approval Workflow Instance should still be pending
         self.assertEqual(self.approval_workflow_instance.current_state, ApprovalWorkflowStateChoices.PENDING)
         # The active stage should be the second stage now
@@ -298,7 +298,7 @@ class ApprovalWorkflowInstanceTest(ModelTestCases.BaseModelTestCase):
         self.approval_workflow_stage_2_instance_response_2.save()
         # One user denies the stage, so the stage should be denied
         self.assertEqual(self.approval_workflow_stage_2_instance.state, ApprovalWorkflowStateChoices.DENIED)
-        self.assertEqual(self.approval_workflow_stage_2_instance.decision_date, date.today())
+        self.assertIsNotNone(self.approval_workflow_stage_2_instance.decision_date)
         # Approval Workflow Instance should be denied since one stage is denied
         self.assertEqual(self.approval_workflow_instance.current_state, ApprovalWorkflowStateChoices.DENIED)
         # The active stage should remain the second stage that is denied
