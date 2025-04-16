@@ -244,19 +244,20 @@ class ApprovalWorkflowStageInstance(PrimaryModel):
         """
         # store previous state in case it is changed
         previous_state = self.state
-        # Check if there is one or more denied response for this stage instance
-        denied_responses = self.approval_workflow_stage_instance_responses.filter(
-            state=ApprovalWorkflowStateChoices.DENIED
-        )
-        if denied_responses.exists():
-            self.state = ApprovalWorkflowStateChoices.DENIED
-
         # Check if the number of approvers is met
         approved_responses = self.approval_workflow_stage_instance_responses.filter(
             state=ApprovalWorkflowStateChoices.APPROVED
         )
         if approved_responses.count() >= self.approval_workflow_stage.min_approvers:
             self.state = ApprovalWorkflowStateChoices.APPROVED
+
+        # Check if there is one or more denied response for this stage instance
+        # If so, set the stage as denied even tho previously the stage could be approved by enough number of approvers
+        denied_responses = self.approval_workflow_stage_instance_responses.filter(
+            state=ApprovalWorkflowStateChoices.DENIED
+        )
+        if denied_responses.exists():
+            self.state = ApprovalWorkflowStateChoices.DENIED
 
         # Set the decision date if the state is changed to APPROVED or DENIED
         decision_made = (
