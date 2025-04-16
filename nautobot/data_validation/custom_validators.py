@@ -48,10 +48,10 @@ class BaseValidator(CustomValidator):
         """The clean method executes the actual rule enforcement logic for each model."""
         obj = self.context["object"]
 
-        _f = [True] if exclude_disabled_rules else [True, False]
+        method_name = "get_enabled_for_model" if exclude_disabled_rules else "get_for_model"
 
         # Regex rules
-        for rule in RegularExpressionValidationRule.objects.get_for_model(self.model).filter(enabled__in=_f):
+        for rule in getattr(RegularExpressionValidationRule.objects, method_name)(self.model):
             field_value = getattr(obj, rule.field)
 
             if field_value is None:
@@ -85,7 +85,7 @@ class BaseValidator(CustomValidator):
                 )
 
         # Min/Max rules
-        for rule in MinMaxValidationRule.objects.get_for_model(self.model).filter(enabled__in=_f):
+        for rule in getattr(MinMaxValidationRule.objects, method_name)(self.model):
             field_value = getattr(obj, rule.field)
 
             if field_value is None:
@@ -114,13 +114,13 @@ class BaseValidator(CustomValidator):
                 )
 
         # Required rules
-        for rule in RequiredValidationRule.objects.get_for_model(self.model).filter(enabled__in=_f):
+        for rule in getattr(RequiredValidationRule.objects, method_name)(self.model):
             field_value = getattr(obj, rule.field)
             if field_value is None or field_value == "":
                 self.validation_error({rule.field: rule.error_message or "This field cannot be blank."})
 
         # Unique rules
-        for rule in UniqueValidationRule.objects.get_for_model(self.model).filter(enabled__in=_f):
+        for rule in getattr(UniqueValidationRule.objects, method_name)(self.model):
             field_value = getattr(obj, rule.field)
             if field_value:
                 # Exclude the current object from the count
@@ -140,7 +140,7 @@ class BaseValidator(CustomValidator):
         for compliance_class in get_data_compliance_rules_map().get(self.model, []):
             compliance_class(obj).clean()
 
-        for repo in GitRepository.objects.filter(provided_contents__contains="data_validation.data_compliance_rule"):
+        for repo in GitRepository.objects.get_for_provided_contents("data_validation.data_compliance_rule"):
             for compliance_class in get_data_compliance_classes_from_git_repo(repo):
                 if (
                     f"{self.context['object']._meta.app_label}.{self.context['object']._meta.model_name}"

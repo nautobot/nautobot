@@ -4,6 +4,7 @@ import re
 
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.validators import MinValueValidator, ValidationError
 from django.db import models
 
@@ -28,11 +29,33 @@ def validate_regex(value):
 class ValidationRuleManager(RestrictedQuerySet):
     """Adds a helper method for getting all active instances for a given content type."""
 
-    def get_for_model(self, content_type):
+    def get_for_model(self, content_type: str):
         """Given a content type string (<app_label>.<model>), return all instances that are enabled for that model."""
         app_label, model = content_type.split(".")
+        cache_key = (
+            f"{self.get_for_model.cache_key_prefix}.{self.model._meta.concrete_model._meta.model_name}.{content_type}"
+        )
+        queryset = cache.get(cache_key)
+        if queryset is None:
+            queryset = self.filter(content_type__app_label=app_label, content_type__model=model)
+            cache.set(cache_key, queryset)
+        return queryset
 
-        return self.filter(content_type__app_label=app_label, content_type__model=model)
+    get_for_model.cache_key_prefix = "nautobot.data_validation.get_for_model"
+
+    def get_enabled_for_model(self, content_type: str):
+        """As get_for_model(), but only return enabled rules."""
+        app_label, model = content_type.split(".")
+        cache_key = (
+            f"{self.get_for_model.cache_key_prefix}.{self.model._meta.concrete_model._meta.model_name}.{content_type}"
+        )
+        queryset = cache.get(cache_key)
+        if queryset is None:
+            queryset = self.filter(content_type__app_label=app_label, content_type__model=model, enabled=True)
+            cache.set(cache_key, queryset)
+        return queryset
+
+    get_enabled_for_model.cache_key_prefix = "nautobot.data_validation.get_enabled_for_model"
 
 
 class ValidationRule(PrimaryModel):

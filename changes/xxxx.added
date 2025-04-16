@@ -1,0 +1,2 @@
+Added `ValidationRule.objects.get_enabled_for_model()` lookup method with associated Redis cache for performance.
+Added `GitRepository.objects.get_for_provided_contents()` lookup method with associated Redis cache for performance.
