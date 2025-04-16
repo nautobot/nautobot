@@ -12,7 +12,6 @@ from nautobot.extras.models import (
     GitRepository,
     GraphQLQuery,
     Job,
-    JobHook,
     Note,
     Relationship,
     SecretsGroup,
@@ -28,6 +27,7 @@ router.register("contact-associations", views.ContactAssociationUIViewSet)
 router.register("export-templates", views.ExportTemplateUIViewSet)
 router.register("external-integrations", views.ExternalIntegrationUIViewSet)
 router.register("job-buttons", views.JobButtonUIViewSet)
+router.register("job-hooks", views.JobHookUIViewSet)
 router.register("job-queues", views.JobQueueUIViewSet)
 router.register("metadata-types", views.MetadataTypeUIViewSet)
 router.register("object-metadata", views.ObjectMetadataUIViewSet)
@@ -422,27 +422,6 @@ urlpatterns = [
     path("jobs/<str:class_path>/run/", views.JobRunView.as_view(), name="job_run_by_class_path"),
     path("jobs/edit/", views.JobBulkEditView.as_view(), name="job_bulk_edit"),
     path("jobs/delete/", views.JobBulkDeleteView.as_view(), name="job_bulk_delete"),
-    # Job hooks
-    path("job-hooks/", views.JobHookListView.as_view(), name="jobhook_list"),
-    path("job-hooks/add/", views.JobHookEditView.as_view(), name="jobhook_add"),
-    path(
-        "job-hooks/delete/",
-        views.JobHookBulkDeleteView.as_view(),
-        name="jobhook_bulk_delete",
-    ),
-    path("job-hooks/<uuid:pk>/", views.JobHookView.as_view(), name="jobhook"),
-    path("job-hooks/<uuid:pk>/edit/", views.JobHookEditView.as_view(), name="jobhook_edit"),
-    path(
-        "job-hooks/<uuid:pk>/delete/",
-        views.JobHookDeleteView.as_view(),
-        name="jobhook_delete",
-    ),
-    path(
-        "job-hooks/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="jobhook_changelog",
-        kwargs={"model": JobHook},
-    ),
     # Generic job results
     path("job-results/", views.JobResultListView.as_view(), name="jobresult_list"),
     path("job-results/<uuid:pk>/", views.JobResultView.as_view(), name="jobresult"),
