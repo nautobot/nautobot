@@ -1,20 +1,24 @@
-<ul class="list-unstyled sidenav-favorite-list">
+<ul class="list-unstyled">
+    <li class="sidenav-link-group text-center{% if request.user.navbar_favorites %} d-none{% endif %}"
+        style="text-transform: none;" id="favorites-empty">
+        You don't have any favorite pages yet.
+    </li>
+
     {% for item in request.user.navbar_favorites %}
         {% if item.link and item.name %}
             <li class="sidenav-link-wrapper" id="sidenav-favorite-link-{{ forloop.counter }}">
-                <a class="sidenav-link" href="{{ item.link }}">
-                    <span class="sidenav-link-text">{{ item.name }}</span>
+                <a class="sidenav-link flat vstack align-items-start" href="{{ item.link }}">
+                    {{ item.name }}
                     {% if item.tab_name and item.group_name %}
-                    <span class="sidenav-link-context">{{ item.tab_name }} / {{ item.group_name }}</span>
+                        <small class="text-secondary">{{ item.tab_name }} / {{ item.group_name }}</small>
                     {% endif %}
                 </a>
-                <button class="sidenav-favorite favorite-item"
+                <button class="sidenav-favorite active"
                         type="button"
-                        hx-post="{%  url "user:navbar_favorites" %}"
-                        hx-vals='{"link": "{{ item.link }}", "remove": true}'
+                        hx-post="{% url "user:navbar_favorites" %}"
+                        hx-vals='{"link": "{{ item.link }}", "name": "{{ item.name }}", "tab_name": "{{ item.tab_name }}", "group_name": "{{ item.group_name }}", "remove": true}'
                         hx-target="#sidenav-favorite-link-{{ forloop.counter }}"
                         hx-swap="delete"
-                        hx-select-oob="#{{ item.tab_name }}"
                         hx-on::before-cleanup-element="showEmpty()"
                 >
                     <span class="visually-hidden">
@@ -24,8 +28,4 @@
             </li>
         {% endif %}
     {% endfor %}
-
-    <li class="sidenav-link-group text-center{% if request.user.navbar_favorites %} d-none{% endif %}" style="text-transform: none;" id="favorites-empty">
-        You don't have any favorite pages yet.
-    </li>
 </ul>

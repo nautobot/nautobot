@@ -77,10 +77,11 @@ class PreferenceProfileSettingsForm(BootstrapMixin, forms.Form):
 
 class NavbarFavoritesForm(forms.Form):
     link = forms.CharField()
-    name = forms.CharField(required=False)
-    tab_name = forms.CharField(required=False)
-    group_name = forms.CharField(required=False)
+    name = forms.CharField()
+    tab_name = forms.CharField()
+    group_name = forms.CharField()
     remove = forms.BooleanField(required=False)
+
 
 
 class AdminPasswordChangeForm(_AdminPasswordChangeForm):

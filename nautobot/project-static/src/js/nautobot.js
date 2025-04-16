@@ -3,9 +3,11 @@ import '../scss/nautobot.scss';
 import * as bootstrap from 'bootstrap';
 
 import ClipboardJS from 'clipboard';
+
 window.ClipboardJS = ClipboardJS;
 
 import flatpickr from 'flatpickr';
+
 window.flatpickr = flatpickr;
 
 import hljs from 'highlight.js/lib/core';
@@ -14,6 +16,7 @@ import graphql from 'highlight.js/lib/languages/graphql';
 import json from 'highlight.js/lib/languages/json';
 import xml from 'highlight.js/lib/languages/xml';
 import yaml from 'highlight.js/lib/languages/yaml';
+
 hljs.registerLanguage('graphql', graphql);
 hljs.registerLanguage('json', json);
 hljs.registerLanguage('xml', xml);
@@ -26,7 +29,7 @@ window.$ = window.jQuery;
 import 'jquery-ui';
 import 'select2';
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   // Tooltips
   // https://getbootstrap.com/docs/5.3/components/tooltips/#enable-tooltips
   [...document.querySelectorAll('[data-bs-toggle="tooltip"]')].forEach(tooltip => new bootstrap.Tooltip(tooltip));
@@ -52,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
       sidenavListItem.setAttribute('aria-expanded', String(!expanded));
 
       const onClickDocument = (documentClickEvent) => {
-        const { target: documentClickTarget } = documentClickEvent;
+        const {target: documentClickTarget} = documentClickEvent;
         const sidenavFlyout = document.getElementById(controls);
 
         const isClickOutside = !sidenavListItem.contains(documentClickTarget)
@@ -69,21 +72,23 @@ document.addEventListener('DOMContentLoaded', function() {
         : document.addEventListener('click', onClickDocument);
     });
   });
+
+  const toggleFavorite = (element, event) => {
+    if (event.detail.successful) {
+      element.classList.toggle('active')
+    }
+  }
+
+  const showEmpty = () => {
+    const favoritesEmpty = document.getElementById('favorites-empty');
+    if (document.querySelectorAll('#sidenav-flyout-favorites > ul > li').length - 1 === 1) {
+      favoritesEmpty.classList.remove('d-none')
+    }
+  }
+
+  window.toggleFavorite = toggleFavorite;
+  window.showEmpty = showEmpty;
 });
 
-const toggleFavorite = (element, event) => {
-    if(event.detail.successful){
-        element.classList.toggle('favorite-item')
-    }
-}
 
-const showEmpty = () => {
-    const favoritesEmpty = document.getElementById('favorites-empty');
-    if(document.querySelectorAll('#sidenav-flyout-favorites > ul > li').length - 1 === 1){
-        favoritesEmpty.classList.remove('d-none')
-    }
-}
-
-window.toggleFavorite = toggleFavorite
-window.showEmpty = showEmpty
 
