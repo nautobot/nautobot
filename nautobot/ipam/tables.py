@@ -709,6 +709,7 @@ class VLANTable(StatusTableMixin, RoleTableMixin, BaseTable):
     location_count = LinkedCountColumn(
         viewname="dcim:location_list",
         url_params={"vlans": "pk"},
+        display_field="name",
         verbose_name="Locations",
     )
     tenant = TenantColumn()
