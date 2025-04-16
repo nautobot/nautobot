@@ -1483,18 +1483,6 @@ urlpatterns = [
         kwargs={"model": PowerFeed},
     ),
     path(
-        "power-feeds/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="powerfeed_changelog",
-        kwargs={"model": PowerFeed},
-    ),
-    path(
-        "power-feeds/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="powerfeed_notes",
-        kwargs={"model": PowerFeed},
-    ),
-    path(
         "power-feeds/<uuid:termination_a_id>/connect/<str:termination_b_type>/",
         views.CableCreateView.as_view(),
         name="powerfeed_connect",
