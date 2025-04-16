@@ -1,5 +1,7 @@
-from datetime import date
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
+from django.conf import settings
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -211,10 +213,10 @@ class ApprovalWorkflowStageInstance(PrimaryModel):
         default=ApprovalWorkflowStateChoices.PENDING,
         help_text="State of the approval workflow stage instance. Eligible values are: Pending, Approved, Denied.",
     )
-    decision_date = models.DateField(
+    decision_date = models.DateTimeField(
         blank=True,
         null=True,
-        help_text="Date when the decision of approval/denial was made.",
+        help_text="Date and time when the decision of approval/denial was made.",
     )
 
     class Meta:
@@ -262,7 +264,8 @@ class ApprovalWorkflowStageInstance(PrimaryModel):
             and previous_state != self.state
         )
         if decision_made:
-            self.decision_date = date.today()
+            timezone = settings.TIME_ZONE or "UTC"
+            self.decision_date = datetime.now(ZoneInfo(timezone))
         super().save(*args, **kwargs)
 
         # Modify the parent ApprovalWorkflowInstance to potentially update its state as well

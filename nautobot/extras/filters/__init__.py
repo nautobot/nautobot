@@ -15,7 +15,7 @@ from nautobot.core.filters import (
     BaseFilterSet,
     ContentTypeFilter,
     ContentTypeMultipleChoiceFilter,
-    MultiValueDateFilter,
+    MultiValueDateTimeFilter,
     MultiValueUUIDFilter,
     NameSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
@@ -314,7 +314,7 @@ class ApprovalWorkflowStageInstanceFilterSet(BaseFilterSet):
         queryset=ApprovalWorkflowStage.objects.all(),
         to_field_name="pk",
     )
-    decision_date = MultiValueDateFilter()
+    decision_date = MultiValueDateTimeFilter()
 
     class Meta:
         """Meta attributes for filter."""

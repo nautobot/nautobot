@@ -171,7 +171,7 @@ class Migration(migrations.Migration):
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
                 ("state", models.CharField(default="Pending", max_length=255)),
-                ("decision_date", models.DateField(blank=True, null=True)),
+                ("decision_date", models.DateTimeField(blank=True, null=True)),
                 (
                     "approval_workflow_instance",
                     models.ForeignKey(

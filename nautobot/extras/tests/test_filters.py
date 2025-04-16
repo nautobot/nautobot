@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import datetime
 import uuid
 from zoneinfo import ZoneInfo
 
@@ -325,7 +325,7 @@ class ApprovalWorkflowTestMixin:
             approval_workflow_instance=cls.approval_workflow_1_instance_1,
             approval_workflow_stage=cls.approval_workflow_1_stage_1,
             state=ApprovalWorkflowStateChoices.APPROVED,
-            decision_date=date.today(),
+            decision_date=datetime.now(ZoneInfo("America/New_York")),
         )
         cls.approval_workflow_1_stage_instance_2 = ApprovalWorkflowStageInstance.objects.create(
             approval_workflow_instance=cls.approval_workflow_1_instance_1,
@@ -341,7 +341,7 @@ class ApprovalWorkflowTestMixin:
             approval_workflow_instance=cls.approval_workflow_1_instance_2,
             approval_workflow_stage=cls.approval_workflow_1_stage_1,
             state=ApprovalWorkflowStateChoices.DENIED,
-            decision_date=date(2025, 3, 14),
+            decision_date=datetime(2025, 4, 15, 10, 30, 0, tzinfo=ZoneInfo("America/New_York")),
         )
         cls.approval_workflow_2_stage_instance_2 = ApprovalWorkflowStageInstance.objects.create(
             approval_workflow_instance=cls.approval_workflow_1_instance_2,
@@ -357,7 +357,7 @@ class ApprovalWorkflowTestMixin:
             approval_workflow_instance=cls.approval_workflow_1_instance_3,
             approval_workflow_stage=cls.approval_workflow_3_stage_1,
             state=ApprovalWorkflowStateChoices.DENIED,
-            decision_date=date(2025, 4, 14),
+            decision_date=datetime(2025, 4, 14, 10, 30, 0, tzinfo=ZoneInfo("America/New_York")),
         )
         ApprovalWorkflowStageInstanceResponse.objects.create(
             approval_workflow_stage_instance=cls.approval_workflow_1_stage_instance_1,
