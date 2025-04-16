@@ -128,7 +128,8 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
         instance = self.get_object()
         children = instance.children.restrict(request.user, "view")
         children_table = CloudNetworkTable(
-            data=children, extra_columns=[("actions", ButtonsColumn(model=CloudNetwork, buttons=("changelog",)))]
+            data=children,
+            extra_columns=[("actions", ButtonsColumn(model=CloudNetwork, return_url_extra="?tab=children"))],
         )
         children_table.columns.hide("parent")
         RequestConfig(
