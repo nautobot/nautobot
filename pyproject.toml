@@ -177,6 +177,8 @@ rich = "~13.9.4"
 towncrier = "~24.8.0"
 # Watch files for celery and mkdocs reload
 watchdog = "~6.0.0"
+# OpenAPI validator to test that our generated schema is valid
+openapi-spec-validator = "^0.7.1"
 
 [tool.poetry.group.docs.dependencies]
 # Rendering docs to HTML
