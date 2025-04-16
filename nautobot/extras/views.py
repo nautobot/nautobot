@@ -2012,36 +2012,24 @@ class ScheduledJobDeleteView(generic.ObjectDeleteView):
 #
 
 
-class JobHookListView(generic.ObjectListView):
-    queryset = JobHook.objects.all()
-    table = tables.JobHookTable
-    filterset = filters.JobHookFilterSet
-    filterset_form = forms.JobHookFilterForm
-    action_buttons = ("add",)
-
-
-class JobHookView(generic.ObjectView):
+class JobHookUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.JobHookBulkEditForm
+    filterset_class = filters.JobHookFilterSet
+    filterset_form_class = forms.JobHookFilterForm
+    form_class = forms.JobHookForm
+    serializer_class = serializers.JobHookSerializer
+    table_class = tables.JobHookTable
     queryset = JobHook.objects.all()
 
-    def get_extra_context(self, request, instance):
-        return {
-            "content_types": instance.content_types.order_by("app_label", "model"),
-            **super().get_extra_context(request, instance),
-        }
-
-
-class JobHookEditView(generic.ObjectEditView):
-    queryset = JobHook.objects.all()
-    model_form = forms.JobHookForm
-
-
-class JobHookDeleteView(generic.ObjectDeleteView):
-    queryset = JobHook.objects.all()
-
-
-class JobHookBulkDeleteView(generic.BulkDeleteView):
-    queryset = JobHook.objects.all()
-    table = tables.JobHookTable
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+        )
+    )
 
 
 #
