@@ -190,7 +190,7 @@ class CloudResourceTypeUIViewSet(NautobotUIViewSet):
         return Response(
             {
                 "services_table": services_table,
-                "active_tab": "cloudservices",
+                "active_tab": "services",
                 "service_table_add_url": service_table_add_url,
             }
         )
