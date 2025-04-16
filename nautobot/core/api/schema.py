@@ -4,8 +4,16 @@ import re
 from drf_spectacular.contrib.django_filters import DjangoFilterExtension
 from drf_spectacular.extensions import OpenApiSerializerFieldExtension
 from drf_spectacular.openapi import AutoSchema
-from drf_spectacular.plumbing import build_array_type, build_media_type_object, get_doc, is_serializer, list_hash
+from drf_spectacular.plumbing import (
+    build_array_type,
+    build_basic_type,
+    build_media_type_object,
+    get_doc,
+    is_serializer,
+    list_hash,
+)
 from drf_spectacular.serializers import PolymorphicProxySerializerExtension
+from drf_spectacular.types import OpenApiTypes
 from rest_framework import serializers
 from rest_framework.relations import ManyRelatedField
 
@@ -313,6 +321,14 @@ class NautobotAutoSchema(AutoSchema):
             component.schema["required"] = ["id"]
         return component
 
+    def _get_serializer_field_meta(self, field, direction):
+        """Fix for ChoiceField that sets the default value's type to match the schema returned in the ChoiceFieldFix extension."""
+        meta = super()._get_serializer_field_meta(field, direction)
+        if isinstance(field, ChoiceField) and "default" in meta and direction == "request":
+            meta["default"] = field.default
+
+        return meta
+
 
 class NautobotFilterExtension(DjangoFilterExtension):
     """
@@ -401,3 +417,20 @@ class SerializedPKRelatedFieldFix(OpenApiSerializerFieldExtension):
         On requests, require PK only; on responses, represent the entire nested serializer.
         """
         return auto_schema._map_serializer(self.target.serializer, direction)
+
+
+class EmailFieldFix(OpenApiSerializerFieldExtension):
+    """Fix invalid schema for EmailField when default is an empty string."""
+
+    target_class = "rest_framework.serializers.EmailField"
+
+    def map_serializer_field(self, auto_schema, direction):
+        if self.target.default == "":
+            return {
+                "oneOf": [
+                    {"type": "string"},
+                    {"type": "string", "format": "email"},
+                ]
+            }
+        else:
+            return build_basic_type(OpenApiTypes.EMAIL)
