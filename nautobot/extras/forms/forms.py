@@ -142,6 +142,7 @@ __all__ = (
     "DynamicGroupFilterForm",
     "DynamicGroupForm",
     "DynamicGroupMembershipFormSet",
+    "ExportTemplateBulkEditForm",
     "ExportTemplateFilterForm",
     "ExportTemplateForm",
     "ExternalIntegrationBulkEditForm",
@@ -160,6 +161,7 @@ __all__ = (
     "JobEditForm",
     "JobFilterForm",
     "JobForm",
+    "JobHookBulkEditForm",
     "JobHookFilterForm",
     "JobHookForm",
     "JobQueueBulkEditForm",
@@ -180,6 +182,7 @@ __all__ = (
     "ObjectMetadataFilterForm",
     "PasswordInputWithPlaceholder",
     "RelationshipAssociationFilterForm",
+    "RelationshipBulkEditForm",
     "RelationshipFilterForm",
     "RelationshipForm",
     "RoleBulkEditForm",
@@ -751,6 +754,31 @@ class StaticGroupAssociationFilterForm(NautobotFilterForm):
 #
 # Export Templates
 #
+class ExportTemplateBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=ExportTemplate.objects.all(), widget=forms.MultipleHiddenInput())
+
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    mime_type = forms.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        required=False,
+        label="MIME type",
+        help_text="Defaults to <code>text/plain</code>",
+    )
+    file_extension = forms.CharField(
+        max_length=CHARFIELD_MAX_LENGTH, required=False, help_text="Extension to append to the rendered filename"
+    )
+
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("export_templates").get_query()).order_by(
+            "app_label", "model"
+        ),
+        required=False,
+        label="Content Type",
+    )
+
+    class Meta:
+        model = ExportTemplate
+        nullable_fields = ["description", "mime_type", "file_extension"]
 
 
 class ExportTemplateForm(BootstrapMixin, forms.ModelForm):
@@ -1282,6 +1310,43 @@ class JobFilterForm(BootstrapMixin, forms.Form):
     tags = TagFilterField(model)
 
 
+class JobHookBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=JobHook.objects.all(), widget=forms.MultipleHiddenInput())
+    job = DynamicModelChoiceField(
+        queryset=Job.objects.all(),
+        query_params={"is_job_hook_receiver": True},
+        required=False,
+        label="Job",
+    )
+    enabled = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    type_create = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    type_update = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    type_delete = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    add_content_types = MultipleContentTypeField(
+        queryset=ChangeLoggedModelsQuery().as_queryset(),
+        required=False,
+        label="Add Content Type(s)",
+    )
+
+    remove_content_types = MultipleContentTypeField(
+        queryset=ChangeLoggedModelsQuery().as_queryset(),
+        required=False,
+        label="Remove Content Type(s)",
+    )
+
+    class Meta:
+        model = JobHook
+        fields = (
+            "job",
+            "enabled",
+            "type_create",
+            "type_update",
+            "type_delete",
+            "add_content_types",
+            "remove_content_types",
+        )
+
+
 class JobHookForm(BootstrapMixin, forms.ModelForm):
     content_types = MultipleContentTypeField(
         queryset=ChangeLoggedModelsQuery().as_queryset(), required=True, label="Content Type(s)"
@@ -1774,6 +1839,45 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
 #
 # Relationship
 #
+
+
+class RelationshipBulkEditForm(BootstrapMixin, CustomFieldModelBulkEditFormMixin, NoteModelBulkEditFormMixin):
+    pk = forms.ModelMultipleChoiceField(queryset=Relationship.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    type = forms.ChoiceField(
+        required=False,
+        label="type",
+        choices=add_blank_choice(RelationshipTypeChoices),
+    )
+    source_hidden = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    destination_hidden = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    source_filter = forms.JSONField(required=False, widget=forms.Textarea, help_text="Filter for the source")
+    destination_filter = forms.JSONField(required=False, widget=forms.Textarea, help_text="Filter for the destination")
+    source_type = CSVContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()), required=False
+    )
+    destination_type = CSVContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()), required=False
+    )
+    source_label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    destination_label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    advanced_ui = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+
+    class Meta:
+        model = Relationship
+        fields = [
+            "description",
+            "type",
+            "source_hidden",
+            "destination_hidden",
+            "source_filter",
+            "destination_filter",
+            "source_type",
+            "destination_type",
+            "source_label",
+            "destination_label",
+            "advanced_ui",
+        ]
 
 
 class RelationshipForm(BootstrapMixin, forms.ModelForm):
