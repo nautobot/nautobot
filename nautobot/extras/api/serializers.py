@@ -162,6 +162,7 @@ class ApprovalWorkflowInstanceSerializer(NautobotModelSerializer):
 
 class ApprovalWorkflowStageInstanceSerializer(NautobotModelSerializer):
     """ApprovalWorkflowStageInstance Serializer."""
+
     decision_date = serializers.DateTimeField(format=None, required=False, allow_null=True)
 
     class Meta:
