@@ -303,7 +303,8 @@ class ApprovalWorkflowStageInstanceFilterSet(BaseFilterSet):
 
     q = SearchFilter(
         filter_predicates={
-            "state": "icontains",
+            "approval_workflow_stage__name": "icontains",
+            "approval_workflow_instance__approval_workflow__name": "icontains",
         }
     )
     approval_workflow_instance = NaturalKeyOrPKMultipleChoiceFilter(
