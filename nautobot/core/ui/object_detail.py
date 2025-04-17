@@ -20,6 +20,7 @@ from django_tables2 import RequestConfig
 
 from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.models.tree_queries import TreeModel
+from nautobot.core.tables import ButtonsColumn
 from nautobot.core.templatetags.helpers import (
     badge,
     bettertitle,
@@ -388,17 +389,16 @@ class DistinctViewTab(Tab):
         url_name,
         label_wrapper_template_path="components/tab/label_wrapper_distinct_view.html",
         related_object_attribute="",
+        panels=(),
         **kwargs,
     ):
         self.url_name = url_name
         self.related_object_attribute = related_object_attribute
-        super().__init__(label_wrapper_template_path=label_wrapper_template_path, **kwargs)
+        self.panels = panels
+        super().__init__(label_wrapper_template_path=label_wrapper_template_path, panels=panels, **kwargs)
 
     def get_extra_context(self, context: Context):
         return {"url": reverse(self.url_name, kwargs={"pk": get_obj_from_context(context).pk})}
-
-    def render(self, context: Context):
-        return ""
 
     def render_label(self, context: Context):
         if not self.related_object_attribute:
@@ -652,6 +652,7 @@ class ObjectsTablePanel(Panel):
         hide_hierarchy_ui=False,
         related_field_name=None,
         enable_bulk_actions=False,
+        tab_id=None,
         body_wrapper_template_path="components/panel/body_wrapper_table.html",
         body_content_template_path="components/panel/body_content_objects_table.html",
         header_extra_content_template_path="components/panel/header_extra_content_table.html",
@@ -697,6 +698,8 @@ class ObjectsTablePanel(Panel):
                 to the base model. Defaults to the same as `table_filter` if unset. Used to populate URLs.
             enable_bulk_actions (bool, optional): Show the pk toggle columns on the table if the user has the
                 appropriate permissions.
+            tab_id (str, optional): The ID of the tab this panel belongs to. Used to append to a `return_url` when
+                users navigate away from the tab and redirect them back to the correct one.
         """
         if context_table_key and any(
             [
@@ -736,6 +739,7 @@ class ObjectsTablePanel(Panel):
         self.hide_hierarchy_ui = hide_hierarchy_ui
         self.related_field_name = related_field_name
         self.enable_bulk_actions = enable_bulk_actions
+        self.tab_id = tab_id
 
         super().__init__(
             body_wrapper_template_path=body_wrapper_template_path,
@@ -756,6 +760,8 @@ class ObjectsTablePanel(Panel):
         request = context["request"]
         related_field_name = self.related_field_name or self.table_filter or obj._meta.model_name
         return_url = context.get("return_url", obj.get_absolute_url())
+        if self.tab_id:
+            return_url += f"?tab={self.tab_id}"
 
         if self.add_button_route == "default":
             body_content_table_class = self.table_class or context[self.context_table_key].__class__
@@ -814,9 +820,25 @@ class ObjectsTablePanel(Panel):
             if self.order_by_fields:
                 body_content_table_queryset = body_content_table_queryset.order_by(*self.order_by_fields)
             body_content_table_queryset = body_content_table_queryset.distinct()
-            body_content_table = body_content_table_class(
-                body_content_table_queryset, hide_hierarchy_ui=self.hide_hierarchy_ui
-            )
+            if self.tab_id:
+                # Use the `self.tab_id`, if it exists, to determine the correct return URL for the table
+                # to redirect the user back to the correct tab after editing/deleteing an object
+                body_content_table = body_content_table_class(
+                    body_content_table_queryset,
+                    hide_hierarchy_ui=self.hide_hierarchy_ui,
+                    extra_columns=[
+                        (
+                            "actions",
+                            ButtonsColumn(
+                                model=body_content_table_queryset.model, return_url_extra=f"?tab={self.tab_id}"
+                            ),
+                        )
+                    ],
+                )
+            else:
+                body_content_table = body_content_table_class(
+                    body_content_table_queryset, hide_hierarchy_ui=self.hide_hierarchy_ui
+                )
 
         if self.exclude_columns or self.include_columns:
             for column in body_content_table.columns:

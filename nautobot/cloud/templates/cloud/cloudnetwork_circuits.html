@@ -1,11 +1,3 @@
 {% extends 'cloud/cloudnetwork_retrieve.html' %}
 
 {% block title %}{{ block.super }} - Circuits {% endblock %}
-
-{% block content %}
-    <div class="row">
-        <div class="col-md-12">
-            {% include 'utilities/obj_table.html' with table=circuits_table table_template='panel_table.html' heading='Circuits' %}
-        </div>
-    </div>
-{% endblock %}

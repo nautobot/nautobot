@@ -1,11 +1,3 @@
 {% extends 'cloud/cloudnetwork_retrieve.html' %}
 
 {% block title %}{{ block.super }} - Cloud Services {% endblock %}
-
-{% block content %}
-    <div class="row">
-        <div class="col-md-12">
-            {% include 'utilities/obj_table.html' with table=cloud_services_table table_template='panel_table.html' heading='Cloud Services' %}
-        </div>
-    </div>
-{% endblock %}

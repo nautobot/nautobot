@@ -1,10 +1,7 @@
-from django.db.models import Q
-from django.urls import reverse
 from django_tables2 import RequestConfig
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from nautobot.circuits.models import Circuit
 from nautobot.circuits.tables import CircuitTable
 from nautobot.cloud.api.serializers import (
     CloudAccountSerializer,
@@ -34,7 +31,6 @@ from nautobot.cloud.forms import (
 )
 from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudResourceType, CloudService
 from nautobot.cloud.tables import CloudAccountTable, CloudNetworkTable, CloudResourceTypeTable, CloudServiceTable
-from nautobot.core.tables import ButtonsColumn
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
@@ -93,6 +89,16 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
                 label="Children",
                 url_name="cloud:cloudnetwork_children",
                 related_object_attribute="children",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        label="Children",
+                        table_class=CloudNetworkTable,
+                        table_attribute="children",
+                        tab_id="children",
+                    ),
+                ),
             ),
             object_detail.DistinctViewTab(
                 weight=800,
@@ -100,6 +106,16 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
                 label="Prefixes",
                 url_name="cloud:cloudnetwork_prefixes",
                 related_object_attribute="prefixes",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_class=PrefixTable,
+                        table_attribute="prefixes",
+                        exclude_columns=("location_count", "vlan"),
+                        tab_id="prefixes",
+                    ),
+                ),
             ),
             object_detail.DistinctViewTab(
                 weight=900,
@@ -107,6 +123,16 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
                 label="Circuits",
                 url_name="cloud:cloudnetwork_circuits",
                 related_object_attribute="circuit_terminations",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_class=CircuitTable,
+                        table_filter=["circuit_termination_a__cloud_network", "circuit_termination_z__cloud_network"],
+                        exclude_columns=("circuit_termination_a", "circuit_termination_z"),
+                        tab_id="circuits",
+                    ),
+                ),
             ),
             object_detail.DistinctViewTab(
                 weight=1000,
@@ -114,87 +140,35 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
                 label="Cloud Services",
                 url_name="cloud:cloudnetwork_cloud_services",
                 related_object_attribute="cloud_services",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_class=CloudServiceTable,
+                        table_attribute="cloud_services",
+                        exclude_columns=("cloud_network_count"),
+                        tab_id="cloud_services",
+                    ),
+                ),
             ),
         ),
     )
 
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        context.update({"object_detail_content": self.object_detail_content})
-        return context
-
     @action(detail=True, url_path="children")
     def children(self, request, *args, **kwargs):
-        instance = self.get_object()
-        children = instance.children.restrict(request.user, "view")
-        children_table = CloudNetworkTable(
-            data=children,
-            extra_columns=[("actions", ButtonsColumn(model=CloudNetwork, return_url_extra="?tab=children"))],
-        )
-        children_table.columns.hide("parent")
-        RequestConfig(
-            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-        ).configure(children_table)
-        child_url = reverse("cloud:cloudnetwork_add")
-        child_table_add_url = f"{child_url}?parent={instance.id}"
-        return Response(
-            {"children_table": children_table, "active_tab": "children", "child_table_add_url": child_table_add_url}
-        )
+        return Response({})
 
     @action(detail=True, url_path="prefixes")
     def prefixes(self, request, *args, **kwargs):
-        instance = self.get_object()
-        prefixes = instance.prefixes.restrict(request.user, "view")
-        prefixes_table = PrefixTable(prefixes.select_related("namespace"), hide_hierarchy_ui=True)
-        prefixes_table.columns.hide("location_count")
-        prefixes_table.columns.hide("vlan")
-        RequestConfig(
-            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-        ).configure(prefixes_table)
-        return Response(
-            {
-                "prefixes_table": prefixes_table,
-                "active_tab": "prefixes",
-            }
-        )
+        return Response({})
 
     @action(detail=True, url_path="circuits")
     def circuits(self, request, *args, **kwargs):
-        instance = self.get_object()
-        circuits = Circuit.objects.restrict(request.user, "view").filter(
-            Q(circuit_termination_a__cloud_network=instance.pk) | Q(circuit_termination_z__cloud_network=instance.pk)
-        )
-        circuits_table = CircuitTable(circuits)
-        circuits_table.columns.hide("circuit_termination_a")
-        circuits_table.columns.hide("circuit_termination_z")
-        RequestConfig(
-            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-        ).configure(circuits_table)
-        return Response(
-            {
-                "circuits_table": circuits_table,
-                "active_tab": "circuits",
-            }
-        )
+        return Response({})
 
     @action(detail=True, url_path="cloud-services", url_name="cloud_services")
     def cloud_services(self, request, *args, **kwargs):
-        instance = self.get_object()
-        cloud_services = instance.cloud_services.restrict(request.user, "view")
-        cloud_services_table = CloudServiceTable(
-            data=cloud_services,
-            extra_columns=[("actions", ButtonsColumn(model=CloudService, return_url_extra="?tab=cloud_services"))],
-        )
-        cloud_services_table.columns.hide("cloud_network_count")
-        RequestConfig(
-            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-        ).configure(cloud_services_table)
-        return Response(
-            {
-                "cloud_services_table": cloud_services_table,
-                "active_tab": "cloudservices",
-            }
-        )
+        return Response({})
 
 
 class CloudResourceTypeUIViewSet(NautobotUIViewSet):
