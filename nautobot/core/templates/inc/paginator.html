@@ -15,7 +15,7 @@
                 {% endfor %}
             {% endif %}
         {% endfor %}
-        <select name="per_page" id="per_page" class="form-select d-inline-block" style="padding-inline-start: 0.4375rem; padding-inline-end: 1.9375rem; width: 4.5rem;"<!-- 7px; 31px; 72px; -->>
+        <select name="per_page" id="per_page" class="form-select">
             {% if page.paginator.per_page not in "PER_PAGE_DEFAULTS"|settings_or_config %}
                 <option value="{{ page.paginator.per_page }}" selected="selected">{{ page.paginator.per_page }}</option>
             {% endif %}

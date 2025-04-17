@@ -1062,3 +1062,11 @@ body {
     }
   }
 }
+
+/* paginator.html */
+#per_page {
+  display: inline-block;
+  padding-inline-start: 0.4375rem; /* 7px */
+  padding-inline-end: 1.9375rem; /* 31px */
+  width: 4.5rem; /* 72px */
+}
