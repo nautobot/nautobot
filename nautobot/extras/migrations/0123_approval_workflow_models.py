@@ -230,6 +230,7 @@ class Migration(migrations.Migration):
                 ),
             ],
             options={
+                "db_table": "extras_approvaluserresponse",
                 "verbose_name": "Approval Workflow Stage Instance Response",
             },
         ),

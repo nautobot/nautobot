@@ -1,4 +1,3 @@
-
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -339,7 +338,7 @@ class ApprovalWorkflowStageInstanceResponse(BaseModel):
 
     class Meta:
         """Meta class for ApprovalWorkflowStageInstanceResponse."""
-
+        db_table = "extras_approvaluserresponse"
         verbose_name = "Approval Workflow Stage Instance Response"
 
     def __str__(self):
