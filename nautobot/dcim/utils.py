@@ -73,7 +73,6 @@ def get_network_driver_mapping_tool_names():
     """
     network_driver_names = NETUTILS_NETWORK_DRIVER_MAPPING_NAMES.copy()
     network_driver_names.update(get_settings_or_config("NETWORK_DRIVERS", fallback={}).keys())
-
     return sorted(network_driver_names)
 
 
