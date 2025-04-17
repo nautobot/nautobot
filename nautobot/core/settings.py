@@ -128,6 +128,14 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 if "NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE" in os.environ and os.environ["NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE"] != "":
     JOB_CREATE_FILE_MAX_SIZE = int(os.environ["NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE"])
 
+# Display summary field in JobResult objects in list view? Default is True, but needs to be configurable for performance
+# purposes if there are a lot of JobResult objects with large numbers of log messages.
+if (
+    "NAUTOBOT_JOB_RESULTS_SUMMARY_FIELD_ENABLED" in os.environ
+    and os.environ["NAUTOBOT_JOB_RESULTS_SUMMARY_FIELD_ENABLED"] != ""
+):
+    JOB_RESULTS_SUMMARY_FIELD_ENABLED = is_truthy(os.environ["NAUTOBOT_JOB_RESULTS_SUMMARY_FIELD_ENABLED"])
+
 # The storage backend to use for Job input files and Job output files
 JOB_FILE_IO_STORAGE = os.getenv("NAUTOBOT_JOB_FILE_IO_STORAGE", "db_file_storage.storage.DatabaseFileStorage")
 
@@ -770,6 +778,12 @@ CONSTANCE_CONFIG = {
         ),
         field_type=int,
     ),
+    "JOB_RESULTS_SUMMARY_FIELD_ENABLED": ConstanceConfigItem(
+        default=True,
+        help_text="Enable the 'Summary' field in Job Results.\n"
+        "This can be disabled if performance issues are encountered due to job results with large numbers of log messages.",
+        field_type=bool,
+    ),
     "LOCATION_NAME_AS_NATURAL_KEY": ConstanceConfigItem(
         default=False,
         help_text="Location names are not guaranteed globally-unique by Nautobot but in practice they often are. "
@@ -869,7 +883,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
         "RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT",
     ],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
-    "User Interface": ["SUPPORT_MESSAGE", "NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"],
+    "User Interface": ["SUPPORT_MESSAGE", "NTC_SUPPORT_CONTRACT_EXPIRATION_DATE", "JOB_RESULTS_SUMMARY_FIELD_ENABLED"],
     "Debugging": ["ALLOW_REQUEST_PROFILING"],
 }
 

@@ -1052,6 +1052,14 @@ properties:
       "`JOB_CREATE_FILE_MAX_SIZE`": "#job_create_file_max_size"
     type: "string"
     version_added: "2.1.0"
+  JOB_RESULTS_SUMMARY_FIELD_ENABLED:
+    default: true
+    description: >-
+      If `True`, the Job results summary field will be displayed in the UI.
+      If `False`, the Job results summary field will not be displayed in the UI.
+    environment_variable: "NAUTOBOT_JOB_RESULTS_SUMMARY_FIELD_ENABLED"
+    type: "boolean"
+    version_added: "2.4.8"
   JOBS_ROOT:
     "$ref": "#/definitions/absolute_path"
     default: "~/.nautobot/jobs"
