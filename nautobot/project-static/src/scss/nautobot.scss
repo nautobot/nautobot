@@ -344,6 +344,22 @@ $dropdown-dark-link-active-bg:      $primary-bg-subtle-dark;
 $dropdown-dark-link-disabled-color: $body-tertiary-color-dark;
 $dropdown-dark-header-color:        $body-secondary-color-dark;
 
+// Pagination
+$pagination-padding-y:    $input-btn-padding-y;
+$pagination-padding-x:    $input-btn-padding-x;
+$pagination-padding-y-sm: $input-btn-padding-y-sm;
+$pagination-padding-x-sm: $input-btn-padding-x-sm;
+$pagination-padding-y-lg: $input-btn-padding-y-lg;
+$pagination-padding-x-lg: $input-btn-padding-x-lg;
+
+$pagination-focus-bg: var(--#{$prefix}primary-bg-subtle);
+
+$pagination-hover-bg: var(--#{$prefix}primary-bg-subtle);
+
+$pagination-active-color:        $white;
+$pagination-active-bg:           var(--#{$prefix}primary-text-emphasis);
+$pagination-active-border-color: var(--#{$prefix}primary-text-emphasis);
+
 /* Badges */
 $badge-font-size:   $font-size-base;
 $badge-font-weight: 400;
@@ -440,10 +456,43 @@ button {
   }
 }
 
+/* Tables */
 .table {
   > thead:not(caption) > tr > th {
     background-color: var(--#{$prefix}tertiary-bg);
     color: var(--#{$prefix}secondary-color);
+    position: relative;
+
+    &.orderable {
+      a,
+      button {
+        &:empty {
+          display: none; /* Fix for focusable actions column header. */
+        }
+
+        &:not(.disabled):not(:disabled):not(:empty) {
+          color: inherit;
+          display: inline-block;
+          margin-block: -#{$table-cell-padding-y};
+          margin-inline: -#{$table-cell-padding-x};
+          padding-block: $table-cell-padding-y;
+          padding-inline: $table-cell-padding-x;
+          text-decoration: none;
+          width: calc(100% + #{$table-cell-padding-x} * 2);
+
+          &:focus-visible,
+          &:hover {
+            background-color: var(--#{$prefix}primary-bg-subtle);
+          }
+        }
+      }
+    }
+  }
+}
+
+.table-hover {
+  > tbody > tr > * {
+    transition: $btn-transition; /* Use `$btn-transition` but in fact it is just for `background-color`. */
   }
 }
 

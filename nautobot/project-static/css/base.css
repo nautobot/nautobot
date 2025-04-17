@@ -60,18 +60,6 @@ td.min-width {
     width: 1%;
 }
 
-/* Paginator */
-div.paginator {
-    margin-bottom: 20px;
-}
-div.paginator form {
-    margin-bottom: 6px;
-}
-nav ul.pagination {
-    margin-top: 0;
-    margin-bottom: 8px !important;
-}
-
 /* Devices */
 table.component-list td.subtable {
     padding: 0;
