@@ -141,3 +141,15 @@
     name: B042
     message: Nav Link is changed from <a href> to <a class="nav-link" href>
     python_module: scripts.djlint_b042
+- rule:
+    name: B043
+    message: Active Nav Link is changed from <a class="active" href> to <a class="nav-link active" href>
+    python_module: scripts.djlint_b043
+- rule:
+    name: B051
+    message: Pagination Page Item is changed from <li> to <li class="page-item">
+    python_module: scripts.djlint_b051
+- rule:
+    name: B052
+    message: Pagination Page Link is changed from <a> to <a class="page-link">
+    python_module: scripts.djlint_b052

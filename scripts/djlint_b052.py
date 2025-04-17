@@ -1,4 +1,4 @@
-"""rule B042: Add nav-link class to anchor items within navigation tabs."""
+"""rule B052: Add page-link class to anchor items within pagination items."""
 
 from __future__ import annotations
 
@@ -28,12 +28,12 @@ def run(
     *args: Any,
     **kwargs: Any,
 ) -> tuple[LintError, ...]:
-    """Add nav-link class to anchor items within navigation tabs."""
+    """Add page-link class to anchor items within pagination items."""
     errors: list[LintError] = []
 
-    # Check for <ul class="nav nav-tabs">
+    # Check for <ul class="pagination">
     for ul_match in re.finditer(r"<ul\s+class=(['\"])(.*?)\1[^>]*>", html, flags=re.IGNORECASE):
-        if "nav-tabs" in ul_match.group(2).lower():
+        if "pagination" in ul_match.group(2).lower():
             ul_start = ul_match.start()
             closing_ul_match = re.search(r"</ul>", html[ul_start:], flags=re.IGNORECASE)
             if closing_ul_match:
@@ -55,7 +55,7 @@ def run(
                                 "message": rule["message"],
                             }
                         )
-                    elif not re.search(r"\bnav-link\b", a_tag, flags=re.IGNORECASE):
+                    elif not re.search(r"\bpage-link\b", a_tag, flags=re.IGNORECASE):
                         errors.append(
                             {
                                 "code": rule["name"],
@@ -64,40 +64,6 @@ def run(
                                 "message": rule["message"],
                             }
                         )
-
-    # Check within {% block extra_nav_tabs %}
-    for block_match in re.finditer(
-        r"{%\s+block\s+extra_nav_tabs\s*%}(.*?){%\s+endblock\s+extra_nav_tabs\s*%}",
-        html,
-        flags=re.DOTALL | re.IGNORECASE,
-    ):
-        block_content = block_match.group(1)
-        block_start = block_match.start()
-
-        for a_match in re.finditer(r"<a[^>]*>", block_content, flags=re.IGNORECASE):
-            a_start_relative = a_match.start()
-            a_end_relative = a_match.end()
-            a_start_absolute = block_start + a_start_relative + len(block_match.group(0).split(block_content)[0])
-
-            a_tag = block_content[a_start_relative:a_end_relative]
-            if not re.search(r"\sclass=(['\"])(.*?)\1", a_tag, flags=re.IGNORECASE):
-                errors.append(
-                    {
-                        "code": rule["name"],
-                        "line": get_line(a_start_absolute, line_ends),
-                        "match": a_tag.strip()[:20],
-                        "message": rule["message"],
-                    }
-                )
-            elif not re.search(r"\bnav-link\b", a_tag, flags=re.IGNORECASE):
-                errors.append(
-                    {
-                        "code": rule["name"],
-                        "line": get_line(a_start_absolute, line_ends),
-                        "match": a_tag.strip()[:20],
-                        "message": rule["message"],
-                    }
-                )
 
     return tuple(
         error
