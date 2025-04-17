@@ -352,7 +352,7 @@ def generate_attrs_for_schema_type(schema_type):
     # Define Attributes for single item and list with their search parameters
     search_params = generate_list_search_parameters(schema_type)
     attrs[single_item_name] = graphene.Field(schema_type, id=graphene.ID())
-    attrs[list_name] = DjangoListField(schema_type, **search_params)
+    attrs[list_name] = graphene.List(schema_type, **search_params)
 
     # Define Resolvers for both single item and list
     single_item_resolver_name = f"{RESOLVER_PREFIX}{single_item_name}"
