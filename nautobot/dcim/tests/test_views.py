@@ -760,7 +760,7 @@ class DeviceFamilyTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         DeviceFamily.objects.create(name="Deletable Device Family 3")
 
 
-class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = Manufacturer
 
     @classmethod
@@ -768,6 +768,9 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         cls.form_data = {
             "name": "Manufacturer X",
             "description": "A new manufacturer",
+        }
+        cls.bulk_edit_data = {
+            "description": "Updated manufacturer description",
         }
 
     def get_deletable_object(self):

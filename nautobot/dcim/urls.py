@@ -17,7 +17,6 @@ from .models import (
     Interface,
     InventoryItem,
     Location,
-    Manufacturer,
     PowerFeed,
     PowerOutlet,
     PowerPanel,
@@ -39,11 +38,13 @@ router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet
 router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
 router.register("interface-redundancy-groups-associations", views.InterfaceRedundancyGroupAssociationUIViewSet)
 router.register("location-types", views.LocationTypeUIViewSet)
+router.register("manufacturers", views.ManufacturerUIViewSet)
 router.register("module-bays", views.ModuleBayUIViewSet)
 router.register("module-bay-templates", views.ModuleBayTemplateUIViewSet)
 router.register("modules", views.ModuleUIViewSet)
 router.register("module-types", views.ModuleTypeUIViewSet)
 router.register("platforms", views.PlatformUIViewSet)
+router.register("power-feeds", views.PowerFeedUIViewSet)
 router.register("software-image-files", views.SoftwareImageFileUIViewSet)
 router.register("software-versions", views.SoftwareVersionUIViewSet)
 router.register("virtual-device-contexts", views.VirtualDeviceContextUIViewSet)
@@ -207,50 +208,6 @@ urlpatterns = [
         ImageAttachmentEditView.as_view(),
         name="rack_add_image",
         kwargs={"model": Rack},
-    ),
-    # Manufacturers
-    path("manufacturers/", views.ManufacturerListView.as_view(), name="manufacturer_list"),
-    path(
-        "manufacturers/add/",
-        views.ManufacturerEditView.as_view(),
-        name="manufacturer_add",
-    ),
-    path(
-        "manufacturers/import/",
-        views.ManufacturerBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="manufacturer_import",
-    ),
-    path(
-        "manufacturers/delete/",
-        views.ManufacturerBulkDeleteView.as_view(),
-        name="manufacturer_bulk_delete",
-    ),
-    path(
-        "manufacturers/<uuid:pk>/",
-        views.ManufacturerView.as_view(),
-        name="manufacturer",
-    ),
-    path(
-        "manufacturers/<uuid:pk>/edit/",
-        views.ManufacturerEditView.as_view(),
-        name="manufacturer_edit",
-    ),
-    path(
-        "manufacturers/<uuid:pk>/delete/",
-        views.ManufacturerDeleteView.as_view(),
-        name="manufacturer_delete",
-    ),
-    path(
-        "manufacturers/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="manufacturer_changelog",
-        kwargs={"model": Manufacturer},
-    ),
-    path(
-        "manufacturers/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="manufacturer_notes",
-        kwargs={"model": Manufacturer},
     ),
     # Device types
     path("device-types/", views.DeviceTypeListView.as_view(), name="devicetype_list"),
@@ -1483,50 +1440,10 @@ urlpatterns = [
         kwargs={"model": PowerPanel},
     ),
     # Power feeds
-    path("power-feeds/", views.PowerFeedListView.as_view(), name="powerfeed_list"),
-    path("power-feeds/add/", views.PowerFeedEditView.as_view(), name="powerfeed_add"),
-    path(
-        "power-feeds/import/",
-        views.PowerFeedBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="powerfeed_import",
-    ),
-    path(
-        "power-feeds/edit/",
-        views.PowerFeedBulkEditView.as_view(),
-        name="powerfeed_bulk_edit",
-    ),
-    path(
-        "power-feeds/delete/",
-        views.PowerFeedBulkDeleteView.as_view(),
-        name="powerfeed_bulk_delete",
-    ),
-    path("power-feeds/<uuid:pk>/", views.PowerFeedView.as_view(), name="powerfeed"),
-    path(
-        "power-feeds/<uuid:pk>/edit/",
-        views.PowerFeedEditView.as_view(),
-        name="powerfeed_edit",
-    ),
-    path(
-        "power-feeds/<uuid:pk>/delete/",
-        views.PowerFeedDeleteView.as_view(),
-        name="powerfeed_delete",
-    ),
     path(
         "power-feeds/<uuid:pk>/trace/",
         views.PathTraceView.as_view(),
         name="powerfeed_trace",
-        kwargs={"model": PowerFeed},
-    ),
-    path(
-        "power-feeds/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="powerfeed_changelog",
-        kwargs={"model": PowerFeed},
-    ),
-    path(
-        "power-feeds/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="powerfeed_notes",
         kwargs={"model": PowerFeed},
     ),
     path(
