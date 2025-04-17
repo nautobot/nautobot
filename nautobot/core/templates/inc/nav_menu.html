@@ -33,7 +33,7 @@
                     </svg>
                     <span>Favorites</span>
                 </button>
-                <div class="sidenav-flyout" id="sidenav-flyout-favorites">
+                <div class="sidenav-flyout" id="sidenav-flyout-favorites" hx-swap-oob="true">
                     {% include "inc/nav_favorites.html" %}
                 </div>
             </li>
@@ -64,7 +64,7 @@
                             >
                                 {% for group_name, group_details in tab_details.groups.items %}
                                     {% if not group_details.permissions or request.user|has_one_or_more_perms:group_details.permissions %}
-                                        <ul class="list-unstyled" hx-vals='{"group_name": "{{ group_name }}"}'>
+                                        <ul class="list-unstyled">
                                             <li class="sidenav-link-group"
                                                 data-group-weight="{{ group_details.weight }}">{{ group_name }}</li>
                                             {% for item_link, item_details in group_details.items.items %}
@@ -78,12 +78,15 @@
                                                         <button
                                                             class="sidenav-favorite{% if item_link in navbar_favorites_link_list %} active{% endif %}"
                                                             type="button"
-                                                            hx-post="{% url "user:navbar_favorites" %}"
-                                                            hx-vals='js:{"name": "{{ item_details.name }}", "link": "{{ item_link }}", "remove": event.target.classList.contains("active")}'
+                                                            hx-post="{% if item_link in navbar_favorites_link_list %}{% url "user:navbar_favorites_delete" %}{% else %}{% url "user:navbar_favorites_add" %}{% endif %}"
+                                                            hx-vals='{"name": "{{ item_details.name }}", "link": "{{ item_link }}"}'
                                                             hx-target="#sidenav-flyout-favorites"
                                                             hx-select="#sidenav-flyout-favorites"
                                                             hx-swap="outerHTML"
                                                             hx-on::after-request="toggleFavorite(this, event)"
+                                                            hx-on::config-request="setRequestUrl(this, event)"
+                                                            data-add-url="{% url "user:navbar_favorites_add" %}"
+                                                            data-delete-url="{% url "user:navbar_favorites_delete" %}"
                                                         >
                                                             <span class="visually-hidden">
                                                                 Add to favorites

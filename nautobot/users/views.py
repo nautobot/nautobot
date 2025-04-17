@@ -23,10 +23,12 @@ from nautobot.core.forms import ConfirmationForm
 from nautobot.core.views.generic import GenericView
 from nautobot.users.utils import serialize_user_without_config_and_views
 
+from ..core.views.mixins import GetReturnURLMixin
 from .forms import (
     AdvancedProfileSettingsForm,
     LoginForm,
-    NavbarFavoritesForm,
+    NavbarFavoritesAddForm,
+    NavbarFavoritesRemoveForm,
     PasswordChangeForm,
     PreferenceProfileSettingsForm,
     TokenForm,
@@ -205,31 +207,41 @@ class UserConfigView(GenericView):
             return redirect("user:preferences")
 
 
-class UserNavbarFavoritesView(GenericView):
-
+class UserNavbarFavoritesAddView(GetReturnURLMixin, GenericView):
     def post(self, request):
         if request.htmx:
-            form = NavbarFavoritesForm(request.POST)
+            form = NavbarFavoritesAddForm(request.POST)
             if form.is_valid():
                 navbar_favorites = request.user.get_config("navbar_favorites", [])
-                remove = form.cleaned_data.pop("remove")
-                if remove:
-                    navbar_favorites = [
-                        item for item in navbar_favorites if item.get("link") != form.cleaned_data["link"]
-                    ]
-                else:
-                    navbar_favorites.append(form.cleaned_data)
-                    navbar_favorites = sorted(navbar_favorites, key=lambda d: d.get("name", ""))
+                navbar_favorites.append(form.cleaned_data)
+                navbar_favorites = sorted(navbar_favorites, key=lambda d: d.get("name", ""))
                 request.user.set_config("navbar_favorites", navbar_favorites, commit=True)
 
                 return render(
                     request,
                     "inc/nav_menu.html",
-                    status=HTTPStatus.OK if remove else HTTPStatus.CREATED,
+                    status=HTTPStatus.CREATED,
                 )
 
-        referer = request.META.get("HTTP_REFERER")
-        return redirect(referer or "home")
+        return redirect(self.get_return_url(request))
+
+
+class UserNavbarFavoritesDeleteView(GetReturnURLMixin, GenericView):
+    def post(self, request):
+        if request.htmx:
+            form = NavbarFavoritesRemoveForm(request.POST)
+            if form.is_valid():
+                navbar_favorites = request.user.get_config("navbar_favorites", [])
+                navbar_favorites = [item for item in navbar_favorites if item.get("link") != form.cleaned_data["link"]]
+                request.user.set_config("navbar_favorites", navbar_favorites, commit=True)
+
+                return render(
+                    request,
+                    "inc/nav_menu.html",
+                    status=HTTPStatus.OK,
+                )
+
+        return redirect(self.get_return_url(request))
 
 
 class ChangePasswordView(GenericView):

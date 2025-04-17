@@ -805,6 +805,7 @@ body {
     top: 0;
     width: max-content;
     z-index: -1;
+    min-width: $sidenav-link-width;
   }
 
   .sidenav-link {

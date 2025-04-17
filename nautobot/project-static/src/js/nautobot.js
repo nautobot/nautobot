@@ -78,16 +78,13 @@ document.addEventListener('DOMContentLoaded', function () {
       element.classList.toggle('active')
     }
   }
-
-  const showEmpty = () => {
-    const favoritesEmpty = document.getElementById('favorites-empty');
-    if (document.querySelectorAll('#sidenav-flyout-favorites > ul > li').length - 1 === 1) {
-      favoritesEmpty.classList.remove('d-none')
-    }
-  }
-
   window.toggleFavorite = toggleFavorite;
-  window.showEmpty = showEmpty;
+
+  const setRequestUrl = (element, event) => {
+    const isFavorite = element.classList.contains('active');
+    event.detail.path = isFavorite ? element.dataset.deleteUrl : element.dataset.addUrl;
+  }
+  window.setRequestUrl = setRequestUrl;
 });
 
 

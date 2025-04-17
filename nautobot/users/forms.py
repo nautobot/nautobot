@@ -75,13 +75,14 @@ class PreferenceProfileSettingsForm(BootstrapMixin, forms.Form):
     timezone = TimeZoneFormField(required=False, help_text="Set your default timezone", widget=StaticSelect2)
 
 
-class NavbarFavoritesForm(forms.Form):
+class NavbarFavoritesAddForm(forms.Form):
     link = forms.CharField()
     name = forms.CharField()
     tab_name = forms.CharField()
-    group_name = forms.CharField()
-    remove = forms.BooleanField(required=False)
 
+
+class NavbarFavoritesRemoveForm(forms.Form):
+    link = forms.CharField()
 
 
 class AdminPasswordChangeForm(_AdminPasswordChangeForm):
