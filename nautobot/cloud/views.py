@@ -192,7 +192,7 @@ class CloudServiceUIViewSet(NautobotUIViewSet):
         context.update({"object_detail_content": self.object_detail_content})
         return context
 
-    @action(detail=True, url_path="cloud_networks", url_name="cloud_networks")
+    @action(detail=True, url_path="cloud-networks", url_name="cloud_networks")
     def cloud_networks(self, request, *args, **kwargs):
         instance = self.get_object()
         networks = instance.cloud_networks.restrict(request.user, "view")
