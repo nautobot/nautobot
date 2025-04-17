@@ -3,7 +3,6 @@
 import logging
 
 import graphene
-from graphene_django.fields import DjangoListField
 import graphene_django_optimizer as gql_optimizer
 from graphql import GraphQLError
 
