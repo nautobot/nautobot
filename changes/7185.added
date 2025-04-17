@@ -1,0 +1,1 @@
+Added constance config setting to disable the `summary` field in the `JobResultTable` for performance issues

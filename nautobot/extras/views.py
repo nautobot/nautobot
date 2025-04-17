@@ -2065,35 +2065,38 @@ class JobHookUIViewSet(NautobotUIViewSet):
 
 
 def get_annotated_jobresult_queryset():
-    return (
-        JobResult.objects.defer("result")
-        .select_related("job_model", "user")
-        .annotate(
-            debug_log_count=count_related(
-                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_DEBUG}
-            ),
-            success_log_count=count_related(
-                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_SUCCESS}
-            ),
-            info_log_count=count_related(
-                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_INFO}
-            ),
-            warning_log_count=count_related(
-                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_WARNING}
-            ),
-            error_log_count=count_related(
-                JobLogEntry,
-                "job_result",
-                filter_dict={
-                    "log_level__in": [
-                        LogLevelChoices.LOG_FAILURE,
-                        LogLevelChoices.LOG_ERROR,
-                        LogLevelChoices.LOG_CRITICAL,
-                    ],
-                },
-            ),
+    if get_settings_or_config("JOB_RESULTS_SUMMARY_FIELD_ENABLED"):
+        return (
+            JobResult.objects.defer("result")
+            .select_related("job_model", "user")
+            .annotate(
+                debug_log_count=count_related(
+                    JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_DEBUG}
+                ),
+                success_log_count=count_related(
+                    JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_SUCCESS}
+                ),
+                info_log_count=count_related(
+                    JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_INFO}
+                ),
+                warning_log_count=count_related(
+                    JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_WARNING}
+                ),
+                error_log_count=count_related(
+                    JobLogEntry,
+                    "job_result",
+                    filter_dict={
+                        "log_level__in": [
+                            LogLevelChoices.LOG_FAILURE,
+                            LogLevelChoices.LOG_ERROR,
+                            LogLevelChoices.LOG_CRITICAL,
+                        ],
+                    },
+                ),
+            )
         )
-    )
+    else:
+        return JobResult.objects.defer("result").select_related("job_model", "user")
 
 
 class JobResultListView(generic.ObjectListView):
@@ -2101,11 +2104,50 @@ class JobResultListView(generic.ObjectListView):
     List JobResults
     """
 
-    queryset = get_annotated_jobresult_queryset()
+    queryset = JobResult.objects.all()
     filterset = filters.JobResultFilterSet
     filterset_form = forms.JobResultFilterForm
     table = tables.JobResultTable
     action_buttons = ()
+
+    def alter_queryset(self, request):
+        """
+        Override to use the annotated queryset
+        """
+        queryset = super().alter_queryset(request)
+
+        if get_settings_or_config("JOB_RESULTS_SUMMARY_FIELD_ENABLED"):
+            return (
+                queryset.defer("result")
+                .select_related("job_model", "user")
+                .annotate(
+                    debug_log_count=count_related(
+                        JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_DEBUG}
+                    ),
+                    success_log_count=count_related(
+                        JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_SUCCESS}
+                    ),
+                    info_log_count=count_related(
+                        JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_INFO}
+                    ),
+                    warning_log_count=count_related(
+                        JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_WARNING}
+                    ),
+                    error_log_count=count_related(
+                        JobLogEntry,
+                        "job_result",
+                        filter_dict={
+                            "log_level__in": [
+                                LogLevelChoices.LOG_FAILURE,
+                                LogLevelChoices.LOG_ERROR,
+                                LogLevelChoices.LOG_CRITICAL,
+                            ],
+                        },
+                    ),
+                )
+            )
+
+        return queryset.defer("result").select_related("job_model", "user")
 
 
 class JobResultDeleteView(generic.ObjectDeleteView):

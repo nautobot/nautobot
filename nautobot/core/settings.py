@@ -128,6 +128,14 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 if "NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE" in os.environ and os.environ["NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE"] != "":
     JOB_CREATE_FILE_MAX_SIZE = int(os.environ["NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE"])
 
+# Display summary field in JobResult objects in list view? Default is True, but needs to be configurable for performance
+# purposes if there are a lot of JobResult objects with large numbers of log messages.
+if (
+    "NAUTOBOT_JOB_RESULTS_SUMMARY_FIELD_ENABLED" in os.environ
+    and os.environ["NAUTOBOT_JOB_RESULTS_SUMMARY_FIELD_ENABLED"] != ""
+):
+    JOB_RESULTS_SUMMARY_FIELD_ENABLED = is_truthy(os.environ["NAUTOBOT_JOB_RESULTS_SUMMARY_FIELD_ENABLED"])
+
 # The storage backend to use for Job input files and Job output files
 JOB_FILE_IO_STORAGE = os.getenv("NAUTOBOT_JOB_FILE_IO_STORAGE", "db_file_storage.storage.DatabaseFileStorage")
 
@@ -770,6 +778,12 @@ CONSTANCE_CONFIG = {
         ),
         field_type=int,
     ),
+    "JOB_RESULTS_SUMMARY_FIELD_ENABLED": ConstanceConfigItem(
+        default=True,
+        help_text="Enable the 'Summary' column in Job Result list view.\n"
+        "This can be disabled if performance issues are encountered due to job results with large numbers of log messages.",
+        field_type=bool,
+    ),
     "LOCATION_NAME_AS_NATURAL_KEY": ConstanceConfigItem(
         default=False,
         help_text="Location names are not guaranteed globally-unique by Nautobot but in practice they often are. "
@@ -862,7 +876,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Installation Metrics": ["DEPLOYMENT_ID"],
     "Natural Keys": ["DEVICE_NAME_AS_NATURAL_KEY", "LOCATION_NAME_AS_NATURAL_KEY"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
-    "Performance": ["JOB_CREATE_FILE_MAX_SIZE"],
+    "Performance": ["JOB_CREATE_FILE_MAX_SIZE", "JOB_RESULTS_SUMMARY_FIELD_ENABLED"],
     "Rack Elevation Rendering": [
         "RACK_ELEVATION_DEFAULT_UNIT_HEIGHT",
         "RACK_ELEVATION_DEFAULT_UNIT_WIDTH",
