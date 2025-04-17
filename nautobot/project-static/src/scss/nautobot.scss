@@ -470,7 +470,7 @@ button {
           display: none; /* Fix for focusable actions column header. */
         }
 
-        &:not(.disabled):not(:disabled):not(:empty) {
+        &:not(:is(.disabled, :disabled, :empty)) {
           color: inherit;
           display: inline-block;
           margin-block: -#{$table-cell-padding-y};
