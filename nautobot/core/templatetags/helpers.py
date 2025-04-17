@@ -742,7 +742,8 @@ def render_button_class(value):
         '<button class="btn btn-primary">primary</button>'
     """
     if value:
-        return format_html('<button class="btn btn-{}">{}</button>', value.lower(), value.lower())
+        base = value.split()[0]
+        return format_html('<button class="btn btn-{}">{}</button>', base.lower(), base.lower())
     return ""
 
 
