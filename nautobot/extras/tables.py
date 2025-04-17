@@ -924,6 +924,7 @@ class JobResultTable(BaseTable):
                 record.warning_log_count,
                 record.error_log_count,
             )
+        return None
 
     class Meta(BaseTable.Meta):
         model = JobResult
