@@ -2096,10 +2096,8 @@ def get_annotated_jobresult_queryset():
             )
         )
     else:
-        return (
-            JobResult.objects.defer("result")
-            .select_related("job_model", "user")
-        )
+        return JobResult.objects.defer("result").select_related("job_model", "user")
+
 
 class JobResultListView(generic.ObjectListView):
     """
@@ -2149,10 +2147,7 @@ class JobResultListView(generic.ObjectListView):
                 )
             )
 
-        return (
-            queryset.defer("result")
-            .select_related("job_model", "user")
-        )
+        return queryset.defer("result").select_related("job_model", "user")
 
 
 class JobResultDeleteView(generic.ObjectDeleteView):

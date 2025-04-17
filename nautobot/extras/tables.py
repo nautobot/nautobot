@@ -270,17 +270,13 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
         self.validator = validator
         self.data_field = data_field
 
-    def render(
-        self, *, record
-    ):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
+    def render(self, *, record):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
         data = getattr(record, self.data_field)
         try:
             self.validator.validate(data)
         except JSONSchemaValidationError as e:
             # Return a red x (like a boolean column) and the validation error message
-            return render_boolean(False) + format_html(
-                '<span class="text-danger">{}</span>', e.message
-            )
+            return render_boolean(False) + format_html('<span class="text-danger">{}</span>', e.message)
 
         # Return a green check (like a boolean column)
         return render_boolean(True)
@@ -382,9 +378,7 @@ class DynamicGroupTable(BaseTable):
 
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    members = tables.Column(
-        accessor="count", verbose_name="Group Members", orderable=False
-    )
+    members = tables.Column(accessor="count", verbose_name="Group Members", orderable=False)
     tenant = TenantColumn()
     tags = TagColumn(url_name="extras:dynamicgroup_list")
     actions = ButtonsColumn(DynamicGroup)
@@ -423,9 +417,7 @@ class DynamicGroupMembershipTable(DynamicGroupTable):
     """Hybrid table for displaying info for both group and membership."""
 
     description = tables.Column(accessor="group.description")
-    members = tables.Column(
-        accessor="group.count", verbose_name="Group Members", orderable=False
-    )
+    members = tables.Column(accessor="group.count", verbose_name="Group Members", orderable=False)
 
     class Meta(BaseTable.Meta):
         model = DynamicGroupMembership
@@ -627,16 +619,12 @@ class GitRepositoryTable(BaseTable):
     class JobResultColumn(tables.TemplateColumn):
         def render(self, record, table, value, bound_column, **kwargs):
             if str(record.pk) in table.context.get("job_results", {}):
-                table.context.update(
-                    {"result": table.context["job_results"][str(record.pk)]}
-                )
+                table.context.update({"result": table.context["job_results"][str(record.pk)]})
             else:
                 table.context.update({"result": None})
             return super().render(record, table, value, bound_column, **kwargs)
 
-    last_sync_status = JobResultColumn(
-        template_name="extras/inc/job_label.html", verbose_name="Sync Status"
-    )
+    last_sync_status = JobResultColumn(template_name="extras/inc/job_label.html", verbose_name="Sync Status")
     provides = tables.TemplateColumn(GITREPOSITORY_PROVIDES)
     actions = ButtonsColumn(GitRepository, prepend_template=GITREPOSITORY_BUTTONS)
 
@@ -667,16 +655,12 @@ class GitRepositoryTable(BaseTable):
 
     def render_last_sync_time(self, record):
         if record.name in self.context["job_results"]:  # pylint: disable=no-member
-            return self.context["job_results"][
-                record.name
-            ].date_done  # pylint: disable=no-member
+            return self.context["job_results"][record.name].date_done  # pylint: disable=no-member
         return self.default
 
     def render_last_sync_user(self, record):
         if record.name in self.context["job_results"]:  # pylint: disable=no-member
-            user = self.context["job_results"][
-                record.name
-            ].user  # pylint: disable=no-member
+            user = self.context["job_results"][record.name].user  # pylint: disable=no-member
             return user
         return self.default
 
@@ -882,9 +866,7 @@ class JobQueueTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     tenant = TenantColumn()
-    jobs_count = LinkedCountColumn(
-        viewname="extras:job_list", url_params={"job_queues": "pk"}, verbose_name="Jobs"
-    )
+    jobs_count = LinkedCountColumn(viewname="extras:job_list", url_params={"job_queues": "pk"}, verbose_name="Jobs")
 
     class Meta(BaseTable.Meta):
         model = JobQueue
@@ -909,9 +891,7 @@ class JobQueueTable(BaseTable):
 class JobResultTable(BaseTable):
     pk = ToggleColumn()
     job_model = tables.Column(linkify=True)
-    date_created = tables.DateTimeColumn(
-        linkify=True, format=settings.SHORT_DATETIME_FORMAT
-    )
+    date_created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
     status = tables.TemplateColumn(
         template_code="{% include 'extras/inc/job_label.html' with result=record %}",
     )
@@ -947,36 +927,28 @@ class JobResultTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = JobResult
-        fields = tuple(
-            field
-            for field in [
-                "pk",
-                "date_created",
-                "name",
-                "job_model",
-                "scheduled_job",
-                "duration",
-                "date_done",
-                "user",
-                "status",
-                "summary" if get_settings_or_config("JOB_RESULTS_SUMMARY_FIELD_ENABLED") else None,
-                "actions",
-            ]
-            if field is not None
+        fields = (
+            "pk",
+            "date_created",
+            "name",
+            "job_model",
+            "scheduled_job",
+            "duration",
+            "date_done",
+            "user",
+            "status",
+            "summary",
+            "actions",
         )
         default_columns = (
-            field
-            for field in [
-                "pk",
-                "date_created",
-                "name",
-                "job_model",
-                "user",
-                "status",
-                "summary" if get_settings_or_config("JOB_RESULTS_SUMMARY_FIELD_ENABLED") else None,
-                "actions",
-            ]
-            if field is not None
+            "pk",
+            "date_created",
+            "name",
+            "job_model",
+            "user",
+            "status",
+            "summary",
+            "actions",
         )
 
 
@@ -1078,27 +1050,13 @@ class ObjectMetadataTable(BaseTable):
         return format_html_join(", ", "<code>{}</code>", ([v] for v in sorted(value)))
 
     def render_value(self, record):
-        if (
-            record.value is not None
-            and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_JSON
-        ):
+        if record.value is not None and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_JSON:
             return render_json(record.value, pretty_print=True)
-        elif (
-            record.value is not None
-            and record.metadata_type.data_type
-            == MetadataTypeDataTypeChoices.TYPE_MARKDOWN
-        ):
+        elif record.value is not None and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_MARKDOWN:
             return render_markdown(record.value)
-        elif (
-            record.value is not None
-            and record.metadata_type.data_type
-            == MetadataTypeDataTypeChoices.TYPE_BOOLEAN
-        ):
+        elif record.value is not None and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_BOOLEAN:
             return render_boolean(record.value)
-        elif (
-            record.metadata_type.data_type
-            == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM
-        ):
+        elif record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
             if record.contact:
                 return format_html(
                     '<a href="{}">{}</a>',
@@ -1106,9 +1064,7 @@ class ObjectMetadataTable(BaseTable):
                     record.contact,
                 )
             else:
-                return format_html(
-                    '<a href="{}">{}</a>', record.team.get_absolute_url(), record.team
-                )
+                return format_html('<a href="{}">{}</a>', record.team.get_absolute_url(), record.team)
         return record.value
 
 
@@ -1141,17 +1097,11 @@ class ScheduledJobTable(BaseTable):
     name = tables.Column(linkify=True)
     job_model = tables.Column(verbose_name="Job", linkify=True)
     interval = tables.Column(verbose_name="Execution Type")
-    start_time = tables.DateTimeColumn(
-        verbose_name="First Run", format=settings.SHORT_DATETIME_FORMAT
-    )
-    last_run_at = tables.DateTimeColumn(
-        verbose_name="Most Recent Run", format=settings.SHORT_DATETIME_FORMAT
-    )
+    start_time = tables.DateTimeColumn(verbose_name="First Run", format=settings.SHORT_DATETIME_FORMAT)
+    last_run_at = tables.DateTimeColumn(verbose_name="Most Recent Run", format=settings.SHORT_DATETIME_FORMAT)
     crontab = tables.Column()
     total_run_count = tables.Column(verbose_name="Total Run Count")
-    actions = ButtonsColumn(
-        ScheduledJob, buttons=("delete",), prepend_template=SCHEDULED_JOB_BUTTONS
-    )
+    actions = ButtonsColumn(ScheduledJob, buttons=("delete",), prepend_template=SCHEDULED_JOB_BUTTONS)
 
     class Meta(BaseTable.Meta):
         model = ScheduledJob
@@ -1178,9 +1128,7 @@ class ScheduledJobTable(BaseTable):
 
 
 class ScheduledJobApprovalQueueTable(BaseTable):
-    name = tables.LinkColumn(
-        viewname="extras:scheduledjob_approval_request_view", args=[tables.A("pk")]
-    )
+    name = tables.LinkColumn(viewname="extras:scheduledjob_approval_request_view", args=[tables.A("pk")])
     job_model = tables.Column(verbose_name="Job", linkify=True)
     interval = tables.Column(verbose_name="Execution Type")
     start_time = tables.Column(verbose_name="Requested")
@@ -1196,12 +1144,8 @@ class ObjectChangeTable(BaseTable):
     time = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
     action = ChoiceFieldColumn()
     changed_object_type = tables.Column(verbose_name="Type")
-    object_repr = tables.TemplateColumn(
-        template_code=OBJECTCHANGE_OBJECT, verbose_name="Object"
-    )
-    request_id = tables.TemplateColumn(
-        template_code=OBJECTCHANGE_REQUEST_ID, verbose_name="Request ID"
-    )
+    object_repr = tables.TemplateColumn(template_code=OBJECTCHANGE_OBJECT, verbose_name="Object")
+    request_id = tables.TemplateColumn(template_code=OBJECTCHANGE_REQUEST_ID, verbose_name="Request ID")
 
     class Meta(BaseTable.Meta):
         model = ObjectChange
@@ -1245,14 +1189,10 @@ class RelationshipAssociationTable(BaseTable):
     relationship = tables.Column(linkify=True)
 
     source_type = tables.Column()
-    source = tables.Column(
-        linkify=True, orderable=False, accessor="get_source", default="unknown"
-    )
+    source = tables.Column(linkify=True, orderable=False, accessor="get_source", default="unknown")
 
     destination_type = tables.Column()
-    destination = tables.Column(
-        linkify=True, orderable=False, accessor="get_destination", default="unknown"
-    )
+    destination = tables.Column(linkify=True, orderable=False, accessor="get_destination", default="unknown")
 
     class Meta(BaseTable.Meta):
         model = RelationshipAssociation
@@ -1323,11 +1263,7 @@ class SecretTable(BaseTable):
         )
 
     def render_provider(self, value):
-        return (
-            registry["secrets_providers"][value].name
-            if value in registry["secrets_providers"]
-            else value
-        )
+        return registry["secrets_providers"][value].name if value in registry["secrets_providers"] else value
 
 
 class SecretsGroupTable(BaseTable):
@@ -1396,9 +1332,7 @@ class TagTable(BaseTable):
 
 
 class TaggedItemTable(BaseTable):
-    content_object = tables.TemplateColumn(
-        template_code=TAGGED_ITEM, orderable=False, verbose_name="Object"
-    )
+    content_object = tables.TemplateColumn(template_code=TAGGED_ITEM, orderable=False, verbose_name="Object")
     content_type = tables.Column(verbose_name="Type")
 
     class Meta(BaseTable.Meta):
@@ -1479,15 +1413,9 @@ class AssociatedContactsTable(StatusTableMixin, RoleTableMixin, BaseTable):
         attrs={"td": {"style": "width:20px;"}},
     )
     name = tables.TemplateColumn(CONTACT_OR_TEAM, verbose_name="Name")
-    contact_or_team_phone = tables.TemplateColumn(
-        PHONE, accessor="contact_or_team.phone", verbose_name="Phone"
-    )
-    contact_or_team_email = tables.TemplateColumn(
-        EMAIL, accessor="contact_or_team.email", verbose_name="E-Mail"
-    )
-    actions = actions = ButtonsColumn(
-        model=ContactAssociation, buttons=("edit", "delete")
-    )
+    contact_or_team_phone = tables.TemplateColumn(PHONE, accessor="contact_or_team.phone", verbose_name="Phone")
+    contact_or_team_email = tables.TemplateColumn(EMAIL, accessor="contact_or_team.email", verbose_name="E-Mail")
+    actions = actions = ButtonsColumn(model=ContactAssociation, buttons=("edit", "delete"))
 
     class Meta(BaseTable.Meta):
         model = ContactAssociation
