@@ -329,7 +329,3 @@ class CustomValidatorIterator:
 
 
 custom_validators = CustomValidatorIterator()
-#
-# Note that with the move to core, DVE no longer registers its own custom validators via the apps API.
-# Instead, BaseValidator instances are automatically added via nautobot.extras.plugins.validators.custom_validator_clean
-#
