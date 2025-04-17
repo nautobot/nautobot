@@ -2187,6 +2187,7 @@ class JobButtonUIViewSet(NautobotUIViewSet):
                 fields="__all__",
                 value_transforms={
                     "text": [helpers.pre_tag],
+                    "job": [helpers.render_job_run_link],
                     "button_class": [helpers.render_button_class],
                 },
             ),

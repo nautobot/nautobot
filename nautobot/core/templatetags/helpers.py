@@ -743,8 +743,26 @@ def render_button_class(value):
     """
     if value:
         base = value.split()[0]
-        return format_html('<button class="btn btn-{}">{}</button>', base.lower(), base.lower())
+        return format_html('<button class="btn btn-{}">{}</button>', base.lower(), base.capitalize())
     return ""
+
+
+def render_job_run_link(value, key=None, context=None):
+    """
+    Render the job as a hyperlink to its 'run' view using the class_path.
+
+    Args:
+        value (Job): The job object.
+        key (str): The name of the field (optional).
+        context (dict): The template context (optional).
+
+    Returns:
+        str: HTML anchor tag linking to the job's run view.
+    """
+    if hasattr(value, "class_path"):
+        url = reverse("extras:job_run_by_class_path", kwargs={"class_path": value.class_path})
+        return format_html('<a href="{}">{}</a>', url, value)
+    return str(value)
 
 
 #
