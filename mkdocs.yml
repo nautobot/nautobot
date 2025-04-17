@@ -511,7 +511,7 @@ nav:
               - Radio Profile: "user-guide/core-data-model/wireless/radioprofile.md"
               - Wireless Network: "user-guide/core-data-model/wireless/wirelessnetwork.md"
       - Platform Functionality:
-          - Approval Workflow: "user-guide/platform-functionality/approval-workflow.md"
+          - Approval Workflows: "user-guide/platform-functionality/approval-workflow.md"
           - Change Logging: "user-guide/platform-functionality/change-logging.md"
           - Computed Fields: "user-guide/platform-functionality/computedfield.md"
           - Custom Fields: "user-guide/platform-functionality/customfield.md"

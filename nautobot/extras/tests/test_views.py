@@ -1,9 +1,8 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 import json
 from unittest import mock
 import urllib.parse
 import uuid
-from zoneinfo import ZoneInfo
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -340,7 +339,6 @@ class ApprovalWorkflowStageInstanceViewTestCase(ViewTestCases.PrimaryObjectViewT
 
         cls.bulk_edit_data = {
             "state": ApprovalWorkflowStateChoices.DENIED,
-            "decision_date": datetime.now(ZoneInfo("UTC")),
         }
 
 

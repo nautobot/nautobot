@@ -274,7 +274,9 @@ class ApprovalWorkflowInstanceTest(ModelTestCases.BaseModelTestCase):
         # Approval Workflow Instance should be approved since all stages are approved
         self.assertEqual(self.approval_workflow_instance.current_state, ApprovalWorkflowStateChoices.APPROVED)
         # No more stages to approve, so the active stage is now None
+        # and its decision date is updated because a terminal state has been reached
         self.assertEqual(self.approval_workflow_instance.active_stage, None)
+        self.assertIsNotNone(self.approval_workflow_instance.decision_date)
 
     def test_approval_workflow_instance_workflow_one_stage_is_denied(self):
         """
@@ -300,7 +302,9 @@ class ApprovalWorkflowInstanceTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.approval_workflow_stage_2_instance.state, ApprovalWorkflowStateChoices.DENIED)
         self.assertIsNotNone(self.approval_workflow_stage_2_instance.decision_date)
         # Approval Workflow Instance should be denied since one stage is denied
+        # and its decision date is updated because a terminal state has been reached
         self.assertEqual(self.approval_workflow_instance.current_state, ApprovalWorkflowStateChoices.DENIED)
+        self.assertIsNotNone(self.approval_workflow_instance.decision_date)
         # The active stage should remain the second stage that is denied
         self.assertEqual(self.approval_workflow_instance.active_stage, self.approval_workflow_stage_2_instance)
 

@@ -10,7 +10,7 @@ from nautobot.core.utils.deprecation import method_deprecated_in_favor_of
 from nautobot.core.utils.lookup import get_route_for_model
 
 
-class ApprovalWorkflowMixin(models.Model):
+class ApprovableModelMixin(models.Model):
     """Abstract mixin for enabling Approval Flow functionality to a given model class."""
 
     class Meta:

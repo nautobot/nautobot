@@ -42,6 +42,7 @@ class ApprovalWorkflow(PrimaryModel):
         default=dict,
         help_text="Constraints to filter the objects that can be approved using this workflow.",
     )
+    documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
 
     class Meta:
         """Meta class for ApprovalWorkflow."""
@@ -88,6 +89,7 @@ class ApprovalWorkflowStage(PrimaryModel):
         help_text="Group of users who are eligible to approve this stage.",
         on_delete=models.PROTECT,
     )
+    documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
 
     class Meta:
         """Meta class for ApprovalWorkflowStage."""
@@ -134,6 +136,11 @@ class ApprovalWorkflowInstance(PrimaryModel):
         default=ApprovalWorkflowStateChoices.PENDING,
         help_text="Current state of the approval workflow instance. Eligible values are: Pending, Approved, Denied.",
     )
+    decision_date = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="Date and time when the decision of approval/denial was made.",
+    )
     documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
 
     class Meta:
@@ -172,6 +179,7 @@ class ApprovalWorkflowInstance(PrimaryModel):
             **kwargs: keyword arguments
         """
         # Check if there is one or more denied response for this stage instance
+        previous_state = self.current_state
         denied_stages = self.approval_workflow_stage_instances.filter(state=ApprovalWorkflowStateChoices.DENIED)
         if denied_stages.exists():
             self.current_state = ApprovalWorkflowStateChoices.DENIED
@@ -180,6 +188,11 @@ class ApprovalWorkflowInstance(PrimaryModel):
         approval_workflow_stage_count = self.approval_workflow.approval_workflow_stages.count()
         if approval_workflow_stage_count and approved_stages.count() == approval_workflow_stage_count:
             self.current_state = ApprovalWorkflowStateChoices.APPROVED
+
+        # If the state is changed to APPROVED or DENIED from PENDING, set the decision date
+        if previous_state != self.current_state:
+            timezone = settings.TIME_ZONE or "UTC"
+            self.decision_date = datetime.now(ZoneInfo(timezone))
         super().save(*args, **kwargs)
 
 
@@ -218,6 +231,7 @@ class ApprovalWorkflowStageInstance(PrimaryModel):
         null=True,
         help_text="Date and time when the decision of approval/denial was made.",
     )
+    documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
 
     class Meta:
         """Meta class for ApprovalWorkflowStageInstance."""
@@ -277,15 +291,20 @@ class ApprovalWorkflowStageInstance(PrimaryModel):
             denied_stages = approval_workflow_instance.approval_workflow_stage_instances.filter(
                 state=ApprovalWorkflowStateChoices.DENIED
             )
-            if denied_stages.exists():
-                approval_workflow_instance.current_state = ApprovalWorkflowStateChoices.DENIED
+            if (
+                denied_stages.exists()
+                and approval_workflow_instance.current_state == ApprovalWorkflowStateChoices.PENDING
+            ):
+                approval_workflow_instance.save(*args, **kwargs)
             # Check if all stages are approved
             approved_stages = approval_workflow_instance.approval_workflow_stage_instances.filter(
                 state=ApprovalWorkflowStateChoices.APPROVED
             )
-            if approved_stages.count() == approval_workflow_instance.approval_workflow.approval_workflow_stages.count():
-                approval_workflow_instance.current_state = ApprovalWorkflowStateChoices.APPROVED
-            approval_workflow_instance.save()
+            if (
+                approved_stages.count() == approval_workflow_instance.approval_workflow.approval_workflow_stages.count()
+                and approval_workflow_instance.current_state == ApprovalWorkflowStateChoices.PENDING
+            ):
+                approval_workflow_instance.save(*args, **kwargs)
 
 
 @extras_features(
@@ -320,6 +339,7 @@ class ApprovalWorkflowStageInstanceResponse(BaseModel):
         default=ApprovalWorkflowStateChoices.PENDING,
         help_text="User response to this approval workflow stage instance. Eligible values are: Pending, Approved, Denied.",
     )
+    documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
 
     class Meta:
         """Meta class for ApprovalWorkflowStageInstanceResponse."""
@@ -339,9 +359,21 @@ class ApprovalWorkflowStageInstanceResponse(BaseModel):
         """
         super().save(*args, **kwargs)
         # Call save() on the parent ApprovalWorkflowStageInstance to potentially update its state as well
-        # If this stage is approved or denied and the state has just been updated.
-        if self.state in [
-            ApprovalWorkflowStateChoices.APPROVED,
-            ApprovalWorkflowStateChoices.DENIED,
-        ]:
-            self.approval_workflow_stage_instance.save()
+        # If this stage is approved or denied and the approval workflow stage instance needs to be updated.
+        if self.state == ApprovalWorkflowStateChoices.DENIED:
+            # Check if the stage instance needs to be updated.
+            if self.approval_workflow_stage_instance.state == ApprovalWorkflowStateChoices.PENDING:
+                self.approval_workflow_stage_instance.save(*args, **kwargs)
+        elif self.state == ApprovalWorkflowStateChoices.APPROVED:
+            approved_responses = (
+                self.approval_workflow_stage_instance.approval_workflow_stage_instance_responses.filter(
+                    state=ApprovalWorkflowStateChoices.APPROVED
+                )
+            )
+            approved_response_count = approved_responses.count()
+            # Check if the number of approvers is met and the stage instance needs to be updated.
+            if (
+                approved_response_count == self.approval_workflow_stage_instance.approval_workflow_stage.min_approvers
+                and self.approval_workflow_stage_instance.state == ApprovalWorkflowStateChoices.PENDING
+            ):
+                self.approval_workflow_stage_instance.save(*args, **kwargs)

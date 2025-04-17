@@ -230,13 +230,12 @@ class ApprovalWorkflowStageInstanceBulkEditForm(TagsBulkEditFormMixin, NautobotB
         widget=StaticSelect2,
         label="State",
     )
-    decision_date = forms.DateTimeField(required=False, label="Decision Date")
 
     class Meta:
         """Meta attributes."""
 
         model = ApprovalWorkflowStageInstance
-        nullable_fields = ["decision_date"]
+        nullable_fields = []
 
 
 class ApprovalWorkflowStageInstanceFilterForm(NautobotFilterForm):

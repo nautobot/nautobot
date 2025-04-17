@@ -1,8 +1,5 @@
 """Unit tests for Approval Workflow models."""
 
-import datetime
-from zoneinfo import ZoneInfo
-
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 
@@ -344,13 +341,11 @@ class ApprovalWorkflowStageInstanceAPITest(ApprovalWorkflowTestMixin, APIViewTes
                 "approval_workflow_instance": cls.approval_workflow_1_instance_1.pk,
                 "approval_workflow_stage": cls.approval_workflow_1_stage_5.pk,
                 "state": choices.ApprovalWorkflowStateChoices.APPROVED,
-                "decision_date": datetime.datetime(2050, 1, 21, 17, 0, tzinfo=ZoneInfo("UTC")),
             },
             {
                 "approval_workflow_instance": cls.approval_workflow_1_instance_1.pk,
                 "approval_workflow_stage": cls.approval_workflow_1_stage_6.pk,
                 "state": choices.ApprovalWorkflowStateChoices.DENIED,
-                "decision_date": datetime.datetime(2050, 1, 21, 17, 0, tzinfo=ZoneInfo("UTC")),
             },
         ]
 

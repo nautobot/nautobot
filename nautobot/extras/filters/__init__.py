@@ -235,7 +235,6 @@ class ApprovalWorkflowStageFilterSet(BaseFilterSet):
         queryset=ApprovalWorkflow.objects.all(),
         to_field_name="name",
     )
-    # TODO NaturalKeyOrPKMultipleChoiceFilter for approver_group does not work on this field?
     approver_group = django_filters.ModelMultipleChoiceFilter(
         queryset=Group.objects.all(),
         label="Approver Group",
@@ -307,13 +306,13 @@ class ApprovalWorkflowStageInstanceFilterSet(BaseFilterSet):
             "approval_workflow_instance__approval_workflow__name": "icontains",
         }
     )
-    approval_workflow_instance = NaturalKeyOrPKMultipleChoiceFilter(
+    approval_workflow_instance = django_filters.ModelMultipleChoiceFilter(
         queryset=ApprovalWorkflowInstance.objects.all(),
-        to_field_name="pk",
+        label="Approval Workflow Instance (ID)",
     )
-    approval_workflow_stage = NaturalKeyOrPKMultipleChoiceFilter(
+    approval_workflow_stage = django_filters.ModelMultipleChoiceFilter(
         queryset=ApprovalWorkflowStage.objects.all(),
-        to_field_name="pk",
+        label="Approval Workflow Stage (ID)",
     )
     decision_date = MultiValueDateTimeFilter()
 
@@ -333,9 +332,9 @@ class ApprovalWorkflowStageInstanceResponseFilterSet(BaseFilterSet):
             "state": "icontains",
         }
     )
-    approval_workflow_stage_instance = NaturalKeyOrPKMultipleChoiceFilter(
+    approval_workflow_stage_instance = django_filters.ModelMultipleChoiceFilter(
         queryset=ApprovalWorkflowStageInstance.objects.all(),
-        to_field_name="pk",
+        label="Approval Workflow Stage Instance (ID)",
     )
     user = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=get_user_model().objects.all(),

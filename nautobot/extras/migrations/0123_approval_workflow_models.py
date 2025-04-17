@@ -83,6 +83,7 @@ class Migration(migrations.Migration):
                         to="extras.approvalworkflow",
                     ),
                 ),
+                ("decision_date", models.DateTimeField(blank=True, null=True)),
                 (
                     "object_under_review_content_type",
                     models.ForeignKey(
