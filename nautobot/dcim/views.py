@@ -4143,45 +4143,14 @@ class PowerPanelUIViewSet(NautobotUIViewSet):
 #
 # Power feeds
 #
-
-
-class PowerFeedListView(generic.ObjectListView):
+class PowerFeedUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.PowerFeedBulkEditForm
+    filterset_class = filters.PowerFeedFilterSet
+    form_class = forms.PowerFeedForm
+    filterset_form_class = forms.PowerFeedFilterForm
     queryset = PowerFeed.objects.all()
-    filterset = filters.PowerFeedFilterSet
-    filterset_form = forms.PowerFeedFilterForm
-    table = tables.PowerFeedTable
-
-
-class PowerFeedView(generic.ObjectView):
-    queryset = PowerFeed.objects.select_related("power_panel", "rack")
-
-
-class PowerFeedEditView(generic.ObjectEditView):
-    queryset = PowerFeed.objects.all()
-    model_form = forms.PowerFeedForm
-    template_name = "dcim/powerfeed_edit.html"
-
-
-class PowerFeedDeleteView(generic.ObjectDeleteView):
-    queryset = PowerFeed.objects.all()
-
-
-class PowerFeedBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = PowerFeed.objects.all()
-    table = tables.PowerFeedTable
-
-
-class PowerFeedBulkEditView(generic.BulkEditView):
-    queryset = PowerFeed.objects.select_related("power_panel", "rack")
-    filterset = filters.PowerFeedFilterSet
-    table = tables.PowerFeedTable
-    form = forms.PowerFeedBulkEditForm
-
-
-class PowerFeedBulkDeleteView(generic.BulkDeleteView):
-    queryset = PowerFeed.objects.select_related("power_panel", "rack")
-    filterset = filters.PowerFeedFilterSet
-    table = tables.PowerFeedTable
+    serializer_class = serializers.PowerFeedSerializer
+    table_class = tables.PowerFeedTable
 
 
 class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
