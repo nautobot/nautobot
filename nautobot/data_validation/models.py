@@ -9,6 +9,7 @@ from django.core.validators import MinValueValidator, ValidationError
 from django.db import models
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.models import BaseManager
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery
@@ -26,14 +27,16 @@ def validate_regex(value):
         raise ValidationError(f"{value} is not a valid regular expression.") from e
 
 
-class ValidationRuleManager(RestrictedQuerySet):
+class ValidationRuleManager(BaseManager.from_queryset(RestrictedQuerySet)):
     """Adds a helper method for getting all active instances for a given content type."""
 
     def get_for_model(self, content_type: str):
         """Given a content type string (<app_label>.<model>), return all instances that are enabled for that model."""
         app_label, model = content_type.split(".")
         cache_key = (
-            f"{self.get_for_model.cache_key_prefix}.{self.model._meta.concrete_model._meta.model_name}.{content_type}"
+            # e.g. "nautobot.data_validation.get_for_model.regularexpressionvalidationrule.dcim.device"
+            f"{self.get_for_model.cache_key_prefix}."
+            f"{self.model._meta.concrete_model._meta.model_name}.{content_type}"
         )
         queryset = cache.get(cache_key)
         if queryset is None:
@@ -47,7 +50,9 @@ class ValidationRuleManager(RestrictedQuerySet):
         """As get_for_model(), but only return enabled rules."""
         app_label, model = content_type.split(".")
         cache_key = (
-            f"{self.get_for_model.cache_key_prefix}.{self.model._meta.concrete_model._meta.model_name}.{content_type}"
+            # e.g. "nautobot.data_validation.get_enabled_for_model.regularexpressionvalidationrule.dcim.device"
+            f"{self.get_enabled_for_model.cache_key_prefix}."
+            f"{self.model._meta.concrete_model._meta.model_name}.{content_type}"
         )
         queryset = cache.get(cache_key)
         if queryset is None:
@@ -76,7 +81,8 @@ class ValidationRule(PrimaryModel):
         help_text="Optional error message to display when validation fails.",
     )
 
-    objects = ValidationRuleManager.as_manager()
+    objects = ValidationRuleManager()
+    documentation_static_path = "docs/user-guide/platform-functionality/data-validation.html"
 
     class Meta:
         """Model metadata for all validation engine rule models."""

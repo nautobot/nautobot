@@ -14,13 +14,14 @@ from nautobot.data_validation.models import (
     UniqueValidationRule,
 )
 from nautobot.data_validation.tables import DataComplianceTableTab
+from nautobot.data_validation.tests import ValidationRuleTestCaseMixin
 from nautobot.data_validation.tests.test_data_compliance_rules import TestFailedDataComplianceRule
 from nautobot.data_validation.views import DataComplianceObjectView
 from nautobot.dcim.models import Device, Location, LocationType, PowerFeed
 from nautobot.extras.models import Status
 
 
-class RegularExpressionValidationRuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+class RegularExpressionValidationRuleTestCase(ValidationRuleTestCaseMixin, ViewTestCases.PrimaryObjectViewTestCase):
     """View test cases for the RegularExpressionValidationRule model."""
 
     model = RegularExpressionValidationRule
@@ -70,7 +71,7 @@ class RegularExpressionValidationRuleTestCase(ViewTestCases.PrimaryObjectViewTes
         }
 
 
-class MinMaxValidationRuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+class MinMaxValidationRuleTestCase(ValidationRuleTestCaseMixin, ViewTestCases.PrimaryObjectViewTestCase):
     """View test cases for the MinMaxValidationRule model."""
 
     model = MinMaxValidationRule
@@ -122,7 +123,7 @@ class MinMaxValidationRuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
 
-class RequiredValidationRuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+class RequiredValidationRuleTestCase(ValidationRuleTestCaseMixin, ViewTestCases.PrimaryObjectViewTestCase):
     """View test cases for the RequiredValidationRule model."""
 
     model = RequiredValidationRule
@@ -167,7 +168,7 @@ class RequiredValidationRuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
 
-class UniqueValidationRuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+class UniqueValidationRuleTestCase(ValidationRuleTestCaseMixin, ViewTestCases.PrimaryObjectViewTestCase):
     """View test cases for the UniqueValidationRule model."""
 
     model = UniqueValidationRule

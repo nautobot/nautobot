@@ -9,10 +9,11 @@ from nautobot.data_validation.models import (
     RequiredValidationRule,
     UniqueValidationRule,
 )
+from nautobot.data_validation.tests import ValidationRuleTestCaseMixin
 from nautobot.dcim.models import Location, Manufacturer, Platform, PowerFeed
 
 
-class RegularExpressionValidationRuleTest(APIViewTestCases.APIViewTestCase):
+class RegularExpressionValidationRuleTest(ValidationRuleTestCaseMixin, APIViewTestCases.APIViewTestCase):
     """
     API view test cases for the RegularExpressionValidationRule model
     """
@@ -69,7 +70,7 @@ class RegularExpressionValidationRuleTest(APIViewTestCases.APIViewTestCase):
         )
 
 
-class MinMaxValidationRuleTest(APIViewTestCases.APIViewTestCase):
+class MinMaxValidationRuleTest(ValidationRuleTestCaseMixin, APIViewTestCases.APIViewTestCase):
     """
     API view test cases for the MinMaxValidationRule model
     """
@@ -129,7 +130,7 @@ class MinMaxValidationRuleTest(APIViewTestCases.APIViewTestCase):
         )
 
 
-class RequiredValidationRuleTest(APIViewTestCases.APIViewTestCase):
+class RequiredValidationRuleTest(ValidationRuleTestCaseMixin, APIViewTestCases.APIViewTestCase):
     """
     API view test cases for the RequiredValidationRule model
     """
@@ -180,7 +181,7 @@ class RequiredValidationRuleTest(APIViewTestCases.APIViewTestCase):
         )
 
 
-class UniqueValidationRuleTest(APIViewTestCases.APIViewTestCase):
+class UniqueValidationRuleTest(ValidationRuleTestCaseMixin, APIViewTestCases.APIViewTestCase):
     """
     API view test cases for the UniqueValidationRule model
     """

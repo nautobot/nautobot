@@ -18,11 +18,12 @@ from nautobot.data_validation.models import (
     RequiredValidationRule,
     UniqueValidationRule,
 )
+from nautobot.data_validation.tests import ValidationRuleTestCaseMixin
 from nautobot.dcim.models import Location, Manufacturer, Platform, PowerFeed, Rack
 from nautobot.extras.models import Tag
 
 
-class ValidationRuleTestMixin:
+class ValidationRuleFilterTestCaseMixin(ValidationRuleTestCaseMixin):
     """
     Content type test mixin for validation rule filter test cases
     """
@@ -39,11 +40,14 @@ class ValidationRuleTestMixin:
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected_queryset)
 
 
-class RegularExpressionValidationRuleFilterTestCase(ValidationRuleTestMixin, FilterTestCases.NameOnlyFilterTestCase):
+class RegularExpressionValidationRuleFilterTestCase(
+    ValidationRuleFilterTestCaseMixin, FilterTestCases.NameOnlyFilterTestCase
+):
     """
     Filterset test cases for the RegularExpressionValidationRule model
     """
 
+    model = RegularExpressionValidationRule
     queryset = RegularExpressionValidationRule.objects.all()
     filterset = RegularExpressionValidationRuleFilterSet
     generic_filter_tests = [
@@ -87,11 +91,12 @@ class RegularExpressionValidationRuleFilterTestCase(ValidationRuleTestMixin, Fil
         )
 
 
-class MinMaxValidationRuleFilterTestCase(ValidationRuleTestMixin, FilterTestCases.NameOnlyFilterTestCase):
+class MinMaxValidationRuleFilterTestCase(ValidationRuleFilterTestCaseMixin, FilterTestCases.NameOnlyFilterTestCase):
     """
     Filterset test cases for the MinMaxValidationRule model
     """
 
+    model = MinMaxValidationRule
     queryset = MinMaxValidationRule.objects.all()
     filterset = MinMaxValidationRuleFilterSet
     generic_filter_tests = [
@@ -139,11 +144,12 @@ class MinMaxValidationRuleFilterTestCase(ValidationRuleTestMixin, FilterTestCase
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
 
-class RequiredValidationRuleFilterTestCase(ValidationRuleTestMixin, FilterTestCases.NameOnlyFilterTestCase):
+class RequiredValidationRuleFilterTestCase(ValidationRuleFilterTestCaseMixin, FilterTestCases.NameOnlyFilterTestCase):
     """
     Filterset test cases for the RequiredValidationRule model
     """
 
+    model = RequiredValidationRule
     queryset = RequiredValidationRule.objects.all()
     filterset = RequiredValidationRuleFilterSet
     generic_filter_tests = [
@@ -183,11 +189,12 @@ class RequiredValidationRuleFilterTestCase(ValidationRuleTestMixin, FilterTestCa
         )
 
 
-class UniqueValidationRuleFilterTestCase(ValidationRuleTestMixin, FilterTestCases.NameOnlyFilterTestCase):
+class UniqueValidationRuleFilterTestCase(ValidationRuleFilterTestCaseMixin, FilterTestCases.NameOnlyFilterTestCase):
     """
     Filterset test cases for the UniqueValidationRule model
     """
 
+    model = UniqueValidationRule
     queryset = UniqueValidationRule.objects.all()
     filterset = UniqueValidationRuleFilterSet
     generic_filter_tests = [

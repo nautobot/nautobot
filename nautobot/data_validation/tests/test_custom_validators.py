@@ -2,44 +2,34 @@
 Model test cases
 """
 
-import contextlib
 import re
 
 from django.contrib.contenttypes.models import ContentType
-from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.test import TestCase
-import redis.exceptions
 
+from nautobot.core.testing.mixins import NautobotTestCaseMixin
 from nautobot.data_validation.models import (
     MinMaxValidationRule,
     RegularExpressionValidationRule,
     RequiredValidationRule,
     UniqueValidationRule,
 )
+from nautobot.data_validation.tests import ValidationRuleTestCaseMixin
 from nautobot.dcim.models import Location, LocationType, Rack
 from nautobot.extras.models import Status
-from nautobot.extras.plugins.validators import wrap_model_clean_methods
 
 
-class RegularExpressionValidationRuleModelTestCase(TestCase):
-    """
-    Test cases related to the RegularExpressionValidationRule model
-    """
+class CustomValidatorTestCases:
+    class CustomValidatorTestCase(ValidationRuleTestCaseMixin, NautobotTestCaseMixin, TestCase):
+        def setUp(self):
+            super().setUp()
+            self.location_type = LocationType.objects.get(name="Root")
+            self.status = Status.objects.get_for_model(Location).first()
 
-    def setUp(self) -> None:
-        wrap_model_clean_methods()
-        self.location_type = LocationType(name="Region")
-        self.location_type.validated_save()
-        self.location_type.content_types.set([ContentType.objects.get_for_model(Rack)])
-        return super().setUp()
 
-    def tearDown(self):
-        """Ensure that custom validator caches are cleared to avoid leakage into other tests."""
-        with contextlib.suppress(redis.exceptions.ConnectionError):
-            cache.delete_pattern(f"{RegularExpressionValidationRule.objects.get_for_model.cache_key_prefix}.*")
-            cache.delete_pattern(f"{RegularExpressionValidationRule.objects.get_enabled_for_model.cache_key_prefix}.*")
-        super().tearDown()
+class RegularExpressionValidationRuleCustomValidatorTestCase(CustomValidatorTestCases.CustomValidatorTestCase):
+    model = RegularExpressionValidationRule
 
     def test_invalid_regex_matches_raise_validation_error(self):
         rule = RegularExpressionValidationRule.objects.create(
@@ -49,11 +39,7 @@ class RegularExpressionValidationRuleModelTestCase(TestCase):
             regular_expression="^ABC$",
         )
 
-        location = Location(
-            name="does not match the regex",
-            location_type=LocationType.objects.get_by_natural_key("Region"),
-            status=Status.objects.get_by_natural_key("Active"),
-        )
+        location = Location(name="does not match the regex", location_type=self.location_type, status=self.status)
         escaped_regex = re.escape(rule.regular_expression)
         with self.assertRaisesRegex(ValidationError, f"Value does not conform to regex: {escaped_regex}"):
             location.clean()
@@ -66,11 +52,7 @@ class RegularExpressionValidationRuleModelTestCase(TestCase):
             regular_expression="^ABC$",
         )
 
-        location = Location(
-            name="ABC",
-            location_type=LocationType.objects.get_by_natural_key("Region"),
-            status=Status.objects.get_by_natural_key("Active"),
-        )
+        location = Location(name="ABC", location_type=self.location_type, status=self.status)
 
         try:
             location.clean()
@@ -87,9 +69,9 @@ class RegularExpressionValidationRuleModelTestCase(TestCase):
 
         location = Location(
             name="Location 1",
-            location_type=LocationType.objects.get_by_natural_key("Region"),
+            location_type=self.location_type,
+            status=self.status,
             description="",  # empty value not allowed by the regex
-            status=Status.objects.get_by_natural_key("Active"),
         )
 
         escaped_regex = re.escape(rule.regular_expression)
@@ -107,9 +89,9 @@ class RegularExpressionValidationRuleModelTestCase(TestCase):
 
         location = Location(
             name="AMS-195",
-            location_type=LocationType.objects.get_by_natural_key("Region"),
+            location_type=self.location_type,
+            status=self.status,
             description="AMS-195 is really cool",  # This should match `AMS.*`
-            status=Status.objects.get_by_natural_key("Active"),
         )
 
         try:
@@ -128,9 +110,9 @@ class RegularExpressionValidationRuleModelTestCase(TestCase):
 
         location = Location(
             name="AMS-195",
-            location_type=LocationType.objects.get_by_natural_key("Region"),
+            location_type=self.location_type,
+            status=self.status,
             description="I don't like AMS-195",  # This should *not* match `AMS.*`
-            status=Status.objects.get_by_natural_key("Active"),
         )
 
         with self.assertRaisesRegex(ValidationError, "Value does not conform to regex: AMS.*"):
@@ -145,11 +127,7 @@ class RegularExpressionValidationRuleModelTestCase(TestCase):
             context_processing=True,
         )
 
-        location = Location(
-            name="AMS-195",
-            location_type=LocationType.objects.get_by_natural_key("Region"),
-            status=Status.objects.get_by_natural_key("Active"),
-        )
+        location = Location(name="AMS-195", location_type=self.location_type, status=self.status)
 
         with self.assertRaisesRegex(
             ValidationError,
@@ -158,23 +136,8 @@ class RegularExpressionValidationRuleModelTestCase(TestCase):
             location.clean()
 
 
-class MinMaxValidationRuleModelTestCase(TestCase):
-    """
-    Test cases related to the MinMaxValidationRule model
-    """
-
-    def setUp(self) -> None:
-        wrap_model_clean_methods()
-        self.location_type = LocationType(name="Region")
-        self.location_type.validated_save()
-        return super().setUp()
-
-    def tearDown(self):
-        """Ensure that custom validator caches are cleared to avoid leakage into other tests."""
-        with contextlib.suppress(redis.exceptions.ConnectionError):
-            cache.delete_pattern(f"{MinMaxValidationRule.objects.get_for_model.cache_key_prefix}.*")
-            cache.delete_pattern(f"{MinMaxValidationRule.objects.get_enabled_for_model.cache_key_prefix}.*")
-        super().tearDown()
+class MinMaxValidationRuleCustomValidatorTestCase(CustomValidatorTestCases.CustomValidatorTestCase):
+    model = MinMaxValidationRule
 
     def test_empty_field_values_raise_validation_error(self):
         MinMaxValidationRule.objects.create(
@@ -187,9 +150,9 @@ class MinMaxValidationRuleModelTestCase(TestCase):
 
         location = Location(
             name="Location without a latitude",
-            location_type=LocationType.objects.get_by_natural_key("Region"),
+            location_type=self.location_type,
+            status=self.status,
             latitude=None,  # empty value not allowed by the rule
-            status=Status.objects.get_by_natural_key("Active"),
         )
 
         with self.assertRaisesRegex(ValidationError, "Value does not conform to mix/max validation: min 1.0, max 1.0"):
@@ -206,9 +169,9 @@ class MinMaxValidationRuleModelTestCase(TestCase):
 
         location = Location(
             name="Location with an invalid latitude",
-            location_type=LocationType.objects.get_by_natural_key("Region"),
+            location_type=self.location_type,
+            status=self.status,
             latitude="foobar",  # wrong type
-            status=Status.objects.get_by_natural_key("Active"),
         )
 
         with self.assertRaisesRegex(
@@ -228,9 +191,9 @@ class MinMaxValidationRuleModelTestCase(TestCase):
 
         location = Location(
             name="Location with latitude less than min",
-            location_type=LocationType.objects.get_by_natural_key("Region"),
+            location_type=self.location_type,
+            status=self.status,
             latitude=4,  # less than min of 5
-            status=Status.objects.get_by_natural_key("Active"),
         )
 
         with self.assertRaisesRegex(ValidationError, "Value is less than minimum value: 5.0"):
@@ -247,9 +210,9 @@ class MinMaxValidationRuleModelTestCase(TestCase):
 
         location = Location(
             name="Location with a latitude more than max",
-            location_type=LocationType.objects.get_by_natural_key("Region"),
+            location_type=self.location_type,
+            status=self.status,
             latitude=11,  # more than max of 10
-            status=Status.objects.get_by_natural_key("Active"),
         )
 
         with self.assertRaisesRegex(ValidationError, "Value is more than maximum value: 10.0"):
@@ -266,9 +229,9 @@ class MinMaxValidationRuleModelTestCase(TestCase):
 
         location = Location(
             name="Location with a valid latitude",
-            location_type=LocationType.objects.get_by_natural_key("Region"),
+            location_type=self.location_type,
+            status=self.status,
             latitude=-5,
-            status=Status.objects.get_by_natural_key("Active"),
         )
 
         try:
@@ -287,9 +250,9 @@ class MinMaxValidationRuleModelTestCase(TestCase):
 
         location = Location(
             name="Location with a valid latitude",
-            location_type=LocationType.objects.get_by_natural_key("Region"),
+            location_type=self.location_type,
+            status=self.status,
             latitude=30,
-            status=Status.objects.get_by_natural_key("Active"),
         )
 
         try:
@@ -308,9 +271,9 @@ class MinMaxValidationRuleModelTestCase(TestCase):
 
         location = Location(
             name="Location with a valid latitude",
-            location_type=LocationType.objects.get_by_natural_key("Region"),
+            location_type=self.location_type,
+            status=self.status,
             latitude=8,  # within bounds
-            status=Status.objects.get_by_natural_key("Active"),
         )
 
         try:
@@ -319,24 +282,8 @@ class MinMaxValidationRuleModelTestCase(TestCase):
             self.fail(f"rule.clean() failed validation: {e}")
 
 
-class RequiredValidationRuleModelTestCase(TestCase):
-    """
-    Test cases related to the RequiredValidationRule model
-    """
-
-    def setUp(self) -> None:
-        wrap_model_clean_methods()
-        self.location_type = LocationType(name="Region")
-        self.location_type.validated_save()
-        self.location_type.content_types.set([ContentType.objects.get_for_model(Rack)])
-        return super().setUp()
-
-    def tearDown(self):
-        """Ensure that custom validator caches are cleared to avoid leakage into other tests."""
-        with contextlib.suppress(redis.exceptions.ConnectionError):
-            cache.delete_pattern(f"{RequiredValidationRule.objects.get_for_model.cache_key_prefix}.*")
-            cache.delete_pattern(f"{RequiredValidationRule.objects.get_enabled_for_model.cache_key_prefix}.*")
-        super().tearDown()
+class RequiredValidationRuleCustomValidatorTestCase(CustomValidatorTestCases.CustomValidatorTestCase):
+    model = RequiredValidationRule
 
     def test_blank_value_raises_error(self):
         RequiredValidationRule.objects.create(
@@ -346,9 +293,7 @@ class RequiredValidationRuleModelTestCase(TestCase):
         )
 
         location = Location(
-            name="Location 1 does not have a description",
-            location_type=LocationType.objects.get_by_natural_key("Region"),
-            status=Status.objects.get_by_natural_key("Active"),
+            name="Location 1 does not have a description", location_type=self.location_type, status=self.status
         )
 
         with self.assertRaisesRegex(ValidationError, "This field cannot be blank."):
@@ -363,8 +308,8 @@ class RequiredValidationRuleModelTestCase(TestCase):
 
         location = Location(
             name="Location 2 does have a description",
-            location_type=LocationType.objects.get_by_natural_key("Region"),
-            status=Status.objects.get_by_natural_key("Active"),
+            location_type=self.location_type,
+            status=self.status,
             description="Location 2",
         )
 
@@ -382,8 +327,8 @@ class RequiredValidationRuleModelTestCase(TestCase):
 
         location = Location(
             name="Location 3 has an empty string description",
-            location_type=LocationType.objects.get_by_natural_key("Region"),
-            status=Status.objects.get_by_natural_key("Active"),
+            location_type=self.location_type,
+            status=self.status,
             description="",
         )
 
@@ -397,17 +342,13 @@ class RequiredValidationRuleModelTestCase(TestCase):
             field="serial",
         )
 
-        location = Location(
-            name="Location 3",
-            location_type=LocationType.objects.get_by_natural_key("Region"),
-            status=Status.objects.get_by_natural_key("Active"),
-        )
+        location = Location(name="Location 3", location_type=self.location_type, status=self.status)
         location.save()
 
         rack = Rack(
             name="Rack 1",
             location=location,
-            status=Status.objects.get_by_natural_key("Active"),
+            status=Status.objects.get_for_model(Rack).first(),
             serial=0,  # test that zero passes validation
         )
 
@@ -417,23 +358,8 @@ class RequiredValidationRuleModelTestCase(TestCase):
             self.fail(f"rule.clean() failed validation: {e}")
 
 
-class UniqueValidationRuleModelTestCase(TestCase):
-    """
-    Test cases related to the UniqueValidationRule model
-    """
-
-    def setUp(self) -> None:
-        wrap_model_clean_methods()
-        self.location_type = LocationType(name="Region")
-        self.location_type.validated_save()
-        return super().setUp()
-
-    def tearDown(self):
-        """Ensure that custom validator caches are cleared to avoid leakage into other tests."""
-        with contextlib.suppress(redis.exceptions.ConnectionError):
-            cache.delete_pattern(f"{UniqueValidationRule.objects.get_for_model.cache_key_prefix}.*")
-            cache.delete_pattern(f"{UniqueValidationRule.objects.get_enabled_for_model.cache_key_prefix}.*")
-        super().tearDown()
+class UniqueValidationRuleCustomValidatorTestCase(CustomValidatorTestCases.CustomValidatorTestCase):
+    model = UniqueValidationRule
 
     def test_null_value_does_not_raise_error(self):
         UniqueValidationRule.objects.create(
@@ -445,14 +371,14 @@ class UniqueValidationRuleModelTestCase(TestCase):
 
         location1 = Location(
             name="Location 1",
-            location_type=LocationType.objects.get_by_natural_key("Region"),
-            status=Status.objects.get_by_natural_key("Active"),
+            location_type=self.location_type,
+            status=self.status,
             asn=None,
         )
         location2 = Location(
             name="Location 2",
-            location_type=LocationType.objects.get_by_natural_key("Region"),
-            status=Status.objects.get_by_natural_key("Active"),
+            location_type=self.location_type,
+            status=self.status,
             asn=None,
         )
 
@@ -473,23 +399,20 @@ class UniqueValidationRuleModelTestCase(TestCase):
 
         location1 = Location(
             name="Location 1",
-            location_type=LocationType.objects.get_by_natural_key("Region"),
-            status=Status.objects.get_by_natural_key("Active"),
-            asn=1,
+            location_type=self.location_type,
+            status=self.status,
             description="same",
         )
         location2 = Location(
             name="Location 2",
-            location_type=LocationType.objects.get_by_natural_key("Region"),
-            status=Status.objects.get_by_natural_key("Active"),
-            asn=2,
+            location_type=self.location_type,
+            status=self.status,
             description="same",
         )
         location3 = Location(
             name="Location 3",
-            location_type=LocationType.objects.get_by_natural_key("Region"),
-            status=Status.objects.get_by_natural_key("Active"),
-            asn=3,
+            location_type=self.location_type,
+            status=self.status,
             description="same",
         )
 
