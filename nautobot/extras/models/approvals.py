@@ -338,6 +338,7 @@ class ApprovalWorkflowStageInstanceResponse(BaseModel):
 
     class Meta:
         """Meta class for ApprovalWorkflowStageInstanceResponse."""
+
         db_table = "extras_approvaluserresponse"
         verbose_name = "Approval Workflow Stage Instance Response"
 
