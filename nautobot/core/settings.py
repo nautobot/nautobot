@@ -780,7 +780,7 @@ CONSTANCE_CONFIG = {
     ),
     "JOB_RESULTS_SUMMARY_FIELD_ENABLED": ConstanceConfigItem(
         default=True,
-        help_text="Enable the 'Summary' field in Job Results.\n"
+        help_text="Enable the 'Summary' column in Job Result list view.\n"
         "This can be disabled if performance issues are encountered due to job results with large numbers of log messages.",
         field_type=bool,
     ),
@@ -876,14 +876,14 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Installation Metrics": ["DEPLOYMENT_ID"],
     "Natural Keys": ["DEVICE_NAME_AS_NATURAL_KEY", "LOCATION_NAME_AS_NATURAL_KEY"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
-    "Performance": ["JOB_CREATE_FILE_MAX_SIZE"],
+    "Performance": ["JOB_CREATE_FILE_MAX_SIZE", "JOB_RESULTS_SUMMARY_FIELD_ENABLED"],
     "Rack Elevation Rendering": [
         "RACK_ELEVATION_DEFAULT_UNIT_HEIGHT",
         "RACK_ELEVATION_DEFAULT_UNIT_WIDTH",
         "RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT",
     ],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
-    "User Interface": ["SUPPORT_MESSAGE", "NTC_SUPPORT_CONTRACT_EXPIRATION_DATE", "JOB_RESULTS_SUMMARY_FIELD_ENABLED"],
+    "User Interface": ["SUPPORT_MESSAGE", "NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"],
     "Debugging": ["ALLOW_REQUEST_PROFILING"],
 }
 

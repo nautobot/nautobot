@@ -1055,8 +1055,8 @@ properties:
   JOB_RESULTS_SUMMARY_FIELD_ENABLED:
     default: true
     description: >-
-      If `True`, the Job results summary field will be displayed in the UI.
-      If `False`, the Job results summary field will not be displayed in the UI.
+      If `True`, the Job Result "summary" column will be available in the Job Results list UI.
+      If `False`, the column will not be available.
     environment_variable: "NAUTOBOT_JOB_RESULTS_SUMMARY_FIELD_ENABLED"
     type: "boolean"
     version_added: "2.4.8"
