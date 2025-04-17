@@ -1670,7 +1670,16 @@ class ModuleBayTemplateUIViewSet(
 
 
 class PlatformCustomKeyValueTablePanel(object_detail.KeyValueTablePanel):
+    """
+    Custom panel that overrides the default key rendering logic
+    to always return the literal key without any formatting or transformation.
+
+    This bypasses the default behavior in the parent class, which might
+    format or localize the key.
+    """
+
     def render_key(self, key, value, context):
+        # Always render the raw key as-is, ignoring any parent logic
         return key
 
 
@@ -1710,7 +1719,6 @@ class PlatformUIViewSet(NautobotUIViewSet):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
             context["network_driver_tool_names"] = instance.fetch_network_driver_mappings()
-            context["network_driver_tool_names_key"] = "network_driver_tool_names"
         return context
 
 
