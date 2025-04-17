@@ -368,19 +368,19 @@ class ApprovalWorkflowStageInstanceResponseAPITest(ApprovalWorkflowTestMixin, AP
         cls.create_data = [
             {
                 "approval_workflow_stage_instance": cls.approval_workflow_1_stage_instance_1.pk,
-                "user": users[0].pk,
+                "user": users[3].pk,
                 "comments": "Approved by user 1",
                 "state": choices.ApprovalWorkflowStateChoices.APPROVED,
             },
             {
                 "approval_workflow_stage_instance": cls.approval_workflow_1_stage_instance_2.pk,
-                "user": users[1].pk,
+                "user": users[4].pk,
                 "comments": "Approved by user 2",
                 "state": choices.ApprovalWorkflowStateChoices.APPROVED,
             },
             {
                 "approval_workflow_stage_instance": cls.approval_workflow_1_stage_instance_3.pk,
-                "user": users[0].pk,
+                "user": users[4].pk,
                 "comments": "Denied by user 1",
                 "state": choices.ApprovalWorkflowStateChoices.DENIED,
             },

@@ -1,11 +1,9 @@
-from datetime import datetime
-from zoneinfo import ZoneInfo
 
-from django.conf import settings
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
+from django.utils import timezone
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseModel
@@ -191,8 +189,7 @@ class ApprovalWorkflowInstance(PrimaryModel):
 
         # If the state is changed to APPROVED or DENIED from PENDING, set the decision date
         if previous_state != self.current_state:
-            timezone = settings.TIME_ZONE or "UTC"
-            self.decision_date = datetime.now(ZoneInfo(timezone))
+            self.decision_date = timezone.now()
         super().save(*args, **kwargs)
 
 
@@ -279,8 +276,7 @@ class ApprovalWorkflowStageInstance(PrimaryModel):
             and previous_state != self.state
         )
         if decision_made:
-            timezone = settings.TIME_ZONE or "UTC"
-            self.decision_date = datetime.now(ZoneInfo(timezone))
+            self.decision_date = timezone.now()
         super().save(*args, **kwargs)
 
         # Modify the parent ApprovalWorkflowInstance to potentially update its state as well
@@ -295,7 +291,7 @@ class ApprovalWorkflowStageInstance(PrimaryModel):
                 denied_stages.exists()
                 and approval_workflow_instance.current_state == ApprovalWorkflowStateChoices.PENDING
             ):
-                approval_workflow_instance.save(*args, **kwargs)
+                approval_workflow_instance.save(using=kwargs.get("using"))
             # Check if all stages are approved
             approved_stages = approval_workflow_instance.approval_workflow_stage_instances.filter(
                 state=ApprovalWorkflowStateChoices.APPROVED
@@ -304,7 +300,7 @@ class ApprovalWorkflowStageInstance(PrimaryModel):
                 approved_stages.count() == approval_workflow_instance.approval_workflow.approval_workflow_stages.count()
                 and approval_workflow_instance.current_state == ApprovalWorkflowStateChoices.PENDING
             ):
-                approval_workflow_instance.save(*args, **kwargs)
+                approval_workflow_instance.save(using=kwargs.get("using"))
 
 
 @extras_features(
@@ -363,7 +359,7 @@ class ApprovalWorkflowStageInstanceResponse(BaseModel):
         if self.state == ApprovalWorkflowStateChoices.DENIED:
             # Check if the stage instance needs to be updated.
             if self.approval_workflow_stage_instance.state == ApprovalWorkflowStateChoices.PENDING:
-                self.approval_workflow_stage_instance.save(*args, **kwargs)
+                self.approval_workflow_stage_instance.save(using=kwargs.get("using"))
         elif self.state == ApprovalWorkflowStateChoices.APPROVED:
             approved_responses = (
                 self.approval_workflow_stage_instance.approval_workflow_stage_instance_responses.filter(
@@ -376,4 +372,4 @@ class ApprovalWorkflowStageInstanceResponse(BaseModel):
                 approved_response_count == self.approval_workflow_stage_instance.approval_workflow_stage.min_approvers
                 and self.approval_workflow_stage_instance.state == ApprovalWorkflowStateChoices.PENDING
             ):
-                self.approval_workflow_stage_instance.save(*args, **kwargs)
+                self.approval_workflow_stage_instance.save(using=kwargs.get("using"))
