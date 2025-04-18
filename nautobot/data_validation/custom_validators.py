@@ -190,9 +190,9 @@ def get_data_compliance_rules_map():
 
 def get_data_compliance_classes_from_git_repo(repo: GitRepository, ignore_import_errors=True):
     """Get list of DataComplianceRule classes found within the custom_validators folder of the given repo."""
-    ensure_git_repository(repo, head=repo.current_head)
     class_list = []
     if "data_validation.data_compliance_rule" in repo.provided_contents:
+        ensure_git_repository(repo, head=repo.current_head)
         if not (
             os.path.isdir(os.path.join(repo.filesystem_path, "custom_validators"))
             or os.path.isfile(os.path.join(repo.filesystem_path, "custom_validators.py"))
@@ -209,8 +209,7 @@ def get_data_compliance_classes_from_git_repo(repo: GitRepository, ignore_import
             for module in modules:
                 for _, compliance_class in inspect.getmembers(module, is_data_compliance_rule):
                     class_list.append(compliance_class)
-            return class_list
-    return []
+    return class_list
 
 
 class ComplianceError(ValidationError):
