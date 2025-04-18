@@ -467,11 +467,13 @@ class ApprovalWorkflowInstanceFilterTestCase(ApprovalWorkflowTestMixin, FilterTe
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(object_under_review_content_type=self.scheduledjob_ct),
+            ordered=False,
         )
         params = {"object_under_review_content_type": ["extras.job"]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(object_under_review_content_type=self.job_ct),
+            ordered=False,
         )
 
 
