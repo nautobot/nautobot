@@ -1047,7 +1047,7 @@ body {
 /* Main content */
 #main-content {
   box-shadow: $box-shadow-sm;
-  padding-top: map.get($spacers, 16);
+  padding-block: map.get($spacers, 16);
 }
 
 /* Footer */
