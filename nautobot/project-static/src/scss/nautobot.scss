@@ -812,6 +812,7 @@ body {
     top: 0;
     width: max-content;
     z-index: -1;
+    min-width: $sidenav-link-width;
   }
 
   .sidenav-link {
@@ -840,6 +841,14 @@ body {
       position: absolute;
       width: $sidenav-link-segment-icon-width;
     }
+
+    &.flat {
+      padding-inline-start: map.get($spacers, 20);
+
+      &::before {
+        content: none;
+      }
+    }
   }
 
   li:last-child > .sidenav-link::before { /* Last link segment icon */
@@ -857,6 +866,12 @@ body {
 
     &:focus-visible,
     &:hover {
+      background-image: #{escape-svg(url("data:image/svg+xml,#{$sidenav-favorite-icon-svg-filled}"))};
+    }
+
+    &.active {
+      @include fade-in;
+      @include filter-nav-orange-0;
       background-image: #{escape-svg(url("data:image/svg+xml,#{$sidenav-favorite-icon-svg-filled}"))};
     }
   }

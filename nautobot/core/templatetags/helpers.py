@@ -1198,9 +1198,9 @@ def format_title_with_saved_view(context, title):
 def get_breadcrumbs(context):
     crumbs = []
 
-    if object := context.get("object"):
-        list_url = validated_viewname(object, "list")
+    if context_object := context.get("object"):
+        list_url = validated_viewname(context_object, "list")
         crumbs.append((reverse(list_url), bettertitle(context.get("verbose_name_plural", ""))))
-        crumbs.append((get_object_link(object), str(object)))
+        crumbs.append((get_object_link(context_object), str(context_object)))
 
     return crumbs
