@@ -15,6 +15,7 @@ import graphql from 'highlight.js/lib/languages/graphql';
 import json from 'highlight.js/lib/languages/json';
 import xml from 'highlight.js/lib/languages/xml';
 import yaml from 'highlight.js/lib/languages/yaml';
+
 hljs.registerLanguage('graphql', graphql);
 hljs.registerLanguage('json', json);
 hljs.registerLanguage('xml', xml);
@@ -86,4 +87,17 @@ document.addEventListener('DOMContentLoaded', function () {
    *   ```
    */
   let unobserveCollapseTabs = observeCollapseTabs();
+
+  const toggleFavorite = (element, event) => {
+    if (event.detail.successful) {
+      element.classList.toggle('active')
+    }
+  }
+  window.toggleFavorite = toggleFavorite;
+
+  const setRequestUrl = (element, event) => {
+    const isFavorite = element.classList.contains('active');
+    event.detail.path = isFavorite ? element.dataset.deleteUrl : element.dataset.addUrl;
+  }
+  window.setRequestUrl = setRequestUrl;
 });
