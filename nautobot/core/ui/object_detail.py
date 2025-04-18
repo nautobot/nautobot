@@ -389,13 +389,11 @@ class DistinctViewTab(Tab):
         url_name,
         label_wrapper_template_path="components/tab/label_wrapper_distinct_view.html",
         related_object_attribute="",
-        panels=(),
         **kwargs,
     ):
         self.url_name = url_name
         self.related_object_attribute = related_object_attribute
-        self.panels = panels
-        super().__init__(label_wrapper_template_path=label_wrapper_template_path, panels=panels, **kwargs)
+        super().__init__(label_wrapper_template_path=label_wrapper_template_path, **kwargs)
 
     def get_extra_context(self, context: Context):
         return {"url": reverse(self.url_name, kwargs={"pk": get_obj_from_context(context).pk})}
@@ -820,24 +818,15 @@ class ObjectsTablePanel(Panel):
             if self.order_by_fields:
                 body_content_table_queryset = body_content_table_queryset.order_by(*self.order_by_fields)
             body_content_table_queryset = body_content_table_queryset.distinct()
+            body_content_table = body_content_table_class(
+                body_content_table_queryset, hide_hierarchy_ui=self.hide_hierarchy_ui
+            )
             if self.tab_id:
                 # Use the `self.tab_id`, if it exists, to determine the correct return URL for the table
                 # to redirect the user back to the correct tab after editing/deleteing an object
-                body_content_table = body_content_table_class(
-                    body_content_table_queryset,
-                    hide_hierarchy_ui=self.hide_hierarchy_ui,
-                    extra_columns=[
-                        (
-                            "actions",
-                            ButtonsColumn(
-                                model=body_content_table_queryset.model, return_url_extra=f"?tab={self.tab_id}"
-                            ),
-                        )
-                    ],
-                )
-            else:
-                body_content_table = body_content_table_class(
-                    body_content_table_queryset, hide_hierarchy_ui=self.hide_hierarchy_ui
+                body_content_table.base_columns["actions"] = ButtonsColumn(
+                    model=body_content_table_queryset.model,
+                    return_url_extra=f"?tab={self.tab_id}",
                 )
 
         if self.exclude_columns or self.include_columns:
