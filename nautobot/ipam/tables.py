@@ -373,6 +373,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     cloud_networks_count = LinkedCountColumn(
         viewname="cloud:cloudnetwork_list", url_params={"prefixes": "pk"}, verbose_name="Cloud Networks"
     )
+    actions = ButtonsColumn(Prefix)
 
     class Meta(BaseTable.Meta):
         model = Prefix
@@ -392,6 +393,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "rir",
             "date_allocated",
             "description",
+            "actions",
         )
         default_columns = (
             "pk",

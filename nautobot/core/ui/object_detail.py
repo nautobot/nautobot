@@ -20,7 +20,6 @@ from django_tables2 import RequestConfig
 
 from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.models.tree_queries import TreeModel
-from nautobot.core.tables import ButtonsColumn
 from nautobot.core.templatetags.helpers import (
     badge,
     bettertitle,
@@ -821,13 +820,10 @@ class ObjectsTablePanel(Panel):
             body_content_table = body_content_table_class(
                 body_content_table_queryset, hide_hierarchy_ui=self.hide_hierarchy_ui
             )
-            if self.tab_id:
+            if self.tab_id and "actions" in body_content_table.columns:
                 # Use the `self.tab_id`, if it exists, to determine the correct return URL for the table
                 # to redirect the user back to the correct tab after editing/deleteing an object
-                body_content_table.base_columns["actions"] = ButtonsColumn(
-                    model=body_content_table_queryset.model,
-                    return_url_extra=f"?tab={self.tab_id}",
-                )
+                body_content_table.columns["actions"].column.extra_context["return_url_extra"] = f"?tab={self.tab_id}"
 
         if self.exclude_columns or self.include_columns:
             for column in body_content_table.columns:

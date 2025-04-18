@@ -126,6 +126,7 @@ class CircuitTable(StatusTableMixin, BaseTable):
         orderable=False,
         verbose_name="Side Z",
     )
+    actions = ButtonsColumn(Circuit)
 
     class Meta(BaseTable.Meta):
         model = Circuit
@@ -142,6 +143,7 @@ class CircuitTable(StatusTableMixin, BaseTable):
             "commit_rate",
             "description",
             "tags",
+            "actions",
         )
         default_columns = (
             "pk",
