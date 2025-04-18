@@ -425,12 +425,17 @@ class EmailFieldFix(OpenApiSerializerFieldExtension):
     target_class = "rest_framework.serializers.EmailField"
 
     def map_serializer_field(self, auto_schema, direction):
+        email_schema = build_basic_type(OpenApiTypes.EMAIL)
+        str_schema = build_basic_type(OpenApiTypes.STR)
+        auto_schema._insert_field_validators(self.target, email_schema)
+        auto_schema._insert_field_validators(self.target, str_schema)
+        email_schema.pop("format", None)
         if self.target.default == "":
             return {
                 "oneOf": [
-                    {"type": "string"},
-                    {"type": "string", "format": "email"},
+                    str_schema,
+                    email_schema,
                 ]
             }
         else:
-            return build_basic_type(OpenApiTypes.EMAIL)
+            return email_schema
