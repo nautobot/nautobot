@@ -1,3 +1,2 @@
-Added Redis cache to `ValidationRule.objects.get_for_model()`.
-Adopted Redis caches in ValidationRule `clean()` implementation to address a global performance degradation in model `clean()` calls.
 Fixed an issue in which data-validation-engine checks would incorrectly run repeatedly when calling model `clean()`, causing significant performance degradation.
+Changed data-validation-engine `BaseValidator.clean()` implementation to use cacheable lookup APIs, improving performance of repeated model `clean()` calls.
