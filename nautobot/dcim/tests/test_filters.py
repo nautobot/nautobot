@@ -4065,21 +4065,14 @@ class ModuleTestCase(
         interfaces = Interface.objects.filter(module__isnull=False)[:3]
         Interface.objects.filter(pk=interfaces[0].pk).update(mac_address="00-00-00-00-00-01")
         Interface.objects.filter(pk=interfaces[1].pk).update(mac_address="00-00-00-00-00-02")
-        
+
     def test_compatible_with_module_bay(self):
         """Test filtering modules that are compatible with a specific module bay based on module family."""
         module_bay = ModuleBay.objects.filter(module_family__isnull=False).first()
         module_family = module_bay.module_family
-        
-        # Get modules with the same module family as the module bay
         compatible_modules = Module.objects.filter(module_type__module_family=module_family)
-        
-        # Test the filter
         params = {"compatible_with_module_bay": module_bay.pk}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            compatible_modules
-        )
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, compatible_modules)
 
 
 class ModuleTypeTestCase(FilterTestCases.FilterTestCase):
