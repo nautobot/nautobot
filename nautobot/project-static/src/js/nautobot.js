@@ -1,13 +1,12 @@
 import '../scss/nautobot.scss';
 
 import * as bootstrap from 'bootstrap';
+window.bootstrap = bootstrap;
 
 import ClipboardJS from 'clipboard';
-
 window.ClipboardJS = ClipboardJS;
 
 import flatpickr from 'flatpickr';
-
 window.flatpickr = flatpickr;
 
 import hljs from 'highlight.js/lib/core';
@@ -29,6 +28,8 @@ window.$ = window.jQuery;
 import 'jquery-ui';
 import 'select2';
 
+import { observeCollapseTabs } from './tabs';
+
 document.addEventListener('DOMContentLoaded', function () {
   // Tooltips
   // https://getbootstrap.com/docs/5.3/components/tooltips/#enable-tooltips
@@ -47,15 +48,15 @@ document.addEventListener('DOMContentLoaded', function () {
     sidenav.classList.toggle('sidenav-collapsed', expanded)
   });
 
-  [...document.querySelectorAll('.sidenav-list-item')].forEach(sidenavListItem => {
-    sidenavListItem.addEventListener('click', (event) => {
+  [...document.querySelectorAll('.sidenav-list-item')].forEach((sidenavListItem) => {
+    sidenavListItem.addEventListener('click', () => {
       const controls = sidenavListItem.getAttribute('aria-controls');
       const expanded = sidenavListItem.getAttribute('aria-expanded') === 'true';
 
       sidenavListItem.setAttribute('aria-expanded', String(!expanded));
 
       const onClickDocument = (documentClickEvent) => {
-        const {target: documentClickTarget} = documentClickEvent;
+        const { target: documentClickTarget } = documentClickEvent;
         const sidenavFlyout = document.getElementById(controls);
 
         const isClickOutside = !sidenavListItem.contains(documentClickTarget)
@@ -73,6 +74,20 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
+  // Tabs
+  /*
+   * TODO(norbert-mieczkowski-codilime): listen for proper event type(s) to re-initialize collapse tabs observers when
+   *   htmx dynamic content reloading is implemented. Said re-initialization should be as simple as something like:
+   *   ```js
+   *   let unobserveCollapseTabs = observeCollapseTabs();
+   *   document.body.addEventListener('htmx:xhr:loadend', () => unobserveCollapseTabs());
+   *   document.body.addEventListener('htmx:load', () => {
+   *     unobserveCollapseTabs = observeCollapseTabs();
+   *   });
+   *   ```
+   */
+  let unobserveCollapseTabs = observeCollapseTabs();
+
   const toggleFavorite = (element, event) => {
     if (event.detail.successful) {
       element.classList.toggle('active')
@@ -86,6 +101,3 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.setRequestUrl = setRequestUrl;
 });
-
-
-
