@@ -442,8 +442,8 @@ class APIRootView(AuthenticatedAPIRootView):
                         reverse("cloud-api:api-root", request=request, format=format),
                     ),
                     (
-                        "data-validation-engine",
-                        reverse("nautobot_data_validation_engine-api:api-root", request=request, format=format),
+                        "data-validation",
+                        reverse("data_validation-api:api-root", request=request, format=format),
                     ),
                     (
                         "dcim",

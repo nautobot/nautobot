@@ -62,7 +62,7 @@ class BaseModel(models.Model):
         related_query_name="associated_object_metadata_%(app_label)s_%(class)s",  # e.g. 'associated_object_metadata_dcim_device'
     )
     associated_data_compliance = GenericRelation(
-        "nautobot_data_validation_engine.DataCompliance",
+        "data_validation.DataCompliance",
         content_type_field="content_type",
         object_id_field="object_id",
         related_query_name="associated_data_compliance_%(app_label)s_%(class)s",  # e.g. 'associated_data_compliance_dcim_device'

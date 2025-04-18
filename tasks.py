@@ -583,13 +583,20 @@ def logs(context, service="", follow=False, tail=0):
 # ------------------------------------------------------------------------------
 # ACTIONS
 # ------------------------------------------------------------------------------
-@task
-def nbshell(context, quiet=False):
+@task(
+    help={
+        "quiet": "Suppress verbose output on launch",
+        "print_sql": "Enable printing of all executed SQL statements",
+    }
+)
+def nbshell(context, quiet=False, print_sql=False):
     """Launch an interactive Nautobot shell."""
     command = "nautobot-server nbshell"
 
     if quiet:
         command += " --quiet"
+    if print_sql:
+        command += " --print-sql"
 
     run_command(context, command)
 

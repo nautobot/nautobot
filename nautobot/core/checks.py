@@ -31,7 +31,7 @@ E005 = Error(
 )
 
 E006 = Error(
-    "The Data Validation Engine app has been moved directly into Nautobot Core.  Please remove 'nautobot_data_validation_engine' from PLUGINS and PLUGINS_CONFIG in your nautobot_config.py.  You should also uninstall 'nautobot-data-validation-engine' from the python environment.",
+    "The Data Validation Engine app has been moved directly into Nautobot Core.  Please remove 'nautobot_data_validation_engine' from PLUGINS and PLUGINS_CONFIG in your nautobot_config.py.  After running Nautobot migrations successfully, you can then also uninstall 'nautobot-data-validation-engine' from the Python environment.",
     id="nautobot.core.E006",
     obj=settings,
 )
