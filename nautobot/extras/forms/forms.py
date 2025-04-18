@@ -142,6 +142,7 @@ __all__ = (
     "DynamicGroupFilterForm",
     "DynamicGroupForm",
     "DynamicGroupMembershipFormSet",
+    "ExportTemplateBulkEditForm",
     "ExportTemplateFilterForm",
     "ExportTemplateForm",
     "ExternalIntegrationBulkEditForm",
@@ -160,6 +161,7 @@ __all__ = (
     "JobEditForm",
     "JobFilterForm",
     "JobForm",
+    "JobHookBulkEditForm",
     "JobHookFilterForm",
     "JobHookForm",
     "JobQueueBulkEditForm",
@@ -180,6 +182,7 @@ __all__ = (
     "ObjectMetadataFilterForm",
     "PasswordInputWithPlaceholder",
     "RelationshipAssociationFilterForm",
+    "RelationshipBulkEditForm",
     "RelationshipFilterForm",
     "RelationshipForm",
     "RoleBulkEditForm",
@@ -519,10 +522,11 @@ class CustomFieldBulkDeleteForm(ConfirmationForm):
         else:
             context = change_context.as_dict(queryset)
             context["context_detail"] = "bulk delete custom field data"
-        tasks = [
-            delete_custom_field_data.si(obj.key, set(obj.content_types.values_list("pk", flat=True)), context)
-            for obj in queryset
-        ]
+        tasks = []
+        for obj in queryset:
+            pk_set = set(obj.content_types.values_list("pk", flat=True))
+            if pk_set:
+                tasks.append(delete_custom_field_data.si(obj.key, pk_set, context))
         return tasks
 
     def perform_pre_delete(self, queryset):
@@ -533,10 +537,11 @@ class CustomFieldBulkDeleteForm(ConfirmationForm):
             logger.error("Celery worker process not running. Object custom fields may fail to reflect this deletion.")
             return
         tasks = self.construct_custom_field_delete_tasks(queryset)
-        # Executing the tasks in the background sequentially using chain() aligns with how a single
-        # CustomField object is deleted.  We decided to not check the result because it needs at least one worker
-        # to be active and comes with extra performance penalty.
-        chain(*tasks).apply_async()
+        if tasks:
+            # Executing the tasks in the background sequentially using chain() aligns with how a single
+            # CustomField object is deleted.  We decided to not check the result because it needs at least one worker
+            # to be active and comes with extra performance penalty.
+            chain(*tasks).apply_async()
 
 
 #
@@ -749,6 +754,31 @@ class StaticGroupAssociationFilterForm(NautobotFilterForm):
 #
 # Export Templates
 #
+class ExportTemplateBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=ExportTemplate.objects.all(), widget=forms.MultipleHiddenInput())
+
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    mime_type = forms.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        required=False,
+        label="MIME type",
+        help_text="Defaults to <code>text/plain</code>",
+    )
+    file_extension = forms.CharField(
+        max_length=CHARFIELD_MAX_LENGTH, required=False, help_text="Extension to append to the rendered filename"
+    )
+
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("export_templates").get_query()).order_by(
+            "app_label", "model"
+        ),
+        required=False,
+        label="Content Type",
+    )
+
+    class Meta:
+        model = ExportTemplate
+        nullable_fields = ["description", "mime_type", "file_extension"]
 
 
 class ExportTemplateForm(BootstrapMixin, forms.ModelForm):
@@ -1280,6 +1310,43 @@ class JobFilterForm(BootstrapMixin, forms.Form):
     tags = TagFilterField(model)
 
 
+class JobHookBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=JobHook.objects.all(), widget=forms.MultipleHiddenInput())
+    job = DynamicModelChoiceField(
+        queryset=Job.objects.all(),
+        query_params={"is_job_hook_receiver": True},
+        required=False,
+        label="Job",
+    )
+    enabled = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    type_create = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    type_update = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    type_delete = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    add_content_types = MultipleContentTypeField(
+        queryset=ChangeLoggedModelsQuery().as_queryset(),
+        required=False,
+        label="Add Content Type(s)",
+    )
+
+    remove_content_types = MultipleContentTypeField(
+        queryset=ChangeLoggedModelsQuery().as_queryset(),
+        required=False,
+        label="Remove Content Type(s)",
+    )
+
+    class Meta:
+        model = JobHook
+        fields = (
+            "job",
+            "enabled",
+            "type_create",
+            "type_update",
+            "type_delete",
+            "add_content_types",
+            "remove_content_types",
+        )
+
+
 class JobHookForm(BootstrapMixin, forms.ModelForm):
     content_types = MultipleContentTypeField(
         queryset=ChangeLoggedModelsQuery().as_queryset(), required=True, label="Content Type(s)"
@@ -1774,6 +1841,45 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
 #
 
 
+class RelationshipBulkEditForm(BootstrapMixin, CustomFieldModelBulkEditFormMixin, NoteModelBulkEditFormMixin):
+    pk = forms.ModelMultipleChoiceField(queryset=Relationship.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    type = forms.ChoiceField(
+        required=False,
+        label="type",
+        choices=add_blank_choice(RelationshipTypeChoices),
+    )
+    source_hidden = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    destination_hidden = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    source_filter = forms.JSONField(required=False, widget=forms.Textarea, help_text="Filter for the source")
+    destination_filter = forms.JSONField(required=False, widget=forms.Textarea, help_text="Filter for the destination")
+    source_type = CSVContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()), required=False
+    )
+    destination_type = CSVContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()), required=False
+    )
+    source_label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    destination_label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    advanced_ui = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+
+    class Meta:
+        model = Relationship
+        fields = [
+            "description",
+            "type",
+            "source_hidden",
+            "destination_hidden",
+            "source_filter",
+            "destination_filter",
+            "source_type",
+            "destination_type",
+            "source_label",
+            "destination_label",
+            "advanced_ui",
+        ]
+
+
 class RelationshipForm(BootstrapMixin, forms.ModelForm):
     key = SlugField(
         help_text="Internal name of this relationship. Please use underscores rather than dashes.",
@@ -1891,8 +1997,11 @@ class RoleBulkEditForm(NautobotBulkEditForm):
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     weight = forms.IntegerField(required=False)
-    content_types = MultipleContentTypeField(
-        queryset=RoleModelsQuery().as_queryset(), required=False, label="Content Type(s)"
+    add_content_types = MultipleContentTypeField(
+        queryset=RoleModelsQuery().as_queryset(), required=False, label="Add Content Type(s)"
+    )
+    remove_content_types = MultipleContentTypeField(
+        queryset=RoleModelsQuery().as_queryset(), required=False, label="Remove Content Type(s)"
     )
 
     class Meta:
@@ -2012,7 +2121,8 @@ class StatusBulkEditForm(NautobotBulkEditForm):
 
     pk = forms.ModelMultipleChoiceField(queryset=Status.objects.all(), widget=forms.MultipleHiddenInput)
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
-    content_types = MultipleContentTypeField(feature="statuses", required=False, label="Content Type(s)")
+    add_content_types = MultipleContentTypeField(feature="statuses", required=False, label="Add Content Type(s)")
+    remove_content_types = MultipleContentTypeField(feature="statuses", required=False, label="Remove Content Type(s)")
 
     class Meta:
         nullable_fields = []

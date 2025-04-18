@@ -60,6 +60,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     Job,
     JobButton,
+    JobHook,
     JobLogEntry,
     JobQueue,
     JobResult,
@@ -84,6 +85,7 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
+from nautobot.extras.tests.test_jobs import get_job_class_and_model
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import RoleModelsQuery, TaggableClassesQuery
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup, VRF
@@ -1069,12 +1071,14 @@ class ExportTemplateTestCase(
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = ExportTemplate
 
     @classmethod
     def setUpTestData(cls):
         obj_type = ContentType.objects.get_for_model(Location)
+        obj_type_1 = ContentType.objects.get_for_model(Interface)
 
         templates = (
             ExportTemplate(
@@ -1101,6 +1105,12 @@ class ExportTemplateTestCase(
             "name": "template-4",
             "content_type": obj_type.pk,
             "template_code": "template-4 test4",
+        }
+        cls.bulk_edit_data = {
+            "content_type": obj_type_1.pk,
+            "description": "Updated template description",
+            "mime_type": "application/json",
+            "file_extension": "json",
         }
 
 
@@ -3285,6 +3295,70 @@ class JobCustomTemplateTestCase(TestCase):
             self.client.get(self.run_url)
 
 
+class JobHookTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
+    model = JobHook
+
+    @classmethod
+    def setUpTestData(cls):
+        # Get valid job from registered job modules
+        module = "job_hook_receiver"
+        name = "TestJobHookReceiverLog"
+        _job_class, job = get_job_class_and_model(module, name)
+
+        # Create content type for Job Hooks
+        obj_type = ContentType.objects.get_for_model(ConsolePort)
+        device_ct = ContentType.objects.get_for_model(Device)
+        ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
+        prefix_ct = ContentType.objects.get_for_model(Prefix)
+
+        # Create JobHook instances
+        cls.job_hooks = (
+            JobHook(
+                name="jobhook-1",
+                enabled=True,
+                job=job,
+                type_create=True,
+            ),
+            JobHook(
+                name="jobhook-2",
+                enabled=True,
+                job=job,
+                type_update=True,
+            ),
+            JobHook(
+                name="jobhook-3",
+                enabled=True,
+                job=job,
+                type_delete=True,
+            ),
+        )
+
+        for job_hook in cls.job_hooks:
+            job_hook.save()
+            job_hook.content_types.set([obj_type])  # Set after save
+
+        # Form data for create test
+        cls.form_data = {
+            "name": "jobhook-4",
+            "content_types": [device_ct.pk],  # Use int PK
+            "enabled": True,
+            "type_create": True,
+            "type_update": False,
+            "type_delete": False,
+            "job": job.pk,
+        }
+
+        # Bulk edit data
+        cls.bulk_edit_data = {
+            "enabled": False,
+            "type_create": True,  # Make sure these change values
+            "type_update": True,
+            "type_delete": True,
+            "add_content_types": [ipaddress_ct.pk, prefix_ct.pk],
+            "remove_content_types": [device_ct.pk],
+        }
+
+
 # TODO: Convert to StandardTestCases.Views
 class ObjectChangeTestCase(TestCase):
     user_permissions = ("extras.view_objectchange",)
@@ -3376,6 +3450,7 @@ class RelationshipTestCase(
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
     RequiredRelationshipTestMixin,
+    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = Relationship
     slug_source = "label"
@@ -3421,6 +3496,19 @@ class RelationshipTestCase(
             "destination_label": "VLANs",
             "destination_hidden": True,
             "destination_filter": None,
+        }
+        cls.bulk_edit_data = {
+            "description": "This is a relationship between VLANs and Interfaces.",
+            "type": "many-to-many",
+            "source_type": vlan_type.pk,
+            "source_label": "Interfaces",
+            "source_hidden": False,
+            "source_filter": '{"status": ["' + status.name + '"]}',
+            "destination_type": interface_type.pk,
+            "destination_label": "VLANs",
+            "destination_hidden": True,
+            "destination_filter": None,
+            "advanced_ui": True,
         }
 
         cls.slug_test_object = "Primary Interface"
@@ -3584,23 +3672,28 @@ class StatusTestCase(
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = Status
 
     @classmethod
     def setUpTestData(cls):
         # Status objects to test.
-        content_type = ContentType.objects.get_for_model(Device)
+        device_ct = ContentType.objects.get_for_model(Device)
+        circuit_ct = ContentType.objects.get_for_model(Circuit)
+        interface_ct = ContentType.objects.get_for_model(Interface)
 
         cls.form_data = {
             "name": "new_status",
             "description": "I am a new status object.",
             "color": "ffcc00",
-            "content_types": [content_type.pk],
+            "content_types": [device_ct.pk],
         }
 
         cls.bulk_edit_data = {
             "color": "000000",
+            "add_content_types": [interface_ct.pk, circuit_ct.pk],
+            "remove_content_types": [device_ct.pk],
         }
 
 
@@ -3790,25 +3883,29 @@ class WebhookTestCase(
         }
 
 
-class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = Role
 
     @classmethod
     def setUpTestData(cls):
-        # Status objects to test.
-        content_type = ContentType.objects.get_for_model(Device)
+        # Role objects to test.
+        device_ct = ContentType.objects.get_for_model(Device)
+        ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
+        prefix_ct = ContentType.objects.get_for_model(Prefix)
 
         cls.form_data = {
             "name": "New Role",
             "description": "I am a new role object.",
             "color": ColorChoices.COLOR_GREY,
-            "content_types": [content_type.pk],
+            "content_types": [device_ct.pk],
         }
 
         cls.bulk_edit_data = {
             "color": "000000",
             "description": "I used to be a new role object.",
             "weight": 255,
+            "add_content_types": [ipaddress_ct.pk, prefix_ct.pk],
+            "remove_content_types": [device_ct.pk],
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])

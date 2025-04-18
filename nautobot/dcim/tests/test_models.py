@@ -1339,6 +1339,19 @@ class LocationTestCase(ModelTestCases.BaseModelTestCase):
             str(cm.exception),
         )
 
+    def test_default_treemodel_display(self):
+        location_1 = Location(name="Building 1", location_type=self.root_type, status=self.status)
+        location_1.validated_save()
+        location_2 = Location(name="Room 1", location_type=self.leaf_type, parent=location_1, status=self.status)
+        self.assertEqual(location_2.display, "Building 1 → Room 1")
+
+    @override_settings(LOCATION_NAME_AS_NATURAL_KEY=True)
+    def test_location_name_as_natural_key_display(self):
+        location_1 = Location(name="Building 1", location_type=self.root_type, status=self.status)
+        location_1.validated_save()
+        location_2 = Location(name="Room 1", location_type=self.leaf_type, parent=location_1, status=self.status)
+        self.assertEqual(location_2.display, "Room 1")
+
 
 class PlatformTestCase(TestCase):
     def setUp(self):

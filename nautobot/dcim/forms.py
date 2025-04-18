@@ -769,6 +769,16 @@ class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
 #
 
 
+class ManufacturerBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=Manufacturer.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    class Meta:
+        nullable_fields = [
+            "description",
+        ]
+
+
 class ManufacturerForm(NautobotModelForm):
     class Meta:
         model = Manufacturer
@@ -785,6 +795,25 @@ class ManufacturerFilterForm(NautobotFilterForm):
         queryset=DeviceType.objects.all(), to_field_name="model", required=False
     )
     platforms = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), to_field_name="name", required=False)
+
+
+#
+# Platform
+#
+
+
+class PlatformBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=Platform.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
+
+    network_driver = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    napalm_driver = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    napalm_args = forms.JSONField(required=False, widget=forms.Textarea(attrs={"rows": 4}))
+
+    class Meta:
+        nullable_fields = ["manufacturer", "network_driver", "napalm_driver", "napalm_args"]
 
 
 #

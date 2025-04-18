@@ -26,7 +26,7 @@ from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.constants import MODULE_RECURSION_DEPTH_LIMIT
-from nautobot.dcim.utils import get_all_network_driver_mappings
+from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_driver_mapping_tool_names
 from nautobot.extras.models import ChangeLoggedModel, ConfigContextModel, RoleField, StatusField
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
@@ -445,6 +445,17 @@ class Platform(OrganizationalModel):
 
         network_driver_mappings = get_all_network_driver_mappings()
         return network_driver_mappings.get(self.network_driver, {})
+
+    def fetch_network_driver_mappings(self):
+        """
+        Returns the network driver mappings for this Platform instance.
+        If the platform is missing network driver mappings, returns an empty dictionary.
+        """
+        if not self.network_driver:
+            return {}
+
+        tool_names = get_network_driver_mapping_tool_names()
+        return {tool_name: self.network_driver_mappings.get(tool_name) for tool_name in tool_names}
 
     class Meta:
         ordering = ["name"]
