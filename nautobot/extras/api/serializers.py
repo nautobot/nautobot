@@ -152,6 +152,7 @@ class ApprovalWorkflowInstanceSerializer(NautobotModelSerializer):
     object_under_review_content_type = ContentTypeField(
         queryset=ContentType.objects.filter(APPROVAL_WORKFLOW_MODELS).order_by("app_label", "model"),
     )
+    decision_date = serializers.DateTimeField(read_only=True, allow_null=True)
 
     class Meta:
         """Meta attributes."""
@@ -162,6 +163,8 @@ class ApprovalWorkflowInstanceSerializer(NautobotModelSerializer):
 
 class ApprovalWorkflowStageInstanceSerializer(NautobotModelSerializer):
     """ApprovalWorkflowStageInstance Serializer."""
+
+    decision_date = serializers.DateTimeField(read_only=True, allow_null=True)
 
     class Meta:
         """Meta attributes."""

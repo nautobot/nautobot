@@ -239,13 +239,11 @@ class ApprovalWorkflowStageInstanceResponseUIViewSet(
     ObjectBulkDestroyViewMixin,
     ObjectDestroyViewMixin,
     ObjectDetailViewMixin,
-    ObjectListViewMixin,
 ):
     """ViewSet for ApprovalWorkflowStageInstanceResponse."""
 
     filterset_class = filters.ApprovalWorkflowStageInstanceResponseFilterSet
     filterset_form_class = forms.ApprovalWorkflowStageInstanceResponseFilterForm
-    form_class = forms.ApprovalWorkflowStageInstanceResponseForm
     queryset = ApprovalWorkflowStageInstanceResponse.objects.all()
     serializer_class = serializers.ApprovalWorkflowStageInstanceResponseSerializer
     table_class = tables.ApprovalWorkflowStageInstanceResponseTable

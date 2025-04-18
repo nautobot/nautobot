@@ -2,6 +2,7 @@ from difflib import get_close_matches
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 import django_filters
@@ -14,7 +15,7 @@ from nautobot.core.filters import (
     BaseFilterSet,
     ContentTypeFilter,
     ContentTypeMultipleChoiceFilter,
-    MultiValueDateFilter,
+    MultiValueDateTimeFilter,
     MultiValueUUIDFilter,
     NameSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
@@ -230,6 +231,14 @@ class ApprovalWorkflowStageFilterSet(BaseFilterSet):
             "denial_message": "icontains",
         }
     )
+    approval_workflow = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ApprovalWorkflow.objects.all(),
+        to_field_name="name",
+    )
+    approver_group = django_filters.ModelMultipleChoiceFilter(
+        queryset=Group.objects.all(),
+        label="Approver Group",
+    )
     approval_workflow_instance = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=ApprovalWorkflowInstance.objects.all(),
         to_field_name="pk",
@@ -268,8 +277,17 @@ class ApprovalWorkflowInstanceFilterSet(BaseFilterSet):
 
     q = SearchFilter(
         filter_predicates={
-            "current_state": "icontains",
+            "object_under_review_content_type__app_label": "icontains",
+            "object_under_review_content_type__model": "icontains",
         }
+    )
+    approval_workflow = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ApprovalWorkflow.objects.all(),
+        to_field_name="name",
+    )
+    object_under_review_content_type = ContentTypeMultipleChoiceFilter(
+        choices=FeatureQuery("approval_workflows").get_choices,
+        label="Object types allowed to be associated with this Approval Workflow Instance",
     )
 
     class Meta:
@@ -284,10 +302,19 @@ class ApprovalWorkflowStageInstanceFilterSet(BaseFilterSet):
 
     q = SearchFilter(
         filter_predicates={
-            "state": "icontains",
+            "approval_workflow_stage__name": "icontains",
+            "approval_workflow_instance__approval_workflow__name": "icontains",
         }
     )
-    decision_date = MultiValueDateFilter()
+    approval_workflow_instance = django_filters.ModelMultipleChoiceFilter(
+        queryset=ApprovalWorkflowInstance.objects.all(),
+        label="Approval Workflow Instance (ID)",
+    )
+    approval_workflow_stage = django_filters.ModelMultipleChoiceFilter(
+        queryset=ApprovalWorkflowStage.objects.all(),
+        label="Approval Workflow Stage (ID)",
+    )
+    decision_date = MultiValueDateTimeFilter()
 
     class Meta:
         """Meta attributes for filter."""
@@ -304,6 +331,14 @@ class ApprovalWorkflowStageInstanceResponseFilterSet(BaseFilterSet):
             "comments": "icontains",
             "state": "icontains",
         }
+    )
+    approval_workflow_stage_instance = django_filters.ModelMultipleChoiceFilter(
+        queryset=ApprovalWorkflowStageInstance.objects.all(),
+        label="Approval Workflow Stage Instance (ID)",
+    )
+    user = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=get_user_model().objects.all(),
+        to_field_name="username",
     )
 
     class Meta:

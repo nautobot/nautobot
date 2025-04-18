@@ -138,7 +138,7 @@ This is especially useful when importing data into Nautobot using applications l
 
 All data compliance result objects can be found on the navigation bar under `Extensibility -> Data Validation Engine -> Data Compliance`. This view lists all available data compliance results produced from the `RunRegisteredDataComplianceRules` job. You can add filters such as showing only invalid objects or only ones from a specific compliance rule class.
 
-Additionally, the `nautobot_data_validation_engine` app automatically creates template extensions to add a `Data Compliance` tab to the detail view of all objects. This tab makes it easy to check an individual object's compliance with any applicable data compliance rules.
+Additionally, the `data_validation` app automatically creates template extensions to add a `Data Compliance` tab to the detail view of all objects. This tab makes it easy to check an individual object's compliance with any applicable data compliance rules.
 
 ## Example
 

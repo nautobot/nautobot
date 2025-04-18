@@ -1,0 +1,3 @@
+Added handling for the ContactAssociation, MetadataType, ObjectMetadata, and Role models to `nautobot.core.utils.migration.migrate_content_type_references_to_new_model`.
+Renamed the data-validation model database tables to fit within identifier length limits in Dolt and MySQL.
+Fixed missing "Data Compliance" tab on relevant models.

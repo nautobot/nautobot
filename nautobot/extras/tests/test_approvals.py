@@ -1,7 +1,5 @@
 """Unit tests for Approval Workflow models."""
 
-import datetime
-
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 
@@ -17,7 +15,7 @@ class ApprovalWorkflowTestMixin:
     def setUpTestData(cls):
         job_ct = ContentType.objects.get(app_label="extras", model="job")
         scheduledjob_ct = ContentType.objects.get(app_label="extras", model="scheduledjob")
-        job = models.Job.objects.first()
+        jobs = list(models.Job.objects.all())
         cls.approver_group_1 = Group.objects.create(name="Approver Group 1")
         cls.approver_group_2 = Group.objects.create(name="Approver Group 2")
         users = list(User.objects.all())
@@ -52,31 +50,31 @@ class ApprovalWorkflowTestMixin:
         cls.approval_workflow_1_instance_1 = models.ApprovalWorkflowInstance.objects.create(
             approval_workflow=cls.approval_workflow_1,
             object_under_review_content_type=job_ct,
-            object_under_review_object_id=job.pk,
+            object_under_review_object_id=jobs[0].pk,
             current_state=choices.ApprovalWorkflowStateChoices.PENDING,
         )
         cls.approval_workflow_1_instance_2 = models.ApprovalWorkflowInstance.objects.create(
             approval_workflow=cls.approval_workflow_2,
             object_under_review_content_type=job_ct,
-            object_under_review_object_id=job.pk,
+            object_under_review_object_id=jobs[1].pk,
             current_state=choices.ApprovalWorkflowStateChoices.PENDING,
         )
         cls.approval_workflow_1_instance_3 = models.ApprovalWorkflowInstance.objects.create(
             approval_workflow=cls.approval_workflow_1,
             object_under_review_content_type=job_ct,
-            object_under_review_object_id=job.pk,
+            object_under_review_object_id=jobs[2].pk,
             current_state=choices.ApprovalWorkflowStateChoices.APPROVED,
         )
         cls.approval_workflow_1_instance_4 = models.ApprovalWorkflowInstance.objects.create(
             approval_workflow=cls.approval_workflow_2,
             object_under_review_content_type=job_ct,
-            object_under_review_object_id=job.pk,
+            object_under_review_object_id=jobs[3].pk,
             current_state=choices.ApprovalWorkflowStateChoices.DENIED,
         )
         cls.approval_workflow_1_instance_5 = models.ApprovalWorkflowInstance.objects.create(
             approval_workflow=cls.approval_workflow_2,
             object_under_review_content_type=job_ct,
-            object_under_review_object_id=job.pk,
+            object_under_review_object_id=jobs[4].pk,
             current_state=choices.ApprovalWorkflowStateChoices.PENDING,
         )
         cls.approval_workflow_1_stage_1 = models.ApprovalWorkflowStage.objects.create(
@@ -185,19 +183,19 @@ class ApprovalWorkflowTestMixin:
             approval_workflow_stage_instance=cls.approval_workflow_1_stage_instance_1,
             user=User.objects.first(),
             comments="Approved by user 1",
-            state=choices.ApprovalWorkflowStateChoices.APPROVED,
+            state=choices.ApprovalWorkflowStateChoices.PENDING,
         )
         models.ApprovalWorkflowStageInstanceResponse.objects.create(
             approval_workflow_stage_instance=cls.approval_workflow_1_stage_instance_2,
             user=User.objects.last(),
             comments="Denied by user 2",
-            state=choices.ApprovalWorkflowStateChoices.DENIED,
+            state=choices.ApprovalWorkflowStateChoices.PENDING,
         )
         models.ApprovalWorkflowStageInstanceResponse.objects.create(
             approval_workflow_stage_instance=cls.approval_workflow_1_stage_instance_1,
             user=User.objects.last(),
             comments="Approved by user 2",
-            state=choices.ApprovalWorkflowStateChoices.APPROVED,
+            state=choices.ApprovalWorkflowStateChoices.PENDING,
         )
 
 
@@ -300,19 +298,19 @@ class ApprovalWorkflowInstanceAPITest(ApprovalWorkflowTestMixin, APIViewTestCase
             {
                 "approval_workflow": cls.approval_workflow_1.pk,
                 "object_under_review_content_type": "extras.job",
-                "object_under_review_object_id": jobs[3].pk,
+                "object_under_review_object_id": jobs[5].pk,
                 "current_state": choices.ApprovalWorkflowStateChoices.PENDING,
             },
             {
                 "approval_workflow": cls.approval_workflow_1.pk,
                 "object_under_review_content_type": "extras.job",
-                "object_under_review_object_id": jobs[4].pk,
+                "object_under_review_object_id": jobs[6].pk,
                 "current_state": choices.ApprovalWorkflowStateChoices.PENDING,
             },
             {
                 "approval_workflow": cls.approval_workflow_1.pk,
                 "object_under_review_content_type": "extras.job",
-                "object_under_review_object_id": jobs[3].pk,
+                "object_under_review_object_id": jobs[7].pk,
                 "current_state": choices.ApprovalWorkflowStateChoices.PENDING,
             },
         ]
@@ -343,19 +341,16 @@ class ApprovalWorkflowStageInstanceAPITest(ApprovalWorkflowTestMixin, APIViewTes
                 "approval_workflow_instance": cls.approval_workflow_1_instance_1.pk,
                 "approval_workflow_stage": cls.approval_workflow_1_stage_5.pk,
                 "state": choices.ApprovalWorkflowStateChoices.APPROVED,
-                "decision_date": datetime.date(2024, 12, 31),
             },
             {
                 "approval_workflow_instance": cls.approval_workflow_1_instance_1.pk,
                 "approval_workflow_stage": cls.approval_workflow_1_stage_6.pk,
                 "state": choices.ApprovalWorkflowStateChoices.DENIED,
-                "decision_date": datetime.date(2024, 8, 24),
             },
         ]
 
         cls.update_data = {
             "state": choices.ApprovalWorkflowStateChoices.APPROVED,
-            "decision_date": datetime.date(2021, 12, 31),
         }
 
 
@@ -373,19 +368,19 @@ class ApprovalWorkflowStageInstanceResponseAPITest(ApprovalWorkflowTestMixin, AP
         cls.create_data = [
             {
                 "approval_workflow_stage_instance": cls.approval_workflow_1_stage_instance_1.pk,
-                "user": users[0].pk,
+                "user": users[3].pk,
                 "comments": "Approved by user 1",
                 "state": choices.ApprovalWorkflowStateChoices.APPROVED,
             },
             {
                 "approval_workflow_stage_instance": cls.approval_workflow_1_stage_instance_2.pk,
-                "user": users[1].pk,
+                "user": users[4].pk,
                 "comments": "Approved by user 2",
                 "state": choices.ApprovalWorkflowStateChoices.APPROVED,
             },
             {
                 "approval_workflow_stage_instance": cls.approval_workflow_1_stage_instance_3.pk,
-                "user": users[0].pk,
+                "user": users[4].pk,
                 "comments": "Denied by user 1",
                 "state": choices.ApprovalWorkflowStateChoices.DENIED,
             },

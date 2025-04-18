@@ -49,6 +49,7 @@ class Migration(migrations.Migration):
                 ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={
+                "ordering": ["name"],
                 "verbose_name": "Approval Workflow",
             },
             bases=(
@@ -82,6 +83,7 @@ class Migration(migrations.Migration):
                         to="extras.approvalworkflow",
                     ),
                 ),
+                ("decision_date", models.DateTimeField(blank=True, null=True)),
                 (
                     "object_under_review_content_type",
                     models.ForeignKey(
@@ -95,6 +97,10 @@ class Migration(migrations.Migration):
             ],
             options={
                 "verbose_name": "Approval Workflow Instance",
+                "unique_together": {
+                    ("approval_workflow", "object_under_review_content_type", "object_under_review_object_id")
+                },
+                "ordering": ["approval_workflow"],
             },
             bases=(
                 nautobot.extras.models.mixins.DynamicGroupMixin,
@@ -142,6 +148,7 @@ class Migration(migrations.Migration):
             options={
                 "verbose_name": "Approval Workflow Stage",
                 "unique_together": {("approval_workflow", "name"), ("approval_workflow", "weight")},
+                "ordering": ["approval_workflow", "weight"],
             },
             bases=(
                 nautobot.extras.models.mixins.DynamicGroupMixin,
@@ -165,7 +172,7 @@ class Migration(migrations.Migration):
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
                 ("state", models.CharField(default="Pending", max_length=255)),
-                ("decision_date", models.DateField(blank=True, null=True)),
+                ("decision_date", models.DateTimeField(blank=True, null=True)),
                 (
                     "approval_workflow_instance",
                     models.ForeignKey(
@@ -186,6 +193,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 "verbose_name": "Approval Workflow Stage Instance",
+                "unique_together": {("approval_workflow_instance", "approval_workflow_stage")},
             },
             bases=(
                 nautobot.extras.models.mixins.DynamicGroupMixin,
@@ -222,6 +230,7 @@ class Migration(migrations.Migration):
                 ),
             ],
             options={
+                "db_table": "extras_approvaluserresponse",
                 "verbose_name": "Approval Workflow Stage Instance Response",
             },
         ),
