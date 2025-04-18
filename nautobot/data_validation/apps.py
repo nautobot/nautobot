@@ -11,7 +11,6 @@ class DataValidationEngineConfig(NautobotConfig):
 
     def ready(self):
         super().ready()
-
         from nautobot.data_validation.custom_validators import custom_validators
 
         register_custom_validators(custom_validators)
@@ -19,3 +18,5 @@ class DataValidationEngineConfig(NautobotConfig):
         from nautobot.data_validation.template_content import template_extensions
 
         register_template_extensions(template_extensions)
+
+        import nautobot.data_validation.signals  # noqa: F401  # unused-import -- but this import installs the signals

@@ -380,9 +380,8 @@ def get_data_compliance_rules():
         validators.extend(rule_sets)
 
     # Get rules from Git Repositories
-    for repo in GitRepository.objects.all():
-        if "data_validation.data_compliance_rule" in repo.provided_contents:
-            validators.extend(get_data_compliance_classes_from_git_repo(repo))
+    for repo in GitRepository.objects.get_for_provided_contents("data_validation.data_compliance_rule"):
+        validators.extend(get_data_compliance_classes_from_git_repo(repo))
     return validators
 
 

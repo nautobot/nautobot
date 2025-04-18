@@ -1054,7 +1054,6 @@ def refresh_git_data_compliance_rules(repository_record, job_result, delete=Fals
     """Callback function for GitRepository updates - refresh all DataComplianceRules managed by this repository."""
     from nautobot.data_validation.custom_validators import get_data_compliance_classes_from_git_repo
 
-    # TODO should we call ensure_git_repository as well to skip reloading the data compliance rules if the repo is not updated?
     if "data_validation.data_compliance_rule" in repository_record.provided_contents:
         for compliance_class in get_data_compliance_classes_from_git_repo(repository_record):
             job_result.log(

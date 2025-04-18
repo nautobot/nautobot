@@ -13,6 +13,7 @@ import netaddr
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.testing import APIViewTestCases, disable_warnings, extract_page_body, TestCase, ViewTestCases
 from nautobot.core.utils.lookup import get_table_for_model
+from nautobot.data_validation.custom_validators import BaseValidator
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.extras import plugins
@@ -85,6 +86,13 @@ class AppTest(TestCase):
             RelationshipAssociationCustomValidator,
             registry["plugin_custom_validators"]["extras.relationshipassociation"],
         )
+
+        # Assert data-validation engine added one and only one validator for a given model.
+        # https://github.com/nautobot/nautobot/pull/7180
+        data_validation_validators = [
+            v for v in registry["plugin_custom_validators"]["dcim.location"] if issubclass(v, BaseValidator)
+        ]
+        self.assertEqual(1, len(data_validation_validators))
 
     def test_jinja_filter_registration(self):
         """
