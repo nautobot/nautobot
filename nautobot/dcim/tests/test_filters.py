@@ -52,6 +52,7 @@ from nautobot.dcim.filters import (
     ManufacturerFilterSet,
     ModuleBayFilterSet,
     ModuleBayTemplateFilterSet,
+    ModuleFamilyFilterSet,
     ModuleFilterSet,
     ModuleTypeFilterSet,
     PlatformFilterSet,
@@ -100,6 +101,7 @@ from nautobot.dcim.models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     Platform,
     PowerFeed,
@@ -573,12 +575,20 @@ def common_test_data(cls):
         label="devicebay3",
         description="Device Bay Description 3",
     )
+    # Create module families for testing
+    module_families = (
+        ModuleFamily.objects.create(name="Module Family 1"),
+        ModuleFamily.objects.create(name="Module Family 2"),
+        ModuleFamily.objects.create(name="Module Family 3"),
+    )
+
     ModuleBayTemplate.objects.create(
         device_type=device_types[0],
         name="device test module bay 1",
         position=1,
         label="devicemodulebay1",
         description="device test module bay 1 description",
+        module_family=module_families[0],
     )
     ModuleBayTemplate.objects.create(
         device_type=device_types[1],
@@ -586,6 +596,7 @@ def common_test_data(cls):
         position=2,
         label="devicemodulebay2",
         description="device test module bay 2 description",
+        module_family=module_families[1],
     )
     ModuleBayTemplate.objects.create(
         device_type=device_types[2],
@@ -4055,6 +4066,14 @@ class ModuleTestCase(
         Interface.objects.filter(pk=interfaces[0].pk).update(mac_address="00-00-00-00-00-01")
         Interface.objects.filter(pk=interfaces[1].pk).update(mac_address="00-00-00-00-00-02")
 
+    def test_compatible_with_module_bay(self):
+        """Test filtering modules that are compatible with a specific module bay based on module family."""
+        module_bay = ModuleBay.objects.filter(module_family__isnull=False).first()
+        module_family = module_bay.module_family
+        compatible_modules = Module.objects.filter(module_type__module_family=module_family)
+        params = {"compatible_with_module_bay": module_bay.pk}
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, compatible_modules)
+
 
 class ModuleTypeTestCase(FilterTestCases.FilterTestCase):
     queryset = ModuleType.objects.all()
@@ -4097,6 +4116,7 @@ class ModuleBayTemplateTestCase(FilterTestCases.FilterTestCase):
         ("label",),
         ("module_type", "module_type__id"),
         ("module_type", "module_type__model"),
+        ("module_family", "module_family__id"),
         ("name",),
         ("position",),
     ]
@@ -4267,4 +4287,36 @@ class InterfaceVDCAssignmentTestCase(FilterTestCases.FilterTestCase):
                 name="Interface 000",
                 status=interface_status,
             ),
+        )
+
+
+class ModuleFamilyTestCase(FilterTestCases.FilterTestCase):
+    """Test cases for the ModuleFamilyFilterSet."""
+
+    queryset = ModuleFamily.objects.all()
+    filterset = ModuleFamilyFilterSet
+    generic_filter_tests = [
+        ("name",),
+        ("description",),
+        ("module_types", "module_types__id"),
+        ("module_types", "module_types__model"),
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create test data for filter tests."""
+        manufacturers = (
+            Manufacturer.objects.create(name="Manufacturer 1"),
+            Manufacturer.objects.create(name="Manufacturer 2"),
+        )
+
+        module_families = (
+            ModuleFamily.objects.create(name="Module Family 1", description="First family"),
+            ModuleFamily.objects.create(name="Module Family 2", description="Second family"),
+            ModuleFamily.objects.create(name="Module Family 3", description="Third family"),
+        )
+
+        cls.module_types = (
+            ModuleType.objects.create(manufacturer=manufacturers[0], model="Model 1", module_family=module_families[0]),
+            ModuleType.objects.create(manufacturer=manufacturers[1], model="Model 2", module_family=module_families[1]),
         )
