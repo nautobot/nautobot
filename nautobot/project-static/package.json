@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@graphiql/plugin-explorer": "0.1.15",
+    "@graphiql/toolkit": "^0.11.1",
     "@mdi/font": "^7.4.47",
     "@popperjs/core": "^2.11.8",
     "bootstrap": "^5.3.3",

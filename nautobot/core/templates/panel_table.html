@@ -7,13 +7,9 @@
             <strong>{{ heading }}</strong>
         </div>
     {% endif %}
-    {% if table.rows %}
-        <div class="table-responsive">
-            {% render_table table table_inc_template|default:'inc/table.html' %}
-        </div>
-    {% else %}
-        <div class="card-body text-muted">None</div>
-    {% endif %}
+    <div class="table-responsive">
+        {% render_table table table_inc_template|default:'inc/table.html' %}
+    </div>
     {% if add_obj_url %}
         <div class="card-footer noprint">
             <div class="pull-right">

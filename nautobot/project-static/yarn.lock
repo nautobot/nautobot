@@ -79,6 +79,22 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@graphiql/toolkit@npm:^0.11.1":
+  version: 0.11.1
+  resolution: "@graphiql/toolkit@npm:0.11.1"
+  dependencies:
+    "@n1ru4l/push-pull-async-iterable-iterator": "npm:^3.1.0"
+    meros: "npm:^1.1.4"
+  peerDependencies:
+    graphql: ^15.5.0 || ^16.0.0 || ^17.0.0
+    graphql-ws: ">= 4.5.0"
+  peerDependenciesMeta:
+    graphql-ws:
+      optional: true
+  checksum: 10c0/8cc28db5214e7520892f6ac86f983c0cd6bd474dcdde0369f29022d08cf5ddeb07597710228b3f7dd1d995df5ff37664552bfc674e5a410f9d1e0b054bb166c3
+  languageName: node
+  linkType: hard
+
 "@graphiql/toolkit@npm:^0.8.4":
   version: 0.8.4
   resolution: "@graphiql/toolkit@npm:0.8.4"
@@ -2193,6 +2209,7 @@ __metadata:
   resolution: "nautobot@workspace:."
   dependencies:
     "@graphiql/plugin-explorer": "npm:0.1.15"
+    "@graphiql/toolkit": "npm:^0.11.1"
     "@mdi/font": "npm:^7.4.47"
     "@popperjs/core": "npm:^2.11.8"
     autoprefixer: "npm:^10.4.20"

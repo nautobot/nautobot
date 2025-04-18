@@ -16,74 +16,10 @@
 {% endblock %}
 
 {% block content %}
-<div class="float-end noprint">
+<div class="align-items-center d-flex gap-8 justify-content-end mb-16 noprint">
     {% block buttons %}{% endblock %}
     {% plugin_buttons content_type.model_class 'list' %}
-    {% if table and request.user.is_authenticated and table_config_form %}
-        {% block table_config_button %}
-            {% table_config_button table table_name="ObjectTable" %}
-        {% endblock table_config_button %}
-    {% endif %}
-    {% if filter_form or dynamic_filter_form %}
-        <button type="button" class="btn btn-default" data-bs-toggle="modal" data-bs-target="#FilterForm_modal" title="Add filters" id="id__filterbtn"><i class="mdi mdi-filter"></i> Filter</button>
-    {% endif %}
-    {% if model.is_saved_view_model %}
-        <div class="btn-group">
-            <button type="button" class="btn btn-default dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <span class="mdi mdi-view-compact-outline" aria-hidden="true"></span> Saved Views
-            </button>
-            <ul class="dropdown-menu">
-                {% for saved_view in saved_views %}
-                    <li>
-                        {% if saved_view == current_saved_view %}
-                            <a href="{% url list_url %}?clear_view=true">
-                                <i class="mdi mdi-check-bold text-bold" aria-hidden="true"></i>
-                                <strong>
-                                    {{saved_view.name}}
-                                </strong>
-                            </a>
-                        {% else %}
-                            <a href="{{ saved_view.get_absolute_url }}">
-                                <i class="mdi mdi-view-compact-outline text-muted" aria-hidden="true"></i>
-                                {{saved_view.name}}
-                            </a>
-                        {% endif %}
-                    </li>
-                {% endfor %}
-                {% if saved_views %}
-                    <li role="separator" class="divider"></li>
-                {% endif %}
-                {% if current_saved_view %}
-                    <li>
-                        <a href="{% url 'extras:savedview_update_config' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
-                            <i class="mdi mdi-content-save-outline text-muted" aria-hidden="true"></i>
-                            <span>Update Current Saved View</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{% url 'extras:savedview_set_default' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
-                            <i class="mdi mdi-star text-muted" aria-hidden="true"></i>
-                            <span>Set As My Default</span>
-                        </a>
-                    </li>
-                {% endif %}
-                <li>
-                    <a href="" data-bs-toggle="modal" data-bs-target="#saved_view_modal" title="Save Current View As">
-                        <i class="mdi mdi-content-save-plus-outline text-muted" aria-hidden="true"></i>
-                        <span>Save As New View</span>
-                    </a>
-                </li>
-                {% if current_saved_view %}
-                    <li>
-                        <a href="{% url 'extras:savedview_delete' pk=request.GET.saved_view %}">
-                            <i class="mdi mdi-trash-can-outline text-danger" aria-hidden="true"></i>
-                            <span class="text-danger">Delete Current Saved View</span>
-                        </a>
-                    </li>
-                {% endif %}
-            </ul>
-        </div>
-    {% endif %}
+
     <div class="btn-group">
         {% if permissions.add and 'add' in action_buttons %}
             {% add_button content_type.model_class|validated_viewname:"add" verbose_name=model|meta:"verbose_name"|bettertitle %}
@@ -99,14 +35,14 @@
                 Actions
             </button>
         {% endif %}
-        <ul class="dropdown-menu pull-right" role="menu">
+        <ul class="dropdown-menu dropdown-menu-end" role="menu">
             {% if permissions.add and 'import' in action_buttons %}
                 {% block import_list_element %}
                     {% job_import_button content_type list_element=True%}
                 {% endblock import_list_element %}
             {% endif %}
             {% if permissions.add and 'import' in action_buttons and 'export' in action_buttons %}
-                <li class="divider"></li>
+                <li class="dropdown-divider"></li>
             {% endif %}
             {% if 'export' in action_buttons %}
                 {% block export_list_element %}
@@ -124,6 +60,77 @@
         {% block export_button %}
         {% endblock export_button %}
     {% endif %}
+    {% if table and request.user.is_authenticated and table_config_form %}
+        {% block table_config_button %}
+            {% table_config_button table table_name="ObjectTable" %}
+        {% endblock table_config_button %}
+    {% endif %}
+    <div class="align-items-center d-flex gap-4">
+        {% if model.is_saved_view_model %}
+            <div class="btn-group">
+                <button type="button" class="btn dropdown-toggle text-secondary" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="Saved Views">
+                    <span class="mdi mdi-view-compact-outline" aria-hidden="true"></span>
+                    <span class="visually-hidden">Saved Views</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    {% for saved_view in saved_views %}
+                        <li>
+                            {% if saved_view == current_saved_view %}
+                                <a class="dropdown-item" href="{% url list_url %}?clear_view=true">
+                                    <i class="mdi mdi-check-bold text-bold" aria-hidden="true"></i>
+                                    <strong>
+                                        {{saved_view.name}}
+                                    </strong>
+                                </a>
+                            {% else %}
+                                <a class="dropdown-item" href="{{ saved_view.get_absolute_url }}">
+                                    <i class="mdi mdi-view-compact-outline text-muted" aria-hidden="true"></i>
+                                    {{saved_view.name}}
+                                </a>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                    {% if saved_views %}
+                        <li role="separator" class="dropdown-divider"></li>
+                    {% endif %}
+                    {% if current_saved_view %}
+                        <li>
+                            <a class="dropdown-item" href="{% url 'extras:savedview_update_config' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
+                                <i class="mdi mdi-content-save-outline text-muted" aria-hidden="true"></i>
+                                <span>Update Current Saved View</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{% url 'extras:savedview_set_default' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
+                                <i class="mdi mdi-star text-muted" aria-hidden="true"></i>
+                                <span>Set As My Default</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                    <li>
+                        <a class="dropdown-item" href="" data-bs-toggle="modal" data-bs-target="#saved_view_modal" title="Save Current View As">
+                            <i class="mdi mdi-content-save-plus-outline text-muted" aria-hidden="true"></i>
+                            <span>Save As New View</span>
+                        </a>
+                    </li>
+                    {% if current_saved_view %}
+                        <li>
+                            <a class="dropdown-item" href="{% url 'extras:savedview_delete' pk=request.GET.saved_view %}">
+                                <i class="mdi mdi-trash-can-outline text-danger" aria-hidden="true"></i>
+                                <span class="text-danger">Delete Current Saved View</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        {% endif %}
+        {% if filter_form or dynamic_filter_form %}
+            <button type="button" class="btn text-secondary" data-bs-toggle="modal" data-bs-target="#FilterForm_modal" title="Add Filters" id="id__filterbtn">
+                <span class="mdi mdi-filter" aria-hidden="true"></span>
+                <span class="visually-hidden">Add Filters</span>
+            </button>
+        {% endif %}
+    </div>
 </div>
 
 {% block header_extra %}{% endblock %}
@@ -163,9 +170,8 @@
 <hr>
 {% endif %}
 
-<div class="row">
+<div>
     {% block table %}
-    <div class="col-md-12">
         {% with bulk_edit_url=content_type.model_class|validated_viewname:"bulk_edit" bulk_delete_url=content_type.model_class|validated_viewname:"bulk_delete" %}
         {% if permissions.change or permissions.delete %}
             <form id="object_list_form" method="post" class="form form-horizontal">
@@ -173,15 +179,17 @@
                 <input type="hidden" name="return_url" value="{% if return_url %}{{ return_url }}{% else %}{{ request.path }}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}{% endif %}" />
                 {% if table.paginator.num_pages > 1 %}
                 <div class="table-responsive">
-                    <div id="select_all_box" class="visually-hidden card noprint">
-                        <div class="card-body">
-                            <div class="checkbox-inline">
-                                <label for="select_all">
+                    <div id="select_all_box" class="visually-hidden card mb-16 noprint">
+                        <div class="card-body column-gap-20 hstack row-gap-12 flex-wrap justify-content-end">
+                            <div class="checkbox-inline flex-grow-1">
+                                <label for="select_all" class="hstack gap-8">
                                     <input type="checkbox" id="select_all" name="_all" />
-                                    Select <strong>all {{ table.rows|length }} {{ table.data.verbose_name_plural }}</strong> matching query
+                                    <span>
+                                        Select <strong>all {{ table.rows|length }} {{ table.data.verbose_name_plural }}</strong> matching query
+                                    </span>
                                 </label>
                             </div>
-                            <div class="float-end">
+                            <div class="hstack gap-8">
                                 {% if content_type.model_class.is_dynamic_group_associable_model and perms.extras.add_staticgroupassociation %}
                                     <button type="button"
                                             id="update_dynamic_groups_for_all"
@@ -211,10 +219,9 @@
                 {% endif %}
                 {% include table_template|default:'panel_table.html' %}
 
-                <div class="float-start noprint">
+                <div class="noprint mt-16 float-lg-start mt-lg-20">
                     {% consolidate_bulk_action_buttons %}
                     {% block bulk_buttons %}{% endblock %}
-
                 </div>
             </form>
         {% else %}
@@ -223,7 +230,6 @@
         {% endwith %}
         {% include 'inc/paginator.html' with paginator=table.paginator page=table.page %}
         <div class="clearfix"></div>
-    </div>
     {% endblock %}
 </div>
 {% if table %}{% table_config_form table table_name="ObjectTable" %}{% endif %}
