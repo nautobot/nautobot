@@ -46,6 +46,7 @@ from nautobot.extras.models import (
     StatusModel,
 )
 from nautobot.extras.models.mixins import (
+    ApprovableModelMixin,
     ContactMixin,
     DynamicGroupMixin,
     DynamicGroupsModelMixin,
@@ -59,6 +60,7 @@ from nautobot.ipam.fields import VarbinaryIPField
 from nautobot.ipam.models import get_default_namespace, get_default_namespace_pk
 
 __all__ = (
+    "ApprovableModelMixin",
     "AttributeSetter",
     "AutoSlugField",
     "BaseManager",

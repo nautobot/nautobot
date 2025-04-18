@@ -349,6 +349,11 @@ def populate_model_features_registry(refresh=False):
             "field_names": [],
             "additional_constraints": {"is_dynamic_group_associable_model": True},
         },
+        {
+            "feature_name": "approval_workflows",
+            "field_names": [],
+            "additional_constraints": {"is_approval_workflow_model": True},
+        },
     ]
 
     app_models = apps.get_models()

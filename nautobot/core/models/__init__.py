@@ -53,6 +53,7 @@ class BaseModel(models.Model):
     is_metadata_associable_model = True
     is_saved_view_model = False  # SavedViewMixin overrides this to default True
     is_cloud_resource_type_model = False  # CloudResourceTypeMixin overrides this to default True
+    is_approval_workflow_model = False  # ApprovableModelMixin overrides this to default True
 
     associated_object_metadata = GenericRelation(
         "extras.ObjectMetadata",
