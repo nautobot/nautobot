@@ -405,6 +405,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "vlan",
             "role",
             "description",
+            "actions",
         )
         row_attrs = {
             "class": lambda record: "success" if not record.present_in_database else "",

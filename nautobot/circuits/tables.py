@@ -153,6 +153,7 @@ class CircuitTable(StatusTableMixin, BaseTable):
             "circuit_termination_a",
             "circuit_termination_z",
             "description",
+            "actions",
         )
 
 
