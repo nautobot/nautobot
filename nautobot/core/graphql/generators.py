@@ -3,6 +3,7 @@
 import logging
 
 import graphene
+from graphene_django.fields import DjangoListField
 import graphene_django_optimizer as gql_optimizer
 from graphql import GraphQLError
 
@@ -67,6 +68,12 @@ def generate_filter_resolver(schema_type, resolver_name, field_name):
     def resolve_filter(self, info, **kwargs):
         if not filterset_class or not kwargs:
             return getattr(self, field_name).all()
+
+        # Backwards-compatibility with Nautobot v2 - "_type" as a (now deprecated) alias for "type" filter
+        if "_type" in kwargs:
+            _type = kwargs.pop("_type")
+            if "type" not in kwargs:
+                kwargs["type"] = _type
 
         resolved_obj = filterset_class(kwargs, getattr(self, field_name).all())
 
@@ -302,6 +309,12 @@ def generate_list_resolver(schema_type, resolver_name):
     def list_resolver(self, info, limit=None, offset=None, **kwargs):
         filterset_class = schema_type._meta.filterset_class
 
+        # Backwards-compatibility with Nautobot v2 - "_type" as a (now deprecated) alias for "type" filter
+        if "_type" in kwargs:
+            _type = kwargs.pop("_type")
+            if "type" not in kwargs:
+                kwargs["type"] = _type
+
         if filterset_class is not None:
             resolved_obj = filterset_class(kwargs, model.objects.restrict(info.context.user, "view").all())
 
@@ -351,7 +364,7 @@ def generate_attrs_for_schema_type(schema_type):
     # Define Attributes for single item and list with their search parameters
     search_params = generate_list_search_parameters(schema_type)
     attrs[single_item_name] = graphene.Field(schema_type, id=graphene.ID())
-    attrs[list_name] = graphene.List(schema_type, **search_params)
+    attrs[list_name] = DjangoListField(schema_type, **search_params)
 
     # Define Resolvers for both single item and list
     single_item_resolver_name = f"{RESOLVER_PREFIX}{single_item_name}"

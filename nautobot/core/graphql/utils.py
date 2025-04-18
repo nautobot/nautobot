@@ -84,9 +84,9 @@ def get_filtering_args_from_filterset(filterset_class):
     # Hack to avoid conflict with `graphene.types.field.Field.description`.
     if "description" in args:
         args["args"].update({"description": args.pop("description")})
-    if "type" in args and "_type" not in args:
+    if "type" in args:
         # for backwards compatibility with our filters in graphene v2 where `type` was a reserved keyword
-        args["_type"] = args["type"]
+        args["args"].update({"_type": args["type"]})
 
     return args
 

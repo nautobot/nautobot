@@ -1803,6 +1803,11 @@ query {
                 f'type: "{PortTypeChoices.TYPE_8P8C}"',
                 Q(type=PortTypeChoices.TYPE_8P8C),
             ),
+            # for backward compatibility:
+            (
+                f'_type: "{PortTypeChoices.TYPE_8P8C}"',
+                Q(type=PortTypeChoices.TYPE_8P8C),
+            ),
         )
 
         for filterv, qs_filter in filters:
