@@ -39,7 +39,6 @@ router.register("interface-redundancy-groups-associations", views.InterfaceRedun
 router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
 router.register("location-types", views.LocationTypeUIViewSet)
 router.register("manufacturers", views.ManufacturerUIViewSet)
-router.register("module-bays", views.ModuleBayUIViewSet)
 router.register("module-bay-templates", views.ModuleBayTemplateUIViewSet)
 router.register("module-bays", views.ModuleBayUIViewSet)
 router.register("module-families", views.ModuleFamilyUIViewSet)
