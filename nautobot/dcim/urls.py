@@ -17,7 +17,6 @@ from .models import (
     Interface,
     InventoryItem,
     Location,
-    Platform,
     PowerFeed,
     PowerOutlet,
     PowerPanel,
@@ -43,6 +42,7 @@ router.register("module-bays", views.ModuleBayUIViewSet)
 router.register("module-bay-templates", views.ModuleBayTemplateUIViewSet)
 router.register("modules", views.ModuleUIViewSet)
 router.register("module-types", views.ModuleTypeUIViewSet)
+router.register("platforms", views.PlatformUIViewSet)
 router.register("power-feeds", views.PowerFeedUIViewSet)
 router.register("rack-groups", views.RackGroupUIViewSet)
 router.register("software-image-files", views.SoftwareImageFileUIViewSet)
@@ -461,42 +461,6 @@ urlpatterns = [
         "device-bay-templates/<uuid:pk>/delete/",
         views.DeviceBayTemplateDeleteView.as_view(),
         name="devicebaytemplate_delete",
-    ),
-    # Platforms
-    path("platforms/", views.PlatformListView.as_view(), name="platform_list"),
-    path("platforms/add/", views.PlatformEditView.as_view(), name="platform_add"),
-    path(
-        "platforms/import/",
-        views.PlatformBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="platform_import",
-    ),
-    path(
-        "platforms/delete/",
-        views.PlatformBulkDeleteView.as_view(),
-        name="platform_bulk_delete",
-    ),
-    path("platforms/<uuid:pk>/", views.PlatformView.as_view(), name="platform"),
-    path(
-        "platforms/<uuid:pk>/edit/",
-        views.PlatformEditView.as_view(),
-        name="platform_edit",
-    ),
-    path(
-        "platforms/<uuid:pk>/delete/",
-        views.PlatformDeleteView.as_view(),
-        name="platform_delete",
-    ),
-    path(
-        "platforms/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="platform_changelog",
-        kwargs={"model": Platform},
-    ),
-    path(
-        "platforms/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="platform_notes",
-        kwargs={"model": Platform},
     ),
     # Devices
     path("devices/", views.DeviceListView.as_view(), name="device_list"),
