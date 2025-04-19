@@ -57,7 +57,7 @@ Nautobot v3.0.0 and later requires the following:
 
 | Dependency | Minimum Version |
 | ---------- | --------------- |
-| Python     | 3.10.0          |
+| Python     | 3.10            |
 | PostgreSQL | 12.0            |
 | Redis      | 4.0             |
 
