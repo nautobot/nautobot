@@ -1,3 +1,5 @@
+from itertools import pairwise
+
 from django.core.paginator import Page, Paginator
 
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT, PAGINATE_COUNT_DEFAULT
@@ -35,7 +37,7 @@ class EnhancedPage(Page):
         page_list = sorted(set(self.paginator.page_range).intersection(pages_wanted))
 
         # Insert skip markers
-        skip_pages = [x[1] for x in zip(page_list[:-1], page_list[1:]) if (x[1] - x[0] != 1)]
+        skip_pages = [x[1] for x in pairwise(page_list[:-1], page_list[1:]) if (x[1] - x[0] != 1)]
         for i in skip_pages:
             page_list.insert(page_list.index(i), False)
 

@@ -45,12 +45,12 @@ jobs:
         with:
           poetry-install-options: ""  # override default "--only dev"
           poetry-version: "1.8.5"
-          python-version: "3.12"
+          python-version: "3.13"
       - name: "Run check-schema"
         # REST API schema generation currently includes GraphQL schema generation, which is dependent on the DB :-(
         run: "poetry run invoke migrate check-schema"
   tests-postgres:
-    name: "Unit tests (PostgreSQL and Python 3.12)"
+    name: "Unit tests (PostgreSQL and Python 3.13)"
     runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -78,11 +78,11 @@ jobs:
         with:
           poetry-install-options: ""  # override default "--only dev"
           poetry-version: "1.8.5"
-          python-version: "3.12"
+          python-version: "3.13"
       - name: "Run unittest"
         run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel"
   tests-mysql:
-    name: "Unit tests (MySQL and Python 3.9)"
+    name: "Unit tests (MySQL and Python 3.10)"
     runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -114,11 +114,11 @@ jobs:
         with:
           poetry-install-options: "--extras mysql"
           poetry-version: "1.8.5"
-          python-version: "3.9"
+          python-version: "3.10"
       - name: "Run unittest"
         run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel"
   migration-tests-mysql:
-    name: "Run migrations against test dataset (MySQL and Python 3.9)"
+    name: "Run migrations against test dataset (MySQL and Python 3.10)"
     runs-on: "ubuntu-24.04"
     env:
       MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_mysql.tar.gz"
@@ -148,11 +148,11 @@ jobs:
         with:
           poetry-install-options: "--extras mysql"
           poetry-version: "1.8.5"
-          python-version: "3.9"
+          python-version: "3.10"
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine mysql --dataset $MIGRATION_TEST_DATASET"
   migration-tests-postgres:
-    name: "Run migrations against test dataset (PostgreSQL and Python 3.12)"
+    name: "Run migrations against test dataset (PostgreSQL and Python 3.13)"
     runs-on: "ubuntu-24.04"
     env:
       MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_postgres.tar.gz"
@@ -179,7 +179,7 @@ jobs:
         with:
           poetry-install-options: ""  # override default "--only dev"
           poetry-version: "1.8.5"
-          python-version: "3.12"
+          python-version: "3.13"
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine postgres --dataset $MIGRATION_TEST_DATASET"
   integration-test:
@@ -215,7 +215,7 @@ jobs:
         with:
           poetry-install-options: ""  # override default "--only dev"
           poetry-version: "1.8.5"
-          python-version: "3.12"
+          python-version: "3.13"
       - name: "Run Integration Tests"
         # If NAUTOBOT_SELENIUM_HOST is set to 'localhost' or '127.0.0.1' the connection does not work
         run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke tests --tag integration --no-keepdb"
@@ -235,7 +235,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.9", "3.10", "3.11", "3.12" ]
+        python-version: ["3.10", "3.11", "3.13", "3.13"]
     steps:
       - name: "Configuration"
         id: "config"
@@ -246,7 +246,7 @@ jobs:
           export TAG_LATEST_FOR_BRANCH="false"
           export TAG_LATEST_FOR_PY="false"
 
-          if [[ "${{ matrix.python-version }}" == "3.12" ]]; then
+          if [[ "${{ matrix.python-version }}" == "3.13" ]]; then
             export TAG_LATEST_FOR_BRANCH="true"
           fi
 
