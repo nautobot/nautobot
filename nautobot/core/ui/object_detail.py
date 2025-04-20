@@ -200,6 +200,7 @@ class Button(Component):
             javascript_template_path (str, optional): JavaScript template to render and include with this button.
                 Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
             attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
+            size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
         """
         self.label = label
         self.color = color
@@ -274,31 +275,31 @@ class DropdownButton(Button):
 
 
 class FormButton(Button):
-    def __init__(self, render_as_button: bool, template_path="components/button/formbutton.html", **kwargs):
+    def __init__(self, form_id: str, link_name: str, template_path="components/button/formbutton.html", **kwargs):
         """
         Initialize a FormButton instance.
 
         Args:
-            render_as_button (bool): Determines whether to render as a button
+            link_name (str, optional): View name to link to, for example "dcim:locationtype_retrieve".
+                This link will be reversed and will automatically include the current object's PK as a parameter to the
+                `reverse()` call when the button is rendered. For more complex link construction, you can subclass this
+                and override the `get_link()` method.
         """
+        self.form_id = form_id
+        self.link_name = link_name
 
-        if not render_as_button:
-            raise ValueError("FormButton requires 'render_as_button' to be enabled.")
-
-        self.render_as_button = render_as_button
-        self.form_id = None
-        super().__init__(template_path=template_path, **kwargs)
-
-    def get_extra_context(self, context: Context):
         if not self.link_name:
             raise ValueError("FormButton requires a 'link_name'.")
+
         if not self.form_id:
             raise ValueError("FormButton requires 'form_id' to be set in ObjectsTablePanel.")
 
+        super().__init__(link_name=link_name, template_path=template_path, **kwargs)
+
+    def get_extra_context(self, context: Context):
         return {
             **super().get_extra_context(context),
             "form_id": self.form_id,
-            "render_as_button": self.render_as_button,
         }
 
 
@@ -733,8 +734,7 @@ class ObjectsTablePanel(Panel):
                 appropriate permissions.
             footer_buttons (list, optional): A list of Button or FormButton components to render in the panel footer.
                 These buttons typically perform actions like bulk delete, edit, or custom form submission.
-            form_id (str, optional): A unique identifier used to set the `data-form-id` attribute on each `FormButton`.
-                This helps associate buttons with a specific form and allows selecting buttons within that scope.
+            form_id (str, optional): A unique ID for this table's form; used to set the `data-form-id` attribute on each `FormButton`.
         """
         if context_table_key and any(
             [
@@ -815,16 +815,6 @@ class ObjectsTablePanel(Panel):
 
         return body_content_table_add_url
 
-    def get_buttons_render(self, context: Context):
-        buttons_render = []
-        for button in self.footer_buttons:
-            # Call render method on each button
-            if isinstance(button, FormButton):
-                button.form_id = self.form_id
-            _render = button.render(context)
-            buttons_render.append(_render)
-        return buttons_render
-
     def get_extra_context(self, context: Context):
         """Add additional context for rendering the table panel.
 
@@ -901,7 +891,6 @@ class ObjectsTablePanel(Panel):
 
         body_content_table_add_url = self._get_table_add_url(context)
         body_content_table_verbose_name_plural = self.table_title or body_content_table_model._meta.verbose_name_plural
-        buttons_render = self.get_buttons_render(context) if self.footer_buttons else None
 
         return {
             "body_content_table": body_content_table,
@@ -909,7 +898,7 @@ class ObjectsTablePanel(Panel):
             "body_content_table_list_url": body_content_table_list_url,
             "body_content_table_verbose_name": body_content_table_model._meta.verbose_name,
             "body_content_table_verbose_name_plural": body_content_table_verbose_name_plural,
-            "buttons_render": buttons_render,
+            "footer_buttons": self.footer_buttons,
             "form_id": self.form_id,
             "more_queryset_count": more_queryset_count,
         }
