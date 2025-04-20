@@ -33,7 +33,6 @@ from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
-from nautobot.core.templatetags import helpers
 from nautobot.core.templatetags.helpers import has_perms
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
@@ -4121,11 +4120,11 @@ class PowerPanelUIViewSet(NautobotUIViewSet):
             object_detail.ObjectFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
-                fields="__all__",
-                value_transforms={
-                    "location": [helpers.render_ancestor_hierarchy],
-                    "rack_group": [helpers.render_ancestor_hierarchy],
-                },
+                fields=[
+                    "name",
+                    "location",
+                    "rack_group",
+                ],
             ),
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.FULL_WIDTH,

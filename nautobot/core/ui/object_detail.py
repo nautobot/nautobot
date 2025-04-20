@@ -959,7 +959,7 @@ class KeyValueTablePanel(Panel):
           the display (returning `""` instead of a placeholder).
 
         There is a lot of "intelligence" built in to this method to handle various data types, including:
-
+        - Instances of `TreeModel` will display the full path from root to node (using `render_ancestor_hierarchy()`)
         - Instances of `Status`, `Role` and similar models will be represented as an appropriately-colored hyperlinked
           badge (using `hyperlinked_object_with_color()`)
         - Instances of `Tenant` will be hyperlinked and will also display their hyperlinked `TenantGroup` if any
@@ -982,6 +982,9 @@ class KeyValueTablePanel(Panel):
 
         elif isinstance(value, bool):
             return render_boolean(value)
+
+        elif isinstance(value, TreeModel):
+            display = render_ancestor_hierarchy(value)
 
         elif isinstance(value, models.Model):
             if hasattr(value, "color"):
