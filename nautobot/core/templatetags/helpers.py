@@ -747,14 +747,12 @@ def render_button_class(value):
     return ""
 
 
-def render_job_run_link(value, key=None, context=None):
+def render_job_run_link(value):
     """
     Render the job as a hyperlink to its 'run' view using the class_path.
 
     Args:
         value (Job): The job object.
-        key (str): The name of the field (optional).
-        context (dict): The template context (optional).
 
     Returns:
         str: HTML anchor tag linking to the job's run view.
