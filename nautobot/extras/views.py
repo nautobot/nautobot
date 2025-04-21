@@ -3065,15 +3065,6 @@ class TeamUIViewSet(NautobotUIViewSet):
 #
 # Webhooks
 #
-class WebhookHTTPFieldsPanel(ObjectFieldsPanel):
-    """Displays HTTP fields and pretty-prints 'additional_headers' JSON in <pre> format."""
-
-    def render_value(self, key, value, context):
-        """Overrides 'additional_headers' rendering as preformatted text; defaults for others."""
-        if key == "additional_headers":
-            return helpers.pre_tag(value)
-
-        return super().render_value(key, value, context)
 
 
 class WebhookUIViewSet(NautobotUIViewSet):
@@ -3093,11 +3084,12 @@ class WebhookUIViewSet(NautobotUIViewSet):
                 weight=100,
                 fields=("name", "content_types", "type_create", "type_update", "type_delete", "enabled"),
             ),
-            WebhookHTTPFieldsPanel(
+            ObjectFieldsPanel(
                 label="HTTP",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields=("http_method", "http_content_type", "payload_url", "additional_headers"),
+                value_transforms={"additional_headers": [helpers.pre_tag]},
             ),
             ObjectFieldsPanel(
                 label="Security",
