@@ -1,8 +1,8 @@
 {% load form_helpers %}
 
-<div class="form-group{% if field.errors %} has-error{% endif %}">
+<div class="mb-10 d-flex justify-content-center{% if field.errors %} has-error{% endif %}">
     {% if field|widget_type == 'checkboxinput' %}
-        <div class="col-md-9 col-md-offset-3">
+        <div class="col-md-9 offset-md-3">
             <div class="checkbox{% if field.errors %} has-error{% endif %}">
                 <label for="{{ field.id_for_label }}">
                     {{ field }} {{ field.label }}
