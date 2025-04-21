@@ -1,9 +1,10 @@
 from django.core.exceptions import ValidationError
-from django_tables2 import RequestConfig
 from django.utils.html import format_html_join
+from django_tables2 import RequestConfig
+
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui.choices import SectionChoices
-from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel,ObjectsTablePanel
+from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectsTablePanel
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.wireless.api.serializers import (
@@ -36,15 +37,14 @@ from nautobot.wireless.tables import (
     WirelessNetworkTable,
 )
 
+
 class RadioProfileFieldsPanel(ObjectFieldsPanel):
     def render_value(self, key, value, context):
         # Custom display for channel_width
         if key == "channel_width":
             if value:
                 return format_html_join(
-                    " ",
-                    '<span class="label label-default">{0}MHz</span>',
-                    ((width,) for width in value)
+                    " ", '<span class="label label-default">{0}MHz</span>', ((width,) for width in value)
                 )
             return helpers.placeholder(value)
 
@@ -52,13 +52,12 @@ class RadioProfileFieldsPanel(ObjectFieldsPanel):
         if key == "allowed_channel_list":
             if value:
                 return format_html_join(
-                    " ",
-                    '<span class="label label-default">{0}</span>',
-                    ((channel,) for channel in value)
+                    " ", '<span class="label label-default">{0}</span>', ((channel,) for channel in value)
                 )
             return helpers.placeholder(value)
 
         return super().render_value(key, value, context)
+
 
 class RadioProfileUIViewSet(NautobotUIViewSet):
     queryset = RadioProfile.objects.all()
