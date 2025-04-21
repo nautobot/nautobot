@@ -682,22 +682,6 @@ class CustomFieldBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class CustomLinkFieldsPanel(ObjectFieldsPanel):
-    def render_value(self, key, value, context):
-        if key == "target_url":
-            return helpers.pre_tag(value)
-
-        if key == "button_class" and value:
-            return format_html('<button class="btn btn-{}">{}</button>', value.lower(), value.lower())
-
-        return super().render_value(key, value, context)
-
-    def render_key(self, key, value, context):
-        if key == "target_url":
-            return "Target URL"
-        return super().render_key(key, value, context)
-
-
 class CustomLinkUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.CustomLinkBulkEditForm
     filterset_class = filters.CustomLinkFilterSet
@@ -709,7 +693,7 @@ class CustomLinkUIViewSet(NautobotUIViewSet):
 
     object_detail_content = ObjectDetailContent(
         panels=[
-            CustomLinkFieldsPanel(
+            ObjectFieldsPanel(
                 label="Custom Link",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
@@ -722,6 +706,10 @@ class CustomLinkUIViewSet(NautobotUIViewSet):
                     "button_class",
                     "new_window",
                 ],
+                value_transforms={
+                    "target_url": [helpers.pre_tag],
+                    "button_class": [helpers.render_button_class],
+                },
             ),
             object_detail.ObjectTextPanel(
                 label="Text",
