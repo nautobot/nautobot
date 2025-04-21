@@ -689,7 +689,7 @@ class RackReservationUIViewSet(NautobotUIViewSet):
 
             rack_id = self.request.GET.get("rack")
             if rack_id:
-                obj.rack_id = rack_id
+                obj.rack = get_object_or_404(Rack, pk=rack_id)
 
         return obj
 
