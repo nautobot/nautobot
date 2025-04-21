@@ -136,10 +136,7 @@ def pre_tag(value):
         >>> pre_tag("hello")
         '<pre>hello</pre>'
     """
-    if value:
-        return format_html("<pre>{}</pre>", value)
-
-    return HTML_NONE
+    return format_html("<pre>{}</pre>", value)
 
 
 @library.filter()
