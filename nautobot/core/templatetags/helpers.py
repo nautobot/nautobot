@@ -737,7 +737,7 @@ def render_ancestor_hierarchy(value):
 
     else:
         result += format_html(
-            "<li><strong>{value}{nestable_tag}</strong></li>",
+            "<li><strong>{value} {nestable_tag}</strong></li>",
             value=hyperlinked_object(value, "name"),
             nestable_tag=nestable_tag,
         )
