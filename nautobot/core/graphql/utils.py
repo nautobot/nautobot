@@ -40,7 +40,7 @@ def get_filtering_args_from_filterset(filterset_class):
         (dict[graphene.Argument]): Filter Arguments organized in a dictionary
     """
 
-    args = {}
+    args = {"args": {}}
     instance = filterset_class()
 
     for filter_name, filter_field in instance.filters.items():
@@ -81,9 +81,12 @@ def get_filtering_args_from_filterset(filterset_class):
             required=False,
         )
 
-    # Hack to swap `description` fields to `_description` since they will conflict with `graphene.types.field.Field.description`.
+    # Hack to avoid conflict with `graphene.types.field.Field.description`.
     if "description" in args:
-        args["_description"] = args.pop("description")
+        args["args"].update({"description": args.pop("description")})
+    if "type" in args:
+        # for backwards compatibility with our filters in graphene v2 where `type` was a reserved keyword
+        args["args"].update({"_type": args["type"]})
 
     return args
 
