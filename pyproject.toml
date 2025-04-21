@@ -143,6 +143,7 @@ social-auth-core = {version = "~4.5.6", optional = true, extras = ["saml"]}
 social-auth-app-django = "~5.4.3"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.2"
+mkdocs-literate-nav = "^0.6.2"
 
 [tool.poetry.extras]
 all = ["django-auth-ldap", "django-storages", "mysqlclient", "napalm", "social-auth-core"]
