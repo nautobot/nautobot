@@ -33,6 +33,7 @@ class SupportedDataRate(PrimaryModel):
         blank=True,
         null=True,
         help_text="The Modulation and Coding Scheme (MCS) index is a value used in wireless communications to define the modulation type, coding rate, and number of spatial streams used in a transmission.",
+        verbose_name="Modulation and Coding Scheme (MCS) Index",
     )
 
     class Meta:
