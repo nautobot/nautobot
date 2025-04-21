@@ -473,15 +473,15 @@ class GraphQLSearchParameters(GraphQLTestCaseBase):
     def test_search_parameters(self):
         fields = LocationFilterSet().filters.keys()
         params = generate_list_search_parameters(self.schema)
-        exclude_filters = ["description"]
+        args_filters = ["description"]
 
         for field in fields:
             field = str_to_var_name(field)
-            if field not in exclude_filters:
-                self.assertIn(field, params.keys())
-            else:
+            if field in args_filters:
                 self.assertNotIn(field, params.keys())
-        self.assertIn("_description", params.keys())
+                self.assertIn(field, params["args"].keys())
+            else:
+                self.assertIn(field, params.keys())
 
 
 class GraphQLAPIPermissionTest(GraphQLTestCaseBase):
@@ -1801,6 +1801,11 @@ query {
             ),
             (
                 f'type: "{PortTypeChoices.TYPE_8P8C}"',
+                Q(type=PortTypeChoices.TYPE_8P8C),
+            ),
+            # for backward compatibility:
+            (
+                f'_type: "{PortTypeChoices.TYPE_8P8C}"',
                 Q(type=PortTypeChoices.TYPE_8P8C),
             ),
         )
