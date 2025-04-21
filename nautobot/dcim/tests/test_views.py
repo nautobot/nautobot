@@ -2036,7 +2036,7 @@ class ModuleBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
         }
 
 
-class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = Platform
 
     @classmethod
@@ -2055,6 +2055,13 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "napalm_args": None,
             "network_driver": "juniper_junos",
             "description": "A new platform",
+        }
+        cls.bulk_edit_data = {
+            "manufacturer": manufacturer.pk,
+            "napalm_driver": "iosxr",
+            "napalm_args": '{"timeout": 30, "retries": 3}',
+            "network_driver": "cisco_ios",
+            "description": "Updated platform description",
         }
 
 
