@@ -1,5 +1,5 @@
 # Jobs
-
+<!-- keep -->
 Familiarity with the basic concepts of [Jobs](../../user-guide/platform-functionality/jobs/index.md), especially the distinction between Job classes (Python code) and Job records (Nautobot database records), is recommended before authoring your first Job.
 
 ??? tip "More about Job class source code loading"
@@ -8,11 +8,11 @@ Familiarity with the basic concepts of [Jobs](../../user-guide/platform-function
     As an implementation detail in Nautobot 2.2.3 and later, all known Job **classes** are cached in the [application registry](../core/application-registry.md#jobs), which is refreshed at various times including Nautobot application startup and immediately prior to actually executing any given Job by a worker. This implementation detail should not be relied on directly; instead you should always use the `get_job()` and/or `get_jobs()` APIs to obtain a Job class when needed.
 
 ## Migrating Jobs from v1 to v2
-
+<!-- move:migration/from-v1.md -->
 See [Migrating Jobs From Nautobot v1](migration/from-v1.md) for more information on how to migrate your existing Jobs to Nautobot v2.
 
 ## Installing Jobs
-
+<!-- move:installation.md -->
 Jobs may be installed in one of three ways:
 
 * Manually installed as files in the [`JOBS_ROOT`](../../user-guide/administration/configuration/settings.md#jobs_root) path (which defaults to `$NAUTOBOT_ROOT/jobs/`).
@@ -33,9 +33,9 @@ For example, we can create a module named `device_jobs.py` to hold all of our Jo
     All Job classes that are intended to be runnable must now be registered by a call to `nautobot.apps.jobs.register_jobs()` on module import. This allows for a module to, if desired, define "abstract" base Job classes that are defined in code but are not registered (and therefore are not runnable in Nautobot). The `register_jobs` method accepts one or more Job classes as arguments.
 
 ## Writing Jobs
-
+<!-- move:getting-started.md -->
 ### Introduction to Writing Jobs
-
+<!-- move:getting-started.md -->
 !!! warning
     Make sure your Job subclasses inherit from `nautobot.apps.jobs.Job` and *not* from `nautobot.extras.models.Job` instead; if you mistakenly inherit from the latter, Django will think you want to define a new database model!
 
@@ -71,14 +71,14 @@ Each Job class will implement some or all of the following components:
 * Optionally, any of the special methods [`before_start()`](#the-before_start-method), [`on_success()`](#the-on_success-method), [`on_failure()`](#the-on_failure-method), and/or [`after_return()`](#the-after_return-method).
 
 It's important to understand that Jobs execute on the server asynchronously as background tasks; they log messages and report their status to the database by updating [`JobResult`](../../user-guide/platform-functionality/jobs/models.md#job-results) records and creating [`JobLogEntry`](../../user-guide/platform-functionality/jobs/models.md#job-log-entry) records.
-
+<!-- move:getting-started.md -->
 !!! note "About detection of changes while developing a Job"
     When actively developing a Job utilizing a development environment it's important to understand that the "automatically reload when code changes are detected" debugging functionality provided by `nautobot-server runserver` does **not** automatically restart the Celery `worker` process when code changes are made; therefore, it is required to restart the `worker` after each update to your Job source code or else it will continue to run the version of the Job code that was present when it first started. In the Nautobot core development environment, we use `watchmedo auto-restart` as a helper tool to auto-restart the workers as well on code changes; you may wish to configure your local development environment similarly for convenience.
 
     Additionally, as of Nautobot 1.3, the Job database records corresponding to installed Jobs are *not* automatically refreshed when the development server auto-restarts. If you make changes to any of the class and module metadata attributes described in the following sections, the database will be refreshed to reflect these changes only after running `nautobot-server migrate` or `nautobot-server post_upgrade` (recommended) or if you manually edit a Job database record to force it to be refreshed. The exception here is Git-repository-provided Jobs; resyncing the Git repository through Nautobot will also trigger a refresh of the Job records corresponding to this repository's contents.
 
 ### Job Registration
-
+<!-- move:getting-started.md -->
 +/- 2.0.0 "`register_jobs()` is now required"
 
 All Job classes, including `JobHookReceiver` and `JobButtonReceiver` classes must be registered at **import time** using the `nautobot.apps.jobs.register_jobs` method. This method accepts one or more Job classes as arguments. You must account for how your Jobs are imported when deciding where to call this method.
@@ -128,7 +128,7 @@ Examples of the different directory structures when registering Jobs in Git repo
 Apps should register Jobs in the module defined in their [`NautobotAppConfig.jobs`](../apps/api/nautobot-app-config.md#nautobotappconfig-code-location-attributes) property. This defaults to the `jobs` module of the App.
 
 ### Reserved Attribute Names
-
+<!-- move:job-reference.md -->
 There are many attributes and methods of the Job class that serve as reserved names. You must be careful when implementing custom methods or defining the user input [variables](#variables) for your Job that you do not inadvertently "step on" one of these reserved attributes causing unexpected behavior or errors.
 
 !!! example
@@ -182,16 +182,16 @@ As of Nautobot 2.4.0, the current list of reserved names (not including low-leve
 | `validate_data`           | internal class method                                   |
 
 ### Module Metadata Attributes
-
+<!-- move:job-structure.md -->
 #### `name` (Grouping)
-
+<!-- move:job-structure.md -->
 You can define a global constant called `name` within a job module (the Python file which contains one or more Job classes) to set the default grouping under which the Jobs in this module will be displayed in the Nautobot UI. If this value is not defined, the module's file name will be used. This "grouping" value may also be defined or overridden when editing Job records in the database.
 
 !!! note
     In some UI elements and API endpoints, the module file name is displayed in addition to or in place of this attribute, so even if defining this attribute, you should still choose an appropriately explanatory file name as well.
 
 ### Class Metadata Attributes
-
+<!-- move:job-structure.md -->
 Job-specific attributes may be defined under a class named `Meta` within each Job class you implement. All of these are optional, but encouraged.
 
 #### `name`
@@ -390,7 +390,7 @@ class ExampleJobWithHardTimeLimit(Job):
     If the `time_limit` is set to a value less than or equal to the `soft_time_limit`, a warning log is generated to inform the user that this Job will fail silently after the `time_limit` as the `soft_time_limit` will never be reached.
 
 ### Variables
-
+<!-- move:job-structure.md -->
 Variables allow your Job to accept user input via the Nautobot UI, but they are optional; if your Job does not require any user input, there is no need to define any variables. Conversely, if you are making use of user input in your Job, you *must* also implement the `run()` method, as it is the only entry point to your Job that has visibility into the variable values provided by the user.
 
 ```python
@@ -582,7 +582,7 @@ An IPv4 or IPv6 network with a mask. Returns a `netaddr.IPNetwork` object. Two a
 * `max_prefix_length` - Maximum length of the mask
 
 ### Special Methods
-
+<!-- move:job-structure.md -->
 Nautobot Jobs when executed will be instantiated by Nautobot, then Nautobot will call in order the special API methods `before_start()`, `run()`, `on_success()`/`on_failure()`, and `after_return()`. You must implement the `run()` method; the other methods have default implementations that do nothing.
 
 As Jobs are Python classes, you are of course free to define any number of other helper methods or functions that you call yourself from within any of the above special methods, but the above are the only ones that will be automatically called.
@@ -635,7 +635,7 @@ If either `before_start()` or `run()` raises any unhandled exception, or reports
 Regardless of the overall Job execution success or failure, the `after_return()` method will be called after `on_success()` or `on_failure()`. It has the signature `after_return(self, status, retval, task_id, args, kwargs, einfo)`; the `status` will indicate success or failure (using the `JobResultStatusChoices` enum), `retval` is *either* the return value from `run()` or the exception raised, and once again `kwargs` contains the user variables.
 
 ### Logging
-
+<!-- move:job-patterns.md -->
 +/- 2.0.0
 
 Messages logged from a Job's logger will be stored in [`JobLogEntry`](../../user-guide/platform-functionality/jobs/models.md#job-log-entry) records associated with the current [`JobResult`](../../user-guide/platform-functionality/jobs/models.md#job-results).
@@ -690,7 +690,7 @@ Markdown rendering is supported for log messages, as well as [a limited subset o
     You can now use `self.logger.failure()` to log a message at the level `FAILURE`, which is located between the standard `WARNING` and `ERROR` log levels.
 
 ### File Output
-
+<!-- move:job-patterns.md -->
 +++ 2.1.0
 
 A Job can create files that will be saved and can later be downloaded by a user. (The specifics of how and where these files are stored will depend on your system's [`JOB_FILE_IO_STORAGE`](../../user-guide/administration/configuration/settings.md#job_file_io_storage) configuration.) To do so, use the `Job.create_file(filename, content)` method:
@@ -709,7 +709,7 @@ The above Job when run will create two files, "greeting.txt" and "farewell.txt",
 The maximum size of any single created file (or in other words, the maximum number of bytes that can be passed to `self.create_file()`) is controlled by the [`JOB_CREATE_FILE_MAX_SIZE`](../../user-guide/administration/configuration/settings.md#job_create_file_max_size) system setting. A `ValueError` exception will be raised if `create_file()` is called with an overly large `content` value.
 
 ### Marking a Job as Failed
-
+<!-- move:job-patterns.md -->
 Any uncaught exception raised from within the `run()` method will abort the `run()` method immediately (as usual in Python), and will result in the Job Result status being marked as `FAILURE`. The exception message and traceback will be recorded in the Job Result.
 
 Alternatively, in Nautobot v2.4.5 and later, you can more "cleanly" fail a Job by calling `self.fail(...)` and then either returning immediately from the `run()` method or continuing with the execution of the Job, as desired. In this case, after the `run()` method completes, the Job Result status will be automatically marked as `FAILURE` and no exception or traceback will be recorded.
@@ -733,7 +733,7 @@ class MyJob(Job):
 ```
 
 ### Accessing User and Job Result
-
+<!-- move:job-patterns.md -->
 +/- 2.0.0 "Significant API change"
     The `request` property has been changed to a Celery request instead of a Django web request and no longer includes the information from the web request that initiated the Job. The `user` object is now available as `self.user` instead of `self.request.user`.
 
@@ -746,7 +746,7 @@ self.logger.info("Job %s initiated by user %s is running.", job_result_id, usern
 ```
 
 ### Reading Data from Files
-
+<!-- move:job-patterns.md -->
 The `Job` class provides two convenience methods for reading data from files:
 
 * `load_yaml`
@@ -755,7 +755,7 @@ The `Job` class provides two convenience methods for reading data from files:
 These two methods will load data in YAML or JSON format, respectively, from files within the local path (i.e. `JOBS_ROOT/`).
 
 ## Testing Jobs
-
+<!-- move:testing.md -->
 Jobs are Python code and can be tested as such, usually via [Django unit-test features](https://docs.djangoproject.com/en/stable/topics/testing/). That said, there are a few useful tricks specific to testing Jobs.
 
 While individual methods within your Job can and should be tested in isolation, you'll likely also want to test the entire execution of the Job.
@@ -795,6 +795,7 @@ The test files should be placed under the `tests` folder in the app's directory 
     For more advanced examples refer to the Nautobot source code, specifically `nautobot/extras/tests/test_jobs.py`.
 
 ## Debugging Job Performance
+<!-- move:testing.md -->
 
 Debugging the performance of Nautobot Jobs can be tricky, because they are executed in the worker context. In order to gain extra visibility, [cProfile](https://docs.python.org/3/library/profile.html) can be used to profile the Job execution.
 
@@ -817,7 +818,7 @@ stats.sort_stats(pstats.SortKey.CUMULATIVE).print_stats(10)
 This will print the 10 functions that the Job execution spent the most time in - adapt this to your needs!
 
 ## Example Jobs
-
+<!-- move:job-patterns.md -->
 ### Example "Everything" Job
 
 The "Example App" included with the Nautobot source code [includes a number of simple sample Jobs](https://github.com/nautobot/nautobot/blob/main/examples/example_app/example_app/jobs.py), including an `ExampleEverythingJob` class that demonstrates and documents the usage of the various metadata attributes, input variable types, and magic methods that a Job can support. As Job functionality will continue to evolve over time, if using this file as a reference, please make sure that you're viewing the version of this Job that corresponds to your target Nautobot version.
@@ -950,7 +951,7 @@ register_jobs(DeviceConnectionsReport)
 ```
 
 ## Job Button Receivers
-
+<!-- move:job-extensions.md -->
 Job Buttons are only able to initiate a specific type of Job called a **Job Button Receiver**. These are Jobs that subclass the `nautobot.apps.jobs.JobButtonReceiver` class. Job Button Receivers are similar to normal Jobs except they are hard coded to accept only `object_pk` and `object_model_name` [variables](#variables). The `JobButtonReceiver` class only implements one method called `receive_job_button`.
 
 !!! note "Disabled by default just like other Jobs"
@@ -1024,7 +1025,7 @@ register_jobs(ExampleComplexJobButtonReceiver)
 ```
 
 ## Job Hook Receivers
-
+<!-- move:job-extensions.md -->
 Job Hooks are only able to initiate a specific type of Job called a **Job Hook Receiver**. These are Jobs that subclass the `nautobot.apps.jobs.JobHookReceiver` class. Job Hook Receivers are similar to normal Jobs except they are hard coded to accept only an `object_change` [variable](#variables). The `JobHookReceiver` class only implements one method called `receive_job_hook`.
 
 !!! warning "No support for `approval_required` at this time"
