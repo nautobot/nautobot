@@ -125,7 +125,16 @@
             </div>
         {% endif %}
         {% if filter_form or dynamic_filter_form %}
-            <button type="button" class="btn text-secondary" data-bs-toggle="modal" data-bs-target="#FilterForm_modal" title="Add Filters" id="id__filterbtn">
+            <button
+                type="button"
+                class="btn text-secondary"
+                data-nb-toggle="drawer"
+                data-nb-target="#FilterForm_drawer"
+                title="Add Filters"
+                id="id__filterbtn"
+                aria-controls="FilterForm_drawer"
+                aria-expanded="false"
+            >
                 <span class="mdi mdi-filter" aria-hidden="true"></span>
                 <span class="visually-hidden">Add Filters</span>
             </button>
@@ -233,12 +242,13 @@
     {% endblock %}
 </div>
 {% if table %}{% table_config_form table table_name="ObjectTable" %}{% endif %}
-{% filter_form_modal filter_form dynamic_filter_form model_plural_name=title %}
 {% if model.is_saved_view_model %}
     {% saved_view_modal request.GET.urlencode list_url model request %}
 {% endif %}
 {% dynamic_group_assignment_modal request=request content_type=content_type %}
 {% endblock %}
+
+{% block drawer %}{% filter_form_drawer filter_form dynamic_filter_form model_plural_name=title %}{% endblock drawer %}
 
 {% block javascript %}
 <script src="{% static 'js/tableconfig.js' %}"></script>

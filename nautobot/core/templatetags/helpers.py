@@ -844,8 +844,8 @@ def table_config_form(table, table_name=None):
     }
 
 
-@register.inclusion_tag("utilities/templatetags/filter_form_modal.html")
-def filter_form_modal(
+@register.inclusion_tag("utilities/templatetags/filter_form_drawer.html")
+def filter_form_drawer(
     filter_form,
     dynamic_filter_form,
     model_plural_name,
