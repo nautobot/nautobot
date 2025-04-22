@@ -19,10 +19,8 @@ from .models import (
     Location,
     PowerFeed,
     PowerOutlet,
-    PowerPanel,
     PowerPort,
     Rack,
-    RackGroup,
     RackReservation,
     RearPort,
     VirtualChassis,
@@ -45,6 +43,8 @@ router.register("modules", views.ModuleUIViewSet)
 router.register("module-types", views.ModuleTypeUIViewSet)
 router.register("platforms", views.PlatformUIViewSet)
 router.register("power-feeds", views.PowerFeedUIViewSet)
+router.register("power-panels", views.PowerPanelUIViewSet)
+router.register("rack-groups", views.RackGroupUIViewSet)
 router.register("software-image-files", views.SoftwareImageFileUIViewSet)
 router.register("software-versions", views.SoftwareVersionUIViewSet)
 router.register("virtual-device-contexts", views.VirtualDeviceContextUIViewSet)
@@ -81,42 +81,6 @@ urlpatterns = [
         ImageAttachmentEditView.as_view(),
         name="location_add_image",
         kwargs={"model": Location},
-    ),
-    # Rack groups
-    path("rack-groups/", views.RackGroupListView.as_view(), name="rackgroup_list"),
-    path("rack-groups/add/", views.RackGroupEditView.as_view(), name="rackgroup_add"),
-    path(
-        "rack-groups/import/",
-        views.RackGroupBulkImportView.as_view(),  # 3.0 TODO: remove
-        name="rackgroup_import",
-    ),
-    path(
-        "rack-groups/delete/",
-        views.RackGroupBulkDeleteView.as_view(),
-        name="rackgroup_bulk_delete",
-    ),
-    path("rack-groups/<uuid:pk>/", views.RackGroupView.as_view(), name="rackgroup"),
-    path(
-        "rack-groups/<uuid:pk>/edit/",
-        views.RackGroupEditView.as_view(),
-        name="rackgroup_edit",
-    ),
-    path(
-        "rack-groups/<uuid:pk>/delete/",
-        views.RackGroupDeleteView.as_view(),
-        name="rackgroup_delete",
-    ),
-    path(
-        "rack-groups/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="rackgroup_changelog",
-        kwargs={"model": RackGroup},
-    ),
-    path(
-        "rack-groups/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="rackgroup_notes",
-        kwargs={"model": RackGroup},
     ),
     # Rack reservations
     path(
@@ -1397,47 +1361,6 @@ urlpatterns = [
         "virtual-chassis-members/<uuid:pk>/delete/",
         views.VirtualChassisRemoveMemberView.as_view(),
         name="virtualchassis_remove_member",
-    ),
-    # Power panels
-    path("power-panels/", views.PowerPanelListView.as_view(), name="powerpanel_list"),
-    path("power-panels/add/", views.PowerPanelEditView.as_view(), name="powerpanel_add"),
-    path(
-        "power-panels/import/",
-        views.PowerPanelBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="powerpanel_import",
-    ),
-    path(
-        "power-panels/edit/",
-        views.PowerPanelBulkEditView.as_view(),
-        name="powerpanel_bulk_edit",
-    ),
-    path(
-        "power-panels/delete/",
-        views.PowerPanelBulkDeleteView.as_view(),
-        name="powerpanel_bulk_delete",
-    ),
-    path("power-panels/<uuid:pk>/", views.PowerPanelView.as_view(), name="powerpanel"),
-    path(
-        "power-panels/<uuid:pk>/edit/",
-        views.PowerPanelEditView.as_view(),
-        name="powerpanel_edit",
-    ),
-    path(
-        "power-panels/<uuid:pk>/delete/",
-        views.PowerPanelDeleteView.as_view(),
-        name="powerpanel_delete",
-    ),
-    path(
-        "power-panels/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="powerpanel_changelog",
-        kwargs={"model": PowerPanel},
-    ),
-    path(
-        "power-panels/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="powerpanel_notes",
-        kwargs={"model": PowerPanel},
     ),
     # Power feeds
     path(

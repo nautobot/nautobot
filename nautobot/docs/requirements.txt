@@ -6,9 +6,9 @@ mkdocs==1.6.0
 mkdocs-gen-files==0.5.0
 mkdocs-glightbox==0.4.0
 mkdocs-macros-plugin==1.0.5
-mkdocs-material==9.5.50
+mkdocs-material==9.6.12
 mkdocs-redirects==1.2.2
-mkdocs-section-index==0.3.9
+mkdocs-section-index==0.3.10
 mkdocstrings==0.26.1
 mkdocstrings-python==1.10.8
 zipp==3.19.1 # not directly required, pinned by Snyk to avoid a vulnerability
