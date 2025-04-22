@@ -17,13 +17,13 @@ from .models import (
     Interface,
     InventoryItem,
     Location,
-    Platform,
     PowerFeed,
     PowerOutlet,
     PowerPanel,
     PowerPort,
     Rack,
     RackGroup,
+    RackReservation,
     RearPort,
     VirtualChassis,
 )
@@ -43,6 +43,9 @@ router.register("module-bays", views.ModuleBayUIViewSet)
 router.register("module-bay-templates", views.ModuleBayTemplateUIViewSet)
 router.register("modules", views.ModuleUIViewSet)
 router.register("module-types", views.ModuleTypeUIViewSet)
+router.register("platforms", views.PlatformUIViewSet)
+router.register("power-feeds", views.PowerFeedUIViewSet)
+router.register("rack-groups", views.RackGroupUIViewSet)
 router.register("rack-reservations", views.RackReservationUIViewSet)
 router.register("software-image-files", views.SoftwareImageFileUIViewSet)
 router.register("software-versions", views.SoftwareVersionUIViewSet)
@@ -80,42 +83,6 @@ urlpatterns = [
         ImageAttachmentEditView.as_view(),
         name="location_add_image",
         kwargs={"model": Location},
-    ),
-    # Rack groups
-    path("rack-groups/", views.RackGroupListView.as_view(), name="rackgroup_list"),
-    path("rack-groups/add/", views.RackGroupEditView.as_view(), name="rackgroup_add"),
-    path(
-        "rack-groups/import/",
-        views.RackGroupBulkImportView.as_view(),  # 3.0 TODO: remove
-        name="rackgroup_import",
-    ),
-    path(
-        "rack-groups/delete/",
-        views.RackGroupBulkDeleteView.as_view(),
-        name="rackgroup_bulk_delete",
-    ),
-    path("rack-groups/<uuid:pk>/", views.RackGroupView.as_view(), name="rackgroup"),
-    path(
-        "rack-groups/<uuid:pk>/edit/",
-        views.RackGroupEditView.as_view(),
-        name="rackgroup_edit",
-    ),
-    path(
-        "rack-groups/<uuid:pk>/delete/",
-        views.RackGroupDeleteView.as_view(),
-        name="rackgroup_delete",
-    ),
-    path(
-        "rack-groups/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="rackgroup_changelog",
-        kwargs={"model": RackGroup},
-    ),
-    path(
-        "rack-groups/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="rackgroup_notes",
-        kwargs={"model": RackGroup},
     ),
     # Racks
     path("racks/", views.RackListView.as_view(), name="rack_list"),
@@ -443,42 +410,6 @@ urlpatterns = [
         "device-bay-templates/<uuid:pk>/delete/",
         views.DeviceBayTemplateDeleteView.as_view(),
         name="devicebaytemplate_delete",
-    ),
-    # Platforms
-    path("platforms/", views.PlatformListView.as_view(), name="platform_list"),
-    path("platforms/add/", views.PlatformEditView.as_view(), name="platform_add"),
-    path(
-        "platforms/import/",
-        views.PlatformBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="platform_import",
-    ),
-    path(
-        "platforms/delete/",
-        views.PlatformBulkDeleteView.as_view(),
-        name="platform_bulk_delete",
-    ),
-    path("platforms/<uuid:pk>/", views.PlatformView.as_view(), name="platform"),
-    path(
-        "platforms/<uuid:pk>/edit/",
-        views.PlatformEditView.as_view(),
-        name="platform_edit",
-    ),
-    path(
-        "platforms/<uuid:pk>/delete/",
-        views.PlatformDeleteView.as_view(),
-        name="platform_delete",
-    ),
-    path(
-        "platforms/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="platform_changelog",
-        kwargs={"model": Platform},
-    ),
-    path(
-        "platforms/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="platform_notes",
-        kwargs={"model": Platform},
     ),
     # Devices
     path("devices/", views.DeviceListView.as_view(), name="device_list"),
@@ -1422,50 +1353,10 @@ urlpatterns = [
         kwargs={"model": PowerPanel},
     ),
     # Power feeds
-    path("power-feeds/", views.PowerFeedListView.as_view(), name="powerfeed_list"),
-    path("power-feeds/add/", views.PowerFeedEditView.as_view(), name="powerfeed_add"),
-    path(
-        "power-feeds/import/",
-        views.PowerFeedBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="powerfeed_import",
-    ),
-    path(
-        "power-feeds/edit/",
-        views.PowerFeedBulkEditView.as_view(),
-        name="powerfeed_bulk_edit",
-    ),
-    path(
-        "power-feeds/delete/",
-        views.PowerFeedBulkDeleteView.as_view(),
-        name="powerfeed_bulk_delete",
-    ),
-    path("power-feeds/<uuid:pk>/", views.PowerFeedView.as_view(), name="powerfeed"),
-    path(
-        "power-feeds/<uuid:pk>/edit/",
-        views.PowerFeedEditView.as_view(),
-        name="powerfeed_edit",
-    ),
-    path(
-        "power-feeds/<uuid:pk>/delete/",
-        views.PowerFeedDeleteView.as_view(),
-        name="powerfeed_delete",
-    ),
     path(
         "power-feeds/<uuid:pk>/trace/",
         views.PathTraceView.as_view(),
         name="powerfeed_trace",
-        kwargs={"model": PowerFeed},
-    ),
-    path(
-        "power-feeds/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="powerfeed_changelog",
-        kwargs={"model": PowerFeed},
-    ),
-    path(
-        "power-feeds/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="powerfeed_notes",
         kwargs={"model": PowerFeed},
     ),
     path(
