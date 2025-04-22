@@ -430,9 +430,6 @@ class DistinctViewTab(Tab):
     def get_extra_context(self, context: Context):
         return {"url": reverse(self.url_name, kwargs={"pk": get_obj_from_context(context).pk})}
 
-    def render(self, context: Context):
-        return ""
-
     def render_label(self, context: Context):
         if not self.related_object_attribute:
             return super().render_label(context)
@@ -685,6 +682,7 @@ class ObjectsTablePanel(Panel):
         hide_hierarchy_ui=False,
         related_field_name=None,
         enable_bulk_actions=False,
+        tab_id=None,
         body_wrapper_template_path="components/panel/body_wrapper_table.html",
         body_content_template_path="components/panel/body_content_objects_table.html",
         header_extra_content_template_path="components/panel/header_extra_content_table.html",
@@ -732,6 +730,8 @@ class ObjectsTablePanel(Panel):
                 to the base model. Defaults to the same as `table_filter` if unset. Used to populate URLs.
             enable_bulk_actions (bool, optional): Show the pk toggle columns on the table if the user has the
                 appropriate permissions.
+            tab_id (str, optional): The ID of the tab this panel belongs to. Used to append to a `return_url` when
+                users navigate away from the tab and redirect them back to the correct one.
             footer_buttons (list, optional): A list of Button or FormButton components to render in the panel footer.
                 These buttons typically perform actions like bulk delete, edit, or custom form submission.
             form_id (str, optional): A unique ID for this table's form; used to set the `data-form-id` attribute on each `FormButton`.
@@ -774,6 +774,7 @@ class ObjectsTablePanel(Panel):
         self.hide_hierarchy_ui = hide_hierarchy_ui
         self.related_field_name = related_field_name
         self.enable_bulk_actions = enable_bulk_actions
+        self.tab_id = tab_id
         self.footer_buttons = footer_buttons
         self.form_id = form_id
 
@@ -796,6 +797,8 @@ class ObjectsTablePanel(Panel):
         request = context["request"]
         related_field_name = self.related_field_name or self.table_filter or obj._meta.model_name
         return_url = context.get("return_url", obj.get_absolute_url())
+        if self.tab_id:
+            return_url += f"?tab={self.tab_id}"
 
         if self.add_button_route == "default":
             body_content_table_class = self.table_class or context[self.context_table_key].__class__
@@ -857,6 +860,10 @@ class ObjectsTablePanel(Panel):
             body_content_table = body_content_table_class(
                 body_content_table_queryset, hide_hierarchy_ui=self.hide_hierarchy_ui
             )
+            if self.tab_id and "actions" in body_content_table.columns:
+                # Use the `self.tab_id`, if it exists, to determine the correct return URL for the table
+                # to redirect the user back to the correct tab after editing/deleteing an object
+                body_content_table.columns["actions"].column.extra_context["return_url_extra"] = f"?tab={self.tab_id}"
 
         if self.exclude_columns or self.include_columns:
             for column in body_content_table.columns:
