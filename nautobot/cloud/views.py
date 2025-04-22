@@ -31,7 +31,6 @@ from nautobot.cloud.forms import (
 )
 from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudResourceType, CloudService
 from nautobot.cloud.tables import CloudAccountTable, CloudNetworkTable, CloudResourceTypeTable, CloudServiceTable
-from nautobot.core.tables import ButtonsColumn
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
@@ -239,29 +238,20 @@ class CloudServiceUIViewSet(NautobotUIViewSet):
                 label="Cloud Networks",
                 url_name="cloud:cloudservice_cloud_networks",
                 related_object_attribute="cloud_networks",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_class=CloudNetworkTable,
+                        table_filter="cloud_services",
+                        tab_id="cloud_networks",
+                        add_button_route=None,
+                    ),
+                ),
             ),
         ),
     )
 
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        context.update({"object_detail_content": self.object_detail_content})
-        return context
-
     @action(detail=True, url_path="cloud-networks", url_name="cloud_networks")
     def cloud_networks(self, request, *args, **kwargs):
-        instance = self.get_object()
-        networks = instance.cloud_networks.restrict(request.user, "view")
-        networks_table = CloudNetworkTable(
-            data=networks,
-            extra_columns=[("actions", ButtonsColumn(model=CloudNetwork, return_url_extra="?tab=cloud_networks"))],
-        )
-        RequestConfig(
-            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-        ).configure(networks_table)
-        return Response(
-            {
-                "networks_table": networks_table,
-                "active_tab": "cloud_networks",
-            }
-        )
+        return Response({})
