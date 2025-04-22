@@ -1,5 +1,6 @@
 import contextlib
 import contextvars
+import uuid
 import logging
 import os
 import shutil
@@ -226,11 +227,65 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
         model_updates.labels(instance._meta.model_name).inc()
 
 
+@receiver(pre_save)
+def _handle_saved_object(sender, instance, **kwargs):
+    """
+    Fires when an object is saved.
+    """
+    _ensure_changelog_exists(ObjectChangeActionChoices.ACTION_UPDATE, sender, instance)
+
+
+def _ensure_changelog_exists(action, sender, instance):
+    """
+    If this is an existing object that should have a change log entry, ensure
+    that one exists, in order for the event notification system to have a
+    previous change log entry to reference.
+    """
+    # Is this an object without a change log?
+    if not hasattr(instance, "to_objectchange"):
+        return
+
+    # Does this object type not persist in the database?
+    if not (instance, "present_in_database"):
+        return
+
+    # Is this a new object?
+    if not instance.present_in_database:
+        return
+
+    # Does this object already have changes?
+    if ObjectChange.objects.filter(changed_object_id=instance.pk).exists():
+        return
+
+    # Retrieve the existing object from the database.
+    if action == ObjectChangeActionChoices.ACTION_UPDATE:
+        instance = sender.objects.get(pk=instance.pk)
+
+    change_context = change_context_state.get()
+
+    # Create a new change log entry for this object.
+    change = instance.to_objectchange(
+        action = action,
+    )
+
+    # The context manager retrieves all changes by request ID. If we use the
+    # same request ID for this change, multiple events will be published rather
+    # than a single change. This is wildly inelegant, but scopes the hack to
+    # just this one file.
+    change.request_id = uuid.uuid4()
+    change.user = change_context.get_user(instance)
+
+    change.save()
+
+
 @receiver(pre_delete)
 def _handle_deleted_object(sender, instance, **kwargs):
     """
     Fires when an object is deleted.
     """
+
+    _ensure_changelog_exists(ObjectChangeActionChoices.ACTION_DELETE, sender, instance)
+
     change_context = change_context_state.get()
 
     if change_context is None:
