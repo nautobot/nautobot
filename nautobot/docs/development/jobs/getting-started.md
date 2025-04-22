@@ -1,95 +1,98 @@
+# Getting Started
 
-## Writing Jobs
-<!-- move:getting-started.md -->
-### Introduction to Writing Jobs
-<!-- move:getting-started.md -->
-!!! warning
-    Make sure your Job subclasses inherit from `nautobot.apps.jobs.Job` and *not* from `nautobot.extras.models.Job` instead; if you mistakenly inherit from the latter, Django will think you want to define a new database model!
+## Why Jobs?
+Nautobot **Jobs** let you run your own Python inside Nautobot’s execution engine.  
+They’re perfect for one‑off data imports, consistency checks, scheduled sync tasks, or bulk edits that would be painful by hand.
 
-The most basic structure of a Python file providing one or more Jobs is as follows:
+What Jobs **can** do: 
 
-```python
+- Touch Nautobot’s database with the same ORM models you use elsewhere  
+- Talk to external devices or APIs  
+- Read/write files via `create_file()` for later download  
+- Run asynchronously in the background (powered by Celery)
+
+What they **shouldn’t** do:
+
+- Spawn infinite loops or long‑running daemons (use [Job scheduling](../../user-guide/platform-functionality/jobs/job-scheduling-and-approvals/) for jobs need to be run at a later date or periodically)  
+- Circumvent user permissions or Django validation  
+- Perform blocking tasks without timeouts
+
+## Prerequisites
+
+You only need a working Nautobot installation where you can:
+
+- **Create a file** under the [`JOBS_ROOT`](../../user-guide/administration/configuration/settings.md#jobs_root) path (defaults to `$NAUTOBOT_ROOT/jobs/`).  
+- **Restart the worker** (Docker, systemd, or `nautobot-server celery worker`) after adding code.
+
+> **Tip** – If you’re using a Git‑backed repo or an App to provide Jobs, the steps below are identical—just commit the file and resync the repo or reload the App.
+
+## Your First Job in 6 Steps
+
+1. **Create a file** called `hello_world.py` inside `$JOBS_ROOT`.
+2. Paste the minimal Job below.  
+3. **Restart your Celery worker** (or redeploy your container / pod).  
+4. Run `nautobot-server post_upgrade` so Nautobot discovers the new Job.  
+5. In the UI, navigate to **Jobs → “Examples” → “Hello World”**, click **Edit Job**, then under the Job section, select the **Enabled** checkbox. Scroll down and **Update** the job.  
+6. **Run Job Now**. You’ll see the log entry appear almost instantly.
+
+```python title="$JOBS_ROOT/hello_world.py"
 from nautobot.apps import jobs
 
-name = "My Group Of Jobs"  # optional, but recommended to define a grouping name
+name = "Examples"                 # Grouping shown in the UI
 
-class MyNewJob(jobs.Job):
+class HelloWorldJob(jobs.Job):
     class Meta:
-        # metadata attributes go here
-        name = "My New Job"
-        # ... etc.
+        name = "Hello World"      # Job name
 
-    # input variable definitions go here
-    some_text_input = jobs.StringVar(...)
-    # ... etc.
+    who = jobs.StringVar(         # One user‑supplied variable
+        description="Whom should we greet?",
+        default="world",
+    )
 
-    def run(self, *, some_text_input, ...):
-        # code to execute when the Job is run goes here
-        self.logger.info("some_text_input: %s", some_text_input)
+    def run(self, *, who):
+        self.logger.info("Hello, %s!", who) # code to execute when the Job is run goes here
 
-jobs.register_jobs(MyNewJob)
+jobs.register_jobs(HelloWorldJob) # <- required in Nautobot 2.x
 ```
 
-Each Job class will implement some or all of the following components:
+### Visual Guide
 
-* [Module](#module-metadata-attributes) and class [metadata attributes](#class-metadata-attributes), configuring the system-level behavior of the Job and providing for documentation and discoverability by users.
-* A set of [variables](#variables) for user input via the Nautobot UI or API.
-* The [`run()` method](#the-run-method), which is the only **required** attribute on a Job class and receives the user input values as keyword arguments.
-* Optionally, any of the special methods [`before_start()`](#the-before_start-method), [`on_success()`](#the-on_success-method), [`on_failure()`](#the-on_failure-method), and/or [`after_return()`](#the-after_return-method).
+![Edit Job](../../media/development/jobs/edit-job.png)  
+**Edit the Job**: Navigate to **Jobs → Examples → Hello World**, select **Edit**.
 
-It's important to understand that Jobs execute on the server asynchronously as background tasks; they log messages and report their status to the database by updating [`JobResult`](../../user-guide/platform-functionality/jobs/models.md#job-results) records and creating [`JobLogEntry`](../../user-guide/platform-functionality/jobs/models.md#job-log-entry) records.
-<!-- move:getting-started.md -->
-!!! note "About detection of changes while developing a Job"
-    When actively developing a Job utilizing a development environment it's important to understand that the "automatically reload when code changes are detected" debugging functionality provided by `nautobot-server runserver` does **not** automatically restart the Celery `worker` process when code changes are made; therefore, it is required to restart the `worker` after each update to your Job source code or else it will continue to run the version of the Job code that was present when it first started. In the Nautobot core development environment, we use `watchmedo auto-restart` as a helper tool to auto-restart the workers as well on code changes; you may wish to configure your local development environment similarly for convenience.
+![Job Settings](../../media/development/jobs/enable-job.png)  
+**Enable the Job**: Scroll down to **Enable** the job, selecting the checkmark box, scroll down and **Update** the job.
 
-    Additionally, as of Nautobot 1.3, the Job database records corresponding to installed Jobs are *not* automatically refreshed when the development server auto-restarts. If you make changes to any of the class and module metadata attributes described in the following sections, the database will be refreshed to reflect these changes only after running `nautobot-server migrate` or `nautobot-server post_upgrade` (recommended) or if you manually edit a Job database record to force it to be refreshed. The exception here is Git-repository-provided Jobs; resyncing the Git repository through Nautobot will also trigger a refresh of the Job records corresponding to this repository's contents.
+![Job Enabled](../../media/development/jobs/job-now-enabled.png)  
+**Job Now Enabled**: Now that the job is enabled, click on the job name.
 
-### Job Registration
-<!-- move:getting-started.md -->
-+/- 2.0.0 "`register_jobs()` is now required"
+![Run Job](../../media/development/jobs/run-job.png)  
+**Run the Job**: Provide input if you like, then click **Run Job Now**.
 
-All Job classes, including `JobHookReceiver` and `JobButtonReceiver` classes must be registered at **import time** using the `nautobot.apps.jobs.register_jobs` method. This method accepts one or more Job classes as arguments. You must account for how your Jobs are imported when deciding where to call this method.
+![Job Results](../../media/development/jobs/job-output.png)  
+**Job Results**: View real-time logs showing the Job's execution.
 
-#### Registering Jobs in `JOBS_ROOT` or Git Repositories
+## Anatomy of the Hello World Job
 
-Only top level module names within `JOBS_ROOT` are imported by Nautobot at runtime. This means that if you're using submodules, you need to ensure that your Jobs are either registered in your top level `__init__.py` or that this file imports your submodules where the Jobs are registered:
+| Line | What it does | Docs to learn more |
+|------|--------------|-------------------|
+| `name = "Examples"` | Sets the *group* header that Jobs appear under in the UI. | [Module metadata](job-structure.md#module-metadata-attributes) |
+| `class HelloWorldJob(jobs.Job)` | Inherit from `nautobot.apps.jobs.Job`—**never** from a model class. | same page |
+| `class Meta:` / `name` | Overrides the default class name for display. | [Class metadata](job-structure.md#class-metadata-attributes) |
+| `who = jobs.StringVar(...)` | Declares an input field—type, label, defaults, validation. | [Variables](job-structure.md#variables) |
+| `def run(self, *, who):` | Mandatory entry point; keyword args correspond to your variables. | [The `run()` method](job-structure.md#the-run-method) |
+| `self.logger.info(...)` | Writes to **Job Result** in real time. | [Logging](job-reference.md#logging) |
+| `jobs.register_jobs(...)` | Registers the Job class at import time—**required** since Nautobot 2.0. | [Job registration](#job-registration) |
 
-```py title="$JOBS_ROOT/my_jobs/__init__.py"
-from . import my_job_module
-```
+## Troubleshooting Common Issues
 
-```py title="$JOBS_ROOT/my_jobs/my_job_module.py"
-from nautobot.apps.jobs import Job, register_jobs
+- **Job not showing in UI**:
+  - Verify correct placement in `$JOBS_ROOT`.
+  - Run `nautobot-server post_upgrade` after adding Jobs.
 
-class MyJob(Job):
-    ...
+- **Changes not appearing**:
+  - Ensure Celery workers are restarted manually after Job code updates. Nautobot's auto-reload does **not** affect Celery workers.
 
-register_jobs(MyJob)
-```
+- **Jobs in submodules**:
+  - Only top-level modules are imported. Use top-level `__init__.py` files to import and register submodule Jobs explicitly.
 
-Similarly, only the `jobs` module is loaded from Git repositories. If you're using submodules, you need to ensure that your Jobs are either registered in the repository's `jobs/__init__.py` or that this file imports your submodules where the Jobs are registered.
-
-If not using submodules, you should register your Job in the file where it is defined.
-
-Examples of the different directory structures when registering Jobs in Git repositories:
-
-!!! note "`__init__.py`"
-    Take note of the `__init__.py` at the root of the repository.  This is required to register Jobs in a Git repository.
-
-``` title="jobs.py"
-.
-├── __init__.py
-└── jobs.py
-```
-
-``` title="submodule"
-.
-├── __init__.py
-└── jobs
-    ├── __init__.py
-    └── my_job_module.py
-```
-
-#### Registering Jobs in an App
-
-Apps should register Jobs in the module defined in their [`NautobotAppConfig.jobs`](../apps/api/nautobot-app-config.md#nautobotappconfig-code-location-attributes) property. This defaults to the `jobs` module of the App.
