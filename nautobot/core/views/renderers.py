@@ -293,18 +293,13 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "verbose_name": queryset.model._meta.verbose_name,
             "verbose_name_plural": queryset.model._meta.verbose_name_plural,
         }
-        if view.action not in [
-            "list",
-            "create",
-            "update",
-            "destroy",
-            "bulk_create",
-            "bulk_update",
-            "bulk_destroy",
-            "bulk_rename",
-        ] and not view.action.startswith("bulk_add"):
+        if view.detail:
             # If we are in a retrieve related detail view (retrieve and custom actions).
-            context["object_detail_content"] = view.object_detail_content
+            try:
+                context["object_detail_content"] = view.object_detail_content
+            except AttributeError:
+                # If the view does not have a object_detail_content attribute, set it to None.
+                context["object_detail_content"] = None
             context.update(common_detail_view_context(request, instance))
         elif view.action == "list":
             # Construct valid actions for list view.
