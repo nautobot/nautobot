@@ -23,3 +23,7 @@ The Nautobot Data Validation Engine functionality previously provided as a separ
 #### GraphQL and GraphiQL Updates
 
 The underlying GraphQL libraries (`graphene`, `graphene-django`, `graphene-django-optimizer`) used by Nautobot have been updated to new major versions, including a new major version of the GraphiQL UI. For the most part this upgrade will be seamless to end users, but the response object returned by Nautobot's `execute_query()` and `execute_saved_query()` Python APIs has changed type -- see [Upgrade Actions](#upgrade-actions) above for specifics.
+
+#### Added Python 3.13 Support and Removed Python 3.9 Support
+
+As Python 3.9 has reached end-of-life, Nautobot 3.0 requires a minimum of Python 3.10. Python 3.13 support was added.
