@@ -4383,7 +4383,6 @@ class SoftwareVersionUIViewSet(NautobotUIViewSet):
                     "end_of_support_date": [helpers.placeholder],
                     "long_term_support": [helpers.render_boolean],
                     "pre_release": [helpers.render_boolean],
-                    "documentation_url": [helpers.hyperlinked_object_target_new_tab],
                 },
             ),
             object_detail.StatsPanel(
