@@ -22,8 +22,6 @@ from .models import (
     PowerPanel,
     PowerPort,
     Rack,
-    RackGroup,
-    RackReservation,
     RearPort,
     VirtualChassis,
 )
