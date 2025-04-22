@@ -39,24 +39,30 @@ from nautobot.wireless.tables import (
 
 
 class RadioProfileFieldsPanel(ObjectFieldsPanel):
+    """
+    Custom panel for rendering radio profile fields with labels.
+    """
+
+    def _render_labels(self, value, suffix=""):
+        """
+        Render list values as HTML labels with optional suffix.
+        """
+        if value:
+            return format_html_join(
+                " ", f'<span class="label label-default">{{0}}{suffix}</span>', ((v,) for v in value)
+            )
+        return helpers.placeholder(value)  # Show placeholder if value is empty
+
     def render_value(self, key, value, context):
-        # Custom display for channel_width
+        """
+        Render specific fields with custom label formatting.
+        """
         if key == "channel_width":
-            if value:
-                return format_html_join(
-                    " ", '<span class="label label-default">{0}MHz</span>', ((width,) for width in value)
-                )
-            return helpers.placeholder(value)
+            return self._render_labels(value, "MHz")
+        elif key == "allowed_channel_list":
+            return self._render_labels(value)
 
-        # Custom display for allowed_channel_list
-        if key == "allowed_channel_list":
-            if value:
-                return format_html_join(
-                    " ", '<span class="label label-default">{0}</span>', ((channel,) for channel in value)
-                )
-            return helpers.placeholder(value)
-
-        return super().render_value(key, value, context)
+        return super().render_value(key, value, context)  # Default handling
 
 
 class RadioProfileUIViewSet(NautobotUIViewSet):
