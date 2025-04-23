@@ -1,0 +1,1 @@
+Ensure that event payload's `prechange` field is populated during object deletion and object update when previous object changes do not exist.

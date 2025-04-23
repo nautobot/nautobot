@@ -4,6 +4,7 @@ import logging
 import os
 import shutil
 import traceback
+import uuid
 
 from db_file_storage.model_utils import delete_file
 from db_file_storage.storage import DatabaseFileStorage
@@ -52,6 +53,47 @@ logger = logging.getLogger(__name__)
 # Change logging
 #
 
+def _ensure_changelog_exists(action, sender, instance):
+    """
+    If this is an existing object that should have a change log entry, ensure
+    that one exists, in order for the event notification system to have a
+    previous change log entry to reference.
+    """
+    # Is this an object without a change log?
+    if not hasattr(instance, "to_objectchange"):
+        return
+
+    # Does this object type not persist in the database?
+    if not (instance, "present_in_database"):
+        return
+
+    # Is this a new object?
+    if not instance.present_in_database:
+        return
+
+    # Does this object already have changes?
+    if ObjectChange.objects.filter(changed_object_id=instance.pk).exists():
+        return
+
+    # Retrieve the existing object from the database.
+    if action == ObjectChangeActionChoices.ACTION_UPDATE:
+        instance = sender.objects.get(pk=instance.pk)
+
+    change_context = change_context_state.get()
+
+    # Create a new change log entry for this object.
+    change = instance.to_objectchange(
+        action = action,
+    )
+
+    # The context manager retrieves all changes by request ID. If we use the
+    # same request ID for this change, multiple events will be published rather
+    # than a single change. This is wildly inelegant, but scopes the hack to
+    # just this one file.
+    change.request_id = uuid.uuid4()
+    change.user = change_context.get_user(instance)
+
+    change.save()
 
 def get_user_if_authenticated(user, instance):
     """Return the user object associated with the request if the user is defined.
@@ -136,6 +178,7 @@ def invalidate_openapi_schema_cache(sender, **kwargs):
         cache.delete_pattern("openapi_schema_cache_*")
 
 
+@receiver(pre_save)
 @receiver(post_save)
 @receiver(m2m_changed)
 def _handle_changed_object(sender, instance, raw=False, **kwargs):
@@ -144,6 +187,10 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
     """
 
     if raw:
+        return
+
+    if kwargs.get("signal") == pre_save and not kwargs.get("created"):
+        _ensure_changelog_exists(ObjectChangeActionChoices.ACTION_UPDATE, sender, instance)
         return
 
     change_context = change_context_state.get()
@@ -168,6 +215,8 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
         # save a copy of this instance's field cache so it can be restored after serialization
         # to prevent unexpected behavior when chaining multiple signal handlers
         original_cache = instance._state.fields_cache.copy()
+        print("original_cache")
+        print(original_cache)
 
         changed_object_type = ContentType.objects.get_for_model(instance)
         changed_object_id = instance.id

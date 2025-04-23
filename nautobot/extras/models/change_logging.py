@@ -213,6 +213,13 @@ class ObjectChange(BaseModel):
 
         prior_change = self.get_prev_change(only=["object_data_v2", "object_data"])
 
+        # Deal with the cases where we are trying to capture an object deletion and there is no prior change record.
+        # This can happen when the object is first created and the changelog for that object creation action is deleted.
+        if self.action == ObjectChangeActionChoices.ACTION_DELETE and prior_change is None:
+            prechange = self.object_data_v2
+            if prechange is None:
+                prechange = self.object_data
+
         if self.action != ObjectChangeActionChoices.ACTION_CREATE and prior_change is not None:
             prechange = prior_change.object_data_v2
             if prechange is None:
@@ -224,7 +231,7 @@ class ObjectChange(BaseModel):
                 postchange = self.object_data
 
         if prechange and postchange:
-            if self.object_data_v2 is None or prior_change.object_data_v2 is None:
+            if self.object_data_v2 is None or (prior_change is not None and prior_change.object_data_v2 is None):
                 prechange = prior_change.object_data
                 postchange = self.object_data
             diff_added = shallow_compare_dict(prechange, postchange, exclude=["last_updated"])
