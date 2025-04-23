@@ -35,7 +35,18 @@ class VPNProfileForm(NautobotModelForm):  # pylint: disable=too-many-ancestors
         """Meta attributes."""
 
         model = models.VPNProfile
-        fields = "__all__"
+        # fields = "__all__"
+        fields = [
+            "name",
+            "description",
+            "keepalive_interval",
+            "keepalive_retries",
+            "keepalive_enabled",
+            "secrets_group",
+            "role",
+            "extra_options",
+            "nat_traversal",
+        ]
 
 
 class VPNProfileBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # pylint: disable=too-many-ancestors
