@@ -4,18 +4,17 @@ from nautobot.apps.ui import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMen
 
 menu_items = (
     NavMenuTab(
-        name="VPN",  # TODO INIT change this if you want the app to have its own tab in the navbar
+        name="VPN",
         weight=250,
         groups=(
             NavMenuGroup(
-                name="VPN",  # TODO INIT you will likely want to change this.
+                name="VPNs",
                 weight=100,
                 items=(
                     NavMenuItem(
                         link="vpn:vpn_list",
-                        name="VPNs",  # TODO INIT Verify.
+                        name="VPNs",
                         weight=100,
-                        # TODO INIT The standard is to have these listed in reverse order of creation, changing the weight will influence the order.
                         permissions=["vpn.view_vpn"],
                         buttons=(
                             NavMenuAddButton(
@@ -26,9 +25,8 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="vpn:vpntunnel_list",
-                        name="VPN Tunnels",  # TODO INIT Verify.
+                        name="VPN Tunnels",
                         weight=100,
-                        # TODO INIT The standard is to have these listed in reverse order of creation, changing the weight will influence the order.
                         permissions=["vpn.view_vpntunnel"],
                         buttons=(
                             NavMenuAddButton(
@@ -39,8 +37,8 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="vpn:vpntunnelendpoint_list",
-                        name="VPN Tunnel Endpoints",  # TODO INIT Verify.
-                        weight=100,  # TODO INIT The standard is to have these listed in reverse order of creation, changing the weight will influence the order.
+                        name="VPN Tunnel Endpoints",
+                        weight=100,
                         permissions=["vpn.view_vpntunnelendpoint"],
                         buttons=(
                             NavMenuAddButton(
@@ -49,10 +47,16 @@ menu_items = (
                             ),
                         ),
                     ),
+                ),
+            ),
+            NavMenuGroup(
+                name="Profiles & Policies",
+                weight=100,
+                items=(
                     NavMenuItem(
                         link="vpn:vpnprofile_list",
-                        name="VPN Profiles",  # TODO INIT Verify.
-                        weight=100,  # TODO INIT The standard is to have these listed in reverse order of creation, changing the weight will influence the order.
+                        name="VPN Profiles",
+                        weight=100,
                         permissions=["vpn.view_vpnprofile"],
                         buttons=(
                             NavMenuAddButton(
@@ -63,8 +67,8 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="vpn:vpnphase1policy_list",
-                        name="VPN Phase 1 Policies",  # TODO INIT Verify.
-                        weight=100,  # TODO INIT The standard is to have these listed in reverse order of creation, changing the weight will influence the order.
+                        name="VPN Phase 1 Policies",
+                        weight=100,
                         permissions=["vpn.view_vpnphase1policy"],
                         buttons=(
                             NavMenuAddButton(
@@ -75,8 +79,8 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="vpn:vpnphase2policy_list",
-                        name="VPN Phase 2 Policies",  # TODO INIT Verify.
-                        weight=100,  # TODO INIT The standard is to have these listed in reverse order of creation, changing the weight will influence the order.
+                        name="VPN Phase 2 Policies",
+                        weight=100,
                         permissions=["vpn.view_vpnphase2policy"],
                         buttons=(
                             NavMenuAddButton(

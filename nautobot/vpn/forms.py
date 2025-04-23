@@ -10,7 +10,6 @@ from nautobot.apps.forms import (
     BulkEditNullBooleanSelect,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
-    JSONField,
     NautobotBulkEditForm,
     NautobotFilterForm,
     NautobotModelForm,
@@ -32,23 +31,11 @@ logger = logging.getLogger(__name__)
 class VPNProfileForm(NautobotModelForm):  # pylint: disable=too-many-ancestors
     """Form for creating and updating VPNProfile."""
 
-    extra_options = JSONField(required=False, label="Extra Options")
-
     class Meta:
         """Meta attributes."""
 
         model = models.VPNProfile
-        fields = [
-            "name",
-            "description",
-            "keepalive_interval",
-            "keepalive_retries",
-            "keepalive_enabled",
-            "secrets_group",
-            "role",
-            "extra_options",
-            "nat_traversal",
-        ]
+        fields = "__all__"
 
 
 class VPNProfileBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # pylint: disable=too-many-ancestors
@@ -380,33 +367,35 @@ class VPNTunnelEndpointForm(NautobotModelForm):  # pylint: disable=too-many-ance
         queryset=IPAddress.objects.all(),
         required=False,
         label="Destination IP Address",
-    )
-    tunnel_device = DynamicModelChoiceField(
-        queryset=Device.objects.all(),
-        required=False,
-        label="Tunnel Device (filter)",
+        help_text="Mutually Exclusive with Destination FQDN",
     )
     tunnel_interface = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
         label="Tunnel Interface",
         query_params={
-            "device": "$tunnel_device",
+            "device": "$device",
             "type": InterfaceTypeChoices.TYPE_TUNNEL,
         },
         help_text="Interface must be of type Tunnel",
     )
-    protected_prefixes_dg = DynamicModelMultipleChoiceField(
-        queryset=DynamicGroup.objects.all(),
+    vpn_profile = DynamicModelChoiceField(
+        queryset=models.VPNProfile.objects.all(),
         required=False,
-        label="Dynamic Group",
-        to_field_name="name",
-        help_text="Dynamic Group for Protected Prefixes behind the tunnel endpoint.",
+        label="VPN Profile",
+        help_text="VPN Profile for the tunnel endpoint.",
     )
     protected_prefixes = DynamicModelMultipleChoiceField(
         queryset=Prefix.objects.all(),
         required=False,
-        label="Prefix",
+        label="Protected Prefixes",
+        help_text="Protected Prefixes behind the tunnel endpoint.",
+    )
+    protected_prefixes_dg = DynamicModelMultipleChoiceField(
+        queryset=DynamicGroup.objects.all(),
+        required=False,
+        label="Protected Prefixes (from Dynamic Group)",
+        to_field_name="name",
         help_text="Protected Prefixes behind the tunnel endpoint.",
     )
 
@@ -414,18 +403,7 @@ class VPNTunnelEndpointForm(NautobotModelForm):  # pylint: disable=too-many-ance
         """Meta attributes."""
 
         model = models.VPNTunnelEndpoint
-        fields = [
-            "device",
-            "source_interface",
-            "source_ipaddress",
-            "destination_ipaddress",
-            "destination_fqdn",
-            "tunnel_device",
-            "tunnel_interface",
-            "protected_prefixes_dg",
-            "protected_prefixes",
-            "role",
-        ]
+        fields = "__all__"
 
 
 class VPNTunnelEndpointBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # pylint: disable=too-many-ancestors
