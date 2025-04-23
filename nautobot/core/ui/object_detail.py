@@ -303,6 +303,36 @@ class FormButton(Button):
         }
 
 
+class FormButtonNoPK(Button):
+    """
+    A button used to submit a form without including the object's primary key in the URL.
+
+    Useful for bulk actions like edit or delete.
+    """
+
+    def __init__(self, form_id, link_name, template_path="components/button/formbutton.html", **kwargs):
+        self.form_id = form_id
+        self.link_name = link_name
+
+        if not self.link_name:
+            raise ValueError("FormButtonNoPK requires 'link_name'.")
+
+        if not self.form_id:
+            raise ValueError("FormButtonNoPK requires 'form_id'.")
+
+        super().__init__(link_name=link_name, template_path=template_path, **kwargs)
+
+    def get_link(self, context):
+        """Returns the reversed URL for the view (no object PK)."""
+        return reverse(self.link_name)
+
+    def get_extra_context(self, context):
+        return {
+            **super().get_extra_context(context),
+            "form_id": self.form_id,
+        }
+
+
 class Tab(Component):
     """Base class for UI framework definition of a single tabbed pane within an Object Detail (Object Retrieve) page."""
 

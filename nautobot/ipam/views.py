@@ -20,6 +20,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from nautobot.cloud.tables import CloudNetworkTable
+from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
 from nautobot.core.models.querysets import count_related
 from nautobot.core.ui import object_detail
@@ -1104,6 +1105,8 @@ class IPAddressToInterfaceUIViewSet(view_mixins.ObjectBulkCreateViewMixin):  # 3
 #
 # VLAN groups
 #
+
+
 class VLANGroupUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.VLANGroupBulkEditForm
     filterset_class = filters.VLANGroupFilterSet
@@ -1125,6 +1128,29 @@ class VLANGroupUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.RIGHT_HALF,
                 context_table_key="vlan_table",
                 related_field_name="vlan_group",
+                enable_bulk_actions=True,
+                add_button_route=None,
+                form_id="vlan_form",
+                footer_buttons=[
+                    object_detail.FormButtonNoPK(
+                        link_name="ipam:vlan_bulk_edit",
+                        label="Edit Selected",
+                        color=ButtonActionColorChoices.EDIT,
+                        icon="mdi-pencil",
+                        size="xs",
+                        form_id="vlan_form",
+                        weight=200,
+                    ),
+                    object_detail.FormButtonNoPK(
+                        link_name="ipam:vlan_bulk_delete",
+                        label="Delete Selected",
+                        color=ButtonActionColorChoices.DELETE,
+                        icon="mdi-trash-can-outline",
+                        size="xs",
+                        form_id="vlan_form",
+                        weight=100,
+                    ),
+                ],
             ),
         )
     )
