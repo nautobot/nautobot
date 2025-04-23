@@ -34,7 +34,6 @@ from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
-from nautobot.core.templatetags import helpers
 from nautobot.core.templatetags.helpers import has_perms
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
@@ -4375,15 +4374,6 @@ class SoftwareVersionUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
-                value_transforms={
-                    "status": [helpers.hyperlinked_object_with_color],
-                    "alias": [helpers.placeholder],
-                    "platform": [helpers.hyperlinked_object],
-                    "release_date": [helpers.placeholder],
-                    "end_of_support_date": [helpers.placeholder],
-                    "long_term_support": [helpers.render_boolean],
-                    "pre_release": [helpers.render_boolean],
-                },
             ),
             object_detail.StatsPanel(
                 weight=100,
