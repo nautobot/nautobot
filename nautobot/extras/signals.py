@@ -217,8 +217,6 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
         # save a copy of this instance's field cache so it can be restored after serialization
         # to prevent unexpected behavior when chaining multiple signal handlers
         original_cache = instance._state.fields_cache.copy()
-        print("original_cache")
-        print(original_cache)
 
         changed_object_type = ContentType.objects.get_for_model(instance)
         changed_object_id = instance.id
