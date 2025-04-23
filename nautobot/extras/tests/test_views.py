@@ -104,6 +104,7 @@ class ComputedFieldTestCase(
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = ComputedField
     slug_source = "label"
@@ -112,6 +113,7 @@ class ComputedFieldTestCase(
     @classmethod
     def setUpTestData(cls):
         obj_type = ContentType.objects.get_for_model(Location)
+        obj_type_1 = ContentType.objects.get_for_model(Interface)
 
         computed_fields = (
             ComputedField(
@@ -160,6 +162,15 @@ class ComputedFieldTestCase(
             "template": "{{ obj.name }} is the best Location!",
             "fallback_value": ":skull_emoji:",
             "weight": 100,
+        }
+        cls.bulk_edit_data = {
+            "content_type": obj_type_1.pk,
+            "label": "Updated Label",
+            "description": "Bulk updated description",
+            "grouping": "General Info",
+            "fallback_value": "Fallback from bulk edit",
+            "weight": 50,
+            "advanced_ui": True,
         }
 
         cls.slug_test_object = "Computed Field Five"
