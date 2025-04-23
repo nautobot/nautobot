@@ -4102,50 +4102,37 @@ class VirtualChassisBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class PowerPanelListView(generic.ObjectListView):
-    queryset = PowerPanel.objects.all()
-    filterset = filters.PowerPanelFilterSet
-    filterset_form = forms.PowerPanelFilterForm
-    table = tables.PowerPanelTable
-
-
-class PowerPanelView(generic.ObjectView):
-    queryset = PowerPanel.objects.prefetch_related("location", "rack_group")
-
-    def get_extra_context(self, request, instance):
-        power_feeds = PowerFeed.objects.restrict(request.user).filter(power_panel=instance).select_related("rack")
-        powerfeed_table = tables.PowerFeedTable(data=power_feeds, orderable=False)
-        powerfeed_table.exclude = ["power_panel"]
-
-        return {"powerfeed_table": powerfeed_table, **super().get_extra_context(request, instance)}
-
-
-class PowerPanelEditView(generic.ObjectEditView):
-    queryset = PowerPanel.objects.all()
-    model_form = forms.PowerPanelForm
-    template_name = "dcim/powerpanel_edit.html"
-
-
-class PowerPanelDeleteView(generic.ObjectDeleteView):
+class PowerPanelUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.PowerPanelBulkEditForm
+    filterset_class = filters.PowerPanelFilterSet
+    filterset_form_class = forms.PowerPanelFilterForm
+    form_class = forms.PowerPanelForm
+    serializer_class = serializers.PowerPanelSerializer
+    table_class = tables.PowerPanelTable
     queryset = PowerPanel.objects.all()
 
-
-class PowerPanelBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = PowerPanel.objects.all()
-    table = tables.PowerPanelTable
-
-
-class PowerPanelBulkEditView(generic.BulkEditView):
-    queryset = PowerPanel.objects.select_related("location", "rack_group")
-    filterset = filters.PowerPanelFilterSet
-    table = tables.PowerPanelTable
-    form = forms.PowerPanelBulkEditForm
-
-
-class PowerPanelBulkDeleteView(generic.BulkDeleteView):
-    queryset = PowerPanel.objects.all()
-    filterset = filters.PowerPanelFilterSet
-    table = tables.PowerPanelTable
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=[
+                    "name",
+                    "location",
+                    "rack_group",
+                ],
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=100,
+                table_class=tables.PowerFeedTable,
+                table_filter="power_panel",
+                table_title="Connected Feeds",
+                exclude_columns=["power_panel"],
+                add_button_route=None,
+            ),
+        )
+    )
 
 
 #
