@@ -428,7 +428,13 @@ $theme-colors-rgb-dark: map-loop($theme-colors-dark, to-rgb, "$value");
 /* 7. Optionally include utilities API last to generate classes based on the Sass map in `_utilities.scss` */
 @import "bootstrap/scss/utilities/api";
 
-/* 8. Add additional custom code here */
+/* 8. Include select2 and select2-bootstrap5-theme here */
+@import "select2/src/scss/core";
+// this is a workaround for select2-bootstrap5-theme issue https://github.com/apalfrey/select2-bootstrap-5-theme/issues/75
+$s2bs5-border-color: $border-color;
+@import "select2-bootstrap-5-theme/src/include-all";
+
+/* 9. Add additional custom code here */
 @if $enable-dark-mode {
   @include color-mode(dark, true) {
     /* Colors */

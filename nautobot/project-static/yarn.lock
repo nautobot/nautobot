@@ -993,6 +993,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"bootstrap@npm:^5.1.3":
+  version: 5.3.5
+  resolution: "bootstrap@npm:5.3.5"
+  peerDependencies:
+    "@popperjs/core": ^2.11.8
+  checksum: 10c0/f0da8bd5e5f743d2d5f73ef531cec2483dec1da3e7aad1ce99d8823800eaedc2982e4c199eff9faf4630d3879261952f1f50c84bcb70ca75168dd5180cfc56ac
+  languageName: node
+  linkType: hard
+
 "bootstrap@npm:^5.3.3":
   version: 5.3.3
   resolution: "bootstrap@npm:5.3.3"
@@ -2231,7 +2240,8 @@ __metadata:
     react-dom: "npm:17.0.2"
     sass: "npm:^1.84.0"
     sass-loader: "npm:^16.0.4"
-    select2: "npm:^4.1.0-rc.0"
+    select2: "npm:4.0.13"
+    select2-bootstrap-5-theme: "npm:^1.3.0"
     webpack: "npm:^5.98.0"
     webpack-cli: "npm:^6.0.1"
     whatwg-fetch: "npm:3.6.2"
@@ -2858,10 +2868,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"select2@npm:^4.1.0-rc.0":
-  version: 4.1.0-rc.0
-  resolution: "select2@npm:4.1.0-rc.0"
-  checksum: 10c0/6e25a387ad059b341bd154374894a730d862a65913a86b84d3a9d5b31d71219f415c2f79ec8d40761efb4d8dc3e11155cdf14b2902cf6e4f99a21148f2688e69
+"select2-bootstrap-5-theme@npm:^1.3.0":
+  version: 1.3.0
+  resolution: "select2-bootstrap-5-theme@npm:1.3.0"
+  dependencies:
+    bootstrap: "npm:^5.1.3"
+  checksum: 10c0/bc8d26b9c2b3151684976ba1502b35e88fe0e1f8fb032cabb6eb988d6a71a0b3d3211a9cec6cb4aa0cab2cd62410819b9999eb3c7ac1a483f1f3a3b98f426113
+  languageName: node
+  linkType: hard
+
+"select2@npm:4.0.13":
+  version: 4.0.13
+  resolution: "select2@npm:4.0.13"
+  checksum: 10c0/a393866565a5f878ca21276ed32793595851debb35ff48a8c368640e732619349f547d335b438b45ff5647145eb6c5af868cd5153740de58306a2dca2498550f
   languageName: node
   linkType: hard
 
