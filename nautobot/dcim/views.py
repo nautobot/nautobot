@@ -62,6 +62,7 @@ from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, 
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable, VRFTable
 from nautobot.virtualization.models import VirtualMachine
+from nautobot.virtualization.tables import VirtualMachineTable
 from nautobot.wireless.forms import ControllerManagedDeviceGroupWirelessNetworkFormSet
 from nautobot.wireless.models import (
     ControllerManagedDeviceGroupRadioProfileAssignment,
@@ -4278,6 +4279,101 @@ class SoftwareImageFileUIViewSet(NautobotUIViewSet):
     queryset = SoftwareImageFile.objects.all()
     serializer_class = serializers.SoftwareImageFileSerializer
     table_class = tables.SoftwareImageFileTable
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+        ),
+        extra_tabs=(
+            object_detail.DistinctViewTab(
+                weight=700,
+                tab_id="device_type",
+                url_name="dcim:softwareimagefile_device_type",
+                label="Device Type",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_class=tables.DeviceTypeTable,
+                        table_filter="software_image_files",
+                        tab_id="device_type",
+                        add_button_route=None,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=800,
+                tab_id="device",
+                url_name="dcim:softwareimagefile_device",
+                label="Device",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_class=tables.DeviceTable,
+                        table_filter="software_image_files",
+                        tab_id="device",
+                        table_title="Devices overridden to use this file",
+                        add_button_route=None,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=900,
+                tab_id="inventory_item",
+                url_name="dcim:softwareimagefile_inventory_item",
+                label="Inventory Item",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_class=tables.InventoryItemTable,
+                        table_filter="software_image_files",
+                        tab_id="inventory_item",
+                        table_title="Inventory items overridden to use this file",
+                        add_button_route=None,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=1000,
+                tab_id="virtual_machine",
+                url_name="dcim:softwareimagefile_virtual_machine",
+                label="Virtual Machine",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_class=VirtualMachineTable,
+                        table_filter="software_image_files",
+                        tab_id="virtual_machine",
+                        table_title="Virtual machines overridden to use this file",
+                        add_button_route=None,
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    @action(detail=True, url_path="device-type", url_name="device_type")
+    def device_type(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(detail=True, url_path="device")
+    def device(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(detail=True, url_path="inventory-item", url_name="inventory_item")
+    def inventory_item(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(detail=True, url_path="virtual-machine", url_name="virtual_machine")
+    def virtual_machine(self, request, *args, **kwargs):
+        return Response({})
 
 
 class SoftwareVersionUIViewSet(NautobotUIViewSet):
