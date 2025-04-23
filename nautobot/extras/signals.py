@@ -192,6 +192,7 @@ def _handle_changed_object_pre_save(sender, instance, raw=False, **kwargs):
     if hasattr(instance, "to_objectchange") and not kwargs.get("created"):
         _ensure_changelog_exists(ObjectChangeActionChoices.ACTION_UPDATE, sender, instance)
 
+
 @receiver(post_save)
 @receiver(m2m_changed)
 def _handle_changed_object(sender, instance, raw=False, **kwargs):
