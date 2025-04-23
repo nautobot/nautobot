@@ -1,28 +1,43 @@
+# Job Structure
 
-### Module Metadata Attributes
-<!-- move:job-structure.md -->
-#### `name` (Grouping)
-<!-- move:job-structure.md -->
+## Introduction
+
+Jobs in Nautobot are Python classes designed to perform automated tasks within the Nautobot environment. Each Job can consist of:
+
+- **Metadata attributes**, which control how the Job appears and behaves within Nautobot.
+- **Input Variables**, which allow users to interact with the Job by providing required or optional input parameters via the Nautobot UI or API.
+- **Special Methods**, which manage the lifecycle and behavior of the Job execution.
+
+It’s essential to distinguish between metadata attributes and input variables clearly:
+
+- **Metadata Attributes** define how the Job itself behaves within the Nautobot platform (such as display name, permissions, execution constraints).
+- **Input Variables** define user-supplied inputs that can influence the Job’s execution logic.
+
+Below, each section details how to implement these components in your Jobs effectively.
+
+## Module Metadata Attributes
+
+### `name` (Grouping)
+
 You can define a global constant called `name` within a job module (the Python file which contains one or more Job classes) to set the default grouping under which the Jobs in this module will be displayed in the Nautobot UI. If this value is not defined, the module's file name will be used. This "grouping" value may also be defined or overridden when editing Job records in the database.
 
 !!! note
     In some UI elements and API endpoints, the module file name is displayed in addition to or in place of this attribute, so even if defining this attribute, you should still choose an appropriately explanatory file name as well.
 
-### Class Metadata Attributes
-<!-- move:job-structure.md -->
-Job-specific attributes may be defined under a class named `Meta` within each Job class you implement. All of these are optional, but encouraged.
+## Class Metadata Attributes
 
-#### `name`
+Job-specific attributes may be defined under a class named `Meta` within each Job class you implement. All of these are optional but encouraged for clearer user experience and administration.
 
-This is the human-friendly name of your Job, as will be displayed in the Nautobot UI. If not set, the class name will be used.
+### `name`
+
+This is the human-friendly name of your Job, as displayed in the Nautobot UI. If not set, the class name will be used.
 
 !!! note
     In some UI elements and API endpoints, the class name is displayed in addition to or in place of this attribute, so even if defining this attribute, you should still choose an appropriately explanatory class name as well.
 
-#### `description`
+### `description`
 
-An optional human-friendly description of what this Job does.
-This can accept either plain text, Markdown-formatted text, or [a limited subset of HTML](../../user-guide/platform-functionality/template-filters.md#render_markdown). It can also be multiple lines:
+An optional human-friendly description of what this Job does. This can accept either plain text, Markdown-formatted text, or [a limited subset of HTML](../../user-guide/platform-functionality/template-filters.md#render_markdown). It can also be multiple lines:
 
 ```python
 class ExampleJob(Job):
@@ -38,13 +53,14 @@ class ExampleJob(Job):
 
 If you code a multi-line description, the first line only will be used in the description column of the Jobs list, while the full description will be rendered in the Job detail view, submission, approval, and results pages.
 
-#### `approval_required`
+
+### `approval_required`
 
 Default: `False`
 
 A boolean that will mark this Job as requiring approval from another user to be run. For more details on approvals, [please refer to the section on scheduling and approvals](../../user-guide/platform-functionality/jobs/job-scheduling-and-approvals.md).
 
-#### `dryrun_default`
+### `dryrun_default`
 
 +/- 2.0.0 "Replacement for `commit_default`"
     The `commit_default` field was renamed to `dryrun_default` and the default value was changed from `True` to `False`. The `commit` functionality that provided an automatic rollback of database changes if the Job failed was removed.
@@ -60,24 +76,24 @@ class MyJob(Job):
         dryrun_default = True
 ```
 
-#### `field_order`
+### `field_order`
 
 Default: `[]`
 
 A list of strings (field names) representing the order your Job [variables](#variables) should be rendered as form fields in the Job submission UI. If not defined, the variables will be listed in order of their definition in the code. If variables are defined on a parent class and no field order is defined, the parent class variables will appear before the subclass variables.
 
-#### `has_sensitive_variables`
+### `has_sensitive_variables`
 
 Default: `True`
 
-Unless set to False, it prevents the Job's input parameters from being saved to the database. This defaults to True so as to protect against inadvertent database exposure of input parameters that may include sensitive data such as passwords or other user credentials. Review whether each Job's inputs contain any such variables before setting this to False; if a Job *does* contain sensitive inputs, if possible you should consider whether the Job could be re-implemented using Nautobot's [`Secrets`](../../user-guide/platform-functionality/secret.md) feature as a way to ensure that the sensitive data is not directly provided as a Job variable at all.
+Unless set to False, it prevents the Job's input parameters from being saved to the database. This defaults to True so as to protect against inadvertent database exposure of input parameters that may include sensitive data such as passwords or other user credentials. Review whether each Job's inputs contain any such variables before setting this to False; if a Job *does* contain sensitive inputs, if possible you should consider whether the Job could be re-implemented using Nautobot's [Secrets](../../user-guide/platform-functionality/secret.md) feature as a way to ensure that the sensitive data is not directly provided as a Job variable at all.
 
 Important notes about Jobs with sensitive variables:
 
 * Such Jobs cannot be scheduled to run in the future or on a recurring schedule (as Scheduled Jobs must by necessity store their variables in the database for future reference).
 * Jobs with sensitive variables cannot be marked as requiring approval (as Jobs pending approval must store their variables in the database until approved).
 
-#### `hidden`
+### `hidden`
 
 Default: `False`
 
@@ -93,7 +109,7 @@ Important notes about hidden Jobs:
 * Hidden Jobs can still be executed through the UI or the REST API given the appropriate URL.
 * Results for hidden Jobs will still appear in the Job Results list after they are run.
 
-#### `is_singleton`
+### `is_singleton`
 
 +++ 2.4.0
 
@@ -108,7 +124,7 @@ Important notes about singleton jobs:
     * Therefore, a restart of Redis will wipe the singleton locks
 * A checkbox on the job run form makes it possible to force the singleton lock to be overridden. This makes it possible to recover from failure scenarios such as the original singleton job being stopped before it can unset the lock.
 
-#### `read_only`
+### `read_only`
 
 +/- 2.0.0 "No automatic functionality"
     The `read_only` flag no longer changes the behavior of Nautobot core and is up to the Job author to decide whether their Job should be considered read only.
@@ -117,7 +133,7 @@ Default: `False`
 
 A boolean that can be set by the Job author to indicate that the Job does not make any changes to the environment. What behavior makes each Job "read only" is up to the individual Job author to decide. Note that user input may still be optionally collected with read-only Jobs via Job variables, as described below.
 
-#### `soft_time_limit`
+### `soft_time_limit`
 
 An int or float value, in seconds, which can be used to override the default [soft time limit](../../user-guide/administration/configuration/settings.md#celery_task_soft_time_limit) for a Job task to complete.
 
@@ -130,7 +146,7 @@ from nautobot.apps.jobs import Job
 class ExampleJobWithSoftTimeLimit(Job):
     class Meta:
         name = "Soft Time Limit"
-        description = "Set a soft time limit of 10 seconds`"
+        description = "Set a soft time limit of 10 seconds"
         soft_time_limit = 10
 
     def run(self):
@@ -142,7 +158,7 @@ class ExampleJobWithSoftTimeLimit(Job):
             cleanup_in_a_hurry()
 ```
 
-#### `task_queues`
+### `task_queues`
 
 Default: `[]`
 
@@ -154,7 +170,7 @@ A list of Job Queue names that the Job can be routed to. An empty list will defa
 !!! note
     A worker must be listening on the requested queue or the Job will not run. See the documentation on [task queues](../../user-guide/administration/guides/celery-queues.md) for more information.
 
-#### `template_name`
+### `template_name`
 
 A path relative to the Job source code containing a Django template which provides additional code to customize the Job's submission form. This template should extend the existing Job template, `extras/job.html`, otherwise the base form and functionality may not be available.
 
@@ -182,7 +198,7 @@ A template can provide additional JavaScript, CSS, or even display HTML. A good 
 
 For another example checkout [the template used in the Example App](https://github.com/nautobot/nautobot/blob/main/examples/example_app/example_app/templates/example_app/example_with_custom_template.html) in the GitHub repo.
 
-#### `time_limit`
+### `time_limit`
 
 An int or float value, in seconds, which can be used to override the
 default [hard time limit](../../user-guide/administration/configuration/settings.md#celery_task_time_limit) (10 minutes by default) for a Job task to complete.
@@ -207,25 +223,42 @@ class ExampleJobWithHardTimeLimit(Job):
 !!! note "`time_limit` versus `soft_time_limit`"
     If the `time_limit` is set to a value less than or equal to the `soft_time_limit`, a warning log is generated to inform the user that this Job will fail silently after the `time_limit` as the `soft_time_limit` will never be reached.
 
-### Variables
-<!-- move:job-structure.md -->
+## Variables
+
 Variables allow your Job to accept user input via the Nautobot UI, but they are optional; if your Job does not require any user input, there is no need to define any variables. Conversely, if you are making use of user input in your Job, you *must* also implement the `run()` method, as it is the only entry point to your Job that has visibility into the variable values provided by the user.
 
+This example defines two input variables using `StringVar` and `IntegerVar`, which are passed as keyword arguments into the `run()` method. The values provided by the user at runtime are then used inside a loop to print a customized greeting message using `self.logger.info()`. By logging each message, the Job provides immediate feedback in the JobResult view. Finally, the class is registered using `register_jobs()` to ensure it can be discovered and run within Nautobot.
+
 ```python
-from nautobot.apps.jobs import Job, StringVar, IntegerVar, ObjectVar
+from nautobot.apps import jobs
 
-class CreateDevices(Job):
-    var1 = StringVar(...)
-    var2 = IntegerVar(...)
-    var3 = ObjectVar(...)
+name = "Hello Jobs"
 
-    def run(self, var1, var2, var3):
-        ...
+class HelloJobs(jobs.Job):
+    class Meta:
+        name = "Say Hello"
+
+    person_name = jobs.StringVar(
+        description="Name of the person to greet",
+        default="world"
+    )
+
+    greeting_count = jobs.IntegerVar(
+        description="How many times to greet",
+        default=1,
+        min_value=1
+    )
+
+    def run(self, *, person_name, greeting_count):
+        for i in range(greeting_count):
+            self.logger.info("Hello, %s! (%d)", person_name, i + 1)
+
+jobs.register_jobs(HelloJobs)
 ```
 
 The remainder of this section documents the various supported variable types and how to make use of them.
 
-#### Default Variable Options
+### Default Variable Options
 
 All Job variables support the following default options:
 
@@ -235,7 +268,7 @@ All Job variables support the following default options:
 * `required` - Indicates whether the field is mandatory (all fields are required by default)
 * `widget` - The class of form widget to use (see the [Django documentation](https://docs.djangoproject.com/en/stable/ref/forms/widgets/))
 
-#### `StringVar`
+### `StringVar`
 
 Stores a string of characters (i.e. text). Options include:
 
@@ -245,107 +278,151 @@ Stores a string of characters (i.e. text). Options include:
 
 Note that `min_length` and `max_length` can be set to the same number to effect a fixed-length field.
 
-#### `TextVar`
+### `TextVar`
 
 Arbitrary text of any length. Renders as a multi-line text input field.
 
-#### `JSONVar`
+### `JSONVar`
 
 +++ 2.1.0
 
 Accepts JSON-formatted data of any length. Renders as a multi-line text input field. The variable passed to `run()` method on the Job has been serialized to the appropriate Python objects.
 
 ```python
+from nautobot.apps.jobs import Job, JSONVar
+
 class ExampleJSONVarJob(Job):
-    var1 = JSONVar()
+    var1 = JSONVar(
+        description="Provide a JSON object with a 'key1' field.",
+    )
 
     def run(self, var1):
-        # var1 form data equals '{"key1": "value1"}'
-        self.logger.info("The value of key1 is: %s", var1["key1"])
+        # Example input: {"key1": "value1"}
+        if "key1" in var1:
+            self.logger.info("The value of key1 is: %s", var1["key1"])
+        else:
+            self.logger.error("Missing required key: key1")
 ```
 
-In the above example `{"key1": "value1"}` is provided to the Job form, on submission first the field is validated to be JSON-formatted data then is serialized and passed to the `run()` method as a dictionary without any need for the Job developer to post-process the variable into a Python dictionary.
+This Job uses a JSONVar to accept a structured input from the user. For example, the user might submit `{"key1": "value1"}`. Nautobot first validates that the input is valid JSON, then automatically deserializes it into a Python dictionary. Inside the Job, you can access the dictionary directly — in this case, logging the value of key1 or raising an error if it’s missing. This is a simple way to demonstrate structured input, useful for things like configuration blobs or external API payloads, without needing to manually parse the JSON yourself.
 
-#### `IntegerVar`
+### `IntegerVar`
 
 Stores a numeric integer. Options include:
 
 * `min_value` - Minimum value
 * `max_value` - Maximum value
 
-#### `BooleanVar`
+### `BooleanVar`
 
 A true/false flag. This field has no options beyond the defaults listed above.
 
-#### `DryRunVar`
+### `DryRunVar`
 
 A true/false flag with special handling for Jobs that require approval. If `dryrun = DryRunVar()` is declared on a Job class, approval may be bypassed if `dryrun` is set to `True` on Job execution.
 
-#### `ChoiceVar`
+### `ChoiceVar`
 
 A set of choices from which the user can select one.
 
 * `choices` - A list of `(value, label)` tuples representing the available choices. For example:
 
 ```python
-CHOICES = (
-    ('n', 'North'),
-    ('s', 'South'),
-    ('e', 'East'),
-    ('w', 'West')
+from nautobot.apps.jobs import Job, ChoiceVar, register_jobs
+
+DIRECTIONS = (
+    ("n", "North"),
+    ("s", "South"),
+    ("e", "East"),
+    ("w", "West"),
 )
 
-direction = ChoiceVar(choices=CHOICES)
+class CompassJob(Job):
+    direction = ChoiceVar(
+        choices=DIRECTIONS,
+        description="Choose a cardinal direction."
+    )
+
+    def run(self, *, direction):
+        self.logger.info("You chose to go: %s", dict(DIRECTIONS)[direction])
+
+register_jobs(CompassJob)
 ```
 
-In the example above, selecting the choice labeled "North" will submit the value `n`.
+This example uses a `ChoiceVar` to let the user select one option from a list of predefined values. When the Job runs, the selected value (e.g., `"n"`) is passed to the `run()` method. The Job then looks up the human-readable label (`"North"`) and logs it. This pattern is useful when you want to limit input to a safe, predictable set of options.
 
-#### `MultiChoiceVar`
+### `MultiChoiceVar`
 
 Similar to `ChoiceVar`, but allows for the selection of multiple choices.
 
-#### `ObjectVar`
+### `ObjectVar`
 
-A particular object within Nautobot. Each ObjectVar must specify a particular model, and allows the user to select one of the available instances. ObjectVar accepts several arguments, listed below.
+A `ObjectVar` allows users to select a single Nautobot object (such as a device, interface, or location) via the UI or API. It accepts several options to customize its behavior, from simple selections to dynamic filters and nested fields.
 
-* `model` - The model class
-* `display_field` - The name of the REST API object field to display in the selection list (default: `'display'`)
-* `query_params` - A dictionary of REST API query parameters to use when retrieving available options (optional)
-* `null_option` - A label representing a "null" or empty choice (optional)
+You can customize how objects appear in the selection dropdown and what subset of records are made available using the following arguments:
 
-The `display_field` argument is useful in cases where using the `display` API field is not desired for referencing the object. For example, when displaying a list of IP Addresses, you might want to use the `dns_name` field:
+- `model`: The Django model class to query (e.g., `Device`, `Location`, `IPAddress`).
+- `display_field`: The model attribute to display for each object in the UI dropdown. Defaults to the object’s `display` property. You can specify any valid attribute, including nested fields (e.g., `vlan_group.name`) or computed fields (e.g., `computed_fields.mycustomfield`).
+- `query_params`: A dictionary of query parameters used to filter the available options. These follow the same structure as the Nautobot REST API.
+- `null_option`: An optional label that represents an empty selection.
+
+#### Basic Usage
 
 ```python
-device_type = ObjectVar(
+from nautobot.apps.jobs import Job, ObjectVar, register_jobs
+from nautobot.dcim.models import Device
+
+class ChooseDevice(Job):
+    device = ObjectVar(
+        model=Device,
+        description="Pick a device to validate."
+    )
+
+    def run(self, *, device):
+        self.logger.info("You selected the device: %s", device)
+
+register_jobs(ChooseDevice)
+```
+
+This Job lets a user select a `Device` object from a dropdown. That selected object is passed as an argument to the `run()` method. This pattern is useful for Jobs that operate on a specific record from Nautobot.
+
+#### Customizing Display Field
+
+By default, Nautobot will show each object's `display` field in the dropdown. To show a different field—such as a hostname, IP, or a related model’s attribute—you can override it using `display_field`.
+
+```python
+device_ip = ObjectVar(
     model=IPAddress,
-    display_field="dns_name",
+    display_field="dns_name",  # Instead of the default "address" or "display"
 )
 ```
 
-Additionally, the `.` notation can be used to reference nested fields:
+You can also use dot notation to reference nested or related fields, such as a VLAN's group name:
 
 ```python
-device_type = ObjectVar(
+vlan = ObjectVar(
     model=VLAN,
     display_field="vlan_group.name",
-    query_params={
-        "depth": 1
-    },
+    query_params={"depth": 1}  # Ensures nested objects are populated
 )
 ```
 
 In the example above, [`"depth": 1`](../../user-guide/platform-functionality/rest-api/overview.md#depth-query-parameter) was needed to influence REST API to include details of the associated records.
-Another example of using the nested reference would be to access [computed fields](../../user-guide/platform-functionality/computedfield.md) of the model:
+
+
+#### Using Computed Fields
+
+Another example of using the nested reference would be to access [computed fields](../../user-guide/platform-functionality/computedfield.md) of the model. Nautobot supports selecting computed fields as part of the `display_field`, provided the API query includes them:
 
 ```python
-device_type = ObjectVar(
+interface = ObjectVar(
     model=Interface,
     display_field="computed_fields.mycustomfield",
-    query_params={
-        "include": "computed_fields"
-    },
+    query_params={"include": "computed_fields"}
 )
 ```
+
+This allows users to see custom-calculated values—like interface capacity scores or normalized labels—in the dropdown UI. It's especially useful when default display fields aren't meaningful enough on their own for selection.
 
 To limit the selections available within the list, additional query parameters can be passed as the `query_params` dictionary. For example, to show only devices with an "active" status:
 
@@ -355,6 +432,17 @@ device = ObjectVar(
     query_params={
         'status': 'active'
     }
+)
+```
+
+#### Filtering Options with `query_params`
+
+Use `query_params` to filter which objects appear in the dropdown. For example, only show devices that are “active”:
+
+```python
+device = ObjectVar(
+    model=Device,
+    query_params={"status": "active"}
 )
 ```
 
@@ -376,31 +464,59 @@ location = ObjectVar(
 )
 ```
 
-#### `MultiObjectVar`
+### `MultiObjectVar`
 
 Similar to `ObjectVar`, but allows for the selection of multiple objects.
 
-#### `FileVar`
+### `FileVar`
 
-An uploaded file. Note that uploaded files are present in memory only for the duration of the Job's execution: They will not be automatically saved for future use. The Job is responsible for writing file contents to disk where necessary.
+An uploaded file provided via `FileVar` is passed to the Job's `run()` method as an in-memory file-like object, typically an `InMemoryUploadedFile`. These are temporary and exist only for the duration of the Job execution—they are not saved automatically.
 
-#### `IPAddressVar`
+The example below shows how to use `FileVar` to upload a CSV file, decode its contents, and process each row with Python’s `csv.DictReader`. This pattern is useful when working with structured input formats such as device inventories, IP assignments, or user data.
+
+If you want to retain output from a Job (e.g. processed data or error logs), you can use `self.create_file()` to save and expose results via the JobResult detail page.
+
+```python
+import csv
+from nautobot.apps.jobs import Job, FileVar, register_jobs
+
+class ReadCSVJob(Job):
+    class Meta:
+        name = "Read CSV Upload"
+
+    input_file = FileVar(description="Upload a CSV file with hostname,ip_address columns")
+
+    def run(self, *, input_file):
+        decoded_file = input_file.read().decode("utf-8").splitlines()
+        reader = csv.DictReader(decoded_file)
+        for row in reader:
+            self.logger.info("Hostname: %s, IP Address: %s", row["hostname"], row["ip_address"])
+
+register_jobs(ReadCSVJob)
+```
+
+!!! note
+    Files provided via `FileVar` must be read and processed during the `run()` method. If needed, use `self.create_file()` to persist any output for download after execution.
+
+### `IPAddressVar`
 
 An IPv4 or IPv6 address, without a mask. Returns a `netaddr.IPAddress` object.
 
-#### `IPAddressWithMaskVar`
+### `IPAddressWithMaskVar`
 
 An IPv4 or IPv6 address with a mask. Returns a `netaddr.IPNetwork` object which includes the mask.
 
-#### `IPNetworkVar`
+### `IPNetworkVar`
 
 An IPv4 or IPv6 network with a mask. Returns a `netaddr.IPNetwork` object. Two attributes are available to validate the provided mask:
 
 * `min_prefix_length` - Minimum length of the mask
 * `max_prefix_length` - Maximum length of the mask
 
-### Special Methods
-<!-- move:job-structure.md -->
+## Special Methods
+
+Special methods allow you to manage the execution lifecycle of a Job, providing hooks to run code at critical points such as initialization, successful execution, or error handling. Implementing these methods can improve robustness, debugging, and reliability of Jobs.
+
 Nautobot Jobs when executed will be instantiated by Nautobot, then Nautobot will call in order the special API methods `before_start()`, `run()`, `on_success()`/`on_failure()`, and `after_return()`. You must implement the `run()` method; the other methods have default implementations that do nothing.
 
 As Jobs are Python classes, you are of course free to define any number of other helper methods or functions that you call yourself from within any of the above special methods, but the above are the only ones that will be automatically called.
@@ -408,26 +524,62 @@ As Jobs are Python classes, you are of course free to define any number of other
 --- 2.0.0 "Removal of `test` and `post_run` special methods"
     The NetBox backwards compatible `test_*()` and `post_run()` special methods have been removed.
 
-#### The `before_start()` Method
+### The `before_start()` Method
 
 The `before_start()` method may optionally be implemented to perform any appropriate Job-specific setup before the `run()` method is called. It has the signature `before_start(self, task_id, args, kwargs)` for historical reasons; the `task_id` parameter will always be identical to `self.request.id`, the `args` parameter will generally be empty, and any user-specified variables passed into the Job execution will be present in the `kwargs` parameter.
 
 The return value from `before_start()` is ignored, but if it raises any exception, the Job result status will be marked as `FAILURE` and `run()` will not be called.
 
-#### The `run()` Method
 
-The `run()` method is the primary worker of any Job, and must be implemented. After the `self` argument, it should accept keyword arguments for any variables defined on the Job:
+### The `create_file()` Method
+
++++ 2.1.0
+
+Jobs can generate output files during execution using the `create_file()` method. These files are saved and made available to the user from the JobResult detail view’s **Advanced** tab or via the REST API.
+
+This is useful when you want to:
+
+- Generate downloadable reports
+- Return structured outputs (e.g. CSV, JSON)
+- Provide a summary or log of what the Job did
 
 ```python
-from nautobot.apps.jobs import Job, StringVar, IntegerVar, ObjectVar
+from nautobot.apps.jobs import Job, register_jobs
 
-class CreateDevices(Job):
-    var1 = StringVar(...)
-    var2 = IntegerVar(...)
-    var3 = ObjectVar(...)
+class ExportText(Job):
+    class Meta:
+        name = "Export Text File"
 
-    def run(self, *, var1, var2, var3):
-        ...
+    def run(self):
+        self.create_file("output.txt", "Export completed successfully.")
+        self.logger.info("File has been created for download.")
+
+register_jobs(ExportText)
+```
+
+The `create_file()` method accepts a filename and file contents (as `str` or `bytes`). Files are saved alongside the JobResult and remain available until the JobResult is deleted.
+
+!!! note
+    The maximum file size and storage backend for output files are controlled by the [`JOB_CREATE_FILE_MAX_SIZE`](../../user-guide/administration/configuration/settings.md#job_create_file_max_size) and [`JOB_FILE_IO_STORAGE`](../../user-guide/administration/configuration/settings.md#job_file_io_storage) settings.
+
+### The `run()` Method
+
+### The `run()` Method
+
+The `run()` method is the core of every Job and is required. It receives user-supplied inputs (defined as variables on the class) as keyword arguments. Inside this method, you define the logic that the Job will execute—such as querying data, applying changes, or interacting with external systems. The method can return a value, which will be saved in the JobResult and displayed in the UI and API.
+
+Here’s a basic structure:
+
+```python
+from nautobot.apps.jobs import Job, StringVar
+
+class SimpleGreetingJob(Job):
+    name_input = StringVar(description="Who should we greet?")
+
+    def run(self, *, name_input):
+        self.logger.info("Hello, %s!", name_input)
+
+register_jobs(SimpleGreetingJob)
 ```
 
 Again, defining user variables is totally optional; you may create a Job with a `run()` method with only the `self` argument if no user input is needed.
@@ -438,16 +590,48 @@ Again, defining user variables is totally optional; you may create a Job with a 
 !!! warning "Be cautious around bulk operations"
     The Django ORM provides methods to create/edit many objects at once, namely `bulk_create()` and `update()`. These are best avoided in most cases as they bypass a model's built-in validation and can easily lead to database corruption if not used carefully.
 
-If `run()` returns any value (even the implicit `None`), the returned value will be stored in the associated JobResult database record. (The Job Result will be marked as `SUCCESS` unless the `fail()` method was called at some point during `run()`, in which case it will be marked as `FAILURE`.) Conversely, if `run()` raises any exception, the Job execution will be marked as `FAILURE` and the traceback will be stored in the JobResult.
+#### Returning and Failing from `run()`
 
-#### The `on_success()` Method
+The return value of the `run()` method is saved to the JobResult and is viewable in both the Nautobot UI and API. If `run()` completes without error, the Job is automatically marked as **SUCCESS**.
+
+There are two ways to explicitly mark a Job as failed:
+
+- Call `self.fail("message")` to mark the Job as **FAILURE** without raising an exception or halting execution.
+- Raise an exception to stop the Job immediately. Nautobot will capture the error and traceback in the JobResult.
+
+Calling `self.fail()` is useful for validation or soft failures that don’t require a hard stop.
+
+```python
+from nautobot.apps.jobs import Job, StringVar, register_jobs
+
+class CheckOccasion(Job):
+    occasion = StringVar(description="Enter an occasion")
+
+    def run(self, *, occasion):
+        if not occasion.startswith("Taco"):
+            self.logger.error("Occasion must begin with 'Taco'")
+            raise Exception("Input validation failed.")
+
+        if not occasion.endswith("Tuesday"):
+            self.fail("It's supposed to be Tuesday!")  # Marks job as FAILURE without traceback
+
+        self.logger.info("Perfect! Today is %s", occasion)
+        return occasion
+
+register_jobs(CheckOccasion)
+```
+
+In this example, if the `occasion` input doesn’t start with “Taco”, an exception is raised and the Job fails immediately. If the input ends incorrectly (but started correctly), the Job continues but is still marked as failed using `self.fail()`. Otherwise, the Job logs a success message and completes normally, returning the value to the JobResult.
+
+
+### The `on_success()` Method
 
 If both `before_start()` and `run()` are successful, the `on_success()` method will be called next, if implemented. It has the signature `on_success(self, retval, task_id, args, kwargs)`; as with `before_start()` the `task_id` and `args` parameters can generally be ignored, while `retval` is the return value from `run()`, and `kwargs` will contain the user-specified variables passed into the Job execution.
 
-#### The `on_failure()` Method
+### The `on_failure()` Method
 
 If either `before_start()` or `run()` raises any unhandled exception, or reports a failure overall through `fail()`, the `on_failure()` method will be called next, if implemented. It has the signature `on_failure(self, exc, task_id, args, kwargs, einfo)`; of these parameters, the `exc` will contain the exception that was raised (if any) or the return value from `before_start()` or `run()` (otherwise), and `kwargs` will contain the user-specified variables passed into the Job.
 
-#### The `after_return()` Method
+### The `after_return()` Method
 
 Regardless of the overall Job execution success or failure, the `after_return()` method will be called after `on_success()` or `on_failure()`. It has the signature `after_return(self, status, retval, task_id, args, kwargs, einfo)`; the `status` will indicate success or failure (using the `JobResultStatusChoices` enum), `retval` is *either* the return value from `run()` or the exception raised, and once again `kwargs` contains the user variables.
