@@ -53,6 +53,7 @@ logger = logging.getLogger(__name__)
 # Change logging
 #
 
+
 def _ensure_changelog_exists(action, sender, instance):
     """
     If this is an existing object that should have a change log entry, ensure
@@ -83,7 +84,7 @@ def _ensure_changelog_exists(action, sender, instance):
 
     # Create a new change log entry for this object.
     change = instance.to_objectchange(
-        action = action,
+        action=action,
     )
 
     # The context manager retrieves all changes by request ID. If we use the
@@ -94,6 +95,7 @@ def _ensure_changelog_exists(action, sender, instance):
     change.user = change_context.get_user(instance)
 
     change.save()
+
 
 def get_user_if_authenticated(user, instance):
     """Return the user object associated with the request if the user is defined.
