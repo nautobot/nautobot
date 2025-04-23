@@ -65,7 +65,7 @@ def _ensure_changelog_exists(action, sender, instance):
         return
 
     # Does this object type not persist in the database?
-    if not (instance, "present_in_database"):
+    if not hasattr(instance, "present_in_database"):
         return
 
     # Is this a new object?
@@ -92,7 +92,8 @@ def _ensure_changelog_exists(action, sender, instance):
     # than a single change. This is wildly inelegant, but scopes the hack to
     # just this one file.
     change.request_id = uuid.uuid4()
-    change.user = change_context.get_user(instance)
+    if change_context is not None:
+        change.user = change_context.get_user(instance)
 
     change.save()
 
@@ -181,6 +182,16 @@ def invalidate_openapi_schema_cache(sender, **kwargs):
 
 
 @receiver(pre_save)
+def _handle_changed_object_pre_save(sender, instance, raw=False, **kwargs):
+    """
+    Fires before an object is created or updated.
+    It creates an ObjectChange Log Entry to capture the old state of the object.
+    This is used to ensure that a previous changelog entry exists for this object when this object is updated.
+    """
+    # Ensure that a changelog entry exists for this object that is being updated
+    if hasattr(instance, "to_objectchange") and not kwargs.get("created"):
+        _ensure_changelog_exists(ObjectChangeActionChoices.ACTION_UPDATE, sender, instance)
+
 @receiver(post_save)
 @receiver(m2m_changed)
 def _handle_changed_object(sender, instance, raw=False, **kwargs):
@@ -189,10 +200,6 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
     """
 
     if raw:
-        return
-
-    if kwargs.get("signal") == pre_save and not kwargs.get("created"):
-        _ensure_changelog_exists(ObjectChangeActionChoices.ACTION_UPDATE, sender, instance)
         return
 
     change_context = change_context_state.get()

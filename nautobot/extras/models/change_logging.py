@@ -213,19 +213,23 @@ class ObjectChange(BaseModel):
 
         prior_change = self.get_prev_change(only=["object_data_v2", "object_data"])
 
-        # Deal with the cases where we are trying to capture an object deletion and there is no prior change record.
-        # This can happen when the object is first created and the changelog for that object creation action is deleted.
-        if self.action == ObjectChangeActionChoices.ACTION_DELETE and prior_change is None:
-            prechange = self.object_data_v2
-            if prechange is None:
-                prechange = self.object_data
+        # Populate the prechange field, create actions do not need to have a prechange field
+        if self.action != ObjectChangeActionChoices.ACTION_CREATE:
+            # Deal with the cases where we are trying to capture an object deletion and there is no prior change record.
+            # This can happen when the object is first created and the changelog for that object creation action is deleted.
+            if prior_change is None:
+                prechange = self.object_data_v2
+                if prechange is None:
+                    prechange = self.object_data
+            else:
+                prechange = prior_change.object_data_v2
+                if prechange is None:
+                    prechange = prior_change.object_data
 
-        if self.action != ObjectChangeActionChoices.ACTION_CREATE and prior_change is not None:
-            prechange = prior_change.object_data_v2
-            if prechange is None:
-                prechange = prior_change.object_data
-
+        # Populate the postchange field, delete actions do not need to have a postchange field
         if self.action != ObjectChangeActionChoices.ACTION_DELETE:
+            # If this is a create action, we want to use the object_data_v2 field if it exists.
+            # Otherwise, we will use the object_data field.
             postchange = self.object_data_v2
             if postchange is None:
                 postchange = self.object_data
