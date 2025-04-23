@@ -3,7 +3,6 @@ from django.urls import path
 from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras import views
 from nautobot.extras.models import (
-    ComputedField,
     ConfigContext,
     ConfigContextSchema,
     CustomField,
@@ -22,6 +21,7 @@ from nautobot.extras.models import (
 app_name = "extras"
 
 router = NautobotUIViewSetRouter()
+router.register("computed-fields", views.ComputedFieldUIViewSet)
 router.register("contacts", views.ContactUIViewSet)
 router.register("contact-associations", views.ContactAssociationUIViewSet)
 router.register("export-templates", views.ExportTemplateUIViewSet)
@@ -43,37 +43,6 @@ urlpatterns = [
     # Change logging
     path("object-changes/", views.ObjectChangeListView.as_view(), name="objectchange_list"),
     path("object-changes/<uuid:pk>/", views.ObjectChangeView.as_view(), name="objectchange"),
-    # Computed Fields
-    path("computed-fields/", views.ComputedFieldListView.as_view(), name="computedfield_list"),
-    path("computed-fields/add/", views.ComputedFieldEditView.as_view(), name="computedfield_add"),
-    path(
-        "computed-fields/delete/",
-        views.ComputedFieldBulkDeleteView.as_view(),
-        name="computedfield_bulk_delete",
-    ),
-    path("computed-fields/<uuid:pk>/", views.ComputedFieldView.as_view(), name="computedfield"),
-    path(
-        "computed-fields/<uuid:pk>/edit/",
-        views.ComputedFieldEditView.as_view(),
-        name="computedfield_edit",
-    ),
-    path(
-        "computed-fields/<uuid:pk>/delete/",
-        views.ComputedFieldDeleteView.as_view(),
-        name="computedfield_delete",
-    ),
-    path(
-        "computed-fields/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="computedfield_changelog",
-        kwargs={"model": ComputedField},
-    ),
-    path(
-        "computed-fields/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="computedfield_notes",
-        kwargs={"model": ComputedField},
-    ),
     # Config contexts
     path(
         "config-contexts/",
