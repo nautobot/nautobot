@@ -6,7 +6,6 @@ from nautobot.extras.models import (
     ConfigContext,
     ConfigContextSchema,
     CustomField,
-    CustomLink,
     DynamicGroup,
     GitRepository,
     GraphQLQuery,
@@ -24,6 +23,7 @@ router = NautobotUIViewSetRouter()
 router.register("computed-fields", views.ComputedFieldUIViewSet)
 router.register("contacts", views.ContactUIViewSet)
 router.register("contact-associations", views.ContactAssociationUIViewSet)
+router.register("custom-links", views.CustomLinkUIViewSet)
 router.register("export-templates", views.ExportTemplateUIViewSet)
 router.register("external-integrations", views.ExternalIntegrationUIViewSet)
 router.register("job-buttons", views.JobButtonUIViewSet)
@@ -182,37 +182,6 @@ urlpatterns = [
         views.ObjectNotesView.as_view(),
         name="customfield_notes",
         kwargs={"model": CustomField},
-    ),
-    # Custom links
-    path("custom-links/", views.CustomLinkListView.as_view(), name="customlink_list"),
-    path("custom-links/add/", views.CustomLinkEditView.as_view(), name="customlink_add"),
-    path(
-        "custom-links/delete/",
-        views.CustomLinkBulkDeleteView.as_view(),
-        name="customlink_bulk_delete",
-    ),
-    path("custom-links/<uuid:pk>/", views.CustomLinkView.as_view(), name="customlink"),
-    path(
-        "custom-links/<uuid:pk>/edit/",
-        views.CustomLinkEditView.as_view(),
-        name="customlink_edit",
-    ),
-    path(
-        "custom-links/<uuid:pk>/delete/",
-        views.CustomLinkDeleteView.as_view(),
-        name="customlink_delete",
-    ),
-    path(
-        "custom-links/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="customlink_changelog",
-        kwargs={"model": CustomLink},
-    ),
-    path(
-        "custom-links/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="customlink_notes",
-        kwargs={"model": CustomLink},
     ),
     # Dynamic Groups
     path("dynamic-groups/", views.DynamicGroupListView.as_view(), name="dynamicgroup_list"),
