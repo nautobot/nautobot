@@ -43,20 +43,24 @@ class RadioProfileFieldsPanel(ObjectFieldsPanel):
     Custom panel to render specific radio profile fields with label formatting.
     """
 
+    # Define custom renderers per field
+    FIELD_RENDERERS = {
+        "channel_width": lambda v: [f"{item}MHz" for item in v],
+        "allowed_channel_list": lambda v: v,
+    }
+
     def render_value(self, key, value, context):
         """
-        Custom render for 'channel_width' and 'allowed_channel_list'.
+        Custom render using FIELD_RENDERERS if applicable.
         """
-        if key in ["channel_width", "allowed_channel_list"]:
+        if key in self.FIELD_RENDERERS:
             if value:
-                # Add 'MHz' only for 'channel_width'
-                suffix = "MHz" if key == "channel_width" else ""
+                formatted_values = self.FIELD_RENDERERS[key](value)
                 return format_html_join(
-                    " ", '<span class="label label-default">{0}</span>', ((f"{item}{suffix}",) for item in value)
+                    " ", '<span class="label label-default">{0}</span>', ((item,) for item in formatted_values)
                 )
             return helpers.placeholder(value)
 
-        # Default rendering for other fields
         return super().render_value(key, value, context)
 
 
