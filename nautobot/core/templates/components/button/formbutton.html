@@ -1,0 +1,7 @@
+<button type="button" class="btn btn-{{ color }} {% if size %} btn-{{ size }}{% endif %}"
+    action-url="{{link}}" data-form-id="{{form_id}}" 
+    {% for key, value in attributes.items %}{{ key }}="{{ value }}" {% endfor %}
+>
+{% if icon %}<span class="mdi {{ icon }}" aria-hidden="true"></span>{% endif %}
+{{ label }}
+</button>
