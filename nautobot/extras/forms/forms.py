@@ -42,6 +42,7 @@ from nautobot.core.forms.widgets import ClearableFileInput
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
+    ButtonClassChoices,
     DynamicGroupTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
@@ -137,6 +138,7 @@ __all__ = (
     "CustomFieldFilterForm",
     "CustomFieldForm",
     "CustomFieldModelCSVForm",
+    "CustomLinkBulkEditForm",
     "CustomLinkFilterForm",
     "CustomLinkForm",
     "DynamicGroupBulkAssignForm",
@@ -584,6 +586,25 @@ class CustomFieldBulkDeleteForm(ConfirmationForm):
 #
 # Custom Links
 #
+class CustomLinkBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin):
+    """Bulk edit form for CustomLink objects."""
+
+    pk = forms.ModelMultipleChoiceField(queryset=CustomLink.objects.all(), widget=forms.MultipleHiddenInput())
+    group_name = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    weight = forms.IntegerField(required=False)
+    target_url = forms.CharField(max_length=500, required=False)
+    text = forms.CharField(max_length=500, required=False)
+    button_class = forms.ChoiceField(choices=add_blank_choice(ButtonClassChoices.CHOICES), required=False)
+    new_window = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("custom_links").get_query()).order_by("app_label", "model"),
+        required=False,
+        label="Content Type",
+    )
+
+    class Meta:
+        model = CustomLink
+        nullable_fields = ["group_name"]
 
 
 class CustomLinkForm(BootstrapMixin, forms.ModelForm):
