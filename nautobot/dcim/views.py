@@ -4294,6 +4294,7 @@ class SoftwareImageFileUIViewSet(NautobotUIViewSet):
                 tab_id="device_type",
                 url_name="dcim:softwareimagefile_device_type",
                 label="Device Type",
+                related_object_attribute="device_types",
                 panels=(
                     object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
@@ -4310,6 +4311,7 @@ class SoftwareImageFileUIViewSet(NautobotUIViewSet):
                 tab_id="device",
                 url_name="dcim:softwareimagefile_device",
                 label="Device",
+                related_object_attribute="devices",
                 panels=(
                     object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
@@ -4327,6 +4329,7 @@ class SoftwareImageFileUIViewSet(NautobotUIViewSet):
                 tab_id="inventory_item",
                 url_name="dcim:softwareimagefile_inventory_item",
                 label="Inventory Item",
+                related_object_attribute="inventory_items",
                 panels=(
                     object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
@@ -4344,6 +4347,7 @@ class SoftwareImageFileUIViewSet(NautobotUIViewSet):
                 tab_id="virtual_machine",
                 url_name="dcim:softwareimagefile_virtual_machine",
                 label="Virtual Machine",
+                related_object_attribute="virtual_machines",
                 panels=(
                     object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
