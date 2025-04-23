@@ -206,7 +206,6 @@ class CloudResourceTypeUIViewSet(NautobotUIViewSet):
                     object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
                         weight=100,
-                        label="cloud_networks",
                         table_class=CloudNetworkTable,
                         table_attribute="cloud_networks",
                         tab_id="networks",
@@ -225,7 +224,6 @@ class CloudResourceTypeUIViewSet(NautobotUIViewSet):
                         weight=100,
                         table_class=CloudServiceTable,
                         table_attribute="cloud_services",
-                        exclude_columns=("cloud_network_count"),
                         tab_id="services",
                     ),
                 ),
