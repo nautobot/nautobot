@@ -1,20 +1,152 @@
-## Installing Jobs
-<!-- move:installation.md -->
-Jobs may be installed in one of three ways:
+# Installing Jobs
 
-* Manually installed as files in the [`JOBS_ROOT`](../../user-guide/administration/configuration/settings.md#jobs_root) path (which defaults to `$NAUTOBOT_ROOT/jobs/`).
-    * Python files and subdirectories containing Python files will be dynamically loaded at Nautobot startup in order to discover and register available Job classes. For example, a Job class named `MyJobClass` in `$JOBS_ROOT/my_job.py` will be loaded into Nautobot as `my_job.MyJobClass`.
-    * All Python modules in this directory are imported by Nautobot and all worker processes at startup. If you have a `custom_jobs.py` and a `custom_jobs_module/__init__.py` file in your `JOBS_ROOT`, both of these files will be imported at startup.
-* Imported from an external [Git repository](../../user-guide/platform-functionality/gitrepository.md#jobs).
-    * Git repositories are loaded into the module namespace of the `GitRepository.slug` value at startup. For example, if your `slug` value is `my_git_jobs` your Jobs will be loaded into Python as `my_git_jobs.jobs.MyJobClass`.
-    * All git repositories providing Jobs must include a `__init__.py` file at the root of the repository.
-    * Nautobot and all worker processes will import the git repository's `jobs` module at startup so a `jobs.py` or `jobs/__init__.py` file must exist in the root of the repository.
-* Packaged as part of an [App](../apps/api/platform-features/jobs.md).
-    * Jobs installed this way are part of the App's Python module and can import code from elsewhere in the App or even have dependencies on other packages, if needed, via the standard Python packaging mechanisms.
+Nautobot supports three ways to install Jobs:
 
-In any case, each module holds one or more Job classes (Python classes), each of which serves a specific purpose. The logic of each Job can be split into a number of distinct methods, each of which performs a discrete portion of the overall Job logic.
+- **Manually**, by placing Python files under the [`JOBS_ROOT`](../../user-guide/administration/configuration/settings.md#jobs_root) path (defaults to `$NAUTOBOT_ROOT/jobs/`)
+- **From a Git repository**, by linking an external repository that contains Jobs
+- **As part of an App**, by defining Jobs inside the App’s Python module
 
-For example, we can create a module named `device_jobs.py` to hold all of our Jobs which pertain to devices in Nautobot. Within that module, we might define several Jobs. Each Job is defined as a Python class inheriting from `nautobot.apps.jobs.Job`, which provides the base functionality needed to accept user input and log activity.
+Each approach supports modular organization, multiple Job classes, and reuse of shared logic. The key difference is how Nautobot loads the files into its job registry and associates them with database Job records.
 
-+/- 2.0.0 "`register_jobs()` must be called"
-    All Job classes that are intended to be runnable must now be registered by a call to `nautobot.apps.jobs.register_jobs()` on module import. This allows for a module to, if desired, define "abstract" base Job classes that are defined in code but are not registered (and therefore are not runnable in Nautobot). The `register_jobs` method accepts one or more Job classes as arguments.
+!!! tip
+    Looking to run Jobs in Kubernetes? See [Kubernetes Job Support](../../../user-guide/platform-functionality/jobs/kubernetes-job-support/).
+
+## Manual Installation via `JOBS_ROOT`
+
+Nautobot automatically loads all Python modules found in the `JOBS_ROOT` directory and its subdirectories. Jobs defined here are ideal for quick prototypes or standalone deployments.
+
+!!! note "Refreshing Job records"
+    After you add or edit files, restart the Celery worker **and** run `nautobot-server post_upgrade` so Nautobot refreshes its Job database records.
+
+Key requirements:
+
+- Files must contain valid Job classes (subclasses of `nautobot.apps.jobs.Job`)
+- Each Job must be registered using `register_jobs()`
+- **All modules in this directory are imported** by the application and Celery workers at startup
+- To update Job records after editing, **run** `nautobot-server post_upgrade`
+- **Jobs are not enabled by default**. You must enable them manually in the UI before they can be run.
+
+Once registered and enabled, Jobs will appear in the **Jobs** tab grouped by the module’s `name` attribute.
+
+Example layout:
+
+```text
+$NAUTOBOT_ROOT/jobs/
+├── __init__.py
+├── device_jobs.py
+└── inventory/
+    ├── __init__.py
+    └── check_inventory.py
+```
+
+In `device_jobs.py`:
+
+```python
+from nautobot.apps.jobs import Job, register_jobs
+
+class CleanupDevices(Job):
+    class Meta:
+        name = "Cleanup Obsolete Devices"
+
+    def run(self):
+        self.logger.info("Cleaning old device entries")
+
+register_jobs(CleanupDevices)
+```
+
+## Installation from a Git Repository
+
+To install Jobs from a Git source, link a Git repository to Nautobot via the UI or REST API. ([See Git integration docs](../../user-guide/platform-functionality/gitrepository.md#jobs))
+
+Git repositories are loaded into the module namespace of the `GitRepository.slug` value at startup. For example, if your `slug` value is `my_git_jobs` your Jobs will be loaded into Python as `my_git_jobs.jobs.MyJobClass`.
+
+Key requirements:
+
+- The repo **must** contain a top-level `__init__.py` file
+- A `jobs.py` file **or** a `jobs/` subdirectory with a `jobs/__init__.py` file must exist in the repo
+- Only the `jobs` module (not the whole repo) is imported
+- Each Job must be explicitly registered via `register_jobs()`
+- **Jobs are not enabled by default** and must be enabled manually
+
+Once registered and enabled, Jobs will appear in the **Jobs** tab grouped by their module’s metadata.
+
+Example layout:
+
+```text
+my_repo/
+├── __init__.py
+└── jobs/
+    ├── __init__.py
+    └── sync_devices.py
+```
+
+In `sync_devices.py`:
+
+```python
+from nautobot.apps.jobs import Job, register_jobs
+
+class SyncDevices(Job):
+    class Meta:
+        name = "Sync Devices from CMDB"
+
+    def run(self):
+        self.logger.info("Running external sync...")
+
+register_jobs(SyncDevices)
+```
+
+When the repo is synced, Nautobot loads the job class under the path:  
+`<slug>.jobs.SyncDevices`, for example, `my_repo.jobs.SyncDevices`.
+
+!!! note "Importing Job Submodules"
+    If your `jobs/` module imports submodules, make sure `__init__.py` imports them explicitly.
+
+## Installation as Part of an App
+
+Apps are full Python packages that can include models, views, static files *and* can include Jobs. They are the best choice for reusable automation. To learn how to create a Nautobot App, check out the [App Development Documentation](../../apps/).
+
+Key requirements:
+
+- Jobs live inside the App's Python module tree
+- App dependencies can be managed via `pyproject.toml` or `setup.py`
+- Define the Job module path in [`NautobotAppConfig.jobs`](../../apps/api/nautobot-app-config/#nautobotappconfig-code-location-attributes) (defaults to `jobs.jobs`)
+- Use `register_jobs()` to register any included Jobs
+- Jobs must be manually enabled before running
+
+Once registered and enabled, Jobs appear in the **Jobs** tab grouped by their App and module metadata.
+
+Example layout:
+
+```text
+my_app/
+├── __init__.py
+├── apps.py
+├── jobs/
+│   ├── __init__.py
+│   ├── cleanup.py
+│   └── report.py
+└── ...
+```
+
+In `apps.py`:
+
+```python
+from nautobot.apps.apps import NautobotAppConfig
+
+class MyAppConfig(NautobotAppConfig):
+    name = "my_app"
+    jobs = "my_app.jobs"
+```
+
+In `jobs/__init__.py`:
+
+```python
+from nautobot.apps.jobs import register_jobs
+from .cleanup import CleanupJob
+from .report import ComplianceReport
+
+register_jobs(CleanupJob, ComplianceReport)
+```
+
+!!! tip
+    For more on App-integrated Jobs, see the [Jobs platform feature](../apps/api/platform-features/jobs.md).
