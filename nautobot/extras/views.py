@@ -143,32 +143,15 @@ logger = logging.getLogger(__name__)
 #
 
 
-class ComputedFieldListView(generic.ObjectListView):
+class ComputedFieldUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ComputedFieldBulkEditForm
+    filterset_class = filters.ComputedFieldFilterSet
+    filterset_form_class = forms.ComputedFieldFilterForm
+    form_class = forms.ComputedFieldForm
+    serializer_class = serializers.ComputedFieldSerializer
+    table_class = tables.ComputedFieldTable
     queryset = ComputedField.objects.all()
-    table = tables.ComputedFieldTable
-    filterset = filters.ComputedFieldFilterSet
-    filterset_form = forms.ComputedFieldFilterForm
     action_buttons = ("add",)
-
-
-class ComputedFieldView(generic.ObjectView):
-    queryset = ComputedField.objects.all()
-
-
-class ComputedFieldEditView(generic.ObjectEditView):
-    queryset = ComputedField.objects.all()
-    model_form = forms.ComputedFieldForm
-    template_name = "extras/computedfield_edit.html"
-
-
-class ComputedFieldDeleteView(generic.ObjectDeleteView):
-    queryset = ComputedField.objects.all()
-
-
-class ComputedFieldBulkDeleteView(generic.BulkDeleteView):
-    queryset = ComputedField.objects.all()
-    table = tables.ComputedFieldTable
-    filterset = filters.ComputedFieldFilterSet
 
 
 #
