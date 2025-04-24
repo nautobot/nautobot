@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.functional import cached_property
 
+from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.requests import normalize_querydict
@@ -89,52 +90,60 @@ class ClusterGroupUIViewSet(NautobotUIViewSet):
 #
 
 
-class ClusterListView(generic.ObjectListView):
-    permission_required = "virtualization.view_cluster"
-    queryset = Cluster.objects.all()
-    table = tables.ClusterTable
-    filterset = filters.ClusterFilterSet
-    filterset_form = forms.ClusterFilterForm
-
-
-class ClusterView(generic.ObjectView):
+class ClusterUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ClusterBulkEditForm
+    filterset_class = filters.ClusterFilterSet
+    filterset_form_class = forms.ClusterFilterForm
+    form_class = forms.ClusterForm
+    serializer_class = serializers.ClusterSerializer
+    table_class = tables.ClusterTable
     queryset = Cluster.objects.all()
 
-    def get_extra_context(self, request, instance):
-        devices = Device.objects.restrict(request.user, "view").filter(cluster=instance)
-        device_table = DeviceTable(list(devices), orderable=False)
-        if request.user.has_perm("virtualization.change_cluster"):
-            device_table.columns.show("pk")
-
-        return {"device_table": device_table, **super().get_extra_context(request, instance)}
-
-
-class ClusterEditView(generic.ObjectEditView):
-    template_name = "virtualization/cluster_edit.html"
-    queryset = Cluster.objects.all()
-    model_form = forms.ClusterForm
-
-
-class ClusterDeleteView(generic.ObjectDeleteView):
-    queryset = Cluster.objects.all()
-
-
-class ClusterBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Cluster.objects.all()
-    table = tables.ClusterTable
-
-
-class ClusterBulkEditView(generic.BulkEditView):
-    queryset = Cluster.objects.all()
-    filterset = filters.ClusterFilterSet
-    table = tables.ClusterTable
-    form = forms.ClusterBulkEditForm
-
-
-class ClusterBulkDeleteView(generic.BulkDeleteView):
-    queryset = Cluster.objects.all()
-    filterset = filters.ClusterFilterSet
-    table = tables.ClusterTable
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                table_class=DeviceTable,
+                table_filter="cluster",
+                table_title="Host Devices",
+                enable_bulk_actions=True,
+                add_button_route=None,
+                form_id="device_form",
+                footer_buttons=[
+                    object_detail.FormButton(
+                        form_id="device_form",
+                        link_name="virtualization:cluster_remove_devices",
+                        label="Remove Devices",
+                        weight=100,
+                        color=ButtonActionColorChoices.DELETE,
+                        icon="mdi-trash-can-outline",
+                        size="xs",
+                    ),
+                    object_detail.Button(
+                        link_name="virtualization:cluster_add_devices",
+                        label="Add Devices",
+                        weight=200,
+                        color=ButtonActionColorChoices.ADD,
+                        icon="mdi-plus",
+                        size="xs",
+                    ),
+                ],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.VirtualMachineTable,
+                table_filter="cluster",
+                add_button_route=None,
+            ),
+        )
+    )
 
 
 class ClusterAddDevicesView(generic.ObjectEditView):

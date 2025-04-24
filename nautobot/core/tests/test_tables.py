@@ -135,6 +135,7 @@ class TableTestCase(TestCase):
             "circuit_termination_z",
             "description",
             "example_app_provider_asn",
+            "actions",
         ]
         expected_configurable_columns = [
             ("cid", "ID"),
