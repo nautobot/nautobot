@@ -1,5 +1,6 @@
+from functools import partial
+
 from django.core.exceptions import ValidationError
-from django.utils.html import format_html_join
 from django_tables2 import RequestConfig
 
 from nautobot.core.templatetags import helpers
@@ -38,32 +39,6 @@ from nautobot.wireless.tables import (
 )
 
 
-class RadioProfileFieldsPanel(ObjectFieldsPanel):
-    """
-    Custom panel to render specific radio profile fields with label formatting.
-    """
-
-    # Define custom renderers per field
-    FIELD_RENDERERS = {
-        "channel_width": lambda v: [f"{item}MHz" for item in v],
-        "allowed_channel_list": lambda v: v,
-    }
-
-    def render_value(self, key, value, context):
-        """
-        Custom render using FIELD_RENDERERS if applicable.
-        """
-        if key in self.FIELD_RENDERERS:
-            if value:
-                formatted_values = self.FIELD_RENDERERS[key](value)
-                return format_html_join(
-                    " ", '<span class="label label-default">{0}</span>', ((item,) for item in formatted_values)
-                )
-            return helpers.placeholder(value)
-
-        return super().render_value(key, value, context)
-
-
 class RadioProfileUIViewSet(NautobotUIViewSet):
     queryset = RadioProfile.objects.all()
     filterset_class = RadioProfileFilterSet
@@ -72,9 +47,10 @@ class RadioProfileUIViewSet(NautobotUIViewSet):
     table_class = RadioProfileTable
     form_class = RadioProfileForm
     bulk_update_form_class = RadioProfileBulkEditForm
+
     object_detail_content = ObjectDetailContent(
         panels=(
-            RadioProfileFieldsPanel(
+            ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
@@ -82,6 +58,8 @@ class RadioProfileUIViewSet(NautobotUIViewSet):
                     "tx_power_min": [helpers.dbm],
                     "tx_power_max": [helpers.dbm],
                     "rx_power_min": [helpers.dbm],
+                    "channel_width": [partial(helpers.label_list, suffix="MHz")],
+                    "allowed_channel_list": [helpers.label_list],
                 },
             ),
             ObjectsTablePanel(

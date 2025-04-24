@@ -1113,6 +1113,12 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         except FieldDoesNotExist:
             field_instance = None
 
+        if key in self.value_transforms:
+            display = value
+            for transform in self.value_transforms[key]:
+                display = transform(display)
+            return display
+
         if key == "_hierarchy":
             return render_ancestor_hierarchy(value)
 
