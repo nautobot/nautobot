@@ -254,8 +254,12 @@ def web_request_context(
             # TODO: get_snapshots() currently requires a DB query per object change processed.
             # We need to develop a more efficient approach: https://github.com/nautobot/nautobot/issues/6303
             snapshots = oc.get_snapshots(
-                pre_object_data[oc.changed_object_id] if pre_object_data is not None else None,
-                pre_object_data_v2[oc.changed_object_id] if pre_object_data_v2 is not None else None,
+                pre_object_data[oc.changed_object_id]
+                if pre_object_data is not None and oc.changed_object_id in pre_object_data
+                else None,
+                pre_object_data_v2[oc.changed_object_id]
+                if pre_object_data_v2 is not None and oc.changed_object_id in pre_object_data_v2
+                else None,
             )
             webhook_queryset = enqueue_webhooks(oc, snapshots=snapshots, webhook_queryset=webhook_queryset)
 
