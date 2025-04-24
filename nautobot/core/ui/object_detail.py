@@ -275,7 +275,14 @@ class DropdownButton(Button):
 
 
 class FormButton(Button):
-    def __init__(self, form_id: str, link_name: str, template_path="components/button/formbutton.html", **kwargs):
+    def __init__(
+        self,
+        form_id: str,
+        link_name: str,
+        template_path="components/button/formbutton.html",
+        link_includes_pk=True,
+        **kwargs,
+    ):
         """
         Initialize a FormButton instance.
 
@@ -287,6 +294,7 @@ class FormButton(Button):
         """
         self.form_id = form_id
         self.link_name = link_name
+        self.link_includes_pk = link_includes_pk
 
         if not self.link_name:
             raise ValueError("FormButton requires a 'link_name'.")
@@ -296,37 +304,13 @@ class FormButton(Button):
 
         super().__init__(link_name=link_name, template_path=template_path, **kwargs)
 
-    def get_extra_context(self, context: Context):
-        return {
-            **super().get_extra_context(context),
-            "form_id": self.form_id,
-        }
-
-
-class FormButtonNoPK(Button):
-    """
-    A button used to submit a form without including the object's primary key in the URL.
-
-    Useful for bulk actions like edit or delete.
-    """
-
-    def __init__(self, form_id, link_name, template_path="components/button/formbutton.html", **kwargs):
-        self.form_id = form_id
-        self.link_name = link_name
-
-        if not self.link_name:
-            raise ValueError("FormButtonNoPK requires 'link_name'.")
-
-        if not self.form_id:
-            raise ValueError("FormButtonNoPK requires 'form_id'.")
-
-        super().__init__(link_name=link_name, template_path=template_path, **kwargs)
-
     def get_link(self, context):
-        """Returns the reversed URL for the view (no object PK)."""
+        """Returns the reversed URL for the view."""
+        if self.link_includes_pk:
+            return super().get_link(context)
         return reverse(self.link_name)
 
-    def get_extra_context(self, context):
+    def get_extra_context(self, context: Context):
         return {
             **super().get_extra_context(context),
             "form_id": self.form_id,
@@ -858,8 +842,7 @@ class ObjectsTablePanel(Panel):
         request = context["request"]
         if self.context_table_key:
             body_content_table = context.get(self.context_table_key)
-            body_content_table_class = type(body_content_table)
-            body_content_table_model = body_content_table_class.Meta.model
+            body_content_table_model = body_content_table.Meta.model
         else:
             body_content_table_class = self.table_class
             body_content_table_model = body_content_table_class.Meta.model
