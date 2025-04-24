@@ -4325,7 +4325,7 @@ class ControllerUIViewSet(NautobotUIViewSet):
                 label="Wireless Networks",
                 related_object_attribute="device_group_wireless_network_assignments",
                 panels=(
-                    object_detail.ObjectsTablePanel(
+                    object_detail.ObjectsTablePanelWithPaginator(
                         section=SectionChoices.FULL_WIDTH,
                         weight=100,
                         table_title="Wireless Networks",

@@ -90,7 +90,7 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
                 url_name="cloud:cloudnetwork_children",
                 related_object_attribute="children",
                 panels=(
-                    object_detail.ObjectsTablePanel(
+                    object_detail.ObjectsTablePanelWithPaginator(
                         section=SectionChoices.FULL_WIDTH,
                         weight=100,
                         label="Children",
@@ -107,7 +107,7 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
                 url_name="cloud:cloudnetwork_prefixes",
                 related_object_attribute="prefixes",
                 panels=(
-                    object_detail.ObjectsTablePanel(
+                    object_detail.ObjectsTablePanelWithPaginator(
                         section=SectionChoices.FULL_WIDTH,
                         weight=100,
                         table_class=PrefixTable,
@@ -124,7 +124,7 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
                 url_name="cloud:cloudnetwork_circuits",
                 related_object_attribute="circuit_terminations",
                 panels=(
-                    object_detail.ObjectsTablePanel(
+                    object_detail.ObjectsTablePanelWithPaginator(
                         section=SectionChoices.FULL_WIDTH,
                         weight=100,
                         table_class=CircuitTable,
@@ -141,7 +141,7 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
                 url_name="cloud:cloudnetwork_cloud_services",
                 related_object_attribute="cloud_services",
                 panels=(
-                    object_detail.ObjectsTablePanel(
+                    object_detail.ObjectsTablePanelWithPaginator(
                         section=SectionChoices.FULL_WIDTH,
                         weight=100,
                         table_class=CloudServiceTable,

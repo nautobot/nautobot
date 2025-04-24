@@ -911,6 +911,18 @@ class ObjectsTablePanel(Panel):
         }
 
 
+class ObjectsTablePanelWithPaginator(ObjectsTablePanel):
+    """
+    Returns an ObjectsTablePanel with a paginator.
+
+    This class should only be used in DistinctViewTabs where only **one** table is displayed.
+    """
+
+    def __init__(self, *, template_path="components/panel/panel_with_paginator.html", **kwargs):
+        """Initialize the ObjectsTablePanelWithPaginator instance."""
+        super().__init__(template_path=template_path, **kwargs)
+
+
 class KeyValueTablePanel(Panel):
     """A panel that displays a two-column table of keys and values, as seen in most object detail views."""
 
