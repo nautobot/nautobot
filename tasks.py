@@ -77,7 +77,7 @@ namespace.configure(
     {
         "nautobot": {
             "project_name": "nautobot",  # extended automatically with Nautobot major/minor ver, see docker_compose()
-            "python_ver": "3.12",
+            "python_ver": "3.13",
             "local": False,
             "ephemeral_ports": False,
             "compose_dir": os.path.join(BASE_DIR, "development/"),
