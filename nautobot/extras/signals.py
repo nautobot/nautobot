@@ -95,8 +95,8 @@ def _cache_obj_data_in_change_context(action, sender, instance):
         change.user = change_context.get_user(instance)
 
     # cache the previous object data in the change context
-    change_context.pre_object_data = change.object_data
-    change_context.pre_object_data_v2 = change.object_data_v2
+    change_context.pre_object_data[instance.pk] = change.object_data
+    change_context.pre_object_data_v2[instance.pk] = change.object_data_v2
     change_context_state.set(change_context)
 
 
