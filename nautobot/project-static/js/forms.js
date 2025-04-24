@@ -57,7 +57,8 @@ function initializeStaticChoiceSelection(context, dropdownParent=null){
     this_context.find('.nautobot-select2-static').select2({
         allowClear: true,
         placeholder: "---------",
-        theme: "bootstrap",
+        theme: "bootstrap-5",
+        selectionCssClass: "select2--small",
         width: "off",
         dropdownParent: dropdownParent
     });
@@ -163,7 +164,8 @@ function initializeColorPicker(context, dropdownParent=null){
     this_context.find('.nautobot-select2-color-picker').select2({
         allowClear: true,
         placeholder: "---------",
-        theme: "bootstrap",
+        theme: "bootstrap-5",
+        selectionCssClass: "select2--small",
         templateResult: colorPickerClassCopy,
         templateSelection: colorPickerClassCopy,
         width: "off",
@@ -227,7 +229,8 @@ function initializeDynamicChoiceSelection(context, dropdownParent=null){
         thisobj.select2({
             allowClear: true,
             placeholder: placeholder,
-            theme: "bootstrap",
+            theme: "bootstrap-5",
+            selectionCssClass: "select2--small",
             width: "off",
             dropdownParent: dropdownParent,
             ajax: {
@@ -522,7 +525,8 @@ function initializeMultiValueChar(context, dropdownParent=null){
     this_context.find('.nautobot-select2-multi-value-char').select2({
         allowClear: true,
         tags: true,
-        theme: "bootstrap",
+        theme: "bootstrap-5",
+        selectionCssClass: "select2--small",
         placeholder: "---------",
         multiple: true,
         dropdownParent: dropdownParent,
