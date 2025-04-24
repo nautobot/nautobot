@@ -281,6 +281,9 @@ jobs:
           tag-latest-for-py: "${{ steps.config.outputs.tag-latest-for-py }}"
           target: "final"
       - name: "Build and Push `final-dev` (amd64 only)"
+        if:
+          steps.config.outputs.tag-latest-for-branch != 'true' ||
+          steps.config.outputs.branch != 'next'
         uses: "./.github/actions/build-nautobot-image"
         with:
           branch: "${{ steps.config.outputs.branch }}"
@@ -292,7 +295,7 @@ jobs:
           tag-latest-for-branch: "${{ steps.config.outputs.tag-latest-for-branch }}"
           tag-latest-for-py: "${{ steps.config.outputs.tag-latest-for-py }}"
           target: "final-dev"
-      - name: "Build and Push `final-dev` arm64 as well, only for next + latest"
+      - name: "Build and Push `final-dev` (amd64 + arm64) for 3.13 + next"
         if:
           steps.config.outputs.tag-latest-for-branch == 'true' &&
           steps.config.outputs.branch == 'next'
@@ -300,7 +303,7 @@ jobs:
         with:
           branch: "${{ steps.config.outputs.branch }}"
           image: "ghcr.io/nautobot/nautobot-dev"
-          platforms: "linux/arm64"
+          platforms: "linux/amd64,linux/arm64"
           push: "true"
           python-version: "${{ matrix.python-version }}"
           tag-latest: "${{ steps.config.outputs.tag-latest }}"
