@@ -19,7 +19,7 @@ from nautobot.apps.forms import (
 )
 from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import Device, Interface
-from nautobot.extras.models import DynamicGroup
+from nautobot.extras.models import DynamicGroup, SecretsGroup
 from nautobot.ipam.models import IPAddress, Prefix
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 
@@ -30,6 +30,13 @@ logger = logging.getLogger(__name__)
 
 class VPNProfileForm(NautobotModelForm, TenancyForm):  # pylint: disable=too-many-ancestors
     """Form for creating and updating VPNProfile."""
+
+    secrets_group = DynamicModelChoiceField(
+        queryset=SecretsGroup.objects.all(),
+        required=False,
+        label="Secrets Group",
+        help_text="Secrets Group for the VPN Profile.",
+    )
 
     class Meta:
         """Meta attributes."""
@@ -114,6 +121,37 @@ class VPNProfileFilterForm(NautobotFilterForm, TenancyFilterForm):  # pylint: di
 class VPNPhase1PolicyForm(NautobotModelForm, TenancyForm):  # pylint: disable=too-many-ancestors
     """Form for creating and updating VPNPhase1Policy."""
 
+    ike_version = forms.ChoiceField(
+        required=False,
+        choices=add_blank_choice(choices.IkeVersionChoices),
+        widget=StaticSelect2,
+        label="IKE Version",
+    )
+    encryption_algorithm = forms.ChoiceField(
+        required=False,
+        choices=add_blank_choice(choices.EncryptionAlgorithmChoices),
+        widget=StaticSelect2,
+        label="Encryption Algorithm",
+    )
+    integrity_algorithm = forms.ChoiceField(
+        required=False,
+        choices=add_blank_choice(choices.IntegrityAlgorithmChoices),
+        widget=StaticSelect2,
+        label="Integrity Algorithm",
+    )
+    dh_group = forms.ChoiceField(
+        required=False,
+        choices=add_blank_choice(choices.DhGroupChoices),
+        widget=StaticSelect2,
+        label="Diffie-Hellman Group",
+    )
+    authentication_method = forms.ChoiceField(
+        required=False,
+        choices=add_blank_choice(choices.AuthenticationMethodChoices),
+        widget=StaticSelect2,
+        label="Authentication Method",
+    )
+
     class Meta:
         """Meta attributes."""
 
@@ -187,6 +225,25 @@ class VPNPhase1PolicyFilterForm(NautobotFilterForm, TenancyFilterForm):  # pylin
 class VPNPhase2PolicyForm(NautobotModelForm, TenancyForm):  # pylint: disable=too-many-ancestors
     """Form for creating and updating VPNPhase2Policy."""
 
+    encryption_algorithm = forms.ChoiceField(
+        required=False,
+        choices=add_blank_choice(choices.EncryptionAlgorithmChoices),
+        widget=StaticSelect2,
+        label="Encryption Algorithm",
+    )
+    integrity_algorithm = forms.ChoiceField(
+        required=False,
+        choices=add_blank_choice(choices.IntegrityAlgorithmChoices),
+        widget=StaticSelect2,
+        label="Integrity Algorithm",
+    )
+    pfs_group = forms.ChoiceField(
+        required=False,
+        choices=add_blank_choice(choices.DhGroupChoices),
+        widget=StaticSelect2,
+        label="PFS Group",
+    )
+
     class Meta:
         """Meta attributes."""
 
@@ -243,6 +300,12 @@ class VPNPhase2PolicyFilterForm(NautobotFilterForm, TenancyFilterForm):  # pylin
 class VPNForm(NautobotModelForm, TenancyForm):  # pylint: disable=too-many-ancestors
     """Form for creating and updating VPN."""
 
+    vpn_profile = DynamicModelChoiceField(
+        queryset=models.VPNProfile.objects.all(),
+        required=False,
+        label="VPN Profile",
+    )
+
     class Meta:
         """Meta attributes."""
 
@@ -282,6 +345,33 @@ class VPNFilterForm(NautobotFilterForm, TenancyFilterForm):  # pylint: disable=t
 
 class VPNTunnelForm(NautobotModelForm, TenancyForm):  # pylint: disable=too-many-ancestors
     """Form for creating and updating VPNTunnel."""
+
+    vpn_profile = DynamicModelChoiceField(
+        queryset=models.VPNProfile.objects.all(),
+        required=False,
+        label="VPN Profile",
+    )
+    vpn = DynamicModelChoiceField(
+        queryset=models.VPN.objects.all(),
+        required=False,
+        label="VPN",
+    )
+    encapsulation = forms.ChoiceField(
+        required=True,
+        choices=add_blank_choice(choices.EncapsulationChoices),
+        widget=StaticSelect2,
+        label="Encapsulation",
+    )
+    endpoint_a = DynamicModelChoiceField(
+        queryset=models.VPNTunnelEndpoint.objects.all(),
+        required=False,
+        label="Endpoint A",
+    )
+    endpoint_z = DynamicModelChoiceField(
+        queryset=models.VPNTunnelEndpoint.objects.all(),
+        required=False,
+        label="Endpoint Z",
+    )
 
     class Meta:
         """Meta attributes."""
