@@ -54,11 +54,10 @@ logger = logging.getLogger(__name__)
 #
 
 
-def _ensure_changelog_exists(action, sender, instance):
+def _cache_obj_data_in_change_context(action, sender, instance):
     """
-    If this is an existing object that should have a change log entry, ensure
-    that one exists, in order for the event notification system to have a
-    previous change log entry to reference.
+    If this is an existing object that should have a change log entry,
+    we need to retrieve the existing object from the database and cache its data in the change context.
     """
     # Is this an object without a change log?
     if not hasattr(instance, "to_objectchange"):
@@ -95,7 +94,10 @@ def _ensure_changelog_exists(action, sender, instance):
     if change_context is not None:
         change.user = change_context.get_user(instance)
 
-    change.save()
+    # cache the previous object data in the change context
+    change_context.pre_object_data = change.object_data
+    change_context.pre_object_data_v2 = change.object_data_v2
+    change_context_state.set(change_context)
 
 
 def get_user_if_authenticated(user, instance):
@@ -185,12 +187,12 @@ def invalidate_openapi_schema_cache(sender, **kwargs):
 def _handle_changed_object_pre_save(sender, instance, raw=False, **kwargs):
     """
     Fires before an object is created or updated.
-    It creates an ObjectChange Log Entry to capture the old state of the object.
+    It caches the current object data to capture the current state of the object.
     This is used to ensure that a previous changelog entry exists for this object when this object is updated.
     """
     # Ensure that a changelog entry exists for this object that is being updated
-    if hasattr(instance, "to_objectchange") and not kwargs.get("created"):
-        _ensure_changelog_exists(ObjectChangeActionChoices.ACTION_UPDATE, sender, instance)
+    if not kwargs.get("created"):
+        _cache_obj_data_in_change_context(ObjectChangeActionChoices.ACTION_UPDATE, sender, instance)
 
 
 @receiver(post_save)

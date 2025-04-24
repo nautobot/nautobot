@@ -193,7 +193,7 @@ class ObjectChange(BaseModel):
             return related_changes.restrict(user, permission)
         return related_changes
 
-    def get_snapshots(self):
+    def get_snapshots(self, pre_object_data=None, pre_object_data_v2=None):
         """
         Return a dictionary with the changed object's serialized data before and after this change
         occurred and a key with a shallow diff of those dictionaries.
@@ -218,9 +218,14 @@ class ObjectChange(BaseModel):
             # Deal with the cases where we are trying to capture an object deletion and there is no prior change record.
             # This can happen when the object is first created and the changelog for that object creation action is deleted.
             if prior_change is None:
-                prechange = self.object_data_v2
-                if prechange is None:
-                    prechange = self.object_data
+                if self.action == ObjectChangeActionChoices.ACTION_DELETE:
+                    prechange = self.object_data_v2
+                    if prechange is None:
+                        prechange = self.object_data
+                else:
+                    prechange = pre_object_data_v2
+                    if prechange is None:
+                        prechange = pre_object_data
             else:
                 prechange = prior_change.object_data_v2
                 if prechange is None:
