@@ -220,7 +220,7 @@ jobs:
         # If NAUTOBOT_SELENIUM_HOST is set to 'localhost' or '127.0.0.1' the connection does not work
         run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke tests --tag integration --no-keepdb"
   container-build:
-    name: "Build Container Images (amd64 on GHCR Only)"
+    name: "Build Container Images (GHCR Only)"
     runs-on: "ubuntu-24.04"
     if: |
       github.event_name == 'push' &&
@@ -266,7 +266,7 @@ jobs:
           registry: "ghcr.io"
           username: "${{ github.actor }}"
           password: "${{ secrets.GITHUB_TOKEN }}"
-      - name: "Build `final`"
+      - name: "Build `final` (amd64 only)"
         if: |
           steps.config.outputs.tag-latest-for-branch == 'true'
         uses: "./.github/actions/build-nautobot-image"
@@ -280,12 +280,27 @@ jobs:
           tag-latest-for-branch: "${{ steps.config.outputs.tag-latest-for-branch }}"
           tag-latest-for-py: "${{ steps.config.outputs.tag-latest-for-py }}"
           target: "final"
-      - name: "Build and Push `final-dev`"
+      - name: "Build and Push `final-dev` (amd64 only)"
         uses: "./.github/actions/build-nautobot-image"
         with:
           branch: "${{ steps.config.outputs.branch }}"
           image: "ghcr.io/nautobot/nautobot-dev"
           platforms: "linux/amd64"
+          push: "true"
+          python-version: "${{ matrix.python-version }}"
+          tag-latest: "${{ steps.config.outputs.tag-latest }}"
+          tag-latest-for-branch: "${{ steps.config.outputs.tag-latest-for-branch }}"
+          tag-latest-for-py: "${{ steps.config.outputs.tag-latest-for-py }}"
+          target: "final-dev"
+      - name: "Build and Push `final-dev` arm64 as well, only for next + latest"
+        if:
+          steps.config.outputs.tag-latest-for-branch == 'true' &&
+          steps.config.outputs.branch == 'next'
+        uses: "./.github/actions/build-nautobot-image"
+        with:
+          branch: "${{ steps.config.outputs.branch }}"
+          image: "ghcr.io/nautobot/nautobot-dev"
+          platforms: "linux/arm64"
           push: "true"
           python-version: "${{ matrix.python-version }}"
           tag-latest: "${{ steps.config.outputs.tag-latest }}"
