@@ -564,8 +564,6 @@ The `create_file()` method accepts a filename and file contents (as `str` or `by
 
 ### The `run()` Method
 
-### The `run()` Method
-
 The `run()` method is the core of every Job and is required. It receives user-supplied inputs (defined as variables on the class) as keyword arguments. Inside this method, you define the logic that the Job will execute—such as querying data, applying changes, or interacting with external systems. The method can return a value, which will be saved in the JobResult and displayed in the UI and API.
 
 Here’s a basic structure:
@@ -622,7 +620,6 @@ register_jobs(CheckOccasion)
 ```
 
 In this example, if the `occasion` input doesn’t start with “Taco”, an exception is raised and the Job fails immediately. If the input ends incorrectly (but started correctly), the Job continues but is still marked as failed using `self.fail()`. Otherwise, the Job logs a success message and completes normally, returning the value to the JobResult.
-
 
 ### The `on_success()` Method
 
