@@ -222,6 +222,8 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "role",
             "device_type",
             "primary_ip",
+            "capabilities",
+            "controller_managed_device_group",
         )
 
     def render_capabilities(self, value):
