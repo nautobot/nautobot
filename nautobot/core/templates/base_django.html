@@ -13,6 +13,9 @@
 </head>
 <body hx-headers='{"x-csrftoken": "{{ csrf_token }}"}'>
     {% include 'inc/nav_menu.html' %}
+    <div id="drawer">
+        {% block drawer %}{% endblock drawer %}
+    </div>
     <header id="header">
         <div class="banner-alert-area">
             {% if request.user.is_authenticated %}
@@ -48,7 +51,7 @@
         </div>
         {% block header %}{% endblock header %}
     </header>
-    <div class="container-fluid wrapper" id="main-content">
+    <main class="container-fluid wrapper" id="main-content" tabindex="-1">
         {% block content %}{% endblock content %}
         <div class="push"></div>
         {% if request.user.is_authenticated %}
@@ -58,7 +61,7 @@
                 </div>
             {% endif %}
         {% endif %}
-    </div>
+    </main>
     {% include 'modals/modal_theme.html' with name='theme'%}
     {% include 'inc/footer.html' %}
     {% include 'inc/javascript.html' %}

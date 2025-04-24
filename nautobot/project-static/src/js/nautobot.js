@@ -28,6 +28,7 @@ window.$ = window.jQuery;
 import 'jquery-ui';
 import 'select2';
 
+import { initializeDrawers } from './drawer';
 import { observeCollapseTabs } from './tabs';
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -73,6 +74,9 @@ document.addEventListener('DOMContentLoaded', function () {
         : document.addEventListener('click', onClickDocument);
     });
   });
+
+  // Drawer
+  initializeDrawers();
 
   // Tabs
   /*

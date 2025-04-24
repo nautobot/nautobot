@@ -1,0 +1,70 @@
+const DRAWER_CLASS = 'nb-drawer';
+const DRAWER_OPEN_CLASS = 'nb-drawer-open';
+
+/**
+ * Toggle drawer element with an option to force open/close.
+ * @param {HTMLElement} drawer - Drawer HTML element to be toggled.
+ * @param {boolean} [force] - Optionally force opening (`true`) or closing (`false`) regardless of current state.
+ * @returns {void} Do not return any value, modify existing HTML element in-place.
+ */
+const toggleDrawer = (drawer, force) => {
+  if (!drawer) {
+    return;
+  }
+
+  drawer.classList.toggle(DRAWER_OPEN_CLASS, force);
+
+  const isOpen = drawer.classList.contains(DRAWER_OPEN_CLASS);
+
+  drawer.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+
+  const drawerToggles = [...document.querySelectorAll(`[data-nb-toggle="drawer"][data-nb-target="#${drawer.id}"]`)];
+  drawerToggles.forEach(
+    (drawerToggle) => drawerToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false'),
+  );
+
+  /*
+   * Maintain proper element focus when the drawer is:
+   *   1. Open - focus the drawer as soon as it becomes visible and focusable.
+   *   2. Closed - in case focus is within the drawer move it back to the first found drawer toggle and, if not
+   *     available, the `main` element instead.
+   */
+  if (isOpen) {
+    (() => {
+      let rafRetriesRemaining = 100; // In case something goes wrong prevent falling into an infinite loop.
+
+      // Use `requestAnimationFrame` to wait until drawer becomes visible and focusable.
+      window.requestAnimationFrame(function focusDrawer() {
+        const isDrawerVisible = window.getComputedStyle(drawer).visibility === 'visible';
+
+        if (isDrawerVisible) {
+          drawer.focus();
+        } else if (rafRetriesRemaining > 0) {
+          rafRetriesRemaining -= 1;
+          window.requestAnimationFrame(focusDrawer);
+        }
+      });
+    })();
+  } else if (drawer.contains(document.activeElement)) {
+    const nextActiveElement = drawerToggles[0] || document.querySelector('main');
+    nextActiveElement?.focus({ preventScroll: true });
+  }
+}
+
+/**
+ * Initialize custom Nautobot drawers mechanism.
+ * @returns {void} Do not return any value, attach an event listener.
+ */
+export const initializeDrawers = () => {
+  // Using event delegation pattern here to avoid re-creating listeners each time DOM is modified.
+  document.addEventListener('click', (event) => {
+    const dismiss = event.target.closest('[data-nb-dismiss]');
+    const toggle = event.target.closest('[data-nb-toggle]');
+
+    if (dismiss?.dataset.nbDismiss === 'drawer') {
+      toggleDrawer(dismiss.closest(`.${DRAWER_CLASS}`), false);
+    } else if (toggle?.dataset.nbToggle === 'drawer') {
+      toggleDrawer(document.querySelector(toggle.dataset.nbTarget));
+    }
+  });
+};
