@@ -632,3 +632,61 @@ If either `before_start()` or `run()` raises any unhandled exception, or reports
 ### The `after_return()` Method
 
 Regardless of the overall Job execution success or failure, the `after_return()` method will be called after `on_success()` or `on_failure()`. It has the signature `after_return(self, status, retval, task_id, args, kwargs, einfo)`; the `status` will indicate success or failure (using the `JobResultStatusChoices` enum), `retval` is *either* the return value from `run()` or the exception raised, and once again `kwargs` contains the user variables.
+
+
+## Reserved Names: Avoiding Collisions with Job Internals
+
+When writing Jobs, it's important to avoid reusing internal attribute or method names from the `Job` class. Doing so can interfere with how Jobs are registered, rendered, or executed. The following table outlines reserved names you **should not** use for variable names or method overrides.
+
+There are many attributes and methods of the Job class that serve as reserved names. You must be careful when implementing custom methods or defining the user input [variables](#variables) for your Job that you do not inadvertently "step on" one of these reserved attributes causing unexpected behavior or errors.
+
+!!! warning "Don't override built-in attributes"
+    A common mistake is redefining the reserved `name` attribute as a user input variable. This overrides the Job’s display name and may prevent the Job from running correctly.
+
+As of Nautobot 2.4.0, the current list of reserved names (not including low-level Python built-ins such as `__dict__` or `__str__` includes:
+
+| Reserved Name             | Purpose                                                                 |
+|---------------------------|-------------------------------------------------------------------------|
+| `after_return`            | [special method](#the-after_return-method)                              |
+| `approval_required`       | [metadata property](#approval_required)                                 |
+| `as_form`                 | class method                                                            |
+| `as_form_class`           | class method                                                            |
+| `before_start`            | [special method](#the-before_start-method)                              |
+| `celery_kwargs`           | property                                                                |
+| `class_path`              | class property                                                          |
+| `class_path_dotted`       | deprecated class property                                               |
+| `class_path_js_escaped`   | class property                                                          |
+| `create_file`             | [helper method](#the-create_file-method)                                |
+| `description`             | [metadata property](#description)                                      |
+| `description_first_line`  | [metadata property](#description)                                      |
+| `deserialize_data`        | internal class method                                                   |
+| `dryrun_default`          | [metadata property](#dryrun_default)                                   |
+| `fail`                    | [helper method](#returning-and-failing-from-run)                        |
+| `field_order`             | [metadata property](#field_order)                                      |
+| `file_path`               | deprecated class property                                               |
+| `grouping`                | [module metadata property](#name-grouping)                              |
+| `has_sensitive_variables` | [metadata property](#has_sensitive_variables)                           |
+| `hidden`                  | [metadata property](#hidden)                                           |
+| `is_singleton`            | [metadata property](#is_singleton)                                     |
+| `job_model`               | property                                                                |
+| `job_result`              | property                                                                |
+| `load_json`               | [helper method](./job-patterns.md#reading-static-data-from-files)              |
+| `load_yaml`               | [helper method](./job-patterns.md#reading-static-data-from-files)              |
+| `name`                    | [metadata property](#name)                                              |
+| `on_failure`              | [special method](#the-on_failure-method)                                |
+| `on_retry`                | reserved as a future special method *(not present)* |
+| `on_success`              | [special method](#the-on_success-method)                                |
+| `prepare_job_kwargs`      | internal class method                                                   |
+| `properties_dict`         | class property                                                          |
+| `read_only`               | [metadata property](#read_only)                                        |
+| `registered_name`         | deprecated class property                                               |
+| `run`                     | [special method](#the-run-method)                                       |
+| `serialize_data`          | internal method                                                         |
+| `soft_time_limit`         | [metadata property](#soft_time_limit)                                  |
+| `supports_dryrun`         | class property                                                          |
+| `task_queues`             | [metadata property](#task_queues)                                      |
+| `template_name`           | [metadata property](#template_name)                                    |
+| `time_limit`              | [metadata property](#time_limit)                                      |
+| `user`                    | property                                                                |
+| `validate_data`           | internal class method                                                   |
+ 

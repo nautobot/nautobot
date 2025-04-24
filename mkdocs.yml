@@ -564,7 +564,6 @@ nav:
           - Common Job Patterns: "development/jobs/job-patterns.md"
           - Testing Jobs: "development/jobs/testing.md"
           - Job Extensions: "development/jobs/job-extensions.md"
-          - Job Reference: "development/jobs/job-reference.md"
           - Migration Guides:
               -  Migrating from v1: "development/jobs/migration/from-v1.md"
       - App Developer Guide:
