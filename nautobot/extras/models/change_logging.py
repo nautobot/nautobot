@@ -233,8 +233,6 @@ class ObjectChange(BaseModel):
 
         # Populate the postchange field, delete actions do not need to have a postchange field
         if self.action != ObjectChangeActionChoices.ACTION_DELETE:
-            # If this is a create action, we want to use the object_data_v2 field if it exists.
-            # Otherwise, we will use the object_data field.
             postchange = self.object_data_v2
             if postchange is None:
                 postchange = self.object_data
