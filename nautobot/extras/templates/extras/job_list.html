@@ -32,7 +32,10 @@
         </a>
     </div>
 
-    <button type="button" class="btn btn-default accordion-toggle-all"{% if display == "tiles" %} disabled="disabled"{% endif %}>Collapse All</button>
+    <button type="button"
+        class="btn btn-default accordion-toggle-all"
+        data-target="#job_accordion_{{ advanced_ui }}"
+        {% if display == "tiles" %} disabled="disabled"{% endif %}>Collapse All</button>
 {% endblock %}
 
 {% block table_config_button %}
@@ -46,30 +49,30 @@
             $(this).children("i").toggleClass("mdi-chevron-right mdi-chevron-down");
         });
         // Toggle v -. >
-        $("#accordion .accordion-toggle").click(function() {
+        $("#job_accordion_{{ advanced_ui }} .accordion-toggle").click(function() {
             $(this).toggleClass("mdi-chevron-down mdi-chevron-right");
+        });
+        $('.accordion-toggle-all').each(function () {
+            $(this).data("lastState", 0); // assume expanded by default
         });
         // Dynamically collapse/expand all when clicking the "Collapse All" button, and then update the button text.
         $('.accordion-toggle-all').on('click', function () {
+            const $button = $(this);
+            const target = $button.data("target");
+            const isExpanded = $button.data("lastState") === 0;
 
-           if ($(this).data("lastState") === null || $(this).data("lastState") === 1) {
-                $('.collapse').collapse('show');
-                $(this).data("lastState", 0);
-
-                $("#accordion .accordion-toggle").addClass("mdi-chevron-down").removeClass("mdi-chevron-right");
-
-                $(this).text("Collapse All");
-           }
-           else {
-                $('[class^=collapseme]').removeData('bs.collapse').collapse({parent: false, toggle: false})
-                .collapse('hide')
-                .removeData('bs.collapse')
-                .collapse({parent: '#accordion', toggle: false});
-
-                $(this).data("lastState", 1);
-                $("#accordion .accordion-toggle").addClass("mdi-chevron-right").removeClass("mdi-chevron-down");
-
-                $(this).text("Expand All");
+            if (isExpanded) {
+                // Collapse all
+                $(`${target} .collapse.in`).collapse('hide');
+                $(`${target} .accordion-toggle`).addClass("mdi-chevron-right").removeClass("mdi-chevron-down");
+                $button.text("Expand All");
+                $button.data("lastState", 1);
+            } else {
+                // Expand all
+                $(`${target} .collapse:not(.in)`).collapse('show');
+                $(`${target} .accordion-toggle`).addClass("mdi-chevron-down").removeClass("mdi-chevron-right");
+                $button.text("Collapse All");
+                $button.data("lastState", 0);
             }
         });
 

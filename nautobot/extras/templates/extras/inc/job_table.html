@@ -1,6 +1,6 @@
 {% load django_tables2 %}
 
-<table id="accordion" {% if table.attrs %} {{ table.attrs.as_html }}{% endif %}>
+<table id="job_accordion_{{ advanced_ui }}" {% if table.attrs %} {{ table.attrs.as_html }}{% endif %}>
     {% if table.show_header %}
         <thead>
             <tr>
