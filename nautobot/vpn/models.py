@@ -52,14 +52,13 @@ class VPNProfile(PrimaryModel):  # pylint: disable=too-many-ancestors
         blank=True, null=True, help_text="Additional options specific to the VPN technology and/or implementation"
     )
 
-    # TODO INIT Nautobot recommends that all models have a tenant field, unless you have a good reason not to.
-    # tenant = models.ForeignKey(
-    #     to="tenancy.Tenant",
-    #     on_delete=models.PROTECT,
-    #     related_name="vpn_profiles",
-    #     blank=True,
-    #     null=True,
-    # )
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.SET_NULL,
+        related_name="vpn_profiles",
+        blank=True,
+        null=True,
+    )
 
     clone_fields = [
         "description",
@@ -77,7 +76,6 @@ class VPNProfile(PrimaryModel):  # pylint: disable=too-many-ancestors
 
         verbose_name = "VPN Profile"
 
-    # TODO INIT Confirm the string representation of the model
     def __str__(self):
         """Stringify instance."""
         return self.name
@@ -123,14 +121,13 @@ class VPNPhase1Policy(PrimaryModel):  # pylint: disable=too-many-ancestors
         blank=True,
         help_text="PSK, RSA, ECDSA, Certificate",
     )
-    # TODO INIT Nautobot recommends that all models have a tenant field, unless you have a good reason not to.
-    # tenant = models.ForeignKey(
-    #     to="tenancy.Tenant",
-    #     on_delete=models.PROTECT,
-    #     related_name="vpn_phase_1_policys",
-    #     blank=True,
-    #     null=True,
-    # )
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.SET_NULL,
+        related_name="vpn_phase_1_policies",
+        blank=True,
+        null=True,
+    )
 
     clone_fields = [
         "description",
@@ -147,11 +144,9 @@ class VPNPhase1Policy(PrimaryModel):  # pylint: disable=too-many-ancestors
     class Meta:
         """Meta class for VPNPhase1Policy."""
 
-        # TODO INIT Confirm the verbose_name of the model
         verbose_name = "VPN Phase 1 Policy"
         verbose_name_plural = "VPN Phase 1 Policies"
 
-    # TODO INIT Confirm the string representation of the model
     def __str__(self):
         """Stringify instance."""
         return self.name
@@ -186,14 +181,13 @@ class VPNPhase2Policy(PrimaryModel):  # pylint: disable=too-many-ancestors
         verbose_name="PFS group",
     )
     lifetime = models.PositiveIntegerField(blank=True, null=True, verbose_name="Lifetime (seconds)")
-    # TODO INIT Nautobot recommends that all models have a tenant field, unless you have a good reason not to.
-    # tenant = models.ForeignKey(
-    #     to="tenancy.Tenant",
-    #     on_delete=models.PROTECT,
-    #     related_name="vpn_phase_2_policys",
-    #     blank=True,
-    #     null=True,
-    # )
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.SET_NULL,
+        related_name="vpn_phase_2_policies",
+        blank=True,
+        null=True,
+    )
 
     clone_fields = [
         "description",
@@ -206,11 +200,9 @@ class VPNPhase2Policy(PrimaryModel):  # pylint: disable=too-many-ancestors
     class Meta:
         """Meta class for VPNPhase2Policy."""
 
-        # TODO INIT Confirm the verbose_name of the model
         verbose_name = "VPN Phase 2 Policy"
         verbose_name_plural = "VPN Phase 2 Policies"
 
-    # TODO INIT Confirm the string representation of the model
     def __str__(self):
         """Stringify instance."""
         return self.name
@@ -296,10 +288,8 @@ class VPN(PrimaryModel):  # pylint: disable=too-many-ancestors
     class Meta:
         """Meta class for VPN."""
 
-        # TODO INIT Confirm the verbose_name of the model
         verbose_name = "VPN"
 
-    # TODO INIT Confirm the string representation of the model
     def __str__(self):
         """Stringify instance."""
         return self.name
@@ -475,14 +465,13 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
         blank=True,
         verbose_name="Protected Prefixes (from Dynamic Group)",
     )
-    # TODO INIT Nautobot recommends that all models have a tenant field, unless you have a good reason not to.
-    # tenant = models.ForeignKey(
-    #     to="tenancy.Tenant",
-    #     on_delete=models.PROTECT,
-    #     related_name="vpn_tunnel_endpoints",
-    #     blank=True,
-    #     null=True,
-    # )
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.SET_NULL,
+        related_name="vpn_tunnel_endpoints",
+        blank=True,
+        null=True,
+    )
 
     clone_fields = [
         "vpn_profile",
