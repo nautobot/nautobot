@@ -1,19 +1,18 @@
-"""Views for nautobot_vpn_models."""
+"""Views for the vpn models."""
 
-from nautobot.apps.ui import ObjectDetailContent, ObjectFieldsPanel, SectionChoices
+import logging
+
+from django.core.exceptions import ValidationError
+
+from nautobot.apps.ui import ObjectDetailContent, ObjectFieldsPanel, ObjectsTablePanel, SectionChoices
 from nautobot.apps.views import NautobotUIViewSet
+from nautobot.extras.tables import DynamicGroupTable
+from nautobot.ipam.tables import PrefixTable
 
-from nautobot_vpn_models import filters, forms, models, tables
-from nautobot_vpn_models.api import serializers
+from . import filters, forms, models, tables
+from .api import serializers
 
-
-
-
-
-
-
-
-
+logger = logging.getLogger(__name__)
 
 
 class VPNProfileUIViewSet(NautobotUIViewSet):
@@ -28,7 +27,7 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
     queryset = models.VPNProfile.objects.all()
     serializer_class = serializers.VPNProfileSerializer
     table_class = tables.VPNProfileTable
-    base_template = "generic/object_retrieve.html"
+    # base_template = "generic/object_retrieve.html"
 
     object_detail_content = ObjectDetailContent(
         panels=[
@@ -37,8 +36,6 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields=[
-                    "vpn_phase1_policy",
-                    "vpn_phase2_policy",
                     "name",
                     "description",
                     "keepalive_enabled",
@@ -47,11 +44,61 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
                     "nat_traversal",
                     "extra_options",
                     "secrets_group",
-                    "role"
+                    "role",
                 ],
+            ),
+            ObjectsTablePanel(
+                weight=100,
+                table_class=tables.VPNProfilePhase1PolicyAssignmentTable,
+                table_filter="vpn_profile",
+                section=SectionChoices.RIGHT_HALF,
+                exclude_columns=[],
+            ),
+            ObjectsTablePanel(
+                weight=200,
+                table_class=tables.VPNProfilePhase2PolicyAssignmentTable,
+                table_filter="vpn_profile",
+                section=SectionChoices.RIGHT_HALF,
+                exclude_columns=[],
             ),
         ],
     )
+
+    def get_extra_context(self, request, instance=None):
+        ctx = super().get_extra_context(request, instance)
+
+        if self.action in ["create", "update"]:
+            ctx["vpn_phase1_policies"] = forms.VPNProfilePh1FormSet(
+                instance=instance,
+                data=request.POST if request.method == "POST" else None,
+            )
+            ctx["vpn_phase2_policies"] = forms.VPNProfilePh2FormSet(
+                instance=instance,
+                data=request.POST if request.method == "POST" else None,
+            )
+        return ctx
+
+    def form_save(self, form, **kwargs):
+        obj = super().form_save(form, **kwargs)
+        ctx = self.get_extra_context(self.request, obj)
+
+        vpn_phase1_policies = ctx.get("vpn_phase1_policies")
+        if vpn_phase1_policies.is_valid():
+            vpn_phase1_policies.save()
+        else:
+            logger.debug("PH1 Policies")
+            logger.error(vpn_phase1_policies.errors)
+            raise ValidationError(vpn_phase1_policies.errors)
+
+        vpn_phase2_policies = ctx.get("vpn_phase2_policies")
+        if vpn_phase2_policies.is_valid():
+            vpn_phase2_policies.save()
+        else:
+            logger.debug("PH2 Policies")
+            logger.error(vpn_phase1_policies.errors)
+            raise ValidationError(vpn_phase2_policies.errors)
+
+        return obj
 
 
 class VPNPhase1PolicyUIViewSet(NautobotUIViewSet):
@@ -66,7 +113,7 @@ class VPNPhase1PolicyUIViewSet(NautobotUIViewSet):
     queryset = models.VPNPhase1Policy.objects.all()
     serializer_class = serializers.VPNPhase1PolicySerializer
     table_class = tables.VPNPhase1PolicyTable
-    base_template = "generic/object_retrieve.html"
+    # base_template = "generic/object_retrieve.html"
 
     object_detail_content = ObjectDetailContent(
         panels=[
@@ -84,7 +131,7 @@ class VPNPhase1PolicyUIViewSet(NautobotUIViewSet):
                     "dh_group",
                     "lifetime_seconds",
                     "lifetime_kb",
-                    "authentication_method"
+                    "authentication_method",
                 ],
             ),
         ],
@@ -103,7 +150,7 @@ class VPNPhase2PolicyUIViewSet(NautobotUIViewSet):
     queryset = models.VPNPhase2Policy.objects.all()
     serializer_class = serializers.VPNPhase2PolicySerializer
     table_class = tables.VPNPhase2PolicyTable
-    base_template = "generic/object_retrieve.html"
+    # base_template = "generic/object_retrieve.html"
 
     object_detail_content = ObjectDetailContent(
         panels=[
@@ -111,14 +158,7 @@ class VPNPhase2PolicyUIViewSet(NautobotUIViewSet):
             ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
-                fields=[
-                    "name",
-                    "description",
-                    "encryption_algorithm",
-                    "integrity_algorithm",
-                    "pfs_group",
-                    "lifetime"
-                ],
+                fields=["name", "description", "encryption_algorithm", "integrity_algorithm", "pfs_group", "lifetime"],
             ),
         ],
     )
@@ -140,19 +180,17 @@ class VPNUIViewSet(NautobotUIViewSet):
 
     object_detail_content = ObjectDetailContent(
         panels=[
-            # TODO INIT ensure these are the fields you want to show
             ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
-                fields=[
-                    "vpn_profile",
-                    "name",
-                    "description",
-                    "vpn_id",
-                    "tenant",
-                    "role",
-                    "contact_associations"
-                ],
+                fields=["vpn_profile", "name", "description", "vpn_id", "tenant", "role"],
+            ),
+            ObjectsTablePanel(
+                weight=200,
+                table_class=tables.VPNTunnelTable,
+                table_filter="vpn",
+                section=SectionChoices.FULL_WIDTH,
+                exclude_columns=[],
             ),
         ],
     )
@@ -179,16 +217,46 @@ class VPNTunnelUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields=[
-                    "vpn_profile",
-                    "vpn",
                     "name",
                     "description",
+                    "vpn",
+                    "vpn_profile",
                     "tunnel_id",
                     "encapsulation",
                     "tenant",
                     "role",
-                    "contact_associations"
+                    "status",
                 ],
+            ),
+            ObjectsTablePanel(
+                weight=100,
+                label="A",
+                table_class=tables.VPNTunnelEndpointTable,
+                table_filter="endpoint_a_vpn_tunnels",
+                section=SectionChoices.RIGHT_HALF,
+                include_columns=[
+                    "device",
+                    "source_interface",
+                    "source_ipaddress",
+                    "tunnel_interface",
+                    "role",
+                ],
+                add_button_route=None,
+            ),
+            ObjectsTablePanel(
+                weight=200,
+                label="Z",
+                table_class=tables.VPNTunnelEndpointTable,
+                table_filter="endpoint_z_vpn_tunnels",
+                section=SectionChoices.RIGHT_HALF,
+                include_columns=[
+                    "device",
+                    "source_interface",
+                    "source_ipaddress",
+                    "tunnel_interface",
+                    "role",
+                ],
+                add_button_route=None,
             ),
         ],
     )
@@ -215,19 +283,58 @@ class VPNTunnelEndpointUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields=[
+                    "name",
                     "vpn_profile",
-                    "vpn_tunnel",
-                    "source_ipaddress",
+                    "device",
                     "source_interface",
+                    "source_ipaddress",
                     "destination_ipaddress",
                     "destination_fqdn",
                     "tunnel_interface",
-                    "protected_prefixes_dg",
-                    "protected_prefixes",
                     "role",
-                    "contact_associations"
                 ],
+            ),
+            ObjectsTablePanel(
+                weight=100,
+                label="A-EndPoint",
+                table_class=tables.VPNTunnelTable,
+                table_filter="endpoint_a",
+                section=SectionChoices.RIGHT_HALF,
+                exclude_columns=[
+                    "endpoint_a",
+                    "endpoint_z",
+                    "actions",
+                ],
+                add_button_route=None,
+            ),
+            ObjectsTablePanel(
+                weight=100,
+                label="Z-EndPoint",
+                table_class=tables.VPNTunnelTable,
+                table_filter="endpoint_z",
+                section=SectionChoices.RIGHT_HALF,
+                exclude_columns=[
+                    "endpoint_a",
+                    "endpoint_z",
+                    "actions",
+                ],
+                add_button_route=None,
+            ),
+            ObjectsTablePanel(
+                weight=100,
+                table_class=DynamicGroupTable,
+                table_filter="vpn_tunnel_endpoints",
+                section=SectionChoices.FULL_WIDTH,
+                exclude_columns=[],
+                add_button_route=None,
+            ),
+            ObjectsTablePanel(
+                weight=200,
+                table_class=PrefixTable,
+                table_filter="vpn_tunnel_endpoints",
+                section=SectionChoices.FULL_WIDTH,
+                exclude_columns=[],
+                add_button_route=None,
             ),
         ],
     )
-

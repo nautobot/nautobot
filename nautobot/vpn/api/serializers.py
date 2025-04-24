@@ -1,15 +1,6 @@
 from nautobot.apps.api import NautobotModelSerializer, TaggedModelSerializerMixin
 
-from nautobot_vpn_models import models
-
-
-
-
-
-
-
-
-
+from .. import models
 
 
 class VPNProfileSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):  # pylint: disable=too-many-ancestors
@@ -42,6 +33,22 @@ class VPNPhase2PolicySerializer(TaggedModelSerializerMixin, NautobotModelSeriali
         fields = "__all__"
 
 
+class VPNProfilePhase1PolicyAssignmentSerializer(NautobotModelSerializer):
+    """Serializer for `VPNProfilePhase1PolicyAssignment` objects."""
+
+    class Meta:
+        model = models.VPNProfilePhase1PolicyAssignment
+        fields = "__all__"
+
+
+class VPNProfilePhase2PolicyAssignmentSerializer(NautobotModelSerializer):
+    """Serializer for `VPNProfilePhase2PolicyAssignment` objects."""
+
+    class Meta:
+        model = models.VPNProfilePhase2PolicyAssignment
+        fields = "__all__"
+
+
 class VPNSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):  # pylint: disable=too-many-ancestors
     """VPN Serializer."""
 
@@ -70,4 +77,3 @@ class VPNTunnelEndpointSerializer(TaggedModelSerializerMixin, NautobotModelSeria
 
         model = models.VPNTunnelEndpoint
         fields = "__all__"
-

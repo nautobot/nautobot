@@ -36,6 +36,7 @@ from nautobot.ipam import choices, constants
 from nautobot.ipam.api import serializers
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VirtualMachine, VMInterface
+from nautobot.vpn.tables import VPNTunnelEndpointTable
 
 from . import filters, forms, tables
 from .models import (
@@ -332,6 +333,17 @@ class PrefixView(generic.ObjectView):
         cloud_network_table = CloudNetworkTable(cloud_networks, orderable=False)
         cloud_network_table.exclude = ("actions", "assigned_prefix_count", "circuit_count", "cloud_service_count")
 
+        vpn_endpoints = instance.vpn_tunnel_endpoints.restrict(request.user, "view")
+        vpn_endpoints_table = VPNTunnelEndpointTable(vpn_endpoints, orderable=False)
+        vpn_endpoints_table.exclude = (
+            "vpn_profile",
+            "destination_ipaddress",
+            "destination_fqdn",
+            "protected_prefixes_dg_count",
+            "protected_prefixes_count",
+            "actions",
+        )
+
         paginate = {
             "paginator_class": EnhancedPaginator,
             "per_page": get_paginate_count(request),
@@ -339,11 +351,13 @@ class PrefixView(generic.ObjectView):
         RequestConfig(request, paginate).configure(parent_prefix_table)
         RequestConfig(request, paginate).configure(vrf_table)
         RequestConfig(request, paginate).configure(cloud_network_table)
+        RequestConfig(request, paginate).configure(vpn_endpoints_table)
 
         return {
             "vrf_table": vrf_table,
             "parent_prefix_table": parent_prefix_table,
             "cloud_network_table": cloud_network_table,
+            "vpn_endpoints_table": vpn_endpoints_table,
             **super().get_extra_context(request, instance),
         }
 

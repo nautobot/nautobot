@@ -1,25 +1,14 @@
 """Unit tests for nautobot_vpn_models."""
 
 from nautobot.apps.testing import APIViewTestCases
-
-from nautobot_vpn_models import choices, models
-
-
-
-
-
-
-
-
-
+from nautobot.vpn import models
 
 
 class VPNProfileAPITest(APIViewTestCases.APIViewTestCase):
     """VPNProfile API tests."""
 
     model = models.VPNProfile
-    choices_fields = (
-    )
+    choices_fields = ()
 
     @classmethod
     def setUpTestData(cls):
@@ -203,8 +192,7 @@ class VPNAPITest(APIViewTestCases.APIViewTestCase):
     """VPN API tests."""
 
     model = models.VPN
-    choices_fields = (
-    )
+    choices_fields = ()
 
     @classmethod
     def setUpTestData(cls):
@@ -254,9 +242,7 @@ class VPNTunnelAPITest(APIViewTestCases.APIViewTestCase):
     """VPNTunnel API tests."""
 
     model = models.VPNTunnel
-    choices_fields = (
-        "encapsulation",
-    )
+    choices_fields = ("encapsulation",)
 
     @classmethod
     def setUpTestData(cls):
@@ -314,8 +300,7 @@ class VPNTunnelEndpointAPITest(APIViewTestCases.APIViewTestCase):
     """VPNTunnelEndpoint API tests."""
 
     model = models.VPNTunnelEndpoint
-    choices_fields = (
-    )
+    choices_fields = ()
 
     @classmethod
     def setUpTestData(cls):
@@ -376,4 +361,3 @@ class VPNTunnelEndpointAPITest(APIViewTestCases.APIViewTestCase):
             "role": "replaceme",
             "contact_associations": "replaceme",
         }
-
