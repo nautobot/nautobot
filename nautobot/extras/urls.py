@@ -3,17 +3,13 @@ from django.urls import path
 from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras import views
 from nautobot.extras.models import (
-    ComputedField,
     ConfigContext,
     ConfigContextSchema,
     CustomField,
-    CustomLink,
     DynamicGroup,
-    ExportTemplate,
     GitRepository,
     GraphQLQuery,
     Job,
-    JobHook,
     Note,
     Relationship,
     SecretsGroup,
@@ -24,13 +20,18 @@ from nautobot.extras.models import (
 app_name = "extras"
 
 router = NautobotUIViewSetRouter()
+router.register("computed-fields", views.ComputedFieldUIViewSet)
 router.register("contacts", views.ContactUIViewSet)
 router.register("contact-associations", views.ContactAssociationUIViewSet)
+router.register("custom-links", views.CustomLinkUIViewSet)
+router.register("export-templates", views.ExportTemplateUIViewSet)
 router.register("external-integrations", views.ExternalIntegrationUIViewSet)
 router.register("job-buttons", views.JobButtonUIViewSet)
+router.register("job-hooks", views.JobHookUIViewSet)
 router.register("job-queues", views.JobQueueUIViewSet)
 router.register("metadata-types", views.MetadataTypeUIViewSet)
 router.register("object-metadata", views.ObjectMetadataUIViewSet)
+router.register("relationships", views.RelationshipUIViewSet)
 router.register("roles", views.RoleUIViewSet)
 router.register("saved-views", views.SavedViewUIViewSet)
 router.register("secrets", views.SecretUIViewSet)
@@ -42,37 +43,6 @@ urlpatterns = [
     # Change logging
     path("object-changes/", views.ObjectChangeListView.as_view(), name="objectchange_list"),
     path("object-changes/<uuid:pk>/", views.ObjectChangeView.as_view(), name="objectchange"),
-    # Computed Fields
-    path("computed-fields/", views.ComputedFieldListView.as_view(), name="computedfield_list"),
-    path("computed-fields/add/", views.ComputedFieldEditView.as_view(), name="computedfield_add"),
-    path(
-        "computed-fields/delete/",
-        views.ComputedFieldBulkDeleteView.as_view(),
-        name="computedfield_bulk_delete",
-    ),
-    path("computed-fields/<uuid:pk>/", views.ComputedFieldView.as_view(), name="computedfield"),
-    path(
-        "computed-fields/<uuid:pk>/edit/",
-        views.ComputedFieldEditView.as_view(),
-        name="computedfield_edit",
-    ),
-    path(
-        "computed-fields/<uuid:pk>/delete/",
-        views.ComputedFieldDeleteView.as_view(),
-        name="computedfield_delete",
-    ),
-    path(
-        "computed-fields/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="computedfield_changelog",
-        kwargs={"model": ComputedField},
-    ),
-    path(
-        "computed-fields/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="computedfield_notes",
-        kwargs={"model": ComputedField},
-    ),
     # Config contexts
     path(
         "config-contexts/",
@@ -213,37 +183,6 @@ urlpatterns = [
         name="customfield_notes",
         kwargs={"model": CustomField},
     ),
-    # Custom links
-    path("custom-links/", views.CustomLinkListView.as_view(), name="customlink_list"),
-    path("custom-links/add/", views.CustomLinkEditView.as_view(), name="customlink_add"),
-    path(
-        "custom-links/delete/",
-        views.CustomLinkBulkDeleteView.as_view(),
-        name="customlink_bulk_delete",
-    ),
-    path("custom-links/<uuid:pk>/", views.CustomLinkView.as_view(), name="customlink"),
-    path(
-        "custom-links/<uuid:pk>/edit/",
-        views.CustomLinkEditView.as_view(),
-        name="customlink_edit",
-    ),
-    path(
-        "custom-links/<uuid:pk>/delete/",
-        views.CustomLinkDeleteView.as_view(),
-        name="customlink_delete",
-    ),
-    path(
-        "custom-links/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="customlink_changelog",
-        kwargs={"model": CustomLink},
-    ),
-    path(
-        "custom-links/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="customlink_notes",
-        kwargs={"model": CustomLink},
-    ),
     # Dynamic Groups
     path("dynamic-groups/", views.DynamicGroupListView.as_view(), name="dynamicgroup_list"),
     path("dynamic-groups/add/", views.DynamicGroupEditView.as_view(), name="dynamicgroup_add"),
@@ -267,49 +206,6 @@ urlpatterns = [
         views.ObjectNotesView.as_view(),
         name="dynamicgroup_notes",
         kwargs={"model": DynamicGroup},
-    ),
-    # Export Templates
-    path(
-        "export-templates/",
-        views.ExportTemplateListView.as_view(),
-        name="exporttemplate_list",
-    ),
-    path(
-        "export-templates/add/",
-        views.ExportTemplateEditView.as_view(),
-        name="exporttemplate_add",
-    ),
-    path(
-        "export-templates/delete/",
-        views.ExportTemplateBulkDeleteView.as_view(),
-        name="exporttemplate_bulk_delete",
-    ),
-    path(
-        "export-templates/<uuid:pk>/",
-        views.ExportTemplateView.as_view(),
-        name="exporttemplate",
-    ),
-    path(
-        "export-templates/<uuid:pk>/edit/",
-        views.ExportTemplateEditView.as_view(),
-        name="exporttemplate_edit",
-    ),
-    path(
-        "export-templates/<uuid:pk>/delete/",
-        views.ExportTemplateDeleteView.as_view(),
-        name="exporttemplate_delete",
-    ),
-    path(
-        "export-templates/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="exporttemplate_changelog",
-        kwargs={"model": ExportTemplate},
-    ),
-    path(
-        "export-templates/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="exporttemplate_notes",
-        kwargs={"model": ExportTemplate},
     ),
     # Git repositories
     path(
@@ -464,27 +360,6 @@ urlpatterns = [
     path("jobs/<str:class_path>/run/", views.JobRunView.as_view(), name="job_run_by_class_path"),
     path("jobs/edit/", views.JobBulkEditView.as_view(), name="job_bulk_edit"),
     path("jobs/delete/", views.JobBulkDeleteView.as_view(), name="job_bulk_delete"),
-    # Job hooks
-    path("job-hooks/", views.JobHookListView.as_view(), name="jobhook_list"),
-    path("job-hooks/add/", views.JobHookEditView.as_view(), name="jobhook_add"),
-    path(
-        "job-hooks/delete/",
-        views.JobHookBulkDeleteView.as_view(),
-        name="jobhook_bulk_delete",
-    ),
-    path("job-hooks/<uuid:pk>/", views.JobHookView.as_view(), name="jobhook"),
-    path("job-hooks/<uuid:pk>/edit/", views.JobHookEditView.as_view(), name="jobhook_edit"),
-    path(
-        "job-hooks/<uuid:pk>/delete/",
-        views.JobHookDeleteView.as_view(),
-        name="jobhook_delete",
-    ),
-    path(
-        "job-hooks/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="jobhook_changelog",
-        kwargs={"model": JobHook},
-    ),
     # Generic job results
     path("job-results/", views.JobResultListView.as_view(), name="jobresult_list"),
     path("job-results/<uuid:pk>/", views.JobResultView.as_view(), name="jobresult"),
@@ -512,32 +387,6 @@ urlpatterns = [
     path("notes/<uuid:pk>/edit/", views.NoteEditView.as_view(), name="note_edit"),
     path("notes/<uuid:pk>/delete/", views.NoteDeleteView.as_view(), name="note_delete"),
     # Custom relationships
-    path("relationships/", views.RelationshipListView.as_view(), name="relationship_list"),
-    path(
-        "relationships/add/",
-        views.RelationshipEditView.as_view(),
-        name="relationship_add",
-    ),
-    path(
-        "relationships/delete/",
-        views.RelationshipBulkDeleteView.as_view(),
-        name="relationship_bulk_delete",
-    ),
-    path(
-        "relationships/<uuid:pk>/",
-        views.RelationshipView.as_view(),
-        name="relationship",
-    ),
-    path(
-        "relationships/<uuid:pk>/edit/",
-        views.RelationshipEditView.as_view(),
-        name="relationship_edit",
-    ),
-    path(
-        "relationships/<uuid:pk>/delete/",
-        views.RelationshipDeleteView.as_view(),
-        name="relationship_delete",
-    ),
     path(
         "relationships/<uuid:pk>/changelog/",
         views.ObjectChangeLogView.as_view(),
