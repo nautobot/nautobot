@@ -288,3 +288,9 @@ KUBERNETES_JOB_POD_NAMESPACE = "default"
 
 # Host of the kubernetes pod created in the kubernetes cluster
 KUBERNETES_DEFAULT_SERVICE_ADDRESS = "https://kubernetes.default.svc"
+import logging
+
+from nautobot.core.events import register_event_broker, SyslogEventBroker
+
+# Send event notifications to the syslog with a severity of INFO
+register_event_broker(SyslogEventBroker(level=logging.INFO))

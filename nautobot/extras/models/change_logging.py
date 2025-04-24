@@ -215,7 +215,7 @@ class ObjectChange(BaseModel):
 
         # Populate the prechange field, create actions do not need to have a prechange field
         if self.action != ObjectChangeActionChoices.ACTION_CREATE:
-            # Deal with the cases where we are trying to capture an object deletion and there is no prior change record.
+            # Deal with the cases where we are trying to capture an object deletion/update and there is no prior change record.
             # This can happen when the object is first created and the changelog for that object creation action is deleted.
             if prior_change is None:
                 if self.action == ObjectChangeActionChoices.ACTION_DELETE:
