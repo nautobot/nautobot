@@ -760,6 +760,44 @@ def render_address(address):
     return HTML_NONE
 
 
+@library.filter()
+@register.filter()
+def render_button_class(value):
+    """
+    Render a string as a styled HTML button using Bootstrap classes.
+
+    Args:
+        value (str): A string representing the button class (e.g., 'primary').
+
+    Returns:
+        str: HTML string for a button with the given class.
+
+    Example:
+        >>> render_button_class("primary")
+        '<button class="btn btn-primary">primary</button>'
+    """
+    if value:
+        base = value.split()[0]
+        return format_html('<button class="btn btn-{}">{}</button>', base.lower(), base.capitalize())
+    return ""
+
+
+def render_job_run_link(value):
+    """
+    Render the job as a hyperlink to its 'run' view using the class_path.
+
+    Args:
+        value (Job): The job object.
+
+    Returns:
+        str: HTML anchor tag linking to the job's run view.
+    """
+    if hasattr(value, "class_path"):
+        url = reverse("extras:job_run_by_class_path", kwargs={"class_path": value.class_path})
+        return format_html('<a href="{}">{}</a>', url, value)
+    return str(value)
+
+
 #
 # Tags
 #
