@@ -4,9 +4,10 @@
 
 Jobs in Nautobot are Python classes designed to perform automated tasks within the Nautobot environment. Each Job can consist of:
 
-- **Metadata attributes**, which control how the Job appears and behaves within Nautobot.
-- **Input Variables**, which allow users to interact with the Job by providing required or optional input parameters via the Nautobot UI or API.
-- **Special Methods**, which manage the lifecycle and behavior of the Job execution.
+- **Metadata attributes** — control how the Job appears and behaves in the UI (e.g. name, permissions, scheduling rules)
+- **Input variables** — define the user-supplied inputs for the Job
+- **Special methods** — control the execution flow (`run()`, `on_success()`, etc.)
+- **Registration logic** — every Job must be explicitly registered with `register_jobs()` to be discoverable
 
 It’s essential to distinguish between metadata attributes and input variables clearly:
 
@@ -14,6 +15,51 @@ It’s essential to distinguish between metadata attributes and input variables 
 - **Input Variables** define user-supplied inputs that can influence the Job’s execution logic.
 
 Below, each section details how to implement these components in your Jobs effectively.
+
+## Job Class vs. Job Record
+
+Nautobot separates the **Job class** (your Python code) from the **Job record** (a database entry that stores metadata).
+
+| Job Class                     | Job Record                    |
+|------------------------------|-------------------------------|
+| Python code in a module      | Created automatically by Nautobot |
+| Inherits from `Job`          | Stored in the database        |
+| Defines metadata, variables, logic | Stores enabled state, name override, queue config |
+| Discovered on startup        | Updated by `post_upgrade` or Git resync |
+
+The Job record must exist for the Job to run — but Nautobot always executes the logic from your source code. This separation allows changes to the Job source without modifying the database.
+
+## Job Registration
+
+All Job classes must be registered with Nautobot at import time to be discoverable and runnable.
+
+This is done using the `register_jobs()` helper:
+
+```python
+from nautobot.apps.jobs import Job, register_jobs
+
+class HelloWorldJob(Job):
+    ...
+
+register_jobs(HelloWorldJob)
+```
+
+You can register multiple jobs at once:
+
+```python
+register_jobs(CleanupDevices, SyncInventory)
+```
+
+### Where to Register
+
+- For files in `JOBS_ROOT`, register Jobs directly in the file or from a top-level `__init__.py` that imports submodules.
+- For Git-based Jobs, use the `jobs/__init__.py` file in the repo to register all your Job classes.
+- For App-based Jobs, register them in the module defined by your App’s `NautobotAppConfig.jobs` property (default: `jobs`).
+
+If you don’t call `register_jobs()`, Nautobot will skip your class during startup, even if it's defined correctly.
+
+!!! warning "Unregistered Jobs are invisible"
+    If you forget to call `register_jobs()`, Nautobot won't discover your Job — it won't appear in the UI, API, or be runnable at all.
 
 ## Module Metadata Attributes
 

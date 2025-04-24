@@ -11,29 +11,25 @@ Not every Job needs every feature shown below. Use this page as a reference: cop
 
 ## Common Job Patterns
 
-- [Preparing and Structuring Jobs](#job-setup-and-context-access)
-    - Accessing user and Job metadata
-    - Using helper methods and structuring multi-step Jobs
+- [Accessing User and Job Context](#accessing-user-and-job-context)
 - [Logging Patterns](#logging-patterns)
-    - Writing structured log messages
-    - Skipping database logging
-    - Logging Markdown or HTML safely
+  - Logging levels
+  - Structured log context with `extra`
+  - Skipping database logging
+  - Markdown formatting and sanitization
 - [Job Flow Control](#job-flow-control)
-    - Marking a Job as failed (`self.fail()`)
-    - Failing via exceptions
-  - Guard clauses and validation
+  - Guard clauses with validation
+  - Success and failure conditions
+  - Marking a Job as failed
 - [Working with Files](#working-with-files)
-    - Uploading and parsing files (`FileVar`)
-    - Creating downloadable files (`create_file()`)
-    - Reading static YAML/JSON files (`load_yaml` / `load_json`)
-- [Structured Output](#structured-output)
-    - Returning structured results like CSV or JSON
-    - Rendering result tables in the UI
-- [Scheduled or Approved Jobs](#scheduled-or-approved-jobs)
-    - Writing Jobs that support future execution
-    - Avoiding `has_sensitive_variables` for compatibility
+  - File output with `create_file()`
+  - Uploading and parsing files (`FileVar`)
+  - Reading static YAML or JSON files
 - [Reference Implementations](#reference-implementations)
-    - Full examples from Nautobot and community sources
+  - Device validation
+  - Creating objects for a planned location
+  - Everything demo from the Example App
+
 
 ## Job Execution Context and Logging Patterns
 

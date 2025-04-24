@@ -22,7 +22,7 @@ Key requirements:
 
 - Files must contain valid Job classes (subclasses of `nautobot.apps.jobs.Job`)
 - Each Job must be registered using `register_jobs()`
-- **All modules in this directory are imported** by the application and Celery workers at startup
+- Python files in JOBS_ROOT are imported at application startup. In Celery mode, this includes Celery workers; in Kubernetes mode, only the main web pod imports them.
 - To update Job records after editing, **run** `nautobot-server post_upgrade`
 - **Jobs are not enabled by default**. You must enable them manually in the UI before they can be run.
 
@@ -109,7 +109,7 @@ Key requirements:
 
 - Jobs live inside the App's Python module tree
 - App dependencies can be managed via `pyproject.toml` or `setup.py`
-- Define the Job module path in [`NautobotAppConfig.jobs`](../../apps/api/nautobot-app-config/#nautobotappconfig-code-location-attributes) (defaults to `jobs.jobs`)
+- Define the Job module path in [`NautobotAppConfig.jobs`](../../apps/api/nautobot-app-config/#nautobotappconfig-code-location-attributes) (defaults to "jobs")
 - Use `register_jobs()` to register any included Jobs
 - Jobs must be manually enabled before running
 

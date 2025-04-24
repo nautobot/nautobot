@@ -24,14 +24,15 @@ You only need a working Nautobot installation where you can:
 - **Create a file** under the [`JOBS_ROOT`](../../user-guide/administration/configuration/settings.md#jobs_root) path (defaults to `$NAUTOBOT_ROOT/jobs/`).  
 - **Restart the worker** (Docker, systemd, or `nautobot-server celery worker`) after adding code.
 
-> **Tip** – If you’re using a Git‑backed repo or an App to provide Jobs, the steps below are identical—just commit the file and resync the repo or reload the App.
+!!! tip
+    If you're using a Git repository or App to provide Jobs, the steps are the same: just save the file, re-sync the repo (or reload the App), and you're good to go.
 
 ## Your First Job in 6 Steps
 
 1. **Create a file** called `hello_world.py` inside `$JOBS_ROOT`.
 2. Paste the minimal Job below.  
 3. **Restart your Celery worker** (or redeploy your container / pod).  
-4. Run `nautobot-server post_upgrade` so Nautobot discovers the new Job.  
+4. Run `nautobot-server post_upgrade` so Nautobot discovers the new Job and creates its database record.
 5. In the UI, navigate to **Jobs → “Examples” → “Hello World”**, click **Edit Job**, then under the Job section, select the **Enabled** checkbox. Scroll down and **Update** the job.  
 6. **Run Job Now**. You’ll see the log entry appear almost instantly.
 
@@ -50,7 +51,7 @@ class HelloWorldJob(jobs.Job):
     )
 
     def run(self, *, who):
-        self.logger.info("Hello, %s!", who) # code to execute when the Job is run goes here
+        self.logger.info("Hello, %s!", who)  # This is the logic that runs when the Job is executed
 
 jobs.register_jobs(HelloWorldJob) # <- required in Nautobot 2.x
 ```
@@ -72,22 +73,11 @@ jobs.register_jobs(HelloWorldJob) # <- required in Nautobot 2.x
 ![Job Results](../../media/development/jobs/job-output.png)  
 **Job Results**: View real-time logs showing the Job's execution.
 
-## Anatomy of the Hello World Job
-
-| Line | What it does | Docs to learn more |
-|------|--------------|-------------------|
-| `name = "Examples"` | Sets the *group* header that Jobs appear under in the UI. | [Module metadata](job-structure.md#module-metadata-attributes) |
-| `class HelloWorldJob(jobs.Job)` | Inherit from `nautobot.apps.jobs.Job`—**never** from a model class. | same page |
-| `class Meta:` / `name` | Overrides the default class name for display. | [Class metadata](job-structure.md#class-metadata-attributes) |
-| `who = jobs.StringVar(...)` | Declares an input field—type, label, defaults, validation. | [Variables](job-structure.md#variables) |
-| `def run(self, *, who):` | Mandatory entry point; keyword args correspond to your variables. | [The `run()` method](job-structure.md#the-run-method) |
-| `self.logger.info(...)` | Writes to **Job Result** in real time. | [Logging](job-reference.md#logging) |
-| `jobs.register_jobs(...)` | Registers the Job class at import time—**required** since Nautobot 2.0. | [Job registration](#job-registration) |
-
 ## Troubleshooting Common Issues
 
 - **Job not showing in UI**:
   - Verify correct placement in `$JOBS_ROOT`.
+  - Verify that the Job class is registered using `register_jobs()`
   - Run `nautobot-server post_upgrade` after adding Jobs.
 
 - **Changes not appearing**:
