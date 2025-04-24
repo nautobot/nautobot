@@ -8,13 +8,17 @@ const DRAWER_OPEN_CLASS = 'nb-drawer-open';
  * @returns {void} Do not return any value, modify existing HTML element in-place.
  */
 const toggleDrawer = (drawer, force) => {
-  drawer?.classList.toggle(DRAWER_OPEN_CLASS, force);
+  if (!drawer) {
+    return;
+  }
 
-  const isOpen = drawer?.classList.contains(DRAWER_OPEN_CLASS);
+  drawer.classList.toggle(DRAWER_OPEN_CLASS, force);
 
-  drawer?.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+  const isOpen = drawer.classList.contains(DRAWER_OPEN_CLASS);
 
-  const drawerToggles = [...document.querySelectorAll(`[data-nb-toggle="drawer"][data-nb-target="#${drawer?.id}"]`)];
+  drawer.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+
+  const drawerToggles = [...document.querySelectorAll(`[data-nb-toggle="drawer"][data-nb-target="#${drawer.id}"]`)];
   drawerToggles.forEach(
     (drawerToggle) => drawerToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false'),
   );
@@ -34,7 +38,7 @@ const toggleDrawer = (drawer, force) => {
         const isDrawerVisible = window.getComputedStyle(drawer).visibility === 'visible';
 
         if (isDrawerVisible) {
-          drawer?.focus();
+          drawer.focus();
         } else if (rafRetriesRemaining > 0) {
           rafRetriesRemaining -= 1;
           window.requestAnimationFrame(focusDrawer);
