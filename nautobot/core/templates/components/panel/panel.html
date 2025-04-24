@@ -14,4 +14,6 @@
         </div>
     {% endif %}
 </div>
-{% include 'inc/paginator.html' with paginator=body_content_table.paginator page=body_content_table.page %}
+{% if body_content_table %}
+    {% include 'inc/paginator.html' with paginator=body_content_table.paginator page=body_content_table.page %}
+{% endif %}
