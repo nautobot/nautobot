@@ -181,6 +181,7 @@ class Button(Component):
         javascript_template_path=None,
         attributes=None,
         size=None,
+        link_includes_pk=True,
         **kwargs,
     ):
         """
@@ -211,6 +212,7 @@ class Button(Component):
         self.javascript_template_path = javascript_template_path
         self.attributes = attributes
         self.size = size
+        self.link_includes_pk = link_includes_pk
         super().__init__(**kwargs)
 
     def should_render(self, context: Context):
@@ -224,9 +226,11 @@ class Button(Component):
         Defaults to reversing `self.link_name` with `pk: obj.pk` as a kwarg, but subclasses may override this for
         more advanced link construction.
         """
-        if self.link_name:
+        if self.link_name and self.link_includes_pk:
             obj = get_obj_from_context(context)
             return reverse(self.link_name, kwargs={"pk": obj.pk})
+        elif self.link_name:
+            return reverse(self.link_name)
         return None
 
     def get_extra_context(self, context: Context):
@@ -280,7 +284,6 @@ class FormButton(Button):
         form_id: str,
         link_name: str,
         template_path="components/button/formbutton.html",
-        link_includes_pk=True,
         **kwargs,
     ):
         """
@@ -294,7 +297,6 @@ class FormButton(Button):
         """
         self.form_id = form_id
         self.link_name = link_name
-        self.link_includes_pk = link_includes_pk
 
         if not self.link_name:
             raise ValueError("FormButton requires a 'link_name'.")
@@ -303,12 +305,6 @@ class FormButton(Button):
             raise ValueError("FormButton requires 'form_id' to be set in ObjectsTablePanel.")
 
         super().__init__(link_name=link_name, template_path=template_path, **kwargs)
-
-    def get_link(self, context):
-        """Returns the reversed URL for the view."""
-        if self.link_includes_pk:
-            return super().get_link(context)
-        return reverse(self.link_name)
 
     def get_extra_context(self, context: Context):
         return {
