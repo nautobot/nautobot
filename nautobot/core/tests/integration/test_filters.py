@@ -5,7 +5,7 @@ from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.factory import LocationTypeFactory
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.extras.models import CustomField, CustomFieldChoice, Status
+from nautobot.extras.models import CustomField, CustomFieldChoice, Status, Tag
 
 
 class ListViewFilterTestCase(SeleniumTestCase):
@@ -221,3 +221,48 @@ class ListViewFilterTestCase(SeleniumTestCase):
         self.assertTrue(self.browser.is_text_present("8888"))
         self.assertTrue(self.browser.is_text_present("SingleSelect Option C"))
         self.assertTrue(self.browser.is_text_present("MultiSelect Option C"))
+
+    def test_advanced_filter_application(self):
+        """Assert that filters are applied successfully when using the advanced filter."""
+        # Go to the location list view
+        self.browser.visit(f'{self.live_server_url}{reverse("dcim:location_list")}')
+        # create a new tag
+        tag = Tag.objects.create(name="Tag1")
+        tag.content_types.set([ContentType.objects.get_for_model(Location)])
+
+        # Open the filter modal
+        self.browser.find_by_id("id__filterbtn").click()
+        # Go to advanced Tab
+        self.browser.find_by_xpath("//a[@href='#advanced-filter']").click()
+
+        # Click on the first column lookup field and select Tags
+        self.browser.find_by_id("select2-id_form-0-lookup_field-container").click()
+        self.browser.find_by_xpath(
+            "//ul[@id='select2-id_form-0-lookup_field-results']/li[contains(@class,'select2-results__option') "
+            "and contains(text(),'Tags')]"
+        ).click()
+
+        # Click on the second column lookup type and select exact
+        self.browser.find_by_id("select2-id_form-0-lookup_type-container").click()
+        self.browser.find_by_xpath(
+            "//ul[@id='select2-id_form-0-lookup_type-results']/li[contains(@class,'select2-results__option') "
+            "and contains(text(),'exact')]"
+        ).click()
+        # find the input field for the tag
+        container = self.browser.find_by_xpath(
+            "//span[@class='select2 select2-container select2-container--bootstrap select2-container--below']"
+        )
+        container.click()
+        # select tag
+        self.browser.find_by_xpath(
+            "//span[@class='select2-results']//ul[@class='select2-results__options']/li[contains(@class,'select2-results__option') "
+            f"and contains(text(),{tag.name})]"
+        ).click()
+
+        apply_btn_xpath = "//div[@id='advanced-filter']//button[@type='submit']"
+        self.browser.find_by_xpath(apply_btn_xpath).click()
+        filter_modal = self.browser.find_by_id("FilterForm_modal", wait_time=10)
+        # Model disappears
+        self.assertFalse(filter_modal.visible)
+        # Assert the choice is applied
+        self.browser.find_by_xpath(f"//li[@class='filter-selection-choice' and contains(text(),{tag.name})]")
