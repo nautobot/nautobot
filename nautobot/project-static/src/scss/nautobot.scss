@@ -403,6 +403,21 @@ $theme-colors-rgb-dark: map-loop($theme-colors-dark, to-rgb, "$value");
 @import "bootstrap/scss/mixins";
 @import "bootstrap/scss/utilities";
 
+$utilities: map-merge(
+  $utilities,
+  (
+    "width": map-merge(
+      map-get($utilities, "width"),
+      (
+        values: map-merge(
+            map-get(map-get($utilities, "width"), "values"),
+            (0: 0),
+        ),
+      ),
+    ),
+  )
+);
+
 /* 6. Optionally include any other parts as needed */
 /* TODO: review the below and trim it down as appropriate */
 @import "bootstrap/scss/root";
@@ -483,6 +498,7 @@ button {
     color: var(--#{$prefix}secondary-color);
     position: relative;
 
+    &.nb-actionable,
     &.orderable {
       a,
       button {
@@ -1085,6 +1101,7 @@ $nb-drawer-open-width: 20rem; /* 320px */
   overflow: hidden;
   position: relative;
   width: 0;
+  z-index: 1;
 
   &:has(.nb-drawer-open) {
     @include box-shadow($nb-drawer-open-box-shadow);
@@ -1094,7 +1111,7 @@ $nb-drawer-open-width: 20rem; /* 320px */
 
 .nb-drawer {
   @include transition(visibility .35s ease);
-  background: var(--#{prefix}body-bg);
+  background: var(--#{$prefix}body-bg);
   inset: 0 auto 0 0;
   outline: none;
   overflow: hidden auto;
@@ -1105,6 +1122,7 @@ $nb-drawer-open-width: 20rem; /* 320px */
 
   &.nb-drawer-open {
     visibility: visible;
+    z-index: 1;
   }
 
   .nb-drawer-header {

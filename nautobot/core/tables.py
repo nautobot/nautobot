@@ -376,7 +376,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
     """
 
     buttons = ("changelog", "edit", "delete")
-    attrs = {"td": {"class": "text-end text-nowrap noprint"}}
+    attrs = {"td": {"class": "text-end text-nowrap w-0 noprint"}, "tf": {"class": "w-0"}, "th": {"class": "nb-actionable w-0"}}
     # Note that braces are escaped to allow for string formatting prior to template rendering
     template_code = """
     {{% if "changelog" in buttons %}}

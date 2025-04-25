@@ -60,11 +60,6 @@
         {% block export_button %}
         {% endblock export_button %}
     {% endif %}
-    {% if table and request.user.is_authenticated and table_config_form %}
-        {% block table_config_button %}
-            {% table_config_button table table_name="ObjectTable" %}
-        {% endblock table_config_button %}
-    {% endif %}
     <div class="align-items-center d-flex gap-4">
         {% if model.is_saved_view_model %}
             <div class="btn-group">
@@ -241,14 +236,18 @@
         <div class="clearfix"></div>
     {% endblock %}
 </div>
-{% if table %}{% table_config_form table table_name="ObjectTable" %}{% endif %}
 {% if model.is_saved_view_model %}
     {% saved_view_modal request.GET.urlencode list_url model request %}
 {% endif %}
 {% dynamic_group_assignment_modal request=request content_type=content_type %}
 {% endblock %}
 
-{% block drawer %}{% filter_form_drawer filter_form dynamic_filter_form model_plural_name=title %}{% endblock drawer %}
+{% block drawer %}
+    {% filter_form_drawer filter_form dynamic_filter_form model_plural_name=title %}
+    {% if table %}
+        {% table_config_form table %}
+    {% endif %}
+{% endblock drawer %}
 
 {% block javascript %}
 <script src="{% static 'js/tableconfig.js' %}"></script>

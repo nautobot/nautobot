@@ -35,10 +35,6 @@
     <button type="button" class="btn btn-default accordion-toggle-all"{% if display == "tiles" %} disabled="disabled"{% endif %}>Collapse All</button>
 {% endblock %}
 
-{% block table_config_button %}
-    <button type="button" class="btn btn-default" data-toggle="modal" data-target="#ObjectTable_config" title="Configure table"{% if display == "tiles" %} disabled="disabled"{% endif %}><i class="mdi mdi-cog"></i> Configure</button>
-{% endblock %}
-
 {% block javascript %}
     {{ block.super }}
     <script>

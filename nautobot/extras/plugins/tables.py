@@ -39,7 +39,7 @@ class InstalledAppsTable(tables.Table):
                 <i class="mdi mdi-book-open-page-variant"></i>
             </a>
         """,
-        attrs={"td": {"class": "text-right text-nowrap noprint"}},
+        attrs={"td": {"class": "text-end text-nowrap w-0 noprint"}, "th": {"class": "nb-actionable w-0"}},
         verbose_name="",
     )
 
