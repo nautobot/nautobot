@@ -34,7 +34,7 @@
 
     <button type="button"
         class="btn btn-default accordion-toggle-all"
-        data-target="#job_accordion_{{ advanced_ui }}"
+        data-target="#job_accordion"
         {% if display == "tiles" %} disabled="disabled"{% endif %}>Collapse All</button>
 {% endblock %}
 
@@ -49,7 +49,7 @@
             $(this).children("i").toggleClass("mdi-chevron-right mdi-chevron-down");
         });
         // Toggle v -. >
-        $("#job_accordion_{{ advanced_ui }} .accordion-toggle").click(function() {
+        $("#job_accordion .accordion-toggle").click(function() {
             $(this).toggleClass("mdi-chevron-down mdi-chevron-right");
         });
         $('.accordion-toggle-all').each(function () {
