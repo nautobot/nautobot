@@ -62,62 +62,18 @@
     {% endif %}
     <div class="align-items-center d-flex gap-4">
         {% if model.is_saved_view_model %}
-            <div class="btn-group">
-                <button type="button" class="btn dropdown-toggle text-secondary" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="Saved Views">
-                    <span class="mdi mdi-view-compact-outline" aria-hidden="true"></span>
-                    <span class="visually-hidden">Saved Views</span>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    {% for saved_view in saved_views %}
-                        <li>
-                            {% if saved_view == current_saved_view %}
-                                <a class="dropdown-item" href="{% url list_url %}?clear_view=true">
-                                    <i class="mdi mdi-check-bold text-bold" aria-hidden="true"></i>
-                                    <strong>
-                                        {{saved_view.name}}
-                                    </strong>
-                                </a>
-                            {% else %}
-                                <a class="dropdown-item" href="{{ saved_view.get_absolute_url }}">
-                                    <i class="mdi mdi-view-compact-outline text-muted" aria-hidden="true"></i>
-                                    {{saved_view.name}}
-                                </a>
-                            {% endif %}
-                        </li>
-                    {% endfor %}
-                    {% if saved_views %}
-                        <li role="separator" class="dropdown-divider"></li>
-                    {% endif %}
-                    {% if current_saved_view %}
-                        <li>
-                            <a class="dropdown-item" href="{% url 'extras:savedview_update_config' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
-                                <i class="mdi mdi-content-save-outline text-muted" aria-hidden="true"></i>
-                                <span>Update Current Saved View</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="{% url 'extras:savedview_set_default' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
-                                <i class="mdi mdi-star text-muted" aria-hidden="true"></i>
-                                <span>Set As My Default</span>
-                            </a>
-                        </li>
-                    {% endif %}
-                    <li>
-                        <a class="dropdown-item" href="" data-bs-toggle="modal" data-bs-target="#saved_view_modal" title="Save Current View As">
-                            <i class="mdi mdi-content-save-plus-outline text-muted" aria-hidden="true"></i>
-                            <span>Save As New View</span>
-                        </a>
-                    </li>
-                    {% if current_saved_view %}
-                        <li>
-                            <a class="dropdown-item" href="{% url 'extras:savedview_delete' pk=request.GET.saved_view %}">
-                                <i class="mdi mdi-trash-can-outline text-danger" aria-hidden="true"></i>
-                                <span class="text-danger">Delete Current Saved View</span>
-                            </a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </div>
+            <button
+                type="button"
+                class="btn text-secondary"
+                data-nb-toggle="drawer"
+                data-nb-target="#SavedViews_drawer"
+                title="Saved Views"
+                aria-expanded="false"
+                aria-controls="SavedViews_drawer"
+            >
+                <span class="mdi mdi-view-compact-outline" aria-hidden="true"></span>
+                <span class="visually-hidden">Saved Views</span>
+            </button>
         {% endif %}
         {% if filter_form or dynamic_filter_form %}
             <button
@@ -247,6 +203,54 @@
     {% if table %}
         {% table_config_form table %}
     {% endif %}
+    <section class="nb-drawer" tabindex="-1" id="SavedViews_drawer">
+        <div class="nb-drawer-header">
+            <h1>Saved Views</h1>
+            <button type="button" class="btn-close" data-nb-dismiss="drawer" aria-label="Close"></button>
+        </div>
+        <div class="nb-drawer-body pb-20 px-20">
+            <div class="align-items-start vstack gap-10">
+                {% for saved_view in saved_views %}
+                    {% if saved_view == current_saved_view %}
+                        <a class="btn btn-secondary" href="{% url list_url %}?clear_view=true">
+                            <i class="mdi mdi-check-bold text-bold" aria-hidden="true"></i>
+                            <strong>{{saved_view.name}}</strong>
+                        </a>
+                    {% else %}
+                        <a class="btn btn-secondary" href="{{ saved_view.get_absolute_url }}">
+                            <i class="mdi mdi-view-compact-outline" aria-hidden="true"></i>
+                            {{saved_view.name}}
+                        </a>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            {% if saved_views %}
+                <hr class="border-top my-20" />
+            {% endif %}
+            <div class="align-items-start vstack gap-10">
+                {% if current_saved_view %}
+                    <a class="btn btn-secondary" href="{% url 'extras:savedview_update_config' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
+                        <i class="mdi mdi-content-save-outline" aria-hidden="true"></i>
+                        Update Current Saved View
+                    </a>
+                    <a class="btn btn-secondary" href="{% url 'extras:savedview_set_default' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
+                        <i class="mdi mdi-star" aria-hidden="true"></i>
+                        Set As My Default
+                    </a>
+                {% endif %}
+                <a class="btn btn-secondary" href="" data-bs-toggle="modal" data-bs-target="#saved_view_modal" title="Save Current View As">
+                    <i class="mdi mdi-content-save-plus-outline" aria-hidden="true"></i>
+                    <span>Save As New View</span>
+                </a>
+                {% if current_saved_view %}
+                    <a class="btn btn-danger" href="{% url 'extras:savedview_delete' pk=request.GET.saved_view %}">
+                        <i class="mdi mdi-trash-can-outline" aria-hidden="true"></i>
+                        Delete Current Saved View
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </section>
 {% endblock drawer %}
 
 {% block javascript %}
