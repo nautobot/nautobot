@@ -538,6 +538,13 @@ class JobLogEntry(BaseModel):
         get_latest_by = "created"
         verbose_name_plural = "job log entries"
 
+        indexes = [
+            models.Index(
+                name="extras_joblogentry_created_idx",
+                fields=["created"],
+            ),
+        ]
+
 
 #
 # Job Queues
