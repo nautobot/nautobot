@@ -59,6 +59,13 @@ def _cache_obj_data_in_change_context(action, sender, instance):
     If this is an existing object that should have a change log entry,
     we need to retrieve the existing object from the database and cache its data in the change context.
     """
+    # We are caching the before object data in the change context so that it can be used later
+    change_context = change_context_state.get()
+
+    # Do nothing if the change_contex is None
+    if change_context is None:
+        return
+
     # Is this an object without a change log?
     if not hasattr(instance, "to_objectchange"):
         return
@@ -79,28 +86,23 @@ def _cache_obj_data_in_change_context(action, sender, instance):
     if action == ObjectChangeActionChoices.ACTION_UPDATE:
         instance = sender.objects.get(pk=instance.pk)
 
-    change_context = change_context_state.get()
-
-    # Create a new change log entry for this object.
-    change = instance.to_objectchange(
-        action=action,
-    )
-
     # The context manager retrieves all changes by request ID. If we use the
     # same request ID for this change, multiple events will be published rather
     # than a single change. This is wildly inelegant, but scopes the hack to
     # just this one file.
+    change = instance.to_objectchange(
+        action=action,
+    )
     change.request_id = uuid.uuid4()
-    if change_context is not None:
-        change.user = change_context.get_user(instance)
-        # cache the previous object data in the change context
-        if change_context.pre_object_data is None:
-            change_context.pre_object_data = {}
-        if change_context.pre_object_data_v2 is None:
-            change_context.pre_object_data_v2 = {}
-        change_context.pre_object_data[instance.pk] = change.object_data
-        change_context.pre_object_data_v2[instance.pk] = change.object_data_v2
-        change_context_state.set(change_context)
+    change.user = change_context.get_user(instance)
+    # cache the previous object data in the change context
+    if change_context.pre_object_data is None:
+        change_context.pre_object_data = {}
+    if change_context.pre_object_data_v2 is None:
+        change_context.pre_object_data_v2 = {}
+    change_context.pre_object_data[instance.pk] = change.object_data
+    change_context.pre_object_data_v2[instance.pk] = change.object_data_v2
+    change_context_state.set(change_context)
 
 
 def get_user_if_authenticated(user, instance):
@@ -193,6 +195,9 @@ def _handle_changed_object_pre_save(sender, instance, raw=False, **kwargs):
     It caches the current object data to capture the current state of the object.
     This is used to ensure that a previous changelog entry exists for this object when this object is updated.
     """
+    if raw:
+        return
+
     # Ensure that a changelog entry exists for this object that is being updated
     if not kwargs.get("created"):
         _cache_obj_data_in_change_context(ObjectChangeActionChoices.ACTION_UPDATE, sender, instance)
