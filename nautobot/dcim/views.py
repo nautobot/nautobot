@@ -4267,8 +4267,8 @@ class SoftwareImageFileUIViewSet(NautobotUIViewSet):
         extra_tabs=(
             object_detail.DistinctViewTab(
                 weight=700,
-                tab_id="device_type",
-                url_name="dcim:softwareimagefile_device_type",
+                tab_id="device_types",
+                url_name="dcim:softwareimagefile_device_types",
                 label="Device Type",
                 related_object_attribute="device_types",
                 panels=(
@@ -4277,15 +4277,15 @@ class SoftwareImageFileUIViewSet(NautobotUIViewSet):
                         weight=100,
                         table_class=tables.DeviceTypeTable,
                         table_filter="software_image_files",
-                        tab_id="device_type",
+                        tab_id="device_types",
                         add_button_route=None,
                     ),
                 ),
             ),
             object_detail.DistinctViewTab(
                 weight=800,
-                tab_id="device",
-                url_name="dcim:softwareimagefile_device",
+                tab_id="devices",
+                url_name="dcim:softwareimagefile_devices",
                 label="Device",
                 related_object_attribute="devices",
                 panels=(
@@ -4294,7 +4294,7 @@ class SoftwareImageFileUIViewSet(NautobotUIViewSet):
                         weight=100,
                         table_class=tables.DeviceTable,
                         table_filter="software_image_files",
-                        tab_id="device",
+                        tab_id="devices",
                         table_title="Devices overridden to use this file",
                         add_button_route=None,
                     ),
@@ -4302,8 +4302,8 @@ class SoftwareImageFileUIViewSet(NautobotUIViewSet):
             ),
             object_detail.DistinctViewTab(
                 weight=900,
-                tab_id="inventory_item",
-                url_name="dcim:softwareimagefile_inventory_item",
+                tab_id="inventory_items",
+                url_name="dcim:softwareimagefile_inventory_items",
                 label="Inventory Item",
                 related_object_attribute="inventory_items",
                 panels=(
@@ -4312,7 +4312,7 @@ class SoftwareImageFileUIViewSet(NautobotUIViewSet):
                         weight=100,
                         table_class=tables.InventoryItemTable,
                         table_filter="software_image_files",
-                        tab_id="inventory_item",
+                        tab_id="inventory_items",
                         table_title="Inventory items overridden to use this file",
                         add_button_route=None,
                     ),
@@ -4320,8 +4320,8 @@ class SoftwareImageFileUIViewSet(NautobotUIViewSet):
             ),
             object_detail.DistinctViewTab(
                 weight=1000,
-                tab_id="virtual_machine",
-                url_name="dcim:softwareimagefile_virtual_machine",
+                tab_id="virtual_machines",
+                url_name="dcim:softwareimagefile_virtual_machines",
                 label="Virtual Machine",
                 related_object_attribute="virtual_machines",
                 panels=(
@@ -4330,7 +4330,7 @@ class SoftwareImageFileUIViewSet(NautobotUIViewSet):
                         weight=100,
                         table_class=VirtualMachineTable,
                         table_filter="software_image_files",
-                        tab_id="virtual_machine",
+                        tab_id="virtual_machines",
                         table_title="Virtual machines overridden to use this file",
                         add_button_route=None,
                     ),
@@ -4339,20 +4339,20 @@ class SoftwareImageFileUIViewSet(NautobotUIViewSet):
         ),
     )
 
-    @action(detail=True, url_path="device-type", url_name="device_type")
-    def device_type(self, request, *args, **kwargs):
+    @action(detail=True, url_path="device-types", url_name="device_types")
+    def device_types(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="device")
-    def device(self, request, *args, **kwargs):
+    @action(detail=True, url_path="devices")
+    def devices(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="inventory-item", url_name="inventory_item")
-    def inventory_item(self, request, *args, **kwargs):
+    @action(detail=True, url_path="inventory-items", url_name="inventory_items")
+    def inventory_items(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="virtual-machine", url_name="virtual_machine")
-    def virtual_machine(self, request, *args, **kwargs):
+    @action(detail=True, url_path="virtual-machines", url_name="virtual_machines")
+    def virtual_machines(self, request, *args, **kwargs):
         return Response({})
 
 
