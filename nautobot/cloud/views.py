@@ -207,7 +207,7 @@ class CloudResourceTypeUIViewSet(NautobotUIViewSet):
                         section=SectionChoices.FULL_WIDTH,
                         weight=100,
                         table_class=CloudNetworkTable,
-                        table_filter="cloud_resource_type",
+                        table_filter="cloud_networks",
                         tab_id="networks",
                     ),
                 ),
