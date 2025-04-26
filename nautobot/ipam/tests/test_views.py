@@ -1069,12 +1069,16 @@ class IPAddressMergeTestCase(ModelViewTestCase):
                     self.assertEqual(set(associations), set(correct_associations))
 
 
-class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class VLANGroupTestCase(
+    ViewTestCases.OrganizationalObjectViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
+):
     model = VLANGroup
 
     @classmethod
     def setUpTestData(cls):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        location_2 = Location.objects.filter(location_type=LocationType.objects.get(name="Building")).first()
 
         cls.form_data = {
             "name": "VLAN Group X",
@@ -1082,6 +1086,12 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "description": "A new VLAN group",
             "range": "1-4094",
             "tags": [t.pk for t in Tag.objects.get_for_model(VLANGroup)],
+        }
+
+        cls.bulk_edit_data = {
+            "location": location_2.pk,
+            "description": "Updated description for bulk edit",
+            "range": "1-4094",
         }
 
     def get_deletable_object(self):
