@@ -168,7 +168,12 @@ These patterns help you:
 
 ### Guard Clauses with Validation
 
-Use guard clauses to validate inputs and exit early when conditions aren’t met. This pattern keeps Job logic clean and prevents unnecessary processing.
+Guard clauses are simple checks early in your `run()` method that validate inputs or environment conditions.  
+If validation fails, the Job can exit immediately without running the rest of its logic.
+
+This keeps Jobs clean, predictable, and avoids unnecessary processing.
+
+If the failure is user-driven or recoverable, you can call `self.fail("message")` to mark the Job as failed without raising an exception.
 
 <!-- pyml disable-num-lines 10 proper-names -->
 !!! example
@@ -221,34 +226,6 @@ This pattern lets you validate inputs, selectively fail under certain conditions
 
 This approach demonstrates how you can gracefully handle invalid inputs with `self.fail()` while still using exceptions to halt execution for more serious issues—giving you precise control over how and why a Job is marked as failed.
 
-### Marking a Job as Failed
-
-Nautobot Jobs can exit in a variety of ways—cleanly, with validation checks, or due to exceptions. This section shows how to control Job execution and how success or failure gets reported to users.
-
-Any uncaught exception raised from within the `run()` method will abort the `run()` method immediately (as usual in Python), and will result in the Job Result status being marked as `FAILURE`. The exception message and traceback will be recorded in the Job Result.
-
-Alternatively, in Nautobot v2.4.5 and later, you can more "cleanly" fail a Job by calling `self.fail(...)` and then either returning immediately from the `run()` method or continuing with the execution of the Job, as desired. In this case, after the `run()` method completes, the Job Result status will be automatically marked as `FAILURE` and no exception or traceback will be recorded.
-
-As an example, the following Job will abort if the user does not put the word "Taco" in `occasion`, and fail (but not abort) if the variable does not additionally contain "Tuesday":
-
-<!-- pyml disable-num-lines 10 proper-names -->
-!!! example
-    ```py
-    from nautobot.apps.jobs import Job, StringVar
-
-    class MyJob(Job):
-        occasion = StringVar(...)
-
-        def run(self, occasion):
-            if not occasion.startswith("Taco"):
-                self.logger.failure("The occasion must begin with 'Taco'")
-                raise Exception("Argument input validation failed.")
-            if not occasion.endswith(" Tuesday"):
-                self.fail("It's supposed to be Tuesday")
-            self.logger.info("Today is %s", occasion)
-            return occasion
-    ```
-
 ## Working with Files
 
 Jobs can accept uploaded files, return output files, and read static data from disk. This section outlines how to use each of these patterns effectively.
@@ -270,12 +247,17 @@ Use the `Job.create_file(filename, content)` method:
 <!-- pyml disable-num-lines 10 proper-names -->
 !!! example
     ```py
-    from nautobot.extras.jobs import Job
+    from nautobot.apps.jobs import Job, register_jobs
 
     class MyJob(Job):
+        class Meta:
+            name = "File Output Example"
+
         def run(self):
             self.create_file("greeting.txt", "Hello world!")
-            self.create_file("farewell.txt", b"Goodbye for now!")  # Content can be a str or bytes
+            self.create_file("farewell.txt", b"Goodbye for now!")  # Content can be str or bytes
+
+    register_jobs(MyJob)
     ```
 
 The files will persist alongside the JobResult unless explicitly deleted. They can also be removed via the Admin UI under **File Proxies**.
@@ -329,12 +311,17 @@ These paths are relative to the Job’s file location inside `$JOBS_ROOT/`.
 <!-- pyml disable-num-lines 10 proper-names -->
 !!! example
     ```py
-    from nautobot.apps.jobs import Job
+    from nautobot.apps.jobs import Job, register_jobs
 
     class LoadConfig(Job):
+        class Meta:
+            name = "Load Configuration Defaults"
+
         def run(self):
             config = self.load_yaml("defaults.yaml")
             self.logger.info("Loaded configuration with %d items.", len(config))
+
+    register_jobs(LoadConfig)
     ```
 
 Unlike uploaded files, static files are typically bundled with the Job and version-controlled. This makes them useful for Jobs that rely on standard schemas or reusable templates.
@@ -353,11 +340,12 @@ This Job is useful when enforcing operational standards in environments where mi
 
 !!! note "Requirements"
     - Devices must exist in the database with `status="Active"`
-    - ConsolePort and PowerPort relationships should be populated
+    - Devices must have at least two connected PowerPorts for validation to pass
+    - ConsolePorts should have active connections
     - The `Status` model must include an `"Active"` value
 
 <!-- pyml disable-num-lines 10 proper-names -->
-!!! example
+!!! example "Device Validation Job"
     ```py
     from nautobot.apps.jobs import Job, register_jobs
     from nautobot.dcim.models import ConsolePort, Device, PowerPort
@@ -425,12 +413,12 @@ These variables are presented as a web form to be completed by the user. Once su
 
 !!! note "Requirements"
     - The `"Planned"` Status must exist in the Status model  
-    - The `"Access Switch"` Role must either exist or will be created  
+    - The `"Access Switch"` Role will be created automatically if it does not already exist  
     - DeviceType and Manufacturer records must exist and be related  
     - The user must have permission to create `Location` and `Device` objects
 
 <!-- pyml disable-num-lines 10 proper-names -->
-!!! example
+!!! example "Planned Location Creation Job"
     ```py
     from django.contrib.contenttypes.models import ContentType
 
@@ -496,13 +484,13 @@ These variables are presented as a web form to be completed by the user. Once su
 
 The [Example App](https://github.com/nautobot/nautobot/blob/main/examples/example_app/example_app/jobs.py) included with Nautobot provides several sample Jobs, including an `ExampleEverythingJob` class. This Job is designed to showcase a wide range of capabilities that a Job class can support—making it a useful reference for exploring what’s possible when combining inputs, lifecycle hooks, and outputs in one place.
 
-The snippet below demonstrates a mix of common patterns: variable types (`StringVar`, `ChoiceVar`, `FileVar`), structured logging, lifecycle methods like `before_start()` and `on_success()`, and file output using `create_file()`. It's a helpful starting point when you want to build a full-featured Job that accepts input, produces artifacts, and reports structured progress through the UI.
+The snippet below demonstrates a mix of common patterns: variable types (`StringVar`, `ChoiceVar`, `FileVar`), structured logging, lifecycle methods like `before_start()` and `on_success()`, and file output using `create_file()`. It's a helpful starting point when you want to build a full-featured Job that accepts input, produces downloadable artifacts, and logs structured progress in the UI.
 
 !!! note
     This snippet highlights only a portion of the full `ExampleEverythingJob`. To explore the complete implementation—including additional variables, error handling with `on_failure()`, and form customization—see the [full source code in the Example App](https://github.com/nautobot/nautobot/blob/main/examples/example_app/example_app/jobs.py).
 
 <!-- pyml disable-num-lines 10 proper-names -->
-!!! example
+!!! example "Everything Demo Job Snippet"
     ```py
     from nautobot.apps.jobs import Job, StringVar, IntegerVar, BooleanVar, ChoiceVar, FileVar, register_jobs
 
