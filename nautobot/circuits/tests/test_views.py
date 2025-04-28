@@ -145,7 +145,6 @@ class CircuitTerminationTestCase(
     # create/edit views are special cases, not currently tested
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
-    # No bulk-edit support currently
     ViewTestCases.BulkDeleteObjectsViewTestCase,
     ViewTestCases.BulkEditObjectsViewTestCase,
 ):
@@ -159,7 +158,7 @@ class CircuitTerminationTestCase(
             provider=provider,
         )
         cloud_network = CloudNetwork.objects.create(name="Test Cloud Network")
-        locations = Location.objects.all()[:2]
+        location = Location.objects.first()
         circuit_type = CircuitType.objects.first()
         status = Status.objects.get_for_model(Circuit).first()
 
@@ -181,7 +180,7 @@ class CircuitTerminationTestCase(
         CircuitTermination.objects.create(
             circuit=circuit1,
             term_side=CircuitTerminationSideChoices.SIDE_A,
-            location=locations[0],
+            location=location,
             port_speed=1000000,
             upstream_speed=1000000,
             xconnect_id="XC-001",
@@ -213,7 +212,7 @@ class CircuitTerminationTestCase(
 
         # 1. Set Location, clear Provider Network and Cloud Network
         cls.bulk_edit_data_location = {
-            "location": locations[1].pk,
+            "location": location.pk,
             "provider_network": None,
             "cloud_network": None,
             "port_speed": 2000000,
