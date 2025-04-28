@@ -25,7 +25,7 @@ The following pages provide detailed guides for managing and running Jobs:
     Backwards compatibility with NetBox scripts and reports has been removed. This includes removal of automatic calls to the `post_run()` and `test_*()` methods.
 
 !!! note
-    Jobs unify and supersede the functionality previously provided in NetBox by "custom scripts" and "reports". User input is supported via [job variables](../../../development/jobs/index.md#variables).
+    Jobs unify and supersede the functionality previously provided in NetBox by "custom scripts" and "reports". User input is supported via [job variables](../../../development/jobs/job-structure.md#variables).
 
 ## Managing Jobs
 

@@ -177,7 +177,7 @@ Jobs allow a user to write scripts in Python.  By integrating the scripts with G
 
 Setting up the repository can be done following the same steps from [Export Templates](#export-templates).  The only differences is the `provides` selection changes to `jobs`.
 
-Jobs need to be defined in a `/jobs/` directory or `jobs.py` at the root of a Git repository. Any job classes defined in these files that have been registered during import will be discovered by Nautobot and made available to be run as a job. See the section on [Job registration](../../development/jobs/index.md#job-registration) for more information.
+Jobs need to be defined in a `/jobs/` directory or `jobs.py` at the root of a Git repository. Any job classes defined in these files that have been registered during import will be discovered by Nautobot and made available to be run as a job. See the section on [Job registration](../../development/jobs/job-structure.md#job-registration) for more information.
 
 An example tree for `/jobs/`.
 
