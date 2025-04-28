@@ -181,6 +181,7 @@ class Button(Component):
         javascript_template_path=None,
         attributes=None,
         size=None,
+        link_includes_pk=True,
         **kwargs,
     ):
         """
@@ -211,6 +212,7 @@ class Button(Component):
         self.javascript_template_path = javascript_template_path
         self.attributes = attributes
         self.size = size
+        self.link_includes_pk = link_includes_pk
         super().__init__(**kwargs)
 
     def should_render(self, context: Context):
@@ -224,9 +226,11 @@ class Button(Component):
         Defaults to reversing `self.link_name` with `pk: obj.pk` as a kwarg, but subclasses may override this for
         more advanced link construction.
         """
-        if self.link_name:
+        if self.link_name and self.link_includes_pk:
             obj = get_obj_from_context(context)
             return reverse(self.link_name, kwargs={"pk": obj.pk})
+        elif self.link_name:
+            return reverse(self.link_name)
         return None
 
     def get_extra_context(self, context: Context):
@@ -275,7 +279,13 @@ class DropdownButton(Button):
 
 
 class FormButton(Button):
-    def __init__(self, form_id: str, link_name: str, template_path="components/button/formbutton.html", **kwargs):
+    def __init__(
+        self,
+        form_id: str,
+        link_name: str,
+        template_path="components/button/formbutton.html",
+        **kwargs,
+    ):
         """
         Initialize a FormButton instance.
 
@@ -830,6 +840,7 @@ class ObjectsTablePanel(Panel):
         request = context["request"]
         if self.context_table_key:
             body_content_table = context.get(self.context_table_key)
+            body_content_table_model = body_content_table.Meta.model
         else:
             body_content_table_class = self.table_class
             body_content_table_model = body_content_table_class.Meta.model
@@ -886,7 +897,10 @@ class ObjectsTablePanel(Panel):
         per_page = self.max_display_count if self.max_display_count is not None else get_paginate_count(request)
         paginate = {"paginator_class": EnhancedPaginator, "per_page": per_page}
         RequestConfig(request, paginate).configure(body_content_table)
-        more_queryset_count = max(body_content_table.data.data.count() - per_page, 0)
+        try:
+            more_queryset_count = max(body_content_table.data.data.count() - per_page, 0)
+        except TypeError:
+            more_queryset_count = max(len(body_content_table.data.data) - per_page, 0)
 
         obj = get_obj_from_context(context)
         body_content_table_model = body_content_table.Meta.model
