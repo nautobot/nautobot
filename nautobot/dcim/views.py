@@ -4221,6 +4221,7 @@ class DeviceFamilyUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.FULL_WIDTH,
                 table_class=tables.DeviceTypeTable,
                 table_filter="device_family",
+                select_related_fields=["manufacturer"],
                 exclude_columns=["device_family"],
             ),
             object_detail.ObjectsTablePanel(
