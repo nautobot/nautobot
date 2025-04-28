@@ -1,6 +1,7 @@
 # Getting Started
 
 ## Why Jobs?
+
 Nautobot **Jobs** let you run your own Python inside Nautobot’s execution engine.  
 They’re perfect for one‑off data imports, consistency checks, scheduled sync tasks, or bulk edits that would be painful by hand.
 
@@ -13,7 +14,7 @@ What Jobs **can** do: 
 
 What they **shouldn’t** do:
 
-- Spawn infinite loops or long‑running daemons (use [Job scheduling](../../user-guide/platform-functionality/jobs/job-scheduling-and-approvals/) for jobs need to be run at a later date or periodically)  
+- Spawn infinite loops or long‑running daemons (use [Job scheduling](../../user-guide/platform-functionality/jobs/job-scheduling-and-approvals.md) for jobs need to be run at a later date or periodically)  
 - Circumvent user permissions or Django validation  
 - Perform blocking tasks without timeouts
 
@@ -76,13 +77,12 @@ jobs.register_jobs(HelloWorldJob) # <- required in Nautobot 2.x
 ## Troubleshooting Common Issues
 
 - **Job not showing in UI**:
-  - Verify correct placement in `$JOBS_ROOT`.
-  - Verify that the Job class is registered using `register_jobs()`
-  - Run `nautobot-server post_upgrade` after adding Jobs.
+    - Verify correct placement in `$JOBS_ROOT`.
+    - Verify that the Job class is registered using `register_jobs()`
+    - Run `nautobot-server post_upgrade` after adding Jobs.
 
 - **Changes not appearing**:
-  - Ensure Celery workers are restarted manually after Job code updates. Nautobot's auto-reload does **not** affect Celery workers.
+    - Ensure Celery workers are restarted manually after Job code updates. Nautobot's auto-reload does **not** affect Celery workers.
 
 - **Jobs in submodules**:
-  - Only top-level modules are imported. Use top-level `__init__.py` files to import and register submodule Jobs explicitly.
-
+    - Only top-level modules are imported. Use top-level `__init__.py` files to import and register submodule Jobs explicitly.

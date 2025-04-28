@@ -7,7 +7,6 @@ Before you begin, make sure you’re familiar with:
 - The [core concepts of Jobs](../../user-guide/platform-functionality/jobs/index.md)
 - The [difference between Job classes and Job records](./job-structure.md#job-class-vs-job-record)
 
-
 ??? tip "Where is Job code stored?"
     Nautobot **does not** store Job code in the database. Instead, it loads Python classes from your file system or installed packages. The Job record stores only metadata — like name, description, and enabled state.
 
@@ -38,4 +37,3 @@ Each of the pages below builds on the previous, from creating a Job to testing i
 Jobs in Nautobot v2 use a different structure than those in v1. If you're upgrading existing Jobs, start here:
 
 - [Migrating Jobs from v1](migration/from-v1.md)
-

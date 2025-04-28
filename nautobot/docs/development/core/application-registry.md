@@ -89,7 +89,7 @@ A dictionary holding information about the layout of Nautobot's homepage. Each a
 
 +++ 2.2.3
 
-A dictionary of registered [Job classes](../jobs/index.md), indexed by their [class path](../jobs/job-structure.md#reserved-names-avoiding-collisions-with-job-internals). For example:
+A dictionary of registered [Job classes](../jobs/index.md), indexed by their [class path](../../user-guide/platform-functionality/jobs/models.md#understanding-job-class-paths). For example:
 
 ```python
 {

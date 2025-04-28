@@ -171,7 +171,7 @@ Now that the Git repository is linked for export templates it can be controlled 
 
 Jobs are a way for users to execute custom logic on demand from within the Nautobot UI. Jobs can interact directly with Nautobot data to accomplish various data creation, modification, and validation tasks.
 
-For technical details on jobs, please see the [documentation on jobs](../platform-functionality/jobs/index.md#jobs).
+For technical details on jobs, please see the [documentation on jobs](../platform-functionality/jobs/index.md).
 
 Jobs allow a user to write scripts in Python.  By integrating the scripts with Git, a user can utilize Git workflows to manage source control, versioning, and pipelines.
 

@@ -12,7 +12,7 @@ These extensions let you tightly couple automation to user actions or system cha
 These are Jobs that subclass the `nautobot.apps.jobs.JobButtonReceiver` class. Job Button Receivers are similar to normal Jobs except they are hard coded to accept only `object_pk` and `object_model_name` [variables](./job-structure.md#variables). The `JobButtonReceiver` class only implements one method called `receive_job_button`.
 
 !!! note "Disabled by default just like other Jobs"
-    Job Button Receivers still need to be [enabled through the web UI](../../user-guide/platform-functionality/jobs/index.md#enabling-jobs-for-running) before they can be used just like other Jobs.
+    Job Button Receivers still need to be [enabled through the web UI](../../user-guide/platform-functionality/jobs/managing-jobs.md#enabling-jobs) before they can be used just like other Jobs.
 
 ### The `receive_job_button()` Method
 
@@ -22,7 +22,6 @@ All `JobButtonReceiver` subclasses must implement `receive_job_button(self, obj)
 !!! example "Example Job Button Receiver"
     ```py
     from nautobot.apps.jobs import JobButtonReceiver, register_jobs
-
 
     class ExampleSimpleJobButtonReceiver(JobButtonReceiver):
         class Meta:
@@ -45,13 +44,11 @@ You can support multiple object types in a single Job by checking the object typ
 !!! tip "Checking Permissions"
     You can use `self.user.has_perm()` to restrict logic based on the object or user’s role.
 
-
 <!-- pyml disable-num-lines 10 proper-names -->
 !!! example
     ```py
     from nautobot.apps.jobs import JobButtonReceiver, register_jobs
     from nautobot.dcim.models import Device, Location
-
 
     class ExampleComplexJobButtonReceiver(JobButtonReceiver):
         class Meta:
@@ -105,7 +102,6 @@ Use Job Hooks to enforce policy, run audits, or trigger external actions in resp
     from nautobot.apps.jobs import JobHookReceiver, register_jobs
     from nautobot.extras.choices import ObjectChangeActionChoices
 
-
     class ExampleJobHookReceiver(JobHookReceiver):
         def receive_job_hook(self, change, action, changed_object):
             # return on delete action
@@ -134,12 +130,10 @@ Use Job Hooks to enforce policy, run audits, or trigger external actions in resp
             # add business logic to validate serial
             return False
 
-
     register_jobs(ExampleJobHookReceiver)
     ```
 
 ### The `receive_job_hook()` Method
-
 
 All `JobHookReceiver` subclasses must implement `receive_job_hook(self, change, action, changed_object)`, which receives:
 

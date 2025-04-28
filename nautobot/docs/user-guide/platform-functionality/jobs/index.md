@@ -2,12 +2,12 @@
 
 Jobs are a way for users to execute custom logic on demand from within the Nautobot UI. Jobs can interact directly with Nautobot data to accomplish various data creation, modification, and validation tasks, such as:
 
-* Automatically populate new devices and cables in preparation for a new location deployment
-* Create a range of new reserved prefixes or IP addresses
-* Fetch data from an external source and import it to Nautobot
-* Check and report whether all top-of-rack switches have a console connection
-* Check and report whether every router has a loopback interface with an assigned IP address
-* Check and report whether all IP addresses have a parent prefix
+- Automatically populate new devices and cables in preparation for a new location deployment
+- Create a range of new reserved prefixes or IP addresses
+- Fetch data from an external source and import it to Nautobot
+- Check and report whether all top-of-rack switches have a console connection
+- Check and report whether every router has a loopback interface with an assigned IP address
+- Check and report whether all IP addresses have a parent prefix
 
 ...and so on. Jobs are Python code and exist outside of the official Nautobot code base, so they can be updated and changed without interfering with the core Nautobot installation. And because they're completely customizable, there's practically no limit to what a job can accomplish.
 
@@ -19,7 +19,6 @@ The following pages provide detailed guides for managing and running Jobs:
 - **[Job Buttons](./jobbutton.md)**: Run Jobs from detail views of Nautobot objects.
 - **[Job Hooks](./jobhook.md)**: Automatically trigger Jobs based on object changes.
 - **[Kubernetes Job Support](./kubernetes-job-support.md)**: Run Jobs within a Kubernetes cluster.
-
 
 +/- 2.0.0
     Backwards compatibility with NetBox scripts and reports has been removed. This includes removal of automatic calls to the `post_run()` and `test_*()` methods.
@@ -81,9 +80,9 @@ http://nautobot/api/extras/jobs/$JOB_NAME/run/ \
 
 When providing input data, it is possible to specify complex values contained in `ObjectVar`s, `MultiObjectVar`s, and `IPAddressVar`s.
 
-* `ObjectVar`s can be specified by either using their primary key directly as the value, or as a dictionary containing a more complicated query that gets passed into the Django ORM as keyword arguments.
-* `MultiObjectVar`s can be specified as a list of primary keys.
-* `IPAddressVar`s can be provided as strings in CIDR notation.
+- `ObjectVar`s can be specified by either using their primary key directly as the value, or as a dictionary containing a more complicated query that gets passed into the Django ORM as keyword arguments.
+- `MultiObjectVar`s can be specified as a list of primary keys.
+- `IPAddressVar`s can be provided as strings in CIDR notation.
 
 #### Jobs with Files
 

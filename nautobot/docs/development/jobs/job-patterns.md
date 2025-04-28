@@ -8,28 +8,26 @@ Because Jobs are highly flexible, many common patterns tend to emerge depending 
 
 Not every Job needs every feature shown below. Use this page as a reference: copy/paste and customize only the patterns you need.
 
-
 ## Common Job Patterns
 
 - [Accessing User and Job Context](#accessing-user-and-job-context)
 - [Logging Patterns](#logging-patterns)
-  - Logging levels
-  - Structured log context with `extra`
-  - Skipping database logging
-  - Markdown formatting and sanitization
+    - Logging levels
+    - Structured log context with `extra`
+    - Skipping database logging
+    - Markdown formatting and sanitization
 - [Job Flow Control](#job-flow-control)
-  - Guard clauses with validation
-  - Success and failure conditions
-  - Marking a Job as failed
+    - Guard clauses with validation
+    - Success and failure conditions
+    - Marking a Job as failed
 - [Working with Files](#working-with-files)
-  - File output with `create_file()`
-  - Uploading and parsing files (`FileVar`)
-  - Reading static YAML or JSON files
+    - File output with `create_file()`
+    - Uploading and parsing files (`FileVar`)
+    - Reading static YAML or JSON files
 - [Reference Implementations](#reference-implementations)
-  - Device validation
-  - Creating objects for a planned location
-  - Everything demo from the Example App
-
+    - Device validation
+    - Creating objects for a planned location
+    - Everything demo from the Example App
 
 ## Job Execution Context and Logging Patterns
 
@@ -61,6 +59,7 @@ Here’s a simple example that logs which user launched the Job, along with its 
 You can access other standard Django user attributes like `self.user.email`, `self.user.is_staff`, or use `self.user.has_perm(...)` for permission checks.
 
 ### Logging Patterns
+
 +/- 2.0.0
 
 Nautobot logs messages from Jobs in a structured way, storing them as part of the `JobResult` and displaying them in the UI. This enables Jobs to provide real-time feedback, track their progress, and surface success or failure messages clearly to the user.
@@ -351,7 +350,6 @@ This Job is useful when enforcing operational standards in environments where mi
     from nautobot.dcim.models import ConsolePort, Device, PowerPort
     from nautobot.extras.models import Status
 
-
     class DeviceConnectionsReport(Job):
         description = "Validate the minimum physical connections for each device"
 
@@ -478,7 +476,6 @@ These variables are presented as a web form to be completed by the user. Once su
 
     register_jobs(NewBranch)
     ```
-
 
 ### Example "Everything" Job
 

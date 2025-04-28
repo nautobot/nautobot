@@ -9,7 +9,7 @@ Nautobot supports three ways to install Jobs:
 Each approach supports modular organization, multiple Job classes, and reuse of shared logic. The key difference is how Nautobot loads the files into its job registry and associates them with database Job records.
 
 !!! tip
-    Looking to run Jobs in Kubernetes? See [Kubernetes Job Support](../../../user-guide/platform-functionality/jobs/kubernetes-job-support/).
+    Looking to run Jobs in Kubernetes? See [Kubernetes Job Support](../../../user-guide/platform-functionality/jobs/kubernetes-job-support.md).
 
 ## Manual Installation via `JOBS_ROOT`
 

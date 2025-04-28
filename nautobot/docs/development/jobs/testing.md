@@ -4,11 +4,11 @@ Jobs are regular Python classes and can be tested using [Django’s standard tes
 
 While individual methods within your Job can and should be tested in isolation, you'll likely also want to test the entire execution of the Job.
 
-### Using `TransactionTestCase`
+## Using `TransactionTestCase`
 
 Nautobot provides a subclass of Django’s `TransactionTestCase` that is tailored for testing Jobs. This test class ensures each test starts with a clean database and supports integration with Nautobot’s Job system.
 
-Use `nautobot.apps.testing.TransactionTestCase` instead of `django.test.TestCase`, especially when invoking full Job execution via `run_job_for_testing()`. 
+Use `nautobot.apps.testing.TransactionTestCase` instead of `django.test.TestCase`, especially when invoking full Job execution via `run_job_for_testing()`.
 
 !!! tip "Why `TransactionTestCase`?"
     `TransactionTestCase` allows database changes to persist across the Celery task boundary when testing, which is required because Jobs are executed in a different process context.
@@ -16,7 +16,7 @@ Use `nautobot.apps.testing.TransactionTestCase` instead of `django.test.TestCase
 
 When using `TransactionTestCase` (whether from Django or from Nautobot) each test runs on a completely empty database. Furthermore, Nautobot requires new Jobs to be enabled before they can run. Therefore, we need to make sure the Job is enabled before each run which `run_job_for_testing` handles for us.
 
-### Running a Job in a Test
+## Running a Job in a Test
 
 Nautobot provides the `run_job_for_testing()` utility to simplify test execution. It handles Job registration, enables the Job if needed, and executes it with your provided input variables using the standard Celery worker system.
 
@@ -46,11 +46,11 @@ class MyJobTestCase(TransactionTestCase):
             self.assertEqual(log_entry.message, "...")
 ```
 
-The test files should be placed under the `tests` folder in the app's directory or under `JOBS_ROOT`. 
+The test files should be placed under the `tests` folder in the app's directory or under `JOBS_ROOT`.
 
 !!! tip "Running Tests"
     You can run Job tests using either Django’s test runner or `pytest`, depending on your environment:
-    
+
     - `nautobot-server test myapp.tests.test_jobs`
     - `pytest myapp/tests/test_jobs.py`
 
@@ -68,7 +68,7 @@ The 'profile' form field on Jobs is automatically available when the `DEBUG` set
 !!! note
     If you need to run this in an environment where `DEBUG` is `False`, you have the option of using `nautobot-server runjob` with the `--profile` flag. According to the docs, `cProfile` should have minimal impact on the performance of the Job; still, proceed with caution when using this in a production environment.
 
-### Reading Profiling Reports
+## Reading Profiling Reports
 
 Profiling files are saved in the format expected by Python’s `pstats` module. A full description on how to deal with the output of `cProfile` can be found in the [Instant User's Manual](https://docs.python.org/3/library/profile.html#instant-user-s-manual). You can analyze them as follows:
 

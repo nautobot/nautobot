@@ -99,7 +99,6 @@ class ExampleJob(Job):
 
 If you code a multi-line description, the first line only will be used in the description column of the Jobs list, while the full description will be rendered in the Job detail view, submission, approval, and results pages.
 
-
 ### `approval_required`
 
 Default: `False`
@@ -136,8 +135,8 @@ Unless set to False, it prevents the Job's input parameters from being saved to 
 
 Important notes about Jobs with sensitive variables:
 
-* Such Jobs cannot be scheduled to run in the future or on a recurring schedule (as Scheduled Jobs must by necessity store their variables in the database for future reference).
-* Jobs with sensitive variables cannot be marked as requiring approval (as Jobs pending approval must store their variables in the database until approved).
+- Such Jobs cannot be scheduled to run in the future or on a recurring schedule (as Scheduled Jobs must by necessity store their variables in the database for future reference).
+- Jobs with sensitive variables cannot be marked as requiring approval (as Jobs pending approval must store their variables in the database until approved).
 
 ### `hidden`
 
@@ -149,11 +148,11 @@ Since the Job execution framework is designed to be generic, there may be severa
 
 Important notes about hidden Jobs:
 
-* This is merely hiding them by default from the web interface. It is NOT a security feature.
-* In the Jobs list view it is possible to filter to "Hidden: (no selection)" or even "Hidden: Yes" to list the hidden Jobs.
-* All Job UI and REST API endpoints still exist for hidden Jobs and can be accessed by any user who is aware of their existence.
-* Hidden Jobs can still be executed through the UI or the REST API given the appropriate URL.
-* Results for hidden Jobs will still appear in the Job Results list after they are run.
+- This is merely hiding them by default from the web interface. It is NOT a security feature.
+- In the Jobs list view it is possible to filter to "Hidden: (no selection)" or even "Hidden: Yes" to list the hidden Jobs.
+- All Job UI and REST API endpoints still exist for hidden Jobs and can be accessed by any user who is aware of their existence.
+- Hidden Jobs can still be executed through the UI or the REST API given the appropriate URL.
+- Results for hidden Jobs will still appear in the Job Results list after they are run.
 
 ### `is_singleton`
 
@@ -166,9 +165,9 @@ Any duplicate job instances will error out with a singleton-specific error messa
 
 Important notes about singleton jobs:
 
-* The singleton functionality is implemented with a Redis key set to timeout either on the hard time out of the job or whenever the job terminates.
-    * Therefore, a restart of Redis will wipe the singleton locks
-* A checkbox on the job run form makes it possible to force the singleton lock to be overridden. This makes it possible to recover from failure scenarios such as the original singleton job being stopped before it can unset the lock.
+- The singleton functionality is implemented with a Redis key set to timeout either on the hard time out of the job or whenever the job terminates.
+    - Therefore, a restart of Redis will wipe the singleton locks
+- A checkbox on the job run form makes it possible to force the singleton lock to be overridden. This makes it possible to recover from failure scenarios such as the original singleton job being stopped before it can unset the lock.
 
 ### `read_only`
 
@@ -308,19 +307,19 @@ The remainder of this section documents the various supported variable types and
 
 All Job variables support the following default options:
 
-* `default` - The field's default value
-* `description` - A brief user-friendly description of the field
-* `label` - The field name to be displayed in the rendered form
-* `required` - Indicates whether the field is mandatory (all fields are required by default)
-* `widget` - The class of form widget to use (see the [Django documentation](https://docs.djangoproject.com/en/stable/ref/forms/widgets/))
+- `default` - The field's default value
+- `description` - A brief user-friendly description of the field
+- `label` - The field name to be displayed in the rendered form
+- `required` - Indicates whether the field is mandatory (all fields are required by default)
+- `widget` - The class of form widget to use (see the [Django documentation](https://docs.djangoproject.com/en/stable/ref/forms/widgets/))
 
 ### `StringVar`
 
 Stores a string of characters (i.e. text). Options include:
 
-* `min_length` - Minimum number of characters
-* `max_length` - Maximum number of characters
-* `regex` - A regular expression against which the provided value must match
+- `min_length` - Minimum number of characters
+- `max_length` - Maximum number of characters
+- `regex` - A regular expression against which the provided value must match
 
 Note that `min_length` and `max_length` can be set to the same number to effect a fixed-length field.
 
@@ -356,8 +355,8 @@ This Job uses a JSONVar to accept a structured input from the user. For example,
 
 Stores a numeric integer. Options include:
 
-* `min_value` - Minimum value
-* `max_value` - Maximum value
+- `min_value` - Minimum value
+- `max_value` - Maximum value
 
 ### `BooleanVar`
 
@@ -371,7 +370,7 @@ A true/false flag with special handling for Jobs that require approval. If `dryr
 
 A set of choices from which the user can select one.
 
-* `choices` - A list of `(value, label)` tuples representing the available choices. For example:
+- `choices` - A list of `(value, label)` tuples representing the available choices. For example:
 
 ```python
 from nautobot.apps.jobs import Job, ChoiceVar, register_jobs
@@ -454,7 +453,6 @@ vlan = ObjectVar(
 ```
 
 In the example above, [`"depth": 1`](../../user-guide/platform-functionality/rest-api/overview.md#depth-query-parameter) was needed to influence REST API to include details of the associated records.
-
 
 #### Using Computed Fields
 
@@ -556,8 +554,8 @@ An IPv4 or IPv6 address with a mask. Returns a `netaddr.IPNetwork` object which 
 
 An IPv4 or IPv6 network with a mask. Returns a `netaddr.IPNetwork` object. Two attributes are available to validate the provided mask:
 
-* `min_prefix_length` - Minimum length of the mask
-* `max_prefix_length` - Maximum length of the mask
+- `min_prefix_length` - Minimum length of the mask
+- `max_prefix_length` - Maximum length of the mask
 
 ## Special Methods
 
@@ -575,7 +573,6 @@ As Jobs are Python classes, you are of course free to define any number of other
 The `before_start()` method may optionally be implemented to perform any appropriate Job-specific setup before the `run()` method is called. It has the signature `before_start(self, task_id, args, kwargs)` for historical reasons; the `task_id` parameter will always be identical to `self.request.id`, the `args` parameter will generally be empty, and any user-specified variables passed into the Job execution will be present in the `kwargs` parameter.
 
 The return value from `before_start()` is ignored, but if it raises any exception, the Job result status will be marked as `FAILURE` and `run()` will not be called.
-
 
 ### The `create_file()` Method
 
@@ -679,7 +676,6 @@ If either `before_start()` or `run()` raises any unhandled exception, or reports
 
 Regardless of the overall Job execution success or failure, the `after_return()` method will be called after `on_success()` or `on_failure()`. It has the signature `after_return(self, status, retval, task_id, args, kwargs, einfo)`; the `status` will indicate success or failure (using the `JobResultStatusChoices` enum), `retval` is *either* the return value from `run()` or the exception raised, and once again `kwargs` contains the user variables.
 
-
 ## Reserved Names: Avoiding Collisions with Job Internals
 
 When writing Jobs, it's important to avoid reusing internal attribute or method names from the `Job` class. Doing so can interfere with how Jobs are registered, rendered, or executed. The following table outlines reserved names you **should not** use for variable names or method overrides.
@@ -735,4 +731,3 @@ As of Nautobot 2.4.0, the current list of reserved names (not including low-leve
 | `time_limit`              | [metadata property](#time_limit)                                      |
 | `user`                    | property                                                                |
 | `validate_data`           | internal class method                                                   |
- 
