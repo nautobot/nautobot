@@ -4209,36 +4209,30 @@ class DeviceFamilyUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.DeviceFamilySerializer
     table_class = tables.DeviceFamilyTable
     lookup_field = "pk"
-
-    def get_extra_context(self, request, instance):
-        # Related device types table
-        context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            device_types = (
-                DeviceType.objects.restrict(request.user, "view")
-                .filter(device_family=instance)
-                .select_related("manufacturer")
-                .annotate(device_count=count_related(Device, "device_type"))
-            )
-            device_type_table = tables.DeviceTypeTable(device_types, orderable=False)
-
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(device_type_table)
-
-            context["device_type_table"] = device_type_table
-
-            total_devices = 0
-            device_type_count = 0
-            for device_type in device_types:
-                total_devices += device_type.device_count
-                device_type_count += 1
-            context["total_devices"] = total_devices
-            context["device_type_count"] = device_type_count
-
-        return context
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.DeviceTypeTable,
+                table_filter="device_family",
+                exclude_columns=["device_family"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.DeviceTable,
+                table_filter="device_type__device_family",
+                related_field_name="device_family",
+                exclude_columns=["device_family"],
+            ),
+        )
+    )
 
 
 #
