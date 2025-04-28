@@ -50,7 +50,6 @@ class CircuitTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTe
             "description": "A new circuit type",
         }
         cls.bulk_edit_data = {
-            "name": "Circuit Type A",
             "description": "A new updated circuit type",
         }
 
