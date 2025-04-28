@@ -1132,8 +1132,9 @@ class VLANGroupUIViewSet(NautobotUIViewSet):
                 add_button_route=None,
                 form_id="vlan_form",
                 footer_buttons=[
-                    object_detail.FormButtonNoPK(
+                    object_detail.FormButton(
                         link_name="ipam:vlan_bulk_edit",
+                        link_includes_pk=False,
                         label="Edit Selected",
                         color=ButtonActionColorChoices.EDIT,
                         icon="mdi-pencil",
@@ -1141,8 +1142,9 @@ class VLANGroupUIViewSet(NautobotUIViewSet):
                         form_id="vlan_form",
                         weight=200,
                     ),
-                    object_detail.FormButtonNoPK(
+                    object_detail.FormButton(
                         link_name="ipam:vlan_bulk_delete",
+                        link_includes_pk=False,
                         label="Delete Selected",
                         color=ButtonActionColorChoices.DELETE,
                         icon="mdi-trash-can-outline",
@@ -1163,8 +1165,6 @@ class VLANGroupUIViewSet(NautobotUIViewSet):
                 .filter(vlan_group=instance)
                 .prefetch_related(Prefetch("prefixes", queryset=Prefix.objects.restrict(request.user)))
             )
-            # vlans_count = vlans.count()
-            excluded_vlans = vlans.exclude(prefixes__isnull=True)
             data_transform_callback = get_add_available_vlans_callback(show_available=True, vlan_group=instance)
             vlan_table = tables.VLANDetailTable(
                 vlans, exclude=["vlan_group"], data_transform_callback=data_transform_callback
@@ -1178,7 +1178,7 @@ class VLANGroupUIViewSet(NautobotUIViewSet):
                 {
                     "bulk_querystring": f"vlan_group={instance.pk}",
                     "vlan_table": vlan_table,
-                    "badge_count_override": len(excluded_vlans),
+                    "badge_count_override": vlans.count(),
                 }
             )
         return context

@@ -143,32 +143,15 @@ logger = logging.getLogger(__name__)
 #
 
 
-class ComputedFieldListView(generic.ObjectListView):
+class ComputedFieldUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ComputedFieldBulkEditForm
+    filterset_class = filters.ComputedFieldFilterSet
+    filterset_form_class = forms.ComputedFieldFilterForm
+    form_class = forms.ComputedFieldForm
+    serializer_class = serializers.ComputedFieldSerializer
+    table_class = tables.ComputedFieldTable
     queryset = ComputedField.objects.all()
-    table = tables.ComputedFieldTable
-    filterset = filters.ComputedFieldFilterSet
-    filterset_form = forms.ComputedFieldFilterForm
     action_buttons = ("add",)
-
-
-class ComputedFieldView(generic.ObjectView):
-    queryset = ComputedField.objects.all()
-
-
-class ComputedFieldEditView(generic.ObjectEditView):
-    queryset = ComputedField.objects.all()
-    model_form = forms.ComputedFieldForm
-    template_name = "extras/computedfield_edit.html"
-
-
-class ComputedFieldDeleteView(generic.ObjectDeleteView):
-    queryset = ComputedField.objects.all()
-
-
-class ComputedFieldBulkDeleteView(generic.BulkDeleteView):
-    queryset = ComputedField.objects.all()
-    table = tables.ComputedFieldTable
-    filterset = filters.ComputedFieldFilterSet
 
 
 #
@@ -682,30 +665,44 @@ class CustomFieldBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class CustomLinkListView(generic.ObjectListView):
+class CustomLinkUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.CustomLinkBulkEditForm
+    filterset_class = filters.CustomLinkFilterSet
+    filterset_form_class = forms.CustomLinkFilterForm
+    form_class = forms.CustomLinkForm
     queryset = CustomLink.objects.all()
-    table = tables.CustomLinkTable
-    filterset = filters.CustomLinkFilterSet
-    filterset_form = forms.CustomLinkFilterForm
-    action_buttons = ("add",)
+    serializer_class = serializers.CustomLinkSerializer
+    table_class = tables.CustomLinkTable
 
-
-class CustomLinkView(generic.ObjectView):
-    queryset = CustomLink.objects.all()
-
-
-class CustomLinkEditView(generic.ObjectEditView):
-    queryset = CustomLink.objects.all()
-    model_form = forms.CustomLinkForm
-
-
-class CustomLinkDeleteView(generic.ObjectDeleteView):
-    queryset = CustomLink.objects.all()
-
-
-class CustomLinkBulkDeleteView(generic.BulkDeleteView):
-    queryset = CustomLink.objects.all()
-    table = tables.CustomLinkTable
+    object_detail_content = ObjectDetailContent(
+        panels=[
+            ObjectFieldsPanel(
+                label="Custom Link",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=[
+                    "content_type",
+                    "name",
+                    "group_name",
+                    "weight",
+                    "target_url",
+                    "button_class",
+                    "new_window",
+                ],
+                value_transforms={
+                    "target_url": [helpers.pre_tag],
+                    "button_class": [helpers.render_button_class],
+                },
+            ),
+            object_detail.ObjectTextPanel(
+                label="Text",
+                section=SectionChoices.LEFT_HALF,
+                weight=200,
+                object_field="text",
+                render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
+            ),
+        ]
+    )
 
 
 #
@@ -2179,6 +2176,20 @@ class JobButtonUIViewSet(NautobotUIViewSet):
     queryset = JobButton.objects.all()
     serializer_class = serializers.JobButtonSerializer
     table_class = tables.JobButtonTable
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                value_transforms={
+                    "text": [helpers.pre_tag],
+                    "job": [helpers.render_job_run_link],
+                    "button_class": [helpers.render_button_class],
+                },
+            ),
+        )
+    )
 
 
 #

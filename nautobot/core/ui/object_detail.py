@@ -181,6 +181,7 @@ class Button(Component):
         javascript_template_path=None,
         attributes=None,
         size=None,
+        link_includes_pk=True,
         **kwargs,
     ):
         """
@@ -211,6 +212,7 @@ class Button(Component):
         self.javascript_template_path = javascript_template_path
         self.attributes = attributes
         self.size = size
+        self.link_includes_pk = link_includes_pk
         super().__init__(**kwargs)
 
     def should_render(self, context: Context):
@@ -224,9 +226,11 @@ class Button(Component):
         Defaults to reversing `self.link_name` with `pk: obj.pk` as a kwarg, but subclasses may override this for
         more advanced link construction.
         """
-        if self.link_name:
+        if self.link_name and self.link_includes_pk:
             obj = get_obj_from_context(context)
             return reverse(self.link_name, kwargs={"pk": obj.pk})
+        elif self.link_name:
+            return reverse(self.link_name)
         return None
 
     def get_extra_context(self, context: Context):
@@ -275,7 +279,13 @@ class DropdownButton(Button):
 
 
 class FormButton(Button):
-    def __init__(self, form_id: str, link_name: str, template_path="components/button/formbutton.html", **kwargs):
+    def __init__(
+        self,
+        form_id: str,
+        link_name: str,
+        template_path="components/button/formbutton.html",
+        **kwargs,
+    ):
         """
         Initialize a FormButton instance.
 
@@ -858,8 +868,7 @@ class ObjectsTablePanel(Panel):
         request = context["request"]
         if self.context_table_key:
             body_content_table = context.get(self.context_table_key)
-            body_content_table_class = type(body_content_table)
-            body_content_table_model = body_content_table_class.Meta.model
+            body_content_table_model = body_content_table.Meta.model
         else:
             body_content_table_class = self.table_class
             body_content_table_model = body_content_table_class.Meta.model
@@ -1043,7 +1052,7 @@ class KeyValueTablePanel(Panel):
           the display (returning `""` instead of a placeholder).
 
         There is a lot of "intelligence" built in to this method to handle various data types, including:
-
+        - Instances of `TreeModel` will display the full path from root to node (using `render_ancestor_hierarchy()`)
         - Instances of `Status`, `Role` and similar models will be represented as an appropriately-colored hyperlinked
           badge (using `hyperlinked_object_with_color()`)
         - Instances of `Tenant` will be hyperlinked and will also display their hyperlinked `TenantGroup` if any
@@ -1066,6 +1075,9 @@ class KeyValueTablePanel(Panel):
 
         elif isinstance(value, bool):
             return render_boolean(value)
+
+        elif isinstance(value, TreeModel):
+            display = render_ancestor_hierarchy(value)
 
         elif isinstance(value, models.Model):
             if hasattr(value, "color"):
