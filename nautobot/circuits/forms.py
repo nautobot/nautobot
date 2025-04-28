@@ -11,6 +11,7 @@ from nautobot.core.forms import (
     TagFilterField,
 )
 from nautobot.dcim.form_mixins import (
+    LocatableModelBulkEditFormMixin,
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
 )
@@ -248,6 +249,33 @@ class CircuitFilterForm(
 #
 # Circuit terminations
 #
+
+
+class CircuitTerminationBulkEditForm(TagsBulkEditFormMixin, LocatableModelBulkEditFormMixin, NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(
+        queryset=CircuitTermination.objects.all(),
+        widget=forms.MultipleHiddenInput,
+    )
+    provider_network = DynamicModelChoiceField(queryset=ProviderNetwork.objects.all(), required=False)
+    cloud_network = DynamicModelChoiceField(queryset=CloudNetwork.objects.all(), required=False)
+    port_speed = forms.IntegerField(required=False, min_value=0, label="Port Speed (Kbps)")
+    upstream_speed = forms.IntegerField(required=False, min_value=0, label="Upstream Speed (Kbps)")
+    xconnect_id = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False, label="Cross-connect ID")
+    pp_info = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False, label="Patch Panel/Port(s)")
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    class Meta:
+        model = CircuitTermination
+        nullable_fields = [
+            "location",
+            "provider_network",
+            "cloud_network",
+            "port_speed",
+            "upstream_speed",
+            "xconnect_id",
+            "pp_info",
+            "description",
+        ]
 
 
 class CircuitTerminationForm(LocatableModelFormMixin, NautobotModelForm):

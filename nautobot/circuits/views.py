@@ -63,17 +63,9 @@ class CircuitTypeUIViewSet(
         return context
 
 
-class CircuitTerminationUIViewSet(
-    view_mixins.ObjectDetailViewMixin,
-    view_mixins.ObjectListViewMixin,
-    view_mixins.ObjectEditViewMixin,
-    view_mixins.ObjectDestroyViewMixin,
-    view_mixins.ObjectBulkDestroyViewMixin,
-    view_mixins.ObjectBulkCreateViewMixin,  # 3.0 TODO: remove this mixin as it's no longer used
-    view_mixins.ObjectChangeLogViewMixin,
-    view_mixins.ObjectNotesViewMixin,
-):
+class CircuitTerminationUIViewSet(NautobotUIViewSet):
     action_buttons = ("import", "export")
+    bulk_update_form_class = forms.CircuitTerminationBulkEditForm
     filterset_class = filters.CircuitTerminationFilterSet
     filterset_form_class = forms.CircuitTerminationFilterForm
     form_class = forms.CircuitTerminationForm

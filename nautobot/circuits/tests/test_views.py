@@ -10,7 +10,9 @@ from nautobot.circuits.models import (
     Provider,
     ProviderNetwork,
 )
+from nautobot.cloud.models import CloudNetwork
 from nautobot.core.testing import post_data, TestCase as NautobotTestCase, utils, ViewTestCases
+from nautobot.dcim.models.locations import Location
 from nautobot.extras.models import Status, Tag
 
 
@@ -145,8 +147,105 @@ class CircuitTerminationTestCase(
     ViewTestCases.ListObjectsViewTestCase,
     # No bulk-edit support currently
     ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = CircuitTermination
+
+    @classmethod
+    def setUpTestData(cls):
+        provider = Provider.objects.first()
+        provider_network = ProviderNetwork.objects.create(
+            name="Test Provider Network",
+            provider=provider,
+        )
+        cloud_network = CloudNetwork.objects.create(name="Test Cloud Network")
+        locations = Location.objects.all()[:2]
+        circuit_type = CircuitType.objects.first()
+        status = Status.objects.get_for_model(Circuit).first()
+
+        # Create Circuits
+        circuit1 = Circuit.objects.create(
+            cid="Test Circuit 1",
+            provider=provider,
+            circuit_type=circuit_type,
+            status=status,
+        )
+        circuit2 = Circuit.objects.create(
+            cid="Test Circuit 2",
+            provider=provider,
+            circuit_type=circuit_type,
+            status=status,
+        )
+
+        # Circuit 1 with Location and Provider Network
+        CircuitTermination.objects.create(
+            circuit=circuit1,
+            term_side=CircuitTerminationSideChoices.SIDE_A,
+            location=locations[0],
+            port_speed=1000000,
+            upstream_speed=1000000,
+            xconnect_id="XC-001",
+            pp_info="Patch-01",
+            description="Initial termination A",
+        )
+        CircuitTermination.objects.create(
+            circuit=circuit1,
+            term_side=CircuitTerminationSideChoices.SIDE_Z,
+            provider_network=provider_network,
+            port_speed=1000000,
+            upstream_speed=1000000,
+            xconnect_id="XC-002",
+            pp_info="Patch-02",
+            description="Initial termination Z",
+        )
+
+        # Circuit 2 with Cloud Network
+        CircuitTermination.objects.create(
+            circuit=circuit2,
+            term_side=CircuitTerminationSideChoices.SIDE_A,
+            cloud_network=cloud_network,
+            port_speed=1000000,
+            upstream_speed=1000000,
+            xconnect_id="XC-003",
+            pp_info="Patch-03",
+            description="Initial termination cloud A",
+        )
+
+        # 1. Set Location, clear Provider Network and Cloud Network
+        cls.bulk_edit_data_location = {
+            "location": locations[1].pk,
+            "provider_network": None,
+            "cloud_network": None,
+            "port_speed": 2000000,
+            "upstream_speed": 1500000,
+            "xconnect_id": "Updated XConnect Location",
+            "pp_info": "Updated Patch Panel Info Location",
+            "description": "Updated description for Location",
+        }
+
+        # 2. Set Provider Network, clear Location and Cloud Network
+        cls.bulk_edit_data_provider_network = {
+            "location": None,
+            "provider_network": provider_network.pk,
+            "cloud_network": None,
+            "port_speed": 2000000,
+            "upstream_speed": 1500000,
+            "xconnect_id": "Updated XConnect Provider",
+            "pp_info": "Updated Patch Panel Info Provider",
+            "description": "Updated description for Provider Network",
+        }
+
+        # 3. Set Cloud Network, clear Location and Provider Network
+        cls.bulk_edit_data_cloud_network = {
+            "location": None,
+            "provider_network": None,
+            "cloud_network": cloud_network.pk,
+            "port_speed": 2000000,
+            "upstream_speed": 1500000,
+            "xconnect_id": "Updated XConnect Cloud",
+            "pp_info": "Updated Patch Panel Info Cloud",
+            "description": "Updated description for Cloud Network",
+        }
 
     def test_circuit_termination_detail_200(self):
         """
