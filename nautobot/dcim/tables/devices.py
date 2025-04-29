@@ -1227,23 +1227,21 @@ class InterfaceRedundancyGroupAssociationTable(BaseTable):
         fields = (
             "pk",
             "interface_redundancy_group",
+            "interface__device",
             "interface",
             "priority",
+            "interface__status",
+            "interface__enabled",
+            "interface__ip_addresses",
+            "interface__type",
+            "interface__description",
+            "interface__label",
             "interface_redundancy_group__status",
             "interface_redundancy_group__virtual_ip",
             "interface_redundancy_group__protocol",
             "interface_redundancy_group__protocol_group_id",
-            "interface__device",
             "interface__name",
-            "interface__status",
-            "interface__label",
-            "interface__enabled",
-            "interface__type",
-            "interface__description",
-            "interface__ip_addresses",
         )
-
-        default_columns = ("priority", "actions")
 
 
 #
