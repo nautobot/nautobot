@@ -222,6 +222,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "role",
             "device_type",
             "primary_ip",
+            "device_redundancy_group_priority",
         )
 
     def render_capabilities(self, value):
