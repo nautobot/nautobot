@@ -161,7 +161,7 @@ class CircuitTerminationTestCase(
 
         # Provider Network
         provider_network = ProviderNetwork.objects.create(
-            name="Test Provider Network",
+            name="Test Provider Network 1",
             provider=provider,
         )
 
