@@ -12,7 +12,7 @@ These extensions let you tightly couple automation to user actions or system cha
 These are Jobs that subclass the `nautobot.apps.jobs.JobButtonReceiver` class. Job Button Receivers are similar to normal Jobs except they are hard coded to accept only `object_pk` and `object_model_name` [variables](./job-structure.md#variables). The `JobButtonReceiver` class only implements one method called `receive_job_button`.
 
 !!! note "Disabled by default just like other Jobs"
-    Job Button Receivers still need to be [enabled through the web UI](../../user-guide/platform-functionality/jobs/managing-jobs.md#enabling-jobs) before they can be used just like other Jobs.
+    Job Button Receivers still need to be [enabled through the web UI](../../user-guide/platform-functionality/jobs/managing-jobs.md#enabling-and-disabling-jobs) before they can be used just like other Jobs.
 
 ### The `receive_job_button()` Method
 

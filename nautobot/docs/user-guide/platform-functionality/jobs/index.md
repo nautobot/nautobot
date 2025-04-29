@@ -111,7 +111,7 @@ nautobot-server runjob [--username <username>] [--local] [--data <data>] <class_
 ```
 
 !!! note
-    [See above](#jobs-and-class_path) for `class_path` definitions.
+    [See above](./models.md#understanding-job-class-paths) for `class_path` definitions.
 
 The `--data` parameter must be a JSON string, e.g. `--data='{"string_variable": "somevalue", "integer_variable": 123}'`
 

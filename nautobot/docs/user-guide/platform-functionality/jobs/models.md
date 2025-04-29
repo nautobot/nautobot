@@ -26,7 +26,7 @@ Records of this type store the following data as read-only (not modifiable via t
 
     An administrator or sufficiently privileged user can manually delete uninstalled Job records if desired, though this will result in the foreign-key from the corresponding `JobResult` and `ScheduledJob` records (if any exist) becoming null. In any case, for tracking and auditing purposes, deleting a Job does **not** automatically delete its related `JobResult` and `ScheduledJob` records.
 
-For any Job that is loaded into Nautobot, the Job must be enabled to run. See [Enabling Jobs for Running](./managing-jobs.md#enabling-jobs) for more details.
+For any Job that is loaded into Nautobot, the Job must be enabled to run. See [Enabling Jobs for Running](./managing-jobs.md#enabling-and-disabling-jobs) for more details.
 
 ## Job Log Entry
 

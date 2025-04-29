@@ -192,7 +192,7 @@ A Job’s result is determined by how the `run()` method completes:
 - If `run()` returns a value, that value is saved to the `JobResult` and displayed in the UI and API.
 
 !!! tip
-    For more, see [The `run()` Method](../job-structure.md#the-run-method) in the Job Structure guide.
+    For more, see [The `run()` Method](./job-structure.md#the-run-method) in the Job Structure guide.
 
 This pattern lets you validate inputs, selectively fail under certain conditions, and return structured summaries or results.
 

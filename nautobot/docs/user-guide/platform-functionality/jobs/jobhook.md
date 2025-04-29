@@ -10,4 +10,4 @@ A Job Hook is a mechanism for automatically starting a [job](./index.md) when an
 * **Enabled** - If unchecked, the job hook will be inactive.
 * **Events** - A job hook may trigger on any combination of create, update, and delete events. At least one event type must be selected.
 
-For any Job that is loaded into Nautobot, the Job must be enabled to run. See [Enabling Jobs for Running](./managing-jobs.md#enabling-jobs) for more details.
+For any Job that is loaded into Nautobot, the Job must be enabled to run. See [Enabling Jobs for Running](./managing-jobs.md#enabling-and-disabling-jobs) for more details.

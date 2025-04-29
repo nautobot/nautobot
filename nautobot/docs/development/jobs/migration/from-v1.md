@@ -39,7 +39,7 @@ The package name for Jobs provided by [Git Repositories](../../../user-guide/pla
 
 ### Run Method Signature
 
-The signature of the `run()` method for Jobs must now accept keyword arguments for every [Job variable](../index.md#variables) defined on the Job class. The `run()` method no longer uses the `data` and `commit` arguments used in v1.X.
+The signature of the `run()` method for Jobs must now accept keyword arguments for every [Job variable](../job-structure.md#variables) defined on the Job class. The `run()` method no longer uses the `data` and `commit` arguments used in v1.X.
 
 !!! example
     ```py title="v1.X Job"
@@ -162,7 +162,7 @@ Some logging features from v1.X are accessible when passing a `dict` to the `ext
 * `logger.debug("message", extra={"object": obj})` - Replaces the `obj` kwarg in Nautobot v1.X Job logging methods
 * `logger.debug("message", extra={"grouping": "string"})` - Replaces the `active_test` Job property in Nautobot v1.X
 
-For more detailed documentation on Job logging see the [Job Logging](../index.md#logging) section of the Jobs feature documentation.
+For more detailed documentation on Job logging see the [Job Logging](../job-patterns.md#logging-patterns) section of the Jobs feature documentation.
 
 ### Tracking Job State
 
