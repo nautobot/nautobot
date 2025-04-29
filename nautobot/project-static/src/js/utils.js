@@ -15,12 +15,12 @@
 export const createElement = (tag, attributes = {}, ...children) => {
   const element = document.createElement(tag);
 
-  Object.entries(attributes).forEach(
-    ([attribute, value]) => element.setAttribute(attribute === 'className' ? 'class' : attribute, value),
+  Object.entries(attributes).forEach(([attribute, value]) =>
+    element.setAttribute(attribute === 'className' ? 'class' : attribute, value),
   );
 
-  children.forEach(
-    (child) => typeof child === 'string' ? element.insertAdjacentText('beforeend', child) : element.appendChild(child),
+  children.forEach((child) =>
+    typeof child === 'string' ? element.insertAdjacentText('beforeend', child) : element.appendChild(child),
   );
 
   return element;
