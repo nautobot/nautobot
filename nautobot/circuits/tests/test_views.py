@@ -1,7 +1,8 @@
 import datetime
 
-from django.urls import reverse
 from django.contrib.contenttypes.models import ContentType
+from django.urls import reverse
+
 from nautobot.circuits.models import (
     Circuit,
     CircuitTermination,
@@ -182,7 +183,8 @@ class CircuitTerminationTestCase(
         # Location Type and Location
         location_type = LocationType.objects.get(name="Building")
         location_type.content_types.add(ContentType.objects.get_for_model(CircuitTermination))
-        location = Location.objects.create(name="NYC02", location_type=location_type)
+        status = Status.objects.get_for_model(Location).first()
+        location = Location.objects.create(name="NYC02", location_type=location_type, status=status)
 
         # Circuit setup
         circuit_type = CircuitType.objects.first()
