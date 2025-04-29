@@ -9,7 +9,7 @@ Nautobot supports three ways to install Jobs:
 Each approach supports modular organization, multiple Job classes, and reuse of shared logic. The key difference is how Nautobot loads the files into its job registry and associates them with database Job records.
 
 !!! tip
-    Looking to run Jobs in Kubernetes? See [Kubernetes Job Support](../../../user-guide/platform-functionality/jobs/kubernetes-job-support.md).
+    Looking to run Jobs in Kubernetes? See [Kubernetes Job Support](../../user-guide/platform-functionality/jobs/kubernetes-job-support.md).
 
 ## Manual Installation via `JOBS_ROOT`
 
@@ -109,7 +109,7 @@ Key requirements:
 
 - Jobs live inside the App's Python module tree
 - App dependencies can be managed via `pyproject.toml` or `setup.py`
-- Define the Job module path in [`NautobotAppConfig.jobs`](../../apps/api/nautobot-app-config.md#nautobotappconfig-code-location-attributes) (defaults to "jobs")
+- Define the Job module path in [`NautobotAppConfig.jobs`](../apps/api/nautobot-app-config.md#nautobotappconfig-code-location-attributes) (defaults to "jobs")
 - Use `register_jobs()` to register any included Jobs
 - Jobs must be manually enabled before running
 
