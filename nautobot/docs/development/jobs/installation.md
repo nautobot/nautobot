@@ -103,13 +103,13 @@ When the repo is synced, Nautobot loads the job class under the path:
 
 ## Installation as Part of an App
 
-Apps are full Python packages that can include models, views, static files *and* can include Jobs. They are the best choice for reusable automation. To learn how to create a Nautobot App, check out the [App Development Documentation](../../apps/).
+Apps are full Python packages that can include models, views, static files *and* can include Jobs. They are the best choice for reusable automation. To learn how to create a Nautobot App, check out the [App Development Documentation](../../apps/index.md).
 
 Key requirements:
 
 - Jobs live inside the App's Python module tree
 - App dependencies can be managed via `pyproject.toml` or `setup.py`
-- Define the Job module path in [`NautobotAppConfig.jobs`](../../apps/api/nautobot-app-config/#nautobotappconfig-code-location-attributes) (defaults to "jobs")
+- Define the Job module path in [`NautobotAppConfig.jobs`](../../apps/api/nautobot-app-config.md#nautobotappconfig-code-location-attributes) (defaults to "jobs")
 - Use `register_jobs()` to register any included Jobs
 - Jobs must be manually enabled before running
 
