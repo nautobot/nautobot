@@ -1,7 +1,7 @@
 import datetime
 
 from django.urls import reverse
-
+from django.contrib.contenttypes.models import ContentType
 from nautobot.circuits.models import (
     Circuit,
     CircuitTermination,
@@ -10,9 +10,10 @@ from nautobot.circuits.models import (
     Provider,
     ProviderNetwork,
 )
-from nautobot.cloud.models import CloudNetwork
+from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudResourceType
 from nautobot.core.testing import post_data, TestCase as NautobotTestCase, utils, ViewTestCases
-from nautobot.dcim.models.locations import Location
+from nautobot.dcim.models.devices import Manufacturer
+from nautobot.dcim.models.locations import Location, LocationType
 from nautobot.extras.models import Status, Tag
 
 
@@ -153,16 +154,40 @@ class CircuitTerminationTestCase(
     @classmethod
     def setUpTestData(cls):
         provider = Provider.objects.first()
+
+        # Set up Manufacturer for cloud account
+        manufacturer = Manufacturer.objects.create(name="Test Cloud Provider")
+
+        # Provider Network
         provider_network = ProviderNetwork.objects.create(
             name="Test Provider Network",
             provider=provider,
         )
-        cloud_network = CloudNetwork.objects.create(name="Test Cloud Network")
-        location = Location.objects.first()
+
+        # Cloud account and resource type
+        cloud_account = CloudAccount.objects.create(
+            name="Test Cloud Account",
+            provider=manufacturer,
+        )
+        cloud_resource_type = CloudResourceType.objects.create(
+            name="VPC Network",
+            provider=manufacturer,
+        )
+        cloud_network = CloudNetwork.objects.create(
+            name="Test Cloud Network",
+            cloud_account=cloud_account,
+            cloud_resource_type=cloud_resource_type,
+        )
+
+        # Location Type and Location
+        location_type = LocationType.objects.get(name="Building")
+        location_type.content_types.add(ContentType.objects.get_for_model(CircuitTermination))
+        location = Location.objects.create(name="NYC02", location_type=location_type)
+
+        # Circuit setup
         circuit_type = CircuitType.objects.first()
         status = Status.objects.get_for_model(Circuit).first()
 
-        # Create Circuits
         circuit1 = Circuit.objects.create(
             cid="Test Circuit 1",
             provider=provider,
@@ -176,7 +201,7 @@ class CircuitTerminationTestCase(
             status=status,
         )
 
-        # Circuit 1 with Location and Provider Network
+        # Terminations
         CircuitTermination.objects.create(
             circuit=circuit1,
             term_side=CircuitTerminationSideChoices.SIDE_A,
@@ -197,8 +222,6 @@ class CircuitTerminationTestCase(
             pp_info="Patch-02",
             description="Initial termination Z",
         )
-
-        # Circuit 2 with Cloud Network
         CircuitTermination.objects.create(
             circuit=circuit2,
             term_side=CircuitTerminationSideChoices.SIDE_A,
@@ -210,7 +233,6 @@ class CircuitTerminationTestCase(
             description="Initial termination cloud A",
         )
 
-        # 1. Set Location, clear Provider Network and Cloud Network
         cls.bulk_edit_data = {
             "location": location.pk,
             "provider_network": None,
