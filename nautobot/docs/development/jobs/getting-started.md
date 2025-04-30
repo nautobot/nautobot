@@ -32,7 +32,7 @@ You only need a working Nautobot installation where you can:
 
 1. **Create a file** called `hello_world.py` inside `$JOBS_ROOT`.
 2. Paste the minimal Job below.  
-3. **Restart your Celery worker** (or redeploy your container / pod).  
+3. **Restart your Celery worker** (or redeploy your container / pod). Depending on your environment, you may also need to **restart the Nautobot server process** to pick up Job changes.  
 4. Run `nautobot-server post_upgrade` so Nautobot discovers the new Job and creates its database record.
 5. In the UI, navigate to **Jobs → "Examples" → "Hello World"**, click **Edit Job**, then under the Job section, select the **Enabled** checkbox. Scroll down and **Update** the job.  
 6. **Run Job Now**. You'll see the log entry appear almost instantly.

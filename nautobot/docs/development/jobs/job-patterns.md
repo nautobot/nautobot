@@ -1,10 +1,10 @@
 # Job Patterns
 
-Jobs in Nautobot are extremely flexible—they can take user input, query the database, talk to devices, generate reports, and more. But because they're built in Python, there's no "one right way" to do any of those tasks.
+Jobs in Nautobot are extremely flexible - they can take user input, query the database, talk to devices, generate reports, and more. But because they're built in Python, there's no "one right way" to do any of those tasks.
 
-This page provides a catalog of **common patterns** used when building Jobs, especially those that go beyond the basics of the `run()` method. These examples are designed to be **practical, modular, and reusable**—you can pick and choose the parts that make sense for your own Job logic.
+This page provides a catalog of **common patterns** used when building Jobs, especially those that go beyond the basics of the `run()` method. These examples are designed to be **practical, modular, and reusable**-you can pick and choose the parts that make sense for your own Job logic.
 
-Because Jobs are highly flexible, many common patterns tend to emerge depending on what the Job is trying to accomplish — like importing data, validating configuration, logging results, or returning output to users.  
+Because Jobs are highly flexible, many common patterns tend to emerge depending on what the Job is trying to accomplish - like importing data, validating configuration, logging results, or returning output to users.  
 
 Not every Job needs every feature shown below. Use this page as a reference: copy/paste and customize only the patterns you need.
 
@@ -31,7 +31,7 @@ Not every Job needs every feature shown below. Use this page as a reference: cop
 
 ## Job Execution Context and Logging Patterns
 
-When writing Jobs, it's helpful to access information about the current execution—like which user ran the Job or which JobResult is being updated. It's equally important to log progress or results in a way that's visible in both the Nautobot UI and REST API.
+When writing Jobs, it's helpful to access information about the current execution - like which user ran the Job or which JobResult is being updated. It's equally important to log progress or results in a way that's visible in both the Nautobot UI and REST API.
 
 This section covers how to use the built-in logger, including structured log messages, context-aware logging, and optional enhancements like skipping database logging or using Markdown formatting.
 
@@ -99,9 +99,9 @@ For most use cases, you'll use `self.logger`. You can also obtain the same logge
 
 You can attach structured metadata to log messages using the `extra` parameter. This enables grouping and improves how logs are displayed or queried:
 
-- `grouping`: A logical group name for related messages, shown in the UI as expandable sections
+- `grouping`: A logical label used to associate related log messages. It is useful for filtering, context, and organizing output in the API or database
 - `object`: A Nautobot object instance to associate with this log message (e.g., a Device)
-- `skip_db_logging`: Set to `True` to avoid saving the log message in the database
+- `skip_db_logging`: Set to `True` to avoid saving the log message in the database (it will still be visible in the Celery worker log output)
 
 <!-- pyml disable-num-lines 10 proper-names -->
 !!! example
@@ -115,7 +115,7 @@ You can attach structured metadata to log messages using the `extra` parameter. 
     )
     ```
 
-To skip writing a log entry to the database but still print it to the console:
+To skip writing a log entry to the database but still print it to the console of the Celery worker:
 
 <!-- pyml disable-num-lines 10 proper-names -->
 !!! example
@@ -157,7 +157,7 @@ As a security precaution, Nautobot passes all log messages through `nautobot.cor
 
 ## Job Flow Control
 
-Nautobot Jobs can exit in a variety of ways—cleanly, with validation errors, or due to unexpected exceptions. This section covers techniques for controlling Job execution and determining how success or failure is reported.
+Nautobot Jobs can exit in a variety of ways - cleanly, with validation errors, or due to unexpected exceptions. This section covers techniques for controlling Job execution and determining how success or failure is reported.
 
 These patterns help you:
 
@@ -223,7 +223,7 @@ This pattern lets you validate inputs, selectively fail under certain conditions
 - If `quantity` is invalid, it raises an exception and aborts immediately.
 - If both values are valid, the Job logs the order and returns a string that's shown in the `JobResult`.
 
-This approach demonstrates how you can gracefully handle invalid inputs with `self.fail()` while still using exceptions to halt execution for more serious issues—giving you precise control over how and why a Job is marked as failed.
+This approach demonstrates how you can gracefully handle invalid inputs with `self.fail()` while still using exceptions to halt execution for more serious issues - giving you precise control over how and why a Job is marked as failed.
 
 ## Working with Files
 
@@ -305,7 +305,7 @@ Use the following convenience methods to load structured data:
 - `load_yaml("filename.yaml")`
 - `load_json("filename.json")`
 
-These paths are relative to the Job's file location inside `$JOBS_ROOT/`.
+These paths are relative to the Job's file location.
 
 <!-- pyml disable-num-lines 10 proper-names -->
 !!! example
@@ -327,7 +327,7 @@ Unlike uploaded files, static files are typically bundled with the Job and versi
 
 ## Reference Implementations
 
-The examples below demonstrate fully working Jobs from the Nautobot ecosystem. They're meant to serve as inspiration and guidance when building your own Jobs—especially if you're not sure where to start or want to see how others have structured their code.
+The examples below demonstrate fully working Jobs from the Nautobot ecosystem. They're meant to serve as inspiration and guidance when building your own Jobs - especially if you're not sure where to start or want to see how others have structured their code.
 
 Some Jobs are simple and focused (like validating devices), while others combine multiple input types and outputs. Use these as starting points, or to understand common patterns in action.
 
@@ -359,13 +359,13 @@ This Job is useful when enforcing operational standards in environments where mi
             # Check that every console port for every active device has a connection defined.
             for console_port in ConsolePort.objects.select_related('device').filter(device__status=STATUS_ACTIVE):
                 if console_port.connected_endpoint is None:
-                    self.logger.error(
+                    self.logger.failure(
                         "No console connection defined for %s",
                         console_port.name,
                         extra={"object": console_port.device},
                     )
                 else:
-                    self.logger.info(
+                    self.logger.success(
                         "Console port %s has a connection defined",
                         console_port.name,
                         extra={"object": console_port.device},
@@ -381,13 +381,13 @@ This Job is useful when enforcing operational standards in environments where mi
                     if power_port.connected_endpoint is not None:
                         connected_ports += 1
                 if connected_ports < 2:
-                    self.logger.error(
+                    self.logger.failure(
                         "%s connected power supplies found (2 needed)",
                         connected_ports,
                         extra={"object": device},
                     )
                 else:
-                    self.logger.info("At least two connected power supplies found", extra={"object": device})
+                    self.logger.success("At least two connected power supplies found", extra={"object": device})
 
         def run(self):
             self.test_console_connection()
@@ -399,7 +399,7 @@ This Job is useful when enforcing operational standards in environments where mi
 
 ### Creating objects for a planned location
 
-This Job illustrates multiple patterns in combination: conditional form rendering (`query_params`), dynamic object creation with model relationships, and structured output formatting. It's a strong reference for provisioning-style workflows or batch creation Jobs. To run it successfully, the system should already have appropriate Device Types and Statuses defined (e.g., "Planned"), and the user must have permission to create DCIM objects like `Device` and `Location`.
+This Job illustrates multiple patterns in combination: conditional form rendering (`query_params`), dynamic object creation with model relationships, and structured output formatting. It's a strong reference for provisioning-style workflows or batch creation Jobs. To run it successfully, the system must include appropriate Device Types and Statuses (e.g., "Planned"), and the user must have permission to create `Location` and `Device` objects—this is enforced in the Job logic.
 
 This Job prompts the user for three variables:
 
@@ -414,6 +414,13 @@ These variables are presented as a web form to be completed by the user. Once su
     - The `"Access Switch"` Role will be created automatically if it does not already exist  
     - DeviceType and Manufacturer records must exist and be related  
     - The user must have permission to create `Location` and `Device` objects
+
+Some Jobs should explicitly enforce user permissions before performing actions like creating or modifying objects. In other cases - such as Jobs run by a trusted automation account - permission checks may be intentionally omitted. Consider your use case carefully:
+
+- **Enforce permissions** when the Job could be run by untrusted or limited-scope users.
+- **Skip permission checks** when Jobs are only run by administrators or automation systems that already operate with elevated access.
+
+The following example includes permission checks for `add_location` and `add_device` to ensure that the running user has the required access before proceeding.
 
 <!-- pyml disable-num-lines 10 proper-names -->
 !!! example "Planned Location Creation Job"
@@ -438,10 +445,21 @@ These variables are presented as a web form to be completed by the user. Once su
         )
 
         def run(self, *, location_name, switch_count, switch_model, manufacturer=None):
+            # Check whether the user has permission to create required objects
+            if not self.user.has_perm("dcim.add_location"):
+                self.logger.failure("User does not have permission to create locations.")
+                self.fail("Missing permission: dcim.add_location")
+                return
+
+            if not self.user.has_perm("dcim.add_device"):
+                self.logger.failure("User does not have permission to create devices.")
+                self.fail("Missing permission: dcim.add_device")
+                return
+
             STATUS_PLANNED = Status.objects.get(name="Planned")
 
             # Create the new location
-            root_type, lt_created = LocationType.objects.get_or_create(name="Campus")
+            root_type, _ = LocationType.objects.get_or_create(name="Campus")
             device_ct = ContentType.objects.get_for_model(Device)
             root_type.content_types.add(device_ct)
             location = Location(
@@ -450,10 +468,10 @@ These variables are presented as a web form to be completed by the user. Once su
                 status=STATUS_PLANNED,
             )
             location.validated_save()
-            self.logger.info("Created new location", extra={"object": location})
+            self.logger.success("Created new location", extra={"object": location})
 
             # Create access switches
-            switch_role, r_created = Role.objects.get_or_create(name="Access Switch")
+            switch_role, _ = Role.objects.get_or_create(name="Access Switch")
             switch_role.content_types.add(device_ct)
             for i in range(1, switch_count + 1):
                 switch = Device(
@@ -464,7 +482,7 @@ These variables are presented as a web form to be completed by the user. Once su
                     role=switch_role,
                 )
                 switch.validated_save()
-                self.logger.info("Created new switch", extra={"object": switch})
+                self.logger.success("Created new switch", extra={"object": switch})
 
             # Generate a CSV table of new devices
             output = ["name,make,model"]
@@ -479,12 +497,12 @@ These variables are presented as a web form to be completed by the user. Once su
 
 ### Example "Everything" Job
 
-The [Example App](https://github.com/nautobot/nautobot/blob/main/examples/example_app/example_app/jobs.py) included with Nautobot provides several sample Jobs, including an `ExampleEverythingJob` class. This Job is designed to showcase a wide range of capabilities that a Job class can support—making it a useful reference for exploring what's possible when combining inputs, lifecycle hooks, and outputs in one place.
+The [Example App](https://github.com/nautobot/nautobot/blob/main/examples/example_app/example_app/jobs.py) included with Nautobot provides several sample Jobs, including an `ExampleEverythingJob` class. This Job is designed to showcase a wide range of capabilities that a Job class can support - making it a useful reference for exploring what's possible when combining inputs, lifecycle hooks, and outputs in one place.
 
 The snippet below demonstrates a mix of common patterns: variable types (`StringVar`, `ChoiceVar`, `FileVar`), structured logging, lifecycle methods like `before_start()` and `on_success()`, and file output using `create_file()`. It's a helpful starting point when you want to build a full-featured Job that accepts input, produces downloadable artifacts, and logs structured progress in the UI.
 
 !!! note
-    This snippet highlights only a portion of the full `ExampleEverythingJob`. To explore the complete implementation—including additional variables, error handling with `on_failure()`, and form customization—see the [full source code in the Example App](https://github.com/nautobot/nautobot/blob/main/examples/example_app/example_app/jobs.py).
+    This snippet highlights only a portion of the full `ExampleEverythingJob`. To explore the complete implementation - including additional variables, error handling with `on_failure()`, and form customization - see the [full source code in the Example App](https://github.com/nautobot/nautobot/blob/main/examples/example_app/example_app/jobs.py).
 
 <!-- pyml disable-num-lines 10 proper-names -->
 !!! example "Everything Demo Job Snippet"

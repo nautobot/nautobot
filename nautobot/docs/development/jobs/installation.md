@@ -16,7 +16,7 @@ Each approach supports modular organization, multiple Job classes, and reuse of 
 Nautobot automatically loads all Python modules found in the `JOBS_ROOT` directory and its subdirectories. Jobs defined here are ideal for quick prototypes or standalone deployments.
 
 !!! note "Refreshing Job records"
-    After you add or edit files, restart the Celery worker **and** run `nautobot-server post_upgrade` so Nautobot refreshes its Job database records.
+    After you add or edit files, restart the Celery worker **and** run `nautobot-server post_upgrade` so Nautobot refreshes its Job database records. Depending on your environment, you may also need to restart the Nautobot web server for changes to take effect.
 
 Key requirements:
 

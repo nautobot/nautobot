@@ -217,7 +217,10 @@ A list of Job Queue names that the Job can be routed to. An empty list will defa
 
 ### `template_name`
 
-A path relative to the Job source code containing a Django template which provides additional code to customize the Job's submission form. This template should extend the existing Job template, `extras/job.html`, otherwise the base form and functionality may not be available.
+A Django template path which provides additional code to customize the Job's submission form. This template should extend the existing Job template, `extras/job.html`, otherwise the base form and functionality may not be available.
+
+!!! note
+    Because the template must be discoverable by Django's template engine, it typically must be provided by Nautobot itself or a Nautobot App. There's no standard mechanism for Jobs in `JOBS_ROOT` or Git repositories to supply such templates.
 
 A template can provide additional JavaScript, CSS, or even display HTML. A good starting template would be:
 
@@ -349,7 +352,7 @@ class ExampleJSONVarJob(Job):
             self.logger.error("Missing required key: key1")
 ```
 
-This Job uses a JSONVar to accept a structured input from the user. For example, the user might submit `{"key1": "value1"}`. Nautobot first validates that the input is valid JSON, then automatically deserializes it into a Python dictionary. Inside the Job, you can access the dictionary directly — in this case, logging the value of key1 or raising an error if it's missing. This is a simple way to demonstrate structured input, useful for things like configuration blobs or external API payloads, without needing to manually parse the JSON yourself.
+This Job uses a JSONVar to accept a structured input from the user. For example, the user might submit `{"key1": "value1"}`. Nautobot first validates that the input is valid JSON, then automatically deserializes it into a Python dictionary. Inside the Job, you can access the dictionary directly - in this case, logging the value of key1 or raising an error if it's missing. This is a simple way to demonstrate structured input, useful for things like configuration blobs or external API payloads, without needing to manually parse the JSON yourself.
 
 ### `IntegerVar`
 
@@ -433,7 +436,7 @@ This Job lets a user select a `Device` object from a dropdown. That selected obj
 
 #### Customizing Display Field
 
-By default, Nautobot will show each object's `display` field in the dropdown. To show a different field—such as a hostname, IP, or a related model's attribute—you can override it using `display_field`.
+By default, Nautobot will show each object's `display` field in the dropdown. To show a different field-such as a hostname, IP, or a related model's attribute - you can override it using `display_field`.
 
 ```python
 device_ip = ObjectVar(
@@ -466,7 +469,7 @@ interface = ObjectVar(
 )
 ```
 
-This allows users to see custom-calculated values—like interface capacity scores or normalized labels—in the dropdown UI. It's especially useful when default display fields aren't meaningful enough on their own for selection.
+This allows users to see custom-calculated values - like interface capacity scores or normalized labels - in the dropdown UI. It's especially useful when default display fields aren't meaningful enough on their own for selection.
 
 To limit the selections available within the list, additional query parameters can be passed as the `query_params` dictionary. For example, to show only devices with an "active" status:
 
@@ -514,7 +517,7 @@ Similar to `ObjectVar`, but allows for the selection of multiple objects.
 
 ### `FileVar`
 
-An uploaded file provided via `FileVar` is passed to the Job's `run()` method as an in-memory file-like object, typically an `InMemoryUploadedFile`. These are temporary and exist only for the duration of the Job execution—they are not saved automatically.
+An uploaded file provided via `FileVar` is passed to the Job's `run()` method as an in-memory file - like object, typically an `InMemoryUploadedFile`. These are temporary and exist only for the duration of the Job execution — they are not saved automatically.
 
 The example below shows how to use `FileVar` to upload a CSV file, decode its contents, and process each row with Python's `csv.DictReader`. This pattern is useful when working with structured input formats such as device inventories, IP assignments, or user data.
 
@@ -607,7 +610,7 @@ The `create_file()` method accepts a filename and file contents (as `str` or `by
 
 ### The `run()` Method
 
-The `run()` method is the core of every Job and is required. It receives user-supplied inputs (defined as variables on the class) as keyword arguments. Inside this method, you define the logic that the Job will execute—such as querying data, applying changes, or interacting with external systems. The method can return a value, which will be saved in the JobResult and displayed in the UI and API.
+The `run()` method is the core of every Job and is required. It receives user-supplied inputs (defined as variables on the class) as keyword arguments. Inside this method, you define the logic that the Job will execute-such as querying data, applying changes, or interacting with external systems. The method can return a value, which will be saved in the JobResult and displayed in the UI and API.
 
 Here's a basic structure:
 
