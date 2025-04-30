@@ -42,6 +42,7 @@ from nautobot.core.forms.widgets import ClearableFileInput
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
+    ButtonClassChoices,
     DynamicGroupTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
@@ -122,6 +123,7 @@ logger = logging.getLogger(__name__)
 
 __all__ = (
     "BaseDynamicGroupMembershipFormSet",
+    "ComputedFieldBulkEditForm",
     "ComputedFieldFilterForm",
     "ComputedFieldForm",
     "ConfigContextBulkEditForm",
@@ -136,6 +138,7 @@ __all__ = (
     "CustomFieldFilterForm",
     "CustomFieldForm",
     "CustomFieldModelCSVForm",
+    "CustomLinkBulkEditForm",
     "CustomLinkFilterForm",
     "CustomLinkForm",
     "DynamicGroupBulkAssignForm",
@@ -211,6 +214,42 @@ __all__ = (
 #
 # Computed Fields
 #
+class ComputedFieldBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin):
+    pk = forms.ModelMultipleChoiceField(queryset=ComputedField.objects.all(), widget=forms.MultipleHiddenInput())
+
+    label = forms.CharField(
+        max_length=CHARFIELD_MAX_LENGTH, required=False, help_text="Name of the field as displayed to users."
+    )
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    grouping = forms.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        required=False,
+        help_text="Human-readable grouping that this computed field belongs to.",
+    )
+    fallback_value = forms.CharField(
+        max_length=500,
+        required=False,
+        help_text="Fallback value (if any) to be output for the field in the case of a template rendering error.",
+    )
+    weight = forms.IntegerField(required=False, min_value=0)
+    advanced_ui = forms.NullBooleanField(
+        required=False,
+        label="Move to Advanced tab",
+        help_text="Hide this field from the object's primary information tab. It will appear in the 'Advanced' tab instead.",
+    )
+    template = forms.CharField(
+        max_length=500, widget=forms.Textarea, required=False, help_text="Jinja2 template code for field value"
+    )
+
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
+        required=False,
+        label="Content Type",
+    )
+
+    class Meta:
+        model = ComputedField
+        nullable_fields = ["description", "grouping", "fallback_value"]
 
 
 class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
@@ -547,6 +586,25 @@ class CustomFieldBulkDeleteForm(ConfirmationForm):
 #
 # Custom Links
 #
+class CustomLinkBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin):
+    """Bulk edit form for CustomLink objects."""
+
+    pk = forms.ModelMultipleChoiceField(queryset=CustomLink.objects.all(), widget=forms.MultipleHiddenInput())
+    group_name = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    weight = forms.IntegerField(required=False)
+    target_url = forms.CharField(max_length=500, required=False)
+    text = forms.CharField(max_length=500, required=False)
+    button_class = forms.ChoiceField(choices=add_blank_choice(ButtonClassChoices.CHOICES), required=False)
+    new_window = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("custom_links").get_query()).order_by("app_label", "model"),
+        required=False,
+        label="Content Type",
+    )
+
+    class Meta:
+        model = CustomLink
+        nullable_fields = ["group_name"]
 
 
 class CustomLinkForm(BootstrapMixin, forms.ModelForm):

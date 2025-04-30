@@ -566,6 +566,7 @@ class RackElevationListView(generic.ObjectListView):
         "reverse",  # control of ordering
     )
     filterset = filters.RackFilterSet
+    filterset_form = forms.RackFilterForm
     action_buttons = []
     template_name = "dcim/rack_elevation_list.html"
 
@@ -675,50 +676,26 @@ class RackBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class RackReservationListView(generic.ObjectListView):
+class RackReservationUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.RackReservationBulkEditForm
+    filterset_class = filters.RackReservationFilterSet
+    filterset_form_class = forms.RackReservationFilterForm
+    form_class = forms.RackReservationForm
+    serializer_class = serializers.RackReservationSerializer
+    table_class = tables.RackReservationTable
     queryset = RackReservation.objects.all()
-    filterset = filters.RackReservationFilterSet
-    filterset_form = forms.RackReservationFilterForm
-    table = tables.RackReservationTable
 
+    def get_object(self):
+        obj = super().get_object()
 
-class RackReservationView(generic.ObjectView):
-    queryset = RackReservation.objects.select_related("rack")
-
-
-class RackReservationEditView(generic.ObjectEditView):
-    queryset = RackReservation.objects.all()
-    model_form = forms.RackReservationForm
-    template_name = "dcim/rackreservation_edit.html"
-
-    def alter_obj(self, obj, request, url_args, url_kwargs):
         if not obj.present_in_database:
-            if "rack" in request.GET:
-                obj.rack = get_object_or_404(Rack, pk=request.GET.get("rack"))
-            obj.user = request.user
+            obj.user = self.request.user
+
+            rack_id = self.request.GET.get("rack")
+            if rack_id:
+                obj.rack = get_object_or_404(Rack, pk=rack_id)
+
         return obj
-
-
-class RackReservationDeleteView(generic.ObjectDeleteView):
-    queryset = RackReservation.objects.all()
-
-
-class RackReservationImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = RackReservation.objects.all()
-    table = tables.RackReservationTable
-
-
-class RackReservationBulkEditView(generic.BulkEditView):
-    queryset = RackReservation.objects.select_related("rack", "user")
-    filterset = filters.RackReservationFilterSet
-    table = tables.RackReservationTable
-    form = forms.RackReservationBulkEditForm
-
-
-class RackReservationBulkDeleteView(generic.BulkDeleteView):
-    queryset = RackReservation.objects.select_related("rack", "user")
-    filterset = filters.RackReservationFilterSet
-    table = tables.RackReservationTable
 
 
 #
@@ -4102,50 +4079,37 @@ class VirtualChassisBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class PowerPanelListView(generic.ObjectListView):
-    queryset = PowerPanel.objects.all()
-    filterset = filters.PowerPanelFilterSet
-    filterset_form = forms.PowerPanelFilterForm
-    table = tables.PowerPanelTable
-
-
-class PowerPanelView(generic.ObjectView):
-    queryset = PowerPanel.objects.prefetch_related("location", "rack_group")
-
-    def get_extra_context(self, request, instance):
-        power_feeds = PowerFeed.objects.restrict(request.user).filter(power_panel=instance).select_related("rack")
-        powerfeed_table = tables.PowerFeedTable(data=power_feeds, orderable=False)
-        powerfeed_table.exclude = ["power_panel"]
-
-        return {"powerfeed_table": powerfeed_table, **super().get_extra_context(request, instance)}
-
-
-class PowerPanelEditView(generic.ObjectEditView):
-    queryset = PowerPanel.objects.all()
-    model_form = forms.PowerPanelForm
-    template_name = "dcim/powerpanel_edit.html"
-
-
-class PowerPanelDeleteView(generic.ObjectDeleteView):
+class PowerPanelUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.PowerPanelBulkEditForm
+    filterset_class = filters.PowerPanelFilterSet
+    filterset_form_class = forms.PowerPanelFilterForm
+    form_class = forms.PowerPanelForm
+    serializer_class = serializers.PowerPanelSerializer
+    table_class = tables.PowerPanelTable
     queryset = PowerPanel.objects.all()
 
-
-class PowerPanelBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = PowerPanel.objects.all()
-    table = tables.PowerPanelTable
-
-
-class PowerPanelBulkEditView(generic.BulkEditView):
-    queryset = PowerPanel.objects.select_related("location", "rack_group")
-    filterset = filters.PowerPanelFilterSet
-    table = tables.PowerPanelTable
-    form = forms.PowerPanelBulkEditForm
-
-
-class PowerPanelBulkDeleteView(generic.BulkDeleteView):
-    queryset = PowerPanel.objects.all()
-    filterset = filters.PowerPanelFilterSet
-    table = tables.PowerPanelTable
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=[
+                    "name",
+                    "location",
+                    "rack_group",
+                ],
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=100,
+                table_class=tables.PowerFeedTable,
+                table_filter="power_panel",
+                table_title="Connected Feeds",
+                exclude_columns=["power_panel"],
+                add_button_route=None,
+            ),
+        )
+    )
 
 
 #
@@ -4301,6 +4265,22 @@ class SoftwareVersionUIViewSet(NautobotUIViewSet):
     queryset = SoftwareVersion.objects.all()
     serializer_class = serializers.SoftwareVersionSerializer
     table_class = tables.SoftwareVersionTable
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            object_detail.StatsPanel(
+                weight=100,
+                label="Stats",
+                section=SectionChoices.RIGHT_HALF,
+                filter_name="software_version",
+                related_models=[SoftwareImageFile, Device, InventoryItem, VirtualMachine],
+            ),
+        )
+    )
 
 
 #
