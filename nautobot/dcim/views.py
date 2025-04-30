@@ -567,6 +567,7 @@ class RackElevationListView(generic.ObjectListView):
         "reverse",  # control of ordering
     )
     filterset = filters.RackFilterSet
+    filterset_form = forms.RackFilterForm
     action_buttons = []
     template_name = "dcim/rack_elevation_list.html"
 
