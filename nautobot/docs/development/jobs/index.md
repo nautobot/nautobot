@@ -1,8 +1,8 @@
 # Developing Jobs
 
-Jobs are Python classes that define custom automation logic in Nautobot. This guide will help you write, structure, test, and deploy Jobs that run within Nautobot’s execution engine.
+Jobs are Python classes that define custom automation logic in Nautobot. This guide will help you write, structure, test, and deploy Jobs that run within Nautobot's execution engine.
 
-Before you begin, make sure you’re familiar with:
+Before you begin, make sure you're familiar with:
 
 - The [core concepts of Jobs](../../user-guide/platform-functionality/jobs/index.md)
 - The [difference between Job classes and Job records](./job-structure.md#job-class-vs-job-record)
@@ -30,7 +30,7 @@ Each of the pages below builds on the previous, from creating a Job to testing i
     Go beyond manual runs. Trigger Jobs from the UI (Job Buttons) or automatically on data changes (Job Hooks).
 
 - **[Testing Jobs](./testing.md)**  
-    Use Nautobot’s `run_job_for_testing()` helper and Django’s `TransactionTestCase` to test Jobs like any other Python code. Includes cProfile tips.
+    Use Nautobot's `run_job_for_testing()` helper and Django's `TransactionTestCase` to test Jobs like any other Python code. Includes cProfile tips.
 
 ## Migrating from Nautobot v1
 

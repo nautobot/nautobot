@@ -2,17 +2,17 @@
 
 ## Why Jobs?
 
-Nautobot **Jobs** let you run your own Python inside Nautobot’s execution engine.  
-They’re perfect for one‑off data imports, consistency checks, scheduled sync tasks, or bulk edits that would be painful by hand.
+Nautobot **Jobs** let you run your own Python inside Nautobot's execution engine.  
+They're perfect for one‑off data imports, consistency checks, scheduled sync tasks, or bulk edits that would be painful by hand.
 
 What Jobs **can** do: 
 
-- Touch Nautobot’s database with the same ORM models you use elsewhere  
+- Touch Nautobot's database with the same ORM models you use elsewhere  
 - Talk to external devices or APIs  
 - Read/write files via `create_file()` for later download  
 - Run asynchronously in the background (powered by Celery)
 
-What they **shouldn’t** do:
+What they **shouldn't** do:
 
 - Spawn infinite loops or long‑running daemons (use [Job scheduling](../../user-guide/platform-functionality/jobs/job-scheduling-and-approvals.md) for jobs need to be run at a later date or periodically)  
 - Circumvent user permissions or Django validation  
@@ -34,8 +34,8 @@ You only need a working Nautobot installation where you can:
 2. Paste the minimal Job below.  
 3. **Restart your Celery worker** (or redeploy your container / pod).  
 4. Run `nautobot-server post_upgrade` so Nautobot discovers the new Job and creates its database record.
-5. In the UI, navigate to **Jobs → “Examples” → “Hello World”**, click **Edit Job**, then under the Job section, select the **Enabled** checkbox. Scroll down and **Update** the job.  
-6. **Run Job Now**. You’ll see the log entry appear almost instantly.
+5. In the UI, navigate to **Jobs → "Examples" → "Hello World"**, click **Edit Job**, then under the Job section, select the **Enabled** checkbox. Scroll down and **Update** the job.  
+6. **Run Job Now**. You'll see the log entry appear almost instantly.
 
 ```python title="$JOBS_ROOT/hello_world.py"
 from nautobot.apps import jobs

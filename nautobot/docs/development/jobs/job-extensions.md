@@ -42,7 +42,7 @@ Since Job Buttons can be associated to multiple object types, it would be easy t
 You can support multiple object types in a single Job by checking the object type using `isinstance()` and performing permission checks with `self.user.has_perm()`.
 
 !!! tip "Checking Permissions"
-    You can use `self.user.has_perm()` to restrict logic based on the object or user’s role.
+    You can use `self.user.has_perm()` to restrict logic based on the object or user's role.
 
 <!-- pyml disable-num-lines 10 proper-names -->
 !!! example

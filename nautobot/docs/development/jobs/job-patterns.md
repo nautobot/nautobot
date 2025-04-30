@@ -1,6 +1,6 @@
 # Job Patterns
 
-Jobs in Nautobot are extremely flexible—they can take user input, query the database, talk to devices, generate reports, and more. But because they’re built in Python, there’s no “one right way” to do any of those tasks.
+Jobs in Nautobot are extremely flexible—they can take user input, query the database, talk to devices, generate reports, and more. But because they're built in Python, there's no "one right way" to do any of those tasks.
 
 This page provides a catalog of **common patterns** used when building Jobs, especially those that go beyond the basics of the `run()` method. These examples are designed to be **practical, modular, and reusable**—you can pick and choose the parts that make sense for your own Job logic.
 
@@ -31,7 +31,7 @@ Not every Job needs every feature shown below. Use this page as a reference: cop
 
 ## Job Execution Context and Logging Patterns
 
-When writing Jobs, it's helpful to access information about the current execution—like which user ran the Job or which JobResult is being updated. It’s equally important to log progress or results in a way that’s visible in both the Nautobot UI and REST API.
+When writing Jobs, it's helpful to access information about the current execution—like which user ran the Job or which JobResult is being updated. It's equally important to log progress or results in a way that's visible in both the Nautobot UI and REST API.
 
 This section covers how to use the built-in logger, including structured log messages, context-aware logging, and optional enhancements like skipping database logging or using Markdown formatting.
 
@@ -46,7 +46,7 @@ This information is useful for:
 - **Conditional logic** — restricting actions to admins or specific users
 - **Debugging** — correlating job logs with user sessions or API activity
 
-Here’s a simple example that logs which user launched the Job, along with its unique result ID:
+Here's a simple example that logs which user launched the Job, along with its unique result ID:
 
 <!-- pyml disable-num-lines 10 proper-names -->
 !!! example
@@ -161,7 +161,7 @@ Nautobot Jobs can exit in a variety of ways—cleanly, with validation errors, o
 
 These patterns help you:
 
-- Exit early if required conditions aren’t met (“guard clauses”)
+- Exit early if required conditions aren't met ("guard clauses")
 - Fail with or without tracebacks
 - Understand how Job completion status is determined and reported
 
@@ -184,7 +184,7 @@ If the failure is user-driven or recoverable, you can call `self.fail("message")
 
 ### Success and Failure Conditions
 
-A Job’s result is determined by how the `run()` method completes:
+A Job's result is determined by how the `run()` method completes:
 
 - If `run()` completes without raising an exception and does **not** call `self.fail()`, the Job is marked **`SUCCESS`**.
 - If `run()` **raises an exception**, the Job is marked **`FAILURE`** and the exception traceback is stored in the `JobResult`.
@@ -221,7 +221,7 @@ This pattern lets you validate inputs, selectively fail under certain conditions
 
 - If `name` is empty, the Job completes but is marked as `FAILURE` (via `self.fail()`).
 - If `quantity` is invalid, it raises an exception and aborts immediately.
-- If both values are valid, the Job logs the order and returns a string that’s shown in the `JobResult`.
+- If both values are valid, the Job logs the order and returns a string that's shown in the `JobResult`.
 
 This approach demonstrates how you can gracefully handle invalid inputs with `self.fail()` while still using exceptions to halt execution for more serious issues—giving you precise control over how and why a Job is marked as failed.
 
@@ -268,7 +268,7 @@ Output files created via `create_file()` are persistent and linked to the JobRes
 
 ### Uploading and Parsing Files
 
-To accept user-provided files at runtime, use [`FileVar`](./job-structure.md#filevar). These files are passed into the Job’s `run()` method as in-memory objects and must be read and processed during execution. They are not saved automatically.
+To accept user-provided files at runtime, use [`FileVar`](./job-structure.md#filevar). These files are passed into the Job's `run()` method as in-memory objects and must be read and processed during execution. They are not saved automatically.
 
 <!-- pyml disable-num-lines 10 proper-names -->
 !!! example
@@ -305,7 +305,7 @@ Use the following convenience methods to load structured data:
 - `load_yaml("filename.yaml")`
 - `load_json("filename.json")`
 
-These paths are relative to the Job’s file location inside `$JOBS_ROOT/`.
+These paths are relative to the Job's file location inside `$JOBS_ROOT/`.
 
 <!-- pyml disable-num-lines 10 proper-names -->
 !!! example
@@ -399,7 +399,7 @@ This Job is useful when enforcing operational standards in environments where mi
 
 ### Creating objects for a planned location
 
-This Job illustrates multiple patterns in combination: conditional form rendering (`query_params`), dynamic object creation with model relationships, and structured output formatting. It’s a strong reference for provisioning-style workflows or batch creation Jobs. To run it successfully, the system should already have appropriate Device Types and Statuses defined (e.g., “Planned”), and the user must have permission to create DCIM objects like `Device` and `Location`.
+This Job illustrates multiple patterns in combination: conditional form rendering (`query_params`), dynamic object creation with model relationships, and structured output formatting. It's a strong reference for provisioning-style workflows or batch creation Jobs. To run it successfully, the system should already have appropriate Device Types and Statuses defined (e.g., "Planned"), and the user must have permission to create DCIM objects like `Device` and `Location`.
 
 This Job prompts the user for three variables:
 
@@ -479,7 +479,7 @@ These variables are presented as a web form to be completed by the user. Once su
 
 ### Example "Everything" Job
 
-The [Example App](https://github.com/nautobot/nautobot/blob/main/examples/example_app/example_app/jobs.py) included with Nautobot provides several sample Jobs, including an `ExampleEverythingJob` class. This Job is designed to showcase a wide range of capabilities that a Job class can support—making it a useful reference for exploring what’s possible when combining inputs, lifecycle hooks, and outputs in one place.
+The [Example App](https://github.com/nautobot/nautobot/blob/main/examples/example_app/example_app/jobs.py) included with Nautobot provides several sample Jobs, including an `ExampleEverythingJob` class. This Job is designed to showcase a wide range of capabilities that a Job class can support—making it a useful reference for exploring what's possible when combining inputs, lifecycle hooks, and outputs in one place.
 
 The snippet below demonstrates a mix of common patterns: variable types (`StringVar`, `ChoiceVar`, `FileVar`), structured logging, lifecycle methods like `before_start()` and `on_success()`, and file output using `create_file()`. It's a helpful starting point when you want to build a full-featured Job that accepts input, produces downloadable artifacts, and logs structured progress in the UI.
 

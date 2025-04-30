@@ -1,12 +1,12 @@
 # Testing Jobs
 
-Jobs are regular Python classes and can be tested using [Django’s standard test utilities](https://docs.djangoproject.com/en/stable/topics/testing/). However, since Jobs are run through Celery and rely on specific setup (like enabling the Job in the database), Nautobot provides additional helpers to make testing easier and more realistic.
+Jobs are regular Python classes and can be tested using [Django's standard test utilities](https://docs.djangoproject.com/en/stable/topics/testing/). However, since Jobs are run through Celery and rely on specific setup (like enabling the Job in the database), Nautobot provides additional helpers to make testing easier and more realistic.
 
 While individual methods within your Job can and should be tested in isolation, you'll likely also want to test the entire execution of the Job.
 
 ## Using `TransactionTestCase`
 
-Nautobot provides a subclass of Django’s `TransactionTestCase` that is tailored for testing Jobs. This test class ensures each test starts with a clean database and supports integration with Nautobot’s Job system.
+Nautobot provides a subclass of Django's `TransactionTestCase` that is tailored for testing Jobs. This test class ensures each test starts with a clean database and supports integration with Nautobot's Job system.
 
 Use `nautobot.apps.testing.TransactionTestCase` instead of `django.test.TestCase`, especially when invoking full Job execution via `run_job_for_testing()`.
 
@@ -49,7 +49,7 @@ class MyJobTestCase(TransactionTestCase):
 The test files should be placed under the `tests` folder in the app's directory or under `JOBS_ROOT`.
 
 !!! tip "Running Tests"
-    You can run Job tests using either Django’s test runner or `pytest`, depending on your environment:
+    You can run Job tests using either Django's test runner or `pytest`, depending on your environment:
 
     - `nautobot-server test myapp.tests.test_jobs`
     - `pytest myapp/tests/test_jobs.py`
@@ -70,7 +70,7 @@ The 'profile' form field on Jobs is automatically available when the `DEBUG` set
 
 ## Reading Profiling Reports
 
-Profiling files are saved in the format expected by Python’s `pstats` module. A full description on how to deal with the output of `cProfile` can be found in the [Instant User's Manual](https://docs.python.org/3/library/profile.html#instant-user-s-manual). You can analyze them as follows:
+Profiling files are saved in the format expected by Python's `pstats` module. A full description on how to deal with the output of `cProfile` can be found in the [Instant User's Manual](https://docs.python.org/3/library/profile.html#instant-user-s-manual). You can analyze them as follows:
 
 ```python
 import pstats

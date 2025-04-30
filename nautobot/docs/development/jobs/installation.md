@@ -4,7 +4,7 @@ Nautobot supports three ways to install Jobs:
 
 - **Manually**, by placing Python files under the [`JOBS_ROOT`](../../user-guide/administration/configuration/settings.md#jobs_root) path (defaults to `$NAUTOBOT_ROOT/jobs/`)
 - **From a Git repository**, by linking an external repository that contains Jobs
-- **As part of an App**, by defining Jobs inside the App’s Python module
+- **As part of an App**, by defining Jobs inside the App's Python module
 
 Each approach supports modular organization, multiple Job classes, and reuse of shared logic. The key difference is how Nautobot loads the files into its job registry and associates them with database Job records.
 
@@ -26,7 +26,7 @@ Key requirements:
 - To update Job records after editing, **run** `nautobot-server post_upgrade`
 - **Jobs are not enabled by default**. You must enable them manually in the UI before they can be run.
 
-Once registered and enabled, Jobs will appear in the **Jobs** tab grouped by the module’s `name` attribute.
+Once registered and enabled, Jobs will appear in the **Jobs** tab grouped by the module's `name` attribute.
 
 Example layout:
 
@@ -68,7 +68,7 @@ Key requirements:
 - Each Job must be explicitly registered via `register_jobs()`
 - **Jobs are not enabled by default** and must be enabled manually
 
-Once registered and enabled, Jobs will appear in the **Jobs** tab grouped by their module’s metadata.
+Once registered and enabled, Jobs will appear in the **Jobs** tab grouped by their module's metadata.
 
 Example layout:
 

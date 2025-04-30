@@ -1,6 +1,6 @@
 # Managing Jobs
 
-_A guide for administrators and power users who need to enable, configure, or retire Jobs after they’ve been installed._
+_A guide for administrators and power users who need to enable, configure, or retire Jobs after they've been installed._
 
 From this point forward we assume the Job *code* is already present in Nautobot.  
 The sections below walk through the operational tasks you perform **after** installation—enabling or hiding a job, overriding its metadata, steering it to Celery or Kubernetes queues, and eventually deleting or archiving the record.  
@@ -35,7 +35,7 @@ Sometimes you need to change how a Job appears or behaves without touching its s
 
 | Attribute | Purpose | Typical use‑case |
 |-----------|---------|------------------|
-| **grouping** | UI category the Job is listed under. | Organize third-party Jobs into “Compliance” or “Local Automations.” |
+| **grouping** | UI category the Job is listed under. | Organize third-party Jobs into "Compliance" or "Local Automations." |
 | **name** | Display name in the Jobs list. | Rename technical Job names to user-friendly descriptions. |
 | **description** | Markdown or HTML description shown on Job detail page. | Add instructions or documentation links. |
 | **approval_required** | Require an additional user approval before each execution. | Protect Jobs that perform bulk production changes. |
