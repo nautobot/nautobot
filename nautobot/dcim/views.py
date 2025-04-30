@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from copy import deepcopy
 import logging
 import re
@@ -741,20 +740,18 @@ class ManufacturerUIViewSet(NautobotUIViewSet):
 #
 # Device types
 #
-
-
-class DeviceTypeListView(generic.ObjectListView):
+class DeviceTypeUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.DeviceTypeBulkEditForm
+    filterset_class = filters.DeviceTypeFilterSet
+    filterset_form_class = forms.DeviceTypeFilterForm
+    form_class = forms.DeviceTypeForm
+    serializer_class = serializers.DeviceTypeSerializer
+    table_class = tables.DeviceTypeTable
     queryset = DeviceType.objects.all()
-    filterset = filters.DeviceTypeFilterSet
-    filterset_form = forms.DeviceTypeFilterForm
-    table = tables.DeviceTypeTable
-    template_name = "dcim/devicetype_list.html"
-
-
-class DeviceTypeView(generic.ObjectView):
-    queryset = DeviceType.objects.select_related("manufacturer").prefetch_related("software_image_files")
 
     def get_extra_context(self, request, instance):
+        if instance is None:
+            return super().get_extra_context(request, instance)
         instance_count = Device.objects.restrict(request.user).filter(device_type=instance).count()
 
         # Component tables
@@ -827,59 +824,6 @@ class DeviceTypeView(generic.ObjectView):
             "software_image_files_table": software_image_files_table,
             **super().get_extra_context(request, instance),
         }
-
-
-class DeviceTypeEditView(generic.ObjectEditView):
-    queryset = DeviceType.objects.all()
-    model_form = forms.DeviceTypeForm
-    template_name = "dcim/devicetype_edit.html"
-
-
-class DeviceTypeDeleteView(generic.ObjectDeleteView):
-    queryset = DeviceType.objects.all()
-
-
-class DeviceTypeImportView(generic.ObjectImportView):
-    additional_permissions = [
-        "dcim.add_devicetype",
-        "dcim.add_consoleporttemplate",
-        "dcim.add_consoleserverporttemplate",
-        "dcim.add_powerporttemplate",
-        "dcim.add_poweroutlettemplate",
-        "dcim.add_interfacetemplate",
-        "dcim.add_frontporttemplate",
-        "dcim.add_rearporttemplate",
-        "dcim.add_devicebaytemplate",
-        "dcim.add_modulebaytemplate",
-    ]
-    queryset = DeviceType.objects.all()
-    model_form = forms.DeviceTypeImportForm
-    related_object_forms = OrderedDict(
-        (
-            ("console-ports", forms.ConsolePortTemplateImportForm),
-            ("console-server-ports", forms.ConsoleServerPortTemplateImportForm),
-            ("power-ports", forms.PowerPortTemplateImportForm),
-            ("power-outlets", forms.PowerOutletTemplateImportForm),
-            ("interfaces", forms.InterfaceTemplateImportForm),
-            ("rear-ports", forms.RearPortTemplateImportForm),
-            ("front-ports", forms.FrontPortTemplateImportForm),
-            ("device-bays", forms.DeviceBayTemplateImportForm),
-            ("module-bays", forms.ModuleBayTemplateImportForm),
-        )
-    )
-
-
-class DeviceTypeBulkEditView(generic.BulkEditView):
-    queryset = DeviceType.objects.all()
-    filterset = filters.DeviceTypeFilterSet
-    table = tables.DeviceTypeTable
-    form = forms.DeviceTypeBulkEditForm
-
-
-class DeviceTypeBulkDeleteView(generic.BulkDeleteView):
-    queryset = DeviceType.objects.all()
-    filterset = filters.DeviceTypeFilterSet
-    table = tables.DeviceTypeTable
 
 
 #
