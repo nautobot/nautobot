@@ -255,10 +255,10 @@ def web_request_context(
             # We need to develop a more efficient approach: https://github.com/nautobot/nautobot/issues/6303
             snapshots = oc.get_snapshots(
                 pre_object_data[str(oc.changed_object_id)]
-                if pre_object_data is not None and oc.changed_object_id in pre_object_data
+                if pre_object_data is not None and str(oc.changed_object_id) in pre_object_data
                 else None,
                 pre_object_data_v2[str(oc.changed_object_id)]
-                if pre_object_data_v2 is not None and oc.changed_object_id in pre_object_data_v2
+                if pre_object_data_v2 is not None and str(oc.changed_object_id) in pre_object_data_v2
                 else None,
             )
             webhook_queryset = enqueue_webhooks(oc, snapshots=snapshots, webhook_queryset=webhook_queryset)
