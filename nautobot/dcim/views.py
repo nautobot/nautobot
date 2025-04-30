@@ -4312,6 +4312,9 @@ class ControllerUIViewSet(NautobotUIViewSet):
                     "tenant",
                     "description",
                 ],
+                value_transforms={
+                    "capabilities": [helpers.render_json_array_field],
+                },
             ),
             object_detail.ObjectFieldsPanel(
                 section=SectionChoices.RIGHT_HALF,
