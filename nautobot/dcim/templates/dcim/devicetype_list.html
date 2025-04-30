@@ -1,11 +1,2 @@
-{% extends 'generic/object_list.html' %}
-{% load buttons %}
-
-{% block import_list_element %}
-    <li><a href="{% url 'dcim:devicetype_import' %}">
-        <span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> Import from JSON/YAML (single record)
-    </a></li>
-    <li><a href="{% job_import_url content_type %}">
-        <span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> Import from CSV (multiple records)
-    </a></li>
-{% endblock import_list_element %}
+{% extends 'generic/devicetype_list_retrieve.html' %}
+{% comment %}3.0 TODO: remove this template, which only exists for backward compatibility with 2.4 and earlier{% endcomment %}

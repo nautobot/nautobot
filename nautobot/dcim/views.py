@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from copy import deepcopy
 import logging
 import re
@@ -824,6 +825,36 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
             "software_image_files_table": software_image_files_table,
             **super().get_extra_context(request, instance),
         }
+
+
+class DeviceTypeImportView(generic.ObjectImportView):
+    additional_permissions = [
+        "dcim.add_devicetype",
+        "dcim.add_consoleporttemplate",
+        "dcim.add_consoleserverporttemplate",
+        "dcim.add_powerporttemplate",
+        "dcim.add_poweroutlettemplate",
+        "dcim.add_interfacetemplate",
+        "dcim.add_frontporttemplate",
+        "dcim.add_rearporttemplate",
+        "dcim.add_devicebaytemplate",
+        "dcim.add_modulebaytemplate",
+    ]
+    queryset = DeviceType.objects.all()
+    model_form = forms.DeviceTypeImportForm
+    related_object_forms = OrderedDict(
+        (
+            ("console-ports", forms.ConsolePortTemplateImportForm),
+            ("console-server-ports", forms.ConsoleServerPortTemplateImportForm),
+            ("power-ports", forms.PowerPortTemplateImportForm),
+            ("power-outlets", forms.PowerOutletTemplateImportForm),
+            ("interfaces", forms.InterfaceTemplateImportForm),
+            ("rear-ports", forms.RearPortTemplateImportForm),
+            ("front-ports", forms.FrontPortTemplateImportForm),
+            ("device-bays", forms.DeviceBayTemplateImportForm),
+            ("module-bays", forms.ModuleBayTemplateImportForm),
+        )
+    )
 
 
 #

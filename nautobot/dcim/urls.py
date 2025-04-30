@@ -120,6 +120,12 @@ urlpatterns = [
         name="rack_add_image",
         kwargs={"model": Rack},
     ),
+    # Device types
+    path(
+        "device-types/import/",
+        views.DeviceTypeImportView.as_view(),
+        name="devicetype_import",
+    ),
     # Console port templates
     path(
         "console-port-templates/add/",
