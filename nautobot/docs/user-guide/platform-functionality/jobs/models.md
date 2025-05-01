@@ -60,7 +60,7 @@ Records of this type store the following data:
 ## Understanding Job Class Paths
 
 +/- 2.0.0
-    The `class_path` concept has been simplified compared to Nautobot 1.x.
+    The `class_path` concept has been simplified compared to Nautobot 1.x. The Job database model `name` field is now enforced to be globally unique and so is also an option for uniquely identifying Job records.
 
 It is a key concept to understand the 2 `class_path` elements:
 
@@ -71,6 +71,3 @@ It is a key concept to understand the 2 `class_path` elements:
 * `JobClassName`: which is the name of the class inheriting from `nautobot.extras.jobs.Job` contained in the above file.
 
 The `class_path` is often represented as a string in the format of `<module_name>.<JobClassName>`, such as `example.MyJobWithNoVars` or `nautobot_golden_config.jobs.BackupJob`. Understanding the definitions of these elements will be important in running jobs programmatically.
-
-+/- 2.0.0
-    The Job database model `name` field is now enforced to be globally unique and so is also an option for uniquely identifying Job records.

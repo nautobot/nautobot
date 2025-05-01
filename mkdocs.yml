@@ -561,6 +561,7 @@ nav:
           - Getting Started: "development/jobs/getting-started.md"
           - Installing Jobs: "development/jobs/installation.md"
           - Job Structure: "development/jobs/job-structure.md"
+          - Job Logging: "development/jobs/job-logging.md"
           - Common Job Patterns: "development/jobs/job-patterns.md"
           - Testing Jobs: "development/jobs/testing.md"
           - Job Extensions: "development/jobs/job-extensions.md"

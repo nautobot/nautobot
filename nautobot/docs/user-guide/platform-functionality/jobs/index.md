@@ -19,6 +19,7 @@ The following pages provide detailed guides for managing and running Jobs:
 - **[Job Buttons](./jobbutton.md)**: Run Jobs from detail views of Nautobot objects.
 - **[Job Hooks](./jobhook.md)**: Automatically trigger Jobs based on object changes.
 - **[Kubernetes Job Support](./kubernetes-job-support.md)**: Run Jobs within a Kubernetes cluster.
+- **[Developing Jobs](../development/jobs)**: To write your own jobs or migrate them from previous Nautobot releases, check out the developer section.
 
 +/- 2.0.0
     Backwards compatibility with NetBox scripts and reports has been removed. This includes removal of automatic calls to the `post_run()` and `test_*()` methods.
@@ -40,6 +41,7 @@ To enable or disable Jobs, override metadata, or remove obsolete Job records, se
     Similarly, to [approve a job request by another user](./job-scheduling-and-approvals.md), a user must be assigned the `extras.approve_job` permission via the same process. Job approvers also need the `extras.change_scheduledjob` and/or `extras.delete_scheduledjob` permissions as job approvals are implemented via the `ScheduledJob` data model.
 
     ![Adding the run action to a permission](../../../media/admin_ui_run_permission.png)
+    *Admin → Users → (Select user or group) → Object permissions → Add object permission*
 
 ### Via the Web UI
 
