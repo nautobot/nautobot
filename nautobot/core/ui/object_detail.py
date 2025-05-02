@@ -769,7 +769,7 @@ class ObjectsTablePanel(Panel):
         if table_class and not (table_filter or table_attribute):
             raise ValueError("You must specify either `table_filter` or `table_attribute`")
         if table_attribute and not related_field_name:
-            raise ValueError("You must specify `related_field_name`")
+            raise ValueError("You must provide a `related_field_name` when specifying `table_attribute`")
         self.table_filter = table_filter
         self.table_attribute = table_attribute
         self.select_related_fields = select_related_fields
