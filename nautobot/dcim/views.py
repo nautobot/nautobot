@@ -3368,6 +3368,36 @@ class DeviceBayBulkDeleteView(generic.BulkDeleteView):
 #
 
 
+class ModuleBayFieldsPanel(object_detail.ObjectFieldsPanel):
+    """
+    Extended ObjectFieldsPanel to inject either 'Parent Device' or 'Parent Module'
+    as a custom field while keeping base functionality intact.
+    """
+
+    def get_data(self, context):
+        # Get default fields from ObjectFieldsPanel
+        data = super().get_data(context)
+
+        obj = context.get("object")
+        if not obj:
+            return data
+
+        # Inject the custom parent field at the top
+        if obj.parent_device:
+            data = {"Parent Device": obj.parent_device, **data}
+        else:
+            data = {"Parent Module": obj.parent_module, **data}
+
+        return data
+
+    def render_value(self, key, value, context):
+        # Render hyperlink for parent fields
+        if key in ["Parent Device", "Parent Module"]:
+            return helpers.hyperlinked_object(value)
+
+        return super().render_value(key, value, context)
+
+
 class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
     queryset = ModuleBay.objects.all()
     filterset_class = filters.ModuleBayFilterSet
@@ -3380,13 +3410,50 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
     table_class = tables.ModuleBayTable
     create_template_name = "dcim/device_component_add.html"
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            ModuleBayFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=("name", "position", "label", "description"),
+            ),
+            object_detail.KeyValueTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                context_data_key="installed_module_data",
+                label="Installed Module",
+            ),
+        )
+    )
+
     def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+
         if instance:
-            return {
-                "device_breadcrumb_url": "dcim:device_modulebays",
-                "module_breadcrumb_url": "dcim:module_modulebays",
-            }
-        return {}
+            # Set breadcrumbs always
+            context.update(
+                {
+                    "device_breadcrumb_url": "dcim:device_modulebays",
+                    "module_breadcrumb_url": "dcim:module_modulebays",
+                }
+            )
+
+            # Safely get installed module
+            module = getattr(instance, "installed_module", None)
+            if module:
+                context["installed_module_data"] = {
+                    "module": module,
+                    "module_type": module.module_type,
+                    "status": module.status,
+                    "role": module.role,
+                    "serial": module.serial,
+                    "asset_tag": module.asset_tag,
+                    "tenant": module.tenant,
+                }
+            else:
+                context["installed_module_data"] = {}  # Ensure key always exists
+
+        return context
 
     def get_selected_objects_parents_name(self, selected_objects):
         selected_object = selected_objects.first()
