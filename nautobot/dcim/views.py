@@ -748,11 +748,12 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
     form_class = forms.DeviceTypeForm
     serializer_class = serializers.DeviceTypeSerializer
     table_class = tables.DeviceTypeTable
-    queryset = DeviceType.objects.all()
+    queryset = DeviceType.objects.select_related("manufacturer").prefetch_related("software_image_files")
+
 
     def get_extra_context(self, request, instance):
-        if instance is None:
-            return super().get_extra_context(request, instance)
+        if self.action != "retrieve":
+            return {}
         instance_count = Device.objects.restrict(request.user).filter(device_type=instance).count()
 
         # Component tables
