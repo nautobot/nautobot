@@ -157,7 +157,7 @@ class CircuitTerminationTestCase(
         provider = Provider.objects.first()
 
         # Set up Manufacturer for cloud account
-        manufacturer = Manufacturer.objects.create(name="Test Cloud Provider")
+        manufacturer = Manufacturer.objects.create(name="Test Manufacturer")
 
         # Provider Network
         provider_network = ProviderNetwork.objects.create(
