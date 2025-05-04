@@ -750,7 +750,6 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
     table_class = tables.DeviceTypeTable
     queryset = DeviceType.objects.select_related("manufacturer").prefetch_related("software_image_files")
 
-
     def get_extra_context(self, request, instance):
         if self.action != "retrieve":
             return {}

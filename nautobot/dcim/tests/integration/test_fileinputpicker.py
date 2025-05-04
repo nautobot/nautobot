@@ -50,8 +50,6 @@ class ClearableFileInputTestCase(SeleniumTestCase):
         """
         Confirm device type add page input is working correctly.
         """
-        print(self.browser.html)
-
         self._assert_file_picker(
             uri_to_visit=reverse("dcim:devicetype_add"),
             page_loaded_confirmation="Add a new device type",
