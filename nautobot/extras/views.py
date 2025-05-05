@@ -1982,14 +1982,13 @@ class SavedViewUIViewSet(
             return redirect(self.get_return_url(request, obj=sv))
         return super().destroy(request, *args, **kwargs)
 
+
 class ScheduledJobUIViewSet(NautobotUIViewSet):
     queryset = ScheduledJob.objects.all()
     filterset_class = filters.ScheduledJobFilterSet
     filterset_form_class = forms.ScheduledJobFilterForm
-    # form_class = forms.ScheduledJobForm
     serializer_class = serializers.ScheduledJobSerializer
     table_class = tables.ScheduledJobTable
-    # bulk_update_form_class = forms.ScheduledJobBulkEditForm
 
     def get_extra_context(self, request, instance):
         if instance is None:
@@ -2018,7 +2017,8 @@ class ScheduledJobUIViewSet(NautobotUIViewSet):
             "filter_form": self.filterset_form_class(request.GET or None),
         }
         return render(request, "extras/scheduled_jobs_approval_queue_list.html", context)
-    
+
+
 #
 # Job hooks
 #
