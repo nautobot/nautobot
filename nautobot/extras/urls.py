@@ -29,6 +29,7 @@ router.register("external-integrations", views.ExternalIntegrationUIViewSet)
 router.register("job-buttons", views.JobButtonUIViewSet)
 router.register("job-hooks", views.JobHookUIViewSet)
 router.register("job-queues", views.JobQueueUIViewSet)
+router.register("jobs/scheduled-jobs", views.ScheduledJobUIViewSet)
 router.register("metadata-types", views.MetadataTypeUIViewSet)
 router.register("object-metadata", views.ObjectMetadataUIViewSet)
 router.register("relationships", views.RelationshipUIViewSet)
@@ -319,19 +320,6 @@ urlpatterns = [
     ),
     # Jobs
     path("jobs/", views.JobListView.as_view(), name="job_list"),
-    path("jobs/scheduled-jobs/", views.ScheduledJobListView.as_view(), name="scheduledjob_list"),
-    path("jobs/scheduled-jobs/<uuid:pk>/", views.ScheduledJobView.as_view(), name="scheduledjob"),
-    path("jobs/scheduled-jobs/<uuid:pk>/delete/", views.ScheduledJobDeleteView.as_view(), name="scheduledjob_delete"),
-    path(
-        "jobs/scheduled-jobs/delete/",
-        views.ScheduledJobBulkDeleteView.as_view(),
-        name="scheduledjob_bulk_delete",
-    ),
-    path(
-        "jobs/scheduled-jobs/approval-queue/",
-        views.ScheduledJobApprovalQueueListView.as_view(),
-        name="scheduledjob_approval_queue_list",
-    ),
     path(
         "jobs/scheduled-jobs/approval-queue/<uuid:pk>/",
         views.JobApprovalRequestView.as_view(),

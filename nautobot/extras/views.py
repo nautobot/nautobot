@@ -1982,43 +1982,24 @@ class SavedViewUIViewSet(
             return redirect(self.get_return_url(request, obj=sv))
         return super().destroy(request, *args, **kwargs)
 
-
-class ScheduledJobListView(generic.ObjectListView):
-    queryset = ScheduledJob.objects.enabled()
-    table = tables.ScheduledJobTable
-    filterset = filters.ScheduledJobFilterSet
-    filterset_form = forms.ScheduledJobFilterForm
-    action_buttons = ()
-
-
-class ScheduledJobBulkDeleteView(generic.BulkDeleteView):
+class ScheduledJobUIViewSet(NautobotUIViewSet):
     queryset = ScheduledJob.objects.all()
-    table = tables.ScheduledJobTable
-    filterset = filters.ScheduledJobFilterSet
-
-
-class ScheduledJobApprovalQueueListView(generic.ObjectListView):
-    queryset = ScheduledJob.objects.needs_approved()
-    table = tables.ScheduledJobApprovalQueueTable
-    filterset = filters.ScheduledJobFilterSet
-    filterset_form = forms.ScheduledJobFilterForm
-    action_buttons = ()
-    template_name = "extras/scheduled_jobs_approval_queue_list.html"
-
-
-class ScheduledJobView(generic.ObjectView):
-    queryset = ScheduledJob.objects.all()
+    filterset_class = filters.ScheduledJobFilterSet
+    filterset_form_class = forms.ScheduledJobFilterForm
+    # form_class = forms.ScheduledJobForm
+    serializer_class = serializers.ScheduledJobSerializer
+    table_class = tables.ScheduledJobTable
+    # bulk_update_form_class = forms.ScheduledJobBulkEditForm
 
     def get_extra_context(self, request, instance):
+        if instance is None:
+            return super().get_extra_context(request, instance)
         job_class = get_job(instance.task)
         labels = {}
         if job_class is not None:
             for name, var in job_class._get_vars().items():
                 field = var.as_field()
-                if field.label:
-                    labels[name] = field.label
-                else:
-                    labels[name] = pretty_name(name)
+                labels[name] = field.label or pretty_name(name)
         return {
             "labels": labels,
             "job_class_found": (job_class is not None),
@@ -2026,11 +2007,18 @@ class ScheduledJobView(generic.ObjectView):
             **super().get_extra_context(request, instance),
         }
 
-
-class ScheduledJobDeleteView(generic.ObjectDeleteView):
-    queryset = ScheduledJob.objects.all()
-
-
+    @action(detail=False, url_path="approval-queue")
+    def approval_queue(self, request, *args, **kwargs):
+        queryset = ScheduledJob.objects.needs_approved()
+        table = tables.ScheduledJobApprovalQueueTable(queryset)
+        context = {
+            "view": self,
+            "queryset": queryset,
+            "table": table,
+            "filter_form": self.filterset_form_class(request.GET or None),
+        }
+        return render(request, "extras/scheduled_jobs_approval_queue_list.html", context)
+    
 #
 # Job hooks
 #
