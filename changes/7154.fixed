@@ -1,0 +1,1 @@
+Fixed memory issue in cleanup Job Results by changing `delete` to `raw sql` in batches in `recursive_delete_with_cascade` method.

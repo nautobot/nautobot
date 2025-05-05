@@ -4,14 +4,13 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('extras', '0122_add_graphqlquery_owner_content_type'),
+        ("extras", "0122_add_graphqlquery_owner_content_type"),
     ]
 
     operations = [
         migrations.AddIndex(
-            model_name='joblogentry',
-            index=models.Index(fields=['created'], name='extras_joblogentry_created_idx'),
+            model_name="joblogentry",
+            index=models.Index(fields=["created"], name="extras_joblogentry_created_idx"),
         ),
     ]
