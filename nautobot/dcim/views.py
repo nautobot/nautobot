@@ -4185,6 +4185,7 @@ class InterfaceRedundancyGroupUIViewSet(NautobotUIViewSet):
                     "interface__type",
                     "interface__description",
                     "interface__label",
+                    "actions",
                 ],
             ),
         ),
