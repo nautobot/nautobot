@@ -68,8 +68,8 @@ class LogsCleanup(Job):
                 self.recursive_delete_with_cascade(cascade_queryset, deletion_summary)
 
         deleted_count = queryset._raw_delete(using="default")
-        model_label = queryset.model._meta.label
-        deletion_summary[model_label] = deletion_summary.get(model_label, 0) + deleted_count
+        if deleted_count:
+            deletion_summary.update({queryset.model._meta.label: deleted_count})
         return deletion_summary
 
     def run(self, *, cleanup_types, max_age=None):  # pylint: disable=arguments-differ
