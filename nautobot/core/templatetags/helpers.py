@@ -803,11 +803,11 @@ def render_job_run_link(value):
 def label_list(value, suffix=""):
     """Render a list of values with optional suffix (like 'MHz') as span labels."""
     if not value:
-        return ""
+        return HTML_NONE
     return format_html_join(
         " ",
         '<span class="label label-default">{0}{1}</span>',
-        ((item, f" {suffix}" if suffix else "") for item in value),
+        ((item, suffix) for item in value),
     )
 
 

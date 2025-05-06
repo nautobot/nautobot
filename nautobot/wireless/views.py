@@ -82,6 +82,18 @@ class SupportedDataRateUIViewSet(NautobotUIViewSet):
     table_class = SupportedDataRateTable
     form_class = SupportedDataRateForm
     bulk_update_form_class = SupportedDataRateBulkEditForm
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                value_transforms={
+                    "rate": [helpers.humanize_speed],
+                },
+            ),
+        )
+    )
 
 
 class WirelessNetworkUIViewSet(NautobotUIViewSet):
