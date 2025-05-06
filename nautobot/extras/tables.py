@@ -297,6 +297,8 @@ class ApprovalWorkflowStageInstanceTable(BaseTable):
     """Table for ApprovalWorkflowStageInstance list view."""
 
     pk = ToggleColumn()
+    approval_workflow_instance = tables.Column(linkify=True)
+    approval_workflow_stage = tables.Column(linkify=True)
     actions = ButtonsColumn(ApprovalWorkflowStageInstance)
 
     class Meta(BaseTable.Meta):

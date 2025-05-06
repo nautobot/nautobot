@@ -138,6 +138,13 @@ class ApprovalWorkflowInstance(PrimaryModel):
         null=True,
         help_text="Date and time when the decision of approval/denial was made.",
     )
+    user = models.ForeignKey(
+        to=User,
+        related_name="approval_workflow_instances",
+        verbose_name="User",
+        on_delete=models.CASCADE,
+        help_text="User who triggered this approval workflow instance.",
+    )
     documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
 
     class Meta:

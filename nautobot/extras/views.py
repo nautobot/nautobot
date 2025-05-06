@@ -82,6 +82,7 @@ from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
 from . import filters, forms, tables
 from .api import serializers
 from .choices import (
+    ApprovalWorkflowStateChoices,
     DynamicGroupTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
@@ -353,6 +354,49 @@ class ApprovalWorkflowStageInstanceResponseUIViewSet(
             ),
         ],
     )
+
+
+class ApproverDashboardView(ObjectListViewMixin):
+    """
+    View for the dashboard of approval workflow stage instances waiting for the current user to approve.
+    """
+
+    queryset = ApprovalWorkflowStageInstance.objects.all()
+    filterset_class = filters.ApprovalWorkflowStageInstanceFilterSet
+    filterset_form_class = forms.ApprovalWorkflowStageInstanceFilterForm
+    table_class = tables.ApprovalWorkflowStageInstanceTable
+
+    def get_queryset(self):
+        """
+        Filter the queryset to only include approval workflow stage instances that are pending approval
+        and are assigned to the current user for approval.
+        """
+        queryset = super().get_queryset()
+        user = self.request.user
+        group_pks = user.groups.all().values_list("pk", flat=True)
+
+        return queryset.filter(
+            state=ApprovalWorkflowStateChoices.PENDING, approval_workflow_stage__approver_group__pk__in=group_pks
+        )
+
+
+class ApproveeDashboardView(ObjectListViewMixin):
+    """
+    View for the dashboard of approval workflows trigger by the current user.
+    """
+
+    queryset = ApprovalWorkflowInstance.objects.all()
+    filterset_class = filters.ApprovalWorkflowInstanceFilterSet
+    filterset_form_class = forms.ApprovalWorkflowInstanceFilterForm
+    table_class = tables.ApprovalWorkflowInstanceTable
+
+    def get_queryset(self):
+        """
+        Filter the queryset to only include instances that triggered by the current users.
+        """
+        queryset = super().get_queryset()
+        user = self.request.user
+        return queryset.filter(current_state=ApprovalWorkflowStateChoices.PENDING, user=user)
 
 
 #

@@ -45,6 +45,10 @@ router.register("statuses", views.StatusUIViewSet)
 router.register("teams", views.TeamUIViewSet)
 
 urlpatterns = [
+    # Approver Dashboard
+    path("approver-dashboard/", views.ApproverDashboardView.as_view({"get": "list"}), name="approver_dashboard"),
+    # Approvee Dashboard
+    path("approvee-dashboard/", views.ApproveeDashboardView.as_view({"get": "list"}), name="approvee_dashboard"),
     # Change logging
     path("object-changes/", views.ObjectChangeListView.as_view(), name="objectchange_list"),
     path("object-changes/<uuid:pk>/", views.ObjectChangeView.as_view(), name="objectchange"),

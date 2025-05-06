@@ -93,6 +93,14 @@ class Migration(migrations.Migration):
                         to="contenttypes.contenttype",
                     ),
                 ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="approval_workflow_instances",
+                        to="users.User",
+                    ),
+                ),
                 ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={
