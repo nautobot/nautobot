@@ -3438,22 +3438,25 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
                 }
             )
 
-            # Safely get installed module
-            module = getattr(instance, "installed_module", None)
-            if module:
-                context["installed_module_data"] = {
-                    "module": module,
-                    "module_type": module.module_type,
-                    "status": module.status,
-                    "role": module.role,
-                    "serial": module.serial,
-                    "asset_tag": module.asset_tag,
-                    "tenant": module.tenant,
-                }
-            else:
-                context["installed_module_data"] = {}  # Ensure key always exists
+            # Add installed module context
+            context["installed_module_data"] = self._get_installed_module_context(instance)
 
         return context
+
+    def _get_installed_module_context(self, instance):
+        module = getattr(instance, "installed_module", None)
+        if not module:
+            return {}
+
+        return {
+            "module": module,
+            "module_type": module.module_type,
+            "status": module.status,
+            "role": module.role,
+            "serial": module.serial,
+            "asset_tag": module.asset_tag,
+            "tenant": module.tenant,
+        }
 
     def get_selected_objects_parents_name(self, selected_objects):
         selected_object = selected_objects.first()
