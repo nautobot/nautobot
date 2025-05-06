@@ -7,7 +7,6 @@ from nautobot.ipam.views import ServiceEditView
 
 from . import views
 from .models import (
-    Cable,
     ConsolePort,
     ConsoleServerPort,
     Device,
@@ -28,6 +27,7 @@ from .models import (
 app_name = "dcim"
 
 router = NautobotUIViewSetRouter()
+router.register("cables", views.CableUIViewSet)
 router.register("controller-managed-device-groups", views.ControllerManagedDeviceGroupUIViewSet)
 router.register("controllers", views.ControllerUIViewSet)
 router.register("device-families", views.DeviceFamilyUIViewSet)
@@ -1211,25 +1211,7 @@ urlpatterns = [
         name="device_inventoryitems_add",
     ),
     # Cables
-    path("cables/", views.CableListView.as_view(), name="cable_list"),
     path("cables/import/", views.CableBulkImportView.as_view(), name="cable_import"),  # 3.0 TODO: remove, unused
-    path("cables/edit/", views.CableBulkEditView.as_view(), name="cable_bulk_edit"),
-    path("cables/delete/", views.CableBulkDeleteView.as_view(), name="cable_bulk_delete"),
-    path("cables/<uuid:pk>/", views.CableView.as_view(), name="cable"),
-    path("cables/<uuid:pk>/edit/", views.CableEditView.as_view(), name="cable_edit"),
-    path("cables/<uuid:pk>/delete/", views.CableDeleteView.as_view(), name="cable_delete"),
-    path(
-        "cables/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="cable_changelog",
-        kwargs={"model": Cable},
-    ),
-    path(
-        "cables/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="cable_notes",
-        kwargs={"model": Cable},
-    ),
     # Console/power/interface connections (read-only)
     path(
         "console-connections/",
