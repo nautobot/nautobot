@@ -1,7 +1,6 @@
 from datetime import timedelta
 
 from django.core.exceptions import PermissionDenied
-from django.db import connection, transaction
 from django.db.models import CASCADE
 from django.db.models.signals import pre_delete
 from django.utils import timezone
@@ -50,38 +49,6 @@ class LogsCleanup(Job):
         description = "Delete ObjectChange and/or JobResult/JobLogEntry records older than a specified cutoff."
         has_sensitive_variables = False
 
-    def delete_in_batches(self, model_name, ids_to_delete, batch_size=10000):
-        """
-        Delete objects of a given model in batches to optimize database performance.
-
-        Args:
-            model_name (str): The name of the model whose objects are to be deleted.
-            ids_to_delete (list): A list or iterable of object IDs to delete.
-            batch_size (int, optional): The number of objects to delete per batch. Defaults to 10,000.
-        """
-        total = len(ids_to_delete)
-        deleted_total = 0
-
-        for i in range(0, total, batch_size):
-            batch = ids_to_delete[i : i + batch_size]
-
-            try:
-                with transaction.atomic():
-                    sql_query = f"DELETE FROM {model_name} WHERE id IN %s"  # noqa: S608
-                    with connection.cursor() as cursor:
-                        cursor.execute(sql_query, [tuple(batch)])
-
-                    deleted_total += len(batch)
-                    self.logger.info(
-                        f"Deleted batch {i // batch_size + 1}: {len(batch)} rows from {model_name} (total: {deleted_total}/{total})"
-                    )
-
-            except Exception as e:
-                self.logger.error(f"Failed to delete batch {i // batch_size + 1}: {e}")
-                raise
-
-        return deleted_total
-
     def recursive_delete_with_cascade(self, queryset, deletion_summary):
         """
         Recursively deletes all related objects with CASCADE for a given queryset.
@@ -100,9 +67,7 @@ class LogsCleanup(Job):
                 cascade_queryset = related_model.objects.filter(**{f"{related_field_name}__id__in": queryset})
                 self.recursive_delete_with_cascade(cascade_queryset, deletion_summary)
 
-        ids_to_delete = list(queryset.values_list("id", flat=True))
-        deleted_count = self.delete_in_batches(queryset.model._meta.db_table, ids_to_delete)
-
+        deleted_count = queryset._raw_delete(using="default")
         model_label = queryset.model._meta.label
         deletion_summary[model_label] = deletion_summary.get(model_label, 0) + deleted_count
         return deletion_summary
