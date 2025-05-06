@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseModel
-from nautobot.core.models.generics import PrimaryModel
+from nautobot.core.models.generics import ChangeLoggedModel, PrimaryModel
 from nautobot.extras.choices import ApprovalWorkflowStateChoices
 from nautobot.extras.constants import APPROVAL_WORKFLOW_MODELS
 from nautobot.extras.utils import extras_features
@@ -59,14 +59,14 @@ class ApprovalWorkflow(PrimaryModel):
     "graphql",
     "webhooks",
 )
-class ApprovalWorkflowStage(PrimaryModel):
+class ApprovalWorkflowStage(ChangeLoggedModel, BaseModel):
     """ApprovalWorkflowStage model."""
 
     approval_workflow = models.ForeignKey(
         to="extras.ApprovalWorkflow",
         related_name="approval_workflow_stages",
         verbose_name="Approval Workflow",
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         help_text="Approval workflow to which this stage belongs.",
     )
     weight = models.PositiveIntegerField(
@@ -206,14 +206,14 @@ class ApprovalWorkflowStageInstance(PrimaryModel):
         to="extras.ApprovalWorkflowInstance",
         related_name="approval_workflow_stage_instances",
         verbose_name="Approval Workflow Instance",
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         help_text="Approval workflow instance to which this stage instance belongs.",
     )
     approval_workflow_stage = models.ForeignKey(
         to="extras.ApprovalWorkflowStage",
         related_name="approval_workflow_stage_instances",
         verbose_name="Approval Workflow Stage",
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         help_text="Approval workflow stage to which this instance belongs.",
     )
     state = models.CharField(
@@ -315,13 +315,13 @@ class ApprovalWorkflowStageInstanceResponse(BaseModel):
         to="extras.ApprovalWorkflowStageInstance",
         related_name="approval_workflow_stage_instance_responses",
         verbose_name="Approval Workflow Stage Instance",
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
     )
     user = models.ForeignKey(
         to=User,
         related_name="approval_workflow_stage_instance_responses",
         verbose_name="User",
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
     )
     comments = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,

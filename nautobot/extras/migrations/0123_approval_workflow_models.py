@@ -119,10 +119,6 @@ class Migration(migrations.Migration):
                 ),
                 ("created", models.DateTimeField(auto_now_add=True, null=True)),
                 ("last_updated", models.DateTimeField(auto_now=True, null=True)),
-                (
-                    "_custom_field_data",
-                    models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
-                ),
                 ("weight", models.PositiveIntegerField()),
                 ("name", models.CharField(max_length=255)),
                 ("min_approvers", models.PositiveIntegerField()),
@@ -130,7 +126,7 @@ class Migration(migrations.Migration):
                 (
                     "approval_workflow",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.PROTECT,
+                        on_delete=django.db.models.deletion.CASCADE,
                         related_name="approval_workflow_stages",
                         to="extras.approvalworkflow",
                     ),
@@ -143,7 +139,6 @@ class Migration(migrations.Migration):
                         to="auth.group",
                     ),
                 ),
-                ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={
                 "verbose_name": "Approval Workflow Stage",
@@ -176,7 +171,7 @@ class Migration(migrations.Migration):
                 (
                     "approval_workflow_instance",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.PROTECT,
+                        on_delete=django.db.models.deletion.CASCADE,
                         related_name="approval_workflow_stage_instances",
                         to="extras.approvalworkflowinstance",
                     ),
@@ -184,7 +179,7 @@ class Migration(migrations.Migration):
                 (
                     "approval_workflow_stage",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.PROTECT,
+                        on_delete=django.db.models.deletion.CASCADE,
                         related_name="approval_workflow_stage_instances",
                         to="extras.approvalworkflowstage",
                     ),
@@ -215,7 +210,7 @@ class Migration(migrations.Migration):
                 (
                     "approval_workflow_stage_instance",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.PROTECT,
+                        on_delete=django.db.models.deletion.CASCADE,
                         related_name="approval_workflow_stage_instance_responses",
                         to="extras.approvalworkflowstageinstance",
                     ),
@@ -223,7 +218,7 @@ class Migration(migrations.Migration):
                 (
                     "user",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.PROTECT,
+                        on_delete=django.db.models.deletion.CASCADE,
                         related_name="approval_workflow_stage_instance_responses",
                         to=settings.AUTH_USER_MODEL,
                     ),

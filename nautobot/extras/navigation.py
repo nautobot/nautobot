@@ -25,42 +25,6 @@ menu_items = (
                             ),
                         ),
                     ),
-                    NavMenuItem(
-                        link="extras:approvalworkflowstage_list",
-                        name="Approval Workflow Stages",
-                        weight=200,
-                        permissions=["extras.view_approvalworkflowstage"],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="extras:approvalworkflowstage_add",
-                                permissions=["extras.add_approvalworkflowstage"],
-                            ),
-                        ),
-                    ),
-                    NavMenuItem(
-                        link="extras:approvalworkflowinstance_list",
-                        name="Approval Workflow Instances",
-                        weight=300,
-                        permissions=["extras.view_approvalworkflowinstance"],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="extras:approvalworkflowinstance_add",
-                                permissions=["extras.add_approvalworkflowinstance"],
-                            ),
-                        ),
-                    ),
-                    NavMenuItem(
-                        link="extras:approvalworkflowstageinstance_list",
-                        name="Approval Workflow Stage Instances",
-                        weight=400,
-                        permissions=["extras.view_approvalworkflowstageinstance"],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="extras:approvalworkflowstageinstance_add",
-                                permissions=["extras.add_approvalworkflowstageinstance"],
-                            ),
-                        ),
-                    ),
                 ),
             ),
         ),

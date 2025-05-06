@@ -3,6 +3,7 @@
 from django import forms
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
+from django.forms import inlineformset_factory
 
 from nautobot.core.forms import (
     add_blank_choice,
@@ -92,6 +93,24 @@ class ApprovalWorkflowStageForm(NautobotModelForm):
 
         model = ApprovalWorkflowStage
         fields = "__all__"
+
+
+# ApprovalWorkFlow inline formset for use with providing dynamic rows when creating/editing choices
+# for `CustomField` objects in UI views. Fields/exclude must be set but since we're using all the
+# fields we're just setting `exclude=()` here.
+ApprovalWorkflowStageFormSet = inlineformset_factory(
+    parent_model=ApprovalWorkflow,
+    model=ApprovalWorkflowStage,
+    exclude=(),
+    extra=5,
+    widgets={
+        "name": forms.TextInput(attrs={"class": "form-control"}),
+        "weight": forms.NumberInput(attrs={"class": "form-control"}),
+        "min_approvers": forms.NumberInput(attrs={"class": "form-control"}),
+        "denial_message": forms.TextInput(attrs={"class": "form-control"}),
+        "approver_group": forms.Select(attrs={"class": "form-control"}),
+    },
+)
 
 
 class ApprovalWorkflowStageBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
