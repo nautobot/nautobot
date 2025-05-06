@@ -22,19 +22,20 @@ hljs.registerLanguage('xml', xml);
 hljs.registerLanguage('yaml', yaml);
 window.hljs = hljs;
 
-window.jQuery = require('jquery');
+import jQuery from 'jquery';
+window.jQuery = jQuery;
 window.$ = window.jQuery;
 
 import 'jquery-ui';
 import 'select2';
 
-import { initializeDrawers } from './drawer';
-import { observeCollapseTabs } from './tabs';
+import { initializeDrawers } from './drawer.js';
+import { observeCollapseTabs } from './tabs.js';
 
 document.addEventListener('DOMContentLoaded', function () {
   // Tooltips
   // https://getbootstrap.com/docs/5.3/components/tooltips/#enable-tooltips
-  [...document.querySelectorAll('[data-bs-toggle="tooltip"]')].forEach(tooltip => new bootstrap.Tooltip(tooltip));
+  [...document.querySelectorAll('[data-bs-toggle="tooltip"]')].forEach((tooltip) => new bootstrap.Tooltip(tooltip));
 
   // Sidenav
   document.querySelector('.sidenav-toggler').addEventListener('click', (event) => {
@@ -46,7 +47,7 @@ document.addEventListener('DOMContentLoaded', function () {
     toggler.setAttribute('aria-expanded', String(!expanded));
 
     const sidenav = document.getElementById(controls);
-    sidenav.classList.toggle('sidenav-collapsed', expanded)
+    sidenav.classList.toggle('sidenav-collapsed', expanded);
   });
 
   [...document.querySelectorAll('.sidenav-list-item')].forEach((sidenavListItem) => {
@@ -60,8 +61,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const { target: documentClickTarget } = documentClickEvent;
         const sidenavFlyout = document.getElementById(controls);
 
-        const isClickOutside = !sidenavListItem.contains(documentClickTarget)
-          && !sidenavFlyout.contains(documentClickTarget);
+        const isClickOutside =
+          !sidenavListItem.contains(documentClickTarget) && !sidenavFlyout.contains(documentClickTarget);
 
         if (isClickOutside) {
           sidenavListItem.setAttribute('aria-expanded', 'false');
@@ -94,14 +95,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
   const toggleFavorite = (element, event) => {
     if (event.detail.successful) {
-      element.classList.toggle('active')
+      element.classList.toggle('active');
     }
-  }
+  };
   window.toggleFavorite = toggleFavorite;
 
   const setRequestUrl = (element, event) => {
     const isFavorite = element.classList.contains('active');
     event.detail.path = isFavorite ? element.dataset.deleteUrl : element.dataset.addUrl;
-  }
+  };
   window.setRequestUrl = setRequestUrl;
 });
