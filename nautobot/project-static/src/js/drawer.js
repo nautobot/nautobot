@@ -19,9 +19,7 @@ const toggleDrawer = (drawer, force) => {
   drawer.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
 
   const drawerToggles = [...document.querySelectorAll(`[data-nb-toggle="drawer"][data-nb-target="#${drawer.id}"]`)];
-  drawerToggles.forEach(
-    (drawerToggle) => drawerToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false'),
-  );
+  drawerToggles.forEach((drawerToggle) => drawerToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false'));
 
   /*
    * Maintain proper element focus when the drawer is:
@@ -49,7 +47,7 @@ const toggleDrawer = (drawer, force) => {
     const nextActiveElement = drawerToggles[0] || document.querySelector('main');
     nextActiveElement?.focus({ preventScroll: true });
   }
-}
+};
 
 /**
  * Initialize custom Nautobot drawers mechanism.
