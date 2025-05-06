@@ -22,14 +22,15 @@ hljs.registerLanguage('xml', xml);
 hljs.registerLanguage('yaml', yaml);
 window.hljs = hljs;
 
-window.jQuery = require('jquery');
+import jQuery from 'jquery';
+window.jQuery = jQuery;
 window.$ = window.jQuery;
 
 import 'jquery-ui';
 import 'select2';
 
-import { initializeDrawers } from './drawer';
-import { observeCollapseTabs } from './tabs';
+import { initializeDrawers } from './drawer.js';
+import { observeCollapseTabs } from './tabs.js';
 
 document.addEventListener('DOMContentLoaded', function () {
   // Tooltips

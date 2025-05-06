@@ -1,5 +1,5 @@
 import * as bootstrap from 'bootstrap';
-import { createElement, removeElementClasses } from './utils';
+import { createElement, removeElementClasses } from './utils.js';
 
 const TABS_HIDDEN_CLASSES = ['invisible', 'position-absolute'];
 
