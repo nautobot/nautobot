@@ -1,12 +1,14 @@
 'use strict'
 
-const path = require('path');
-const autoprefixer = require('autoprefixer');
-const miniCssExtractPlugin = require('mini-css-extract-plugin');
+import path from 'node:path';
+import autoprefixer from 'autoprefixer';
+import miniCssExtractPlugin from 'mini-css-extract-plugin'
 /* TODO: bootstrap 5 usage doesn't coexist well with stylelint defaults */
-// const stylelintPlugin = require('stylelint-webpack-plugin');
+// import stylelintPlugin from 'stylelint-webpack-plugin';
 
-module.exports = [
+const __dirname = import.meta.dirname;
+
+export default [
     {
         mode: 'production',
         devtool: 'source-map',
