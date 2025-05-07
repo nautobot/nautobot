@@ -4155,6 +4155,9 @@ class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
                 table_class=tables.DeviceTable,
                 table_attribute="devices_sorted",
                 related_field_name="device_redundancy_group",
+                include_columns=[
+                    "device_redundancy_group_priority",
+                ],
             ),
         )
     )

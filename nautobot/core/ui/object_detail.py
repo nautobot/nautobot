@@ -876,14 +876,18 @@ class ObjectsTablePanel(Panel):
                 # to redirect the user back to the correct tab after editing/deleteing an object
                 body_content_table.columns["actions"].column.extra_context["return_url_extra"] = f"?tab={self.tab_id}"
 
-        if self.exclude_columns or self.include_columns:
+        if self.exclude_columns:
             for column in body_content_table.columns:
-                if (self.exclude_columns and column.name in self.exclude_columns) or (
-                    self.include_columns and column.name not in self.include_columns
-                ):
+                if self.exclude_columns and column.name in self.exclude_columns:
                     body_content_table.columns.hide(column.name)
                 else:
                     body_content_table.columns.show(column.name)
+
+        if self.include_columns:
+            for column in self.include_columns:
+                if column in body_content_table.base_columns:
+                    body_content_table.columns.show(column)
+
         # Enable bulk action toggle if the user has appropriate permissions
         user = request.user
         if self.enable_bulk_actions and (
