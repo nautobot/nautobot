@@ -3598,12 +3598,6 @@ class CableUIViewSet(NautobotUIViewSet):
     queryset = Cable.objects.prefetch_related("termination_a", "termination_b")
     action_buttons = ("import", "export")
 
-    def get_extra_context(self, request, instance):
-        return {
-            "editing": bool(instance and instance.pk),
-            **super().get_extra_context(request, instance),
-        }
-
 
 class PathTraceView(generic.ObjectView):
     """
