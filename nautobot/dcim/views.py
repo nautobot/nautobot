@@ -62,6 +62,7 @@ from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, 
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable, VRFTable
 from nautobot.virtualization.models import VirtualMachine
+from nautobot.virtualization.tables import VirtualMachineTable
 from nautobot.wireless.forms import ControllerManagedDeviceGroupWirelessNetworkFormSet
 from nautobot.wireless.models import (
     ControllerManagedDeviceGroupRadioProfileAssignment,
@@ -566,6 +567,7 @@ class RackElevationListView(generic.ObjectListView):
         "reverse",  # control of ordering
     )
     filterset = filters.RackFilterSet
+    filterset_form = forms.RackFilterForm
     action_buttons = []
     template_name = "dcim/rack_elevation_list.html"
 
@@ -4255,6 +4257,105 @@ class SoftwareImageFileUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.SoftwareImageFileSerializer
     table_class = tables.SoftwareImageFileTable
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+        ),
+        extra_tabs=(
+            object_detail.DistinctViewTab(
+                weight=700,
+                tab_id="device_types",
+                url_name="dcim:softwareimagefile_device_types",
+                label="Device Types",
+                related_object_attribute="device_types",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_class=tables.DeviceTypeTable,
+                        table_filter="software_image_files",
+                        tab_id="device_types",
+                        add_button_route=None,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=800,
+                tab_id="devices",
+                url_name="dcim:softwareimagefile_devices",
+                label="Devices",
+                related_object_attribute="devices",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_class=tables.DeviceTable,
+                        table_filter="software_image_files",
+                        tab_id="devices",
+                        table_title="Devices overridden to use this file",
+                        add_button_route=None,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=900,
+                tab_id="inventory_items",
+                url_name="dcim:softwareimagefile_inventory_items",
+                label="Inventory Items",
+                related_object_attribute="inventory_items",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_class=tables.InventoryItemTable,
+                        table_filter="software_image_files",
+                        tab_id="inventory_items",
+                        table_title="Inventory items overridden to use this file",
+                        add_button_route=None,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=1000,
+                tab_id="virtual_machines",
+                url_name="dcim:softwareimagefile_virtual_machines",
+                label="Virtual Machines",
+                related_object_attribute="virtual_machines",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_class=VirtualMachineTable,
+                        table_filter="software_image_files",
+                        tab_id="virtual_machines",
+                        table_title="Virtual machines overridden to use this file",
+                        add_button_route=None,
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    @action(detail=True, url_path="device-types", url_name="device_types")
+    def device_types(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(detail=True, url_path="devices")
+    def devices(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(detail=True, url_path="inventory-items", url_name="inventory_items")
+    def inventory_items(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(detail=True, url_path="virtual-machines", url_name="virtual_machines")
+    def virtual_machines(self, request, *args, **kwargs):
+        return Response({})
+
 
 class SoftwareVersionUIViewSet(NautobotUIViewSet):
     filterset_class = filters.SoftwareVersionFilterSet
@@ -4437,6 +4538,7 @@ class VirtualDeviceContextUIViewSet(NautobotUIViewSet):
                 weight=200,
                 table_class=tables.InterfaceTable,
                 table_attribute="interfaces",
+                related_field_name="virtual_device_contexts",
                 section=SectionChoices.FULL_WIDTH,
                 exclude_columns=["device"],
             ),
@@ -4444,6 +4546,7 @@ class VirtualDeviceContextUIViewSet(NautobotUIViewSet):
                 weight=300,
                 table_class=VRFTable,
                 table_attribute="vrfs",
+                related_field_name="virtual_device_contexts",
                 section=SectionChoices.FULL_WIDTH,
             ),
         ),
