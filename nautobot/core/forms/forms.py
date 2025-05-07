@@ -11,6 +11,7 @@ from django.urls import reverse
 import yaml
 
 from nautobot.core.forms import widgets as nautobot_widgets
+from nautobot.core.forms.fields import CommentField
 from nautobot.core.utils.filtering import build_lookup_label, get_filter_field_label, get_filterset_parameter_form_field
 from nautobot.ipam import formfields
 
@@ -106,6 +107,15 @@ class ConfirmationForm(BootstrapMixin, ReturnURLForm):
     A generic confirmation form. The form is not valid unless the confirm field is checked.
     """
 
+    confirm = forms.BooleanField(required=True, widget=forms.HiddenInput(), initial=True)
+
+
+class CommentForm(BootstrapMixin, ReturnURLForm):
+    """
+    A generic comment form. The form is not valid unless the confirm field is checked.
+    """
+
+    comments = CommentField(label="Comments", required=True)
     confirm = forms.BooleanField(required=True, widget=forms.HiddenInput(), initial=True)
 
 

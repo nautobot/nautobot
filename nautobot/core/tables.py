@@ -439,6 +439,84 @@ class ButtonsColumn(django_tables2.TemplateColumn):
         return ""
 
 
+class ApprovalButtonsColumn(django_tables2.TemplateColumn):
+    """
+    Render approve, deny, and comment buttons for an approval workflow stage instance.
+
+    :param model: Model class to use for calculating URL view names
+    :param prepend_template: Additional template content to render in the column (optional)
+    :param return_url_extra: String to append to the return URL (e.g. for specifying a tab) (optional)
+    """
+
+    buttons = ("detail", "approve", "deny", "comment")
+    attrs = {"td": {"class": "text-right text-nowrap noprint"}}
+    # Note that braces are escaped to allow for string formatting prior to template rendering
+    template_code = """
+    {{% if "detail" in buttons and perms.{app_label}.view_{model_name} %}}
+        <a href="{{{{ record.get_absolute_url }}}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-default" title="Info">
+            <i class="mdi mdi-information-outline"></i>
+        </a>
+    {{% endif %}}
+    {{% if "approve" in buttons and perms.{app_label}.change_{model_name} %}}
+        <a href="{{% url '{approval_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-success btn-xs" title="Approve">
+            <i class="mdi mdi-check-bold"></i>
+        </a>
+    {{% endif %}}
+    {{% if "deny" in buttons and perms.{app_label}.change_{model_name} %}}
+        <a href="{{% url '{deny_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-danger" title="Deny">
+            <i class="mdi mdi-close-thick"></i>
+        </a>
+    {{% endif %}}
+    {{% if "comment" in buttons and perms.{app_label}.change_{model_name} %}}
+        <a href="{{% url '{comment_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-default" title="Comment">
+            <i class="mdi mdi-pencil"></i>
+        </a>
+    {{% endif %}}
+    """
+
+    def __init__(
+        self,
+        model,
+        *args,
+        pk_field="pk",
+        buttons=None,
+        prepend_template=None,
+        return_url_extra="",
+        **kwargs,
+    ):
+        if prepend_template:
+            prepend_template = prepend_template.replace("{", "{{")
+            prepend_template = prepend_template.replace("}", "}}")
+            self.template_code = prepend_template + self.template_code
+
+        app_label = model._meta.app_label
+        approval_route = "extras:approvalworkflowstageinstance_approve"
+        deny_route = "extras:approvalworkflowstageinstance_deny"
+        comment_route = "extras:approvalworkflowstageinstance_comment"
+
+        template_code = self.template_code.format(
+            app_label=app_label,
+            model_name=model._meta.model_name,
+            approval_route=approval_route,
+            deny_route=deny_route,
+            comment_route=comment_route,
+            pk_field=pk_field,
+            buttons=buttons,
+        )
+
+        super().__init__(template_code=template_code, *args, **kwargs)
+
+        self.extra_context.update(
+            {
+                "buttons": buttons or self.buttons,
+                "return_url_extra": return_url_extra,
+            }
+        )
+
+    def header(self):  # pylint: disable=invalid-overridden-method
+        return ""
+
+
 class ChoiceFieldColumn(django_tables2.Column):
     """
     Render a ChoiceField value inside a <span> indicating a particular CSS class. This is useful for displaying colored

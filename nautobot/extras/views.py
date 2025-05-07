@@ -28,14 +28,14 @@ from rest_framework.response import Response
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.events import publish_event
 from nautobot.core.exceptions import FilterSetFieldNotFound
-from nautobot.core.forms import restrict_form_fields
+from nautobot.core.forms import CommentForm, ConfirmationForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query, serialize_object_v2
 from nautobot.core.tables import ButtonsColumn
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
-from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectsTablePanel, ObjectTextPanel
+from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectTextPanel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
@@ -167,7 +167,7 @@ class ApprovalWorkflowUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
             ),
-            ObjectsTablePanel(
+            object_detail.ObjectsTablePanel(
                 weight=200,
                 table_class=tables.ApprovalWorkflowStageTable,
                 table_filter="approval_workflow",
@@ -283,6 +283,9 @@ class ApprovalWorkflowStageUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
+                value_transforms={
+                    "current_state": [helpers.bettertitle],
+                },
             ),
         ],
     )
@@ -306,6 +309,13 @@ class ApprovalWorkflowInstanceUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
             ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                table_class=tables.ApprovalWorkflowStageInstanceTable,
+                table_filter="approval_workflow_instance",
+                section=SectionChoices.FULL_WIDTH,
+                exclude_columns=["approval_workflow_instance"],
+            ),
         ],
     )
 
@@ -328,8 +338,173 @@ class ApprovalWorkflowStageInstanceUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
             ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                table_class=tables.ApprovalWorkflowStageInstanceResponseTable,
+                table_filter="approval_workflow_stage_instance",
+                section=SectionChoices.FULL_WIDTH,
+                exclude_columns=["approval_workflow_stage_instance"],
+            ),
         ],
     )
+
+    @action(detail=True, url_path="approve", methods=["get", "post"])
+    def approve(self, request, *args, **kwargs):
+        """
+        Approve the approval workflow stage instance response.
+        """
+        instance = self.get_object()
+        approval_workflow_instance = instance.approval_workflow_instance
+        if approval_workflow_instance.active_stage != instance:
+            # The user is not allowed to approve or deny the stage
+            # because it is not the active stage
+            messages.warning(
+                request, f"You are not allowed to approve {instance} yet because this stage is not active."
+            )
+            return redirect(self.get_return_url(request))
+
+        try:
+            approval_workflow_stage_instance_response = ApprovalWorkflowStageInstanceResponse.objects.get(
+                approval_workflow_stage_instance=instance,
+                user=request.user,
+            )
+        except ApprovalWorkflowStageInstanceResponse.DoesNotExist:
+            approval_workflow_stage_instance_response = ApprovalWorkflowStageInstanceResponse.objects.create(
+                approval_workflow_stage_instance=instance,
+                user=request.user,
+            )
+
+        if approval_workflow_stage_instance_response.state != ApprovalWorkflowStateChoices.PENDING:
+            # The user is not allowed to approve or deny the response
+            # Once it reaches a terminal state
+            messages.warning(
+                request, f"You are not allowed to approve {instance} since it already has reached a terminal state."
+            )
+            return redirect(self.get_return_url(request))
+
+        if request.method == "GET":
+            obj = approval_workflow_stage_instance_response
+            form = ConfirmationForm(initial=request.GET)
+
+            return render(
+                request,
+                "extras/approval_workflow/approve.html",
+                {
+                    "obj": obj,
+                    "form": form,
+                    "obj_type": self.queryset.model._meta.verbose_name,
+                    "return_url": self.get_return_url(request, obj),
+                    "panel_class": "success",
+                    "button_class": "success",
+                },
+            )
+
+        if request.data.get("confirm"):
+            approval_workflow_stage_instance_response.state = ApprovalWorkflowStateChoices.APPROVED
+            approval_workflow_stage_instance_response.save()
+            messages.success(request, f"You approved {instance}.")
+            return redirect(self.get_return_url(request))
+
+    @action(detail=True, url_path="deny", methods=["get", "post"])
+    def deny(self, request, *args, **kwargs):
+        """
+        Deny the approval workflow stage instance response.
+        """
+        instance = self.get_object()
+        approval_workflow_instance = instance.approval_workflow_instance
+        if approval_workflow_instance.active_stage != instance:
+            # The user is not allowed to approve or deny the stage
+            # because it is not the active stage
+            messages.warning(request, f"You are not allowed to deny {instance} yet because this stage is not active.")
+            return redirect(self.get_return_url(request))
+
+        try:
+            approval_workflow_stage_instance_response = ApprovalWorkflowStageInstanceResponse.objects.get(
+                approval_workflow_stage_instance=instance,
+                user=request.user,
+            )
+        except ApprovalWorkflowStageInstanceResponse.DoesNotExist:
+            approval_workflow_stage_instance_response = ApprovalWorkflowStageInstanceResponse.objects.create(
+                approval_workflow_stage_instance=instance,
+                user=request.user,
+            )
+
+        if approval_workflow_stage_instance_response.state != ApprovalWorkflowStateChoices.PENDING:
+            # The user is not allowed to approve or deny the response
+            # Once it reaches a terminal state
+            messages.warning(
+                request, f"You are not allowed to deny {instance} since it already has reached a terminal state."
+            )
+            return redirect(self.get_return_url(request))
+
+        if request.method == "GET":
+            obj = approval_workflow_stage_instance_response
+            form = ConfirmationForm(initial=request.GET)
+
+            return render(
+                request,
+                "extras/approval_workflow/deny.html",
+                {
+                    "obj": obj,
+                    "form": form,
+                    "obj_type": self.queryset.model._meta.verbose_name,
+                    "return_url": self.get_return_url(request, obj),
+                },
+            )
+
+        if request.data.get("confirm"):
+            approval_workflow_stage_instance_response.state = ApprovalWorkflowStateChoices.DENIED
+            approval_workflow_stage_instance_response.save()
+            messages.success(request, f"You denied {instance}.")
+            return redirect(self.get_return_url(request))
+
+    @action(detail=True, url_path="comment", methods=["get", "post"])
+    def comment(self, request, *args, **kwargs):
+        """
+        Comment the approval workflow stage instance response.
+        """
+        instance = self.get_object()
+        approval_workflow_instance = instance.approval_workflow_instance
+        if approval_workflow_instance.active_stage != instance:
+            # The user is not allowed to modify the stage yet because it is not the active stage
+            messages.warning(
+                request, f"You are not allowed to comment {instance} yet because {instance} is not active yet."
+            )
+            return redirect(self.get_return_url(request))
+
+        try:
+            approval_workflow_stage_instance_response = ApprovalWorkflowStageInstanceResponse.objects.get(
+                approval_workflow_stage_instance=instance,
+                user=request.user,
+            )
+        except ApprovalWorkflowStageInstanceResponse.DoesNotExist:
+            approval_workflow_stage_instance_response = ApprovalWorkflowStageInstanceResponse.objects.create(
+                approval_workflow_stage_instance=instance,
+                user=request.user,
+            )
+
+        if request.method == "GET":
+            obj = approval_workflow_stage_instance_response
+            form = CommentForm(initial=request.GET)
+
+            return render(
+                request,
+                "extras/approval_workflow/comment.html",
+                {
+                    "obj": obj,
+                    "form": form,
+                    "obj_type": self.queryset.model._meta.verbose_name,
+                    "return_url": self.get_return_url(request, obj),
+                    "button_class": "info",
+                    "panel_class": "info",
+                },
+            )
+
+        if request.data.get("confirm"):
+            approval_workflow_stage_instance_response.comments = request.data.get("comments")
+            approval_workflow_stage_instance_response.save()
+            messages.success(request, f"You left comments on {instance}.")
+            return redirect(self.get_return_url(request))
 
 
 class ApprovalWorkflowStageInstanceResponseUIViewSet(
@@ -396,7 +571,28 @@ class ApproveeDashboardView(ObjectListViewMixin):
         """
         queryset = super().get_queryset()
         user = self.request.user
-        return queryset.filter(current_state=ApprovalWorkflowStateChoices.PENDING, user=user)
+        return queryset.filter(user=user)
+
+
+# from nautobot.extras.choices import ApprovalWorkflowStateChoices
+# approver_group = Group.objects.first()
+# approver_group.user_set.add(User.objects.get(username="admin"))
+# approval_workflow = ApprovalWorkflow.objects.first()
+# job_ct = ContentType.objects.get_for_model(Job)
+# job = Job.objects.first()
+# approval_workflow_instance = ApprovalWorkflowInstance.objects.create(
+#     approval_workflow=approval_workflow,
+#     object_under_review_content_type=job_ct,
+#     object_under_review_object_id=job.pk,
+#     current_state=ApprovalWorkflowStateChoices.PENDING,
+# )
+# approval_workflow_stages = approval_workflow.approval_workflow_stages.all()
+# for i in range(len(approval_workflow_stages)):
+#     ApprovalWorkflowStageInstance.objects.create(
+#         approval_workflow_instance=approval_workflow_instance,
+#         approval_workflow_stage=approval_workflow_stages[i],
+#         state=ApprovalWorkflowStateChoices.PENDING,
+#     )
 
 
 #

@@ -96,11 +96,14 @@ class Migration(migrations.Migration):
                 (
                     "user",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
                         related_name="approval_workflow_instances",
-                        to="users.User",
+                        to=settings.AUTH_USER_MODEL,
                     ),
                 ),
+                ("user_name", models.CharField(editable=False, max_length=150)),
                 ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={
@@ -197,6 +200,7 @@ class Migration(migrations.Migration):
             options={
                 "verbose_name": "Approval Workflow Stage Instance",
                 "unique_together": {("approval_workflow_instance", "approval_workflow_stage")},
+                "ordering": ["approval_workflow_instance", "approval_workflow_stage__weight"],
             },
             bases=(
                 nautobot.extras.models.mixins.DynamicGroupMixin,

@@ -25,6 +25,11 @@ class ApprovalWorkflowStateChoices(ChoiceSet):
         (APPROVED, "Approved"),
         (DENIED, "Denied"),
     )
+    CSS_CLASSES = {
+        PENDING: "info",
+        APPROVED: "success",
+        DENIED: "danger",
+    }
 
 
 #

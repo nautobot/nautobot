@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -138,13 +139,15 @@ class ApprovalWorkflowInstance(PrimaryModel):
         null=True,
         help_text="Date and time when the decision of approval/denial was made.",
     )
+    # The user who triggered the approval workflow instance
     user = models.ForeignKey(
-        to=User,
+        to=settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
         related_name="approval_workflow_instances",
-        verbose_name="User",
-        on_delete=models.CASCADE,
-        help_text="User who triggered this approval workflow instance.",
+        blank=True,
+        null=True,
     )
+    user_name = models.CharField(max_length=150, editable=False, db_index=True)
     documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
 
     class Meta:
@@ -157,6 +160,9 @@ class ApprovalWorkflowInstance(PrimaryModel):
     def __str__(self):
         """Stringify instance."""
         return f"{self.approval_workflow.name}: {self.object_under_review} ({self.current_state})"
+
+    def get_current_state_class(self):
+        return ApprovalWorkflowStateChoices.CSS_CLASSES.get(self.current_state)
 
     @property
     def active_stage(self):
@@ -182,6 +188,11 @@ class ApprovalWorkflowInstance(PrimaryModel):
             *args: positional arguments
             **kwargs: keyword arguments
         """
+        if not self.user_name:
+            if self.user:
+                self.user_name = self.user.username
+            else:
+                self.user_name = "Undefined"
         # Check if there is one or more denied response for this stage instance
         previous_state = self.current_state
         denied_stages = self.approval_workflow_stage_instances.filter(state=ApprovalWorkflowStateChoices.DENIED)
@@ -241,10 +252,14 @@ class ApprovalWorkflowStageInstance(PrimaryModel):
 
         verbose_name = "Approval Workflow Stage Instance"
         unique_together = [["approval_workflow_instance", "approval_workflow_stage"]]
+        ordering = ["approval_workflow_instance", "approval_workflow_stage__weight"]
 
     def __str__(self):
         """Stringify instance."""
         return f"{self.approval_workflow_stage}: {self.state}"
+
+    def get_state_class(self):
+        return ApprovalWorkflowStateChoices.CSS_CLASSES.get(self.state)
 
     def save(self, *args, **kwargs):
         """
@@ -352,6 +367,9 @@ class ApprovalWorkflowStageInstanceResponse(BaseModel):
     def __str__(self):
         """Stringify instance."""
         return f"{self.approval_workflow_stage_instance}: {self.user}"
+
+    def get_state_class(self):
+        return ApprovalWorkflowStateChoices.CSS_CLASSES.get(self.state)
 
     def save(self, *args, **kwargs):
         """

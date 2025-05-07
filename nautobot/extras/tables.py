@@ -5,6 +5,7 @@ from django_tables2.utils import Accessor
 from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 
 from nautobot.core.tables import (
+    ApprovalButtonsColumn,
     BaseTable,
     BooleanColumn,
     ButtonsColumn,
@@ -270,6 +271,7 @@ class ApprovalWorkflowInstanceTable(BaseTable):
     object_under_review = tables.TemplateColumn(
         template_code=APPROVAL_WORKFLOW_OBJECT, verbose_name="Object Under Review"
     )
+    current_state = ChoiceFieldColumn()
     actions = ButtonsColumn(ApprovalWorkflowInstance)
 
     class Meta(BaseTable.Meta):
@@ -299,7 +301,8 @@ class ApprovalWorkflowStageInstanceTable(BaseTable):
     pk = ToggleColumn()
     approval_workflow_instance = tables.Column(linkify=True)
     approval_workflow_stage = tables.Column(linkify=True)
-    actions = ButtonsColumn(ApprovalWorkflowStageInstance)
+    state = ChoiceFieldColumn()
+    actions = ApprovalButtonsColumn(ApprovalWorkflowStageInstance)
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -326,7 +329,8 @@ class ApprovalWorkflowStageInstanceResponseTable(BaseTable):
     """Table for ApprovalWorkflowStageInstanceResponse list view."""
 
     pk = ToggleColumn()
-    actions = ButtonsColumn(ApprovalWorkflowStageInstanceResponse)
+    state = ChoiceFieldColumn()
+    actions = ApprovalButtonsColumn(ApprovalWorkflowStageInstanceResponse, buttons=("detail"))
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
