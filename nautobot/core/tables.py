@@ -448,13 +448,18 @@ class ApprovalButtonsColumn(django_tables2.TemplateColumn):
     :param return_url_extra: String to append to the return URL (e.g. for specifying a tab) (optional)
     """
 
-    buttons = ("detail", "approve", "deny", "comment")
+    buttons = ("detail", "changelog", "approve", "deny", "comment")
     attrs = {"td": {"class": "text-right text-nowrap noprint"}}
     # Note that braces are escaped to allow for string formatting prior to template rendering
     template_code = """
-    {{% if "detail" in buttons and perms.{app_label}.view_{model_name} %}}
-        <a href="{{{{ record.get_absolute_url }}}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-default" title="Info">
+    {{% if "detail" in buttons %}}
+        <a href="{{{{ record.get_absolute_url }}}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-default" title="Details">
             <i class="mdi mdi-information-outline"></i>
+        </a>
+    {{% endif %}}
+    {{% if "changelog" in buttons %}}
+        <a href="{{% url '{changelog_route}' {pk_field}=record.{pk_field} %}}" class="btn btn-default btn-xs" title="Change log">
+            <i class="mdi mdi-history"></i>
         </a>
     {{% endif %}}
     {{% if "approve" in buttons and perms.{app_label}.change_{model_name} %}}
@@ -490,6 +495,7 @@ class ApprovalButtonsColumn(django_tables2.TemplateColumn):
             self.template_code = prepend_template + self.template_code
 
         app_label = model._meta.app_label
+        changelog_route = get_route_for_model(model, "changelog")
         approval_route = "extras:approvalworkflowstageinstance_approve"
         deny_route = "extras:approvalworkflowstageinstance_deny"
         comment_route = "extras:approvalworkflowstageinstance_comment"
@@ -497,6 +503,7 @@ class ApprovalButtonsColumn(django_tables2.TemplateColumn):
         template_code = self.template_code.format(
             app_label=app_label,
             model_name=model._meta.model_name,
+            changelog_route=changelog_route,
             approval_route=approval_route,
             deny_route=deny_route,
             comment_route=comment_route,

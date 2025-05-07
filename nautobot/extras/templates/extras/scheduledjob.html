@@ -24,6 +24,30 @@
 {{ block.super }}
 {% endblock content %}
 
+{% block extra_nav_tabs %}
+    {% if approval_workflow_instances_count %}
+        <li role="presentation"{% if request.GET.tab == 'approval_workflow_instances' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#approval_workflow_instances" onclick="switch_tab(this.href, reload=false)" aria-controls="approval_workflow_instances" role="tab" data-toggle="tab">
+                Approval Workflow {% badge approval_workflow_instances_count %}
+            </a>
+        </li>
+    {% endif %}
+{% endblock extra_nav_tabs %}
+
+{% block extra_tab_content %}
+    {% if approval_workflow_instances_count %}
+        <div id="approval_workflow_instances" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "approval_workflow_instances" %}active{% else %}fade{% endif %}">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Approval Workflow Instances</strong>
+                </div>
+                {% include 'inc/table.html' with table=approval_workflow_instance_table %}
+            </div>
+            {% include 'inc/paginator.html' with paginator=approval_workflow_instance_table.paginator page=approval_workflow_instance_table.page %}
+        </div>
+    {% endif %}
+{% endblock extra_tab_content %}
+
 {% block content_left_page %}
       <div class="panel panel-default">
           <div class="panel-heading">

@@ -272,7 +272,7 @@ class ApprovalWorkflowInstanceTable(BaseTable):
         template_code=APPROVAL_WORKFLOW_OBJECT, verbose_name="Object Under Review"
     )
     current_state = ChoiceFieldColumn()
-    actions = ButtonsColumn(ApprovalWorkflowInstance)
+    actions = ApprovalButtonsColumn(ApprovalWorkflowInstance, buttons=("detail", "changelog"))
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""

@@ -168,11 +168,20 @@ class ApprovalWorkflowUIViewSet(NautobotUIViewSet):
                 fields="__all__",
             ),
             object_detail.ObjectsTablePanel(
-                weight=200,
+                weight=100,
                 table_class=tables.ApprovalWorkflowStageTable,
                 table_filter="approval_workflow",
-                section=SectionChoices.FULL_WIDTH,
+                section=SectionChoices.RIGHT_HALF,
                 exclude_columns=["approval_workflow", "actions"],
+                add_button_route=None,
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                table_class=tables.ApprovalWorkflowInstanceTable,
+                table_filter="approval_workflow",
+                section=SectionChoices.FULL_WIDTH,
+                exclude_columns=["approval_workflow"],
+                add_button_route=None,
             ),
         ],
     )
@@ -304,7 +313,14 @@ class ApprovalWorkflowInstanceUIViewSet(NautobotUIViewSet):
             ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
-                fields="__all__",
+                fields=[
+                    "approval_workflow",
+                    "object_under_review",
+                    "current_state",
+                    "decision_date",
+                    "user",
+                    "user_name",
+                ],
                 value_transforms={
                     "current_state": [helpers.render_approval_workflow_state],
                 },
@@ -313,8 +329,9 @@ class ApprovalWorkflowInstanceUIViewSet(NautobotUIViewSet):
                 weight=200,
                 table_class=tables.ApprovalWorkflowStageInstanceTable,
                 table_filter="approval_workflow_instance",
-                section=SectionChoices.FULL_WIDTH,
+                section=SectionChoices.RIGHT_HALF,
                 exclude_columns=["approval_workflow_instance"],
+                add_button_route=None,
             ),
         ],
     )
@@ -345,7 +362,7 @@ class ApprovalWorkflowStageInstanceUIViewSet(NautobotUIViewSet):
                 weight=200,
                 table_class=tables.ApprovalWorkflowStageInstanceResponseTable,
                 table_filter="approval_workflow_stage_instance",
-                section=SectionChoices.FULL_WIDTH,
+                section=SectionChoices.RIGHT_HALF,
                 exclude_columns=["approval_workflow_stage_instance"],
             ),
         ],
@@ -358,13 +375,20 @@ class ApprovalWorkflowStageInstanceUIViewSet(NautobotUIViewSet):
         """
         instance = self.get_object()
         approval_workflow_instance = instance.approval_workflow_instance
-        if approval_workflow_instance.active_stage != instance:
-            # The user is not allowed to approve or deny the stage
-            # because it is not the active stage
-            messages.warning(
-                request, f"You are not allowed to approve {instance} yet because this stage is not active."
-            )
-            return redirect(self.get_return_url(request))
+        if approval_workflow_instance.active_stage:
+            if approval_workflow_instance.active_stage.state == ApprovalWorkflowStateChoices.DENIED:
+                # The user is not allowed to approve the stage because it is has already been denied
+                messages.warning(
+                    request,
+                    f"You are not allowed to approve {instance} because the parent workflow {instance.approval_workflow_instance} has already been denied",
+                )
+                return redirect(self.get_return_url(request))
+            if approval_workflow_instance.active_stage != instance:
+                # The user is not allowed to approve the stage because this stage is not the active stage
+                messages.warning(
+                    request, f"You are not allowed to approve {instance} because this stage is not active yet."
+                )
+                return redirect(self.get_return_url(request))
 
         try:
             approval_workflow_stage_instance_response = ApprovalWorkflowStageInstanceResponse.objects.get(
@@ -415,11 +439,20 @@ class ApprovalWorkflowStageInstanceUIViewSet(NautobotUIViewSet):
         """
         instance = self.get_object()
         approval_workflow_instance = instance.approval_workflow_instance
-        if approval_workflow_instance.active_stage != instance:
-            # The user is not allowed to approve or deny the stage
-            # because it is not the active stage
-            messages.warning(request, f"You are not allowed to deny {instance} yet because this stage is not active.")
-            return redirect(self.get_return_url(request))
+        if approval_workflow_instance.active_stage:
+            if approval_workflow_instance.active_stage.state == ApprovalWorkflowStateChoices.DENIED:
+                # The user is not allowed to deny the stage because it is has already been denied
+                messages.warning(
+                    request,
+                    f"You are not allowed to deny {instance} because the parent workflow {instance.approval_workflow_instance} has already been denied",
+                )
+                return redirect(self.get_return_url(request))
+            if approval_workflow_instance.active_stage != instance:
+                # The user is not allowed to deny the stage because this stage is not the active stage
+                messages.warning(
+                    request, f"You are not allowed to deny {instance} because this stage is not active yet."
+                )
+                return redirect(self.get_return_url(request))
 
         try:
             approval_workflow_stage_instance_response = ApprovalWorkflowStageInstanceResponse.objects.get(
@@ -467,14 +500,6 @@ class ApprovalWorkflowStageInstanceUIViewSet(NautobotUIViewSet):
         Comment the approval workflow stage instance response.
         """
         instance = self.get_object()
-        approval_workflow_instance = instance.approval_workflow_instance
-        if approval_workflow_instance.active_stage != instance:
-            # The user is not allowed to modify the stage yet because it is not the active stage
-            messages.warning(
-                request, f"You are not allowed to comment {instance} yet because {instance} is not active yet."
-            )
-            return redirect(self.get_return_url(request))
-
         try:
             approval_workflow_stage_instance_response = ApprovalWorkflowStageInstanceResponse.objects.get(
                 approval_workflow_stage_instance=instance,
@@ -556,8 +581,13 @@ class ApproverDashboardView(ObjectListViewMixin):
         user = self.request.user
         group_pks = user.groups.all().values_list("pk", flat=True)
 
+        # Return only the approval workflow stage instances that are pending
+        # and belong to a pending approval workflow instance
+        # and are assigned to the current user or any of the groups the user belongs to
         return queryset.filter(
-            state=ApprovalWorkflowStateChoices.PENDING, approval_workflow_stage__approver_group__pk__in=group_pks
+            approval_workflow_instance__current_state=ApprovalWorkflowStateChoices.PENDING,
+            state=ApprovalWorkflowStateChoices.PENDING,
+            approval_workflow_stage__approver_group__pk__in=group_pks,
         )
 
 
@@ -578,27 +608,6 @@ class ApproveeDashboardView(ObjectListViewMixin):
         queryset = super().get_queryset()
         user = self.request.user
         return queryset.filter(user=user)
-
-
-# from nautobot.extras.choices import ApprovalWorkflowStateChoices
-# approver_group = Group.objects.first()
-# approver_group.user_set.add(User.objects.get(username="admin"))
-# approval_workflow = ApprovalWorkflow.objects.first()
-# job_ct = ContentType.objects.get_for_model(Job)
-# job = Job.objects.first()
-# approval_workflow_instance = ApprovalWorkflowInstance.objects.create(
-#     approval_workflow=approval_workflow,
-#     object_under_review_content_type=job_ct,
-#     object_under_review_object_id=job.pk,
-#     current_state=ApprovalWorkflowStateChoices.PENDING,
-# )
-# approval_workflow_stages = approval_workflow.approval_workflow_stages.all()
-# for i in range(len(approval_workflow_stages)):
-#     ApprovalWorkflowStageInstance.objects.create(
-#         approval_workflow_instance=approval_workflow_instance,
-#         approval_workflow_stage=approval_workflow_stages[i],
-#         state=ApprovalWorkflowStateChoices.PENDING,
-#     )
 
 
 #
@@ -1997,6 +2006,27 @@ class JobView(generic.ObjectView):
     queryset = JobModel.objects.all()
     template_name = "extras/job_detail.html"
 
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        approval_workflow_instances = instance.associated_approval_workflow_instances.all()
+        approval_workflow_instances_count = approval_workflow_instances.count()
+        approval_workflow_instance_table = tables.ApprovalWorkflowInstanceTable(
+            data=approval_workflow_instances,
+            user=request.user,
+            exclude=["object_under_review", "object_under_review_content_type"],
+        )
+
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(approval_workflow_instance_table)
+        context.update(
+            {
+                "approval_workflow_instances_count": approval_workflow_instances_count,
+                "approval_workflow_instance_table": approval_workflow_instance_table,
+            }
+        )
+        return context
+
 
 class JobEditView(generic.ObjectEditView):
     queryset = JobModel.objects.all()
@@ -2475,7 +2505,22 @@ class ScheduledJobView(generic.ObjectView):
                     labels[name] = field.label
                 else:
                     labels[name] = pretty_name(name)
+
+        approval_workflow_instances = instance.associated_approval_workflow_instances.all()
+        approval_workflow_instances_count = approval_workflow_instances.count()
+        approval_workflow_instance_table = tables.ApprovalWorkflowInstanceTable(
+            data=approval_workflow_instances,
+            user=request.user,
+            exclude=["object_under_review", "object_under_review_content_type"],
+        )
+
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(approval_workflow_instance_table)
+
         return {
+            "approval_workflow_instances_count": approval_workflow_instances_count,
+            "approval_workflow_instance_table": approval_workflow_instance_table,
             "labels": labels,
             "job_class_found": (job_class is not None),
             "default_time_zone": get_current_timezone(),

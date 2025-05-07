@@ -3,7 +3,8 @@
     {% for instance in approval_workflow_stage_instances %}
         {% with approval_workflow_instance=instance.approval_workflow_instance %}
             <div class="list-group-item">
-                <a href="{{ instance.get_absolute_url }}" >{{ instance }} </a> <br />
+                {{ instance.state|render_approval_workflow_state }}
+                <a href="{{ approval_workflow_instance.get_absolute_url }}" >{{ instance }} </a> <br />
                 {{ approval_workflow_instance.object_under_review_content_type.name|bettertitle }}
                 {% if instance and approval_workflow_instance.object_under_review and approval_workflow_instance.object_under_review.get_absolute_url %}
                     {{ approval_workflow_instance.object_under_review|hyperlinked_object }}
@@ -21,7 +22,7 @@
         {% endwith %}
         {% if forloop.last %}
             <div class="list-group-item text-right">
-                <a href="{% url 'extras:approvalworkflowinstance_list' %}">View All Pending Approval Workflows</a>
+                <a href="{% url 'extras:approver_dashboard' %}">View All Approval Workflow Stages Pending Approval</a>
             </div>
         {% endif %}
     {% endfor %}

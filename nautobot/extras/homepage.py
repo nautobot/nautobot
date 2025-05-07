@@ -9,7 +9,9 @@ def get_approval_workflow_stage_instances(request):
     group_pks = user.groups.all().values_list("pk", flat=True)
 
     return ApprovalWorkflowStageInstance.objects.filter(
-        state=ApprovalWorkflowStateChoices.PENDING, approval_workflow_stage__approver_group__pk__in=group_pks
+        approval_workflow_instance__current_state=ApprovalWorkflowStateChoices.PENDING,
+        state=ApprovalWorkflowStateChoices.PENDING,
+        approval_workflow_stage__approver_group__pk__in=group_pks,
     )[:15]
 
 

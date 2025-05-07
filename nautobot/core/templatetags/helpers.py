@@ -163,6 +163,7 @@ def add_html_id(element_str, id_str):
         return element_str
     return mark_safe(match.group(1) + format_html(' id="{}" ', id_str) + match.group(2))  # noqa: S308  # suspicious-mark-safe-usage
 
+
 @library.filter()
 @register.filter()
 def render_approval_workflow_state(value):
@@ -171,9 +172,9 @@ def render_approval_workflow_state(value):
     """
     if value:
         css_class = ApprovalWorkflowStateChoices.CSS_CLASSES.get(value)
-        label = value.lower()
-        return format_html('<span class="label label-{}">{}</span>', css_class, label)
+        return format_html('<span class="label label-{}">{}</span>', css_class, value)
     return ""
+
 
 @library.filter()
 @register.filter()

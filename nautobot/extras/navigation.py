@@ -25,6 +25,12 @@ menu_items = (
                             ),
                         ),
                     ),
+                    NavMenuItem(
+                        link="extras:approvalworkflowinstance_list",
+                        name="Approval Workflow Instances",
+                        weight=200,
+                        permissions=["extras.view_approvalworkflowinstance"],
+                    ),
                 ),
             ),
         ),
