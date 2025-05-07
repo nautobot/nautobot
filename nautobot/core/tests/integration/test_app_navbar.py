@@ -1,3 +1,5 @@
+from django.urls import reverse
+
 from nautobot.core.choices import ButtonActionColorChoices, ButtonActionIconChoices
 from nautobot.core.testing.integration import SeleniumTestCase
 
@@ -40,93 +42,61 @@ class AppNavBarTestCase(SeleniumTestCase):
 
     def setUp(self):
         super().setUp()
-        self.login(self.user.username, self.password)
-
-    def tearDown(self):
-        self.logout()
-        super().tearDown()
+        self.login_as_superuser()
+        self.browser.visit(self.live_server_url)
 
     def test_app_navbar_new_tab(self):
         """
         Verify that a new menu tab defined and populated by the example app is rendered properly.
         """
-        # Set test user to admin
-        self.user.is_superuser = True
-        self.user.save()
+        sidenav_section = self.find_sidenav_section("Example Menu")
+        sidenav_section.toggle()
+        self.assertTrue(sidenav_section.is_expanded)
 
-        # Retrieve home page
-        self.browser.visit(self.live_server_url)
+        group = sidenav_section.flyout.find_by_xpath(
+            "//li[@class='sidenav-link-group' and normalize-space()='Example Group 1']"
+        )
+        self.assertEqual(len(group), 1)
 
-        tab_xpath = "//*[@id='navbar']//span[normalize-space()='Example Menu']/.."
-        tab = self.browser.find_by_xpath(tab_xpath)
-        tab.click()
-        self.assertEqual(tab["aria-expanded"], "true")
-
-        group = tab.find_by_xpath(f"{tab_xpath}/following-sibling::ul//li[normalize-space()='Example Group 1']")
-
-        item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[normalize-space()='Example Models']]"
-        group.find_by_xpath(item_xpath)
+        link = sidenav_section.find_link("Example Models")
+        self.assertEqual(len(link), 1)
 
     def test_app_navbar_modify_circuits(self):
         """
         Verify that the example app is able to add a new group and items to an existing menu tab.
         """
-        # Set test user to admin
-        self.user.is_superuser = True
-        self.user.save()
-
-        # Retrieve home page
-        self.browser.visit(self.live_server_url)
-
-        tab_xpath = "//*[@id='navbar']//*[normalize-space()='Circuits']"
-        tab = self.browser.find_by_xpath(tab_xpath)
-        tab.click()
-        self.assertEqual(tab["aria-expanded"], "true")
+        sidenav_section = self.find_sidenav_section("Circuits")
+        sidenav_section.toggle()
+        self.assertTrue(sidenav_section.is_expanded)
 
         for group_name, items in self.navbar["Circuits"].items():
-            group = tab.find_by_xpath(f"{tab_xpath}/following-sibling::ul//li[normalize-space()='{group_name}']")
+            group = sidenav_section.flyout.find_by_xpath(
+                f"//li[@class='sidenav-link-group' and normalize-space()='{group_name}']"
+            )
+            self.assertEqual(len(group), 1)
+
             for item_name, item_details in items.items():
-                item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[normalize-space()='{item_name}']]"
-                item = group.find_by_xpath(item_xpath)
+                link = sidenav_section.find_link(item_name)
+                self.assertEqual(len(link), 1)
 
-                for button_name in item_details["buttons"]:
-                    button = item.find_by_xpath(f"{item_xpath}/div//a[@data-original-title='{button_name}']")
-                    if button_class := getattr(ButtonActionColorChoices, button_name.upper(), None):
-                        self.assertIn(button_class, button["class"])
-                    if button_icon := getattr(ButtonActionIconChoices, button_name.upper(), None):
-                        icon = button.find_by_xpath(f"{item_xpath}/div//a[@data-original-title='{button_name}']/i")
-                        self.assertIn(button_icon, icon["class"])
-
-        tab.click()
+        sidenav_section.toggle()
 
     def test_app_navbar_apps_tab(self):
         """
         Test that old-style app menu definitions are correctly rendered to the Apps menu tab.
         """
-        # Set test user to admin
-        self.user.is_superuser = True
-        self.user.save()
-
-        # Retrieve home page
-        self.browser.visit(self.live_server_url)
-
-        tab_xpath = "//*[@id='navbar']//*[normalize-space()='Apps']"
-        tab = self.browser.find_by_xpath(tab_xpath)
-        tab.click()
-        self.assertEqual(tab["aria-expanded"], "true")
+        sidenav_section = self.find_sidenav_section("Apps")
+        sidenav_section.toggle()
+        self.assertTrue(sidenav_section.is_expanded)
 
         for group_name, items in self.navbar["Apps"].items():
-            group = tab.find_by_xpath(f"{tab_xpath}/following-sibling::ul//li[normalize-space()='{group_name}']")
+            group = sidenav_section.flyout.find_by_xpath(
+                f"//li[@class='sidenav-link-group' and normalize-space()='{group_name}']"
+            )
+            self.assertEqual(len(group), 1)
+
             for item_name, item_details in items.items():
-                item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[normalize-space()='{item_name}']]"
-                item = group.find_by_xpath(item_xpath)
+                link = sidenav_section.find_link(item_name)
+                self.assertEqual(len(link), 1)
 
-                for button_name in item_details["buttons"]:
-                    button = item.find_by_xpath(f"{item_xpath}/div//a[@data-original-title='{button_name}']")
-                    if button_class := getattr(ButtonActionColorChoices, button_name.upper(), None):
-                        self.assertIn(button_class, button["class"])
-                    if button_icon := getattr(ButtonActionIconChoices, button_name.upper(), None):
-                        icon = button.find_by_xpath(f"{item_xpath}/div//a[@data-original-title='{button_name}']/i")
-                        self.assertIn(button_icon, icon["class"])
-
-        tab.click()
+        sidenav_section.toggle()

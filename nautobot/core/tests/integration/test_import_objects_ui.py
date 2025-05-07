@@ -6,13 +6,7 @@ class ImportObjectsUITestCase(SeleniumTestCase):
 
     def setUp(self):
         super().setUp()
-        self.user.is_superuser = True
-        self.user.save()
-        self.login(self.user.username, self.password)
-
-    def tearDown(self):
-        self.logout()
-        super().tearDown()
+        self.login_as_superuser()
 
     def test_import_objects_ui_population(self):
         self.browser.visit(self.live_server_url)

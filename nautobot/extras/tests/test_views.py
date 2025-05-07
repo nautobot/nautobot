@@ -3040,7 +3040,9 @@ class JobTestCase(
         instance = self.test_pass
         self.add_permissions("extras.view_objectchange", "extras.view_job")
         response = self.client.get(instance.get_changelog_url())
-        self.assertBodyContains(response, f"{instance.name} - Change Log")
+        self.assertBodyContains(response, f"{instance}")
+        changelog_table = "<thead><tr><th>Time</th><th>User name</th><th>Action</th><th>Type</th><th>Object</th><th>Request ID</th></tr></thead>"
+        self.assertBodyContains(response, changelog_table, html=True)
 
 
 class JobButtonTestCase(

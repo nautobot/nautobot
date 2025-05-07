@@ -124,13 +124,7 @@ class AppDocumentationTest(SeleniumTestCase):
 
     def setUp(self):
         super().setUp()
-        self.user.is_superuser = True
-        self.user.save()
-        self.login(self.user.username, self.password)
-
-    def tearDown(self):
-        self.logout()
-        super().tearDown()
+        self.login_as_superuser()
 
     def test_object_edit_help_provided(self):
         """The ExampleModel object provides model documentation, this test ensures the help link is rendered."""
@@ -152,9 +146,7 @@ class AppReturnUrlTestCase(SeleniumTestCase):
 
     def setUp(self):
         super().setUp()
-        self.user.is_superuser = True
-        self.user.save()
-        self.login(self.user.username, self.password)
+        self.login_as_superuser()
 
     def test_app_return_url(self):
         """This test ensures that Apps return url for new objects is the list view."""
@@ -174,9 +166,7 @@ class AppTabsTestCase(SeleniumTestCase):
 
     def setUp(self):
         super().setUp()
-        self.user.is_superuser = True
-        self.user.save()
-        self.login(self.user.username, self.password)
+        self.login_as_superuser()
 
     def test_circuit_detail_tab(self):
         provider = Provider.objects.create(name="Test Provider", asn=12345)

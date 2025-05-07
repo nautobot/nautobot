@@ -16,9 +16,7 @@ class ComputedFieldsTestCase(SeleniumTestCase):
 
     def setUp(self):
         super().setUp()
-        self.user.is_superuser = True
-        self.user.save()
-        self.login(self.user.username, self.password)
+        self.login_as_superuser()
         self.device = create_test_device()
         self.computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Device),
@@ -26,10 +24,6 @@ class ComputedFieldsTestCase(SeleniumTestCase):
             label="Device Computed Field",
             template="{{ obj.name }} is awesome!",
         )
-
-    def tearDown(self):
-        self.logout()
-        super().tearDown()
 
     def test_computed_field_advanced_ui(self):
         """

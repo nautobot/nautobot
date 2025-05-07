@@ -60,12 +60,12 @@ class CircuitTestCase(SeleniumTestCase, ObjectsListMixin, ObjectDetailsMixin):
 
         # Fill Circuit creation form
         self.fill_select2_field("provider", self.provider.name)
-        self.browser.fill("cid", cid)
+        self.fill_input("cid", cid)
         self.fill_select2_field("circuit_type", self.circuit_type.name)
         self.fill_select2_field("status", "")  # pick first status
-        self.browser.fill("install_date", "2025-01-01")
-        self.browser.fill("commit_rate", 192)
-        self.browser.fill("description", "My Precious Circuit")
+        self.fill_input("install_date", "2025-01-01")
+        self.fill_input("commit_rate", 192)
+        self.fill_input("description", "My Precious Circuit")
         self.fill_select2_field("tenant_group", "Family Inc.")
         self.fill_select2_field("tenant", "Tenant 1")
 
@@ -116,11 +116,11 @@ class CircuitTestCase(SeleniumTestCase, ObjectsListMixin, ObjectDetailsMixin):
 
                 # Fill termination creation form
                 self.fill_select2_field("location", self.location.name)
-                self.browser.fill("port_speed", port_speed)
-                self.browser.fill("upstream_speed", upstream_speed)
-                self.browser.fill("xconnect_id", xconnect_id)
-                self.browser.fill("pp_info", pp_info)
-                self.browser.fill("description", description)
+                self.fill_input("port_speed", port_speed)
+                self.fill_input("upstream_speed", upstream_speed)
+                self.fill_input("xconnect_id", xconnect_id)
+                self.fill_input("pp_info", pp_info)
+                self.fill_input("description", description)
                 self.click_edit_form_create_button()
 
                 self.assertTrue(self.browser.is_text_present(f"Created circuit termination Termination {side}"))

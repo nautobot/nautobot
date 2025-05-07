@@ -8,13 +8,7 @@ from nautobot.extras.models import Job, Status
 class ClearableFileInputTestCase(SeleniumTestCase):
     def setUp(self):
         super().setUp()
-        self.user.is_superuser = True
-        self.user.save()
-        self.login(self.user.username, self.password)
-
-    def tearDown(self):
-        self.logout()
-        super().tearDown()
+        self.login_as_superuser()
 
     def _assert_file_picker(self, uri_to_visit: str, page_loaded_confirmation: str, file_input_selector_id: str):
         """
