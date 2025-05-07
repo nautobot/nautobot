@@ -2,6 +2,7 @@ from django.conf import settings
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
@@ -188,6 +189,14 @@ class ApprovalWorkflowInstance(PrimaryModel):
             *args: positional arguments
             **kwargs: keyword arguments
         """
+        # Check of the object under review's content type matches the parent approval workflow's content type
+        if self.object_under_review_content_type != self.approval_workflow.model_content_type:
+            raise ValidationError(
+                f"The content type {self.object_under_review_content_type} of "
+                f"the object under review does not match the content type {self.approval_workflow.model_content_type} of the parent approval workflow."
+            )
+
+        # TODO need to check of the object fits the model_constraints of the approval workflow
         if not self.user_name:
             if self.user:
                 self.user_name = self.user.username

@@ -308,6 +308,28 @@ class ApprovalWorkflowInstanceTest(ModelTestCases.BaseModelTestCase):
         # The active stage should remain the second stage that is denied
         self.assertEqual(self.approval_workflow_instance.active_stage, self.approval_workflow_stage_2_instance)
 
+    def test_approval_workflow_instance_and_parent_approval_workflow_contenttype_mismatch(self):
+        # Create a Approval Workflow
+        scheduled_job_ct = ContentType.objects.get_for_model(ScheduledJob)
+        approval_workflow = ApprovalWorkflow.objects.create(
+            name="Scheduled Job Approval Workflow",
+            model_content_type=scheduled_job_ct,
+        )
+        approval_workflow_instance = ApprovalWorkflowInstance(
+            approval_workflow=approval_workflow,
+            object_under_review_content_type=ContentType.objects.get_for_model(JobModel),
+            object_under_review_object_id=JobModel.objects.last().pk,
+        )
+
+        with self.assertRaises(ValidationError) as cm:
+            approval_workflow_instance.save()
+
+        self.assertIn(
+            f"The content type {approval_workflow_instance.object_under_review_content_type} of "
+            f"the object under review does not match the content type {approval_workflow.model_content_type} of the parent approval workflow.",
+            str(cm.exception),
+        )
+
 
 class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
     """

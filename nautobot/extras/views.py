@@ -401,11 +401,17 @@ class ApprovalWorkflowStageInstanceUIViewSet(NautobotUIViewSet):
                 user=request.user,
             )
 
-        if approval_workflow_stage_instance_response.state != ApprovalWorkflowStateChoices.PENDING:
-            # The user is not allowed to approve or deny the response
-            # Once it reaches a terminal state
+        if instance.state != ApprovalWorkflowStateChoices.PENDING:
+            # The user is not allowed to approve or deny the response once the stage has reached a terminal state
             messages.warning(
                 request, f"You are not allowed to approve {instance} since it already has reached a terminal state."
+            )
+            return redirect(self.get_return_url(request))
+
+        if approval_workflow_stage_instance_response.state != ApprovalWorkflowStateChoices.PENDING:
+            # The user is not allowed to approve or deny the response once you made a decision
+            messages.warning(
+                request, f"You are not allowed to approve {instance} since you already have submitted your response."
             )
             return redirect(self.get_return_url(request))
 
@@ -417,9 +423,9 @@ class ApprovalWorkflowStageInstanceUIViewSet(NautobotUIViewSet):
                 request,
                 "extras/approval_workflow/approve.html",
                 {
-                    "obj": obj,
+                    "obj": obj.approval_workflow_stage_instance,
                     "form": form,
-                    "obj_type": self.queryset.model._meta.verbose_name,
+                    "obj_type": ApprovalWorkflowStageInstance._meta.verbose_name,
                     "return_url": self.get_return_url(request, obj),
                     "panel_class": "success",
                     "button_class": "success",
@@ -463,13 +469,20 @@ class ApprovalWorkflowStageInstanceUIViewSet(NautobotUIViewSet):
             approval_workflow_stage_instance_response = ApprovalWorkflowStageInstanceResponse.objects.create(
                 approval_workflow_stage_instance=instance,
                 user=request.user,
+                state=ApprovalWorkflowStateChoices.PENDING,
             )
 
-        if approval_workflow_stage_instance_response.state != ApprovalWorkflowStateChoices.PENDING:
-            # The user is not allowed to approve or deny the response
-            # Once it reaches a terminal state
+        if instance.state != ApprovalWorkflowStateChoices.PENDING:
+            # The user is not allowed to approve or deny the response once the stage has reached a terminal state
             messages.warning(
                 request, f"You are not allowed to deny {instance} since it already has reached a terminal state."
+            )
+            return redirect(self.get_return_url(request))
+
+        if approval_workflow_stage_instance_response.state != ApprovalWorkflowStateChoices.PENDING:
+            # The user is not allowed to approve or deny the response once you made a decision
+            messages.warning(
+                request, f"You are not allowed to deny {instance} since you already have submitted your response."
             )
             return redirect(self.get_return_url(request))
 
@@ -481,9 +494,9 @@ class ApprovalWorkflowStageInstanceUIViewSet(NautobotUIViewSet):
                 request,
                 "extras/approval_workflow/deny.html",
                 {
-                    "obj": obj,
+                    "obj": obj.approval_workflow_stage_instance,
                     "form": form,
-                    "obj_type": self.queryset.model._meta.verbose_name,
+                    "obj_type": ApprovalWorkflowStageInstance._meta.verbose_name,
                     "return_url": self.get_return_url(request, obj),
                 },
             )
@@ -499,6 +512,7 @@ class ApprovalWorkflowStageInstanceUIViewSet(NautobotUIViewSet):
         """
         Comment the approval workflow stage instance response.
         """
+        # The user is allowed to comment on the stage instance regardless of its state
         instance = self.get_object()
         try:
             approval_workflow_stage_instance_response = ApprovalWorkflowStageInstanceResponse.objects.get(
@@ -519,9 +533,9 @@ class ApprovalWorkflowStageInstanceUIViewSet(NautobotUIViewSet):
                 request,
                 "extras/approval_workflow/comment.html",
                 {
-                    "obj": obj,
+                    "obj": obj.approval_workflow_stage_instance,
                     "form": form,
-                    "obj_type": self.queryset.model._meta.verbose_name,
+                    "obj_type": ApprovalWorkflowStageInstance._meta.verbose_name,
                     "return_url": self.get_return_url(request, obj),
                     "button_class": "info",
                     "panel_class": "info",
