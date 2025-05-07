@@ -131,14 +131,14 @@ function watchRegenerateButton(context, targetField, repopulate){
     regenerateButton.addEventListener('click', repopulate)
 }
 
-function getSlugField(context){
-    const slugField = context.getElementById("id_slug");
+function getSlugField(){
+    const slugField = document.getElementById("id_slug");
     if(slugField){
         return slugField
     }
     // If id_slug field is not to be found
     // check if it is renamed to key field like what we did for CustomField and Relationship
-    return context.getElementById("id_key");
+    return document.getElementById("id_key");
 }
 
 function initializeAutoField(context, field, sourceFieldsAttrName, defaultMaxLength = 255, transformValue = null){
@@ -158,7 +158,7 @@ function initializeAutoField(context, field, sourceFieldsAttrName, defaultMaxLen
 function initializeSlugField(context){
     // Function to support slug fields auto-populate and slugify logic
     const vanilla_context = context[0] // jsify form passes jquery context
-    const slugField = getSlugField(vanilla_context)
+    const slugField = getSlugField()
     if(!slugField){
         return
     }
