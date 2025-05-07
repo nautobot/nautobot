@@ -49,8 +49,10 @@ class InstalledAppsTable(tables.Table):
         }
         default_columns = ("name", "headline", "version", "actions")
 
-    def __init__(self, *args, user=None, **kwargs):
+    def __init__(self, *args, user=None, configurable=False, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.configurable = configurable
 
         if self.empty_text is None:
             self.empty_text = "No installed Apps found"

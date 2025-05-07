@@ -7,7 +7,7 @@
             <thead>
                 <tr>
                     {% for column in table.columns %}
-                        {% if table.context.table_config_form == None or not forloop.last or last_column_name != 'actions' %}
+                        {% if not table.configurable or not forloop.last or last_column_name != 'actions' %}
                             {% if column.orderable %}
                                 <th {{ column.attrs.th.as_html }}><a href="{% querystring table.prefixed_order_by_field=column.order_by_alias.next %}" data-column-name="{{ column.name }}">{{ column.header }}</a></th>
                             {% else %}
@@ -19,7 +19,7 @@
                             </th>
                         {% endif %}
                     {% endfor %}
-                    {% if table.context.table_config_form != None and last_column_name != 'actions' %}
+                    {% if table.configurable and last_column_name != 'actions' %}
                         <th class="nb-actionable w-0">
                             {% table_config_button table %}
                         </th>
@@ -33,7 +33,7 @@
                     {% for column, cell in row.items %}
                         <td {{ column.attrs.td.as_html }}>{{ cell }}</td>
                     {% endfor %}
-                    {% if table.context.table_config_form != None and last_column_name != "actions" %}
+                    {% if table.configurable and last_column_name != "actions" %}
                         <td class="w-0" />
                     {% endif %}
                 </tr>
@@ -56,7 +56,7 @@
                     {% for column in table.columns %}
                         <td>{{ column.footer }}</td>
                     {% endfor %}
-                    {% if table.context.table_config_form != None and last_column_name != "actions" %}
+                    {% if table.configurable and last_column_name != "actions" %}
                         <td class="w-0" />
                     {% endif %}
                 </tr>

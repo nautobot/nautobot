@@ -3,7 +3,9 @@
 {% load static %}
 
 {% block drawer %}
-    {% table_config_form vminterface_table %}
+    {% if vminterface_table %}
+        {% table_config_form vminterface_table %}
+    {% endif %}
 {% endblock %}
 
 {% block extra_buttons %}

@@ -49,6 +49,7 @@ class BaseTable(django_tables2.Table):
         hide_hierarchy_ui=False,
         order_by=None,
         data_transform_callback=None,
+        configurable=False,
         **kwargs,
     ):
         """
@@ -109,6 +110,8 @@ class BaseTable(django_tables2.Table):
 
         # Init table
         super().__init__(*args, order_by=order_by, **kwargs)
+
+        self.configurable = configurable
 
         if not isinstance(self.data, TableQuerysetData):
             # LinkedCountColumns don't work properly if the data is a list of dicts instead of a queryset,
