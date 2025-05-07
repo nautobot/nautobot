@@ -768,6 +768,8 @@ class ObjectsTablePanel(Panel):
             raise ValueError("You can only specify either `table_filter` or `table_attribute`")
         if table_class and not (table_filter or table_attribute):
             raise ValueError("You must specify either `table_filter` or `table_attribute`")
+        if table_attribute and not related_field_name:
+            raise ValueError("You must provide a `related_field_name` when specifying `table_attribute`")
         self.table_filter = table_filter
         self.table_attribute = table_attribute
         self.select_related_fields = select_related_fields
@@ -1851,6 +1853,7 @@ class _ObjectDetailContactsTab(Tab):
                     weight=100,
                     table_class=AssociatedContactsTable,
                     table_attribute="associated_contacts",
+                    related_field_name="assigned_object_id",
                     order_by_fields=["role__name"],
                     enable_bulk_actions=True,
                     max_display_count=100,  # since there isn't a separate list view for ContactAssociations!
