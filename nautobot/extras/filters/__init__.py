@@ -1346,6 +1346,11 @@ class SecretsGroupFilterSet(
             "name": "icontains",
         },
     )
+    secrets = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Secret.objects.all(),
+        label="Secret (ID or name)",
+        to_field_name="name",
+    )
 
     class Meta:
         model = SecretsGroup
