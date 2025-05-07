@@ -231,6 +231,9 @@ class ObjectChange(BaseModel):
                 postchange = self.object_data
 
         if prechange and postchange:
+            if self.object_data_v2 is None or (prior_change and prior_change.object_data_v2 is None):
+                prechange = prior_change.object_data
+                postchange = self.object_data
             diff_added = shallow_compare_dict(prechange, postchange, exclude=["last_updated"])
             diff_removed = {x: prechange.get(x) for x in diff_added}
         elif prechange and not postchange:
