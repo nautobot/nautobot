@@ -24,6 +24,7 @@ from jsonschema.validators import Draft7Validator
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 
+from nautobot.apps.ui import BaseTextPanel
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.events import publish_event
 from nautobot.core.exceptions import FilterSetFieldNotFound
@@ -3075,36 +3076,45 @@ class TeamUIViewSet(NautobotUIViewSet):
 #
 
 
-class WebhookListView(generic.ObjectListView):
+class WebhookUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.WebhookBulkEditForm
+    filterset_class = filters.WebhookFilterSet
+    filterset_form_class = forms.WebhookFilterForm
+    form_class = forms.WebhookForm
     queryset = Webhook.objects.all()
-    table = tables.WebhookTable
-    filterset = filters.WebhookFilterSet
-    filterset_form = forms.WebhookFilterForm
-    action_buttons = ("add",)
+    serializer_class = serializers.WebhookSerializer
+    table_class = tables.WebhookTable
 
-
-class WebhookView(generic.ObjectView):
-    queryset = Webhook.objects.all()
-
-    def get_extra_context(self, request, instance):
-        return {
-            "content_types": instance.content_types.order_by("app_label", "model"),
-            **super().get_extra_context(request, instance),
-        }
-
-
-class WebhookEditView(generic.ObjectEditView):
-    queryset = Webhook.objects.all()
-    model_form = forms.WebhookForm
-
-
-class WebhookDeleteView(generic.ObjectDeleteView):
-    queryset = Webhook.objects.all()
-
-
-class WebhookBulkDeleteView(generic.BulkDeleteView):
-    queryset = Webhook.objects.all()
-    table = tables.WebhookTable
+    object_detail_content = ObjectDetailContent(
+        panels=[
+            ObjectFieldsPanel(
+                label="Webhook",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=("name", "content_types", "type_create", "type_update", "type_delete", "enabled"),
+            ),
+            ObjectFieldsPanel(
+                label="HTTP",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=("http_method", "http_content_type", "payload_url", "additional_headers"),
+                value_transforms={"additional_headers": [helpers.pre_tag]},
+            ),
+            ObjectFieldsPanel(
+                label="Security",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=("secret", "ssl_verification", "ca_file_path"),
+            ),
+            ObjectTextPanel(
+                label="Body Template",
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                object_field="body_template",
+                render_as=BaseTextPanel.RenderOptions.CODE,
+            ),
+        ]
+    )
 
 
 #
