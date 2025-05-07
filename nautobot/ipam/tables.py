@@ -234,7 +234,6 @@ class VRFTable(StatusTableMixin, BaseTable):
             "export_targets",
             "tags",
         )
-        # default_columns = ("pk", "name", "rd", "namespace", "tenant", "description")
         default_columns = ("pk", "name", "rd", "status", "namespace", "tenant", "description")
 
 
