@@ -229,11 +229,11 @@
             {% endif %}
             <div class="align-items-start vstack gap-10">
                 {% if current_saved_view %}
-                    <a class="btn btn-secondary" href="{% url 'extras:savedview_update_config' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
+                    <a class="btn btn-secondary" href="{% url 'extras:savedview_update_config' pk=current_saved_view.pk %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
                         <i class="mdi mdi-content-save-outline" aria-hidden="true"></i>
                         Update Current Saved View
                     </a>
-                    <a class="btn btn-secondary" href="{% url 'extras:savedview_set_default' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
+                    <a class="btn btn-secondary" href="{% url 'extras:savedview_set_default' pk=current_saved_view.pk %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
                         <i class="mdi mdi-star" aria-hidden="true"></i>
                         Set As My Default
                     </a>
@@ -243,7 +243,7 @@
                     <span>Save As New View</span>
                 </a>
                 {% if current_saved_view %}
-                    <a class="btn btn-danger" href="{% url 'extras:savedview_delete' pk=request.GET.saved_view %}">
+                    <a class="btn btn-danger" href="{% url 'extras:savedview_delete' pk=current_saved_view.pk %}">
                         <i class="mdi mdi-trash-can-outline" aria-hidden="true"></i>
                         Delete Current Saved View
                     </a>
