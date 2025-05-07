@@ -283,9 +283,6 @@ class ApprovalWorkflowStageUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
-                value_transforms={
-                    "current_state": [helpers.bettertitle],
-                },
             ),
         ],
     )
@@ -308,6 +305,9 @@ class ApprovalWorkflowInstanceUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
+                value_transforms={
+                    "current_state": [helpers.render_approval_workflow_state],
+                },
             ),
             object_detail.ObjectsTablePanel(
                 weight=200,
@@ -337,6 +337,9 @@ class ApprovalWorkflowStageInstanceUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
+                value_transforms={
+                    "state": [helpers.render_approval_workflow_state],
+                },
             ),
             object_detail.ObjectsTablePanel(
                 weight=200,
@@ -526,6 +529,9 @@ class ApprovalWorkflowStageInstanceResponseUIViewSet(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
+                value_transforms={
+                    "state": [helpers.render_approval_workflow_state],
+                },
             ),
         ],
     )
