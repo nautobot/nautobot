@@ -180,6 +180,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     secrets_group = tables.Column(linkify=True)
     capabilities = tables.Column(orderable=False, accessor="controller_managed_device_group.capabilities")
     tags = TagColumn(url_name="dcim:device_list")
+    actions = ButtonsColumn(Device)
 
     class Meta(BaseTable.Meta):
         model = Device
@@ -211,6 +212,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "secrets_group",
             "capabilities",
             "tags",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -223,6 +225,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "device_type",
             "primary_ip",
             "device_redundancy_group_priority",
+            "actions",
         )
 
     def render_capabilities(self, value):
@@ -1045,6 +1048,7 @@ class InventoryItemTable(DeviceComponentTable):
     discovered = BooleanColumn()
     tags = TagColumn(url_name="dcim:inventoryitem_list")
     cable = None  # Override DeviceComponentTable
+    actions = ButtonsColumn(InventoryItem)
 
     class Meta(DeviceComponentTable.Meta):
         model = InventoryItem
@@ -1060,6 +1064,7 @@ class InventoryItemTable(DeviceComponentTable):
             "description",
             "discovered",
             "tags",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -1070,6 +1075,7 @@ class InventoryItemTable(DeviceComponentTable):
             "part_id",
             "serial",
             "asset_tag",
+            "actions",
         )
 
 
