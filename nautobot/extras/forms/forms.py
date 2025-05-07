@@ -206,6 +206,7 @@ __all__ = (
     "TagBulkEditForm",
     "TagFilterForm",
     "TagForm",
+    "WebhookBulkEditForm",
     "WebhookFilterForm",
     "WebhookForm",
 )
@@ -2238,6 +2239,53 @@ class TagBulkEditForm(NautobotBulkEditForm):
 #
 # Webhooks
 #
+class WebhookBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin):
+    """Bulk edit form for Webhook objects."""
+
+    pk = forms.ModelMultipleChoiceField(queryset=Webhook.objects.all(), widget=forms.MultipleHiddenInput())
+
+    # Boolean fields
+    enabled = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    type_create = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    type_update = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    type_delete = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    ssl_verification = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+
+    # Editable string fields
+    payload_url = forms.CharField(required=False, max_length=500)
+    secret = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
+    ca_file_path = forms.CharField(required=False, max_length=4096)
+    http_content_type = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
+
+    # Choice field
+    http_method = forms.ChoiceField(
+        required=False,
+        choices=add_blank_choice(WebhookHttpMethodChoices.CHOICES),
+    )
+
+    add_content_types = MultipleContentTypeField(
+        limit_choices_to=FeatureQuery("webhooks"), required=False, label="Add Content Type(s)"
+    )
+    remove_content_types = MultipleContentTypeField(
+        limit_choices_to=FeatureQuery("webhooks"), required=False, label="Remove Content Type(s)"
+    )
+
+    class Meta:
+        model = Webhook
+        fields = (
+            "enabled",
+            "type_create",
+            "type_update",
+            "type_delete",
+            "http_method",
+            "http_content_type",
+            "ssl_verification",
+            "ca_file_path",
+            "payload_url",
+            "secret",
+            "add_content_types",
+            "remove_content_types",
+        )
 
 
 class WebhookForm(BootstrapMixin, forms.ModelForm):
