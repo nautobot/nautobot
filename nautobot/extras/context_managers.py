@@ -42,9 +42,9 @@ class ChangeContext:
         context=None,
         context_detail="",
         change_id=None,
-        pre_object_data=None,
-        pre_object_data_v2=None,
-    ):
+        pre_object_data={},
+        pre_object_data_v2={},
+    ):  # pylint: disable=dangerous-default-value
         self.request = request
         self.user = user
         self.reset_deferred_object_changes()
@@ -254,12 +254,8 @@ def web_request_context(
             # TODO: get_snapshots() currently requires a DB query per object change processed.
             # We need to develop a more efficient approach: https://github.com/nautobot/nautobot/issues/6303
             snapshots = oc.get_snapshots(
-                pre_object_data[str(oc.changed_object_id)]
-                if pre_object_data is not None and str(oc.changed_object_id) in pre_object_data
-                else None,
-                pre_object_data_v2[str(oc.changed_object_id)]
-                if pre_object_data_v2 is not None and str(oc.changed_object_id) in pre_object_data_v2
-                else None,
+                pre_object_data.get(str(oc.changed_object_id), None),
+                pre_object_data_v2.get(str(oc.changed_object_id), None),
             )
             webhook_queryset = enqueue_webhooks(oc, snapshots=snapshots, webhook_queryset=webhook_queryset)
 

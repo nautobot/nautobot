@@ -86,10 +86,6 @@ def _cache_obj_data_in_change_context(action, sender, instance):
     if action == ObjectChangeActionChoices.ACTION_UPDATE:
         instance = sender.objects.get(pk=instance.pk)
 
-    # The context manager retrieves all changes by request ID. If we use the
-    # same request ID for this change, multiple events will be published rather
-    # than a single change. This is wildly inelegant, but scopes the hack to
-    # just this one file.
     change = instance.to_objectchange(
         action=action,
     )
@@ -100,8 +96,9 @@ def _cache_obj_data_in_change_context(action, sender, instance):
         change_context.pre_object_data = {}
     if change_context.pre_object_data_v2 is None:
         change_context.pre_object_data_v2 = {}
-    change_context.pre_object_data[str(instance.pk)] = change.object_data
-    change_context.pre_object_data_v2[str(instance.pk)] = change.object_data_v2
+
+    change_context.pre_object_data.setdefault(str(instance.pk), change.object_data)
+    change_context.pre_object_data_v2.setdefault(str(instance.pk), change.object_data_v2)
     change_context_state.set(change_context)
 
 
