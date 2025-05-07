@@ -351,6 +351,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 saved_view=current_saved_view,
                 user=request.user,
                 hide_hierarchy_ui=hide_hierarchy_ui,
+                configurable=True,
             )
             if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                 table.columns.show("pk")

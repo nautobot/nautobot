@@ -28,6 +28,12 @@ const toggleDrawer = (drawer, force) => {
    *     available, the `main` element instead.
    */
   if (isOpen) {
+    // Close other open drawers if there are any. Effectively, this allows only one drawer to be open at a time.
+    const openDrawers = document.getElementsByClassName(DRAWER_OPEN_CLASS);
+    [...openDrawers]
+      .filter((openDrawer) => openDrawer !== drawer)
+      .forEach((openDrawer) => toggleDrawer(openDrawer, false));
+
     (() => {
       let rafRetriesRemaining = 100; // In case something goes wrong prevent falling into an infinite loop.
 

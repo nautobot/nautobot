@@ -1114,7 +1114,9 @@ class IPAddressVMInterfacesView(generic.ObjectView):
         vm_interfaces = instance.vm_interfaces.restrict(request.user, "view").prefetch_related(
             Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)),
         )
-        vm_interface_table = tables.IPAddressVMInterfaceTable(data=vm_interfaces, user=request.user, orderable=False)
+        vm_interface_table = tables.IPAddressVMInterfaceTable(
+            data=vm_interfaces, user=request.user, orderable=False, configurable=True
+        )
         if request.user.has_perm("virtualization.change_vminterface") or request.user.has_perm(
             "virtualization.delete_vminterface"
         ):

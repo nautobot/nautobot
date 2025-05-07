@@ -743,17 +743,20 @@ def querystring(request, **kwargs):
 def table_config_button(table, table_name=None, extra_classes="", disabled=False):
     if table_name is None:
         table_name = table.__class__.__name__
-    html_template = (
-        '<button type="button" class="btn btn-default {}'
-        '" data-bs-toggle="modal" data-bs-target="#{}_config" {} title="Configure table">'
-        '<i class="mdi mdi-cog"></i> Configure</button>'
-    )
-    return format_html(html_template, extra_classes, table_name, 'disabled="disabled"' if disabled else "")
-
-
-@register.simple_tag()
-def table_config_button_small(table, table_name=None):
-    return table_config_button(table, table_name, "btn-xs")
+    html_template = """<button
+            type="button"
+            class="btn border-0 float-end rounded-0 text-end text-secondary {}"
+            data-nb-toggle="drawer"
+            data-nb-target="#{}_config"
+            {}
+            title="Configure table"
+            aria-controls="{}_config"
+            aria-expanded="false"
+        >
+            <span class="mdi mdi-cog" aria-hidden="true"></span>
+            <span class="visually-hidden">Configure</span>
+        </button>"""
+    return format_html(html_template, extra_classes, table_name, 'disabled="disabled"' if disabled else "", table_name)
 
 
 @register.inclusion_tag("utilities/templatetags/utilization_graph.html")
