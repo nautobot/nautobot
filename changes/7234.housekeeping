@@ -1,1 +1,0 @@
-Refactored CircuitTermination model related UI views to use `NautobotUIViewSet`.
