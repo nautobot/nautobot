@@ -85,7 +85,7 @@
             </a>
         </li>
         {% if object.is_contact_associable_model %}
-            {% if perms.extras.view_contact %}
+            {% if perms.extras.view_contactassociation %}
                 <li role="presentation"{% if request.GET.tab == 'contacts' %} class="active"{% endif %}>
                     <a href="{{ object.get_absolute_url }}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">
                         Contacts
