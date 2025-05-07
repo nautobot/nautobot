@@ -1,4 +1,4 @@
-'use strict'
+'use strict';
 
 import { fetch } from 'whatwg-fetch';
 import { render } from 'react-dom';

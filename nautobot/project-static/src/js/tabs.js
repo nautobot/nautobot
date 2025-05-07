@@ -1,5 +1,5 @@
 import * as bootstrap from 'bootstrap';
-import { createElement, removeElementClasses } from './utils';
+import { createElement, removeElementClasses } from './utils.js';
 
 const TABS_HIDDEN_CLASSES = ['invisible', 'position-absolute'];
 
@@ -32,9 +32,7 @@ export const collapseTabs = (tabs) => {
   tabsClone.classList.add(...tabsCloneTemporaryClasses);
 
   // Append currently invisible cloned tabs to DOM right after the original tabs element.
-  tabs.nextSibling
-    ? tabsParent.insertBefore(tabsClone, tabs.nextSibling)
-    : tabsParent.appendChild(tabsClone);
+  tabs.nextSibling ? tabsParent.insertBefore(tabsClone, tabs.nextSibling) : tabsParent.appendChild(tabsClone);
 
   // Excessive tabs should be collapsed if tabs clone is wider than the original. Remember - clone does not wrap.
   const shouldCollapseTabs = () => tabsClone.getBoundingClientRect().width > tabs.getBoundingClientRect().width;
@@ -60,10 +58,10 @@ export const collapseTabs = (tabs) => {
       'aria-expanded': 'false',
       className: 'btn dropdown-toggle text-secondary',
       'data-bs-toggle': 'dropdown',
-      'type':'button'
+      type: 'button',
     },
     dropdownToggleIcon,
-    dropdownToggleLabel
+    dropdownToggleLabel,
   );
   const dropdown = createElement(
     'li',
@@ -106,7 +104,7 @@ export const collapseTabs = (tabs) => {
    * Tabs clone with collapsed tabs is now ready to be swapped with original. The only thing left to do is to
    * make it synchronize its state back to the original.
    */
-  [...tabsClone.querySelectorAll('a')].forEach(clonedTab => {
+  [...tabsClone.querySelectorAll('a')].forEach((clonedTab) => {
     clonedTab.addEventListener('shown.bs.tab', () => {
       const originalTab = tabs.querySelector(`a[href="${clonedTab.getAttribute('href')}"]`);
       const originalTabInstance = bootstrap.Tab.getInstance(originalTab) || new bootstrap.Tab(originalTab);
@@ -134,5 +132,5 @@ export const observeCollapseTabs = () => {
     return resizeObserver;
   });
 
-  return () => resizeObservers.forEach(resizeObserver => resizeObserver.disconnect());
+  return () => resizeObservers.forEach((resizeObserver) => resizeObserver.disconnect());
 };
