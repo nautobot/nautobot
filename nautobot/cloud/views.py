@@ -233,7 +233,7 @@ class CloudResourceTypeUIViewSet(NautobotUIViewSet):
     def networks(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="services", url_name="services")
+    @action(detail=True, url_path="services")
     def services(self, request, *args, **kwargs):
         return Response({})
 
