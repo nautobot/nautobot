@@ -224,6 +224,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "role",
             "device_type",
             "primary_ip",
+            "device_redundancy_group_priority",
             "actions",
         )
 
