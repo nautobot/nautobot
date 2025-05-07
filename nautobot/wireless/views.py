@@ -103,7 +103,7 @@ class WirelessNetworkUIViewSet(NautobotUIViewSet):
                 table_class=ControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
                 table_title="Controller Managed Device Groups",
                 table_filter="wireless_network",
-                related_field_name="controller_managed_device_group",
+                related_field_name="wireless_networks",
                 exclude_columns=[
                     "wireless_network",
                     "ssid",

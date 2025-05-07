@@ -906,8 +906,18 @@ class ObjectsTablePanel(Panel):
 
         try:
             list_route = reverse(get_route_for_model(body_content_table_model, "list"))
-            body_content_table_list_url = f"{list_route}?{related_field_name}={obj.pk}"
         except NoReverseMatch:
+            list_url_attr = getattr(self.table_class, "list_url", None)
+            try:
+                if list_url_attr:
+                    list_route = reverse(list_url_attr)
+                else:
+                    list_route = None
+            except NoReverseMatch:
+                list_route = None
+        if list_route:
+            body_content_table_list_url = f"{list_route}?{related_field_name}={obj.pk}"
+        else:
             body_content_table_list_url = None
 
         body_content_table_add_url = self._get_table_add_url(context)
