@@ -4225,7 +4225,7 @@ class DeviceFamilyUIViewSet(NautobotUIViewSet):
                 exclude_columns=["device_family"],
             ),
             object_detail.ObjectsTablePanel(
-                weight=100,
+                weight=200,
                 section=SectionChoices.FULL_WIDTH,
                 table_class=tables.DeviceTable,
                 table_filter="device_type__device_family",
