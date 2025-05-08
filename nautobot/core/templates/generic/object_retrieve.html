@@ -84,14 +84,12 @@
                 Advanced
             </a>
         </li>
-        {% if object.is_contact_associable_model %}
-            {% if perms.extras.view_contactassociation %}
-                <li role="presentation"{% if request.GET.tab == 'contacts' %} class="active"{% endif %}>
-                    <a href="{{ object.get_absolute_url }}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">
-                        Contacts
-                    </a>
-                </li>
-            {% endif %}
+        {% if object.is_contact_associable_model and perms.extras.view_contactassociation %}
+            <li role="presentation"{% if request.GET.tab == 'contacts' %} class="active"{% endif %}>
+                <a href="{{ object.get_absolute_url }}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">
+                    Contacts
+                </a>
+            </li>
         {% endif %}
         {% if object.is_dynamic_group_associable_model and perms.extras.view_dynamicgroup %}
             {% with object.dynamic_groups.count as dg_count %}
