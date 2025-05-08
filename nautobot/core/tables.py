@@ -463,12 +463,12 @@ class ApprovalButtonsColumn(django_tables2.TemplateColumn):
         </a>
     {{% endif %}}
     {{% if "approve" in buttons and perms.{app_label}.change_{model_name} %}}
-        <a href="{{% url '{approval_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-success btn-xs" title="Approve">
+        <a href="{{% url '{approval_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-success btn-xs{{% if not record.is_active_stage %}} disabled{{% endif %}}" title="Approve">
             <i class="mdi mdi-check-bold"></i>
         </a>
     {{% endif %}}
     {{% if "deny" in buttons and perms.{app_label}.change_{model_name} %}}
-        <a href="{{% url '{deny_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-danger" title="Deny">
+        <a href="{{% url '{deny_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-danger {{% if not record.is_active_stage %}} disabled{{% endif %}}" title="Deny">
             <i class="mdi mdi-close-thick"></i>
         </a>
     {{% endif %}}

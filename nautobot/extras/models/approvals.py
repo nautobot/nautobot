@@ -270,6 +270,17 @@ class ApprovalWorkflowStageInstance(PrimaryModel):
     def get_state_class(self):
         return ApprovalWorkflowStateChoices.CSS_CLASSES.get(self.state)
 
+    @property
+    def is_active_stage(self):
+        """
+        Check if the stage is active.
+        An active stage is a stage that is not yet approved or denied.
+        Returns:
+            bool: True if the stage is active, False otherwise.
+        """
+        active_stage = self.approval_workflow_instance.active_stage
+        return self.pk == active_stage.pk and active_stage.state == ApprovalWorkflowStateChoices.PENDING
+
     def save(self, *args, **kwargs):
         """
         Override save method:
