@@ -464,17 +464,17 @@ class ApprovalButtonsColumn(django_tables2.TemplateColumn):
     {{% endif %}}
     {{% if "approve" in buttons and perms.{app_label}.change_{model_name} %}}
         <a href="{{% url '{approval_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-success btn-xs{{% if not record.is_active_stage %}} disabled{{% endif %}}" title="Approve">
-            <i class="mdi mdi-check-bold"></i>
+            <i class="mdi mdi-check"></i>
         </a>
     {{% endif %}}
     {{% if "deny" in buttons and perms.{app_label}.change_{model_name} %}}
         <a href="{{% url '{deny_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-danger {{% if not record.is_active_stage %}} disabled{{% endif %}}" title="Deny">
-            <i class="mdi mdi-close-thick"></i>
+            <i class="mdi mdi-close"></i>
         </a>
     {{% endif %}}
     {{% if "comment" in buttons and perms.{app_label}.change_{model_name} %}}
         <a href="{{% url '{comment_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-default" title="Comment">
-            <i class="mdi mdi-pencil"></i>
+            <i class="mdi mdi-comment-outline"></i>
         </a>
     {{% endif %}}
     """

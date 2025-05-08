@@ -604,6 +604,16 @@ class ApproverDashboardView(ObjectListViewMixin):
             approval_workflow_stage__approver_group__pk__in=group_pks,
         )
 
+    def list(self, request, *args, **kwargs):
+        """
+        Override the list method to display a helpful message regarding the page.
+        """
+        messages.info(
+            request,
+            "You are viewing a dashboard of approval workflow stage instances that are pending for your approval.",
+        )
+        return super().list(request, *args, **kwargs)
+
 
 class ApproveeDashboardView(ObjectListViewMixin):
     """
@@ -622,6 +632,17 @@ class ApproveeDashboardView(ObjectListViewMixin):
         queryset = super().get_queryset()
         user = self.request.user
         return queryset.filter(user=user)
+
+    def list(self, request, *args, **kwargs):
+        """
+        Override the list method to display a helpful message regarding the page.
+        """
+        messages.info(
+            request,
+            "You are viewing a dashboard of approval workflow instances that are requested by you.",
+        )
+        return super().list(request, *args, **kwargs)
+
 
 
 #

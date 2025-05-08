@@ -279,6 +279,10 @@ class ApprovalWorkflowStageInstance(PrimaryModel):
             bool: True if the stage is active, False otherwise.
         """
         active_stage = self.approval_workflow_instance.active_stage
+        # If there is no active stage aka, all stages are approved, return False
+        if active_stage is None:
+            return False
+        # Check if the stage is the active stage and if the stage state is pending
         return self.pk == active_stage.pk and active_stage.state == ApprovalWorkflowStateChoices.PENDING
 
     def save(self, *args, **kwargs):
