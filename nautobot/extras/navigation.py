@@ -154,7 +154,7 @@ menu_items = (
                         buttons=(),
                     ),
                     NavMenuItem(
-                        link="extras:scheduledjob_approval-queue",
+                        link="extras:scheduledjob_approval_queue_list",
                         name="Job Approval Queue",
                         weight=200,
                         permissions=[

@@ -2006,11 +2006,12 @@ class ScheduledJobUIViewSet(NautobotUIViewSet):
             **super().get_extra_context(request, instance),
         }
 
-    @action(detail=False, url_path="approval-queue")
+    @action(detail=False, url_path="approval-queue", url_name="approval_queue_list")
     def approval_queue(self, request, *args, **kwargs):
         queryset = ScheduledJob.objects.needs_approved()
         table = tables.ScheduledJobApprovalQueueTable(queryset)
         context = {
+            "content_type": ContentType.objects.get_for_model(ScheduledJob),
             "view": self,
             "queryset": queryset,
             "table": table,
