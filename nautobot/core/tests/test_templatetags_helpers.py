@@ -58,7 +58,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(helpers.placeholder("something"), "something")
 
     def test_pre_tag(self):
-        self.assertEqual(helpers.pre_tag(None), "<pre>None</pre>")
+        self.assertEqual(helpers.pre_tag(None), '<span class="text-muted">&mdash;</span>')
         self.assertEqual(helpers.pre_tag([]), "<pre>[]</pre>")
         self.assertEqual(helpers.pre_tag("something"), "<pre>something</pre>")
 
