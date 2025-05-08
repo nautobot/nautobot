@@ -374,21 +374,6 @@ class ApprovalWorkflowStageInstanceUIViewSet(NautobotUIViewSet):
         Approve the approval workflow stage instance response.
         """
         instance = self.get_object()
-        approval_workflow_instance = instance.approval_workflow_instance
-        if approval_workflow_instance.active_stage:
-            if approval_workflow_instance.active_stage.state == ApprovalWorkflowStateChoices.DENIED:
-                # The user is not allowed to approve the stage because it is has already been denied
-                messages.warning(
-                    request,
-                    f"You are not allowed to approve {instance} because the parent workflow {instance.approval_workflow_instance} has already been denied",
-                )
-                return redirect(self.get_return_url(request))
-            if approval_workflow_instance.active_stage != instance:
-                # The user is not allowed to approve the stage because this stage is not the active stage
-                messages.warning(
-                    request, f"You are not allowed to approve {instance} because this stage is not active yet."
-                )
-                return redirect(self.get_return_url(request))
 
         try:
             approval_workflow_stage_instance_response = ApprovalWorkflowStageInstanceResponse.objects.get(
@@ -400,20 +385,6 @@ class ApprovalWorkflowStageInstanceUIViewSet(NautobotUIViewSet):
                 approval_workflow_stage_instance=instance,
                 user=request.user,
             )
-
-        if instance.state != ApprovalWorkflowStateChoices.PENDING:
-            # The user is not allowed to approve or deny the response once the stage has reached a terminal state
-            messages.warning(
-                request, f"You are not allowed to approve {instance} since it already has reached a terminal state."
-            )
-            return redirect(self.get_return_url(request))
-
-        if approval_workflow_stage_instance_response.state != ApprovalWorkflowStateChoices.PENDING:
-            # The user is not allowed to approve or deny the response once you made a decision
-            messages.warning(
-                request, f"You are not allowed to approve {instance} since you already have submitted your response."
-            )
-            return redirect(self.get_return_url(request))
 
         if request.method == "GET":
             obj = approval_workflow_stage_instance_response
@@ -431,12 +402,10 @@ class ApprovalWorkflowStageInstanceUIViewSet(NautobotUIViewSet):
                     "button_class": "success",
                 },
             )
-
-        if request.data.get("confirm"):
-            approval_workflow_stage_instance_response.state = ApprovalWorkflowStateChoices.APPROVED
-            approval_workflow_stage_instance_response.save()
-            messages.success(request, f"You approved {instance}.")
-            return redirect(self.get_return_url(request))
+        approval_workflow_stage_instance_response.state = ApprovalWorkflowStateChoices.APPROVED
+        approval_workflow_stage_instance_response.save()
+        messages.success(request, f"You approved {instance}.")
+        return redirect(self.get_return_url(request))
 
     @action(detail=True, url_path="deny", methods=["get", "post"])
     def deny(self, request, *args, **kwargs):
@@ -444,21 +413,6 @@ class ApprovalWorkflowStageInstanceUIViewSet(NautobotUIViewSet):
         Deny the approval workflow stage instance response.
         """
         instance = self.get_object()
-        approval_workflow_instance = instance.approval_workflow_instance
-        if approval_workflow_instance.active_stage:
-            if approval_workflow_instance.active_stage.state == ApprovalWorkflowStateChoices.DENIED:
-                # The user is not allowed to deny the stage because it is has already been denied
-                messages.warning(
-                    request,
-                    f"You are not allowed to deny {instance} because the parent workflow {instance.approval_workflow_instance} has already been denied",
-                )
-                return redirect(self.get_return_url(request))
-            if approval_workflow_instance.active_stage != instance:
-                # The user is not allowed to deny the stage because this stage is not the active stage
-                messages.warning(
-                    request, f"You are not allowed to deny {instance} because this stage is not active yet."
-                )
-                return redirect(self.get_return_url(request))
 
         try:
             approval_workflow_stage_instance_response = ApprovalWorkflowStageInstanceResponse.objects.get(
@@ -471,20 +425,6 @@ class ApprovalWorkflowStageInstanceUIViewSet(NautobotUIViewSet):
                 user=request.user,
                 state=ApprovalWorkflowStateChoices.PENDING,
             )
-
-        if instance.state != ApprovalWorkflowStateChoices.PENDING:
-            # The user is not allowed to approve or deny the response once the stage has reached a terminal state
-            messages.warning(
-                request, f"You are not allowed to deny {instance} since it already has reached a terminal state."
-            )
-            return redirect(self.get_return_url(request))
-
-        if approval_workflow_stage_instance_response.state != ApprovalWorkflowStateChoices.PENDING:
-            # The user is not allowed to approve or deny the response once you made a decision
-            messages.warning(
-                request, f"You are not allowed to deny {instance} since you already have submitted your response."
-            )
-            return redirect(self.get_return_url(request))
 
         if request.method == "GET":
             obj = approval_workflow_stage_instance_response
@@ -501,11 +441,10 @@ class ApprovalWorkflowStageInstanceUIViewSet(NautobotUIViewSet):
                 },
             )
 
-        if request.data.get("confirm"):
-            approval_workflow_stage_instance_response.state = ApprovalWorkflowStateChoices.DENIED
-            approval_workflow_stage_instance_response.save()
-            messages.success(request, f"You denied {instance}.")
-            return redirect(self.get_return_url(request))
+        approval_workflow_stage_instance_response.state = ApprovalWorkflowStateChoices.DENIED
+        approval_workflow_stage_instance_response.save()
+        messages.success(request, f"You denied {instance}.")
+        return redirect(self.get_return_url(request))
 
     @action(detail=True, url_path="comment", methods=["get", "post"])
     def comment(self, request, *args, **kwargs):
@@ -542,11 +481,10 @@ class ApprovalWorkflowStageInstanceUIViewSet(NautobotUIViewSet):
                 },
             )
 
-        if request.data.get("confirm"):
-            approval_workflow_stage_instance_response.comments = request.data.get("comments")
-            approval_workflow_stage_instance_response.save()
-            messages.success(request, f"You left comments on {instance}.")
-            return redirect(self.get_return_url(request))
+        approval_workflow_stage_instance_response.comments = request.data.get("comments")
+        approval_workflow_stage_instance_response.save()
+        messages.success(request, f"You left comments on {instance}.")
+        return redirect(self.get_return_url(request))
 
 
 class ApprovalWorkflowStageInstanceResponseUIViewSet(
@@ -642,7 +580,6 @@ class ApproveeDashboardView(ObjectListViewMixin):
             "You are viewing a dashboard of approval workflow instances that are requested by you.",
         )
         return super().list(request, *args, **kwargs)
-
 
 
 #
