@@ -197,7 +197,7 @@ class ApprovalWorkflowInstance(PrimaryModel):
             )
 
         # TODO need to check of the object fits the model_constraints of the approval workflow
-        if not self.user_name:
+        if not self.user_name or self.user_name == "Undefined":
             if self.user:
                 self.user_name = self.user.username
             else:
