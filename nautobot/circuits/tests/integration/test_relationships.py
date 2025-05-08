@@ -114,11 +114,8 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
         """
         self.browser.visit(self.live_server_url)
 
-        # Click Circuits dropdown button
-        self.browser.links.find_by_partial_text("Circuits").click()
-
-        # Click Circuits link
-        self.browser.links.find_by_partial_text("Circuits")[1].click()
+        # Navigate to Circuits list
+        self.click_navbar_entry("Circuits", "Circuits")
 
         # Click on the circuit link (circuit created in setUp)
         self.browser.links.find_by_partial_text("123456789").click()

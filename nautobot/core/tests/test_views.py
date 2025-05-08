@@ -697,7 +697,7 @@ class TestObjectDetailView(TestCase):
         view_move_url = reverse("circuits:circuit_list") + f"?provider={provider.id}"
 
         # Assert Badge Count in table panel header
-        panel_header = f"""<div class="panel-heading"><strong>Circuits</strong> <a href="{view_move_url}" class="badge badge-primary">10</a></div>"""
+        panel_header = f"""<div class="card-header"><strong>Circuits</strong> <a href="{view_move_url}" class="badge badge-primary">10</a></div>"""
         self.assertInHTML(panel_header, response_data)
 
         # Assert view X more btn

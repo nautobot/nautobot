@@ -10,8 +10,7 @@ class ImportObjectsUITestCase(SeleniumTestCase):
 
     def test_import_objects_ui_population(self):
         self.browser.visit(self.live_server_url)
-        self.browser.links.find_by_partial_text("Organization").click()
-        self.browser.links.find_by_partial_text("Locations").click()
+        self.click_navbar_entry("Organization", "Locations")
         self.browser.find_by_id("actions-dropdown").click()
         self.browser.find_by_id("import-button").click()
 

@@ -87,6 +87,12 @@ class ObjectsListMixin:
         """
         self.click_button('#select_all_box button[name="_edit"]')
 
+    def click_add_item(self):
+        """
+        Click add item button on top of the items table list.
+        """
+        self.click_button('#add_button')
+
     def click_table_link(self, row=1, column=2):
         """By default, tries to click column next to checkbox to go to the details page."""
         self.browser.find_by_xpath(f'//*[@id="object_list_form"]//tbody/tr[{row}]/td[{column}]/a').click()
@@ -120,7 +126,7 @@ class ObjectDetailsMixin:
         By default, it's not using the exact match, because on the UI we're often adding
         additional tags, relationships or units.
         """
-        panel_xpath = f'//*[@id="main"]//div[@class="panel-heading"][contains(normalize-space(), "{panel_label}")]/following-sibling::table'
+        panel_xpath = f'//*[@id="main"]//div[@class="card-header"][contains(normalize-space(), "{panel_label}")]/following-sibling::table'
         value = self.browser.find_by_xpath(f'{panel_xpath}//td[text()="{field_label}"]/following-sibling::td[1]').text
 
         if exact_match:
@@ -134,7 +140,7 @@ class ObjectDetailsMixin:
 
         TODO: remove after all panels will be moved to UI Components Framework or new Bootstrap 5 templates.
         """
-        panel_xpath = f'//*[@id="main"]//div[@class="panel-heading"][contains(normalize-space(), "{panel_label}")]'
+        panel_xpath = f'//*[@id="main"]//div[@class="card-header"][contains(normalize-space(), "{panel_label}")]'
         expand_button_xpath = f"{panel_xpath}/button[normalize-space()='Expand All']"
         expand_button = self.browser.find_by_xpath(expand_button_xpath)
         if not expand_button.is_empty():

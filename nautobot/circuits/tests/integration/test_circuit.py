@@ -105,7 +105,7 @@ class CircuitTestCase(SeleniumTestCase, ObjectsListMixin, ObjectDetailsMixin):
                 self.assertIn(details_url, self.browser.url)
 
                 # Find and click add termination button
-                termination_panel_xpath = f'//*[@id="main"]//div[@class="panel-heading"][contains(normalize-space(), "Termination - {side} Side")]'
+                termination_panel_xpath = f'//*[@id="main"]//div[@class="card-header"][contains(normalize-space(), "Termination - {side} Side")]'
                 self.browser.find_by_xpath(f'{termination_panel_xpath}//a[normalize-space()="Add"]').click()
 
                 port_speed = ord(side)

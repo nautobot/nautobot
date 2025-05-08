@@ -63,6 +63,6 @@ class RelationshipsTestCase(SeleniumTestCase, ObjectDetailsMixin):
         self.assertFalse(self.browser.is_text_present("power panel"))
         self.assertFalse(self.browser.is_text_present("Power Panel"))
         # Check the relationship appears in the advanced tab
-        self.browser.links.find_by_partial_text("Advanced")[0].click()
+        self.switch_tab("Advanced")
         self.assertTrue(self.browser.is_text_present("power panel"))
         self.assertTrue(self.browser.is_text_present("Power Panel"))

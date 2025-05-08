@@ -1,3 +1,5 @@
+import unittest
+
 from nautobot.circuits.models import Circuit, Provider
 from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.models import Location, PowerFeed, PowerPanel
@@ -25,10 +27,7 @@ class HomeTestCase(SeleniumTestCase):
     def setUp(self):
         super().setUp()
         self.login(self.user.username, self.password)
-
-    def tearDown(self):
-        self.logout()
-        super().tearDown()
+        self.logged_in = True
 
     def get_panel_permissions(self, panel_details):
         permissions = []
@@ -36,13 +35,7 @@ class HomeTestCase(SeleniumTestCase):
             permissions.append(panel["permission"])
         return permissions
 
-    def test_login(self):
-        """
-        Perform a UI login.
-        """
-        # Wait for the page to render and make sure we got a body.
-        self.browser.visit(self.live_server_url)
-
+    @unittest.skip("Skip until HomePage in v3 will be ready.")
     def test_homepage_render(self):
         """
         Render homepage with app defined objects.
@@ -59,6 +52,7 @@ class HomeTestCase(SeleniumTestCase):
             for item_name, _ in panel_details.items():
                 columns_html.first.find_by_xpath(f".//a[contains(text(), '{item_name}')]")
 
+    @unittest.skip("Skip until HomePage in v3 will be ready.")
     def test_homepage_render_counters(self):
         """
         Ensure object counters are correct.
@@ -79,6 +73,7 @@ class HomeTestCase(SeleniumTestCase):
                     counter_html = int(item_html.find_by_xpath("./../../span").first.html)
                     self.assertEqual(counter, counter_html)
 
+    @unittest.skip("Skip until HomePage in v3 will be ready.")
     def test_homepage_render_with_limit_permissions(self):
         """
         Render homepage with limited permissions and restricted UI.

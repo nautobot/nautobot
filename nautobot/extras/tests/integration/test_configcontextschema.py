@@ -1,12 +1,12 @@
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.core.testing.integration import SeleniumTestCase, ObjectDetailsMixin
+from nautobot.core.testing.integration import SeleniumTestCase, ObjectDetailsMixin, ObjectsListMixin
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.models import ConfigContext, ConfigContextSchema, Role, Status
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 
-class ConfigContextSchemaTestCase(SeleniumTestCase, ObjectDetailsMixin):
+class ConfigContextSchemaTestCase(SeleniumTestCase, ObjectDetailsMixin, ObjectsListMixin):
     """
     Integration tests for the ConfigContextSchema model
     """
@@ -26,8 +26,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase, ObjectDetailsMixin):
         self.click_navbar_entry("Extensibility", "Config Context Schemas")
 
         # Click add button
-        # Need to be a bit clever in our search here to avoid accidentally hitting "IP Addresses -> Add" in the nav
-        self.browser.find_by_xpath("//div[contains(@class, 'wrapper')]//a[contains(., 'Add')]").click()
+        self.click_add_item()
 
         # Fill out form
         self.fill_input("name", "Integration Schema 1")
@@ -53,8 +52,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase, ObjectDetailsMixin):
         self.click_navbar_entry("Extensibility", "Config Context Schemas")
 
         # Click add button
-        # Need to be a bit clever in our search here to avoid accidentally hitting "IP Addresses -> Add" in the nav
-        self.browser.find_by_xpath("//div[contains(@class, 'wrapper')]//a[contains(., 'Add')]").click()
+        self.click_add_item()
 
         # Fill out form
         self.fill_input("name", "Integration Schema 2")
