@@ -19,7 +19,7 @@ The following pages provide detailed guides for managing and running Jobs:
 - **[Job Buttons](./jobbutton.md)**: Run Jobs from detail views of Nautobot objects.
 - **[Job Hooks](./jobhook.md)**: Automatically trigger Jobs based on object changes.
 - **[Kubernetes Job Support](./kubernetes-job-support.md)**: Run Jobs within a Kubernetes cluster.
-- **[Developing Jobs](../development/jobs)**: To write your own jobs or migrate them from previous Nautobot releases, check out the developer section.
+- **[Developing Jobs](../../../development/jobs/index.md)**: To write your own jobs or migrate them from previous Nautobot releases, check out the developer section.
 
 +/- 2.0.0
     Backwards compatibility with NetBox scripts and reports has been removed. This includes removal of automatic calls to the `post_run()` and `test_*()` methods.

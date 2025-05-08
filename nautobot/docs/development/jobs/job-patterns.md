@@ -24,7 +24,7 @@ Not every Job needs every feature shown below. Use this page as a reference: cop
     - Creating objects for a planned location
     - Everything demo from the Example App
 
-## Job Execution Context 
+## Job Execution Context
 
 When writing Jobs, it's helpful to access information about the current execution - like which user ran the Job or which JobResult is being updated. It's equally important to log progress or results in a way that's visible in both the Nautobot UI and REST API.
 

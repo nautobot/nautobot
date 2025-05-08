@@ -98,6 +98,35 @@ register_jobs(SyncDevices)
 When the repo is synced, Nautobot loads the job class under the path:  
 `<slug>.jobs.SyncDevices`, for example, `my_repo.jobs.SyncDevices`.
 
+!!! warning "Changing the Git repository `slug`"
+    If you change the repository's `slug`, Nautobot may treat Jobs under the new slug as completely new, resulting in **duplicate Job records** in the database.
+
+    To clean these up:
+
+    - **Preferred**: Use the Nautobot UI:
+        1. Navigate to **Extensibility → Jobs**.
+        2. Click the **Filter** button.
+        3. Set **Installed** to **No**.
+        4. Click **Apply**.
+        5. Review and delete any unwanted Jobs directly from the list.
+
+    - **Alternatively**, use the Django shell to list and delete duplicates manually:
+
+    ```bash
+    nautobot-server shell
+    ```
+
+    ```python
+    from nautobot.extras.models import Job
+
+    # List all duplicate jobs
+    for job in Job.objects.filter(name="Sync Devices from CMDB"):
+        print(job.pk, job.class_path)
+
+    # Delete unwanted one(s) by primary key
+    Job.objects.filter(pk="your-job-id-here").delete()
+    ```
+
 !!! note "Importing Job Submodules"
     If your `jobs/` module imports submodules, make sure `__init__.py` imports them explicitly.
 
