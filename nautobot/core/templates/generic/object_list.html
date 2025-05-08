@@ -25,14 +25,17 @@
             {% add_button content_type.model_class|validated_viewname:"add" verbose_name=model|meta:"verbose_name"|bettertitle %}
             <button type="button" id="actions-dropdown" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
                 <span class="visually-hidden">Toggle Dropdown</span>
+                <span class="mdi mdi-chevron-down"></span>
             </button>
         {% elif permissions.add and 'import' in action_buttons %}
             <button type="button" id="actions-dropdown" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
                 Actions
+                <span class="mdi mdi-chevron-down" aria-hidden="true"></span>
             </button>
         {% elif 'export' in action_buttons %}
             <button type="button" id="actions-dropdown" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
                 Actions
+                <span class="mdi mdi-chevron-down" aria-hidden="true"></span>
             </button>
         {% endif %}
         <ul class="dropdown-menu dropdown-menu-end" role="menu">
