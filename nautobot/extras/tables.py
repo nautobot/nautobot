@@ -301,6 +301,14 @@ class ApprovalWorkflowStageInstanceTable(BaseTable):
     pk = ToggleColumn()
     approval_workflow_instance = tables.Column(linkify=True)
     approval_workflow_stage = tables.Column(linkify=True)
+    approvals_needed = tables.TemplateColumn(
+        template_code="""{% if record.remaining_approvals %}
+        {{ record.remaining_approvals }} approval(s) needed
+        {% else %}<span class="text-muted">&mdash;</span>
+        {% endif %}""",
+        orderable=False,
+        verbose_name="Approvals Needed",
+    )
     state = ChoiceFieldColumn()
     actions = ApprovalButtonsColumn(ApprovalWorkflowStageInstance)
 
@@ -312,6 +320,7 @@ class ApprovalWorkflowStageInstanceTable(BaseTable):
             "pk",
             "approval_workflow_instance",
             "approval_workflow_stage",
+            "approvals_needed",
             "state",
             "decision_date",
         )
@@ -319,6 +328,7 @@ class ApprovalWorkflowStageInstanceTable(BaseTable):
             "pk",
             "approval_workflow_instance",
             "approval_workflow_stage",
+            "approvals_needed",
             "state",
             "decision_date",
             "actions",

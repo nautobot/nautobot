@@ -271,6 +271,22 @@ class ApprovalWorkflowStageInstance(PrimaryModel):
         return ApprovalWorkflowStateChoices.CSS_CLASSES.get(self.state)
 
     @property
+    def remaining_approvals(self):
+        """
+        Calculate the number of remaining approvals needed for this stage instance to be approved.
+        Returns:
+            int: Number of remaining approvals needed.
+        """
+        if self.approval_workflow_instance.current_state != ApprovalWorkflowStateChoices.PENDING:
+            return 0
+        # Get the number of approvers who have already approved this stage instance
+        approved_responses = self.approval_workflow_stage_instance_responses.filter(
+            state=ApprovalWorkflowStateChoices.APPROVED
+        )
+        # Calculate the number of remaining approvals needed
+        return max(0, self.approval_workflow_stage.min_approvers - approved_responses.count())
+
+    @property
     def is_active_stage(self):
         """
         Check if the stage is active.
@@ -284,6 +300,20 @@ class ApprovalWorkflowStageInstance(PrimaryModel):
             return False
         # Check if the stage is the active stage and if the stage state is pending
         return self.pk == active_stage.pk and active_stage.state == ApprovalWorkflowStateChoices.PENDING
+
+    @property
+    def users_that_already_approved(self):
+        """
+        Get the users that have already approved this stage instance.
+        Returns:
+            list: List of users that have already approved this stage instance.
+        """
+        return [
+            response.user
+            for response in self.approval_workflow_stage_instance_responses.filter(
+                state=ApprovalWorkflowStateChoices.APPROVED
+            )
+        ]
 
     def save(self, *args, **kwargs):
         """

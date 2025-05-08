@@ -533,6 +533,12 @@ class ApproverDashboardView(ObjectListViewMixin):
         user = self.request.user
         group_pks = user.groups.all().values_list("pk", flat=True)
 
+        # Get the ApprovalWorkflowStage instances that are already approved by the current user
+        approved_approval_workflow_stage_instances = ApprovalWorkflowStageInstanceResponse.objects.filter(
+            state=ApprovalWorkflowStateChoices.APPROVED,
+            user=user,
+        ).values_list("approval_workflow_stage_instance", flat=True)
+
         # Return only the approval workflow stage instances that are pending
         # and belong to a pending approval workflow instance
         # and are assigned to the current user or any of the groups the user belongs to
@@ -540,7 +546,7 @@ class ApproverDashboardView(ObjectListViewMixin):
             approval_workflow_instance__current_state=ApprovalWorkflowStateChoices.PENDING,
             state=ApprovalWorkflowStateChoices.PENDING,
             approval_workflow_stage__approver_group__pk__in=group_pks,
-        )
+        ).exclude(pk__in=approved_approval_workflow_stage_instances)
 
     def list(self, request, *args, **kwargs):
         """
