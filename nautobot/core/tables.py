@@ -441,7 +441,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
 
 class ApprovalButtonsColumn(django_tables2.TemplateColumn):
     """
-    Render approve, deny, and comment buttons for an approval workflow stage instance.
+    Render detail, changelog, approve, deny, and comment buttons for an approval workflow stage instance.
 
     :param model: Model class to use for calculating URL view names
     :param prepend_template: Additional template content to render in the column (optional)
@@ -450,53 +450,16 @@ class ApprovalButtonsColumn(django_tables2.TemplateColumn):
 
     buttons = ("detail", "changelog", "approve", "deny", "comment")
     attrs = {"td": {"class": "text-right text-nowrap noprint"}}
-    # Note that braces are escaped to allow for string formatting prior to template rendering
-    template_code = """
-    {{% if "detail" in buttons %}}
-        <a href="{{{{ record.get_absolute_url }}}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-default" title="Details">
-            <i class="mdi mdi-information-outline"></i>
-        </a>
-    {{% endif %}}
-    {{% if "changelog" in buttons %}}
-        <a href="{{% url '{changelog_route}' {pk_field}=record.{pk_field} %}}" class="btn btn-default btn-xs" title="Change log">
-            <i class="mdi mdi-history"></i>
-        </a>
-    {{% endif %}}
-    {{% if "approve" in buttons and perms.{app_label}.change_{model_name} %}}
-        <span title='{{% if not record.is_active_stage %}}This stage is not active yet{{% elif request.user in record.users_that_already_approved %}}You already approved this stage{{% else %}}Approve this stage{{% endif %}}'>
-            <a href="{{% url '{approval_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-success btn-xs{{% if not record.is_active_stage or request.user in record.users_that_already_approved %}} disabled{{% endif %}}">
-                <i class="mdi mdi-check"></i>
-            </a>
-        </span>
-    {{% endif %}}
-    {{% if "deny" in buttons and perms.{app_label}.change_{model_name} %}}
-        <span title='{{% if not record.is_active_stage %}}This stage is not active yet{{% elif request.user in record.users_that_already_approved %}}You already approved this stage{{% else %}}Deny this stage{{% endif %}}'>
-            <a href="{{% url '{deny_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-danger {{% if not record.is_active_stage or request.user in record.users_that_already_approved %}} disabled{{% endif %}}">
-                <i class="mdi mdi-close"></i>
-            </a>
-        </span>
-    {{% endif %}}
-    {{% if "comment" in buttons and perms.{app_label}.change_{model_name} %}}
-        <a href="{{% url '{comment_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-default" title="Comment">
-            <i class="mdi mdi-comment-outline"></i>
-        </a>
-    {{% endif %}}
-    """
+    template_name = "extras/inc/approval_buttons_column.html"
 
     def __init__(
         self,
         model,
         *args,
-        pk_field="pk",
         buttons=None,
-        prepend_template=None,
         return_url_extra="",
         **kwargs,
     ):
-        if prepend_template:
-            prepend_template = prepend_template.replace("{", "{{")
-            prepend_template = prepend_template.replace("}", "}}")
-            self.template_code = prepend_template + self.template_code
 
         app_label = model._meta.app_label
         changelog_route = get_route_for_model(model, "changelog")
@@ -504,23 +467,17 @@ class ApprovalButtonsColumn(django_tables2.TemplateColumn):
         deny_route = "extras:approvalworkflowstageinstance_deny"
         comment_route = "extras:approvalworkflowstageinstance_comment"
 
-        template_code = self.template_code.format(
-            app_label=app_label,
-            model_name=model._meta.model_name,
-            changelog_route=changelog_route,
-            approval_route=approval_route,
-            deny_route=deny_route,
-            comment_route=comment_route,
-            pk_field=pk_field,
-            buttons=buttons,
-        )
-
-        super().__init__(template_code=template_code, *args, **kwargs)
+        super().__init__(template_name=self.template_name, *args, **kwargs)
 
         self.extra_context.update(
             {
                 "buttons": buttons or self.buttons,
                 "return_url_extra": return_url_extra,
+                "changelog_route": changelog_route,
+                "approval_route": approval_route,
+                "deny_route": deny_route,
+                "comment_route": comment_route,
+                "have_permission": f"perms.{app_label}.change_{model._meta.model_name,}",
             }
         )
 
