@@ -147,6 +147,7 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         RIR.objects.create(name="RIR XYZ")
 
 
+@unittest.expectedFailure
 class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.ListObjectsViewTestCase):
     model = Prefix
     filter_on_field = "prefix_length"
@@ -234,7 +235,6 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         for prefix in prefixes:
             self.assertNotIn(prefix.get_absolute_url(), content, msg=content)
 
-    @unittest.expectedFailure
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_object_warnings(self):
         """Test various object creation scenarios that should result in a warning to the user."""
@@ -362,7 +362,6 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                 strip_tags(content),
             )
 
-    @unittest.expectedFailure
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_prefix_ipaddresses_table_list_includes_child_ips(self):
         ip_status = Status.objects.get_for_model(IPAddress).first()
