@@ -460,7 +460,6 @@ class ApprovalButtonsColumn(django_tables2.TemplateColumn):
         return_url_extra="",
         **kwargs,
     ):
-
         app_label = model._meta.app_label
         changelog_route = get_route_for_model(model, "changelog")
         approval_route = "extras:approvalworkflowstageinstance_approve"
