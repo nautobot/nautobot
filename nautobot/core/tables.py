@@ -49,6 +49,7 @@ class BaseTable(django_tables2.Table):
         hide_hierarchy_ui=False,
         order_by=None,
         data_transform_callback=None,
+        configurable=False,
         **kwargs,
     ):
         """
@@ -109,6 +110,8 @@ class BaseTable(django_tables2.Table):
 
         # Init table
         super().__init__(*args, order_by=order_by, **kwargs)
+
+        self.configurable = configurable
 
         if not isinstance(self.data, TableQuerysetData):
             # LinkedCountColumns don't work properly if the data is a list of dicts instead of a queryset,
@@ -376,7 +379,11 @@ class ButtonsColumn(django_tables2.TemplateColumn):
     """
 
     buttons = ("changelog", "edit", "delete")
-    attrs = {"td": {"class": "text-end text-nowrap noprint"}}
+    attrs = {
+        "td": {"class": "text-end text-nowrap w-0 noprint"},
+        "tf": {"class": "w-0"},
+        "th": {"class": "nb-actionable w-0"},
+    }
     # Note that braces are escaped to allow for string formatting prior to template rendering
     template_code = """
     {{% if "changelog" in buttons %}}
