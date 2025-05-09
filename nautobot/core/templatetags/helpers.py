@@ -24,7 +24,6 @@ from nautobot.core import forms
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.utils import color, config, data, logging as nautobot_logging, lookup
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
-from nautobot.extras.choices import ApprovalWorkflowStateChoices
 
 # S308 is suspicious-mark-safe-usage, but these are all using static strings that we know to be safe
 HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')  # noqa: S308
@@ -162,18 +161,6 @@ def add_html_id(element_str, id_str):
     if not match:
         return element_str
     return mark_safe(match.group(1) + format_html(' id="{}" ', id_str) + match.group(2))  # noqa: S308  # suspicious-mark-safe-usage
-
-
-@library.filter()
-@register.filter()
-def render_approval_workflow_state(value):
-    """
-    Render an approval state value as a colored label.
-    """
-    if value:
-        css_class = ApprovalWorkflowStateChoices.CSS_CLASSES.get(value)
-        return format_html('<span class="label label-{}">{}</span>', css_class, value)
-    return ""
 
 
 @library.filter()

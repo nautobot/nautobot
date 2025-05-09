@@ -1,8 +1,8 @@
 {% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
 
-{% block extra_buttons %}
-    <span title="{% if not object.is_active_stage %}Current Stage is not active yet{% elif request.user in object.users_that_already_approved %}You already approved this stage{% else %}Approve this stage{% endif %}">
+{% block buttons %}
+    <span title="{% if not object.is_active_stage %}This stage is not active yet{% elif request.user in object.users_that_already_approved %}You already approved this stage{% else %}Approve this stage{% endif %}">
         <a
             href="{% url 'extras:approvalworkflowstageinstance_approve' object.pk %}?return_url={{request.path}}"
             class="btn btn-success{% if not object.is_active_stage or request.user in object.users_that_already_approved %} disabled{% endif %}"
@@ -10,7 +10,7 @@
             <i class="mdi mdi-check"></i> Approve
         </a>
     </span>
-    <span title="{% if not object.is_active_stage %}Current Stage is not active yet{% elif request.user in object.users_that_already_approved %}You already approved this stage{% else %}Deny this stage{% endif %}">
+    <span title="{% if not object.is_active_stage %}This stage is not active yet{% elif request.user in object.users_that_already_approved %}You already approved this stage{% else %}Deny this stage{% endif %}">
         <a
             href="{% url 'extras:approvalworkflowstageinstance_deny' object.pk %}?return_url={{request.path}}"
             class="btn btn-danger {% if not object.is_active_stage or request.user in object.users_that_already_approved %} disabled{% endif %}"
@@ -21,4 +21,4 @@
     <a href="{% url 'extras:approvalworkflowstageinstance_comment' object.pk %}?return_url={{request.path}}" class="btn btn-default" title="Add comment on this stage">
         <i class="mdi mdi-comment-outline"></i> Comment
     </a>
-{% endblock extra_buttons %}
+{% endblock buttons %}

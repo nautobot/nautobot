@@ -96,7 +96,7 @@ class ApprovalWorkflowStageForm(NautobotModelForm):
 
 
 # ApprovalWorkFlow inline formset for use with providing dynamic rows when creating/editing choices
-# for `CustomField` objects in UI views. Fields/exclude must be set but since we're using all the
+# for `ApprovalWorkFlowInstance` objects in UI views. Fields/exclude must be set but since we're using all the
 # fields we're just setting `exclude=()` here.
 ApprovalWorkflowStageFormSet = inlineformset_factory(
     parent_model=ApprovalWorkflow,

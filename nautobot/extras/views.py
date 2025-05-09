@@ -73,6 +73,7 @@ from nautobot.dcim.tables import (
     VirtualDeviceContextTable,
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
+from nautobot.extras.templatetags.approvals import render_approval_workflow_state
 from nautobot.extras.utils import fixup_filterset_query_params, get_base_template, get_job_queue, get_worker_count
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
@@ -322,7 +323,7 @@ class ApprovalWorkflowInstanceUIViewSet(NautobotUIViewSet):
                     "user_name",
                 ],
                 value_transforms={
-                    "current_state": [helpers.render_approval_workflow_state],
+                    "current_state": [render_approval_workflow_state],
                 },
             ),
             object_detail.ObjectsTablePanel(
@@ -355,7 +356,7 @@ class ApprovalWorkflowStageInstanceUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
                 value_transforms={
-                    "state": [helpers.render_approval_workflow_state],
+                    "state": [render_approval_workflow_state],
                 },
             ),
             object_detail.ObjectsTablePanel(
@@ -507,7 +508,7 @@ class ApprovalWorkflowStageInstanceResponseUIViewSet(
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
                 value_transforms={
-                    "state": [helpers.render_approval_workflow_state],
+                    "state": [render_approval_workflow_state],
                 },
             ),
         ],
@@ -523,6 +524,15 @@ class ApproverDashboardView(ObjectListViewMixin):
     filterset_class = filters.ApprovalWorkflowStageInstanceFilterSet
     filterset_form_class = forms.ApprovalWorkflowStageInstanceFilterForm
     table_class = tables.ApprovalWorkflowStageInstanceTable
+    action_buttons = ()
+
+    def get_extra_context(self, request, instance):
+        """
+        Get the extra context for the dashboard view.
+        """
+        context = super().get_extra_context(request, instance)
+        context["title"] = "Approval Dashboard"
+        return context
 
     def get_queryset(self):
         """
@@ -568,6 +578,15 @@ class ApproveeDashboardView(ObjectListViewMixin):
     filterset_class = filters.ApprovalWorkflowInstanceFilterSet
     filterset_form_class = forms.ApprovalWorkflowInstanceFilterForm
     table_class = tables.ApprovalWorkflowInstanceTable
+    action_buttons = ()
+
+    def get_extra_context(self, request, instance):
+        """
+        Get the extra context for the dashboard view.
+        """
+        context = super().get_extra_context(request, instance)
+        context["title"] = "Approvee Dashboard"
+        return context
 
     def get_queryset(self):
         """

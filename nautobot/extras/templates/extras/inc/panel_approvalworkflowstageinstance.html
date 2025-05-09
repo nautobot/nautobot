@@ -1,4 +1,7 @@
 {% load helpers %}
+{% load approvals %}
+
+
 {% if approval_workflow_stage_instances and perms.extras.view_approvalworkflowstageinstance %}
     {% for instance in approval_workflow_stage_instances %}
         {% with approval_workflow_instance=instance.approval_workflow_instance %}
@@ -6,13 +9,7 @@
                 {{ instance.state|render_approval_workflow_state }}
                 <a href="{{ approval_workflow_instance.get_absolute_url }}" >{{ instance }} </a> <br />
                 {{ approval_workflow_instance.object_under_review_content_type.name|bettertitle }}
-                {% if instance and approval_workflow_instance.object_under_review and approval_workflow_instance.object_under_review.get_absolute_url %}
-                    {{ approval_workflow_instance.object_under_review|hyperlinked_object }}
-                {% elif instance and approval_workflow_instance.object_under_review %}
-                    {{ approval_workflow_instance.object_under_review|default:approval_workflow_instance.object_repr }}
-                {% elif instance %}
-                    {{ approval_workflow_instance.object_repr }}
-                {% endif %}
+                {{ approval_workflow_instance.object_under_review|hyperlinked_object }}
                 <br />
                 <small>
                     <span class="text-muted">{{ approval_workflow_instance.user }} -</span>

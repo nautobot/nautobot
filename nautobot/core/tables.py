@@ -463,15 +463,15 @@ class ApprovalButtonsColumn(django_tables2.TemplateColumn):
         </a>
     {{% endif %}}
     {{% if "approve" in buttons and perms.{app_label}.change_{model_name} %}}
-        <span title='{{% if not record.is_active_stage %}}Current Stage is not active yet{{% elif request.user in record.users_that_already_approved %}}You already approved this stage{{% else %}}Approve this stage{{% endif %}}'>
-            <a href="{{% url '{approval_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-success btn-xs{{% if not record.is_active_stage or request.user in record.users_that_already_approved %}} disabled{{% endif %}}" title="Approve">
+        <span title='{{% if not record.is_active_stage %}}This stage is not active yet{{% elif request.user in record.users_that_already_approved %}}You already approved this stage{{% else %}}Approve this stage{{% endif %}}'>
+            <a href="{{% url '{approval_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-success btn-xs{{% if not record.is_active_stage or request.user in record.users_that_already_approved %}} disabled{{% endif %}}">
                 <i class="mdi mdi-check"></i>
             </a>
         </span>
     {{% endif %}}
     {{% if "deny" in buttons and perms.{app_label}.change_{model_name} %}}
-        <span title='{{% if not record.is_active_stage %}}Current Stage is not active yet{{% elif request.user in record.users_that_already_approved %}}You already approved this stage{{% else %}}Deny this stage{{% endif %}}'>
-            <a href="{{% url '{deny_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-danger {{% if not record.is_active_stage or request.user in record.users_that_already_approved %}} disabled{{% endif %}}" title="Deny">
+        <span title='{{% if not record.is_active_stage %}}This stage is not active yet{{% elif request.user in record.users_that_already_approved %}}You already approved this stage{{% else %}}Deny this stage{{% endif %}}'>
+            <a href="{{% url '{deny_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-danger {{% if not record.is_active_stage or request.user in record.users_that_already_approved %}} disabled{{% endif %}}">
                 <i class="mdi mdi-close"></i>
             </a>
         </span>
