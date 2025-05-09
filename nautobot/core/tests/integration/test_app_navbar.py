@@ -1,4 +1,3 @@
-
 from nautobot.core.testing.integration import SeleniumTestCase
 
 
@@ -73,7 +72,7 @@ class AppNavBarTestCase(SeleniumTestCase):
             )
             self.assertEqual(len(group), 1)
 
-            for item_name, item_details in items.items():
+            for item_name, _ in items.items():
                 link = sidenav_section.find_link(item_name)
                 self.assertEqual(len(link), 1)
 
@@ -93,7 +92,7 @@ class AppNavBarTestCase(SeleniumTestCase):
             )
             self.assertEqual(len(group), 1)
 
-            for item_name, item_details in items.items():
+            for item_name, _ in items.items():
                 link = sidenav_section.find_link(item_name)
                 self.assertEqual(len(link), 1)
 
