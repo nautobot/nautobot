@@ -23,16 +23,8 @@ from .choices import CircuitTerminationSideChoices
 from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 
 
-class CircuitTypeUIViewSet(
-    view_mixins.ObjectDetailViewMixin,
-    view_mixins.ObjectListViewMixin,
-    view_mixins.ObjectEditViewMixin,
-    view_mixins.ObjectDestroyViewMixin,
-    view_mixins.ObjectBulkDestroyViewMixin,
-    view_mixins.ObjectBulkCreateViewMixin,  # 3.0 TODO: remove this mixin as it's no longer used
-    view_mixins.ObjectChangeLogViewMixin,
-    view_mixins.ObjectNotesViewMixin,
-):
+class CircuitTypeUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.CircuitTypeBulkEditForm
     filterset_class = filters.CircuitTypeFilterSet
     filterset_form_class = forms.CircuitTypeFilterForm
     form_class = forms.CircuitTypeForm

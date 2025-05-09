@@ -44,7 +44,7 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
 
-class CircuitTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class CircuitTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = CircuitType
 
     @classmethod
@@ -52,6 +52,9 @@ class CircuitTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         cls.form_data = {
             "name": "Circuit Type X",
             "description": "A new circuit type",
+        }
+        cls.bulk_edit_data = {
+            "description": "A new updated circuit type",
         }
 
 
