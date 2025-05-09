@@ -485,8 +485,6 @@ $s2bs5-border-color: $border-color;
   @include color-mode(light, true) {
     @include meta.load-css('flatpickr/dist/themes/light.css');
   }
-} @else {
-  @include meta.load-css('flatpickr/dist/themes/light.css');
 }
 
 /* Links */
