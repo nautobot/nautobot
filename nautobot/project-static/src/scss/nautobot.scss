@@ -464,7 +464,7 @@ $utilities: map-merge(
 $s2bs5-border-color: $border-color;
 @import "select2-bootstrap-5-theme/src/include-all";
 
-/* 10. Add additional custom code here */
+/* 9. Add additional custom code here */
 @if $enable-dark-mode {
   @include color-mode(dark, true) {
     /* Colors */
