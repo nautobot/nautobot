@@ -35,7 +35,7 @@ class HomeTestCase(SeleniumTestCase):
             permissions.append(panel["permission"])
         return permissions
 
-    @unittest.skip("Skip until HomePage in v3 will be ready.")
+    @unittest.expectedFailure
     def test_homepage_render(self):
         """
         Render homepage with app defined objects.
@@ -52,7 +52,7 @@ class HomeTestCase(SeleniumTestCase):
             for item_name, _ in panel_details.items():
                 columns_html.first.find_by_xpath(f".//a[contains(text(), '{item_name}')]")
 
-    @unittest.skip("Skip until HomePage in v3 will be ready.")
+    @unittest.expectedFailure
     def test_homepage_render_counters(self):
         """
         Ensure object counters are correct.
@@ -73,7 +73,7 @@ class HomeTestCase(SeleniumTestCase):
                     counter_html = int(item_html.find_by_xpath("./../../span").first.html)
                     self.assertEqual(counter, counter_html)
 
-    @unittest.skip("Skip until HomePage in v3 will be ready.")
+    @unittest.expectedFailure
     def test_homepage_render_with_limit_permissions(self):
         """
         Render homepage with limited permissions and restricted UI.

@@ -303,7 +303,6 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         return f"http://{cls.selenium_host}:{cls.server_thread.port}"
 
     def tearDown(self):
-        # breakpoint()
         if self.logged_in:
             self.logout()
 
@@ -333,7 +332,6 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         """
         Helper function to find sidenav section known as "tab_name". In `nav_menu` we still have tabs/groups naming.
         """
-        # sidenav_section = self.browser.find_by_xpath(f"//*[@id='sidenav']//li[@data-tab-name='{tab_name}']")
         return SidenavSection(self.browser, tab_name)
 
     def click_navbar_entry(self, parent_menu_name, child_menu_name):
