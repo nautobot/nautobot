@@ -1,6 +1,7 @@
 /* nautobot.scss */
 
 @use "sass:map";
+@use "sass:meta";
 
 /* 1. Include functions first (so you can manipulate colors, SVGs, calc, etc) */
 @import "bootstrap/scss/functions";
@@ -463,7 +464,7 @@ $utilities: map-merge(
 $s2bs5-border-color: $border-color;
 @import "select2-bootstrap-5-theme/src/include-all";
 
-/* 9. Add additional custom code here */
+/* 10. Add additional custom code here */
 @if $enable-dark-mode {
   @include color-mode(dark, true) {
     /* Colors */
@@ -477,7 +478,15 @@ $s2bs5-border-color: $border-color;
 
     /* Focus styles */
     --#{$prefix}focus-ring-color: #{$focus-ring-color-dark};
+
+    @include meta.load-css('flatpickr/dist/themes/dark.css');
   }
+
+  @include color-mode(light, true) {
+    @include meta.load-css('flatpickr/dist/themes/light.css');
+  }
+} @else {
+  @include meta.load-css('flatpickr/dist/themes/light.css');
 }
 
 /* Links */
