@@ -1,0 +1,1 @@
+Added `primary_ip` property to GraphQL `DeviceType` to simplify lookup of primary IPs when a mixture of IPv4 and IPv6 are involved.
