@@ -1,6 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.core.testing.integration import SeleniumTestCase, ObjectDetailsMixin, ObjectsListMixin
+from nautobot.core.testing.integration import ObjectDetailsMixin, ObjectsListMixin, SeleniumTestCase
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.models import ConfigContext, ConfigContextSchema, Role, Status
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine

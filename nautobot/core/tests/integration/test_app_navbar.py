@@ -1,6 +1,4 @@
-from django.urls import reverse
 
-from nautobot.core.choices import ButtonActionColorChoices, ButtonActionIconChoices
 from nautobot.core.testing.integration import SeleniumTestCase
 
 

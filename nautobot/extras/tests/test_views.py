@@ -1,6 +1,6 @@
-import unittest
 from datetime import timedelta
 import json
+import unittest
 from unittest import mock
 import urllib.parse
 import uuid

@@ -10,7 +10,6 @@ from django.utils.functional import classproperty
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
 from splinter.browser import Browser
-from splinter.element_list import ElementList
 from splinter.exceptions import ElementDoesNotExist
 
 from nautobot.core import testing
@@ -91,7 +90,7 @@ class ObjectsListMixin:
         """
         Click add item button on top of the items table list.
         """
-        self.click_button('#add_button')
+        self.click_button("#add_button")
 
     def click_table_link(self, row=1, column=2):
         """By default, tries to click column next to checkbox to go to the details page."""

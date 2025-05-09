@@ -1,7 +1,7 @@
 import contextlib
 import re
-import unittest
 from typing import Optional, Sequence
+import unittest
 from unittest import skipIf
 import uuid
 

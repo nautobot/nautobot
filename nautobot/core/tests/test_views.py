@@ -147,7 +147,7 @@ class HomeViewTestCase(TestCase):
         response = self.client.get(url)
         response_content = response.content.decode(response.charset).replace("\n", "")
 
-        footer_hostname_version_pattern = re.compile(r'<span>\s+\S+\s+\(v1\.2\.3\)\s+</span>')
+        footer_hostname_version_pattern = re.compile(r"<span>\s+\S+\s+\(v1\.2\.3\)\s+</span>")
         self.assertRegex(response_content, footer_hostname_version_pattern)
 
         self.client.logout()
@@ -225,7 +225,6 @@ class SearchFieldsTestCase(TestCase):
 
 
 class FilterFormsTestCase(TestCase):
-
     @unittest.expectedFailure
     def test_support_for_both_default_and_dynamic_filter_form_in_ui(self):
         self.add_permissions("dcim.view_location", "circuits.view_circuit")
@@ -676,7 +675,6 @@ class ExampleViewWithCustomPermissionsTest(TestCase):
 
 
 class TestObjectDetailView(TestCase):
-
     @unittest.expectedFailure
     @override_settings(PAGINATE_COUNT=5)
     def test_object_table_panel(self):

@@ -61,7 +61,7 @@ class ComputedFieldsTestCase(SeleniumTestCase):
         and then checks to see if it actually appears there.
         """
         self.browser.visit(f"{self.live_server_url}/dcim/devices/")
-        self.click_button('#table-configure-button')
+        self.click_button("#table-configure-button")
         select_option = self.browser.find_by_xpath(
             ".//select[@id='id_columns']/option[contains(text(), 'Device Computed Field')]"
         )

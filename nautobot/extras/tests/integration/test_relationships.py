@@ -1,7 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
-from nautobot.core.testing.integration import SeleniumTestCase, ObjectDetailsMixin
+from nautobot.core.testing.integration import ObjectDetailsMixin, SeleniumTestCase
 from nautobot.dcim.models import Device, PowerPanel
 from nautobot.extras.choices import RelationshipTypeChoices
 from nautobot.extras.models import Relationship, RelationshipAssociation

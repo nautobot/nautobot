@@ -1,6 +1,6 @@
 import netaddr
 
-from nautobot.core.testing.integration import SeleniumTestCase, ObjectDetailsMixin
+from nautobot.core.testing.integration import ObjectDetailsMixin, SeleniumTestCase
 from nautobot.extras.models import Status
 from nautobot.ipam.choices import PrefixTypeChoices
 from nautobot.ipam.models import Namespace, Prefix
