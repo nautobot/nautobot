@@ -135,6 +135,12 @@ class ProviderNetworkFilterForm(NautobotFilterForm):
 #
 # Circuit types
 #
+class CircuitTypeBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=CircuitType.objects.all(), widget=forms.MultipleHiddenInput)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    class Meta:
+        nullable_fields = ["description"]
 
 
 class CircuitTypeForm(NautobotModelForm):
