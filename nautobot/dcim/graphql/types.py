@@ -84,6 +84,8 @@ class ModuleBayType(OptimizedNautobotObjectType):
 
 
 class ModuleType(OptimizedNautobotObjectType):
+    device = graphene.Field("nautobot.dcim.graphql.types.DeviceType")
+
     class Meta:
         model = Module
         filterset_class = ModuleFilterSet
