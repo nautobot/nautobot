@@ -180,16 +180,16 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#7107](https://github.com/nautobot/nautobot/issues/7107) - Added Bulk Edit functionality for the JobHook model.
 - [#7126](https://github.com/nautobot/nautobot/issues/7126) - Added Bulk Edit functionality for the CustomLink model.
 - [#7148](https://github.com/nautobot/nautobot/issues/7148) - Added Bulk Edit functionality for the RackGroup model.
-- [#7154](https://github.com/nautobot/nautobot/issues/7154) - Added index to `created` field in `JobLogEntry`
+- [#7154](https://github.com/nautobot/nautobot/issues/7154) - Added index to `created` field in `JobLogEntry`.
 - [#7159](https://github.com/nautobot/nautobot/issues/7159) - Added Bulk Edit functionality for the ComputedField model.
 - [#7232](https://github.com/nautobot/nautobot/issues/7232) - Added Bulk Edit functionality for the CircuitType model.
 - [#7234](https://github.com/nautobot/nautobot/issues/7234) - Added Bulk Edit functionality for the CircuitTermination model.
 
 ### Changed in v2.4.8
 
-- [#7219](https://github.com/nautobot/nautobot/issues/7219) - Allow searching Contacts by email and phone number
+- [#7219](https://github.com/nautobot/nautobot/issues/7219) - Enhanced Contact and Team search to include matching by email and phone number.
 - [#7224](https://github.com/nautobot/nautobot/issues/7224) - Changed `ObjectsTablePanel.__init__()` to enforce that a `related_field_name` is required when specifying a `table_attribute`.
-- [#7267](https://github.com/nautobot/nautobot/issues/7267) - Hide the `contacts` tab in object detail view if users do not have permission to view contacts.
+- [#7267](https://github.com/nautobot/nautobot/issues/7267) - Changed the `contacts` tab in object detail views to not render if users do not have permission to view contact-associations.
 
 ### Fixed in v2.4.8
 
@@ -226,8 +226,8 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#7173](https://github.com/nautobot/nautobot/issues/7173) - Refactored JobQueue model related UI views to use `UI component framework`.
 - [#7175](https://github.com/nautobot/nautobot/issues/7175) - Refactored JobButton model related UI views to use `UI component framework`.
 - [#7184](https://github.com/nautobot/nautobot/issues/7184) - Refactored RadioProfile model related UI views to use `UI component framework`.
-- [#7187](https://github.com/nautobot/nautobot/issues/7187) - Add Upstream testing for next/next-3.0 in Apps.
-- [#7187](https://github.com/nautobot/nautobot/issues/7187) - Removes Upstream testing for ltm-1.6.
+- [#7187](https://github.com/nautobot/nautobot/issues/7187) - Added upstream testing for next/next-3.0 in Apps.
+- [#7187](https://github.com/nautobot/nautobot/issues/7187) - Removed upstream testing for ltm-1.6.
 - [#7189](https://github.com/nautobot/nautobot/issues/7189) - Updated `mkdocs-material` documentation dependency to `~9.6.12`.
 - [#7189](https://github.com/nautobot/nautobot/issues/7189) - Updated `mkdocs-section-index` documentation dependency to `~0.3.10`.
 - [#7204](https://github.com/nautobot/nautobot/issues/7204) - Refactored SoftwareVersion model related UI views to use `UI component framework`.
