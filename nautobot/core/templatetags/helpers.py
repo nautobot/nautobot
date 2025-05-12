@@ -136,7 +136,9 @@ def pre_tag(value):
         >>> pre_tag("hello")
         '<pre>hello</pre>'
     """
-    return format_html("<pre>{}</pre>", value)
+    if value is not None:
+        return format_html("<pre>{}</pre>", value)
+    return HTML_NONE
 
 
 @library.filter()
@@ -796,6 +798,19 @@ def render_job_run_link(value):
         url = reverse("extras:job_run_by_class_path", kwargs={"class_path": value.class_path})
         return format_html('<a href="{}">{}</a>', url, value)
     return str(value)
+
+
+@library.filter()
+@register.filter()
+def label_list(value, suffix=""):
+    """Render a list of values with optional suffix (like 'MHz') as span labels."""
+    if not value:
+        return HTML_NONE
+    return format_html_join(
+        " ",
+        '<span class="label label-default">{0}{1}</span>',
+        ((item, suffix) for item in value),
+    )
 
 
 #
