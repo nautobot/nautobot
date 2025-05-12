@@ -24,6 +24,7 @@ from jsonschema.validators import Draft7Validator
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 
+from nautobot.apps.ui import BaseTextPanel
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.events import publish_event
 from nautobot.core.exceptions import FilterSetFieldNotFound
@@ -143,32 +144,15 @@ logger = logging.getLogger(__name__)
 #
 
 
-class ComputedFieldListView(generic.ObjectListView):
+class ComputedFieldUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ComputedFieldBulkEditForm
+    filterset_class = filters.ComputedFieldFilterSet
+    filterset_form_class = forms.ComputedFieldFilterForm
+    form_class = forms.ComputedFieldForm
+    serializer_class = serializers.ComputedFieldSerializer
+    table_class = tables.ComputedFieldTable
     queryset = ComputedField.objects.all()
-    table = tables.ComputedFieldTable
-    filterset = filters.ComputedFieldFilterSet
-    filterset_form = forms.ComputedFieldFilterForm
     action_buttons = ("add",)
-
-
-class ComputedFieldView(generic.ObjectView):
-    queryset = ComputedField.objects.all()
-
-
-class ComputedFieldEditView(generic.ObjectEditView):
-    queryset = ComputedField.objects.all()
-    model_form = forms.ComputedFieldForm
-    template_name = "extras/computedfield_edit.html"
-
-
-class ComputedFieldDeleteView(generic.ObjectDeleteView):
-    queryset = ComputedField.objects.all()
-
-
-class ComputedFieldBulkDeleteView(generic.BulkDeleteView):
-    queryset = ComputedField.objects.all()
-    table = tables.ComputedFieldTable
-    filterset = filters.ComputedFieldFilterSet
 
 
 #
@@ -682,30 +666,44 @@ class CustomFieldBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class CustomLinkListView(generic.ObjectListView):
+class CustomLinkUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.CustomLinkBulkEditForm
+    filterset_class = filters.CustomLinkFilterSet
+    filterset_form_class = forms.CustomLinkFilterForm
+    form_class = forms.CustomLinkForm
     queryset = CustomLink.objects.all()
-    table = tables.CustomLinkTable
-    filterset = filters.CustomLinkFilterSet
-    filterset_form = forms.CustomLinkFilterForm
-    action_buttons = ("add",)
+    serializer_class = serializers.CustomLinkSerializer
+    table_class = tables.CustomLinkTable
 
-
-class CustomLinkView(generic.ObjectView):
-    queryset = CustomLink.objects.all()
-
-
-class CustomLinkEditView(generic.ObjectEditView):
-    queryset = CustomLink.objects.all()
-    model_form = forms.CustomLinkForm
-
-
-class CustomLinkDeleteView(generic.ObjectDeleteView):
-    queryset = CustomLink.objects.all()
-
-
-class CustomLinkBulkDeleteView(generic.BulkDeleteView):
-    queryset = CustomLink.objects.all()
-    table = tables.CustomLinkTable
+    object_detail_content = ObjectDetailContent(
+        panels=[
+            ObjectFieldsPanel(
+                label="Custom Link",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=[
+                    "content_type",
+                    "name",
+                    "group_name",
+                    "weight",
+                    "target_url",
+                    "button_class",
+                    "new_window",
+                ],
+                value_transforms={
+                    "target_url": [helpers.pre_tag],
+                    "button_class": [helpers.render_button_class],
+                },
+            ),
+            object_detail.ObjectTextPanel(
+                label="Text",
+                section=SectionChoices.LEFT_HALF,
+                weight=200,
+                object_field="text",
+                render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
+            ),
+        ]
+    )
 
 
 #
@@ -1702,17 +1700,27 @@ class JobQueueUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.JobQueueSerializer
     table_class = tables.JobQueueTable
 
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-
-        if self.action == "retrieve":
-            jobs = instance.jobs.restrict(request.user, "view")
-            jobs_table = tables.JobTable(jobs, orderable=False)
-            paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-            RequestConfig(request, paginate).configure(jobs_table)
-            context["jobs_table"] = jobs_table
-
-        return context
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=[
+                    "name",
+                    "queue_type",
+                    "description",
+                    "tenant",
+                ],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_title="Assigned Jobs",
+                table_class=tables.JobTable,
+                table_filter="job_queues",
+            ),
+        )
+    )
 
 
 #
@@ -2029,36 +2037,24 @@ class ScheduledJobDeleteView(generic.ObjectDeleteView):
 #
 
 
-class JobHookListView(generic.ObjectListView):
-    queryset = JobHook.objects.all()
-    table = tables.JobHookTable
-    filterset = filters.JobHookFilterSet
-    filterset_form = forms.JobHookFilterForm
-    action_buttons = ("add",)
-
-
-class JobHookView(generic.ObjectView):
+class JobHookUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.JobHookBulkEditForm
+    filterset_class = filters.JobHookFilterSet
+    filterset_form_class = forms.JobHookFilterForm
+    form_class = forms.JobHookForm
+    serializer_class = serializers.JobHookSerializer
+    table_class = tables.JobHookTable
     queryset = JobHook.objects.all()
 
-    def get_extra_context(self, request, instance):
-        return {
-            "content_types": instance.content_types.order_by("app_label", "model"),
-            **super().get_extra_context(request, instance),
-        }
-
-
-class JobHookEditView(generic.ObjectEditView):
-    queryset = JobHook.objects.all()
-    model_form = forms.JobHookForm
-
-
-class JobHookDeleteView(generic.ObjectDeleteView):
-    queryset = JobHook.objects.all()
-
-
-class JobHookBulkDeleteView(generic.BulkDeleteView):
-    queryset = JobHook.objects.all()
-    table = tables.JobHookTable
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+        )
+    )
 
 
 #
@@ -2181,6 +2177,20 @@ class JobButtonUIViewSet(NautobotUIViewSet):
     queryset = JobButton.objects.all()
     serializer_class = serializers.JobButtonSerializer
     table_class = tables.JobButtonTable
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                value_transforms={
+                    "text": [helpers.pre_tag],
+                    "job": [helpers.render_job_run_link],
+                    "button_class": [helpers.render_button_class],
+                },
+            ),
+        )
+    )
 
 
 #
@@ -2628,6 +2638,7 @@ class SecretUIViewSet(
                 table_title="Groups containing this secret",
                 table_class=tables.SecretsGroupTable,
                 table_attribute="secrets_groups",
+                related_field_name="secrets",
                 footer_content_template_path=None,
             ),
         ],
@@ -3066,36 +3077,45 @@ class TeamUIViewSet(NautobotUIViewSet):
 #
 
 
-class WebhookListView(generic.ObjectListView):
+class WebhookUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.WebhookBulkEditForm
+    filterset_class = filters.WebhookFilterSet
+    filterset_form_class = forms.WebhookFilterForm
+    form_class = forms.WebhookForm
     queryset = Webhook.objects.all()
-    table = tables.WebhookTable
-    filterset = filters.WebhookFilterSet
-    filterset_form = forms.WebhookFilterForm
-    action_buttons = ("add",)
+    serializer_class = serializers.WebhookSerializer
+    table_class = tables.WebhookTable
 
-
-class WebhookView(generic.ObjectView):
-    queryset = Webhook.objects.all()
-
-    def get_extra_context(self, request, instance):
-        return {
-            "content_types": instance.content_types.order_by("app_label", "model"),
-            **super().get_extra_context(request, instance),
-        }
-
-
-class WebhookEditView(generic.ObjectEditView):
-    queryset = Webhook.objects.all()
-    model_form = forms.WebhookForm
-
-
-class WebhookDeleteView(generic.ObjectDeleteView):
-    queryset = Webhook.objects.all()
-
-
-class WebhookBulkDeleteView(generic.BulkDeleteView):
-    queryset = Webhook.objects.all()
-    table = tables.WebhookTable
+    object_detail_content = ObjectDetailContent(
+        panels=[
+            ObjectFieldsPanel(
+                label="Webhook",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=("name", "content_types", "type_create", "type_update", "type_delete", "enabled"),
+            ),
+            ObjectFieldsPanel(
+                label="HTTP",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=("http_method", "http_content_type", "payload_url", "additional_headers"),
+                value_transforms={"additional_headers": [helpers.pre_tag]},
+            ),
+            ObjectFieldsPanel(
+                label="Security",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=("secret", "ssl_verification", "ca_file_path"),
+            ),
+            ObjectTextPanel(
+                label="Body Template",
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                object_field="body_template",
+                render_as=BaseTextPanel.RenderOptions.CODE,
+            ),
+        ]
+    )
 
 
 #
