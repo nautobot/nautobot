@@ -42,6 +42,7 @@ class ApprovalWorkflow(PrimaryModel):
         help_text="Constraints to filter the objects that can be approved using this workflow.",
     )
     documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
+    is_dynamic_group_associable = False
 
     class Meta:
         """Meta class for ApprovalWorkflow."""
@@ -305,9 +306,12 @@ class ApprovalWorkflowStageInstance(PrimaryModel):
         Returns:
             list: List of users that have already approved this stage instance.
         """
-        return self.approval_workflow_stage_instance_responses.filter(
-            state=ApprovalWorkflowStateChoices.APPROVED
-        ).values_list("user", flat=True)
+        return [
+            response.user
+            for response in self.approval_workflow_stage_instance_responses.filter(
+                state=ApprovalWorkflowStateChoices.APPROVED
+            )
+        ]
 
     def save(self, *args, **kwargs):
         """
@@ -411,6 +415,7 @@ class ApprovalWorkflowStageInstanceResponse(BaseModel):
 
         db_table = "extras_approvaluserresponse"
         verbose_name = "Approval Workflow Stage Instance Response"
+        ordering = ["approval_workflow_stage_instance", "user"]
 
     def __str__(self):
         """Stringify instance."""

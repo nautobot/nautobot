@@ -15,7 +15,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="extras:approvalworkflow_list",
-                        name="Approval Workflows",
+                        name="Workflow Definitions",
                         weight=100,
                         permissions=["extras.view_approvalworkflow"],
                         buttons=(
@@ -27,7 +27,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="extras:approvalworkflowinstance_list",
-                        name="Approval Workflow Instances",
+                        name="Workflow Instances",
                         weight=200,
                         permissions=["extras.view_approvalworkflowinstance"],
                     ),

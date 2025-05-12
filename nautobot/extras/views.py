@@ -181,7 +181,7 @@ class ApprovalWorkflowUIViewSet(NautobotUIViewSet):
                 table_class=tables.ApprovalWorkflowInstanceTable,
                 table_filter="approval_workflow",
                 section=SectionChoices.FULL_WIDTH,
-                exclude_columns=["approval_workflow"],
+                exclude_columns=["object_under_review_content_type", "approval_workflow"],
                 add_button_route=None,
             ),
         ],
@@ -298,13 +298,18 @@ class ApprovalWorkflowStageUIViewSet(NautobotUIViewSet):
     )
 
 
-class ApprovalWorkflowInstanceUIViewSet(NautobotUIViewSet):
+class ApprovalWorkflowInstanceUIViewSet(
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectNotesViewMixin,
+):
     """ViewSet for ApprovalWorkflowInstance."""
 
-    bulk_update_form_class = forms.ApprovalWorkflowInstanceBulkEditForm
     filterset_class = filters.ApprovalWorkflowInstanceFilterSet
     filterset_form_class = forms.ApprovalWorkflowInstanceFilterForm
-    form_class = forms.ApprovalWorkflowInstanceForm
     queryset = ApprovalWorkflowInstance.objects.all()
     serializer_class = serializers.ApprovalWorkflowInstanceSerializer
     table_class = tables.ApprovalWorkflowInstanceTable
@@ -328,8 +333,18 @@ class ApprovalWorkflowInstanceUIViewSet(NautobotUIViewSet):
             ),
             object_detail.ObjectsTablePanel(
                 weight=200,
-                table_class=tables.ApprovalWorkflowStageInstanceTable,
+                table_title="Stage Instances",
+                table_class=tables.RelatedApprovalWorkflowStageInstanceTable,
                 table_filter="approval_workflow_instance",
+                section=SectionChoices.RIGHT_HALF,
+                exclude_columns=["approval_workflow_instance"],
+                add_button_route=None,
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                table_title="Approver Responses",
+                table_class=tables.RelatedApprovalWorkflowStageInstanceResponseTable,
+                table_filter="approval_workflow_stage_instance__approval_workflow_instance",
                 section=SectionChoices.RIGHT_HALF,
                 exclude_columns=["approval_workflow_instance"],
                 add_button_route=None,
@@ -338,13 +353,18 @@ class ApprovalWorkflowInstanceUIViewSet(NautobotUIViewSet):
     )
 
 
-class ApprovalWorkflowStageInstanceUIViewSet(NautobotUIViewSet):
+class ApprovalWorkflowStageInstanceUIViewSet(
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectNotesViewMixin,
+):
     """ViewSet for ApprovalWorkflowStageInstance."""
 
-    bulk_update_form_class = forms.ApprovalWorkflowStageInstanceBulkEditForm
     filterset_class = filters.ApprovalWorkflowStageInstanceFilterSet
     filterset_form_class = forms.ApprovalWorkflowStageInstanceFilterForm
-    form_class = forms.ApprovalWorkflowStageInstanceForm
     queryset = ApprovalWorkflowStageInstance.objects.all()
     serializer_class = serializers.ApprovalWorkflowStageInstanceSerializer
     table_class = tables.ApprovalWorkflowStageInstanceTable
@@ -396,6 +416,7 @@ class ApprovalWorkflowStageInstanceUIViewSet(NautobotUIViewSet):
                 "extras/approval_workflow/approve.html",
                 {
                     "obj": obj.approval_workflow_stage_instance,
+                    "object_under_review": obj.approval_workflow_stage_instance.approval_workflow_instance.object_under_review,
                     "form": form,
                     "obj_type": ApprovalWorkflowStageInstance._meta.verbose_name,
                     "return_url": self.get_return_url(request, obj),
@@ -436,6 +457,7 @@ class ApprovalWorkflowStageInstanceUIViewSet(NautobotUIViewSet):
                 "extras/approval_workflow/deny.html",
                 {
                     "obj": obj.approval_workflow_stage_instance,
+                    "object_under_review": obj.approval_workflow_stage_instance.approval_workflow_instance.object_under_review,
                     "form": form,
                     "obj_type": ApprovalWorkflowStageInstance._meta.verbose_name,
                     "return_url": self.get_return_url(request, obj),
@@ -474,6 +496,7 @@ class ApprovalWorkflowStageInstanceUIViewSet(NautobotUIViewSet):
                 "extras/approval_workflow/comment.html",
                 {
                     "obj": obj.approval_workflow_stage_instance,
+                    "object_under_review": obj.approval_workflow_stage_instance.approval_workflow_instance.object_under_review,
                     "form": form,
                     "obj_type": ApprovalWorkflowStageInstance._meta.verbose_name,
                     "return_url": self.get_return_url(request, obj),
@@ -523,7 +546,7 @@ class ApproverDashboardView(ObjectListViewMixin):
     queryset = ApprovalWorkflowStageInstance.objects.all()
     filterset_class = filters.ApprovalWorkflowStageInstanceFilterSet
     filterset_form_class = forms.ApprovalWorkflowStageInstanceFilterForm
-    table_class = tables.ApprovalWorkflowStageInstanceTable
+    table_class = tables.ApproverDashboardTable
     action_buttons = ()
 
     def get_extra_context(self, request, instance):
@@ -531,7 +554,7 @@ class ApproverDashboardView(ObjectListViewMixin):
         Get the extra context for the dashboard view.
         """
         context = super().get_extra_context(request, instance)
-        context["title"] = "Approval Dashboard"
+        context["title"] = "Approver Dashboard"
         return context
 
     def get_queryset(self):
@@ -542,6 +565,8 @@ class ApproverDashboardView(ObjectListViewMixin):
         queryset = super().get_queryset()
         user = self.request.user
         group_pks = user.groups.all().values_list("pk", flat=True)
+        # we only want currently active stages on the approver
+        active_stage_instance_pks = [workflow.active_stage.pk for workflow in ApprovalWorkflowInstance.objects.all()]
 
         # Get the ApprovalWorkflowStage instances that are already approved by the current user
         approved_approval_workflow_stage_instances = ApprovalWorkflowStageInstanceResponse.objects.filter(
@@ -549,10 +574,11 @@ class ApproverDashboardView(ObjectListViewMixin):
             user=user,
         ).values_list("approval_workflow_stage_instance", flat=True)
 
-        # Return only the approval workflow stage instances that are pending
+        # Return only the approval workflow stage instances that are pending and active currently
         # and belong to a pending approval workflow instance
         # and are assigned to the current user or any of the groups the user belongs to
         return queryset.filter(
+            pk__in=active_stage_instance_pks,
             approval_workflow_instance__current_state=ApprovalWorkflowStateChoices.PENDING,
             state=ApprovalWorkflowStateChoices.PENDING,
             approval_workflow_stage__approver_group__pk__in=group_pks,
