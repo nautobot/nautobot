@@ -25,7 +25,7 @@ The panels displayed on the Nautobot home page have been modified to enable a mo
 
 #### Job File Outputs ([#3352](https://github.com/nautobot/nautobot/issues/3352), [#4820](https://github.com/nautobot/nautobot/issues/4820))
 
-The `Job` base class now includes a [`create_file(filename, content)`](../development/jobs/index.md#file-output) method which can be called by a Job to create a persistent file with the provided content when run. This file will be linked from the Job Result detail view for subsequent downloading by users, and can also be downloaded via the REST API (`/api/extras/file-proxies/<id>/download/`) as desired.
+The `Job` base class now includes a [`create_file(filename, content)`](../development/jobs/job-patterns.md#file-output) method which can be called by a Job to create a persistent file with the provided content when run. This file will be linked from the Job Result detail view for subsequent downloading by users, and can also be downloaded via the REST API (`/api/extras/file-proxies/<id>/download/`) as desired.
 
 The size of files Jobs can create via this method are constrained by the [`JOB_CREATE_FILE_MAX_SIZE`](../user-guide/administration/configuration/settings.md#job_create_file_max_size) settings variable.
 
