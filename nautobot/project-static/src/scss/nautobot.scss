@@ -528,9 +528,15 @@ button {
 
   .nb-actions {
     .dropdown {
-      font-size: 0; // Use `font-size: 0;` to remove any visible whitespace.
+      font-size: 0; /* Use `font-size: 0;` to remove any visible whitespace. */
 
       .dropdown-toggle {
+        /*
+         * Make table actions dropdown toggle button occupy the entire cell (works for default table cell size):
+         *   1. Use negative margins to "cancel" table cell padding.
+         *   2. Overwrite default button padding with table cell padding. In addition to that, subtract  border width
+         *      from each side because paddings and borders add up, and idle button already has a (transparent) border.
+         */
         margin-block: -#{$table-cell-padding-y};
         margin-inline: -#{$table-cell-padding-x};
         padding-block: $table-cell-padding-y - $border-width;
