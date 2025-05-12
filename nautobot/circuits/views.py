@@ -2,7 +2,6 @@ from django.contrib import messages
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.html import format_html
-from django_tables2 import RequestConfig
 
 from nautobot.core.forms import ConfirmationForm
 from nautobot.core.templatetags.helpers import bettertitle, humanize_speed, placeholder
@@ -14,7 +13,6 @@ from nautobot.core.ui.object_detail import (
 )
 from nautobot.core.ui.utils import render_component_template
 from nautobot.core.views import generic, mixins as view_mixins
-from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 
 from . import filters, forms, tables
@@ -32,27 +30,24 @@ class CircuitTypeUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.CircuitTypeSerializer
     table_class = tables.CircuitTypeTable
 
-    def get_extra_context(self, request, instance):
-        # Circuits
-        context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            circuits = (
-                Circuit.objects.restrict(request.user, "view")
-                .filter(circuit_type=instance)
-                .select_related("circuit_type", "tenant")
-                .prefetch_related("circuit_terminations__location")
-            )
-
-            circuits_table = tables.CircuitTable(circuits)
-            circuits_table.columns.hide("circuit_type")
-
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(circuits_table)
-            context["circuits_table"] = circuits_table
-        return context
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+            ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=100,
+                table_class=tables.CircuitTable,
+                table_filter="circuit_type",
+                select_related_fields=["circuit_type", "tenant"],
+                prefetch_related_fields=["circuit_terminations__location"],
+                exclude_columns=["circuit_type"],
+            ),
+        ),
+    )
 
 
 class CircuitTerminationUIViewSet(
