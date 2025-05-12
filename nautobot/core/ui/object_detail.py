@@ -882,8 +882,6 @@ class ObjectsTablePanel(Panel):
             for column in body_content_table.columns:
                 if column.name in self.exclude_columns:
                     body_content_table.columns.hide(column.name)
-                else:
-                    body_content_table.columns.show(column.name)
 
         if self.include_columns:
             for column in self.include_columns:
