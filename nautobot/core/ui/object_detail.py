@@ -880,7 +880,7 @@ class ObjectsTablePanel(Panel):
 
         if self.exclude_columns:
             for column in body_content_table.columns:
-                if self.exclude_columns and column.name in self.exclude_columns:
+                if column.name in self.exclude_columns:
                     body_content_table.columns.hide(column.name)
                 else:
                     body_content_table.columns.show(column.name)
