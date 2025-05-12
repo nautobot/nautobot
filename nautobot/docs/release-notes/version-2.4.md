@@ -232,7 +232,6 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#7189](https://github.com/nautobot/nautobot/issues/7189) - Updated `mkdocs-section-index` documentation dependency to `~0.3.10`.
 - [#7204](https://github.com/nautobot/nautobot/issues/7204) - Refactored SoftwareVersion model related UI views to use `UI component framework`.
 - [#7212](https://github.com/nautobot/nautobot/issues/7212) - Refactored SoftwareImageFile model related UI views to use `UI component framework`.
-- [#7230](https://github.com/nautobot/nautobot/issues/7230) - Modified the mkdocs theme to load Google Tag Manager with the appropriate code for site analytics.
 
 ## v2.4.7 (2025-04-14)
 
