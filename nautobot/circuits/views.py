@@ -13,7 +13,7 @@ from nautobot.core.ui.object_detail import (
     ObjectsTablePanel,
 )
 from nautobot.core.ui.utils import render_component_template
-from nautobot.core.views import generic, mixins as view_mixins
+from nautobot.core.views import generic
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 
