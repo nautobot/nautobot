@@ -146,4 +146,4 @@ In the example above, the Job inspects changes to the `serial` field and reverts
 If the action is `"delete"`, the method exits early since `changed_object` is `None`.
 
 !!! note
-    You can use the `change` object to inspect more detailed diffs if needed. See the [`ObjectChange`](../../user-guide/platform-functionality/change-logging.md#objectchange) docs for more.
+    You can use the `change` object to inspect more detailed diffs if needed. See the [`ObjectChange`](../../user-guide/platform-functionality/change-logging.md#object-changes) docs for more.
