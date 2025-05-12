@@ -385,25 +385,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
         "th": {"class": "nb-actionable w-0"},
     }
     # Note that braces are escaped to allow for string formatting prior to template rendering
-    buttons_template_code = """
-    {prepend_template}
-    {{% if "changelog" in buttons %}}
-        <a href="{{% url '{changelog_route}' {pk_field}=record.{pk_field} %}}" class="btn btn-secondary btn-xs" title="Change Log">
-            <i class="mdi mdi-history"></i>
-        </a>
-    {{% endif %}}
-    {{% if "edit" in buttons and perms.{app_label}.change_{model_name} %}}
-        <a href="{{% url '{edit_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-warning" title="Edit">
-            <i class="mdi mdi-pencil"></i>
-        </a>
-    {{% endif %}}
-    {{% if "delete" in buttons and perms.{app_label}.delete_{model_name} %}}
-        <a href="{{% url '{delete_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-danger" title="Delete">
-            <i class="mdi mdi-trash-can-outline"></i>
-        </a>
-    {{% endif %}}
-    """
-    dropdown_template_code = """
+    template_code = """
     <div class="dropdown">
         <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
             <span class="mdi mdi-dots-vertical" aria-hidden="true"></span>
@@ -454,16 +436,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
         edit_route = get_route_for_model(model, "edit")
         delete_route = get_route_for_model(model, "delete")
 
-        buttons_to_render = buttons or self.buttons
-        template_code_to_render = (
-            self.dropdown_template_code
-            if (
-                buttons_to_render
-                and ((len(buttons_to_render) > 1) or (len(buttons_to_render) == 1 and len(prepend_template) > 0))
-            )
-            else self.buttons_template_code
-        )
-        template_code = template_code_to_render.format(
+        template_code = self.template_code.format(
             app_label=app_label,
             model_name=model._meta.model_name,
             changelog_route=changelog_route,
@@ -478,7 +451,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
 
         self.extra_context.update(
             {
-                "buttons": buttons_to_render,
+                "buttons": buttons or self.buttons,
                 "return_url_extra": return_url_extra,
             }
         )
