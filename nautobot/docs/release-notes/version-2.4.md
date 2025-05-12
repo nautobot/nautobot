@@ -175,13 +175,13 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 ### Added in v2.4.8
 
-- [#7048](https://github.com/nautobot/nautobot/issues/7048) - Added bulk-edit support for the Platform model.
+- [#7048](https://github.com/nautobot/nautobot/issues/7048) - Added Bulk Edit functionality for the Platform model.
 - [#7075](https://github.com/nautobot/nautobot/issues/7075) - Added Bulk Edit functionality for the webhook model.
-- [#7107](https://github.com/nautobot/nautobot/issues/7107) - Added bulk-edit support for the JobHook model.
+- [#7107](https://github.com/nautobot/nautobot/issues/7107) - Added Bulk Edit functionality for the JobHook model.
 - [#7126](https://github.com/nautobot/nautobot/issues/7126) - Added Bulk Edit functionality for the CustomLink model.
 - [#7148](https://github.com/nautobot/nautobot/issues/7148) - Added Bulk Edit functionality for the RackGroup model.
 - [#7154](https://github.com/nautobot/nautobot/issues/7154) - Added index to `created` field in `JobLogEntry`
-- [#7159](https://github.com/nautobot/nautobot/issues/7159) - Added bulk-edit support for the ComputedField model.
+- [#7159](https://github.com/nautobot/nautobot/issues/7159) - Added Bulk Edit functionality for the ComputedField model.
 - [#7232](https://github.com/nautobot/nautobot/issues/7232) - Added Bulk Edit functionality for the CircuitType model.
 - [#7234](https://github.com/nautobot/nautobot/issues/7234) - Added Bulk Edit functionality for the CircuitTermination model.
 
@@ -241,9 +241,9 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#4171](https://github.com/nautobot/nautobot/issues/4171) - Added `TYPE_NOTES` and `TYPE_URL` to SecretsGroupSecretTypeChoices.
 - [#6923](https://github.com/nautobot/nautobot/issues/6923) - Added `AutoPopulateWidget` to support form fields with auto-population logic.
 - [#6998](https://github.com/nautobot/nautobot/issues/6998) - Added browser and backend caching for `/api/swagger` OpenAPI endpoint to speed up Swagger and Redoc loading time.
-- [#7115](https://github.com/nautobot/nautobot/issues/7115) - Added bulk-edit support for the Relationship model.
-- [#7127](https://github.com/nautobot/nautobot/issues/7127) - Added bulk-edit support for the ExportTemplate model.
-- [#7134](https://github.com/nautobot/nautobot/issues/7134) - Added bulk-edit support for the Manufacturer model.
+- [#7115](https://github.com/nautobot/nautobot/issues/7115) - Added Bulk Edit functionality for the Relationship model.
+- [#7127](https://github.com/nautobot/nautobot/issues/7127) - Added Bulk Edit functionality for the ExportTemplate model.
+- [#7134](https://github.com/nautobot/nautobot/issues/7134) - Added Bulk Edit functionality for the Manufacturer model.
 
 ### Changed in v2.4.7
 
@@ -284,8 +284,8 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#5780](https://github.com/nautobot/nautobot/issues/5780) - Added object permission enforcement to related objects when modifying records through the REST API.
 - [#6957](https://github.com/nautobot/nautobot/issues/6957) - Added optional `display_field` parameter to `LinkedCountColumn`.
 - [#7003](https://github.com/nautobot/nautobot/issues/7003) - Added `external_integration` foreign key field to `SoftwareImageFile` model, which allows the enrichment of file data to include download options, secrets, etc.
-- [#7041](https://github.com/nautobot/nautobot/issues/7041) - Added bulk-edit support for the ClusterType model.
-- [#7044](https://github.com/nautobot/nautobot/issues/7044) - Added bulk-edit support for the ClusterGroup model.
+- [#7041](https://github.com/nautobot/nautobot/issues/7041) - Added Bulk Edit functionality for the ClusterType model.
+- [#7044](https://github.com/nautobot/nautobot/issues/7044) - Added Bulk Edit functionality for the ClusterGroup model.
 - [#7088](https://github.com/nautobot/nautobot/issues/7088) - Added support for removing content types in Status bulk-edit and Role bulk-edit.
 - [#7091](https://github.com/nautobot/nautobot/issues/7091) - Added Nautobot DNS Models app to the Apps Marketplace.
 
@@ -353,7 +353,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#6384](https://github.com/nautobot/nautobot/issues/6384) - Added `Job.logger.failure()` API for Job logging, using custom `FAILURE` log level (between `WARNING` and `ERROR`).
 - [#6384](https://github.com/nautobot/nautobot/issues/6384) - Added `Job.fail()` API, which can be used to fail a Job more gracefully than by raising an uncaught exception.
 - [#6384](https://github.com/nautobot/nautobot/issues/6384) - Added `NautobotTestCaseMixin.assertJobResultStatus()` testing helper API.
-- [#7001](https://github.com/nautobot/nautobot/issues/7001) - Added bulk-edit support for the RIR model.
+- [#7001](https://github.com/nautobot/nautobot/issues/7001) - Added Bulk Edit functionality for the RIR model.
 
 ### Changed in v2.4.5
 

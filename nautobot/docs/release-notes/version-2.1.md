@@ -522,7 +522,7 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 - [#1905](https://github.com/nautobot/nautobot/issues/1905) - Enhanced `status` filters to support filtering by ID (UUID) as an alternative to filtering by `name`.
 - [#3352](https://github.com/nautobot/nautobot/issues/3352) - Added `Job.create_file()` API and `JOB_FILE_IO_STORAGE` configuration setting.
 - [#3994](https://github.com/nautobot/nautobot/issues/3994) - Added "Data Provenance" section to the Advanced tab in ObjectDetailView to display the user that created and last updated the object.
-- [#4272](https://github.com/nautobot/nautobot/issues/4272) - Added bulk edit and bulk destroy views to Namespaces.
+- [#4272](https://github.com/nautobot/nautobot/issues/4272) - Added Bulk Edit and Bulk Delete functionalities to Namespaces.
 - [#4646](https://github.com/nautobot/nautobot/issues/4646) - Added read-only view in admin panel for Django admin log entries.
 - [#4694](https://github.com/nautobot/nautobot/issues/4694) - Added `ExternalIntegration` model to track connections to systems external to Nautobot.
 - [#4745](https://github.com/nautobot/nautobot/issues/4745) - Added `ExportObjectList` system Job.
