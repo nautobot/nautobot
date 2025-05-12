@@ -1,5 +1,6 @@
 import datetime
 
+from django.test import tag
 from django.urls import reverse
 
 from nautobot.circuits.models import (
@@ -134,6 +135,10 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "description": "New description",
             "comments": "New comments",
         }
+
+    @tag("fix_in_v3")
+    def test_get_object_with_permission(self):
+        return super().test_get_object_with_permission()
 
 
 class CircuitTerminationTestCase(
