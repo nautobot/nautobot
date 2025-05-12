@@ -209,6 +209,8 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 ### Documentation in v2.4.8
 
 - [#7140](https://github.com/nautobot/nautobot/issues/7140) - Fixed a typo in front port documentation.
+- [#7240](https://github.com/nautobot/nautobot/issues/7240) - This change reorganizes and expands the Nautobot Jobs documentation across both the User Guide and the Development Guide.
+- [#7240](https://github.com/nautobot/nautobot/issues/7240) - The goals of this update are to improve navigation, reduce page length for easier readability, standardize examples, and align the documentation with Nautobot 2.4.x behavior.
 
 ### Housekeeping in v2.4.8
 
