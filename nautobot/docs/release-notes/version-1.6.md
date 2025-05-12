@@ -72,6 +72,22 @@ The default Python version for Nautobot Docker images has been changed from 3.7 
 As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
 <!-- towncrier release notes start -->
+
+## v1.6.31 (2025-05-12)
+
+### Security
+
+- [#6983](https://github.com/nautobot/nautobot/issues/6983) - Updated dependency `Jinja2` to `~3.1.6` to address `CVE-2025-27516`.
+
+### Fixed
+
+- [#6985](https://github.com/nautobot/nautobot/issues/6985) - Fixed Rack Elevation filtering by adding `filterset_form` to the `RackElevationListView`.
+
+### Housekeeping
+
+- [#6618](https://github.com/nautobot/nautobot/issues/6618) - Update GitHub actions *.yml file to use minimum ubuntu-24.04 since ubuntu-20.04 is deprecated.
+- [#6988](https://github.com/nautobot/nautobot/issues/6988) - Updated GitHub Actions to use `networktocode/gh-action-setup-poetry-environment@v6`.
+
 ## v1.6.30 (2025-01-06)
 
 ### Security

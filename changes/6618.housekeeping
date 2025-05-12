@@ -1,1 +1,0 @@
-Update GitHub actions *.yml file to use minimum ubuntu-24.04 since ubuntu-20.04 is deprecated.
