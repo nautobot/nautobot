@@ -909,12 +909,9 @@ class ObjectsTablePanel(Panel):
         try:
             list_route = reverse(get_route_for_model(body_content_table_model, "list"))
         except NoReverseMatch:
-            list_url_attr = getattr(self.table_class, "list_url", None)
+            list_url_attr = getattr(self.table_class, "list_url", "")
             try:
-                if list_url_attr:
-                    list_route = reverse(list_url_attr)
-                else:
-                    list_route = None
+                list_route = reverse(list_url_attr)
             except NoReverseMatch:
                 list_route = None
         if list_route:
