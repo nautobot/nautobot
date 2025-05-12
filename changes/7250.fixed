@@ -1,1 +1,1 @@
-Fixed MULTISELECT custom field being returned as a `repr()` string when using GraphQL.
+Fixed MULTISELECT custom field representation in GraphQL to be a JSON array instead of a string.
