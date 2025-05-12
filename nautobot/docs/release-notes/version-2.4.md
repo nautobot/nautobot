@@ -175,6 +175,8 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 ### Added in v2.4.8
 
+- [#6053](https://github.com/nautobot/nautobot/issues/6053) - Added `primary_ip` property to GraphQL `DeviceType` to simplify lookup of primary IPs when a mixture of IPv4 and IPv6 are involved.
+- [#6053](https://github.com/nautobot/nautobot/issues/6053) - Added `device` property to GraphQL `ModuleType` to simplify lookup of the Device containing a given Module.
 - [#7048](https://github.com/nautobot/nautobot/issues/7048) - Added Bulk Edit functionality for the Platform model.
 - [#7075](https://github.com/nautobot/nautobot/issues/7075) - Added Bulk Edit functionality for the Webhook model.
 - [#7107](https://github.com/nautobot/nautobot/issues/7107) - Added Bulk Edit functionality for the JobHook model.
@@ -193,6 +195,8 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 ### Fixed in v2.4.8
 
+- [#6053](https://github.com/nautobot/nautobot/issues/6053) - Added `all_interfaces`, `all_modules`, etc. properties to GraphQL `DeviceType` to facilitate lookup of components belonging to descendant modules.
+- [#6053](https://github.com/nautobot/nautobot/issues/6053) - Added `common_vc_interfaces`, `vc_interfaces` properties to GraphQL `DeviceType` to facilitate lookup of components when VirtualChassis are involved.
 - [#6157](https://github.com/nautobot/nautobot/issues/6157) - Fixed invalid specs for ChoiceFields and EmailFields in the swagger schema.
 - [#6985](https://github.com/nautobot/nautobot/issues/6985) - Added `filterset_form` to `RackElevationListView`.
 - [#7026](https://github.com/nautobot/nautobot/issues/7026) - Fixed collapsing/expanding on the jobs page.
