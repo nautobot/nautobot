@@ -396,7 +396,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
             {{% if "changelog" in buttons %}}
                 <li>
                     <a href="{{% url '{changelog_route}' {pk_field}=record.{pk_field} %}}" class="dropdown-item">
-                        <i class="mdi mdi-history"></i>
+                        <span class="mdi mdi-history" aria-hidden="true"></span>
                         Change Log
                     </a>
                 </li>
@@ -404,7 +404,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
             {{% if "edit" in buttons and perms.{app_label}.change_{model_name} %}}
                 <li>
                     <a href="{{% url '{edit_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="dropdown-item text-warning">
-                        <i class="mdi mdi-pencil"></i>
+                        <span class="mdi mdi-pencil" aria-hidden="true"></span>
                         Edit
                     </a>
                 </li>
@@ -412,7 +412,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
             {{% if "delete" in buttons and perms.{app_label}.delete_{model_name} %}}
                 <li>
                     <a href="{{% url '{delete_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="dropdown-item text-danger">
-                        <i class="mdi mdi-trash-can-outline"></i>
+                        <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
                         Delete
                     </a>
                 </li>
