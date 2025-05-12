@@ -3,7 +3,7 @@ import os
 import tempfile
 
 from django.contrib.contenttypes.models import ContentType
-from django.test import override_settings
+from django.test import override_settings, tag
 from django.urls import reverse
 
 from nautobot.circuits.models import (
@@ -193,6 +193,7 @@ class AppTabsTestCase(SeleniumTestCase):
             )
         )
 
+    @tag("fix_in_v3")
     def test_device_detail_tab(self):
         """
         This test checks that both app device tabs from the Example App are visible and render correctly.
