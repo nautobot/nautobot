@@ -18,15 +18,15 @@ Records of this type store the following data as read-only (not modifiable via t
 * The name of the Job class
 * Whether the job class is installed presently
 * Whether the job is self-described as "read-only"
-* Whether the job is a [Job Hook Receiver](../../../development/jobs/index.md#job-hook-receivers)
-* Whether the job is a [Job Button Receiver](../../../development/jobs/index.md#job-button-receivers)
+* Whether the job is a [Job Hook Receiver](../../../development/jobs/job-extensions.md#job-hook-receivers)
+* Whether the job is a [Job Button Receiver](../../../development/jobs/job-extensions.md#job-button-receivers)
 
 !!! note
     As presently implemented, after a job is uninstalled, when the database is next refreshed, the corresponding Job database record will *not* be deleted - only its `installed` flag will be set to False. This allows existing `JobResult` and `ScheduledJob` records to continue to reference the Job that they originated from.
 
     An administrator or sufficiently privileged user can manually delete uninstalled Job records if desired, though this will result in the foreign-key from the corresponding `JobResult` and `ScheduledJob` records (if any exist) becoming null. In any case, for tracking and auditing purposes, deleting a Job does **not** automatically delete its related `JobResult` and `ScheduledJob` records.
 
-For any Job that is loaded into Nautobot, the Job must be enabled to run. See [Enabling Jobs for Running](./index.md#enabling-jobs-for-running) for more details.
+For any Job that is loaded into Nautobot, the Job must be enabled to run. See [Enabling Jobs for Running](./managing-jobs.md#enabling-and-disabling-jobs) for more details.
 
 ## Job Log Entry
 
@@ -56,3 +56,18 @@ Records of this type store the following data:
 
 +/- 2.3.0
     The Additional Data tab has been removed, you can now find the data in the Advanced Tab.
+
+## Understanding Job Class Paths
+
++/- 2.0.0
+    The `class_path` concept has been simplified compared to Nautobot 1.x. The Job database model `name` field is now enforced to be globally unique and so is also an option for uniquely identifying Job records.
+
+It is a key concept to understand the 2 `class_path` elements:
+
+* `module_name`: which is the importable Python path to the job class definition (with `.` in place of `/` in the directory path, and not including the `.py` file extension, as per Python syntax standards).
+    * For an App-provided job, this might be something like `my_app_name.jobs.my_job_filename` or `nautobot_golden_config.jobs`
+    * For a locally installed job, this would match the file name, such as `my_job_filename`
+    * For a Git-provided job, this includes the repository's defined `slug`, such as `my_repository.jobs.my_job_filename`
+* `JobClassName`: which is the name of the class inheriting from `nautobot.extras.jobs.Job` contained in the above file.
+
+The `class_path` is often represented as a string in the format of `<module_name>.<JobClassName>`, such as `example.MyJobWithNoVars` or `nautobot_golden_config.jobs.BackupJob`. Understanding the definitions of these elements will be important in running jobs programmatically.
