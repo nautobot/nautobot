@@ -176,7 +176,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 ### Added in v2.4.8
 
 - [#7048](https://github.com/nautobot/nautobot/issues/7048) - Added Bulk Edit functionality for the Platform model.
-- [#7075](https://github.com/nautobot/nautobot/issues/7075) - Added Bulk Edit functionality for the webhook model.
+- [#7075](https://github.com/nautobot/nautobot/issues/7075) - Added Bulk Edit functionality for the Webhook model.
 - [#7107](https://github.com/nautobot/nautobot/issues/7107) - Added Bulk Edit functionality for the JobHook model.
 - [#7126](https://github.com/nautobot/nautobot/issues/7126) - Added Bulk Edit functionality for the CustomLink model.
 - [#7148](https://github.com/nautobot/nautobot/issues/7148) - Added Bulk Edit functionality for the RackGroup model.
