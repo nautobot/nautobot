@@ -4151,7 +4151,7 @@ class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
             ),
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.FULL_WIDTH,
-                weight=100,
+                weight=200,
                 table_class=tables.DeviceTable,
                 table_attribute="devices_sorted",
                 related_field_name="device_redundancy_group",
