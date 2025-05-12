@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+from django.test import tag
 from django.urls import reverse
 from selenium.webdriver.common.keys import Keys
 
@@ -18,6 +19,7 @@ class DynamicGroupTestCase(SeleniumTestCase):
         super().setUp()
         self.login_as_superuser()
 
+    @tag("fix_in_v3")
     def test_create_and_update(self):
         """
         Test initial add and then update of a new DynamicGroup

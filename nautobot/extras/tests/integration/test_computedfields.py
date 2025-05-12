@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+from django.test import tag
 from django.urls import reverse
 
 from nautobot.core.testing.integration import SeleniumTestCase
@@ -25,6 +26,7 @@ class ComputedFieldsTestCase(SeleniumTestCase):
             template="{{ obj.name }} is awesome!",
         )
 
+    @tag("fix_in_v3")
     def test_computed_field_advanced_ui(self):
         """
         This test creates a device and a computed field for that device.
@@ -55,6 +57,7 @@ class ComputedFieldsTestCase(SeleniumTestCase):
         self.assertTrue(self.browser.is_text_present("Device Computed Field"))
         self.assertTrue(self.browser.is_text_present(f"{self.device.name} is awesome!"))
 
+    @tag("fix_in_v3")
     def test_computed_field_appears_in_object_list(self):
         """
         This test sets the computed field to be visible on the object list

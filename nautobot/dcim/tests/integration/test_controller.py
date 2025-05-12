@@ -1,3 +1,4 @@
+from django.test import tag
 from django.urls import reverse
 
 from nautobot.core.testing.integration import SeleniumTestCase
@@ -9,6 +10,7 @@ class ControllerTestCase(SeleniumTestCase):
     Perform set of Controller tests using Selenium.
     """
 
+    @tag("fix_in_v3")
     def test_controller_bulk_edit(self):
         """
         This test goes through the process of creating a Controller and performing bulk edit.

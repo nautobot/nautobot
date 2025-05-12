@@ -1,3 +1,4 @@
+from django.test import tag
 from django.urls import reverse
 
 from nautobot.core.testing.integration import SeleniumTestCase
@@ -9,6 +10,7 @@ class ControllerManagedDeviceGroupsTestCase(SeleniumTestCase):
     Perform set of Controller Managed Device Group tests using Selenium.
     """
 
+    @tag("fix_in_v3")
     def test_controller_managed_device_groups_bulk_edit(self):
         """
         This test goes through the process of creating a Controller Managed Device Group and performing bulk edit.

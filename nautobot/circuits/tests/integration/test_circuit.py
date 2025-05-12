@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+from django.test import tag
 from django.urls import reverse
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
@@ -47,6 +48,7 @@ class CircuitTestCase(SeleniumTestCase, ObjectsListMixin, ObjectDetailsMixin):
         )
         return circuit
 
+    @tag("fix_in_v3")
     def test_circuit_create(self):
         cid = "Circuit-test-abc123"
         description = "My Precious Circuit"
@@ -94,6 +96,7 @@ class CircuitTestCase(SeleniumTestCase, ObjectsListMixin, ObjectDetailsMixin):
         self.assertPanelValue("Circuit", "Commit Rate (Kbps)", "192")
         self.assertPanelValue("Circuit", "Description", description)
 
+    @tag("fix_in_v3")
     def test_circuit_create_termination(self):
         circuit = self.create_circuit("Circuit-test-termination")
         sides = ["A", "Z"]

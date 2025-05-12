@@ -1,5 +1,3 @@
-from django.test import tag
-
 from nautobot.circuits.models import Circuit, Provider
 from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.models import Location, PowerFeed, PowerPanel
@@ -35,7 +33,6 @@ class HomeTestCase(SeleniumTestCase):
             permissions.append(panel["permission"])
         return permissions
 
-    @tag("fix_in_v3")
     def test_homepage_render(self):
         """
         Render homepage with app defined objects.
@@ -52,7 +49,6 @@ class HomeTestCase(SeleniumTestCase):
             for item_name, _ in panel_details.items():
                 columns_html.first.find_by_xpath(f".//a[contains(text(), '{item_name}')]")
 
-    @tag("fix_in_v3")
     def test_homepage_render_counters(self):
         """
         Ensure object counters are correct.
@@ -73,7 +69,6 @@ class HomeTestCase(SeleniumTestCase):
                     counter_html = int(item_html.find_by_xpath("./../../span").first.html)
                     self.assertEqual(counter, counter_html)
 
-    @tag("fix_in_v3")
     def test_homepage_render_with_limit_permissions(self):
         """
         Render homepage with limited permissions and restricted UI.

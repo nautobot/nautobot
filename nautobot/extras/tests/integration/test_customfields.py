@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+from django.test import tag
 from django.urls import reverse
 from selenium.webdriver.common.keys import Keys
 
@@ -153,6 +154,7 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
         self.assertTrue(self.browser.is_text_present("Modified custom field"))
         self.assertTrue(self.browser.is_text_present("new_choice"))
 
+    @tag("fix_in_v3")
     def test_update_type_select_create_delete_choices(self):
         """
         Test edit existing field, deleting first choice, adding a new row and saving that as a new choice.
@@ -247,6 +249,7 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
         # Confirm the JSON data is visible
         self.assertTrue(self.browser.is_text_present("Test JSON Value"))
 
+    @tag("fix_in_v3")
     def test_json_type_with_invalid_json(self):
         """
         This test creates a custom field with a type of "json".

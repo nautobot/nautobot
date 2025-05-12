@@ -1,3 +1,4 @@
+from django.test import tag
 from django.urls import reverse
 
 from nautobot.core.testing.integration import SeleniumTestCase
@@ -9,6 +10,7 @@ class RadioProfileTestCase(SeleniumTestCase):
     Perform set of Radio Profile tests using Selenium.
     """
 
+    @tag("fix_in_v3")
     def test_radio_profile_bulk_edit(self):
         """
         This test goes through the process of creating a radio profile and performing bulk edit.

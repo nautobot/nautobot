@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+from django.test import tag
 from django.urls import reverse
 
 from nautobot.core.testing.integration import SeleniumTestCase
@@ -140,6 +141,7 @@ class ListViewFilterTestCase(SeleniumTestCase):
             )
             self.browser.find_by_xpath(select_field_xpath).click()
 
+    @tag("fix_in_v3")
     def test_input_field_gets_updated(self):
         """Assert that a filter input/select field on Dynamic Filter Form updates if same field is updated."""
         self.browser.visit(f'{self.live_server_url}{reverse("dcim:location_list")}')

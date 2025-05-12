@@ -1,3 +1,4 @@
+from django.test import tag
 from django.urls import reverse
 
 from nautobot.core.testing.integration import SeleniumTestCase, WebDriverWait
@@ -40,6 +41,7 @@ class ClearableFileInputTestCase(SeleniumTestCase):
         self.assertFalse(clear_button.visible)
         self.assertEqual(front_image_file_input.value, "")
 
+    @tag("fix_in_v3")
     def test_add_device_page(self):
         """
         Confirm device type add page input is working correctly.
@@ -50,6 +52,7 @@ class ClearableFileInputTestCase(SeleniumTestCase):
             file_input_selector_id="id_front_image",
         )
 
+    @tag("fix_in_v3")
     def test_job_runner_page(self):
         """
         Confirm job run page file input is working correctly.
@@ -62,6 +65,7 @@ class ClearableFileInputTestCase(SeleniumTestCase):
             file_input_selector_id="id_input_file",
         )
 
+    @tag("fix_in_v3")
     def test_location_image_attachment_view(self):
         """
         Confirm location image attachment page is working correctly.

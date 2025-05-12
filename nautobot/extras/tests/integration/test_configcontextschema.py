@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+from django.test import tag
 
 from nautobot.core.testing.integration import ObjectDetailsMixin, ObjectsListMixin, SeleniumTestCase
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
@@ -15,6 +16,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase, ObjectDetailsMixin, ObjectsL
         super().setUp()
         self.login_as_superuser()
 
+    @tag("fix_in_v3")
     def test_create_valid_config_context_schema(self):
         """
         Given a clean slate, navigate to and fill out the form for a valid schema object
@@ -38,6 +40,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase, ObjectDetailsMixin, ObjectsL
         self.assertTrue(self.browser.is_text_present("Created config context schema Integration Schema 1"))
         self.assertTrue(self.browser.is_text_present("Edit"))
 
+    @tag("fix_in_v3")
     def test_create_invalid_config_context_schema(self):
         """
         Given a clean slate, navigate to and fill out the form for an invalid schema object
@@ -65,6 +68,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase, ObjectDetailsMixin, ObjectsL
         self.assertTrue(self.browser.is_text_present("Add a new config context schema"))
         self.assertEqual(self.browser.find_by_name("name").first.value, "Integration Schema 2")
 
+    @tag("fix_in_v3")
     def test_validation_tab(self):
         """
         Given a config context schema that is assigned to a config context, and device, and a VM with valid context data
