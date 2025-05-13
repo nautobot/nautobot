@@ -38,7 +38,7 @@ from nautobot.extras.jobs import (
     StringVar,
     TextVar,
 )
-from nautobot.extras.models import ExportTemplate, GitRepository
+from nautobot.extras.models import ExportTemplate, GitRepository, SavedView
 
 name = "System Jobs"
 
@@ -178,9 +178,12 @@ class ExportObjectList(Job):
             "sort",
             "table_changes_pending",
         )
-        filter_params = get_filterable_params_from_filter_params(
-            query_params, default_non_filter_params, filterset_class()
-        )
+        if "saved_view" in query_params:
+            filter_params = SavedView.objects.get(pk=query_params["saved_view"]).config.get("filter_params", {})
+        else:
+            filter_params = get_filterable_params_from_filter_params(
+                query_params, default_non_filter_params, filterset_class()
+            )
         self.logger.debug("Filterset params: `%s`", filter_params)
         filterset = filterset_class(filter_params, queryset)
         if not filterset.is_valid():

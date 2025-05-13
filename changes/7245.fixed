@@ -1,1 +1,1 @@
-Fixed `query_params` in the retrieve method of `SavedViewUIViewSet` to also include `filter_params` from the saved view instance's config.
+Fixed `ExportObjectList` so that when a `SavedView` is exported, it takes `filter_params` from the saved view instance's config.

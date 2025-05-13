@@ -1,6 +1,6 @@
 import logging
 from typing import Optional
-from urllib.parse import parse_qs, urlencode
+from urllib.parse import parse_qs
 
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
@@ -1809,17 +1809,7 @@ class SavedViewUIViewSet(
         The detail view for a saved view should the related ObjectListView with saved configurations applied
         """
         instance = self.get_object()
-        query_params = {"saved_view": instance.pk}
-
-        config = getattr(instance, "config", {})
-        filter_params = config.get("filter_params")
-
-        if filter_params:
-            for key, value in filter_params.items():
-                query_params[key] = value
-
-        base_url = reverse(instance.view)
-        list_view_url = f"{base_url}?{urlencode(query_params, doseq=True)}"
+        list_view_url = reverse(instance.view) + f"?saved_view={instance.pk}"
         return redirect(list_view_url)
 
     @action(detail=True, name="Set Default", methods=["get"], url_path="set-default", url_name="set_default")
