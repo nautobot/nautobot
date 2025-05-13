@@ -54,7 +54,7 @@ class ChoiceField(serializers.Field):
         return super().validate_empty_values(data)
 
     def to_representation(self, value):
-        if value == "":
+        if value == "" and "" not in self._choices:
             return None
         return OrderedDict([("value", value), ("label", self._choices[value])])
 

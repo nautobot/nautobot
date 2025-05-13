@@ -654,6 +654,14 @@ class NautobotFilterSet(
 class ContactTeamFilterSet(NameSearchFilterSet, NautobotFilterSet):
     """Base filter set for Contacts and Teams."""
 
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "email": "icontains",
+            "phone": "icontains",
+        },
+    )
+
     similar_to_location_data = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Location.objects.all(),
         label="Similar to location contact data",
@@ -1510,6 +1518,11 @@ class SecretsGroupFilterSet(
         filter_predicates={
             "name": "icontains",
         },
+    )
+    secrets = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Secret.objects.all(),
+        label="Secret (ID or name)",
+        to_field_name="name",
     )
 
     class Meta:
