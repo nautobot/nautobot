@@ -743,20 +743,18 @@ class ManufacturerUIViewSet(NautobotUIViewSet):
 #
 # Device types
 #
-
-
-class DeviceTypeListView(generic.ObjectListView):
-    queryset = DeviceType.objects.all()
-    filterset = filters.DeviceTypeFilterSet
-    filterset_form = forms.DeviceTypeFilterForm
-    table = tables.DeviceTypeTable
-    template_name = "dcim/devicetype_list.html"
-
-
-class DeviceTypeView(generic.ObjectView):
+class DeviceTypeUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.DeviceTypeBulkEditForm
+    filterset_class = filters.DeviceTypeFilterSet
+    filterset_form_class = forms.DeviceTypeFilterForm
+    form_class = forms.DeviceTypeForm
+    serializer_class = serializers.DeviceTypeSerializer
+    table_class = tables.DeviceTypeTable
     queryset = DeviceType.objects.select_related("manufacturer").prefetch_related("software_image_files")
 
     def get_extra_context(self, request, instance):
+        if self.action != "retrieve":
+            return {}
         instance_count = Device.objects.restrict(request.user).filter(device_type=instance).count()
 
         # Component tables
@@ -831,16 +829,6 @@ class DeviceTypeView(generic.ObjectView):
         }
 
 
-class DeviceTypeEditView(generic.ObjectEditView):
-    queryset = DeviceType.objects.all()
-    model_form = forms.DeviceTypeForm
-    template_name = "dcim/devicetype_edit.html"
-
-
-class DeviceTypeDeleteView(generic.ObjectDeleteView):
-    queryset = DeviceType.objects.all()
-
-
 class DeviceTypeImportView(generic.ObjectImportView):
     additional_permissions = [
         "dcim.add_devicetype",
@@ -869,19 +857,6 @@ class DeviceTypeImportView(generic.ObjectImportView):
             ("module-bays", forms.ModuleBayTemplateImportForm),
         )
     )
-
-
-class DeviceTypeBulkEditView(generic.BulkEditView):
-    queryset = DeviceType.objects.all()
-    filterset = filters.DeviceTypeFilterSet
-    table = tables.DeviceTypeTable
-    form = forms.DeviceTypeBulkEditForm
-
-
-class DeviceTypeBulkDeleteView(generic.BulkDeleteView):
-    queryset = DeviceType.objects.all()
-    filterset = filters.DeviceTypeFilterSet
-    table = tables.DeviceTypeTable
 
 
 #
@@ -4259,36 +4234,31 @@ class DeviceFamilyUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.DeviceFamilySerializer
     table_class = tables.DeviceFamilyTable
     lookup_field = "pk"
-
-    def get_extra_context(self, request, instance):
-        # Related device types table
-        context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            device_types = (
-                DeviceType.objects.restrict(request.user, "view")
-                .filter(device_family=instance)
-                .select_related("manufacturer")
-                .annotate(device_count=count_related(Device, "device_type"))
-            )
-            device_type_table = tables.DeviceTypeTable(device_types, orderable=False)
-
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(device_type_table)
-
-            context["device_type_table"] = device_type_table
-
-            total_devices = 0
-            device_type_count = 0
-            for device_type in device_types:
-                total_devices += device_type.device_count
-                device_type_count += 1
-            context["total_devices"] = total_devices
-            context["device_type_count"] = device_type_count
-
-        return context
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.DeviceTypeTable,
+                table_filter="device_family",
+                select_related_fields=["manufacturer"],
+                exclude_columns=["device_family"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.DeviceTable,
+                table_filter="device_type__device_family",
+                related_field_name="device_family",
+                exclude_columns=["device_family"],
+            ),
+        )
+    )
 
 
 #
