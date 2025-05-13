@@ -199,6 +199,7 @@ def _handle_changed_object_pre_save(sender, instance, raw=False, **kwargs):
     if not kwargs.get("created"):
         _cache_obj_data_in_change_context(ObjectChangeActionChoices.ACTION_UPDATE, sender, instance)
 
+
 @receiver(post_save, sender=GitRepository)
 @receiver(post_delete, sender=GitRepository)
 def invalidate_gitrepository_provided_contents_cache(sender, **kwargs):
