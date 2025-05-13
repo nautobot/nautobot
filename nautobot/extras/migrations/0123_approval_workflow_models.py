@@ -104,7 +104,6 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("user_name", models.CharField(editable=False, max_length=150, db_index=True)),
-                ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={
                 "verbose_name": "Approval Workflow Instance",
@@ -195,7 +194,6 @@ class Migration(migrations.Migration):
                         to="extras.approvalworkflowstage",
                     ),
                 ),
-                ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={
                 "verbose_name": "Approval Workflow Stage Instance",

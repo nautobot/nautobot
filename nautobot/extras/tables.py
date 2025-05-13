@@ -307,16 +307,21 @@ class ApprovalWorkflowStageInstanceTable(BaseTable):
     pk = ToggleColumn()
     approval_workflow_instance = tables.Column(linkify=True)
     approval_workflow_stage = tables.Column(linkify=True)
-    approvals_needed = tables.TemplateColumn(
-        template_code="""{% if record.remaining_approvals %}
-        {{ record.remaining_approvals }} more approval(s) needed
-        {% else %}<span class="text-muted">&mdash;</span>
-        {% endif %}""",
+    actions_needed = tables.TemplateColumn(
+        template_code="""
+        {% if record.remaining_approvals == 1 %}
+        {{ record.remaining_approvals }} more approval needed
+        {% elif record.remaining_approvals == 0 %}
+        <span class="text-muted">&mdash;</span>
+        {% else %}
+        {{ record.remaining_approvals }} more approvals needed
+        {% endif %}
+        """,
         orderable=False,
-        verbose_name="Approvals Needed",
+        verbose_name="Actions Needed",
     )
     state = ChoiceFieldColumn()
-    actions = ApprovalButtonsColumn(ApprovalWorkflowStageInstance)
+    actions = ApprovalButtonsColumn(ApprovalWorkflowStageInstance, buttons=("approve", "deny", "comment"))
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -326,7 +331,7 @@ class ApprovalWorkflowStageInstanceTable(BaseTable):
             "pk",
             "approval_workflow_instance",
             "approval_workflow_stage",
-            "approvals_needed",
+            "actions_needed",
             "state",
             "decision_date",
         )
@@ -334,7 +339,7 @@ class ApprovalWorkflowStageInstanceTable(BaseTable):
             "pk",
             "approval_workflow_instance",
             "approval_workflow_stage",
-            "approvals_needed",
+            "actions_needed",
             "state",
             "decision_date",
             "actions",
@@ -348,10 +353,12 @@ class ApproverDashboardTable(ApprovalWorkflowStageInstanceTable):
 
     pk = ToggleColumn()
     approval_workflow = tables.TemplateColumn(
-        template_code="<a href={{record.approval_workflow_instance.approval_workflow.get_absolute_url}}>{{ record.approval_workflow_instance.approval_workflow.name }}</a>"
+        template_code="<a href={{record.approval_workflow_instance.get_absolute_url}}>{{ record.approval_workflow_instance.approval_workflow.name }}</a>",
+        verbose_name="Workflow",
     )
     approval_workflow_stage = tables.TemplateColumn(
-        template_code="<a href={{record.approval_workflow_stage.get_absolute_url}}>{{ record.approval_workflow_stage.name }}</a>"
+        template_code="<a href={{record.approval_workflow_instance.get_absolute_url}}>{{ record.approval_workflow_stage.name }}</a>",
+        verbose_name="Current Stage",
     )
     object_under_review = tables.TemplateColumn(
         template_code="<a href={{record.approval_workflow_instance.object_under_review.get_absolute_url }}>{{ record.approval_workflow_instance.object_under_review }}</a>"
@@ -366,7 +373,7 @@ class ApproverDashboardTable(ApprovalWorkflowStageInstanceTable):
             "approval_workflow_stage",
             "approval_workflow",
             "object_under_review",
-            "approvals_needed",
+            "actions_needed",
             "state",
             "decision_date",
         )
@@ -375,9 +382,8 @@ class ApproverDashboardTable(ApprovalWorkflowStageInstanceTable):
             "approval_workflow_stage",
             "approval_workflow",
             "object_under_review",
-            "approvals_needed",
+            "actions_needed",
             "state",
-            "decision_date",
             "actions",
         )
 
@@ -388,7 +394,8 @@ class RelatedApprovalWorkflowStageInstanceTable(ApprovalWorkflowStageInstanceTab
     """
 
     approval_workflow_stage = tables.TemplateColumn(
-        template_code="<a href={{record.approval_workflow_stage.get_absolute_url}}>{{ record.approval_workflow_stage.name }}</a>"
+        template_code="<a href={{record.get_absolute_url}}>{{ record.approval_workflow_stage.name }}</a>",
+        verbose_name="Stage",
     )
 
     class Meta(BaseTable.Meta):
@@ -399,7 +406,7 @@ class RelatedApprovalWorkflowStageInstanceTable(ApprovalWorkflowStageInstanceTab
             "pk",
             "approval_workflow_instance",
             "approval_workflow_stage",
-            "approvals_needed",
+            "actions_needed",
             "state",
             "decision_date",
         )
@@ -407,7 +414,7 @@ class RelatedApprovalWorkflowStageInstanceTable(ApprovalWorkflowStageInstanceTab
             "pk",
             "approval_workflow_instance",
             "approval_workflow_stage",
-            "approvals_needed",
+            "actions_needed",
             "state",
             "decision_date",
             "actions",
@@ -419,7 +426,6 @@ class ApprovalWorkflowStageInstanceResponseTable(BaseTable):
 
     pk = ToggleColumn()
     state = ChoiceFieldColumn()
-    actions = ApprovalButtonsColumn(ApprovalWorkflowStageInstanceResponse, buttons=("detail"))
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -438,7 +444,6 @@ class ApprovalWorkflowStageInstanceResponseTable(BaseTable):
             "user",
             "comments",
             "state",
-            "actions",
         )
 
 
@@ -446,7 +451,8 @@ class RelatedApprovalWorkflowStageInstanceResponseTable(ApprovalWorkflowStageIns
     """Table for ApprovalWorkflowStageInstanceResponse list view."""
 
     approval_workflow_stage_instance = tables.TemplateColumn(
-        template_code="<a href={{record.approval_workflow_stage_instance.get_absolute_url}}>{{ record.approval_workflow_stage_instance.approval_workflow_stage.name }}</a>"
+        template_code="<a href={{record.approval_workflow_stage_instance.get_absolute_url}}>{{ record.approval_workflow_stage_instance.approval_workflow_stage.name }}</a>",
+        verbose_name="Stage",
     )
 
     class Meta(BaseTable.Meta):

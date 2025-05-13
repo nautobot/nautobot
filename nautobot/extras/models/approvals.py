@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseModel
-from nautobot.core.models.generics import ChangeLoggedModel, PrimaryModel
+from nautobot.core.models.generics import ChangeLoggedModel, OrganizationalModel, PrimaryModel
 from nautobot.extras.choices import ApprovalWorkflowStateChoices
 from nautobot.extras.constants import APPROVAL_WORKFLOW_MODELS
 from nautobot.extras.utils import extras_features
@@ -110,7 +110,7 @@ class ApprovalWorkflowStage(ChangeLoggedModel, BaseModel):
     "graphql",
     "webhooks",
 )
-class ApprovalWorkflowInstance(PrimaryModel):
+class ApprovalWorkflowInstance(OrganizationalModel):
     """ApprovalWorkflowInstance model."""
 
     approval_workflow = models.ForeignKey(
@@ -224,7 +224,7 @@ class ApprovalWorkflowInstance(PrimaryModel):
     "graphql",
     "webhooks",
 )
-class ApprovalWorkflowStageInstance(PrimaryModel):
+class ApprovalWorkflowStageInstance(OrganizationalModel):
     """ApprovalWorkflowStageInstance model."""
 
     approval_workflow_instance = models.ForeignKey(

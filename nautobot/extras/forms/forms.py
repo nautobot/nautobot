@@ -248,7 +248,8 @@ class ApprovalWorkflowForm(
     model_constraints = JSONField(
         required=False,
         label="Model Constraints",
-        help_text="Constraints to filter the objects that can be approved using this workflow.",
+        help_text="Filterset filter matching the selected model content type.<br>"
+        'Enter in <a href="https://json.org/">JSON</a> format.',
     )
 
     class Meta:
