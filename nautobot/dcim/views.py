@@ -3894,13 +3894,27 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
 
     def perform_create(self, request, *args, **kwargs):
         form_class = self.get_form_class()
-        form = form_class(data=request.POST, files=request.FILES)
+        form = form_class(
+            data=request.POST,
+            files=request.FILES,
+            initial=normalize_querydict(request.GET, form_class=form_class),
+        )
         restrict_form_fields(form, request.user)
-
         if form.is_valid():
-            with transaction.atomic():
-                self.object_created = not form.instance.present_in_database
-                self.object = form.save()
+            obj = form.save(commit=False)
+            restricted_qs = self.queryset.model.objects.restrict(request.user, "add")
+            try:
+                with transaction.atomic():
+                    obj.save()
+
+                    if not restricted_qs.filter(pk=obj.pk).exists():
+                        raise PermissionDenied()
+
+                    self.object_created = True
+                    self.object = obj
+            except PermissionDenied:
+                form.add_error(None, "You do not have permission to add this object.")
+                return self.form_invalid(form)
             return self.form_valid(form)
         return self.form_invalid(form)
 
