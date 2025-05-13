@@ -53,12 +53,19 @@ class BaseModel(models.Model):
     is_metadata_associable_model = True
     is_saved_view_model = False  # SavedViewMixin overrides this to default True
     is_cloud_resource_type_model = False  # CloudResourceTypeMixin overrides this to default True
+    is_approval_workflow_model = False  # ApprovableModelMixin overrides this to default True
 
     associated_object_metadata = GenericRelation(
         "extras.ObjectMetadata",
         content_type_field="assigned_object_type",
         object_id_field="assigned_object_id",
         related_query_name="associated_object_metadata_%(app_label)s_%(class)s",  # e.g. 'associated_object_metadata_dcim_device'
+    )
+    associated_data_compliance = GenericRelation(
+        "data_validation.DataCompliance",
+        content_type_field="content_type",
+        object_id_field="object_id",
+        related_query_name="associated_data_compliance_%(app_label)s_%(class)s",  # e.g. 'associated_data_compliance_dcim_device'
     )
 
     class Meta:

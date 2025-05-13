@@ -119,7 +119,7 @@ def extend_schema_type(schema_type):
     #
     # Queryset
     #
-    setattr(schema_type, "get_queryset", generate_restricted_queryset())
+    setattr(schema_type, "get_queryset", classmethod(generate_restricted_queryset()))
 
     #
     # Custom Fields

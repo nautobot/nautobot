@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -35,6 +36,7 @@ from nautobot.dcim.models import (
     Platform,
 )
 from nautobot.extras.choices import (
+    ApprovalWorkflowStateChoices,
     JobExecutionType,
     JobResultStatusChoices,
     LogLevelChoices,
@@ -53,6 +55,11 @@ from nautobot.extras.constants import (
 from nautobot.extras.datasources.registry import get_datasource_contents
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
+    ApprovalWorkflow,
+    ApprovalWorkflowInstance,
+    ApprovalWorkflowStage,
+    ApprovalWorkflowStageInstance,
+    ApprovalWorkflowStageInstanceResponse,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -99,6 +106,207 @@ from nautobot.virtualization.models import (
 from example_app.jobs import ExampleJob
 
 User = get_user_model()
+
+
+class ApprovalWorkflowInstanceTest(ModelTestCases.BaseModelTestCase):
+    """
+    Tests for the ApprovalWorkflowInstance model class.
+    """
+
+    model = ApprovalWorkflowInstance
+
+    @classmethod
+    def setUpTestData(cls):
+        # Prepare the test data
+        job_ct = ContentType.objects.get(app_label="extras", model="job")
+        job = JobModel.objects.first()
+        cls.approver_group_1 = Group.objects.create(name="Approver Group 1")
+        cls.approver_group_2 = Group.objects.create(name="Approver Group 2")
+        cls.approver_group_3 = Group.objects.create(name="Approver Group 3")
+        cls.users = (
+            User.objects.create(username="User 1", is_active=True),
+            User.objects.create(username="User 2", is_active=True),
+            User.objects.create(username="User 3", is_active=True, is_superuser=True),
+            User.objects.create(username="User 4", is_active=True),
+            User.objects.create(username="User 5", is_active=True),
+        )
+        cls.approver_group_1.user_set.set([cls.users[0]])
+        cls.approver_group_2.user_set.set([cls.users[1], cls.users[2]])
+        cls.approver_group_3.user_set.set([cls.users[3], cls.users[4]])
+
+        # Create a Approval Workflow
+        cls.approval_workflow = ApprovalWorkflow.objects.create(
+            name="Approval Workflow with Three Stages",
+            model_content_type=job_ct,
+        )
+        # Create three stages of the Approval Workflow
+        cls.approval_workflow_stage_1 = ApprovalWorkflowStage.objects.create(
+            approval_workflow=cls.approval_workflow,
+            weight=100,
+            name="Approval Workflow Stage 1",
+            min_approvers=1,
+            denial_message="Stage 1 Denial Message",
+            approver_group=cls.approver_group_1,
+        )
+        cls.approval_workflow_stage_2 = ApprovalWorkflowStage.objects.create(
+            approval_workflow=cls.approval_workflow,
+            weight=200,
+            name="Approval Workflow Stage 2",
+            min_approvers=2,
+            denial_message="Stage 2 Denial Message",
+            approver_group=cls.approver_group_2,
+        )
+        cls.approval_workflow_stage_3 = ApprovalWorkflowStage.objects.create(
+            approval_workflow=cls.approval_workflow,
+            weight=300,
+            name="Approval Workflow Stage 3",
+            min_approvers=2,
+            denial_message="Stage 3 Denial Message",
+            approver_group=cls.approver_group_3,
+        )
+
+        # Create an Approval Workflow Instance
+        cls.approval_workflow_instance = ApprovalWorkflowInstance.objects.create(
+            approval_workflow=cls.approval_workflow,
+            object_under_review_content_type=job_ct,
+            object_under_review_object_id=job.pk,
+            current_state=ApprovalWorkflowStateChoices.PENDING,
+        )
+        # Create three Approval Workflow Stage Instances
+        cls.approval_workflow_stage_1_instance = ApprovalWorkflowStageInstance.objects.create(
+            approval_workflow_instance=cls.approval_workflow_instance,
+            approval_workflow_stage=cls.approval_workflow_stage_1,
+            state=ApprovalWorkflowStateChoices.PENDING,
+        )
+        cls.approval_workflow_stage_2_instance = ApprovalWorkflowStageInstance.objects.create(
+            approval_workflow_instance=cls.approval_workflow_instance,
+            approval_workflow_stage=cls.approval_workflow_stage_2,
+            state=ApprovalWorkflowStateChoices.PENDING,
+        )
+        cls.approval_workflow_stage_3_instance = ApprovalWorkflowStageInstance.objects.create(
+            approval_workflow_instance=cls.approval_workflow_instance,
+            approval_workflow_stage=cls.approval_workflow_stage_3,
+            state=ApprovalWorkflowStateChoices.PENDING,
+        )
+        # Create five Approval Workflow Stage Instance Response
+        cls.approval_workflow_stage_1_instance_response_1 = ApprovalWorkflowStageInstanceResponse.objects.create(
+            approval_workflow_stage_instance=cls.approval_workflow_stage_1_instance,
+            user=cls.users[0],
+            state=ApprovalWorkflowStateChoices.PENDING,
+        )
+        cls.approval_workflow_stage_2_instance_response_1 = ApprovalWorkflowStageInstanceResponse.objects.create(
+            approval_workflow_stage_instance=cls.approval_workflow_stage_2_instance,
+            user=cls.users[1],
+            state=ApprovalWorkflowStateChoices.PENDING,
+        )
+        cls.approval_workflow_stage_2_instance_response_2 = ApprovalWorkflowStageInstanceResponse.objects.create(
+            approval_workflow_stage_instance=cls.approval_workflow_stage_2_instance,
+            user=cls.users[2],
+            state=ApprovalWorkflowStateChoices.PENDING,
+        )
+        cls.approval_workflow_stage_3_instance_response_1 = ApprovalWorkflowStageInstanceResponse.objects.create(
+            approval_workflow_stage_instance=cls.approval_workflow_stage_3_instance,
+            user=cls.users[3],
+            state=ApprovalWorkflowStateChoices.PENDING,
+        )
+        cls.approval_workflow_stage_3_instance_response_2 = ApprovalWorkflowStageInstanceResponse.objects.create(
+            approval_workflow_stage_instance=cls.approval_workflow_stage_3_instance,
+            user=cls.users[4],
+            state=ApprovalWorkflowStateChoices.PENDING,
+        )
+
+    def test_active_stage_property(self):
+        """
+        Test the active_stage property of the ApprovalWorkflowInstance model.
+        """
+        # Test that the active stage is the one with the lowest weight when all stages are pending
+        self.assertEqual(self.approval_workflow_instance.active_stage, self.approval_workflow_stage_1_instance)
+        # Test that the active stage is the second stage when the first stage is approved
+        self.approval_workflow_stage_1_instance_response_1.state = ApprovalWorkflowStateChoices.APPROVED
+        self.approval_workflow_stage_1_instance_response_1.save()
+        self.assertEqual(self.approval_workflow_stage_1_instance.state, ApprovalWorkflowStateChoices.APPROVED)
+        self.assertIsNotNone(self.approval_workflow_stage_1_instance.decision_date)
+        self.assertEqual(self.approval_workflow_instance.active_stage, self.approval_workflow_stage_2_instance)
+        # Test that the active stage remains the second stage when the second stage is denied
+        self.approval_workflow_stage_2_instance_response_1.state = ApprovalWorkflowStateChoices.DENIED
+        self.approval_workflow_stage_2_instance_response_1.save()
+        self.assertEqual(self.approval_workflow_stage_2_instance.state, ApprovalWorkflowStateChoices.DENIED)
+        self.assertIsNotNone(self.approval_workflow_stage_2_instance.decision_date)
+        self.assertEqual(self.approval_workflow_instance.active_stage, self.approval_workflow_stage_2_instance)
+        self.assertEqual(self.approval_workflow_instance.current_state, ApprovalWorkflowStateChoices.DENIED)
+
+    def test_approval_workflow_instance_workflow_all_stages_are_approved(self):
+        """
+        Test the logic when all stage instances of an approval workflow instance are approved.
+        """
+        # One user approves the first stage
+        self.approval_workflow_stage_1_instance_response_1.state = ApprovalWorkflowStateChoices.APPROVED
+        self.approval_workflow_stage_1_instance_response_1.save()
+        # Minimum approvers for the first stage is 1, so the stage should be approved
+        self.assertEqual(self.approval_workflow_stage_1_instance.state, ApprovalWorkflowStateChoices.APPROVED)
+        self.assertIsNotNone(self.approval_workflow_stage_1_instance.decision_date)
+        # Approval Workflow Instance should still be pending, stage 2 and stage 3 are not approved yet
+        self.assertEqual(self.approval_workflow_instance.current_state, ApprovalWorkflowStateChoices.PENDING)
+        # The active stage should be the second stage now
+        self.assertEqual(self.approval_workflow_instance.active_stage, self.approval_workflow_stage_2_instance)
+
+        # Two users approved the second stage
+        self.approval_workflow_stage_2_instance_response_1.state = ApprovalWorkflowStateChoices.APPROVED
+        self.approval_workflow_stage_2_instance_response_1.save()
+        self.approval_workflow_stage_2_instance_response_2.state = ApprovalWorkflowStateChoices.APPROVED
+        self.approval_workflow_stage_2_instance_response_2.save()
+        # Minimum approvers for the second stage is 2, so the stage should be approved
+        self.assertEqual(self.approval_workflow_stage_2_instance.state, ApprovalWorkflowStateChoices.APPROVED)
+        self.assertIsNotNone(self.approval_workflow_stage_2_instance.decision_date)
+        # Approval Workflow Instance should still be pending, stage 3 is not approved yet
+        self.assertEqual(self.approval_workflow_instance.current_state, ApprovalWorkflowStateChoices.PENDING)
+        # The active stage should be the third stage now
+        self.assertEqual(self.approval_workflow_instance.active_stage, self.approval_workflow_stage_3_instance)
+
+        # Two users approved the third stage
+        self.approval_workflow_stage_3_instance_response_1.state = ApprovalWorkflowStateChoices.APPROVED
+        self.approval_workflow_stage_3_instance_response_1.save()
+        self.approval_workflow_stage_3_instance_response_2.state = ApprovalWorkflowStateChoices.APPROVED
+        self.approval_workflow_stage_3_instance_response_2.save()
+        # Minimum approvers for the third stage is 2, so the stage should be approved
+        self.assertEqual(self.approval_workflow_stage_3_instance.state, ApprovalWorkflowStateChoices.APPROVED)
+        self.assertIsNotNone(self.approval_workflow_stage_3_instance.decision_date)
+        # Approval Workflow Instance should be approved since all stages are approved
+        self.assertEqual(self.approval_workflow_instance.current_state, ApprovalWorkflowStateChoices.APPROVED)
+        # No more stages to approve, so the active stage is now None
+        # and its decision date is updated because a terminal state has been reached
+        self.assertEqual(self.approval_workflow_instance.active_stage, None)
+        self.assertIsNotNone(self.approval_workflow_instance.decision_date)
+
+    def test_approval_workflow_instance_workflow_one_stage_is_denied(self):
+        """
+        Test the logic when one of the stage instances of an approval workflow instance is denied.
+        """
+        # One user approves the first stage
+        self.approval_workflow_stage_1_instance_response_1.state = ApprovalWorkflowStateChoices.APPROVED
+        self.approval_workflow_stage_1_instance_response_1.save()
+        # Minimum approvers for the first stage is 1, so the stage should be approved
+        self.assertEqual(self.approval_workflow_stage_1_instance.state, ApprovalWorkflowStateChoices.APPROVED)
+        self.assertIsNotNone(self.approval_workflow_stage_1_instance.decision_date)
+        # Approval Workflow Instance should still be pending
+        self.assertEqual(self.approval_workflow_instance.current_state, ApprovalWorkflowStateChoices.PENDING)
+        # The active stage should be the second stage now
+        self.assertEqual(self.approval_workflow_instance.active_stage, self.approval_workflow_stage_2_instance)
+
+        # One user approved the second stage while another user denies it
+        self.approval_workflow_stage_2_instance_response_1.state = ApprovalWorkflowStateChoices.APPROVED
+        self.approval_workflow_stage_2_instance_response_1.save()
+        self.approval_workflow_stage_2_instance_response_2.state = ApprovalWorkflowStateChoices.DENIED
+        self.approval_workflow_stage_2_instance_response_2.save()
+        # One user denies the stage, so the stage should be denied
+        self.assertEqual(self.approval_workflow_stage_2_instance.state, ApprovalWorkflowStateChoices.DENIED)
+        self.assertIsNotNone(self.approval_workflow_stage_2_instance.decision_date)
+        # Approval Workflow Instance should be denied since one stage is denied
+        # and its decision date is updated because a terminal state has been reached
+        self.assertEqual(self.approval_workflow_instance.current_state, ApprovalWorkflowStateChoices.DENIED)
+        self.assertIsNotNone(self.approval_workflow_instance.decision_date)
+        # The active stage should remain the second stage that is denied
+        self.assertEqual(self.approval_workflow_instance.active_stage, self.approval_workflow_stage_2_instance)
 
 
 class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
@@ -2020,19 +2228,20 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
         """
         Test that overlapping scoped_fields of ObjectMetadata with same metadata_type/assigned_object is not allowed.
         """
+        ip = IPAddress.objects.filter(associated_object_metadata__isnull=True).first()
         ObjectMetadata.objects.create(
             metadata_type=MetadataType.objects.first(),
             contact=Contact.objects.first(),
             scoped_fields=["host", "mask_length", "type", "role", "status"],
             assigned_object_type=ContentType.objects.get_for_model(IPAddress),
-            assigned_object_id=IPAddress.objects.filter(associated_object_metadata__isnull=True).first().pk,
+            assigned_object_id=ip.pk,
         )
         instance2 = ObjectMetadata.objects.create(
             metadata_type=MetadataType.objects.first(),
             contact=Contact.objects.first(),
-            scoped_fields=[],
+            scoped_fields=[],  # permitted for now because we skipped calling clean()/validated_save()
             assigned_object_type=ContentType.objects.get_for_model(IPAddress),
-            assigned_object_id=IPAddress.objects.filter(associated_object_metadata__isnull=True).first().pk,
+            assigned_object_id=ip.pk,
         )
         with self.assertRaises(ValidationError):
             # try scope all fields

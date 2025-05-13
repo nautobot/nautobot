@@ -77,7 +77,7 @@ namespace.configure(
     {
         "nautobot": {
             "project_name": "nautobot",  # extended automatically with Nautobot major/minor ver, see docker_compose()
-            "python_ver": "3.12",
+            "python_ver": "3.13",
             "local": False,
             "ephemeral_ports": False,
             "compose_dir": os.path.join(BASE_DIR, "development/"),
@@ -583,13 +583,20 @@ def logs(context, service="", follow=False, tail=0):
 # ------------------------------------------------------------------------------
 # ACTIONS
 # ------------------------------------------------------------------------------
-@task
-def nbshell(context, quiet=False):
+@task(
+    help={
+        "quiet": "Suppress verbose output on launch",
+        "print_sql": "Enable printing of all executed SQL statements",
+    }
+)
+def nbshell(context, quiet=False, print_sql=False):
     """Launch an interactive Nautobot shell."""
     command = "nautobot-server nbshell"
 
     if quiet:
         command += " --quiet"
+    if print_sql:
+        command += " --print-sql"
 
     run_command(context, command)
 
@@ -869,9 +876,11 @@ def check_schema(context, api_version=None):
         nautobot_version = get_nautobot_version()
         # logic equivalent to nautobot.core.settings REST_FRAMEWORK_ALLOWED_VERSIONS - keep them in sync!
         current_major, current_minor = [int(v) for v in nautobot_version.split(".")[:2]]
-        if current_major != 2:
+        if current_major > 3:
             raise RuntimeError(f"check_schemas version calc must be updated to handle version {current_major}")
-        api_versions = [f"{current_major}.{minor}" for minor in range(0, current_minor + 1)]
+        api_versions = ["2.1", "2.2", "2.3", "2.4"] + [
+            f"{current_major}.{minor}" for minor in range(0, current_minor + 1)
+        ]
 
     for api_vers in api_versions:
         command = f"nautobot-server spectacular --api-version {api_vers} --validate --fail-on-warn --file /dev/null"

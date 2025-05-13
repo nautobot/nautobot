@@ -19,8 +19,13 @@ from nautobot.core.tables import (
 from nautobot.core.templatetags.helpers import render_boolean, render_json, render_markdown
 from nautobot.tenancy.tables import TenantColumn
 
-from .choices import MetadataTypeDataTypeChoices
+from .choices import LogLevelChoices, MetadataTypeDataTypeChoices
 from .models import (
+    ApprovalWorkflow,
+    ApprovalWorkflowInstance,
+    ApprovalWorkflowStage,
+    ApprovalWorkflowStageInstance,
+    ApprovalWorkflowStageInstanceResponse,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -59,6 +64,14 @@ from .models import (
     Webhook,
 )
 from .registry import registry
+
+APPROVAL_WORKFLOW_OBJECT = """
+{% if record.object_under_review and record.object_under_review.get_absolute_url %}
+    <a href="{{ record.object_under_review.get_absolute_url }}">{{ record.object_under_review }}</a>
+{% else %}
+    {{ record.object_under_review }}
+{% endif %}
+"""
 
 ASSIGNED_OBJECT = """
 {% load helpers %}
@@ -185,6 +198,153 @@ SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS = """
     <i class="mdi mdi-close"></i>
 </button>
 """
+
+#
+# Approval Workflow
+#
+
+
+class ApprovalWorkflowTable(BaseTable):
+    """Table for ApprovalWorkflow list view."""
+
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    actions = ButtonsColumn(ApprovalWorkflow)
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = ApprovalWorkflow
+        fields = (
+            "pk",
+            "name",
+            "model_content_type",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "model_content_type",
+            "actions",
+        )
+
+
+class ApprovalWorkflowStageTable(BaseTable):
+    """Table for ApprovalWorkflowStage list view."""
+
+    pk = ToggleColumn()
+    approval_workflow = tables.Column(linkify=True)
+    name = tables.Column(linkify=True)
+    actions = ButtonsColumn(ApprovalWorkflowStage)
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStage
+        fields = (
+            "pk",
+            "approval_workflow",
+            "weight",
+            "name",
+            "min_approvers",
+            "denial_message",
+            "approver_group",
+        )
+        default_columns = (
+            "pk",
+            "approval_workflow",
+            "weight",
+            "name",
+            "min_approvers",
+            "denial_message",
+            "approver_group",
+            "actions",
+        )
+
+
+class ApprovalWorkflowInstanceTable(BaseTable):
+    """Table for ApprovalWorkflowInstance list view."""
+
+    pk = ToggleColumn()
+    approval_workflow = tables.Column(linkify=True)
+    object_under_review_content_type = tables.Column(verbose_name="Object Type Under Review")
+    object_under_review = tables.TemplateColumn(
+        template_code=APPROVAL_WORKFLOW_OBJECT, verbose_name="Object Under Review"
+    )
+    actions = ButtonsColumn(ApprovalWorkflowInstance)
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = ApprovalWorkflowInstance
+        fields = (
+            "pk",
+            "approval_workflow",
+            "object_under_review_content_type",
+            "object_under_review",
+            "current_state",
+        )
+        default_columns = (
+            "pk",
+            "approval_workflow",
+            "object_under_review_content_type",
+            "object_under_review",
+            "current_state",
+            "actions",
+        )
+
+
+class ApprovalWorkflowStageInstanceTable(BaseTable):
+    """Table for ApprovalWorkflowStageInstance list view."""
+
+    pk = ToggleColumn()
+    actions = ButtonsColumn(ApprovalWorkflowStageInstance)
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStageInstance
+        fields = (
+            "pk",
+            "approval_workflow_instance",
+            "approval_workflow_stage",
+            "state",
+            "decision_date",
+        )
+        default_columns = (
+            "pk",
+            "approval_workflow_instance",
+            "approval_workflow_stage",
+            "state",
+            "decision_date",
+            "actions",
+        )
+
+
+class ApprovalWorkflowStageInstanceResponseTable(BaseTable):
+    """Table for ApprovalWorkflowStageInstanceResponse list view."""
+
+    pk = ToggleColumn()
+    actions = ButtonsColumn(ApprovalWorkflowStageInstanceResponse)
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStageInstanceResponse
+        fields = (
+            "pk",
+            "approval_workflow_stage_instance",
+            "user",
+            "comments",
+            "state",
+        )
+        default_columns = (
+            "pk",
+            "approval_workflow_stage_instance",
+            "user",
+            "comments",
+            "state",
+            "actions",
+        )
 
 
 class ComputedFieldTable(BaseTable):
@@ -613,10 +773,11 @@ class GitRepositoryTable(BaseTable):
 
     class JobResultColumn(tables.TemplateColumn):
         def render(self, record, table, value, bound_column, **kwargs):
-            if str(record.pk) in table.context.get("job_results", {}):
-                table.context.update({"result": table.context["job_results"][str(record.pk)]})
-            else:
-                table.context.update({"result": None})
+            if hasattr(table, "context"):
+                if str(record.pk) in table.context.get("job_results", {}):
+                    table.context.update({"result": table.context["job_results"][str(record.pk)]})
+                else:
+                    table.context.update({"result": None})
             return super().render(record, table, value, bound_column, **kwargs)
 
     last_sync_status = JobResultColumn(template_name="extras/inc/job_label.html", verbose_name="Sync Status")
@@ -649,14 +810,16 @@ class GitRepositoryTable(BaseTable):
         )
 
     def render_last_sync_time(self, record):
-        if record.name in self.context["job_results"]:  # pylint: disable=no-member
-            return self.context["job_results"][record.name].date_done  # pylint: disable=no-member
+        if hasattr(self, "context"):
+            if record.name in self.context.get("job_results", {}):
+                return self.context["job_results"][record.name].date_done
         return self.default
 
     def render_last_sync_user(self, record):
-        if record.name in self.context["job_results"]:  # pylint: disable=no-member
-            user = self.context["job_results"][record.name].user  # pylint: disable=no-member
-            return user
+        if hasattr(self, "context"):
+            if record.name in self.context.get("job_results", {}):
+                user = self.context["job_results"][record.name].user
+                return user
         return self.default
 
 
@@ -904,6 +1067,25 @@ class JobResultTable(BaseTable):
         """
         Define custom rendering for the summary column.
         """
+        # Normally the *_log_count attributes will be generated efficiently via queryset annotation in the view,
+        # however, we cannot assume that will always be the case. Calculate them inefficiently as a fallback.
+        if not hasattr(record, "debug_log_count"):
+            record.debug_log_count = record.job_log_entries.filter(log_level=LogLevelChoices.LOG_DEBUG).count()
+        if not hasattr(record, "success_log_count"):
+            record.success_log_count = record.job_log_entries.filter(log_level=LogLevelChoices.LOG_SUCCESS).count()
+        if not hasattr(record, "info_log_count"):
+            record.info_log_count = record.job_log_entries.filter(log_level=LogLevelChoices.LOG_INFO).count()
+        if not hasattr(record, "warning_log_count"):
+            record.warning_log_count = record.job_log_entries.filter(log_level=LogLevelChoices.LOG_WARNING).count()
+        if not hasattr(record, "error_log_count"):
+            record.error_log_count = record.job_log_entries.filter(
+                log_level__in=[
+                    LogLevelChoices.LOG_FAILURE,
+                    LogLevelChoices.LOG_ERROR,
+                    LogLevelChoices.LOG_CRITICAL,
+                ]
+            ).count()
+
         return format_html(
             """<label class="label label-default">{}</label>
             <label class="label label-success">{}</label>

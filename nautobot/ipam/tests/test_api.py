@@ -124,7 +124,13 @@ class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.vrfs = VRF.objects.all()
+        cls.vrfs = (
+            VRF.objects.create(name="Test VRF 1", rd="65000:1", namespace=Namespace.objects.first()),
+            VRF.objects.create(name="Test VRF 2", rd="65000:2", namespace=Namespace.objects.first()),
+            VRF.objects.create(name="Test VRF 3", rd="65000:3", namespace=Namespace.objects.first()),
+            VRF.objects.create(name="Test VRF 4", rd="65000:4", namespace=Namespace.objects.first()),
+            VRF.objects.create(name="Test VRF 5", rd="65000:5", namespace=Namespace.objects.first()),
+        )
         cls.devices = Device.objects.all()
         cls.vdcs = VirtualDeviceContext.objects.all()
         locations = Location.objects.filter(location_type__name="Campus")

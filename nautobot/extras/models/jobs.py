@@ -47,7 +47,7 @@ from nautobot.extras.constants import (
 )
 from nautobot.extras.managers import JobResultManager, ScheduledJobsManager
 from nautobot.extras.models import ChangeLoggedModel, GitRepository
-from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin
+from nautobot.extras.models.mixins import ApprovableModelMixin, ContactMixin, DynamicGroupsModelMixin, NotesMixin
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
@@ -83,7 +83,7 @@ JOB_RESULT_METRIC = Histogram(
     "job_results",
     "webhooks",
 )
-class Job(PrimaryModel):
+class Job(ApprovableModelMixin, PrimaryModel):
     """
     Database model representing an installed Job class.
     """
@@ -845,6 +845,7 @@ class JobResult(BaseModel, CustomFieldModel):
         # And from the kubernetes pod, we specify "--local"/synchronous=True
         # so that `run_kubernetes_job_and_return_job_result` is not executed again and the job will be run locally.
         if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES and not synchronous:
+            # TODO: make this branch aware!
             return run_kubernetes_job_and_return_job_result(job_queue, job_result, json.dumps(job_kwargs))
 
         job_celery_kwargs = {
@@ -1087,7 +1088,7 @@ class ScheduledJobs(models.Model):
             return None
 
 
-class ScheduledJob(BaseModel):
+class ScheduledJob(ApprovableModelMixin, BaseModel):
     """Model representing a periodic task."""
 
     name = models.CharField(
@@ -1350,6 +1351,12 @@ class ScheduledJob(BaseModel):
             "queue": task_queue,
             "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
         }
+        if "nautobot_version_control" in settings.PLUGINS:
+            from nautobot_version_control.utils import active_branch  # pylint: disable=import-error
+
+            branch_name = active_branch()
+            # TODO: what do we do when merging a branch's ScheduledJob down to main?
+            celery_kwargs["nautobot_job_branch_name"] = branch_name
         if job_model.soft_time_limit > 0:
             celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
         if job_model.time_limit > 0:

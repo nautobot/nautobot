@@ -2,6 +2,7 @@ from difflib import get_close_matches
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 import django_filters
@@ -14,6 +15,7 @@ from nautobot.core.filters import (
     BaseFilterSet,
     ContentTypeFilter,
     ContentTypeMultipleChoiceFilter,
+    MultiValueDateTimeFilter,
     MultiValueUUIDFilter,
     NameSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
@@ -54,6 +56,11 @@ from nautobot.extras.filters.mixins import (
     StatusModelFilterSetMixin,
 )
 from nautobot.extras.models import (
+    ApprovalWorkflow,
+    ApprovalWorkflowInstance,
+    ApprovalWorkflowStage,
+    ApprovalWorkflowStageInstance,
+    ApprovalWorkflowStageInstanceResponse,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -107,6 +114,11 @@ from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup
 
 __all__ = (
+    "ApprovalWorkflowFilterSet",
+    "ApprovalWorkflowInstanceFilterSet",
+    "ApprovalWorkflowStageFilterSet",
+    "ApprovalWorkflowStageInstanceFilterSet",
+    "ApprovalWorkflowStageInstanceResponseFilterSet",
     "ComputedFieldFilterSet",
     "ConfigContextFilterSet",
     "ContactFilterSet",
@@ -173,6 +185,167 @@ class CreatedUpdatedFilterSet(CreatedUpdatedModelFilterSetMixin):
 @class_deprecated_in_favor_of(RelationshipModelFilterSetMixin)
 class RelationshipModelFilterSet(RelationshipModelFilterSetMixin):
     pass
+
+
+#
+# Approval Workflows
+#
+
+
+class ApprovalWorkflowFilterSet(BaseFilterSet):
+    """Filter for ApprovalWorkflow."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "model_content_type__app_label": "icontains",
+            "model_content_type__model": "icontains",
+        }
+    )
+    model_content_type = ContentTypeMultipleChoiceFilter(
+        choices=FeatureQuery("approval_workflows").get_choices,
+        label="Object types allowed to be associated with this Approval Workflow",
+    )
+
+    class Meta:
+        """Meta attributes for filter."""
+
+        model = ApprovalWorkflow
+        fields = "__all__"
+
+
+class ApprovalWorkflowStageFilterSet(BaseFilterSet):
+    """Filter for ApprovalWorkflowStage."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "weight": {
+                "lookup_expr": "exact",
+                "preprocessor": int,
+            },
+            "name": "icontains",
+            "min_approvers": {
+                "lookup_expr": "exact",
+                "preprocessor": int,
+            },
+            "denial_message": "icontains",
+        }
+    )
+    approval_workflow = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ApprovalWorkflow.objects.all(),
+        to_field_name="name",
+    )
+    approver_group = django_filters.ModelMultipleChoiceFilter(
+        queryset=Group.objects.all(),
+        label="Approver Group",
+    )
+    approval_workflow_instance = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ApprovalWorkflowInstance.objects.all(),
+        to_field_name="pk",
+        method="_approval_workflow_instance",
+        label="Filter approval workflow stages by approval workflow instance",
+    )
+
+    def generate_query__approval_workflow_instance(self, queryset, approval_workflow_instances):
+        """Helper method used by _approval_workflow_instance() method."""
+        query_params = Q()
+        for approval_workflow_instance in approval_workflow_instances:
+            approval_workflow = approval_workflow_instance.approval_workflow
+            query_params |= Q(approval_workflow=approval_workflow)
+        return query_params
+
+    @extend_schema_field({"type": "string"})
+    def _approval_workflow_instance(self, queryset, name, value):
+        """FilterSet method for getting approval workflow stages belong to an approval workflow instance"""
+        if value:
+            params = self.generate_query__approval_workflow_instance(queryset, value)
+            if len(params) > 0:
+                return queryset.filter(params)
+            else:
+                return queryset.none()
+        return queryset
+
+    class Meta:
+        """Meta attributes for filter."""
+
+        model = ApprovalWorkflowStage
+        fields = "__all__"
+
+
+class ApprovalWorkflowInstanceFilterSet(BaseFilterSet):
+    """Filter for ApprovalWorkflowInstance."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "object_under_review_content_type__app_label": "icontains",
+            "object_under_review_content_type__model": "icontains",
+        }
+    )
+    approval_workflow = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ApprovalWorkflow.objects.all(),
+        to_field_name="name",
+    )
+    object_under_review_content_type = ContentTypeMultipleChoiceFilter(
+        choices=FeatureQuery("approval_workflows").get_choices,
+        label="Object types allowed to be associated with this Approval Workflow Instance",
+    )
+
+    class Meta:
+        """Meta attributes for filter."""
+
+        model = ApprovalWorkflowInstance
+        fields = "__all__"
+
+
+class ApprovalWorkflowStageInstanceFilterSet(BaseFilterSet):
+    """Filter for ApprovalWorkflowStageInstance."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "approval_workflow_stage__name": "icontains",
+            "approval_workflow_instance__approval_workflow__name": "icontains",
+        }
+    )
+    approval_workflow_instance = django_filters.ModelMultipleChoiceFilter(
+        queryset=ApprovalWorkflowInstance.objects.all(),
+        label="Approval Workflow Instance (ID)",
+    )
+    approval_workflow_stage = django_filters.ModelMultipleChoiceFilter(
+        queryset=ApprovalWorkflowStage.objects.all(),
+        label="Approval Workflow Stage (ID)",
+    )
+    decision_date = MultiValueDateTimeFilter()
+
+    class Meta:
+        """Meta attributes for filter."""
+
+        model = ApprovalWorkflowStageInstance
+        fields = "__all__"
+
+
+class ApprovalWorkflowStageInstanceResponseFilterSet(BaseFilterSet):
+    """Filter for ApprovalWorkflowStageInstanceResponse."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "comments": "icontains",
+            "state": "icontains",
+        }
+    )
+    approval_workflow_stage_instance = django_filters.ModelMultipleChoiceFilter(
+        queryset=ApprovalWorkflowStageInstance.objects.all(),
+        label="Approval Workflow Stage Instance (ID)",
+    )
+    user = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=get_user_model().objects.all(),
+        to_field_name="username",
+    )
+
+    class Meta:
+        """Meta attributes for filter."""
+
+        model = ApprovalWorkflowStageInstanceResponse
+        fields = "__all__"
 
 
 #
