@@ -3368,36 +3368,6 @@ class DeviceBayBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class ModuleBayFieldsPanel(object_detail.ObjectFieldsPanel):
-    """
-    Extended ObjectFieldsPanel to inject either 'Parent Device' or 'Parent Module'
-    as a custom field while keeping base functionality intact.
-    """
-
-    def get_data(self, context):
-        # Get default fields from ObjectFieldsPanel
-        data = super().get_data(context)
-
-        obj = context.get("object")
-        if not obj:
-            return data
-
-        # Inject the custom parent field at the top
-        if obj.parent_device:
-            data = {"Parent Device": obj.parent_device, **data}
-        else:
-            data = {"Parent Module": obj.parent_module, **data}
-
-        return data
-
-    def render_value(self, key, value, context):
-        # Render hyperlink for parent fields
-        if key in ["Parent Device", "Parent Module"]:
-            return helpers.hyperlinked_object(value)
-
-        return super().render_value(key, value, context)
-
-
 class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
     queryset = ModuleBay.objects.all()
     filterset_class = filters.ModuleBayFilterSet
@@ -3412,10 +3382,18 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            ModuleBayFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
-                fields=("name", "position", "label", "description"),
+                fields=(
+                    "parent_device",
+                    "parent_module",
+                    "name",
+                    "position",
+                    "label",
+                    "description",
+                ),
+                hide_if_unset=("parent_device", "parent_module"),
             ),
             object_detail.KeyValueTablePanel(
                 weight=100,
