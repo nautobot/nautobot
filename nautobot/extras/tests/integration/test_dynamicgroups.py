@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+from django.test import tag
 from django.urls import reverse
 from selenium.webdriver.common.keys import Keys
 
@@ -16,14 +17,9 @@ class DynamicGroupTestCase(SeleniumTestCase):
 
     def setUp(self):
         super().setUp()
-        self.user.is_superuser = True
-        self.user.save()
-        self.login(self.user.username, self.password)
+        self.login_as_superuser()
 
-    def tearDown(self):
-        self.logout()
-        super().tearDown()
-
+    @tag("fix_in_v3")
     def test_create_and_update(self):
         """
         Test initial add and then update of a new DynamicGroup
@@ -33,15 +29,14 @@ class DynamicGroupTestCase(SeleniumTestCase):
         ct_label = f"{content_type.app_label}.{content_type.model}"
 
         # Navigate to the DynamicGroups list view
-        self.browser.links.find_by_partial_text("Organization").click()
-        self.browser.links.find_by_partial_text("Dynamic Groups").click()
+        self.click_navbar_entry("Organization", "Dynamic Groups")
 
         # Click add button
         self.browser.find_by_id("add-button").click()
 
         # Fill out the form.
         name = "devices-active"
-        self.browser.fill("name", name)
+        self.fill_input("name", name)
         self.browser.select("content_type", ct_label)
 
         # Click that "Create" button

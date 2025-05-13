@@ -1190,7 +1190,7 @@ def format_title_with_saved_view(context, title):
         return title
 
     if new_changes_not_applied:
-        new_title = format_html("{} — <i title='Pending changes not saved'>{}</i>", title, current_saved_view.name)
+        new_title = format_html('{} — <i title="Pending changes not saved">{}</i>', title, current_saved_view.name)
     else:
         new_title = format_html("{} — {}", title, current_saved_view.name)
 

@@ -959,7 +959,7 @@ def unittest(
             command += f" --tag {individual_tag}"
     if exclude_tag:
         for individual_exclude_tag in exclude_tag:
-            command += f" --tag {individual_exclude_tag}"
+            command += f" --exclude-tag {individual_exclude_tag}"
     for item in pattern or []:
         command += f" -k='{item}'"
 

@@ -3,7 +3,7 @@ import random
 
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Count
-from django.test import override_settings
+from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils.html import strip_tags
 from django.utils.timezone import make_aware
@@ -146,6 +146,7 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         RIR.objects.create(name="RIR XYZ")
 
 
+@tag("fix_in_v3")
 class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.ListObjectsViewTestCase):
     model = Prefix
     filter_on_field = "prefix_length"
@@ -504,6 +505,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         created_ip = IPAddress.objects.get(parent__namespace=new_namespace, address=instance.address)
         self.assertEqual(created_ip.parent, new_parent)
 
+    @tag("fix_in_v3")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_object_warnings(self):
         self.add_permissions("ipam.add_ipaddress")
