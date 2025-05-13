@@ -15,7 +15,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.storage import get_storage_class
 from django.db import transaction
 from django.db.models.signals import m2m_changed, post_delete, post_migrate, post_save, pre_delete, pre_save
-from django.dispatch import receiver
+from django.dispatch import receiver, Signal
 from django.utils import timezone
 from django_prometheus.models import model_deletes, model_inserts, model_updates
 import redis.exceptions
@@ -659,3 +659,7 @@ def handle_mdt_removed_obj_types(instance, action, pk_set, **kwargs):  # pylint:
 
 
 m2m_changed.connect(handle_mdt_removed_obj_types, sender=MetadataType.content_types.through)
+
+# Signal to be sent at the beginning of `nautobot.extras.jobs.get_job`
+# Sends the job class path as the `sender` kwarg and passes through the `reload` kwarg from the `get_job` call
+nautobot_get_job_signal = Signal()
