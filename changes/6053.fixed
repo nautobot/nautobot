@@ -1,0 +1,2 @@
+Added `all_interfaces`, `all_modules`, etc. properties to GraphQL `DeviceType` to facilitate lookup of components belonging to descendant modules.
+Added `common_vc_interfaces`, `vc_interfaces` properties to GraphQL `DeviceType` to facilitate lookup of components when VirtualChassis are involved.
