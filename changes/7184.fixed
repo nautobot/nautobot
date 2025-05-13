@@ -1,1 +1,0 @@
-Fixed missing support for `value_transforms` with certain model field types in `ObjectFieldsPanel`.
