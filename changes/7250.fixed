@@ -1,0 +1,1 @@
+Fixed JSON and MULTISELECT custom field being returned as a `repr()` string when using GraphQL.
