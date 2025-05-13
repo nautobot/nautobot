@@ -135,7 +135,7 @@
             } else {
                 /* Do we have a job class object to derive properties from? */
                 if (job_class_properties != "") {
-                    if (field_name != "job_queues") {
+                    if (field_name != "job_queues" && field_name != "default_job_queue") {
                         field.val(job_class_properties[field_name]);
                     }
                 } else if (field_name != "description") {
@@ -145,17 +145,23 @@
                     /* Textarea fields don't have a "value" attribute */
                     field.val(description_default);
                 }
-                field.attr("readonly", "readonly");
+                if (field_name == "job_queues" || field_name == "default_job_queue") {
+                    field.attr("disabled", true);
+                } else {
+                    field.attr("readonly", "readonly");
+                }
             }
         }
     });
     $("[id^=id_][id$=_override]").change();
 
-    /* As mentioned above, we need to re-enable all checkboxes on form submission so they get included */
+    /* As mentioned above, we need to re-enable all checkboxes, job_queues and default_job_queue fields on form submission so they get included */
     $("form").submit(function() {
         $('input[type="checkbox"]:disabled').each(function() {
             $(this).attr("disabled", null);
         });
+        $('#id_job_queues').prop("disabled", false);
+        $('#id_default_job_queues').prop("disabled", false);
     });
 </script>
 {% endblock javascript %}
