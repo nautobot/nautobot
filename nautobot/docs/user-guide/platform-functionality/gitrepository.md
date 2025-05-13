@@ -42,7 +42,7 @@ Whenever a Git repository record is created, updated, or deleted, Nautobot autom
 
 ### Jobs
 
-Jobs can be defined in Python files located in a `/jobs/` directory or `jobs.py` at the root of a Git repository. Any job classes defined in these files that have been registered during import will be discovered by Nautobot and made available to be run as a job. See the section on [Job registration](../../development/jobs/index.md#job-registration) for more information.
+Jobs can be defined in Python files located in a `/jobs/` directory or `jobs.py` at the root of a Git repository. Any job classes defined in these files that have been registered during import will be discovered by Nautobot and made available to be run as a job. See the section on [Job registration](../../development/jobs/job-structure.md#job-registration) for more information.
 
 !!! note
     There **must** be an `__init__.py` file in the `/jobs/` directory.

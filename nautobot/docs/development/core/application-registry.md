@@ -89,7 +89,7 @@ A dictionary holding information about the layout of Nautobot's homepage. Each a
 
 +++ 2.2.3
 
-A dictionary of registered [Job classes](../jobs/index.md), indexed by their [class path](../../user-guide/platform-functionality/jobs/index.md#jobs-and-class_path). For example:
+A dictionary of registered [Job classes](../jobs/index.md), indexed by their [class path](../../user-guide/platform-functionality/jobs/models.md#understanding-job-class-paths). For example:
 
 ```python
 {
@@ -220,7 +220,7 @@ List of GraphQL Type objects that will be added to the GraphQL schema. GraphQL o
 ```
 
 --- 2.0.0
-    The `plugin_jobs` registry has been replaced by [`nautobot.core.celery.register_jobs`](../jobs/index.md#writing-jobs) which should be called at import time by any App that provides jobs.
+    The `plugin_jobs` registry has been replaced by [`nautobot.core.celery.register_jobs`](../jobs/index.md) which should be called at import time by any App that provides jobs.
 
 ### `plugin_template_extensions`
 
