@@ -66,8 +66,10 @@ class LogsCleanup(Job):
                 related_field_name = related_object.field.name
                 cascade_queryset = related_model.objects.filter(**{f"{related_field_name}__id__in": queryset})
                 self.recursive_delete_with_cascade(cascade_queryset, deletion_summary)
-        _, deleted_dict = queryset.delete()
-        deletion_summary.update(deleted_dict)
+
+        deleted_count = queryset._raw_delete(using="default")
+        if deleted_count:
+            deletion_summary.update({queryset.model._meta.label: deleted_count})
         return deletion_summary
 
     def run(self, *, cleanup_types, max_age=None):  # pylint: disable=arguments-differ
