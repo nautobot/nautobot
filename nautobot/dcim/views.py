@@ -743,20 +743,18 @@ class ManufacturerUIViewSet(NautobotUIViewSet):
 #
 # Device types
 #
-
-
-class DeviceTypeListView(generic.ObjectListView):
-    queryset = DeviceType.objects.all()
-    filterset = filters.DeviceTypeFilterSet
-    filterset_form = forms.DeviceTypeFilterForm
-    table = tables.DeviceTypeTable
-    template_name = "dcim/devicetype_list.html"
-
-
-class DeviceTypeView(generic.ObjectView):
+class DeviceTypeUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.DeviceTypeBulkEditForm
+    filterset_class = filters.DeviceTypeFilterSet
+    filterset_form_class = forms.DeviceTypeFilterForm
+    form_class = forms.DeviceTypeForm
+    serializer_class = serializers.DeviceTypeSerializer
+    table_class = tables.DeviceTypeTable
     queryset = DeviceType.objects.select_related("manufacturer").prefetch_related("software_image_files")
 
     def get_extra_context(self, request, instance):
+        if self.action != "retrieve":
+            return {}
         instance_count = Device.objects.restrict(request.user).filter(device_type=instance).count()
 
         # Component tables
@@ -831,16 +829,6 @@ class DeviceTypeView(generic.ObjectView):
         }
 
 
-class DeviceTypeEditView(generic.ObjectEditView):
-    queryset = DeviceType.objects.all()
-    model_form = forms.DeviceTypeForm
-    template_name = "dcim/devicetype_edit.html"
-
-
-class DeviceTypeDeleteView(generic.ObjectDeleteView):
-    queryset = DeviceType.objects.all()
-
-
 class DeviceTypeImportView(generic.ObjectImportView):
     additional_permissions = [
         "dcim.add_devicetype",
@@ -869,19 +857,6 @@ class DeviceTypeImportView(generic.ObjectImportView):
             ("module-bays", forms.ModuleBayTemplateImportForm),
         )
     )
-
-
-class DeviceTypeBulkEditView(generic.BulkEditView):
-    queryset = DeviceType.objects.all()
-    filterset = filters.DeviceTypeFilterSet
-    table = tables.DeviceTypeTable
-    form = forms.DeviceTypeBulkEditForm
-
-
-class DeviceTypeBulkDeleteView(generic.BulkDeleteView):
-    queryset = DeviceType.objects.all()
-    filterset = filters.DeviceTypeFilterSet
-    table = tables.DeviceTypeTable
 
 
 #
