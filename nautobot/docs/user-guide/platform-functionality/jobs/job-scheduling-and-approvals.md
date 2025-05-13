@@ -9,7 +9,7 @@ Jobs can be scheduled to be run immediately, at some point in the future, or at 
 Jobs can be scheduled through the UI or the API.
 
 !!! warning
-    A Job **must** be [enabled](./index.md#enabling-jobs-for-running) and cannot have [has_sensitive_variables](../../../development/jobs/index.md#has_sensitive_variables) set to `True` in order to be scheduled. If these requirements are not met, a warning banner will appear on the run Job view with the reason why Job Scheduling is not an option.
+    A Job **must** be [enabled](./managing-jobs.md#enabling-and-disabling-jobs) and cannot have [has_sensitive_variables](../../../development/jobs/job-structure.md#class-metadata-attributes) set to `True` in order to be scheduled. If these requirements are not met, a warning banner will appear on the run Job view with the reason why Job Scheduling is not an option.
 
 ### Scheduling via the UI
 
