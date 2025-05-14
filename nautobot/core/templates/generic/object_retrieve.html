@@ -164,18 +164,15 @@
                     <div class="col-md-12">
                         <form method="post">
                             {% csrf_token %}
-                            <div class="panel panel-default">
-                                <div class="panel-heading">
+                            <div class="card">
+                                <div class="card-header">
                                     <strong>Contact Associations</strong>
-                                    <div class="float-end noprint">
-                                        <!-- Insert table config button here -->
-                                    </div>
                                 </div>
                                 <div class="table-responsive">
                                     {% render_table associated_contacts_table 'inc/table.html' %}
                                 </div>
                                 {% with request.path|add:"?tab=contacts"|urlencode as return_url %}
-                                    <div class="panel-footer noprint">
+                                    <div class="card-footer noprint">
                                         {% if perms.extras.change_contactassociation %}
                                             <button type="submit" name="_edit" formaction="{% url 'extras:contactassociation_bulk_edit' %}?return_url={{return_url}}" class="btn btn-warning btn-xs">
                                                 <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
@@ -220,12 +217,9 @@
                     <div class="col-md-12">
                         <form method="post">
                             {% csrf_token %}
-                            <div class="panel panel-default">
-                                <div class="panel-heading">
+                            <div class="card">
+                                <div class="card-header">
                                     <strong>Dynamic Groups</strong>
-                                    <div class="float-end noprint">
-                                        <!-- Insert table config button here -->
-                                    </div>
                                 </div>
                                 <div class="table-responsive">
                                     {% render_table associated_dynamic_groups_table 'inc/table.html' %}
@@ -242,12 +236,9 @@
                     <div class="col-md-12">
                         <form method="post">
                             {% csrf_token %}
-                            <div class="panel panel-default">
-                                <div class="panel-heading">
+                            <div class="card">
+                                <div class="card-header">
                                     <strong>Object Metadata</strong>
-                                    <div class="float-end noprint">
-                                        <!-- Insert table config button here -->
-                                    </div>
                                 </div>
                                 <div class="table-responsive">
                                     {% render_table associated_object_metadata_table 'inc/table.html' %}
@@ -306,25 +297,6 @@
     }
 
     window.addEventListener('popstate', (event) => show_tab(event.state.id));
-
-    document.addEventListener("DOMContentLoaded", function () {
-        var collapseIcons = document.querySelectorAll('[data-bs-toggle="collapse"]');
-        collapseIcons.forEach(function (button) {
-            var chevronIcon = button.querySelector("span"); // Select the icon inside the anchor
-
-            button.addEventListener("click", function () {
-                // Get the associated collapsible element
-                var panelId = button.getAttribute("panel-id");
-                var collapseElement = document.getElementById(panelId);
-                collapseElement.addEventListener("shown.bs.collapse", function () {
-                    chevronIcon.classList.replace("mdi-chevron-left", "mdi-chevron-down");
-                });
-                collapseElement.addEventListener("hidden.bs.collapse", function () {
-                    chevronIcon.classList.replace("mdi-chevron-down", "mdi-chevron-left");
-                });
-            });
-        });
-    });
 
     // Toggle v -. >
     $(".accordion-toggle").click(function () {
