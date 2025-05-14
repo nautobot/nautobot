@@ -1,5 +1,7 @@
 import codecs
+import csv
 from datetime import timedelta
+from io import StringIO
 import json
 from pathlib import Path
 
@@ -25,6 +27,7 @@ from nautobot.extras.models import (
     JobResult,
     ObjectChange,
     Role,
+    SavedView,
     Status,
     Tag,
 )
@@ -135,6 +138,32 @@ class ExportObjectListTest(TransactionTestCase):
         yaml_data = job_result.files.first().file.read().decode("utf-8")
         data = yaml.safe_load(yaml_data)
         self.assertEqual(data["manufacturer"], "Cisco")
+
+    def test_export_saved_view_to_csv(self):
+        """Export saved view with filters."""
+        filter_name = Location.objects.first().name
+        sv = SavedView.objects.create(
+            name="Global default View",
+            owner=self.user,
+            view="dcim:location_list",
+            is_global_default=True,
+            config={"filter_params": {"name": [filter_name]}},
+        )
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ExportObjectList",
+            content_type=ContentType.objects.get_for_model(Location).pk,
+            query_string=f"saved_view={sv.pk}",
+        )
+        self.assertJobResultStatus(job_result)
+        self.assertTrue(job_result.files.exists())
+        self.assertEqual(Path(job_result.files.first().file.name).name, "nautobot_locations.csv")
+        csv_data = job_result.files.first().file.read().decode("utf-8")
+        # remove BOM character if present
+        csv_data = csv_data.lstrip("\ufeff")
+        rows = list(csv.DictReader(StringIO(csv_data)))
+        self.assertEqual(len(rows), 1)  # because saved view has filter with name then should be only 1 record
+        self.assertEqual(rows[0]["name"], filter_name)
 
 
 class ImportObjectsTestCase(TransactionTestCase):
