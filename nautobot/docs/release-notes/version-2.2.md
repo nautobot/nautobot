@@ -450,7 +450,7 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 - [#5098](https://github.com/nautobot/nautobot/issues/5098) - Added client-side GraphQL, JSON, XML, and YAML syntax highlighting with the `highlight.js` library.
 - [#5101](https://github.com/nautobot/nautobot/issues/5101) - Added a utility to help when writing migrations that replace database models.
 - [#5107](https://github.com/nautobot/nautobot/issues/5107) - Added `hyperlinked_email` and `hyperlinked_phone_number` template tags/filters.
-- [#5127](https://github.com/nautobot/nautobot/issues/5127) - Added bulk-edit and bulk-delete capabilities for Jobs.
+- [#5127](https://github.com/nautobot/nautobot/issues/5127) - Added Bulk Edit and Bulk Delete functionalities for Jobs.
 - [#5129](https://github.com/nautobot/nautobot/issues/5129) - Implemented jobs tile view.
 - [#5188](https://github.com/nautobot/nautobot/issues/5188) - Added table of related Device Families to the DeviceType detail view.
 - [#5278](https://github.com/nautobot/nautobot/issues/5278) - Added permission constraint for User Token.
