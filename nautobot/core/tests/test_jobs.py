@@ -162,6 +162,9 @@ class ExportObjectListTest(TransactionTestCase):
         # remove BOM character if present
         csv_data = csv_data.lstrip("\ufeff")
         rows = list(csv.DictReader(StringIO(csv_data)))
+        self.assertGreaterEqual(
+            len(Location.objects.all()), 1
+        )  # just to be sure that we have more than 1 Location and filter works
         self.assertEqual(len(rows), 1)  # because saved view has filter with name then should be only 1 record
         self.assertEqual(rows[0]["name"], filter_name)
 
