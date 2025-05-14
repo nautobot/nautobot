@@ -105,6 +105,7 @@ $dark-border-subtle-dark:      $gray-05-dark;
 
 /* Options */
 $enable-shadows:          true;
+$enable-caret:            false;
 $enable-negative-margins: true;
 
 $prefix: bs-;
@@ -531,11 +532,51 @@ button {
       }
     }
   }
+
+  .nb-actions {
+    .dropdown {
+      font-size: 0; /* Use `font-size: 0;` to remove any visible whitespace. */
+
+      .dropdown-toggle {
+        /*
+         * Make table actions dropdown toggle button occupy the entire cell (works for default table cell size):
+         *   1. Use negative margins to "cancel" table cell padding.
+         *   2. Overwrite default button padding with table cell padding. In addition to that, subtract  border width
+         *      from each side because paddings and borders add up, and idle button already has a (transparent) border.
+         */
+        margin-block: -#{$table-cell-padding-y};
+        margin-inline: -#{$table-cell-padding-x};
+        padding-block: $table-cell-padding-y - $border-width;
+        padding-inline: $table-cell-padding-x - $border-width;
+      }
+    }
+  }
 }
 
 .table-hover {
+  > tbody > tr {
+    /* By default Bootstrap 5 defines only `:hover` and we need to slightly extend it to improve end user experience. */
+    &:hover,
+    &:focus-within,
+    &:has( .dropdown-toggle.show) { /* Leading space inside `has` is intentional and stands for descendant nodes. */
+      > * {
+        --#{$prefix}table-color-state: var(--#{$prefix}table-hover-color);
+        --#{$prefix}table-bg-state: var(--#{$prefix}table-hover-bg);
+
+        &.nb-actions .dropdown-toggle {
+          opacity: 1;
+        }
+      }
+    }
+  }
+
   > tbody > tr > * {
     transition: $btn-transition; /* Use `$btn-transition` but in fact it is just for `background-color`. */
+
+    &.nb-actions .dropdown-toggle {
+      @include transition($btn-transition, $transition-fade);
+      opacity: 0;
+    }
   }
 }
 
@@ -707,11 +748,6 @@ $btn-variants: (
   align-items: center;
   display: flex;
   gap: map.get($spacers, 8);
-
-  /* TODO(norbert-mieczkowski-codilime): replace `i.mdi` with new icons pattern when ready to use. */
-  &:not(:where(.active, :active,.disabled, :disabled)) > i.mdi {
-    color: var(--#{$prefix}secondary-color);
-  }
 }
 
 /* Badges */

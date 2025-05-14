@@ -380,27 +380,45 @@ class ButtonsColumn(django_tables2.TemplateColumn):
 
     buttons = ("changelog", "edit", "delete")
     attrs = {
-        "td": {"class": "text-end text-nowrap w-0 noprint"},
+        "td": {"class": "text-end text-nowrap w-0 noprint nb-actions"},
         "tf": {"class": "w-0"},
         "th": {"class": "nb-actionable w-0"},
     }
     # Note that braces are escaped to allow for string formatting prior to template rendering
     template_code = """
-    {{% if "changelog" in buttons %}}
-        <a href="{{% url '{changelog_route}' {pk_field}=record.{pk_field} %}}" class="btn btn-default btn-xs" title="Change log">
-            <i class="mdi mdi-history"></i>
-        </a>
-    {{% endif %}}
-    {{% if "edit" in buttons and perms.{app_label}.change_{model_name} %}}
-        <a href="{{% url '{edit_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-warning" title="Edit">
-            <i class="mdi mdi-pencil"></i>
-        </a>
-    {{% endif %}}
-    {{% if "delete" in buttons and perms.{app_label}.delete_{model_name} %}}
-        <a href="{{% url '{delete_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-danger" title="Delete">
-            <i class="mdi mdi-trash-can-outline"></i>
-        </a>
-    {{% endif %}}
+    <div class="dropdown">
+        <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <span class="mdi mdi-dots-vertical" aria-hidden="true"></span>
+            <span class="visually-hidden">Toggle Dropdown</span>
+        </button>
+        <ul class="dropdown-menu">
+            {prepend_template}
+            {{% if "changelog" in buttons %}}
+                <li>
+                    <a href="{{% url '{changelog_route}' {pk_field}=record.{pk_field} %}}" class="dropdown-item">
+                        <span class="mdi mdi-history" aria-hidden="true"></span>
+                        Change Log
+                    </a>
+                </li>
+            {{% endif %}}
+            {{% if "edit" in buttons and perms.{app_label}.change_{model_name} %}}
+                <li>
+                    <a href="{{% url '{edit_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="dropdown-item text-warning">
+                        <span class="mdi mdi-pencil" aria-hidden="true"></span>
+                        Edit
+                    </a>
+                </li>
+            {{% endif %}}
+            {{% if "delete" in buttons and perms.{app_label}.delete_{model_name} %}}
+                <li>
+                    <a href="{{% url '{delete_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="dropdown-item text-danger">
+                        <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
+                        Delete
+                    </a>
+                </li>
+            {{% endif %}}
+        </ul>
+    </div>
     """
 
     def __init__(
@@ -409,15 +427,10 @@ class ButtonsColumn(django_tables2.TemplateColumn):
         *args,
         pk_field="pk",
         buttons=None,
-        prepend_template=None,
+        prepend_template="",
         return_url_extra="",
         **kwargs,
     ):
-        if prepend_template:
-            prepend_template = prepend_template.replace("{", "{{")
-            prepend_template = prepend_template.replace("}", "}}")
-            self.template_code = prepend_template + self.template_code
-
         app_label = model._meta.app_label
         changelog_route = get_route_for_model(model, "changelog")
         edit_route = get_route_for_model(model, "edit")
@@ -431,6 +444,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
             delete_route=delete_route,
             pk_field=pk_field,
             buttons=buttons,
+            prepend_template=prepend_template,
         )
 
         super().__init__(template_code=template_code, *args, **kwargs)

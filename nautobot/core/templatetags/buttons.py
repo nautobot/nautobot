@@ -215,6 +215,7 @@ def consolidate_bulk_action_buttons(context):
                 f"""
                 <button type="button" data-bs-toggle="dropdown" class="{edit_button_classes} dropdown-toggle" aria-haspopup="true">
                     <span class="visually-hidden">Toggle Dropdown</span>
+                    <span class="mdi mdi-chevron-down"></span>
                 </button>
                 """
             )
@@ -226,6 +227,7 @@ def consolidate_bulk_action_buttons(context):
                 """
                 <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true">
                     Bulk Actions
+                    <span class="mdi mdi-chevron-down" aria-hidden="true"></span>
                 </button>
                 """
             )

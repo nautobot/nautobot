@@ -1,7 +1,7 @@
 {% load django_tables2 %}
 {% load get_item table_config_button from helpers %}
 
-{% with last_column_name=table.columns.items|last|first %}
+{% with last_column_name=table.columns.names|last %}
     <table{% if table.attrs %} {{ table.attrs.as_html }}{% endif %}>
         {% if table.show_header %}
             <thead>
