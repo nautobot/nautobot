@@ -98,10 +98,10 @@ from .datasources import (
 from .jobs import get_job
 from .models import (
     ApprovalWorkflow,
-    ApprovalWorkflowInstance,
+    ApprovalWorkflowDefinition,
     ApprovalWorkflowStage,
-    ApprovalWorkflowStageInstance,
-    ApprovalWorkflowStageInstanceResponse,
+    ApprovalWorkflowStageDefinition,
+    ApprovalWorkflowStageResponse,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -150,16 +150,16 @@ logger = logging.getLogger(__name__)
 #
 
 
-class ApprovalWorkflowUIViewSet(NautobotUIViewSet):
-    """ViewSet for ApprovalWorkflow."""
+class ApprovalWorkflowDefinitionUIViewSet(NautobotUIViewSet):
+    """ViewSet for ApprovalWorkflowDefinition."""
 
-    bulk_update_form_class = forms.ApprovalWorkflowBulkEditForm
-    filterset_class = filters.ApprovalWorkflowFilterSet
-    filterset_form_class = forms.ApprovalWorkflowFilterForm
-    form_class = forms.ApprovalWorkflowForm
-    queryset = ApprovalWorkflow.objects.all()
-    serializer_class = serializers.ApprovalWorkflowSerializer
-    table_class = tables.ApprovalWorkflowTable
+    bulk_update_form_class = forms.ApprovalWorkflowDefinitionBulkEditForm
+    filterset_class = filters.ApprovalWorkflowDefinitionFilterSet
+    filterset_form_class = forms.ApprovalWorkflowDefinitionFilterForm
+    form_class = forms.ApprovalWorkflowDefinitionForm
+    queryset = ApprovalWorkflowDefinition.objects.all()
+    serializer_class = serializers.ApprovalWorkflowDefinitionSerializer
+    table_class = tables.ApprovalWorkflowDefinitionTable
 
     object_detail_content = ObjectDetailContent(
         panels=[
@@ -170,32 +170,31 @@ class ApprovalWorkflowUIViewSet(NautobotUIViewSet):
             ),
             object_detail.ObjectsTablePanel(
                 weight=100,
-                table_class=tables.ApprovalWorkflowStageTable,
-                table_filter="approval_workflow",
+                table_class=tables.ApprovalWorkflowStageDefinitionTable,
+                table_filter="approval_workflow_definition",
                 section=SectionChoices.RIGHT_HALF,
-                exclude_columns=["approval_workflow", "actions"],
+                exclude_columns=["approval_workflow_definition", "actions"],
                 add_button_route=None,
                 table_title="Stages",
             ),
             object_detail.ObjectsTablePanel(
                 weight=200,
-                table_class=tables.ApprovalWorkflowInstanceTable,
-                table_filter="approval_workflow",
+                table_class=tables.ApprovalWorkflowTable,
+                table_filter="approval_workflow_definition",
                 section=SectionChoices.FULL_WIDTH,
-                exclude_columns=["object_under_review_content_type", "approval_workflow"],
+                exclude_columns=["object_under_review_content_type", "approval_workflow_definition"],
                 add_button_route=None,
-                table_title="Active Workflows",
+                table_title="Workflows",
             ),
         ],
     )
 
     def get_extra_context(self, request, instance):
         ctx = super().get_extra_context(request, instance)
-
         if request.POST:
-            ctx["stages"] = forms.ApprovalWorkflowStageFormSet(data=request.POST, instance=instance)
+            ctx["stages"] = forms.ApprovalWorkflowStageDefinitionFormSet(data=request.POST, instance=instance)
         else:
-            ctx["stages"] = forms.ApprovalWorkflowStageFormSet(instance=instance)
+            ctx["stages"] = forms.ApprovalWorkflowStageDefinitionFormSet(instance=instance)
 
         return ctx
 
@@ -208,6 +207,9 @@ class ApprovalWorkflowUIViewSet(NautobotUIViewSet):
         if self.action in ["create", "update"]:
             try:
                 self._process_create_or_update_form(form)
+            except ObjectDoesNotExist:
+                form = self._handle_object_does_not_exist(form)
+                self.has_error = True
             except RuntimeError:
                 msg = "Errors encountered when saving approval workflow stages. See below."
                 logger.debug(msg)
@@ -278,16 +280,16 @@ class ApprovalWorkflowUIViewSet(NautobotUIViewSet):
                     self.success_url = self.get_return_url(request, obj)
 
 
-class ApprovalWorkflowStageUIViewSet(NautobotUIViewSet):
-    """ViewSet for ApprovalWorkflowStage."""
+class ApprovalWorkflowStageDefinitionUIViewSet(NautobotUIViewSet):
+    """ViewSet for ApprovalWorkflowStageDefinition."""
 
-    bulk_update_form_class = forms.ApprovalWorkflowStageBulkEditForm
-    filterset_class = filters.ApprovalWorkflowStageFilterSet
-    filterset_form_class = forms.ApprovalWorkflowStageFilterForm
-    form_class = forms.ApprovalWorkflowStageForm
-    queryset = ApprovalWorkflowStage.objects.all()
-    serializer_class = serializers.ApprovalWorkflowStageSerializer
-    table_class = tables.ApprovalWorkflowStageTable
+    bulk_update_form_class = forms.ApprovalWorkflowStageDefinitionBulkEditForm
+    filterset_class = filters.ApprovalWorkflowStageDefinitionFilterSet
+    filterset_form_class = forms.ApprovalWorkflowStageDefinitionFilterForm
+    form_class = forms.ApprovalWorkflowStageDefinitionForm
+    queryset = ApprovalWorkflowStageDefinition.objects.all()
+    serializer_class = serializers.ApprovalWorkflowStageDefinitionSerializer
+    table_class = tables.ApprovalWorkflowStageDefinitionTable
 
     object_detail_content = ObjectDetailContent(
         panels=[
@@ -300,7 +302,7 @@ class ApprovalWorkflowStageUIViewSet(NautobotUIViewSet):
     )
 
 
-class ApprovalWorkflowInstanceUIViewSet(
+class ApprovalWorkflowUIViewSet(
     ObjectDetailViewMixin,
     ObjectListViewMixin,
     ObjectDestroyViewMixin,
@@ -308,19 +310,20 @@ class ApprovalWorkflowInstanceUIViewSet(
     ObjectChangeLogViewMixin,
     ObjectNotesViewMixin,
 ):
-    """ViewSet for ApprovalWorkflowInstance."""
+    """ViewSet for ApprovalWorkflow."""
 
-    filterset_class = filters.ApprovalWorkflowInstanceFilterSet
-    filterset_form_class = forms.ApprovalWorkflowInstanceFilterForm
-    queryset = ApprovalWorkflowInstance.objects.all()
-    serializer_class = serializers.ApprovalWorkflowInstanceSerializer
-    table_class = tables.ApprovalWorkflowInstanceTable
+    filterset_class = filters.ApprovalWorkflowFilterSet
+    filterset_form_class = forms.ApprovalWorkflowFilterForm
+    queryset = ApprovalWorkflow.objects.all()
+    serializer_class = serializers.ApprovalWorkflowSerializer
+    table_class = tables.ApprovalWorkflowTable
+    action_buttons = ()
 
-    class ApprovalWorkflowInstancePanel(ObjectFieldsPanel):
+    class ApprovalWorkflowPanel(ObjectFieldsPanel):
         def __init__(self, **kwargs):
             super().__init__(
                 fields=(
-                    "approval_workflow",
+                    "approval_workflow_definition",
                     "object_under_review",
                     "current_state",
                     "decision_date",
@@ -358,33 +361,33 @@ class ApprovalWorkflowInstanceUIViewSet(
 
     object_detail_content = ObjectDetailContent(
         panels=[
-            ApprovalWorkflowInstancePanel(
+            ApprovalWorkflowPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
             ),
             object_detail.ObjectsTablePanel(
                 weight=200,
                 table_title="Stages",
-                table_class=tables.RelatedApprovalWorkflowStageInstanceTable,
-                table_filter="approval_workflow_instance",
+                table_class=tables.RelatedApprovalWorkflowStageTable,
+                table_filter="approval_workflow",
                 section=SectionChoices.RIGHT_HALF,
-                exclude_columns=["approval_workflow_instance"],
+                exclude_columns=["approval_workflow"],
                 add_button_route=None,
             ),
             object_detail.ObjectsTablePanel(
                 weight=200,
                 table_title="Responses",
-                table_class=tables.RelatedApprovalWorkflowStageInstanceResponseTable,
-                table_filter="approval_workflow_stage_instance__approval_workflow_instance",
+                table_class=tables.RelatedApprovalWorkflowStageResponseTable,
+                table_filter="approval_workflow_stage__approval_workflow",
                 section=SectionChoices.RIGHT_HALF,
-                exclude_columns=["approval_workflow_instance"],
+                exclude_columns=["approval_workflow"],
                 add_button_route=None,
             ),
         ],
     )
 
 
-class ApprovalWorkflowStageInstanceUIViewSet(
+class ApprovalWorkflowStageUIViewSet(
     ObjectDetailViewMixin,
     ObjectListViewMixin,
     ObjectDestroyViewMixin,
@@ -392,19 +395,20 @@ class ApprovalWorkflowStageInstanceUIViewSet(
     ObjectChangeLogViewMixin,
     ObjectNotesViewMixin,
 ):
-    """ViewSet for ApprovalWorkflowStageInstance."""
+    """ViewSet for ApprovalWorkflowStage."""
 
-    filterset_class = filters.ApprovalWorkflowStageInstanceFilterSet
-    filterset_form_class = forms.ApprovalWorkflowStageInstanceFilterForm
-    queryset = ApprovalWorkflowStageInstance.objects.all()
-    serializer_class = serializers.ApprovalWorkflowStageInstanceSerializer
-    table_class = tables.ApprovalWorkflowStageInstanceTable
+    filterset_class = filters.ApprovalWorkflowStageFilterSet
+    filterset_form_class = forms.ApprovalWorkflowStageFilterForm
+    queryset = ApprovalWorkflowStage.objects.all()
+    serializer_class = serializers.ApprovalWorkflowStageSerializer
+    table_class = tables.ApprovalWorkflowStageTable
+    action_buttons = ()
 
-    class ApprovalWorkflowStageInstancePanel(ObjectFieldsPanel):
+    class ApprovalWorkflowStagePanel(ObjectFieldsPanel):
         def __init__(self, **kwargs):
             super().__init__(
                 fields=(
-                    "approval_workflow_instance",
+                    "approval_workflow",
                     "state",
                     "decision_date",
                     "approver_group",
@@ -421,7 +425,7 @@ class ApprovalWorkflowStageInstanceUIViewSet(
         def render_key(self, key, value, context):
             obj = get_obj_from_context(context)
 
-            if key == "approval_workflow_instance":
+            if key == "approval_workflow":
                 return "Approval Workflow"
             if key == "decision_date":
                 if obj.state == ApprovalWorkflowStateChoices.APPROVED:
@@ -445,22 +449,22 @@ class ApprovalWorkflowStageInstanceUIViewSet(
         def get_data(self, context):
             obj = get_obj_from_context(context)
             data = super().get_data(context)
-            data["approver_group"] = obj.approval_workflow_stage.approver_group
-            data["min_approvers"] = obj.approval_workflow_stage.min_approvers
+            data["approver_group"] = obj.approval_workflow_stage_definition.approver_group
+            data["min_approvers"] = obj.approval_workflow_stage_definition.min_approvers
             return data
 
     object_detail_content = ObjectDetailContent(
         panels=[
-            ApprovalWorkflowStageInstancePanel(
+            ApprovalWorkflowStagePanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
             ),
             object_detail.ObjectsTablePanel(
                 weight=200,
-                table_class=tables.ApprovalWorkflowStageInstanceResponseTable,
-                table_filter="approval_workflow_stage_instance",
+                table_class=tables.ApprovalWorkflowStageResponseTable,
+                table_filter="approval_workflow_stage",
                 section=SectionChoices.RIGHT_HALF,
-                exclude_columns=["approval_workflow_stage_instance"],
+                exclude_columns=["approval_workflow_stage"],
                 table_title="Responses",
             ),
         ],
@@ -474,35 +478,35 @@ class ApprovalWorkflowStageInstanceUIViewSet(
         instance = self.get_object()
 
         try:
-            approval_workflow_stage_instance_response = ApprovalWorkflowStageInstanceResponse.objects.get(
-                approval_workflow_stage_instance=instance,
+            approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.get(
+                approval_workflow_stage=instance,
                 user=request.user,
             )
-        except ApprovalWorkflowStageInstanceResponse.DoesNotExist:
-            approval_workflow_stage_instance_response = ApprovalWorkflowStageInstanceResponse.objects.create(
-                approval_workflow_stage_instance=instance,
+        except ApprovalWorkflowStageResponse.DoesNotExist:
+            approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.create(
+                approval_workflow_stage=instance,
                 user=request.user,
             )
 
         if request.method == "GET":
-            obj = approval_workflow_stage_instance_response
+            obj = approval_workflow_stage_response
             form = ConfirmationForm(initial=request.GET)
 
             return render(
                 request,
                 "extras/approval_workflow/approve.html",
                 {
-                    "obj": obj.approval_workflow_stage_instance,
-                    "object_under_review": obj.approval_workflow_stage_instance.approval_workflow_instance.object_under_review,
+                    "obj": obj.approval_workflow_stage,
+                    "object_under_review": obj.approval_workflow_stage.approval_workflow.object_under_review,
                     "form": form,
-                    "obj_type": ApprovalWorkflowStageInstance._meta.verbose_name,
+                    "obj_type": ApprovalWorkflowStage._meta.verbose_name,
                     "return_url": self.get_return_url(request, obj),
                     "panel_class": "success",
                     "button_class": "success",
                 },
             )
-        approval_workflow_stage_instance_response.state = ApprovalWorkflowStateChoices.APPROVED
-        approval_workflow_stage_instance_response.save()
+        approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.APPROVED
+        approval_workflow_stage_response.save()
         messages.success(request, f"You approved {instance}.")
         return redirect(self.get_return_url(request))
 
@@ -514,35 +518,35 @@ class ApprovalWorkflowStageInstanceUIViewSet(
         instance = self.get_object()
 
         try:
-            approval_workflow_stage_instance_response = ApprovalWorkflowStageInstanceResponse.objects.get(
-                approval_workflow_stage_instance=instance,
+            approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.get(
+                approval_workflow_stage=instance,
                 user=request.user,
             )
-        except ApprovalWorkflowStageInstanceResponse.DoesNotExist:
-            approval_workflow_stage_instance_response = ApprovalWorkflowStageInstanceResponse.objects.create(
-                approval_workflow_stage_instance=instance,
+        except ApprovalWorkflowStageResponse.DoesNotExist:
+            approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.create(
+                approval_workflow_stage=instance,
                 user=request.user,
                 state=ApprovalWorkflowStateChoices.PENDING,
             )
 
         if request.method == "GET":
-            obj = approval_workflow_stage_instance_response
+            obj = approval_workflow_stage_response
             form = ConfirmationForm(initial=request.GET)
 
             return render(
                 request,
                 "extras/approval_workflow/deny.html",
                 {
-                    "obj": obj.approval_workflow_stage_instance,
-                    "object_under_review": obj.approval_workflow_stage_instance.approval_workflow_instance.object_under_review,
+                    "obj": obj.approval_workflow_stage,
+                    "object_under_review": obj.approval_workflow_stage.approval_workflow.object_under_review,
                     "form": form,
-                    "obj_type": ApprovalWorkflowStageInstance._meta.verbose_name,
+                    "obj_type": ApprovalWorkflowStage._meta.verbose_name,
                     "return_url": self.get_return_url(request, obj),
                 },
             )
 
-        approval_workflow_stage_instance_response.state = ApprovalWorkflowStateChoices.DENIED
-        approval_workflow_stage_instance_response.save()
+        approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.DENIED
+        approval_workflow_stage_response.save()
         messages.success(request, f"You denied {instance}.")
         return redirect(self.get_return_url(request))
 
@@ -554,51 +558,51 @@ class ApprovalWorkflowStageInstanceUIViewSet(
         # The user is allowed to comment on the stage instance regardless of its state
         instance = self.get_object()
         try:
-            approval_workflow_stage_instance_response = ApprovalWorkflowStageInstanceResponse.objects.get(
-                approval_workflow_stage_instance=instance,
+            approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.get(
+                approval_workflow_stage=instance,
                 user=request.user,
             )
-        except ApprovalWorkflowStageInstanceResponse.DoesNotExist:
-            approval_workflow_stage_instance_response = ApprovalWorkflowStageInstanceResponse.objects.create(
-                approval_workflow_stage_instance=instance,
+        except ApprovalWorkflowStageResponse.DoesNotExist:
+            approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.create(
+                approval_workflow_stage=instance,
                 user=request.user,
             )
 
         if request.method == "GET":
-            obj = approval_workflow_stage_instance_response
+            obj = approval_workflow_stage_response
             form = CommentForm(initial=request.GET)
 
             return render(
                 request,
                 "extras/approval_workflow/comment.html",
                 {
-                    "obj": obj.approval_workflow_stage_instance,
-                    "object_under_review": obj.approval_workflow_stage_instance.approval_workflow_instance.object_under_review,
+                    "obj": obj.approval_workflow_stage,
+                    "object_under_review": obj.approval_workflow_stage.approval_workflow.object_under_review,
                     "form": form,
-                    "obj_type": ApprovalWorkflowStageInstance._meta.verbose_name,
+                    "obj_type": ApprovalWorkflowStage._meta.verbose_name,
                     "return_url": self.get_return_url(request, obj),
                     "button_class": "info",
                     "panel_class": "info",
                 },
             )
 
-        approval_workflow_stage_instance_response.comments = request.data.get("comments")
-        approval_workflow_stage_instance_response.save()
+        approval_workflow_stage_response.comments = request.data.get("comments")
+        approval_workflow_stage_response.save()
         messages.success(request, f"You left comments on {instance}.")
         return redirect(self.get_return_url(request))
 
 
-class ApprovalWorkflowStageInstanceResponseUIViewSet(
+class ApprovalWorkflowStageResponseUIViewSet(
     ObjectBulkDestroyViewMixin,
     ObjectDestroyViewMixin,
 ):
-    """ViewSet for ApprovalWorkflowStageInstanceResponse."""
+    """ViewSet for ApprovalWorkflowStageResponse."""
 
-    filterset_class = filters.ApprovalWorkflowStageInstanceResponseFilterSet
-    filterset_form_class = forms.ApprovalWorkflowStageInstanceResponseFilterForm
-    queryset = ApprovalWorkflowStageInstanceResponse.objects.all()
-    serializer_class = serializers.ApprovalWorkflowStageInstanceResponseSerializer
-    table_class = tables.ApprovalWorkflowStageInstanceResponseTable
+    filterset_class = filters.ApprovalWorkflowStageResponseFilterSet
+    filterset_form_class = forms.ApprovalWorkflowStageResponseFilterForm
+    queryset = ApprovalWorkflowStageResponse.objects.all()
+    serializer_class = serializers.ApprovalWorkflowStageResponseSerializer
+    table_class = tables.ApprovalWorkflowStageResponseTable
 
 
 class ApproverDashboardView(ObjectListViewMixin):
@@ -606,11 +610,11 @@ class ApproverDashboardView(ObjectListViewMixin):
     View for the dashboard of approval workflow stage instances waiting for the current user to approve.
     """
 
-    queryset = ApprovalWorkflowStageInstance.objects.all()
-    filterset_class = filters.ApprovalWorkflowStageInstanceFilterSet
-    filterset_form_class = forms.ApprovalWorkflowStageInstanceFilterForm
+    queryset = ApprovalWorkflowStage.objects.all()
+    filterset_class = filters.ApprovalWorkflowStageFilterSet
+    filterset_form_class = forms.ApprovalWorkflowStageFilterForm
     table_class = tables.ApproverDashboardTable
-    template_name = "extras/approver_dashboard.html"
+    template_name = "extras/approval_dashboard.html"
     action_buttons = ()
 
     def get_template_name(self):
@@ -636,25 +640,25 @@ class ApproverDashboardView(ObjectListViewMixin):
         user = self.request.user
         group_pks = user.groups.all().values_list("pk", flat=True)
         # we only want currently active stages on the approver
-        active_stage_instance_pks = [workflow.active_stage.pk for workflow in ApprovalWorkflowInstance.objects.all()]
+        active_stage_pks = [workflow.active_stage.pk for workflow in ApprovalWorkflow.objects.all()]
 
         # Get the ApprovalWorkflowStage instances that are already approved by the current user
-        approved_approval_workflow_stage_instances = ApprovalWorkflowStageInstanceResponse.objects.filter(
+        approved_approval_workflow_stages = ApprovalWorkflowStageResponse.objects.filter(
             state=ApprovalWorkflowStateChoices.APPROVED,
             user=user,
-        ).values_list("approval_workflow_stage_instance", flat=True)
+        ).values_list("approval_workflow_stage", flat=True)
 
         # Return only the approval workflow stage instances that are pending and active currently
         # and belong to a pending approval workflow instance
         # and are assigned to the current user or any of the groups the user belongs to
         return (
             queryset.filter(
-                pk__in=active_stage_instance_pks,
-                approval_workflow_instance__current_state=ApprovalWorkflowStateChoices.PENDING,
+                pk__in=active_stage_pks,
+                approval_workflow__current_state=ApprovalWorkflowStateChoices.PENDING,
                 state=ApprovalWorkflowStateChoices.PENDING,
-                approval_workflow_stage__approver_group__pk__in=group_pks,
+                approval_workflow_stage_definition__approver_group__pk__in=group_pks,
             )
-            .exclude(pk__in=approved_approval_workflow_stage_instances)
+            .exclude(pk__in=approved_approval_workflow_stages)
             .order_by("created")
         )
 
@@ -674,11 +678,11 @@ class ApproveeDashboardView(ObjectListViewMixin):
     View for the dashboard of approval workflows trigger by the current user.
     """
 
-    queryset = ApprovalWorkflowInstance.objects.all()
-    filterset_class = filters.ApprovalWorkflowInstanceFilterSet
-    filterset_form_class = forms.ApprovalWorkflowInstanceFilterForm
-    table_class = tables.ApprovalWorkflowInstanceTable
-    template_name = "extras/approvee_dashboard.html"
+    queryset = ApprovalWorkflow.objects.all()
+    filterset_class = filters.ApprovalWorkflowFilterSet
+    filterset_form_class = forms.ApprovalWorkflowFilterForm
+    table_class = tables.ApprovalWorkflowTable
+    template_name = "extras/approval_dashboard.html"
     action_buttons = ()
 
     def get_template_name(self):
@@ -701,7 +705,7 @@ class ApproveeDashboardView(ObjectListViewMixin):
         """
         queryset = super().get_queryset()
         user = self.request.user
-        return queryset.filter(user=user)
+        return queryset.filter(user=user).order_by("created")
 
     def list(self, request, *args, **kwargs):
         """
@@ -2112,21 +2116,21 @@ class JobView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
-        approval_workflow_instances = instance.associated_approval_workflow_instances.all()
-        approval_workflow_instances_count = approval_workflow_instances.count()
-        approval_workflow_instance_table = tables.ApprovalWorkflowInstanceTable(
-            data=approval_workflow_instances,
+        approval_workflows = instance.associated_approval_workflows.all()
+        approval_workflows_count = approval_workflows.count()
+        approval_workflow_table = tables.ApprovalWorkflowTable(
+            data=approval_workflows,
             user=request.user,
             exclude=["object_under_review", "object_under_review_content_type"],
         )
 
         RequestConfig(
             request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-        ).configure(approval_workflow_instance_table)
+        ).configure(approval_workflow_table)
         context.update(
             {
-                "approval_workflow_instances_count": approval_workflow_instances_count,
-                "approval_workflow_instance_table": approval_workflow_instance_table,
+                "approval_workflows_count": approval_workflows_count,
+                "approval_workflow_table": approval_workflow_table,
             }
         )
         return context
@@ -2610,21 +2614,21 @@ class ScheduledJobView(generic.ObjectView):
                 else:
                     labels[name] = pretty_name(name)
 
-        approval_workflow_instances = instance.associated_approval_workflow_instances.all()
-        approval_workflow_instances_count = approval_workflow_instances.count()
-        approval_workflow_instance_table = tables.ApprovalWorkflowInstanceTable(
-            data=approval_workflow_instances,
+        approval_workflows = instance.associated_approval_workflows.all()
+        approval_workflows_count = approval_workflows.count()
+        approval_workflow_table = tables.ApprovalWorkflowTable(
+            data=approval_workflows,
             user=request.user,
             exclude=["object_under_review", "object_under_review_content_type"],
         )
 
         RequestConfig(
             request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-        ).configure(approval_workflow_instance_table)
+        ).configure(approval_workflow_table)
 
         return {
-            "approval_workflow_instances_count": approval_workflow_instances_count,
-            "approval_workflow_instance_table": approval_workflow_instance_table,
+            "approval_workflow_count": approval_workflows_count,
+            "approval_workflow_table": approval_workflow_table,
             "labels": labels,
             "job_class_found": (job_class is not None),
             "default_time_zone": get_current_timezone(),

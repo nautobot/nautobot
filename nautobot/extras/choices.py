@@ -11,9 +11,9 @@ from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 class ApprovalWorkflowStateChoices(ChoiceSet):
     """
     Choices for:
-    1. current_state field on the ApprovalWorkflowInstance model.
-    2. state field on the ApprovalWorkflowStageInstance model.
-    3. state field on the ApprovalWorkflowStageInstanceResponse model.
+    1. current_state field on the ApprovalWorkflow model.
+    2. state field on the ApprovalWorkflowStage model.
+    3. state field on the ApprovalWorkflowStageResponse model.
     """
 
     PENDING = "Pending"

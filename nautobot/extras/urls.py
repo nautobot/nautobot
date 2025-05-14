@@ -24,10 +24,10 @@ app_name = "extras"
 
 router = NautobotUIViewSetRouter()
 router.register("approval-workflows", views.ApprovalWorkflowUIViewSet)
-router.register("approval-workflow-instances", views.ApprovalWorkflowInstanceUIViewSet)
-router.register("approval-workflow-stage-instance-responses", views.ApprovalWorkflowStageInstanceResponseUIViewSet)
-router.register("approval-workflow-stage-instances", views.ApprovalWorkflowStageInstanceUIViewSet)
+router.register("approval-workflow-definitions", views.ApprovalWorkflowDefinitionUIViewSet)
+router.register("approval-workflow-stage-responses", views.ApprovalWorkflowStageResponseUIViewSet)
 router.register("approval-workflow-stages", views.ApprovalWorkflowStageUIViewSet)
+router.register("approval-workflow-stage-definitions", views.ApprovalWorkflowStageDefinitionUIViewSet)
 router.register("contacts", views.ContactUIViewSet)
 router.register("contact-associations", views.ContactAssociationUIViewSet)
 router.register("export-templates", views.ExportTemplateUIViewSet)

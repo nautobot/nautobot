@@ -14,14 +14,14 @@ menu_items = (
                 weight=50,
                 items=(
                     NavMenuItem(
-                        link="extras:approvalworkflow_list",
+                        link="extras:approvalworkflowdefinition_list",
                         name="Workflow Definitions",
                         weight=100,
-                        permissions=["extras.view_approvalworkflow"],
+                        permissions=["extras.view_approvalworkflowdefinition"],
                         buttons=(
                             NavMenuAddButton(
-                                link="extras:approvalworkflow_add",
-                                permissions=["extras.add_approvalworkflow"],
+                                link="extras:approvalworkflowdefinition_add",
+                                permissions=["extras.add_approvalworkflowdefinition"],
                             ),
                         ),
                     ),

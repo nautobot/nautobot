@@ -18,12 +18,12 @@ class ApprovableModelMixin(models.Model):
 
     is_approval_workflow_model = True
 
-    # Reverse relation so that deleting a ApprovableModelMixin automatically deletes any approval workflow instances related to it.
-    associated_approval_workflow_instances = GenericRelation(
-        "extras.ApprovalWorkflowInstance",
+    # Reverse relation so that deleting a ApprovableModelMixin automatically deletes any approval workflows related to it.
+    associated_approval_workflows = GenericRelation(
+        "extras.ApprovalWorkflow",
         content_type_field="object_under_review_content_type",
         object_id_field="object_under_review_object_id",
-        related_query_name="associated_approval_workflow_instances_%(app_label)s_%(class)s",  # e.g. 'associated_object_approval_workflow_instances_dcim_device'
+        related_query_name="associated_approval_workflows_%(app_label)s_%(class)s",  # e.g. 'associated_object_approval_workflows_dcim_device'
     )
 
 

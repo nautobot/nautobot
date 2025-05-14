@@ -1,10 +1,10 @@
 from .change_logging import ChangeLoggedModel, ObjectChange  # isort:skip
 from .approvals import (  # isort: skip
     ApprovalWorkflow,
-    ApprovalWorkflowInstance,
+    ApprovalWorkflowDefinition,
+    ApprovalWorkflowStageDefinition,
     ApprovalWorkflowStage,
-    ApprovalWorkflowStageInstance,
-    ApprovalWorkflowStageInstanceResponse,
+    ApprovalWorkflowStageResponse,
 )
 from .contacts import Contact, ContactAssociation, Team
 from .customfields import ComputedField, CustomField, CustomFieldChoice, CustomFieldModel
@@ -48,10 +48,10 @@ from .tags import Tag, TaggedItem
 
 __all__ = (
     "ApprovalWorkflow",
-    "ApprovalWorkflowInstance",
+    "ApprovalWorkflowDefinition",
     "ApprovalWorkflowStage",
-    "ApprovalWorkflowStageInstance",
-    "ApprovalWorkflowStageInstanceResponse",
+    "ApprovalWorkflowStageDefinition",
+    "ApprovalWorkflowStageResponse",
     "ChangeLoggedModel",
     "ComputedField",
     "ConfigContext",

@@ -441,7 +441,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
 
 class ApprovalButtonsColumn(django_tables2.TemplateColumn):
     """
-    Render detail, changelog, approve, deny, and comment buttons for an approval workflow stage instance.
+    Render detail, changelog, approve, deny, and comment buttons for an approval workflow stage.
 
     :param model: Model class to use for calculating URL view names
     :param prepend_template: Additional template content to render in the column (optional)
@@ -462,9 +462,9 @@ class ApprovalButtonsColumn(django_tables2.TemplateColumn):
     ):
         app_label = model._meta.app_label
         changelog_route = get_route_for_model(model, "changelog")
-        approval_route = "extras:approvalworkflowstageinstance_approve"
-        deny_route = "extras:approvalworkflowstageinstance_deny"
-        comment_route = "extras:approvalworkflowstageinstance_comment"
+        approval_route = "extras:approvalworkflowstage_approve"
+        deny_route = "extras:approvalworkflowstage_deny"
+        comment_route = "extras:approvalworkflowstage_comment"
 
         super().__init__(template_name=self.template_name, *args, **kwargs)
 

@@ -23,10 +23,10 @@ from nautobot.tenancy.tables import TenantColumn
 from .choices import LogLevelChoices, MetadataTypeDataTypeChoices
 from .models import (
     ApprovalWorkflow,
-    ApprovalWorkflowInstance,
+    ApprovalWorkflowDefinition,
     ApprovalWorkflowStage,
-    ApprovalWorkflowStageInstance,
-    ApprovalWorkflowStageInstanceResponse,
+    ApprovalWorkflowStageDefinition,
+    ApprovalWorkflowStageResponse,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -205,68 +205,68 @@ SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS = """
 #
 
 
+class ApprovalWorkflowDefinitionTable(BaseTable):
+    """Table for ApprovalWorkflowDefinitionTable list view."""
+
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    actions = ButtonsColumn(ApprovalWorkflowDefinition)
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = ApprovalWorkflowDefinition
+        fields = (
+            "pk",
+            "name",
+            "model_content_type",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "model_content_type",
+            "actions",
+        )
+
+
+class ApprovalWorkflowStageDefinitionTable(BaseTable):
+    """Table for ApprovalWorkflowStageDefinition list view."""
+
+    pk = ToggleColumn()
+    approval_workflow_definition = tables.Column(linkify=True)
+    name = tables.Column(linkify=True)
+    actions = ButtonsColumn(ApprovalWorkflowStageDefinition)
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStageDefinition
+        fields = (
+            "pk",
+            "approval_workflow_definition",
+            "weight",
+            "name",
+            "min_approvers",
+            "denial_message",
+            "approver_group",
+        )
+        default_columns = (
+            "pk",
+            "approval_workflow_definition",
+            "weight",
+            "name",
+            "min_approvers",
+            "denial_message",
+            "approver_group",
+            "actions",
+        )
+
+
 class ApprovalWorkflowTable(BaseTable):
     """Table for ApprovalWorkflow list view."""
 
     pk = ToggleColumn()
-    name = tables.Column(linkify=True)
-    actions = ButtonsColumn(ApprovalWorkflow)
-
-    class Meta(BaseTable.Meta):
-        """Meta attributes."""
-
-        model = ApprovalWorkflow
-        fields = (
-            "pk",
-            "name",
-            "model_content_type",
-        )
-        default_columns = (
-            "pk",
-            "name",
-            "model_content_type",
-            "actions",
-        )
-
-
-class ApprovalWorkflowStageTable(BaseTable):
-    """Table for ApprovalWorkflowStage list view."""
-
-    pk = ToggleColumn()
-    approval_workflow = tables.Column(linkify=True)
-    name = tables.Column(linkify=True)
-    actions = ButtonsColumn(ApprovalWorkflowStage)
-
-    class Meta(BaseTable.Meta):
-        """Meta attributes."""
-
-        model = ApprovalWorkflowStage
-        fields = (
-            "pk",
-            "approval_workflow",
-            "weight",
-            "name",
-            "min_approvers",
-            "denial_message",
-            "approver_group",
-        )
-        default_columns = (
-            "pk",
-            "approval_workflow",
-            "weight",
-            "name",
-            "min_approvers",
-            "denial_message",
-            "approver_group",
-            "actions",
-        )
-
-
-class ApprovalWorkflowInstanceTable(BaseTable):
-    """Table for ApprovalWorkflowInstance list view."""
-
-    pk = ToggleColumn()
-    approval_workflow = tables.Column(linkify=True)
+    approval_workflow_definition = tables.Column(linkify=True)
     object_under_review_content_type = tables.Column(verbose_name="Object Type Under Review")
     object_under_review = tables.TemplateColumn(
         template_code=APPROVAL_WORKFLOW_OBJECT, verbose_name="Object Under Review"
@@ -276,12 +276,12 @@ class ApprovalWorkflowInstanceTable(BaseTable):
         verbose_name="User",
     )
     current_state = ChoiceFieldColumn()
-    actions = ApprovalButtonsColumn(ApprovalWorkflowInstance, buttons=("detail", "changelog"))
+    actions = ApprovalButtonsColumn(ApprovalWorkflow, buttons=("detail", "changelog"))
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
 
-        model = ApprovalWorkflowInstance
+        model = ApprovalWorkflow
         fields = (
             "pk",
             "approval_workflow",
@@ -301,12 +301,12 @@ class ApprovalWorkflowInstanceTable(BaseTable):
         )
 
 
-class ApprovalWorkflowStageInstanceTable(BaseTable):
-    """Table for ApprovalWorkflowStageInstance list view."""
+class ApprovalWorkflowStageTable(BaseTable):
+    """Table for ApprovalWorkflowStage list view."""
 
     pk = ToggleColumn()
-    approval_workflow_instance = tables.Column(linkify=True)
-    approval_workflow_stage = tables.Column(linkify=True)
+    approval_workflow = tables.Column(linkify=True)
+    approval_workflow_stage_definition = tables.Column(linkify=True)
     actions_needed = tables.TemplateColumn(
         template_code="""
         {% if record.remaining_approvals == 1 %}
@@ -321,24 +321,24 @@ class ApprovalWorkflowStageInstanceTable(BaseTable):
         verbose_name="Actions Needed",
     )
     state = ChoiceFieldColumn()
-    actions = ApprovalButtonsColumn(ApprovalWorkflowStageInstance, buttons=("approve", "deny", "comment"))
+    actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("approve", "deny", "comment"))
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
 
-        model = ApprovalWorkflowStageInstance
+        model = ApprovalWorkflowStage
         fields = (
             "pk",
-            "approval_workflow_instance",
-            "approval_workflow_stage",
+            "approval_workflow",
+            "approval_workflow_stage_definition",
             "actions_needed",
             "state",
             "decision_date",
         )
         default_columns = (
             "pk",
-            "approval_workflow_instance",
-            "approval_workflow_stage",
+            "approval_workflow",
+            "approval_workflow_stage_definition",
             "actions_needed",
             "state",
             "decision_date",
@@ -346,28 +346,28 @@ class ApprovalWorkflowStageInstanceTable(BaseTable):
         )
 
 
-class ApproverDashboardTable(ApprovalWorkflowStageInstanceTable):
+class ApproverDashboardTable(ApprovalWorkflowStageTable):
     """
-    ApprovalWorkflowStageInstanceTable modified for the approver dashboard.
+    ApprovalWorkflowStageTable modified for the approver dashboard.
     """
 
     pk = ToggleColumn()
     approval_workflow = tables.TemplateColumn(
-        template_code="<a href={{record.approval_workflow_instance.get_absolute_url}}>{{ record.approval_workflow_instance.approval_workflow.name }}</a>",
+        template_code="<a href={{record.approval_workflow.get_absolute_url}}>{{ record.approval_workflow.approval_workflow_definition.name }}</a>",
         verbose_name="Workflow",
     )
     approval_workflow_stage = tables.TemplateColumn(
-        template_code="<a href={{record.approval_workflow_instance.get_absolute_url}}>{{ record.approval_workflow_stage.name }}</a>",
+        template_code="<a href={{record.approval_workflow.get_absolute_url}}>{{ record.approval_workflow_stage_definition.name }}</a>",
         verbose_name="Current Stage",
     )
     object_under_review = tables.TemplateColumn(
-        template_code="<a href={{record.approval_workflow_instance.object_under_review.get_absolute_url }}>{{ record.approval_workflow_instance.object_under_review }}</a>"
+        template_code="<a href={{record.approval_workflow.object_under_review.get_absolute_url }}>{{ record.approval_workflow.object_under_review }}</a>"
     )
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
 
-        model = ApprovalWorkflowStageInstance
+        model = ApprovalWorkflowStage
         fields = (
             "pk",
             "approval_workflow_stage",
@@ -388,23 +388,23 @@ class ApproverDashboardTable(ApprovalWorkflowStageInstanceTable):
         )
 
 
-class RelatedApprovalWorkflowStageInstanceTable(ApprovalWorkflowStageInstanceTable):
+class RelatedApprovalWorkflowStageTable(ApprovalWorkflowStageTable):
     """
-    ApprovalWorkflowStageInstanceTable used in the detail view of ApprovalWorkflowInstance detail view.
+    ApprovalWorkflowStageTable used in the detail view of ApprovalWorkflow detail view.
     """
 
     approval_workflow_stage = tables.TemplateColumn(
-        template_code="<a href={{record.get_absolute_url}}>{{ record.approval_workflow_stage.name }}</a>",
+        template_code="<a href={{record.get_absolute_url}}>{{ record.approval_workflow_stage_definition.name }}</a>",
         verbose_name="Stage",
     )
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
 
-        model = ApprovalWorkflowStageInstance
+        model = ApprovalWorkflowStage
         fields = (
             "pk",
-            "approval_workflow_instance",
+            "approval_workflow",
             "approval_workflow_stage",
             "actions_needed",
             "state",
@@ -412,7 +412,7 @@ class RelatedApprovalWorkflowStageInstanceTable(ApprovalWorkflowStageInstanceTab
         )
         default_columns = (
             "pk",
-            "approval_workflow_instance",
+            "approval_workflow",
             "approval_workflow_stage",
             "actions_needed",
             "state",
@@ -421,8 +421,8 @@ class RelatedApprovalWorkflowStageInstanceTable(ApprovalWorkflowStageInstanceTab
         )
 
 
-class ApprovalWorkflowStageInstanceResponseTable(BaseTable):
-    """Table for ApprovalWorkflowStageInstanceResponse list view."""
+class ApprovalWorkflowStageResponseTable(BaseTable):
+    """Table for ApprovalWorkflowStageResponse list view."""
 
     pk = ToggleColumn()
     state = ChoiceFieldColumn()
@@ -430,45 +430,45 @@ class ApprovalWorkflowStageInstanceResponseTable(BaseTable):
     class Meta(BaseTable.Meta):
         """Meta attributes."""
 
-        model = ApprovalWorkflowStageInstanceResponse
+        model = ApprovalWorkflowStageResponse
         fields = (
             "pk",
-            "approval_workflow_stage_instance",
+            "approval_workflow_stage",
             "user",
             "comments",
             "state",
         )
         default_columns = (
             "pk",
-            "approval_workflow_stage_instance",
+            "approval_workflow_stage",
             "user",
             "comments",
             "state",
         )
 
 
-class RelatedApprovalWorkflowStageInstanceResponseTable(ApprovalWorkflowStageInstanceResponseTable):
-    """Table for ApprovalWorkflowStageInstanceResponse list view."""
+class RelatedApprovalWorkflowStageResponseTable(ApprovalWorkflowStageResponseTable):
+    """Table for ApprovalWorkflowStageResponse list view."""
 
-    approval_workflow_stage_instance = tables.TemplateColumn(
-        template_code="<a href={{record.approval_workflow_stage_instance.get_absolute_url}}>{{ record.approval_workflow_stage_instance.approval_workflow_stage.name }}</a>",
+    approval_workflow_stage = tables.TemplateColumn(
+        template_code="<a href={{record.approval_workflow_stage.get_absolute_url}}>{{ record.approval_workflow_stage.approval_workflow_stage_definition.name }}</a>",
         verbose_name="Stage",
     )
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
 
-        model = ApprovalWorkflowStageInstanceResponse
+        model = ApprovalWorkflowStageResponse
         fields = (
             "pk",
-            "approval_workflow_stage_instance",
+            "approval_workflow_stage",
             "user",
             "comments",
             "state",
         )
         default_columns = (
             "pk",
-            "approval_workflow_stage_instance",
+            "approval_workflow_stage",
             "user",
             "comments",
             "state",

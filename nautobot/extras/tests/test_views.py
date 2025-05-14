@@ -55,10 +55,10 @@ from nautobot.extras.choices import (
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON, JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.models import (
     ApprovalWorkflow,
-    ApprovalWorkflowInstance,
+    ApprovalWorkflowDefinition,
     ApprovalWorkflowStage,
-    ApprovalWorkflowStageInstance,
-    ApprovalWorkflowStageInstanceResponse,
+    ApprovalWorkflowStageDefinition,
+    ApprovalWorkflowStageResponse,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -107,10 +107,10 @@ from nautobot.users.models import ObjectPermission
 User = get_user_model()
 
 
-class ApprovalWorkflowViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
-    """Test the ApprovalWorkflow views."""
+class ApprovalWorkflowDefinitionViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    """Test the ApprovalWorkflowDefinition views."""
 
-    model = ApprovalWorkflow
+    model = ApprovalWorkflowDefinition
 
     @classmethod
     def setUpTestData(cls):
@@ -119,21 +119,20 @@ class ApprovalWorkflowViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.job_ct = ContentType.objects.get_for_model(Job)
         cls.scheduledjob_ct = ContentType.objects.get_for_model(ScheduledJob)
         for i in range(5):
-            ApprovalWorkflow.objects.create(
+            ApprovalWorkflowDefinition.objects.create(
                 name=f"Test Approval Workflow {i}",
                 model_content_type=cls.job_ct,
             )
 
         cls.form_data = {
-            "name": "Test Approval Workflow 5",
+            "name": "Test Approval Workflow Definition 5",
             "model_content_type": cls.job_ct.pk,
             "model_constraints": '{"name": "Bulk Delete Objects"}',
-        }
-
-        cls.update_data = {
-            "name": "Updated Approval Workflow 1",
-            "model_content_type": cls.job_ct.pk,
-            "model_constraints": '{"name": "Bulk Import Objects"}',
+            # These are the "management_form" fields required by the dynamic CustomFieldChoice formsets.
+            "approval_workflow_stage_definitions-TOTAL_FORMS": "0",  # Set to 0 so validation succeeds until we need it
+            "approval_workflow_stage_definitions-INITIAL_FORMS": "1",
+            "approval_workflow_stage_definitions-MIN_NUM_FORMS": "0",
+            "approval_workflow_stage_definitions-MAX_NUM_FORMS": "1000",
         }
 
         cls.bulk_edit_data = {
@@ -141,10 +140,10 @@ class ApprovalWorkflowViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
 
-class ApprovalWorkflowStageViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
-    """Test the ApprovalWorkflowStage views."""
+class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    """Test the ApprovalWorkflowStageDefinition views."""
 
-    model = ApprovalWorkflowStage
+    model = ApprovalWorkflowStageDefinition
 
     @classmethod
     def setUpTestData(cls):
@@ -152,65 +151,65 @@ class ApprovalWorkflowStageViewTestCase(ViewTestCases.PrimaryObjectViewTestCase)
         super().setUpTestData()
         cls.job_ct = ContentType.objects.get_for_model(Job)
         cls.scheduledjob_ct = ContentType.objects.get_for_model(ScheduledJob)
-        cls.approval_workflow = ApprovalWorkflow.objects.create(
-            name="Test Approval Workflow 1",
+        cls.approval_workflow_definition = ApprovalWorkflowDefinition.objects.create(
+            name="Test Approval Workflow Definition 1",
             model_content_type=cls.job_ct,
         )
         cls.approver_group = Group.objects.create(name="Test Group 1")
         cls.updated_approver_group = Group.objects.create(name="Test Group 2")
         # Deletable objects
-        ApprovalWorkflowStage.objects.create(
-            approval_workflow=cls.approval_workflow,
+        ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=cls.approval_workflow_definition,
             weight=100,
-            name="Test Approval Workflow 1 Stage 1",
+            name="Test Approval Workflow 1 Stage 1 Definition",
             min_approvers=2,
             denial_message="Stage 1 Denial Message",
             approver_group=cls.approver_group,
         )
-        ApprovalWorkflowStage.objects.create(
-            approval_workflow=cls.approval_workflow,
+        ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=cls.approval_workflow_definition,
             weight=200,
-            name="Test Approval Workflow 1 Stage 2",
+            name="Test Approval Workflow 1 Stage 2 Definition",
             min_approvers=3,
             denial_message="Stage 2 Denial Message",
             approver_group=cls.approver_group,
         )
-        ApprovalWorkflowStage.objects.create(
-            approval_workflow=cls.approval_workflow,
+        ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=cls.approval_workflow_definition,
             weight=300,
-            name="Test Approval Workflow 1 Stage 3",
+            name="Test Approval Workflow 1 Stage 3 Definition",
             min_approvers=4,
             denial_message="Stage 3 Denial Message",
             approver_group=cls.updated_approver_group,
         )
-        ApprovalWorkflowStage.objects.create(
-            approval_workflow=cls.approval_workflow,
+        ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=cls.approval_workflow_definition,
             weight=400,
-            name="Test Approval Workflow 1 Stage 4",
+            name="Test Approval Workflow 1 Stage 4 Definition",
             min_approvers=4,
             denial_message="Stage 4 Denial Message",
             approver_group=cls.updated_approver_group,
         )
-        ApprovalWorkflowStage.objects.create(
-            approval_workflow=cls.approval_workflow,
+        ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=cls.approval_workflow_definition,
             weight=500,
-            name="Test Approval Workflow 1 Stage 5",
+            name="Test Approval Workflow 1 Stage 5 Definition",
             min_approvers=4,
             denial_message="Stage 5 Denial Message",
             approver_group=cls.updated_approver_group,
         )
 
         cls.form_data = {
-            "approval_workflow": cls.approval_workflow.pk,
+            "approval_workflow_definition": cls.approval_workflow_definition.pk,
             "weight": 600,
-            "name": "Approval Workflow Stage 1",
+            "name": "Approval Workflow Stage 1 Definition",
             "min_approvers": 2,
             "denial_message": "Stage 1 is denied",
             "approver_group": cls.approver_group.pk,
         }
 
         cls.update_data = {
-            "approval_workflow": cls.approval_workflow.pk,
+            "approval_workflow_definition": cls.approval_workflow_definition.pk,
             "weight": 700,
             "name": "Updated approval workflow stage 1",
             "min_approvers": 3,
@@ -220,17 +219,24 @@ class ApprovalWorkflowStageViewTestCase(ViewTestCases.PrimaryObjectViewTestCase)
 
         cls.bulk_edit_data = {
             "weight": 800,
-            "name": "Update approval workflow stage name",
+            "name": "Updated approval workflow stage definition name",
             "min_approvers": 5,
             "denial_message": "updated denial message",
             "approver_group": cls.updated_approver_group.pk,
         }
 
 
-class ApprovalWorkflowInstanceViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
-    """Test the ApprovalWorkflowInstance views."""
+class ApprovalWorkflowViewTestCase(
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.GetObjectNotesViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+):
+    """Test the ApprovalWorkflow views."""
 
-    model = ApprovalWorkflowInstance
+    model = ApprovalWorkflow
 
     @classmethod
     def setUpTestData(cls):
@@ -239,16 +245,16 @@ class ApprovalWorkflowInstanceViewTestCase(ViewTestCases.PrimaryObjectViewTestCa
         cls.jobs = list(Job.objects.all())
         cls.job_ct = ContentType.objects.get_for_model(Job)
         cls.scheduledjob_ct = ContentType.objects.get_for_model(ScheduledJob)
-        approval_workflows = [
-            ApprovalWorkflow.objects.create(
+        approval_workflow_definitions = [
+            ApprovalWorkflowDefinition.objects.create(
                 name=f"Test Approval Workflow {i}",
                 model_content_type=cls.job_ct,
             )
             for i in range(5)
         ]
-        cls.approval_workflow_instances = [
-            ApprovalWorkflowInstance.objects.create(
-                approval_workflow=approval_workflows[i],
+        cls.approval_workflows = [
+            ApprovalWorkflow.objects.create(
+                approval_workflow_definition=approval_workflow_definitions[i],
                 object_under_review_content_type=cls.job_ct,
                 object_under_review_object_id=cls.jobs[i].pk,
                 current_state=ApprovalWorkflowStateChoices.PENDING,
@@ -257,14 +263,14 @@ class ApprovalWorkflowInstanceViewTestCase(ViewTestCases.PrimaryObjectViewTestCa
         ]
 
         cls.form_data = {
-            "approval_workflow": approval_workflows[3].pk,
+            "approval_workflow_definition": approval_workflow_definitions[3].pk,
             "object_under_review_content_type": cls.job_ct.pk,
             "object_under_review_object_id": cls.jobs[5].pk,
             "current_state": ApprovalWorkflowStateChoices.PENDING,
         }
 
         cls.update_data = {
-            "approval_workflow": approval_workflows[3].pk,
+            "approval_workflow_definition": approval_workflow_definitions[3].pk,
             "object_under_review_content_type": cls.job_ct.pk,
             "object_under_review_object_id": cls.jobs[6].pk,
             "current_state": ApprovalWorkflowStateChoices.APPROVED,
@@ -275,10 +281,17 @@ class ApprovalWorkflowInstanceViewTestCase(ViewTestCases.PrimaryObjectViewTestCa
         }
 
 
-class ApprovalWorkflowStageInstanceViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
-    """Test the ApprovalWorkflowStageInstance views."""
+class ApprovalWorkflowStageViewTestCase(
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.GetObjectNotesViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+):
+    """Test the ApprovalWorkflowStage views."""
 
-    model = ApprovalWorkflowStageInstance
+    model = ApprovalWorkflowStage
 
     @classmethod
     def setUpTestData(cls):
@@ -288,52 +301,46 @@ class ApprovalWorkflowStageInstanceViewTestCase(ViewTestCases.PrimaryObjectViewT
         cls.job_ct = ContentType.objects.get_for_model(Job)
         cls.scheduledjob_ct = ContentType.objects.get_for_model(ScheduledJob)
         cls.approver_groups = [Group.objects.create(name=f"Test Group {i}") for i in range(3)]
-        cls.approval_workflows = [
-            ApprovalWorkflow.objects.create(
+        cls.approval_workflow_definitions = [
+            ApprovalWorkflowDefinition.objects.create(
                 name=f"Test Approval Workflow {i}",
                 model_content_type=cls.job_ct,
             )
             for i in range(5)
         ]
-        cls.approval_workflow_stages = []
-        for approval_workflow in cls.approval_workflows:
+        cls.approval_workflow_stage_definitions = []
+        for approval_workflow_definition in cls.approval_workflow_definitions:
             for i in range(3):
-                cls.approval_workflow_stages.append(
-                    ApprovalWorkflowStage.objects.create(
-                        approval_workflow=approval_workflow,
+                cls.approval_workflow_stage_definitions.append(
+                    ApprovalWorkflowStageDefinition.objects.create(
+                        approval_workflow_definition=approval_workflow_definition,
                         weight=i * 100,
-                        name=f"Test Approval Workflow Stage {i}",
+                        name=f"Test Approval Workflow Stage {i} Definition",
                         min_approvers=i + 1,
                         denial_message=f"Stage {i} Denial Message",
                         approver_group=cls.approver_groups[i],
                     )
                 )
-        cls.approval_workflow_instances = [
-            ApprovalWorkflowInstance.objects.create(
-                approval_workflow=cls.approval_workflows[i],
+        cls.approval_workflows = [
+            ApprovalWorkflow.objects.create(
+                approval_workflow_definition=cls.approval_workflow_definitions[i],
                 object_under_review_content_type=cls.job_ct,
                 object_under_review_object_id=cls.jobs[i].pk,
                 current_state=ApprovalWorkflowStateChoices.PENDING,
             )
             for i in range(5)
         ]
-        for i, approval_workflow_instance in enumerate(cls.approval_workflow_instances[:2]):
+        for i, approval_workflow in enumerate(cls.approval_workflows[:2]):
             for j in range(3):
-                ApprovalWorkflowStageInstance.objects.create(
-                    approval_workflow_instance=approval_workflow_instance,
-                    approval_workflow_stage=cls.approval_workflow_stages[i * 3 + j],
+                ApprovalWorkflowStage.objects.create(
+                    approval_workflow=approval_workflow,
+                    approval_workflow_stage_definition=cls.approval_workflow_stage_definitions[i * 3 + j],
                     state=ApprovalWorkflowStateChoices.PENDING,
                 )
 
         cls.form_data = {
-            "approval_workflow_instance": cls.approval_workflow_instances[2].pk,
-            "approval_workflow_stage": cls.approval_workflow_stages[6].pk,
-            "state": ApprovalWorkflowStateChoices.PENDING,
-        }
-
-        cls.update_data = {
-            "approval_workflow_instance": cls.approval_workflow_instances[3].pk,
-            "approval_workflow_stage": cls.approval_workflow_stages[9].pk,
+            "approval_workflow": cls.approval_workflows[2].pk,
+            "approval_workflow_stage_definition": cls.approval_workflow_stage_definitions[6].pk,
             "state": ApprovalWorkflowStateChoices.PENDING,
         }
 
@@ -342,14 +349,13 @@ class ApprovalWorkflowStageInstanceViewTestCase(ViewTestCases.PrimaryObjectViewT
         }
 
 
-class ApprovalWorkflowStageInstanceResponseViewTestCase(
-    ViewTestCases.GetObjectViewTestCase,
+class ApprovalWorkflowStageResponseViewTestCase(
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
-    """Test the ApprovalWorkflowStageInstanceResponse views."""
+    """Test the ApprovalWorkflowStageResponse views."""
 
-    model = ApprovalWorkflowStageInstanceResponse
+    model = ApprovalWorkflowStageResponse
 
     @classmethod
     def setUpTestData(cls):
@@ -364,48 +370,48 @@ class ApprovalWorkflowStageInstanceResponseViewTestCase(
             for group in cls.approver_groups:
                 user.groups.add(group)
 
-        cls.approval_workflows = [
-            ApprovalWorkflow.objects.create(
-                name=f"Test Approval Workflow {i}",
+        cls.approval_workflow_definitions = [
+            ApprovalWorkflowDefinition.objects.create(
+                name=f"Test Approval Workflow {i} Definition",
                 model_content_type=cls.job_ct,
             )
             for i in range(5)
         ]
-        cls.approval_workflow_stages = []
-        for approval_workflow in cls.approval_workflows:
+        cls.approval_workflow_stage_definitions = []
+        for approval_workflow_definition in cls.approval_workflow_definitions:
             for i in range(3):
-                cls.approval_workflow_stages.append(
-                    ApprovalWorkflowStage.objects.create(
-                        approval_workflow=approval_workflow,
+                cls.approval_workflow_stage_definitions.append(
+                    ApprovalWorkflowStageDefinition.objects.create(
+                        approval_workflow_definition=approval_workflow_definition,
                         weight=i * 100,
-                        name=f"Test Approval Workflow Stage {i}",
+                        name=f"Test Approval Workflow Stage {i} Definition",
                         min_approvers=i + 1,
                         denial_message=f"Stage {i} Denial Message",
                         approver_group=cls.approver_groups[i],
                     )
                 )
-        cls.approval_workflow_instances = [
-            ApprovalWorkflowInstance.objects.create(
-                approval_workflow=cls.approval_workflows[i],
+        cls.approval_workflows = [
+            ApprovalWorkflow.objects.create(
+                approval_workflow_definition=cls.approval_workflow_definitions[i],
                 object_under_review_content_type=cls.job_ct,
                 object_under_review_object_id=cls.jobs[i].pk,
                 current_state=ApprovalWorkflowStateChoices.PENDING,
             )
             for i in range(5)
         ]
-        cls.approval_workflow_stage_instances = []
-        for i, approval_workflow_instance in enumerate(cls.approval_workflow_instances):
+        cls.approval_workflow_stages = []
+        for i, approval_workflow in enumerate(cls.approval_workflows):
             for j in range(3):
-                approval_workflow_stage_instance = ApprovalWorkflowStageInstance.objects.create(
-                    approval_workflow_instance=approval_workflow_instance,
-                    approval_workflow_stage=cls.approval_workflow_stages[i * 3 + j],
+                approval_workflow_stage = ApprovalWorkflowStage.objects.create(
+                    approval_workflow=approval_workflow,
+                    approval_workflow_stage_definition=cls.approval_workflow_stage_definitions[i * 3 + j],
                     state=ApprovalWorkflowStateChoices.PENDING,
                 )
-                cls.approval_workflow_stage_instances.append(approval_workflow_stage_instance)
+                cls.approval_workflow_stages.append(approval_workflow_stage)
                 if i < 2:
                     # Create responses for the first two approval workflow instances
-                    ApprovalWorkflowStageInstanceResponse.objects.create(
-                        approval_workflow_stage_instance=approval_workflow_stage_instance,
+                    ApprovalWorkflowStageResponse.objects.create(
+                        approval_workflow_stage=approval_workflow_stage,
                         user=cls.users[i],
                         comments=f"Test comment {i * 3 + j}",
                         state=ApprovalWorkflowStateChoices.PENDING,

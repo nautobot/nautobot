@@ -58,10 +58,10 @@ from nautobot.extras.constants import APPROVAL_WORKFLOW_MODELS, JOB_OVERRIDABLE_
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
     ApprovalWorkflow,
-    ApprovalWorkflowInstance,
+    ApprovalWorkflowDefinition,
     ApprovalWorkflowStage,
-    ApprovalWorkflowStageInstance,
-    ApprovalWorkflowStageInstanceResponse,
+    ApprovalWorkflowStageDefinition,
+    ApprovalWorkflowStageResponse,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -131,16 +131,16 @@ from .mixins import (
 logger = logging.getLogger(__name__)
 
 __all__ = (
-    "ApprovalWorkflowBulkEditForm",
+    "ApprovalWorkflowDefinitionBulkEditForm",
+    "ApprovalWorkflowDefinitionFilterForm",
+    "ApprovalWorkflowDefinitionForm",
     "ApprovalWorkflowFilterForm",
-    "ApprovalWorkflowForm",
-    "ApprovalWorkflowInstanceFilterForm",
-    "ApprovalWorkflowStageBulkEditForm",
+    "ApprovalWorkflowStageDefinitionBulkEditForm",
+    "ApprovalWorkflowStageDefinitionFilterForm",
+    "ApprovalWorkflowStageDefinitionForm",
+    "ApprovalWorkflowStageDefinitionFormSet",
     "ApprovalWorkflowStageFilterForm",
-    "ApprovalWorkflowStageForm",
-    "ApprovalWorkflowStageFormSet",
-    "ApprovalWorkflowStageInstanceFilterForm",
-    "ApprovalWorkflowStageInstanceResponseFilterForm",
+    "ApprovalWorkflowStageResponseFilterForm",
     "BaseDynamicGroupMembershipFormSet",
     "ComputedFieldFilterForm",
     "ComputedFieldForm",
@@ -231,14 +231,13 @@ __all__ = (
 #
 
 
-class ApprovalWorkflowForm(
+class ApprovalWorkflowDefinitionForm(
     BootstrapMixin,
-    # The below must be listed *after* BootstrapMixin so that BootstrapMixin applies to their dynamic form fields
     CustomFieldModelFormMixin,
     NoteModelFormMixin,
     RelationshipModelFormMixin,
 ):
-    """Form for creating and updating ApprovalWorkflow."""
+    """Form for creating and updating ApprovalWorkflowDefinition."""
 
     model_content_type = forms.ModelChoiceField(
         queryset=ContentType.objects.filter(APPROVAL_WORKFLOW_MODELS).order_by("app_label", "model"),
@@ -255,14 +254,16 @@ class ApprovalWorkflowForm(
     class Meta:
         """Meta attributes."""
 
-        model = ApprovalWorkflow
+        model = ApprovalWorkflowDefinition
         fields = "__all__"
 
 
-class ApprovalWorkflowBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
-    """ApprovalWorkflow bulk edit form."""
+class ApprovalWorkflowDefinitionBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+    """ApprovalWorkflowDefinition bulk edit form."""
 
-    pk = forms.ModelMultipleChoiceField(queryset=ApprovalWorkflow.objects.all(), widget=forms.MultipleHiddenInput)
+    pk = forms.ModelMultipleChoiceField(
+        queryset=ApprovalWorkflowDefinition.objects.all(), widget=forms.MultipleHiddenInput
+    )
     model_content_type = forms.ModelChoiceField(
         queryset=ContentType.objects.filter(APPROVAL_WORKFLOW_MODELS).order_by("app_label", "model"),
         required=True,
@@ -272,14 +273,14 @@ class ApprovalWorkflowBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     class Meta:
         """Meta attributes."""
 
-        model = ApprovalWorkflow
+        model = ApprovalWorkflowDefinition
         nullable_fields = ["model_constraints"]
 
 
-class ApprovalWorkflowFilterForm(NautobotFilterForm):
-    """Filter form for ApprovalWorkflow."""
+class ApprovalWorkflowDefinitionFilterForm(NautobotFilterForm):
+    """Filter form for ApprovalWorkflowDefinition."""
 
-    model = ApprovalWorkflow
+    model = ApprovalWorkflowDefinition
     q = forms.CharField(required=False, label="Search")
     name = MultiValueCharField(required=False)
     model_content_type = MultipleContentTypeField(
@@ -288,13 +289,13 @@ class ApprovalWorkflowFilterForm(NautobotFilterForm):
     tags = TagFilterField(model)
 
 
-class ApprovalWorkflowStageForm(NautobotModelForm):
-    """Form for creating and updating ApprovalWorkflowStage."""
+class ApprovalWorkflowStageDefinitionForm(NautobotModelForm):
+    """Form for creating and updating ApprovalWorkflowStageDefinition."""
 
-    approval_workflow = DynamicModelChoiceField(
-        queryset=ApprovalWorkflow.objects.all(),
+    approval_workflow_definition = DynamicModelChoiceField(
+        queryset=ApprovalWorkflowDefinition.objects.all(),
         required=True,
-        label="Approval Workflow",
+        label="Approval Workflow Definition",
     )
     approver_group = DynamicModelChoiceField(
         queryset=Group.objects.all(),
@@ -306,16 +307,16 @@ class ApprovalWorkflowStageForm(NautobotModelForm):
     class Meta:
         """Meta attributes."""
 
-        model = ApprovalWorkflowStage
+        model = ApprovalWorkflowStageDefinition
         fields = "__all__"
 
 
 # ApprovalWorkFlow inline formset for use with providing dynamic rows when creating/editing choices
 # for `ApprovalWorkFlowInstance` objects in UI views. Fields/exclude must be set but since we're using all the
 # fields we're just setting `exclude=()` here.
-ApprovalWorkflowStageFormSet = inlineformset_factory(
-    parent_model=ApprovalWorkflow,
-    model=ApprovalWorkflowStage,
+ApprovalWorkflowStageDefinitionFormSet = inlineformset_factory(
+    parent_model=ApprovalWorkflowDefinition,
+    model=ApprovalWorkflowStageDefinition,
     exclude=(),
     extra=5,
     widgets={
@@ -328,10 +329,12 @@ ApprovalWorkflowStageFormSet = inlineformset_factory(
 )
 
 
-class ApprovalWorkflowStageBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
-    """ApprovalWorkflowStage bulk edit form."""
+class ApprovalWorkflowStageDefinitionBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+    """ApprovalWorkflowStageDefinition bulk edit form."""
 
-    pk = forms.ModelMultipleChoiceField(queryset=ApprovalWorkflowStage.objects.all(), widget=forms.MultipleHiddenInput)
+    pk = forms.ModelMultipleChoiceField(
+        queryset=ApprovalWorkflowStageDefinition.objects.all(), widget=forms.MultipleHiddenInput
+    )
     weight = forms.IntegerField(required=False, label="Weight")
     min_approvers = forms.IntegerField(required=False, label="Min Approvers")
     denial_message = forms.CharField(required=False, label="Denial Message")
@@ -339,20 +342,20 @@ class ApprovalWorkflowStageBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditF
     class Meta:
         """Meta attributes."""
 
-        model = ApprovalWorkflowStage
+        model = ApprovalWorkflowStageDefinition
         nullable_fields = ["denial_message"]
 
 
-class ApprovalWorkflowStageFilterForm(NautobotFilterForm):
-    """Filter form for ApprovalWorkflowStage."""
+class ApprovalWorkflowStageDefinitionFilterForm(NautobotFilterForm):
+    """Filter form for ApprovalWorkflowStageDefinition."""
 
-    model = ApprovalWorkflowStage
+    model = ApprovalWorkflowStageDefinition
     q = forms.CharField(required=False, label="Search")
     name = MultiValueCharField(required=False)
-    approval_workflow = DynamicModelChoiceField(
-        queryset=ApprovalWorkflow.objects.all(),
+    approval_workflow_definition = DynamicModelChoiceField(
+        queryset=ApprovalWorkflowDefinition.objects.all(),
         required=False,
-        label="Approval Workflow",
+        label="Approval Workflow Definition",
     )
     weight = forms.IntegerField(required=False, label="Weight")
     min_approvers = forms.IntegerField(required=False, label="Min Approvers")
@@ -365,15 +368,15 @@ class ApprovalWorkflowStageFilterForm(NautobotFilterForm):
     tags = TagFilterField(model)
 
 
-class ApprovalWorkflowInstanceFilterForm(NautobotFilterForm):
-    """Filter form for ApprovalWorkflowInstance."""
+class ApprovalWorkflowFilterForm(NautobotFilterForm):
+    """Filter form for ApprovalWorkflow."""
 
-    model = ApprovalWorkflowInstance
+    model = ApprovalWorkflow
     q = forms.CharField(required=False, label="Search")
-    approval_workflow = DynamicModelChoiceField(
-        queryset=ApprovalWorkflow.objects.all(),
+    approval_workflow_definition = DynamicModelChoiceField(
+        queryset=ApprovalWorkflowDefinition.objects.all(),
         required=False,
-        label="Approval Workflow",
+        label="Approval Workflow Definition",
     )
     object_under_review_content_type = forms.ModelChoiceField(
         queryset=ContentType.objects.filter(APPROVAL_WORKFLOW_MODELS).order_by("app_label", "model"),
@@ -386,23 +389,22 @@ class ApprovalWorkflowInstanceFilterForm(NautobotFilterForm):
         widget=StaticSelect2,
         label="Current State",
     )
-    tags = TagFilterField(model)
 
 
-class ApprovalWorkflowStageInstanceFilterForm(NautobotFilterForm):
-    """Filter form for ApprovalWorkflowStageInstance."""
+class ApprovalWorkflowStageFilterForm(NautobotFilterForm):
+    """Filter form for ApprovalWorkflowStage."""
 
-    model = ApprovalWorkflowStageInstance
+    model = ApprovalWorkflowStage
     q = forms.CharField(required=False, label="Search")
-    approval_workflow_instance = DynamicModelChoiceField(
-        queryset=ApprovalWorkflowInstance.objects.all(),
+    approval_workflow = DynamicModelChoiceField(
+        queryset=ApprovalWorkflow.objects.all(),
         required=False,
-        label="Approval Workflow Instance",
+        label="Approval Workflow",
     )
-    approval_workflow_stage = DynamicModelChoiceField(
-        queryset=ApprovalWorkflowStage.objects.all(),
+    approval_workflow_stage_definition = DynamicModelChoiceField(
+        queryset=ApprovalWorkflowStageDefinition.objects.all(),
         required=False,
-        label="Approval Workflow Stage",
+        label="Approval Workflow Stage Definition",
     )
     state = forms.ChoiceField(
         required=False,
@@ -411,13 +413,12 @@ class ApprovalWorkflowStageInstanceFilterForm(NautobotFilterForm):
         label="State",
     )
     decision_date = forms.DateField(widget=DatePicker(), required=False, label="Decision Date")
-    tags = TagFilterField(model)
 
 
-class ApprovalWorkflowStageInstanceResponseFilterForm(NautobotFilterForm):
-    """Filter form for ApprovalWorkflowStageInstanceResponse."""
+class ApprovalWorkflowStageResponseFilterForm(NautobotFilterForm):
+    """Filter form for ApprovalWorkflowStageResponse."""
 
-    model = ApprovalWorkflowStageInstanceResponse
+    model = ApprovalWorkflowStageResponse
     q = forms.CharField(required=False, label="Search")
 
 
