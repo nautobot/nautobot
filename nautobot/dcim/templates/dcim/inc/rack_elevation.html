@@ -1,8 +1,14 @@
+{% if label.strip%}
+    <div class="panel-heading">
+        {% if label %}
+            <strong>{{ label }}</strong>
+        {% endif %}
+    </div>
+{% endif %}
+
 <div style="margin-left: -30px">
-    <object data="{% url 'dcim-api:rack-elevation' pk=object.pk %}?face={{face}}&render=svg" class="rack_elevation"></object>
+    <object data="{% url 'dcim-api:rack-elevation' pk=object.rack.pk %}?face={{face}}&render=svg" class="rack_elevation"></object>
 </div>
-<div class="text-center text-small">
-    <a href="{% url 'dcim-api:rack-elevation' pk=object.pk %}?face={{face}}&render=svg" class="rack_elevation_save_svg_link" download="rack_{{ face }}_{{ object }}.svg">
-        <i class="mdi mdi-content-save-outline"></i> Save SVG
-    </a>
-</div>
+<a href="{% url 'dcim-api:rack-elevation' pk=object.rack.pk %}?face={{face}}&render=svg" class="rack_elevation_save_svg_link" download="rack_{{ face }}_{{ object.rack }}.svg">
+    <i class="mdi mdi-content-save-outline"></i> Save SVG
+</a>

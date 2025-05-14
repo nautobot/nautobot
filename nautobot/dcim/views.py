@@ -686,6 +686,18 @@ class RackReservationUIViewSet(NautobotUIViewSet):
     table_class = tables.RackReservationTable
     queryset = RackReservation.objects.all()
 
+    class FrontPanel(object_detail.Panel):
+        def get_extra_context(self, context):
+            context = super().get_extra_context(context)
+            context["face"] = "front"
+            return context
+
+    class RearPanel(object_detail.Panel):
+        def get_extra_context(self, context):
+            context = super().get_extra_context(context)
+            context["face"] = "rear"
+            return context
+
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.KeyValueTablePanel(
@@ -699,6 +711,18 @@ class RackReservationUIViewSet(NautobotUIViewSet):
                 weight=100,
                 label="Reservation Details",
                 fields=["unit_list", "tenant", "user", "description"],
+            ),
+            FrontPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                label="Front",
+                template_path="dcim/inc/rack_elevation.html",
+            ),
+            RearPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                label="Rear",
+                template_path="dcim/inc/rack_elevation.html",
             ),
         ),
     )
