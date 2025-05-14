@@ -139,7 +139,28 @@ class ExportObjectListTest(TransactionTestCase):
         data = yaml.safe_load(yaml_data)
         self.assertEqual(data["manufacturer"], "Cisco")
 
-    def test_export_saved_view_to_csv(self):
+    def test_export_saved_view_to_csv_without_filters(self):
+        """Export saved view without filters."""
+        sv = SavedView.objects.create(
+            name="Global default View",
+            owner=self.user,
+            view="extras:status_list",
+            is_global_default=True,
+        )
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ExportObjectList",
+            content_type=ContentType.objects.get_for_model(Status).pk,
+            query_string=f"saved_view={sv.pk}",
+        )
+        self.assertJobResultStatus(job_result)
+        self.assertTrue(job_result.files.exists())
+        self.assertEqual(Path(job_result.files.first().file.name).name, "nautobot_statuses.csv")
+        csv_data = job_result.files.first().file.read().decode("utf-8")
+        rows = list(csv.DictReader(StringIO(csv_data)))
+        self.assertEqual(len(rows), len(Status.objects.all()))
+
+    def test_export_saved_view_to_csv_with_filters(self):
         """Export saved view with filters."""
         filter_name = Status.objects.first().name
         sv = SavedView.objects.create(
