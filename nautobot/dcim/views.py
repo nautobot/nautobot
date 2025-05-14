@@ -21,6 +21,7 @@ from django.utils.encoding import iri_to_uri
 from django.utils.functional import cached_property
 from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.safestring import mark_safe
 from django.views.generic import View
 from django_tables2 import RequestConfig
 from rest_framework.decorators import action
@@ -4116,6 +4117,8 @@ class PowerPanelUIViewSet(NautobotUIViewSet):
 #
 # Power feeds
 #
+
+
 class PowerFeedUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.PowerFeedBulkEditForm
     filterset_class = filters.PowerFeedFilterSet
@@ -4124,6 +4127,112 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
     queryset = PowerFeed.objects.all()
     serializer_class = serializers.PowerFeedSerializer
     table_class = tables.PowerFeedTable
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            # Primary Power Feed information
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                label="Power Feed",
+                fields=["power_panel", "rack", "type", "status"],
+            ),
+            # Electrical Characteristics
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=300,
+                label="Electrical Characteristics",
+                fields=["supply", "voltage", "amperage", "phase", "max_utilization"],
+                value_transforms={
+                    "voltage": [lambda v: f"{v}V"],
+                    "amperage": [lambda a: f"{a}A"],
+                    "max_utilization": [lambda p: f"{p}%"],
+                },
+            ),
+            object_detail.KeyValueTablePanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=102,
+                label="Connected Device",
+                context_data_key="connected_device_data",
+            ),
+            # Connection info
+            object_detail.KeyValueTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=400,
+                label="Connection",
+                context_data_key="connection_data",
+            ),
+            # Comments
+            object_detail.ObjectTextPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=500,
+                label="Comments",
+                object_field="comments",
+                render_as=object_detail.ObjectTextPanel.RenderOptions.MARKDOWN,
+            ),
+        ),
+    )
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        context["connection_data"] = self._get_connection_context(instance)
+        # Connected Device Panel
+        if instance.connected_endpoint:
+            connected_device_html = (
+                f"{helpers.hyperlinked_object(instance.connected_endpoint.parent)} ({instance.connected_endpoint})"
+            )
+        else:
+            connected_device_html = '<span class="text-muted">None</span>'
+
+        context["connected_device_data"] = {"Connected Device": mark_safe(connected_device_html)}
+        return context
+
+    def _get_connection_context(self, instance):
+        if not instance:
+            return {}
+
+        if instance.cable:
+            trace_url = reverse("dcim:powerfeed_trace", kwargs={"pk": instance.pk})
+            cable_html = mark_safe(
+                f"{helpers.hyperlinked_object(instance.cable)} "
+                f"<a href='{trace_url}' class='btn btn-primary btn-xs' title='Trace'>"
+                f"<i class='mdi mdi-transit-connection-variant'></i></a>"
+            )
+
+            data = {"Cable": cable_html}
+
+            if endpoint := getattr(instance, "connected_endpoint", None):
+                data.update(
+                    {
+                        "Device" if endpoint.device else "Module": endpoint.device or endpoint.module,
+                        "Power Port": endpoint,
+                        "Type": getattr(endpoint, "get_type_display", lambda: "")(),
+                        "Description": getattr(endpoint, "description", ""),
+                        "Path Status": mark_safe(
+                            '<span class="label label-success">Reachable</span>'
+                            if getattr(instance, "path", None) and instance.path.is_active
+                            else '<span class="label label-danger">Not Reachable</span>'
+                        ),
+                    }
+                )
+            return data
+
+        # If not connected
+        if self.request.user.has_perm("dcim.add_cable"):
+            connect_url = (
+                reverse(
+                    "dcim:powerfeed_connect",
+                    kwargs={"termination_a_id": instance.pk, "termination_b_type": "power-port"},
+                )
+                + f"?return_url={instance.get_absolute_url()}"
+            )
+            connect_link = mark_safe(
+                f'<a href="{connect_url}" class="btn btn-primary btn-sm pull-right">'
+                f'<span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect</a>'
+            )
+            return {"Connection": mark_safe(f"Not connected {connect_link}")}
+        else:
+            return {"Connection": "Not connected"}
 
 
 class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
