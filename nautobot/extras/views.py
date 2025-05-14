@@ -2638,6 +2638,7 @@ class SecretUIViewSet(
                 table_title="Groups containing this secret",
                 table_class=tables.SecretsGroupTable,
                 table_attribute="secrets_groups",
+                related_field_name="secrets",
                 footer_content_template_path=None,
             ),
         ],
