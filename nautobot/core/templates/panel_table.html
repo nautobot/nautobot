@@ -3,7 +3,7 @@
 
 <div class="card{% if card_class %} border-{{ card_class }} {% endif %} mb-3">
     {% if heading %}
-        <div class="card-header{% if card_class %} bg-{{ card_class }} text-white {% endif %}">
+        <div class="card-header{% if card_class %} bg-{{ card_class }}{% endif %}">
             <strong>{{ heading }}</strong>
         </div>
     {% endif %}
@@ -12,7 +12,7 @@
     </div>
     {% if add_obj_url %}
         <div class="card-footer noprint">
-            <div class="pull-right">
+            <div class="float-end">
                 <a href="{{ add_obj_url }}" class="btn btn-primary btn-xs">
                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add {{ table.data.data.model|meta:"verbose_name" }}
                 </a>

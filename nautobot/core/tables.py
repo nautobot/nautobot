@@ -37,7 +37,7 @@ class BaseTable(django_tables2.Table):
 
     class Meta:
         attrs = {
-            "class": "table table-hover table-headings mb-0",
+            "class": "table table-hover table-headings",
         }
 
     def __init__(

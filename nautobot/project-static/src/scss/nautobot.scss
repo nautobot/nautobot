@@ -363,6 +363,19 @@ $pagination-active-color:        $white;
 $pagination-active-bg:           var(--#{$prefix}primary-text-emphasis);
 $pagination-active-border-color: var(--#{$prefix}primary-text-emphasis);
 
+/* Cards */
+$card-spacer-y:       map.get($spacers, 8);
+$card-spacer-x:       map.get($spacers, 10);
+$card-title-spacer-y: $card-spacer-y;
+$card-title-color:    var(--#{$prefix}secondary-color);
+$card-subtitle-color: var(--#{$prefix}tertiary-color);
+$card-border-color:   var(--#{$prefix}border-color);
+$card-cap-padding-y:  $card-spacer-y;
+$card-cap-padding-x:  $card-spacer-x;
+$card-cap-bg:         var(--#{$prefix}tertiary-bg);
+$card-cap-color:      $card-title-color;
+$card-bg:             var(--#{$prefix}body-bg);
+
 /* Badges */
 $badge-font-size:   $font-size-base;
 $badge-font-weight: 400;
@@ -501,6 +514,8 @@ button {
 
 /* Tables */
 .table {
+  margin-block-end: map.get($spacers, 0);
+
   > thead:not(caption) > tr > th {
     background-color: var(--#{$prefix}tertiary-bg);
     color: var(--#{$prefix}secondary-color);
@@ -578,6 +593,12 @@ button {
       opacity: 0;
     }
   }
+}
+
+/* TODO(norbert-mieczkowski-codilime): rename `.table-headings` to `.nb-table-headings`. */
+.table-headings th {
+  background-color: var(--#{$prefix}tertiary-bg);
+  white-space: nowrap;
 }
 
 /* Buttons */
@@ -750,6 +771,42 @@ $btn-variants: (
   gap: map.get($spacers, 8);
 }
 
+/* Cards */
+.card {
+  overflow: hidden; /* Fix border-radii for card content. */
+
+  /* When card content is collapsed prevent card bottom border duplication by entirely removing `border-bottom` from card header. */
+  &:has(.collapse:not(.show)) .card-header {
+    border-bottom: none;
+  }
+
+  /* Fix borders in case when `table` is rendered inside a `card`, e.g. in list views, detail views, etc. */
+  .table {
+    @mixin remove-row-border-bottom() {
+      > * { /* Every cell. */
+        border-bottom: none;
+      }
+    }
+
+    &:last-child { /* If table is the last item in card. */
+      > :is(tbody, thead, tfoot):last-child { /* Bottommost table section group. */
+        > :last-child { /* Bottommost row. */
+          @include remove-row-border-bottom;
+        }
+      }
+
+      > tr:last-child { /* Bottommost row in case simplified table structure is used (i.e. without `thead`, `tbody`). */
+        @include remove-row-border-bottom;
+      }
+    }
+  }
+}
+
+.card-header {
+  position: relative;
+  text-transform: uppercase;
+}
+
 /* Badges */
 .badge {
   --#{$prefix}badge-color: var(--#{$prefix}body-color);
@@ -794,6 +851,25 @@ $btn-variants: (
   }
 }
 
+/* Collapse */
+.nb-collapse-toggle {
+  @include transition($btn-transition);
+  border-color: transparent !important; /* Kill ridiculous Bootstrap 5 specificity with fire. */
+  color: var(--#{$prefix}secondary-color);
+  float: right;
+  font-size: 0; /* Use `font-size: 0;` to remove any visible whitespace. */
+  padding: map.get($spacers, 2);
+
+  > * { /* Select *any* child, which is expected to be a chevron icon, to be icon library agnostic. */
+    @include transition(transform .35s ease);
+    display: inline-block; /* `transform` does not work on standard `inline` elements, like `span`, hence `inline-block`. */
+  }
+
+  &:not([aria-expanded="true"]) > * {
+    transform: rotate(-90deg); /* Rotate chevron icon when collapse is closed. */
+  }
+}
+
 /* Nautobot custom components */
 body {
   display: grid;
@@ -801,7 +877,7 @@ body {
     "sidenav header       drawer"
     "sidenav main-content drawer"
     "sidenav footer       drawer";
-  grid-template-columns: fit-content(0) 1fr fit-content(0);
+  grid-template-columns: fit-content(0) minmax(0, 1fr) fit-content(0);
   grid-template-rows: fit-content(0) 1fr fit-content(0);
 
   #sidenav {
