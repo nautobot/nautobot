@@ -141,29 +141,29 @@ class ExportObjectListTest(TransactionTestCase):
 
     def test_export_saved_view_to_csv(self):
         """Export saved view with filters."""
-        filter_name = Location.objects.first().name
+        filter_name = Status.objects.first().name
         sv = SavedView.objects.create(
             name="Global default View",
             owner=self.user,
-            view="dcim:location_list",
+            view="extras:status_list",
             is_global_default=True,
             config={"filter_params": {"name": [filter_name]}},
         )
         job_result = create_job_result_and_run_job(
             "nautobot.core.jobs",
             "ExportObjectList",
-            content_type=ContentType.objects.get_for_model(Location).pk,
+            content_type=ContentType.objects.get_for_model(Status).pk,
             query_string=f"saved_view={sv.pk}",
         )
         self.assertJobResultStatus(job_result)
         self.assertTrue(job_result.files.exists())
-        self.assertEqual(Path(job_result.files.first().file.name).name, "nautobot_locations.csv")
+        self.assertEqual(Path(job_result.files.first().file.name).name, "nautobot_statuses.csv")
         csv_data = job_result.files.first().file.read().decode("utf-8")
         # remove BOM character if present
         csv_data = csv_data.lstrip("\ufeff")
         rows = list(csv.DictReader(StringIO(csv_data)))
         self.assertGreaterEqual(
-            len(Location.objects.all()), 1
+            len(Status.objects.all()), 1
         )  # just to be sure that we have more than 1 Location and filter works
         self.assertEqual(len(rows), 1)  # because saved view has filter with name then should be only 1 record
         self.assertEqual(rows[0]["name"], filter_name)
