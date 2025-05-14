@@ -728,9 +728,7 @@ class ObjectsTablePanel(Panel):
             table_title (str, optional): The title to display in the panel heading for the table.
                 If None, defaults to the plural verbose name of the table model.
             include_columns (list, optional): A list of field names to include in the table display.
-                If provided, only these fields will be displayed in the table.
             exclude_columns (list, optional): A list of field names to exclude from the table display.
-                Mutually exclusive with `include_columns`.
             add_button_route (str, optional): The route used to generate the "add" button URL. Defaults to "default",
                 which uses the default table's model `add` route.
             add_permissions (list, optional): A list of permissions required for the "add" button to be displayed.
@@ -777,8 +775,6 @@ class ObjectsTablePanel(Panel):
         self.order_by_fields = order_by_fields
         self.table_title = table_title
         self.max_display_count = max_display_count
-        if exclude_columns and include_columns:
-            raise ValueError("You can only specify either `exclude_columns` or `include_columns`")
         self.include_columns = include_columns
         self.exclude_columns = exclude_columns
         self.add_button_route = add_button_route
@@ -885,8 +881,9 @@ class ObjectsTablePanel(Panel):
 
         if self.include_columns:
             for column in self.include_columns:
-                if column in body_content_table.base_columns:
-                    body_content_table.columns.show(column)
+                if column not in body_content_table.base_columns:
+                    raise ValueError(f"You are specifying a non-existent column `{column}`")
+                body_content_table.columns.show(column)
 
         # Enable bulk action toggle if the user has appropriate permissions
         user = request.user
