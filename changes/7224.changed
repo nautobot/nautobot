@@ -1,1 +1,0 @@
-Changed `ObjectsTablePanel.__init__()` to enforce that a `related_field_name` is required when specifying a `table_attribute`.
