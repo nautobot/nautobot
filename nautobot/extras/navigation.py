@@ -25,6 +25,12 @@ menu_items = (
                             ),
                         ),
                     ),
+                    NavMenuItem(
+                        link="extras:approver_dashboard",
+                        name="Approval Dashboard",
+                        weight=200,
+                        permissions=["extras.view_approvalworkflow"],
+                    ),
                 ),
             ),
         ),

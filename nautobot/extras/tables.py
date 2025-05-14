@@ -284,7 +284,7 @@ class ApprovalWorkflowTable(BaseTable):
         model = ApprovalWorkflow
         fields = (
             "pk",
-            "approval_workflow",
+            "approval_workflow_definition",
             "object_under_review_content_type",
             "object_under_review",
             "current_state",
@@ -292,7 +292,7 @@ class ApprovalWorkflowTable(BaseTable):
         )
         default_columns = (
             "pk",
-            "approval_workflow",
+            "approval_workflow_definition",
             "object_under_review_content_type",
             "object_under_review",
             "current_state",
@@ -370,9 +370,9 @@ class ApproverDashboardTable(ApprovalWorkflowStageTable):
         model = ApprovalWorkflowStage
         fields = (
             "pk",
-            "approval_workflow_stage",
-            "approval_workflow",
             "object_under_review",
+            "approval_workflow",
+            "approval_workflow_stage",
             "actions_needed",
             "state",
             "decision_date",

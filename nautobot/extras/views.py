@@ -432,6 +432,8 @@ class ApprovalWorkflowStageUIViewSet(
                     return "Approval Date"
                 elif obj.state == ApprovalWorkflowStateChoices.DENIED:
                     return "Denial Date"
+            if key == "min_approvers":
+                return "Minimum Number of Approvers Needed"
 
             return super().render_key(key, value, context)
 
@@ -473,7 +475,7 @@ class ApprovalWorkflowStageUIViewSet(
     @action(detail=True, url_path="approve", methods=["get", "post"])
     def approve(self, request, *args, **kwargs):
         """
-        Approve the approval workflow stage instance response.
+        Approve the approval workflow stage response.
         """
         instance = self.get_object()
 
@@ -513,7 +515,7 @@ class ApprovalWorkflowStageUIViewSet(
     @action(detail=True, url_path="deny", methods=["get", "post"])
     def deny(self, request, *args, **kwargs):
         """
-        Deny the approval workflow stage instance response.
+        Deny the approval workflow stage response.
         """
         instance = self.get_object()
 
@@ -555,7 +557,7 @@ class ApprovalWorkflowStageUIViewSet(
         """
         Comment the approval workflow stage instance response.
         """
-        # The user is allowed to comment on the stage instance regardless of its state
+        # The user is allowed to comment on the stage regardless of its state
         instance = self.get_object()
         try:
             approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.get(
@@ -607,7 +609,7 @@ class ApprovalWorkflowStageResponseUIViewSet(
 
 class ApproverDashboardView(ObjectListViewMixin):
     """
-    View for the dashboard of approval workflow stage instances waiting for the current user to approve.
+    View for the dashboard of approval workflow stages waiting for the current user to approve.
     """
 
     queryset = ApprovalWorkflowStage.objects.all()
@@ -628,12 +630,13 @@ class ApproverDashboardView(ObjectListViewMixin):
         Get the extra context for the dashboard view.
         """
         context = super().get_extra_context(request, instance)
-        context["title"] = "Approver Dashboard"
+        context["title"] = "My Approvals"
+        context["approval_view"] = True
         return context
 
     def get_queryset(self):
         """
-        Filter the queryset to only include approval workflow stage instances that are pending approval
+        Filter the queryset to only include approval workflow stages that are pending approval
         and are assigned to the current user for approval.
         """
         queryset = super().get_queryset()
@@ -642,14 +645,14 @@ class ApproverDashboardView(ObjectListViewMixin):
         # we only want currently active stages on the approver
         active_stage_pks = [workflow.active_stage.pk for workflow in ApprovalWorkflow.objects.all()]
 
-        # Get the ApprovalWorkflowStage instances that are already approved by the current user
+        # Get the ApprovalWorkflowStages that are already approved by the current user
         approved_approval_workflow_stages = ApprovalWorkflowStageResponse.objects.filter(
             state=ApprovalWorkflowStateChoices.APPROVED,
             user=user,
         ).values_list("approval_workflow_stage", flat=True)
 
-        # Return only the approval workflow stage instances that are pending and active currently
-        # and belong to a pending approval workflow instance
+        # Return only the approval workflow stages that are pending and active currently
+        # and belong to a pending approval workflow
         # and are assigned to the current user or any of the groups the user belongs to
         return (
             queryset.filter(
@@ -668,7 +671,7 @@ class ApproverDashboardView(ObjectListViewMixin):
         """
         messages.info(
             request,
-            "You are viewing a dashboard of approval workflow stage instances that are pending for your approval.",
+            "You are viewing a dashboard of approval workflow stages that are pending for your approval.",
         )
         return super().list(request, *args, **kwargs)
 
@@ -696,12 +699,12 @@ class ApproveeDashboardView(ObjectListViewMixin):
         Get the extra context for the dashboard view.
         """
         context = super().get_extra_context(request, instance)
-        context["title"] = "Approvee Dashboard"
+        context["title"] = "My Requests"
         return context
 
     def get_queryset(self):
         """
-        Filter the queryset to only include instances that triggered by the current users.
+        Filter the queryset to only include workflows that triggered by the current users.
         """
         queryset = super().get_queryset()
         user = self.request.user
@@ -713,7 +716,7 @@ class ApproveeDashboardView(ObjectListViewMixin):
         """
         messages.info(
             request,
-            "You are viewing a dashboard of approval workflow instances that are requested by you.",
+            "You are viewing a dashboard of approval workflows that are requested by you.",
         )
         return super().list(request, *args, **kwargs)
 

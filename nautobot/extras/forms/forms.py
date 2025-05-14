@@ -317,7 +317,7 @@ class ApprovalWorkflowStageDefinitionForm(NautobotModelForm):
 ApprovalWorkflowStageDefinitionFormSet = inlineformset_factory(
     parent_model=ApprovalWorkflowDefinition,
     model=ApprovalWorkflowStageDefinition,
-    exclude=(),
+    exclude=("_custom_field_data",),
     extra=5,
     widgets={
         "name": forms.TextInput(attrs={"class": "form-control"}),
