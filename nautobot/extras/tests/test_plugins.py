@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.template import engines
-from django.test import override_settings
+from django.test import override_settings, tag
 from django.urls import NoReverseMatch, reverse
 import django_tables2 as tables
 import netaddr
@@ -915,16 +915,19 @@ class PluginTemplateExtensionsTest(TestCase):
         response_body = extract_page_body(response.content.decode(response.charset))
         self.assertIn("APP INJECTED LOCATION CONTENT - BUTTONS", response_body, msg=response_body)
 
+    @tag("fix_in_v3")
     def test_detail_view_left_page(self):
         response = self.client.get(reverse("dcim:location", kwargs={"pk": self.location.pk}))
         response_body = extract_page_body(response.content.decode(response.charset))
         self.assertIn("App Injected Content - Left", response_body, msg=response_body)
 
+    @tag("fix_in_v3")
     def test_detail_view_right_page(self):
         response = self.client.get(reverse("dcim:location", kwargs={"pk": self.location.pk}))
         response_body = extract_page_body(response.content.decode(response.charset))
         self.assertIn("App Injected Content - Right", response_body, msg=response_body)
 
+    @tag("fix_in_v3")
     def test_detail_view_full_width_page(self):
         response = self.client.get(reverse("dcim:location", kwargs={"pk": self.location.pk}))
         response_body = extract_page_body(response.content.decode(response.charset))

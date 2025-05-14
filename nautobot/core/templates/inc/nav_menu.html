@@ -43,7 +43,7 @@
             {% with request.user.navbar_favorites_link_list as navbar_favorites_link_list %}
                 {% for tab_name, tab_details in registry.nav_menu.tabs.items %}
                     {% if not tab_details.permissions or request.user|has_one_or_more_perms:tab_details.permissions %}
-                        <li>
+                        <li data-section-name="{{ tab_name }}">
                             <button
                                 aria-controls="sidenav-flyout-{{ forloop.counter }}"
                                 aria-expanded="false"

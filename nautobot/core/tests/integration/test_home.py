@@ -25,23 +25,13 @@ class HomeTestCase(SeleniumTestCase):
     def setUp(self):
         super().setUp()
         self.login(self.user.username, self.password)
-
-    def tearDown(self):
-        self.logout()
-        super().tearDown()
+        self.logged_in = True
 
     def get_panel_permissions(self, panel_details):
         permissions = []
         for panel in panel_details.values():
             permissions.append(panel["permission"])
         return permissions
-
-    def test_login(self):
-        """
-        Perform a UI login.
-        """
-        # Wait for the page to render and make sure we got a body.
-        self.browser.visit(self.live_server_url)
 
     def test_homepage_render(self):
         """

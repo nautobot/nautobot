@@ -491,7 +491,7 @@ class ColoredLabelColumn(django_tables2.TemplateColumn):
 
     template_code = """
     {% load helpers %}
-    {% if value %}<span class="badge" style="color: {{ value.color|fgcolor }}; background-color: #{{ value.color }}">{{ value }}</label>{% else %}&mdash;{% endif %}
+    {% if value %}<span class="badge" style="color: {{ value.color|fgcolor }}; background-color: #{{ value.color }}">{{ value }}</span>{% else %}&mdash;{% endif %}
     """
 
     def __init__(self, *args, **kwargs):

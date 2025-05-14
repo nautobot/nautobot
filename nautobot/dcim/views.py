@@ -1652,6 +1652,7 @@ class ModuleBayTemplateUIViewSet(
     serializer_class = serializers.ModuleBayTemplateSerializer
     table_class = tables.ModuleBayTemplateTable
     create_template_name = "dcim/device_component_add.html"
+    object_detail_content = None
 
     def get_selected_objects_parents_name(self, selected_objects):
         selected_object = selected_objects.first()
@@ -4323,6 +4324,7 @@ class InterfaceRedundancyGroupAssociationUIViewSet(ObjectEditViewMixin, ObjectDe
     form_class = forms.InterfaceRedundancyGroupAssociationForm
     template_name = "dcim/interfaceredundancygroupassociation_create.html"
     lookup_field = "pk"
+    object_detail_content = None
 
 
 class DeviceFamilyUIViewSet(NautobotUIViewSet):

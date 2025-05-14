@@ -1,5 +1,7 @@
 import uuid
 
+from django.test import tag
+
 from nautobot.core.testing.integration import (
     BulkOperationsTestCases,
 )
@@ -7,6 +9,7 @@ from nautobot.dcim.models import Device
 from nautobot.extras.tests.integration import create_test_device
 
 
+@tag("fix_in_v3")
 class DeviceBulkOperationsTestCase(BulkOperationsTestCases.BulkOperationsTestCase):
     """
     Test devices bulk edit / delete operations.

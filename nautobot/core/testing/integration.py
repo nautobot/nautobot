@@ -86,6 +86,12 @@ class ObjectsListMixin:
         """
         self.click_button('#select_all_box button[name="_edit"]')
 
+    def click_add_item(self):
+        """
+        Click add item button on top of the items table list.
+        """
+        self.click_button("#add_button")
+
     def click_table_link(self, row=1, column=2):
         """By default, tries to click column next to checkbox to go to the details page."""
         self.browser.find_by_xpath(f'//*[@id="object_list_form"]//tbody/tr[{row}]/td[{column}]/a').click()
@@ -119,13 +125,30 @@ class ObjectDetailsMixin:
         By default, it's not using the exact match, because on the UI we're often adding
         additional tags, relationships or units.
         """
-        panel_xpath = f'//*[@id="main"]//div[@class="panel-heading"][contains(normalize-space(), "{panel_label}")]/following-sibling::table'
+        panel_xpath = f'//*[@id="main"]//div[@class="card-header"][contains(normalize-space(), "{panel_label}")]/following-sibling::table'
         value = self.browser.find_by_xpath(f'{panel_xpath}//td[text()="{field_label}"]/following-sibling::td[1]').text
 
         if exact_match:
             self.assertEqual(value, str(expected_value))
         else:
             self.assertIn(str(expected_value), value)
+
+    def find_and_open_panel_v2(self, panel_label):
+        """
+        Finds panel with given title and expand it if needed. Works with v2 template panels.
+
+        TODO: remove after all panels will be moved to UI Components Framework or new Bootstrap 5 templates.
+        """
+        panel_xpath = f'//*[@id="main"]//div[@class="card-header"][contains(normalize-space(), "{panel_label}")]'
+        expand_button_xpath = f"{panel_xpath}/button[normalize-space()='Expand All']"
+        expand_button = self.browser.find_by_xpath(expand_button_xpath)
+        if not expand_button.is_empty():
+            expand_button.click()
+        return self.browser.find_by_xpath(f"{panel_xpath}/../table")
+
+    def switch_tab(self, tab_name):
+        tab_xpath = f'//ul[@class="nav nav-tabs"]//a[contains(normalize-space(), "{tab_name}")]'
+        self.browser.find_by_xpath(tab_xpath, wait_time=5).click()
 
 
 class BulkOperationsMixin:
@@ -169,7 +192,7 @@ class BulkOperationsMixin:
         if is_select:
             self.fill_select2_field(field_name, value)
         else:
-            self.browser.fill(field_name, value)
+            self.fill_input(field_name, value)
 
     def assertBulkDeleteConfirmMessageIsValid(self, expected_count):
         """
@@ -201,6 +224,44 @@ class BulkOperationsMixin:
         """
         job_status = self.wait_for_job_result()
         self.assertEqual(job_status, "Completed")
+
+
+class SidenavSection:
+    """
+    Helper class which represents a Sidenav section and simplify moving around sidenav, expanding section and clicking
+    proper navigation link.
+    """
+
+    def __init__(self, browser, section_name):
+        self.browser = browser
+        self.section_name = section_name
+        self.section_xpath = f"//*[@id='sidenav']//li[@data-section-name='{self.section_name}']"
+        self.section = self.browser.find_by_xpath(self.section_xpath)
+
+    @property
+    def button(self):
+        return self.section.find_by_xpath(f"{self.section_xpath}/button")
+
+    @property
+    def flyout(self):
+        return self.section.find_by_xpath(f"{self.section_xpath}/div[@class='sidenav-flyout']")
+
+    @property
+    def is_expanded(self):
+        return self.button["aria-expanded"] == "true"
+
+    def toggle(self):
+        if not self.is_expanded:
+            self.button.click()
+
+    def find_link(self, link_name):
+        return self.section.find_by_xpath(
+            f"{self.section_xpath}/div[@class='sidenav-flyout']//a[@class='sidenav-link' and normalize-space()='{link_name}']"
+        )
+
+    def click_link(self, link_name):
+        link = self.find_link(link_name)
+        link.click()
 
 
 # In CI, sometimes the FQDN of SELENIUM_HOST gets used, other times it seems to be just the hostname?
@@ -261,19 +322,26 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         if self.browser.is_text_present("Please enter a correct username and password."):
             self.fail(f"Unable to login in with username {username}")
 
+        self.logged_in = True
+
     def logout(self):
         self.browser.visit(f"{self.live_server_url}/logout")
+
+    def find_sidenav_section(self, tab_name):
+        """
+        Helper function to find sidenav section known as "tab_name". In `nav_menu` we still have tabs/groups naming.
+        """
+        return SidenavSection(self.browser, tab_name)
 
     def click_navbar_entry(self, parent_menu_name, child_menu_name):
         """
         Helper function to click on a parent menu and child menu in the navigation bar.
         """
-
-        parent_menu_xpath = f"//*[@id='navbar']//a[@class='dropdown-toggle' and normalize-space()='{parent_menu_name}']"
-        parent_menu = self.browser.find_by_xpath(parent_menu_xpath, wait_time=5)
-        if not parent_menu["aria-expanded"] == "true":
-            parent_menu.click()
-        child_menu_xpath = f"{parent_menu_xpath}/following-sibling::ul//li[.//a[normalize-space()='{child_menu_name}']]"
+        section_xpath = f"//*[@id='sidenav']//li[@data-section-name='{parent_menu_name}']"
+        sidenav_button = self.browser.find_by_xpath(f"{section_xpath}/button", wait_time=5)
+        if not sidenav_button["aria-expanded"] == "true":
+            sidenav_button.click()
+        child_menu_xpath = f"{section_xpath}/div[@class='sidenav-flyout']//a[@class='sidenav-link' and normalize-space()='{child_menu_name}']"
         child_menu = self.browser.find_by_xpath(child_menu_xpath, wait_time=5)
         child_menu.click()
 
@@ -353,8 +421,17 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
     def click_button(self, query_selector):
         btn = self.browser.find_by_css(query_selector, wait_time=5)
         # Button might be visible but on the edge and then impossible to click due to vertical/horizontal scrolls
-        self.browser.execute_script(f"document.querySelector('{query_selector}').scrollIntoView()")
+        self.browser.execute_script(f"document.querySelector('{query_selector}').scrollIntoView(true)")
         btn.click()
+
+    def fill_input(self, input_name, input_value):
+        """
+        Helper function to fill an input field. Solves issue with element could not be scrolled into view for some pages.
+        """
+        element = self.browser.find_by_name(input_name, wait_time=5)
+        self.browser.execute_script("arguments[0].scrollIntoView(true);", element.first._element)
+        self.browser.execute_script("arguments[0].focus();", element.first._element)
+        self.browser.fill(input_name, input_value)
 
     def login_as_superuser(self):
         self.user.is_superuser = True

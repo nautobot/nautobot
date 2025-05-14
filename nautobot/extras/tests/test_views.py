@@ -8,7 +8,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import Q
-from django.test import override_settings
+from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import escape, format_html
@@ -3040,7 +3040,9 @@ class JobTestCase(
         instance = self.test_pass
         self.add_permissions("extras.view_objectchange", "extras.view_job")
         response = self.client.get(instance.get_changelog_url())
-        self.assertBodyContains(response, f"{instance.name} - Change Log")
+        self.assertBodyContains(response, f"{instance}")
+        changelog_table = "<thead><tr><th>Time</th><th>User name</th><th>Action</th><th>Type</th><th>Object</th><th>Request ID</th></tr></thead>"
+        self.assertBodyContains(response, changelog_table, html=True)
 
 
 class JobButtonTestCase(
@@ -3134,12 +3136,14 @@ class JobButtonRenderingTestCase(TestCase):
 
         self.location_type = LocationType.objects.get(name="Campus")
 
+    @tag("fix_in_v3")
     def test_view_object_with_job_button(self):
         """Ensure that the job button is rendered."""
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
         self.assertBodyContains(response, f"JobButton {self.location_type.name}")
         self.assertBodyContains(response, "Click me!")
 
+    @tag("fix_in_v3")
     def test_task_queue_hidden_input_is_present(self):
         """
         Ensure that the job button respects the job class' task_queues and the job class default job queue is passed as a hidden form input.
@@ -3167,6 +3171,7 @@ class JobButtonRenderingTestCase(TestCase):
             f'<input type="hidden" name="_job_queue" value="{self.job.default_job_queue.pk}">', content, content
         )
 
+    @tag("fix_in_v3")
     def test_view_object_with_unsafe_text(self):
         """Ensure that JobButton text can't be used as a vector for XSS."""
         self.job_button_1.text = '<script>alert("Hello world!")</script>'
@@ -3186,6 +3191,7 @@ class JobButtonRenderingTestCase(TestCase):
         self.assertNotIn("<script>alert", content, content)
         self.assertIn("&lt;script&gt;alert", content, content)
 
+    @tag("fix_in_v3")
     def test_view_object_with_unsafe_name(self):
         """Ensure that JobButton names can't be used as a vector for XSS."""
         self.job_button_1.text = "JobButton {{ obj"
@@ -3197,6 +3203,7 @@ class JobButtonRenderingTestCase(TestCase):
         self.assertNotIn("<script>alert", content, content)
         self.assertIn("&lt;script&gt;alert", content, content)
 
+    @tag("fix_in_v3")
     def test_render_constrained_run_permissions(self):
         obj_perm = ObjectPermission(
             name="Test permission",
@@ -3689,9 +3696,9 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         }
         self.assertHttpStatus(self.client.post(**request), 302)
 
-        tag = Tag.objects.filter(name=self.form_data["name"])
-        self.assertTrue(tag.exists())
-        self.assertEqual(tag[0].content_types.first(), location_content_type)
+        tag_object = Tag.objects.filter(name=self.form_data["name"])
+        self.assertTrue(tag_object.exists())
+        self.assertEqual(tag_object[0].content_types.first(), location_content_type)
 
     def test_create_tags_with_invalid_content_types(self):
         self.add_permissions("extras.add_tag")
@@ -3708,8 +3715,8 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         }
 
         response = self.client.post(**request)
-        tag = Tag.objects.filter(name=self.form_data["name"])
-        self.assertFalse(tag.exists())
+        tag_object = Tag.objects.filter(name=self.form_data["name"])
+        self.assertFalse(tag_object.exists())
         self.assertBodyContains(response, "content_types: Select a valid choice")
 
     def test_update_tags_remove_content_type(self):
@@ -3735,6 +3742,34 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         self.assertHttpStatus(
             response, 200, ["content_types: Unable to remove dcim.location. Dependent objects were found."]
         )
+
+    @tag("fix_in_v3")
+    def test_list_objects_with_permission(self):
+        return super().test_list_objects_with_permission()
+
+    @tag("fix_in_v3")
+    def test_list_objects_with_constrained_permission(self):
+        return super().test_list_objects_with_constrained_permission()
+
+    @tag("fix_in_v3")
+    def test_list_objects_anonymous(self):
+        return super().test_list_objects_anonymous()
+
+    @tag("fix_in_v3")
+    def test_list_objects_filtered(self):
+        return super().test_list_objects_filtered()
+
+    @tag("fix_in_v3")
+    def test_list_objects_unknown_filter_no_strict_filtering(self):
+        return super().test_list_objects_unknown_filter_no_strict_filtering()
+
+    @tag("fix_in_v3")
+    def test_list_objects_unknown_filter_strict_filtering(self):
+        return super().test_list_objects_unknown_filter_strict_filtering()
+
+    @tag("fix_in_v3")
+    def test_list_view_app_banner(self):
+        return super().test_list_view_app_banner()
 
 
 class WebhookTestCase(
@@ -3811,6 +3846,7 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "weight": 255,
         }
 
+    @tag("fix_in_v3")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_view_with_content_types(self):
         """

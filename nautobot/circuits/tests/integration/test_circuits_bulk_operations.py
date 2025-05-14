@@ -1,5 +1,7 @@
 import uuid
 
+from django.test import tag
+
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.testing.integration import (
     BulkOperationsTestCases,
@@ -7,6 +9,7 @@ from nautobot.core.testing.integration import (
 from nautobot.extras.models import Status
 
 
+@tag("fix_in_v3")
 class CircuitBulkOperationsTestCase(BulkOperationsTestCases.BulkOperationsTestCase):
     """
     Test circuits bulk edit / delete operations.

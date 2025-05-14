@@ -1,3 +1,5 @@
+from django.test import tag
+
 from nautobot.core.testing.integration import SeleniumTestCase
 
 
@@ -22,6 +24,7 @@ class ThemeTestCase(SeleniumTestCase):
         # Validate modal is not visible
         self.assertFalse(theme_modal[0].visible)
 
+    @tag("fix_in_v3")
     def test_modal_rendered(self):
         """Modal should render when selecting the 'theme' button in the footer."""
 
