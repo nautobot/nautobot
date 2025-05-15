@@ -246,7 +246,7 @@ class Migration(migrations.Migration):
                 ),
             ],
             options={
-                "ordering": ["approval_workflow_stage"],
+                "ordering": ["approval_workflow_stage", "user"],
                 "db_table": "extras_approvaluserresponse",
                 "verbose_name": "Approval Workflow Stage Response",
             },
