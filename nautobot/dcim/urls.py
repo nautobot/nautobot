@@ -11,7 +11,6 @@ from .models import (
     ConsoleServerPort,
     Device,
     DeviceBay,
-    DeviceType,
     FrontPort,
     Interface,
     InventoryItem,
@@ -32,6 +31,7 @@ router.register("controller-managed-device-groups", views.ControllerManagedDevic
 router.register("controllers", views.ControllerUIViewSet)
 router.register("device-families", views.DeviceFamilyUIViewSet)
 router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
+router.register("device-types", views.DeviceTypeUIViewSet)
 router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
 router.register("interface-redundancy-groups-associations", views.InterfaceRedundancyGroupAssociationUIViewSet)
 router.register("location-types", views.LocationTypeUIViewSet)
@@ -121,45 +121,10 @@ urlpatterns = [
         kwargs={"model": Rack},
     ),
     # Device types
-    path("device-types/", views.DeviceTypeListView.as_view(), name="devicetype_list"),
-    path("device-types/add/", views.DeviceTypeEditView.as_view(), name="devicetype_add"),
     path(
         "device-types/import/",
         views.DeviceTypeImportView.as_view(),
         name="devicetype_import",
-    ),
-    path(
-        "device-types/edit/",
-        views.DeviceTypeBulkEditView.as_view(),
-        name="devicetype_bulk_edit",
-    ),
-    path(
-        "device-types/delete/",
-        views.DeviceTypeBulkDeleteView.as_view(),
-        name="devicetype_bulk_delete",
-    ),
-    path("device-types/<uuid:pk>/", views.DeviceTypeView.as_view(), name="devicetype"),
-    path(
-        "device-types/<uuid:pk>/edit/",
-        views.DeviceTypeEditView.as_view(),
-        name="devicetype_edit",
-    ),
-    path(
-        "device-types/<uuid:pk>/delete/",
-        views.DeviceTypeDeleteView.as_view(),
-        name="devicetype_delete",
-    ),
-    path(
-        "device-types/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="devicetype_changelog",
-        kwargs={"model": DeviceType},
-    ),
-    path(
-        "device-types/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="devicetype_notes",
-        kwargs={"model": DeviceType},
     ),
     # Console port templates
     path(
