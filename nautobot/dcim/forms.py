@@ -2111,9 +2111,9 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         queryset=ClusterGroup.objects.all(),
         required=False,
         null_option="None",
-        initial_params={"clusters": "$cluster"},
+        initial_params={"clusters": "$clusters"},
     )
-    cluster = DynamicModelChoiceField(
+    clusters = DynamicModelMultipleChoiceField(
         queryset=Cluster.objects.all(),
         required=False,
         query_params={"cluster_group": "$cluster_group"},
@@ -2159,7 +2159,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             "primary_ip6",
             "secrets_group",
             "cluster_group",
-            "cluster",
+            "clusters",
             "tenant_group",
             "tenant",
             "vrfs",
