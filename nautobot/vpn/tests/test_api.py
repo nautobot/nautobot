@@ -361,3 +361,6 @@ class VPNTunnelEndpointAPITest(APIViewTestCases.APIViewTestCase):
             "role": "replaceme",
             "contact_associations": "replaceme",
         }
+
+
+# TODO: Verify GQL !!!

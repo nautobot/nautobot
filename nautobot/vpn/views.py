@@ -235,6 +235,7 @@ class VPNTunnelUIViewSet(NautobotUIViewSet):
                 table_filter="endpoint_a_vpn_tunnels",
                 section=SectionChoices.RIGHT_HALF,
                 include_columns=[
+                    "name",
                     "device",
                     "source_interface",
                     "source_ipaddress",
@@ -250,6 +251,7 @@ class VPNTunnelUIViewSet(NautobotUIViewSet):
                 table_filter="endpoint_z_vpn_tunnels",
                 section=SectionChoices.RIGHT_HALF,
                 include_columns=[
+                    "name",
                     "device",
                     "source_interface",
                     "source_ipaddress",

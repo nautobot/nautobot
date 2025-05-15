@@ -100,17 +100,17 @@ class VPNPhase1Policy(PrimaryModel):  # pylint: disable=too-many-ancestors
         default=False,
         help_text="Only applicable to IKEv1",
     )
-    encryption_algorithm = models.CharField(
+    encryption_algorithm = models.CharField(  # TODO try making them multichoice. Make it private field, and public property with list.
         max_length=CHARFIELD_MAX_LENGTH,
         choices=choices.EncryptionAlgorithmChoices,
         blank=True,
     )
-    integrity_algorithm = models.CharField(
+    integrity_algorithm = models.CharField(  # TODO Same
         max_length=CHARFIELD_MAX_LENGTH,
         choices=choices.IntegrityAlgorithmChoices,
         blank=True,
     )
-    dh_group = models.CharField(
+    dh_group = models.CharField(  # TODO Same, also ph2 policy.
         max_length=CHARFIELD_MAX_LENGTH, choices=choices.DhGroupChoices, blank=True, verbose_name="Diffie-Hellman group"
     )
     lifetime_seconds = models.PositiveIntegerField(blank=True, null=True, verbose_name="Lifetime (seconds)")
@@ -402,15 +402,15 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
         on_delete=models.CASCADE,
         related_name="vpn_tunnel_endpoints",
         blank=True,
-        null=True,  # TODO change to False
+        null=True,
         verbose_name="Device",
     )
     source_interface = models.OneToOneField(
         to="dcim.Interface",
         on_delete=models.PROTECT,
         related_name="vpn_tunnel_endpoints_src_int",
-        blank=False,
-        null=False,
+        blank=True,
+        null=True,
         verbose_name="Source Interface",
     )
     source_ipaddress = models.ForeignKey(
@@ -420,21 +420,13 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
         blank=True,
         null=True,
         verbose_name="Source IP Address",
+        help_text="Mutually Exclusive with Source FQDN."
     )
-    destination_ipaddress = models.ForeignKey(
-        to="ipam.IPAddress",
-        on_delete=models.SET_NULL,
-        related_name="vpn_tunnel_endpoints_dst_ip",
-        blank=True,
-        null=True,
-        verbose_name="Destination IP Address",
-        help_text="Mutually Exclusive with Destination FQDN",
-    )
-    destination_fqdn = models.CharField(
+    source_fqdn = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
-        verbose_name="Destination FQDN",
-        help_text="Mutually Exclusive with Destination IP Address",
+        verbose_name="Source FQDN",
+        help_text="Mutually Exclusive with Source IP Address",
     )
     tunnel_interface = models.OneToOneField(
         to="dcim.Interface",
@@ -477,8 +469,7 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
         "vpn_profile",
         "source_interface",
         "source_ipaddress",
-        "destination_ipaddress",
-        "destination_fqdn",
+        "source_fqdn",
         "tunnel_interface",
         "protected_prefixes_dg",
         "protected_prefixes",
@@ -492,18 +483,24 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
     @property
     def name(self):
         """Name property."""
-        device_intf = f"{self.source_interface.device.name} {self.source_interface.name}"
-        if self.source_ipaddress:
-            return f"{device_intf}({self.source_ipaddress.address})"
-        return device_intf
+        if self.source_interface:
+            device_intf = f"{self.source_interface.device.name} {self.source_interface.name}"
+            if self.source_ipaddress:
+                return f"{device_intf}({self.source_ipaddress.address})"
+            return device_intf
+        return self.source_fqdn
 
     def __str__(self):
         """Stringify instance."""
         return self.name
 
     def clean(self):
-        if self.destination_ipaddress and self.destination_fqdn:
+        if self.source_ipaddress and self.source_fqdn:
             raise ValidationError(
-                "Destination IP Address and Destination FQDN are mutually exclusive fields. Select only one."
+                "Source IP Address and Source FQDN are mutually exclusive fields. Select only one."
+            )
+        if not any([self.source_interface, self.source_ipaddress, self.source_fqdn]):
+            raise ValidationError(
+                "Source Interface or Source IP Address or Source FQDN Is required."
             )
         return super().clean()
