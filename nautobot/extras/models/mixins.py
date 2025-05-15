@@ -26,6 +26,23 @@ class ApprovableModelMixin(models.Model):
         related_query_name="associated_approval_workflows_%(app_label)s_%(class)s",  # e.g. 'associated_object_approval_workflows_dcim_device'
     )
 
+    def get_approval_workflow_url(self):
+        """Return the approval workflow URL for this object."""
+        route = get_route_for_model(self, "approvalworkflow")
+
+        # Iterate the pk-like fields and try to get a URL, or return None.
+        fields = ["pk", "slug"]
+        for field in fields:
+            if not hasattr(self, field):
+                continue
+
+            try:
+                return reverse(route, kwargs={field: getattr(self, field)})
+            except NoReverseMatch:
+                continue
+
+        return None
+
 
 class ContactMixin(models.Model):
     """Abstract mixin for enabling Contact/Team association to a given model class."""

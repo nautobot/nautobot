@@ -61,7 +61,7 @@ from nautobot.core.views.mixins import (
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.views.utils import get_obj_from_context, prepare_cloned_fields
+from nautobot.core.views.utils import common_detail_view_context, get_obj_from_context, prepare_cloned_fields
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Controller, Device, Interface, Module, Rack, VirtualDeviceContext
 from nautobot.dcim.tables import (
@@ -719,6 +719,67 @@ class ApproveeDashboardView(ObjectListViewMixin):
             "You are viewing a dashboard of approval workflows that are requested by you.",
         )
         return super().list(request, *args, **kwargs)
+
+
+class ObjectApprovalWorkflowView(generic.GenericView):
+    """
+    Present an pending approval workflow attached to a particular object.
+
+    base_template: Specify to explicitly identify the base object detail template to render.
+        If not provided, "<app>/<model>.html", "<app>/<model>_retrieve.html", or "generic/object_retrieve.html"
+        will be used, as per `get_base_template()`.
+    """
+
+    base_template: Optional[str] = None
+
+    def get(self, request, model, **kwargs):
+        # Handle QuerySet restriction of parent object if needed
+
+        if hasattr(model.objects, "restrict"):
+            obj = get_object_or_404(model.objects.restrict(request.user, "view"), **kwargs)
+        else:
+            obj = get_object_or_404(model, **kwargs)
+
+        job_class = get_job(obj.task)
+        labels = {}
+        if job_class is not None:
+            for name, var in job_class._get_vars().items():
+                field = var.as_field()
+                if field.label:
+                    labels[name] = field.label
+                else:
+                    labels[name] = pretty_name(name)
+
+        # Gather all changes for this object (and its related objects)
+        approval_workflow = ApprovalWorkflow.objects.get(object_under_review_object_id=obj.pk)
+        stage_table = tables.RelatedApprovalWorkflowStageTable(
+            ApprovalWorkflowStage.objects.filter(approval_workflow=approval_workflow),
+        )
+        stage_table.columns.hide("approval_workflow")
+        response_table = tables.RelatedApprovalWorkflowStageResponseTable(
+            ApprovalWorkflowStageResponse.objects.filter(approval_workflow_stage__approval_workflow=approval_workflow)
+        )
+
+        base_template = get_base_template(self.base_template, model)
+
+        return render(
+            request,
+            "extras/object_approvalworkflow.html",
+            {
+                "object": obj,
+                "verbose_name": helpers.bettertitle(obj._meta.verbose_name),
+                "verbose_name_plural": obj._meta.verbose_name_plural,
+                "approval_workflow": approval_workflow,
+                "base_template": base_template,
+                "active_tab": "approval_workflow",
+                "labels": labels,
+                "job_class_found": (job_class is not None),
+                "default_time_zone": get_current_timezone(),
+                "stage_table": stage_table,
+                "response_table": response_table,
+                **common_detail_view_context(request, obj),
+            },
+        )
 
 
 #
@@ -2617,21 +2678,7 @@ class ScheduledJobView(generic.ObjectView):
                 else:
                     labels[name] = pretty_name(name)
 
-        approval_workflows = instance.associated_approval_workflows.all()
-        approval_workflows_count = approval_workflows.count()
-        approval_workflow_table = tables.ApprovalWorkflowTable(
-            data=approval_workflows,
-            user=request.user,
-            exclude=["object_under_review", "object_under_review_content_type"],
-        )
-
-        RequestConfig(
-            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-        ).configure(approval_workflow_table)
-
         return {
-            "approval_workflow_count": approval_workflows_count,
-            "approval_workflow_table": approval_workflow_table,
             "labels": labels,
             "job_class_found": (job_class is not None),
             "default_time_zone": get_current_timezone(),
