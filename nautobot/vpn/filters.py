@@ -187,7 +187,7 @@ class VPNTunnelEndpointFilterSet(NautobotFilterSet):  # pylint: disable=too-many
     # and instead use the NameSearchFilterSet in the class inheritance.
     q = SearchFilter(
         filter_predicates={
-            "destination_fqdn": "icontains",
+            "source_fqdn": "icontains",
         }
     )
     endpoint_a_vpn_tunnels = NaturalKeyOrPKMultipleChoiceFilter(
