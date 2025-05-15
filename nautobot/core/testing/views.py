@@ -328,9 +328,9 @@ class ViewTestCases:
             response = self.client.get(self._get_url("add"))
             self.assertHttpStatus(response, 200)
             # The response content should contain the expected form buttons
-            self.assertNotContains(response, "Update")
-            self.assertBodyContains(response, "Create")
-            self.assertBodyContains(response, "Create and Add Another")
+            self.assertNotContains(response, '<button type="submit" name="_update" class="btn btn-primary">Update</button>')
+            self.assertBodyContains(response, '<button type="submit" name="_create" class="btn btn-primary">Create</button>')
+            self.assertBodyContains(response, '<button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>')
 
             # Try POST with model-level permission
             request = {
@@ -472,9 +472,9 @@ class ViewTestCases:
             response = self.client.get(self._get_url("edit", instance))
             # The response content should contain the expected form buttons
             self.assertHttpStatus(response, 200)
-            self.assertBodyContains(response, "Update")
-            self.assertNotContains(response, "Create")
-            self.assertNotContains(response, "Create and Add Another")
+            self.assertBodyContains(response, '<button type="submit" name="_update" class="btn btn-primary">Update</button>')
+            self.assertNotContains(response, '<button type="submit" name="_create" class="btn btn-primary">Create</button>')
+            self.assertNotContains(response, '<button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>')
 
             # Try POST with model-level permission
             update_data = self.update_data or self.form_data
