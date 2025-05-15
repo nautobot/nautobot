@@ -441,12 +441,6 @@ class VPNTunnelEndpointForm(NautobotModelForm, TenancyForm):  # pylint: disable=
             "interfaces": "$source_interface",
         },
     )
-    destination_ipaddress = DynamicModelChoiceField(
-        queryset=IPAddress.objects.all(),
-        required=False,
-        label="Destination IP Address",
-        help_text="Mutually Exclusive with Destination FQDN",
-    )
     tunnel_interface = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
@@ -490,7 +484,7 @@ class VPNTunnelEndpointBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm)
     pk = forms.ModelMultipleChoiceField(
         queryset=models.VPNTunnelEndpoint.objects.all(), widget=forms.MultipleHiddenInput
     )
-    destination_fqdn = forms.CharField(required=False, label="Destination Fqdn")
+    source_fqdn = forms.CharField(required=False, label="Source Fqdn")
     protected_prefixes_dg = DynamicModelMultipleChoiceField(
         queryset=DynamicGroup.objects.all(),
         required=False,
@@ -515,8 +509,7 @@ class VPNTunnelEndpointBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm)
             "vpn_profile",
             "source_ipaddress",
             "source_interface",
-            "destination_ipaddress",
-            "destination_fqdn",
+            "source_fqdn",
             "tunnel_interface",
             "protected_prefixes_dg",
             "protected_prefixes",
