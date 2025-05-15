@@ -1,1 +1,1 @@
-Fixed `ExportObjectList` so that when a `SavedView` is exported, it takes `filter_params` from the saved view instance's config.
+Fixed `ExportObjectList` job now initializes `filter_params` from the selected SavedView's config when `?saved_view` is present and filters haven't been cleared. If additional query parameters are included, they override matching filters from the saved view.
