@@ -23,7 +23,6 @@ from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
 from nautobot.apps.ui import BaseTextPanel
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
@@ -192,93 +191,26 @@ class ApprovalWorkflowDefinitionUIViewSet(NautobotUIViewSet):
 
     def get_extra_context(self, request, instance):
         ctx = super().get_extra_context(request, instance)
-        if request.POST:
-            ctx["stages"] = forms.ApprovalWorkflowStageDefinitionFormSet(data=request.POST, instance=instance)
-        else:
-            ctx["stages"] = forms.ApprovalWorkflowStageDefinitionFormSet(instance=instance)
+        if self.action in ("create", "update"):
+            if request.POST:
+                ctx["stages"] = forms.ApprovalWorkflowStageDefinitionFormSet(data=request.POST, instance=instance)
+            else:
+                ctx["stages"] = forms.ApprovalWorkflowStageDefinitionFormSet(instance=instance)
 
         return ctx
 
-    def form_valid(self, form):
-        """
-        Handle valid forms and redirect to success_url.
-        """
-        self.has_error = False
-        self.call_process_create_or_update_form = False
-        if self.action in ["create", "update"]:
-            try:
-                self._process_create_or_update_form(form)
-            except ObjectDoesNotExist:
-                form = self._handle_object_does_not_exist(form)
-                self.has_error = True
-            except RuntimeError:
-                msg = "Errors encountered when saving approval workflow stages. See below."
-                logger.debug(msg)
-                form.add_error(None, msg)
-                self.has_error = True
-            except ProtectedError as err:
-                # e.g. Trying to delete a choice that is in use.
-                err_msg = err.args[0]
-                protected_obj = err.protected_objects[0]
-                msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
-                logger.debug(msg)
-                form.add_error(None, msg)
-                self.has_error = True
-            if self.has_error:
-                return Response({"form": form})
+    def form_save(self, form, **kwargs):
+        obj = super().form_save(form, **kwargs)
 
-        return super().form_valid(form)
+        # Process the formset for stages
+        ctx = self.get_extra_context(self.request, obj)
+        stages = ctx["stages"]
+        if stages.is_valid():
+            stages.save()
+        else:
+            raise ValidationError(stages.errors)
 
-    def _process_create_or_update_form(self, form):
-        """
-        Helper method to create or update an approval workflow and its associated stages after the form is validated successfully.
-        """
-        request = self.request
-        queryset = self.get_queryset()
-        with transaction.atomic():
-            object_created = not form.instance.present_in_database
-            obj = self.form_save(form)
-
-            # Check that the new object conforms with any assigned object-level permissions
-            queryset.get(pk=obj.pk)
-
-            # ---> BEGIN difference from ObjectEditViewMixin._process_create_or_update_form()
-            # Process the formsets for approval workflow stages
-            ctx = self.get_extra_context(request, obj)
-            stages = ctx["stages"]
-            if stages.is_valid():
-                stages.save()
-            else:
-                raise RuntimeError(stages.errors)
-            # <--- END difference from ObjectEditViewMixin._process_create_or_update_form()
-
-            if hasattr(form, "save_note") and callable(form.save_note):
-                form.save_note(instance=obj, user=request.user)
-
-            msg = f'{"Created" if object_created else "Modified"} {queryset.model._meta.verbose_name}'
-            self.logger.info(f"{msg} {obj} (PK: {obj.pk})")
-            try:
-                msg = format_html(
-                    '{} <a href="{}">{}</a>' + self.extra_message(**self.extra_message_context(obj)),
-                    msg,
-                    obj.get_absolute_url(),
-                    obj,
-                )
-            except AttributeError:
-                msg = format_html("{} {}" + self.extra_message(**self.extra_message_context(obj)), msg, obj)
-            messages.success(request, msg)
-            if "_addanother" in request.POST:
-                # If the object has clone_fields, pre-populate a new instance of the form
-                if hasattr(obj, "clone_fields"):
-                    url = f"{request.path}?{prepare_cloned_fields(obj)}"
-                    self.success_url = url
-                self.success_url = request.get_full_path()
-            else:
-                return_url = form.cleaned_data.get("return_url")
-                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
-                    self.success_url = iri_to_uri(return_url)
-                else:
-                    self.success_url = self.get_return_url(request, obj)
+        return obj
 
 
 class ApprovalWorkflowStageDefinitionUIViewSet(NautobotUIViewSet):
