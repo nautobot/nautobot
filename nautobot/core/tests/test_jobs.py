@@ -12,6 +12,7 @@ from django.utils import timezone
 import yaml
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
+from nautobot.core.jobs import ExportObjectList
 from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
@@ -164,6 +165,37 @@ class ExportObjectListTest(TransactionTestCase):
         yaml_data = job_result.files.first().file.read().decode("utf-8")
         data = yaml.safe_load(yaml_data)
         self.assertEqual(data["manufacturer"], "Cisco")
+
+    def test_get_saved_view_filter_params(self):
+        """Test various cases for the saved view filter parameters."""
+        saved_view = self._create_saved_view(config={"filter_params": {"name": ["Active"]}})
+        test_cases = [
+            # (query_params, expected_output)
+            ({"saved_view": saved_view.pk}, {"name": ["Active"]}),
+            (
+                {
+                    "saved_view": saved_view.pk,
+                    "name": ["Active"],
+                    "content_types": ["dcim.devices"],
+                },  # new filter content_types
+                {"name": ["Active"]},
+            ),
+            (
+                {"saved_view": saved_view.pk, "content_types": ["dcim.devices"]},  # name filter was deleted
+                {},
+            ),
+            ({"saved_view": saved_view.pk, "all_filters_removed": "true"}, {}),
+            (
+                {"name": ["Active"]},  # No saved view provided
+                {},
+            ),
+        ]
+
+        for query_params, expected_output in test_cases:
+            with self.subTest(query_params=query_params, expected_output=expected_output):
+                job = ExportObjectList()
+                filter_params = job._get_saved_view_filter_params(query_params)
+                self.assertEqual(filter_params, expected_output)
 
     def test_export_saved_view_to_csv_without_filters(self):
         """Export a SavedView to CSV without any filters applied."""
