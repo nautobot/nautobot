@@ -253,6 +253,8 @@ class VPNTunnelTable(StatusTableMixin, RoleTableMixin, BaseTable):
 
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
+    endpoint_a = tables.Column(linkify=True)
+    endpoint_z = tables.Column(linkify=True)
     tenant = TenantColumn()
     actions = ButtonsColumn(models.VPNTunnel)
     tags = TagColumn(url_name="vpn:vpntunnel_list")

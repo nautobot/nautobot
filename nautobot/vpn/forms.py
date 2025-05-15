@@ -422,12 +422,12 @@ class VPNTunnelEndpointForm(NautobotModelForm, TenancyForm):  # pylint: disable=
 
     device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
-        required=True,
+        required=False,
         label="Device",
     )
     source_interface = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
-        required=True,
+        required=False,
         label="Source Interface",
         query_params={
             "device": "$device",
