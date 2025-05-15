@@ -2011,12 +2011,24 @@ class ScheduledJobUIViewSet(NautobotUIViewSet):
         queryset = ScheduledJob.objects.needs_approved()
         table = tables.ScheduledJobApprovalQueueTable(queryset)
         context = {
-            "content_type": ContentType.objects.get_for_model(ScheduledJob),
-            "view": self,
             "queryset": queryset,
             "table": table,
+            "view": self,
             "filter_form": self.filterset_form_class(request.GET or None),
+            "search_form": self.filterset_form_class(request.GET or None),
+            "table_config_form": True,
+            "content_type": ContentType.objects.get_for_model(ScheduledJob),
+            "permissions": {
+                "add": False,
+                "change": False,
+                "delete": request.user.has_perm("extras.delete_scheduledjob"),
+            },
+            "model": ScheduledJob,
+            "title": "Scheduled Jobs",
+            "list_url": "extras:scheduledjob_list",
+            "list_url_title": "Scheduled Jobs",
         }
+
         return render(request, "extras/scheduled_jobs_approval_queue_list.html", context)
 
 
