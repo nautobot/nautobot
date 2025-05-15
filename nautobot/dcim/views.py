@@ -16,6 +16,7 @@ from django.forms import (
     MultipleHiddenInput,
 )
 from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.encoding import iri_to_uri
 from django.utils.functional import cached_property
@@ -4118,6 +4119,7 @@ class PowerPanelUIViewSet(NautobotUIViewSet):
 # Power feeds
 #
 
+
 class PowerFeedUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.PowerFeedBulkEditForm
     filterset_class = filters.PowerFeedFilterSet
@@ -4129,21 +4131,16 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            object_detail.ObjectFieldsPanel(
-                section=SectionChoices.LEFT_HALF,
-                weight=100,
-                label="Power Feed",
-                fields=["power_panel", "rack", "type", "status"],
-            ),
+            # Unified panel for Power Feed + Connected Device
             object_detail.KeyValueTablePanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
-                label="Connected Device",
-                context_data_key="connected_device_data",
+                label="Power Feed",
+                context_data_key="powerfeed_connected_data",
             ),
             object_detail.ObjectFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
-                weight=200,
+                weight=300,
                 label="Electrical Characteristics",
                 fields=["supply", "voltage", "amperage", "phase", "max_utilization"],
                 value_transforms={
@@ -4152,6 +4149,7 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
                     "max_utilization": [lambda p: f"{p}%"],
                 },
             ),
+            # Connection panel remains as-is
             object_detail.KeyValueTablePanel(
                 section=SectionChoices.RIGHT_HALF,
                 weight=200,
@@ -4167,10 +4165,24 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
         if not instance:
             return context
 
-        # Connected Device context
-        connected_device_data = self.get_connected_device_data(instance)
-        context["connected_device_data"] = connected_device_data
+        # Build Power Feed details
+        powerfeed_data = {
+            "Power Panel": instance.power_panel,
+            "Rack": instance.rack,
+            "Type": format_html(
+                '<span class="label label-{}">{}</span>',
+                instance.get_type_class(),
+                instance.get_type_display(),
+            ),
+            "Status": helpers.hyperlinked_object_with_color(instance.status),
+        }
 
+        # Merge Connected Device data
+        connected_device_data = self.get_connected_device_data(instance)
+        powerfeed_data.update(connected_device_data)
+
+        # Assign merged data to context
+        context["powerfeed_connected_data"] = powerfeed_data
         context["connection_data"] = self._get_connection_data(request, instance)
 
         return context
@@ -4182,13 +4194,9 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
         connected_device = self._get_connected_device_html(instance)
         utilization_label = self._get_utilization_display(instance)
 
-        # Mark as safe without sanitizing
-        connected_device_safe = mark_safe(connected_device)
-        utilization_label_safe = mark_safe(utilization_label)
-
         return {
-            "Connected Device": connected_device_safe,  # Safe to mark as HTML
-            "Utilization (Allocated)": utilization_label_safe,  # Safe to mark as HTML
+            "Connected Device": mark_safe(connected_device),
+            "Utilization (Allocated)": mark_safe(utilization_label),
         }
 
     def _get_connected_device_html(self, instance):
@@ -4201,10 +4209,7 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
 
             if device and power_port:
                 return f"{hyperlinked_object(device)} ({power_port.name})"
-            else:
-                return '<span class="text-muted">None</span>'
-        else:
-            return '<span class="text-muted">None</span>'
+        return '<span class="text-muted">None</span>'
 
     def _get_utilization_display(self, instance):
         endpoint = getattr(instance, "connected_endpoint", None)
@@ -4212,14 +4217,26 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
             return '<span class="text-muted">N/A</span>'
 
         utilization = endpoint.get_power_draw()
-        if utilization and "allocated" in utilization:
-            allocated = utilization["allocated"]
-            available = instance.available_power or 0
-            if available > 0:
-                percent = round(allocated / available * 100)
-                return f"{allocated}VA / {available}VA ({percent}%)"
-            return f"{allocated}VA / {available}VA"
-        return '<span class="text-muted">N/A</span>'
+        if not utilization or "allocated" not in utilization:
+            return '<span class="text-muted">N/A</span>'
+
+        allocated = utilization["allocated"]
+        available = instance.available_power or 0
+
+        if available > 0:
+            # Render the utilization bar only (without showing the % text)
+            graph_html = render_to_string(
+                "utilities/templatetags/utilization_graph.html",
+                helpers.utilization_graph_raw_data(allocated, available),
+            )
+            return format_html(
+                "{}VA / {}VA {}",
+                allocated,
+                available,
+                graph_html,  # just the bar, no percentage text
+            )
+
+        return f"{allocated}VA / {available}VA"
 
     def _get_connection_data(self, request, instance):
         if not instance:
