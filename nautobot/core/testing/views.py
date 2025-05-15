@@ -325,7 +325,12 @@ class ViewTestCases:
             self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
 
             # Try GET with model-level permission
-            self.assertHttpStatus(self.client.get(self._get_url("add")), 200)
+            response = self.client.get(self._get_url("add"))
+            self.assertHttpStatus(response, 200)
+            # The response content should contain the expected form buttons
+            self.assertNotContains(response, "Update")
+            self.assertBodyContains(response, "Create")
+            self.assertBodyContains(response, "Create and Add Another")
 
             # Try POST with model-level permission
             request = {
@@ -464,7 +469,12 @@ class ViewTestCases:
             self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
 
             # Try GET with model-level permission
-            self.assertHttpStatus(self.client.get(self._get_url("edit", instance)), 200)
+            response = self.client.get(self._get_url("edit", instance))
+            # The response content should contain the expected form buttons
+            self.assertHttpStatus(response, 200)
+            self.assertBodyContains(response, "Update")
+            self.assertNotContains(response, "Create")
+            self.assertNotContains(response, "Create and Add Another")
 
             # Try POST with model-level permission
             update_data = self.update_data or self.form_data
