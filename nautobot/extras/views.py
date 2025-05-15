@@ -1989,6 +1989,7 @@ class ScheduledJobUIViewSet(NautobotUIViewSet):
     filterset_form_class = forms.ScheduledJobFilterForm
     serializer_class = serializers.ScheduledJobSerializer
     table_class = tables.ScheduledJobTable
+    action_buttons = ()
 
     def get_extra_context(self, request, instance):
         if instance is None:
@@ -2006,30 +2007,18 @@ class ScheduledJobUIViewSet(NautobotUIViewSet):
             **super().get_extra_context(request, instance),
         }
 
-    @action(detail=False, url_path="approval-queue", url_name="approval_queue_list")
-    def approval_queue(self, request, *args, **kwargs):
-        queryset = ScheduledJob.objects.needs_approved()
-        table = tables.ScheduledJobApprovalQueueTable(queryset)
-        context = {
-            "queryset": queryset,
-            "table": table,
-            "view": self,
-            "filter_form": self.filterset_form_class(request.GET or None),
-            "search_form": self.filterset_form_class(request.GET or None),
-            "table_config_form": True,
-            "content_type": ContentType.objects.get_for_model(ScheduledJob),
-            "permissions": {
-                "add": False,
-                "change": False,
-                "delete": request.user.has_perm("extras.delete_scheduledjob"),
-            },
-            "model": ScheduledJob,
-            "title": "Scheduled Jobs",
-            "list_url": "extras:scheduledjob_list",
-            "list_url_title": "Scheduled Jobs",
-        }
 
-        return render(request, "extras/scheduled_jobs_approval_queue_list.html", context)
+class ScheduledJobApprovalQueueListView(ObjectListViewMixin):
+    queryset = ScheduledJob.objects.needs_approved()
+    table_class = tables.ScheduledJobApprovalQueueTable
+    filterset_class = filters.ScheduledJobFilterSet
+    filterset_form_class = forms.ScheduledJobFilterForm
+    action_buttons = ()
+
+    def get_template_name(self):
+        if self.action == "list":
+            return "extras/scheduled_jobs_approval_queue_list.html"
+        return super().get_template_name()
 
 
 #
