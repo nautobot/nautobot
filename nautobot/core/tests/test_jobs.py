@@ -43,27 +43,29 @@ class ExportObjectListTest(TransactionTestCase):
 
     databases = ("default", "job_logs")
 
-    def _create_saved_view(self, config=None):
+    def _create_saved_view(self, model_class=Status, config=None):
         """Helper to create a SavedView with optional filter config."""
         return SavedView.objects.create(
             name="Global default View",
             owner=self.user,
-            view="extras:status_list",
+            view=f"{model_class._meta.app_label}:{model_class._meta.model_name}_list",
             is_global_default=True,
             config=config or {},
         )
 
-    def _run_export_job(self, query_string):
+    def _run_export_job(self, query_string, model_class=Status):
         """Helper to run export job and return parsed CSV rows."""
         job_result = create_job_result_and_run_job(
             "nautobot.core.jobs",
             "ExportObjectList",
-            content_type=ContentType.objects.get_for_model(Status).pk,
+            content_type=ContentType.objects.get_for_model(model_class).pk,
             query_string=query_string,
         )
         self.assertJobResultStatus(job_result)
         self.assertTrue(job_result.files.exists())
-        self.assertEqual(Path(job_result.files.first().file.name).name, "nautobot_statuses.csv")
+        self.assertEqual(
+            Path(job_result.files.first().file.name).name, f"nautobot_{model_class._meta.verbose_name_plural}.csv"
+        )
         csv_data = job_result.files.first().file.read().decode("utf-8").lstrip("\ufeff")
         return list(csv.DictReader(StringIO(csv_data)))
 
@@ -167,7 +169,7 @@ class ExportObjectListTest(TransactionTestCase):
         """Export a SavedView to CSV without any filters applied."""
         # URL: /?saved_view=<id>
         sv = self._create_saved_view()
-        rows = self._run_export_job(f"saved_view={sv.pk}")
+        rows = self._run_export_job(query_string=f"saved_view={sv.pk}")
         self.assertEqual(len(rows), Status.objects.count())
 
     def test_export_saved_view_to_csv_with_filters_from_saved_view(self):
@@ -175,7 +177,7 @@ class ExportObjectListTest(TransactionTestCase):
         # URL: /?saved_view=<id>
         filter_name = Status.objects.first().name
         sv = self._create_saved_view(config={"filter_params": {"name": [filter_name]}})
-        rows = self._run_export_job(f"saved_view={sv.pk}")
+        rows = self._run_export_job(query_string=f"saved_view={sv.pk}")
         self.assertGreaterEqual(Status.objects.count(), 1)  # Ensure multiple Statuses exist and filter works
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["name"], filter_name)
@@ -186,26 +188,25 @@ class ExportObjectListTest(TransactionTestCase):
         filter_name = Status.objects.first().name
         filter_name2 = Status.objects.last().name
         sv = self._create_saved_view(config={"filter_params": {"name": [filter_name]}})
-        rows = self._run_export_job(f"saved_view={sv.pk}&name={filter_name}&name={filter_name2}")
+        rows = self._run_export_job(query_string=f"saved_view={sv.pk}&name={filter_name}&name={filter_name2}")
         self.assertEqual(len(rows), 2)
         self.assertEqual(rows[0]["name"], filter_name)
         self.assertEqual(rows[1]["name"], filter_name2)
 
-    def test_export_saved_view_to_csv_with_replaced_filters(self):
-        """Export a SavedView to CSV after replacing filters."""
-        # URL: /?saved_view=<id>&content_types=<filter2_content_type_name>
-        first_status = Status.objects.first()
-        filter_name = first_status.name
-        excluded_cts = first_status.content_types.all()
-        sv = self._create_saved_view(config={"filter_params": {"name": [filter_name]}})
-        # find a Status with different content types to use as the new filter
-        statuses = Status.objects.exclude(content_types__in=excluded_cts)
-        self.assertGreaterEqual(statuses.count(), 1)
-        filter2_content_type = statuses[0].content_types.all()[0]
-        filter2_content_type_name = f"{filter2_content_type.app_label}.{filter2_content_type.model}"
-        rows = self._run_export_job(f"saved_view={sv.pk}&content_types={filter2_content_type_name}")
-        statuses_with_filtered_content_types = Status.objects.filter(content_types__in=statuses[0].content_types.all())
-        self.assertEqual(len(rows), statuses_with_filtered_content_types.count())
+    def test_export_saved_view_manufacturer_to_csv_with_replaced_filters(self):
+        """Export a SavedView manufacturer to CSV after replacing filters."""
+        # URL: /?saved_view=<id>&description=<manufacturer2>
+        manufacturer = Manufacturer.objects.create(name="Test Manufacturer")
+        manufacturer2 = Manufacturer.objects.create(name="Test2 Manufacturer", description="test filter")
+        filter_name = manufacturer.name
+        filter_description = manufacturer2.description
+        sv = self._create_saved_view(model_class=Manufacturer, config={"filter_params": {"name": [filter_name]}})
+        rows = self._run_export_job(
+            query_string=f"saved_view={sv.pk}&description={filter_description}", model_class=Manufacturer
+        )
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["name"], manufacturer2.name)
+        self.assertEqual(rows[0]["description"], filter_description)
         self.assertTrue(all(row["name"] != filter_name for row in rows))
 
     def test_export_saved_view_to_csv_after_removing_all_filters(self):
@@ -213,7 +214,7 @@ class ExportObjectListTest(TransactionTestCase):
         # URL: /?saved_view=<id>&all_filters_removed=true
         filter_name = Status.objects.first().name
         sv = self._create_saved_view(config={"filter_params": {"name": [filter_name]}})
-        rows = self._run_export_job(f"saved_view={sv.pk}&all_filters_removed=true")
+        rows = self._run_export_job(query_string=f"saved_view={sv.pk}&all_filters_removed=true")
         self.assertEqual(len(rows), Status.objects.count())
 
 
