@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("contenttypes", "0002_remove_content_type_name"),
-        ("extras", "0122_add_graphqlquery_owner_content_type"),
+        ("extras", "0124_approval_workflow_models"),
     ]
 
     operations = [

@@ -46,6 +46,7 @@ from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
+    ButtonClassChoices,
     DynamicGroupTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
@@ -142,6 +143,7 @@ __all__ = (
     "ApprovalWorkflowStageFilterForm",
     "ApprovalWorkflowStageResponseFilterForm",
     "BaseDynamicGroupMembershipFormSet",
+    "ComputedFieldBulkEditForm",
     "ComputedFieldFilterForm",
     "ComputedFieldForm",
     "ConfigContextBulkEditForm",
@@ -156,6 +158,7 @@ __all__ = (
     "CustomFieldFilterForm",
     "CustomFieldForm",
     "CustomFieldModelCSVForm",
+    "CustomLinkBulkEditForm",
     "CustomLinkFilterForm",
     "CustomLinkForm",
     "DynamicGroupBulkAssignForm",
@@ -181,6 +184,7 @@ __all__ = (
     "JobEditForm",
     "JobFilterForm",
     "JobForm",
+    "JobHookBulkEditForm",
     "JobHookFilterForm",
     "JobHookForm",
     "JobQueueBulkEditForm",
@@ -222,6 +226,7 @@ __all__ = (
     "TagBulkEditForm",
     "TagFilterForm",
     "TagForm",
+    "WebhookBulkEditForm",
     "WebhookFilterForm",
     "WebhookForm",
 )
@@ -425,6 +430,42 @@ class ApprovalWorkflowStageResponseFilterForm(NautobotFilterForm):
 #
 # Computed Fields
 #
+class ComputedFieldBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin):
+    pk = forms.ModelMultipleChoiceField(queryset=ComputedField.objects.all(), widget=forms.MultipleHiddenInput())
+
+    label = forms.CharField(
+        max_length=CHARFIELD_MAX_LENGTH, required=False, help_text="Name of the field as displayed to users."
+    )
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    grouping = forms.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        required=False,
+        help_text="Human-readable grouping that this computed field belongs to.",
+    )
+    fallback_value = forms.CharField(
+        max_length=500,
+        required=False,
+        help_text="Fallback value (if any) to be output for the field in the case of a template rendering error.",
+    )
+    weight = forms.IntegerField(required=False, min_value=0)
+    advanced_ui = forms.NullBooleanField(
+        required=False,
+        label="Move to Advanced tab",
+        help_text="Hide this field from the object's primary information tab. It will appear in the 'Advanced' tab instead.",
+    )
+    template = forms.CharField(
+        max_length=500, widget=forms.Textarea, required=False, help_text="Jinja2 template code for field value"
+    )
+
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
+        required=False,
+        label="Content Type",
+    )
+
+    class Meta:
+        model = ComputedField
+        nullable_fields = ["description", "grouping", "fallback_value"]
 
 
 class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
@@ -761,6 +802,25 @@ class CustomFieldBulkDeleteForm(ConfirmationForm):
 #
 # Custom Links
 #
+class CustomLinkBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin):
+    """Bulk edit form for CustomLink objects."""
+
+    pk = forms.ModelMultipleChoiceField(queryset=CustomLink.objects.all(), widget=forms.MultipleHiddenInput())
+    group_name = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    weight = forms.IntegerField(required=False)
+    target_url = forms.CharField(max_length=500, required=False)
+    text = forms.CharField(max_length=500, required=False)
+    button_class = forms.ChoiceField(choices=add_blank_choice(ButtonClassChoices.CHOICES), required=False)
+    new_window = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("custom_links").get_query()).order_by("app_label", "model"),
+        required=False,
+        label="Content Type",
+    )
+
+    class Meta:
+        model = CustomLink
+        nullable_fields = ["group_name"]
 
 
 class CustomLinkForm(BootstrapMixin, forms.ModelForm):
@@ -1522,6 +1582,43 @@ class JobFilterForm(BootstrapMixin, forms.Form):
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     tags = TagFilterField(model)
+
+
+class JobHookBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=JobHook.objects.all(), widget=forms.MultipleHiddenInput())
+    job = DynamicModelChoiceField(
+        queryset=Job.objects.all(),
+        query_params={"is_job_hook_receiver": True},
+        required=False,
+        label="Job",
+    )
+    enabled = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    type_create = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    type_update = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    type_delete = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    add_content_types = MultipleContentTypeField(
+        queryset=ChangeLoggedModelsQuery().as_queryset(),
+        required=False,
+        label="Add Content Type(s)",
+    )
+
+    remove_content_types = MultipleContentTypeField(
+        queryset=ChangeLoggedModelsQuery().as_queryset(),
+        required=False,
+        label="Remove Content Type(s)",
+    )
+
+    class Meta:
+        model = JobHook
+        fields = (
+            "job",
+            "enabled",
+            "type_create",
+            "type_update",
+            "type_delete",
+            "add_content_types",
+            "remove_content_types",
+        )
 
 
 class JobHookForm(BootstrapMixin, forms.ModelForm):
@@ -2357,6 +2454,53 @@ class TagBulkEditForm(NautobotBulkEditForm):
 #
 # Webhooks
 #
+class WebhookBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin):
+    """Bulk edit form for Webhook objects."""
+
+    pk = forms.ModelMultipleChoiceField(queryset=Webhook.objects.all(), widget=forms.MultipleHiddenInput())
+
+    # Boolean fields
+    enabled = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    type_create = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    type_update = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    type_delete = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    ssl_verification = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+
+    # Editable string fields
+    payload_url = forms.CharField(required=False, max_length=500)
+    secret = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
+    ca_file_path = forms.CharField(required=False, max_length=4096)
+    http_content_type = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
+
+    # Choice field
+    http_method = forms.ChoiceField(
+        required=False,
+        choices=add_blank_choice(WebhookHttpMethodChoices.CHOICES),
+    )
+
+    add_content_types = MultipleContentTypeField(
+        limit_choices_to=FeatureQuery("webhooks"), required=False, label="Add Content Type(s)"
+    )
+    remove_content_types = MultipleContentTypeField(
+        limit_choices_to=FeatureQuery("webhooks"), required=False, label="Remove Content Type(s)"
+    )
+
+    class Meta:
+        model = Webhook
+        fields = (
+            "enabled",
+            "type_create",
+            "type_update",
+            "type_delete",
+            "http_method",
+            "http_content_type",
+            "ssl_verification",
+            "ca_file_path",
+            "payload_url",
+            "secret",
+            "add_content_types",
+            "remove_content_types",
+        )
 
 
 class WebhookForm(BootstrapMixin, forms.ModelForm):

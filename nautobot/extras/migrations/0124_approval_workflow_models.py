@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
         ("auth", "0012_alter_user_first_name_max_length"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ("contenttypes", "0002_remove_content_type_name"),
-        ("extras", "0122_add_graphqlquery_owner_content_type"),
+        ("extras", "0123_alter_joblogentry_created"),
     ]
 
     operations = [

@@ -4,6 +4,7 @@ import logging
 import os
 import shutil
 import traceback
+import uuid
 
 from db_file_storage.model_utils import delete_file
 from db_file_storage.storage import DatabaseFileStorage
@@ -51,6 +52,54 @@ logger = logging.getLogger(__name__)
 #
 # Change logging
 #
+
+
+def _cache_obj_data_in_change_context(action, sender, instance):
+    """
+    If this is an existing object that should have a change log entry,
+    we need to retrieve the existing object from the database and cache its data in the change context.
+    """
+    # We are caching the before object data in the change context so that it can be used later
+    change_context = change_context_state.get()
+
+    # Do nothing if the change_contex is None
+    if change_context is None:
+        return
+
+    # Is this an object without a change log?
+    if not hasattr(instance, "to_objectchange"):
+        return
+
+    # Does this object type not persist in the database?
+    if not hasattr(instance, "present_in_database"):
+        return
+
+    # Is this a new object?
+    if not instance.present_in_database:
+        return
+
+    # Does this object already have changes?
+    if ObjectChange.objects.filter(changed_object_id=instance.pk).exists():
+        return
+
+    # Retrieve the existing object from the database.
+    if action == ObjectChangeActionChoices.ACTION_UPDATE:
+        instance = sender.objects.get(pk=instance.pk)
+
+    change = instance.to_objectchange(
+        action=action,
+    )
+    change.request_id = uuid.uuid4()
+    change.user = change_context.get_user(instance)
+    # cache the previous object data in the change context
+    if change_context.pre_object_data is None:
+        change_context.pre_object_data = {}
+    if change_context.pre_object_data_v2 is None:
+        change_context.pre_object_data_v2 = {}
+
+    change_context.pre_object_data.setdefault(str(instance.pk), change.object_data)
+    change_context.pre_object_data_v2.setdefault(str(instance.pk), change.object_data_v2)
+    change_context_state.set(change_context)
 
 
 def get_user_if_authenticated(user, instance):
@@ -134,6 +183,21 @@ def invalidate_openapi_schema_cache(sender, **kwargs):
     """Invalidate the openapi schema cache."""
     with contextlib.suppress(redis.exceptions.ConnectionError):
         cache.delete_pattern("openapi_schema_cache_*")
+
+
+@receiver(pre_save)
+def _handle_changed_object_pre_save(sender, instance, raw=False, **kwargs):
+    """
+    Fires before an object is created or updated.
+    It caches the current object data to capture the current state of the object.
+    This is used to ensure that a previous changelog entry exists for this object when this object is updated.
+    """
+    if raw:
+        return
+
+    # Ensure that a changelog entry exists for this object that is being updated
+    if not kwargs.get("created"):
+        _cache_obj_data_in_change_context(ObjectChangeActionChoices.ACTION_UPDATE, sender, instance)
 
 
 @receiver(post_save, sender=GitRepository)

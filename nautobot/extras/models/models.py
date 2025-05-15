@@ -918,8 +918,6 @@ class UserSavedViewAssociation(BaseModel):
 #
 # Webhooks
 #
-
-
 @extras_features("graphql")
 class Webhook(
     ChangeLoggedModel,
