@@ -15,6 +15,7 @@ from nautobot.extras.models import (
     JobHook,
     Note,
     Relationship,
+    ScheduledJob,
     SecretsGroup,
     Tag,
     Webhook,
@@ -402,6 +403,12 @@ urlpatterns = [
         "jobs/scheduled-jobs/approval-queue/",
         views.ScheduledJobApprovalQueueListView.as_view(),
         name="scheduledjob_approval_queue_list",
+    ),
+    path(
+        "jobs/scheduled-jobs/<uuid:pk>/approval-workflow/",
+        views.ObjectApprovalWorkflowView.as_view(),
+        name="scheduledjob_approvalworkflow",
+        kwargs={"model": ScheduledJob},
     ),
     path(
         "jobs/scheduled-jobs/approval-queue/<uuid:pk>/",

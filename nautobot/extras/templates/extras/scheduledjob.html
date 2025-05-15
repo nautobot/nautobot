@@ -25,28 +25,14 @@
 {% endblock content %}
 
 {% block extra_nav_tabs %}
-    {% if approval_workflows_count %}
-        <li role="presentation"{% if request.GET.tab == 'approval_workflows' %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}#approval_workflows" onclick="switch_tab(this.href, reload=false)" aria-controls="approval_workflows" role="tab" data-toggle="tab">
-                Approval Workflow {% badge approval_workflows_count %}
-            </a>
-        </li>
+    {% if perms.extras.view_approvalworkflow %}
+        {% if active_tab != 'approval_workflow' and object.get_approval_workflow_url or active_tab == 'approval_workflow' %}
+            <li role="presentation"{% if active_tab == 'approval_workflow' %} class="active"{% endif %}>
+                <a href="{{ object.get_approval_workflow_url }}">Approval Workflow</a>
+            </li>
+        {% endif %}
     {% endif %}
 {% endblock extra_nav_tabs %}
-
-{% block extra_tab_content %}
-    {% if approval_workflows_count %}
-        <div id="approval_workflows" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "approval_workflows" %}active{% else %}fade{% endif %}">
-            <div class="panel panel-default">
-                <div class="panel-heading">
-                    <strong>Approval Workflows</strong>
-                </div>
-                {% include 'inc/table.html' with table=approval_workflow_table %}
-            </div>
-            {% include 'inc/paginator.html' with paginator=approval_workflow_table.paginator page=approval_workflow_table.page %}
-        </div>
-    {% endif %}
-{% endblock extra_tab_content %}
 
 {% block content_left_page %}
       <div class="panel panel-default">
