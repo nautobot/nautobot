@@ -2343,8 +2343,7 @@ class MetadataTypeUIViewSet(NautobotUIViewSet):
                     context["choices"] = forms.MetadataChoiceFormSet(data=request.POST, instance=instance)
                 else:
                     context["choices"] = forms.MetadataChoiceFormSet(instance=instance)
-            else:
-                # Only populate choices if instance exists
+            elif self.action == "retrieve":
                 context["choices"] = tables.MetadataChoiceTable(instance.choices.all())
 
         return context
