@@ -1247,9 +1247,22 @@ class InterfaceRedundancyGroupAssociationTable(BaseTable):
             "interface__type",
             "interface__description",
             "interface__ip_addresses",
+            "actions",
         )
 
-        default_columns = ("priority", "actions")
+        default_columns = (
+            "priority",
+            "actions",
+            "interface__device",
+            "interface",
+            "priority",
+            "interface__status",
+            "interface__enabled",
+            "interface__ip_addresses",
+            "interface__type",
+            "interface__description",
+            "interface__label",
+        )
 
 
 #
