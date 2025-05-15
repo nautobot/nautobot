@@ -563,13 +563,29 @@ class Device(PrimaryModel, ConfigContextModel):
         null=True,
         verbose_name="Primary IPv6",
     )
-    cluster = models.ForeignKey(
+    clusters = models.ManyToManyField(
         to="virtualization.Cluster",
-        on_delete=models.SET_NULL,
         related_name="devices",
+        through="dcim.DeviceClusterAssignment",
         blank=True,
-        null=True,
     )
+
+    @property
+    def cluster(self):
+        if self.clusters.count() > 1:
+            raise self.clusters.model.MultipleObjectsReturned(
+                "Multiple Cluster objects returned. Please refer to clusters."
+            )
+        return self.clusters.first()
+
+    @cluster.setter
+    def cluster(self, value):
+        if self.clusters.count() > 1:
+            raise self.clusters.model.MultipleObjectsReturned(
+                "Multiple Cluster objects returned. Please refer to clusters."
+            )
+        self.clusters.set([value])
+
     virtual_chassis = models.ForeignKey(
         to="VirtualChassis",
         on_delete=models.SET_NULL,
@@ -1083,6 +1099,23 @@ class Device(PrimaryModel, ConfigContextModel):
         Return all Rear Ports that are installed in the device or in modules that are installed in the device.
         """
         return RearPort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+
+
+@extras_features("graphql")
+class DeviceClusterAssignment(BaseModel):
+
+    device = models.ForeignKey("dcim.Device", on_delete=models.CASCADE, related_name="cluster_assignments")
+
+    cluster = models.ForeignKey("virtualization.Cluster", on_delete=models.CASCADE, related_name="device_assignments")
+
+    is_metadata_associable_model = False
+
+    class Meta:
+        unique_together = ["device", "cluster"]
+        ordering = ["device", "cluster"]
+
+    def __str__(self):
+        return f"{self.device}: {self.cluster}"
 
 
 #
