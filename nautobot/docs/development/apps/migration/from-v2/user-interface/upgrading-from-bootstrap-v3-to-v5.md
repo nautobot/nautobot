@@ -88,13 +88,13 @@ In Bootstrap v3.4.1, dropdowns were kind of second class citizens, missing out m
 
 Differences include:
 
-1. Dropdown wrapper component is no longer of class `btn-group` but `dropdown` instead.
-2. Dropdown toggle button `data-toggle` attribute has been renamed to `data-bs-toggle`, and `aria-haspopup` attribute is no longer recommended.
-3. As already mentioned in [Helper classes / Helpers and Utilities](#helper-classes--helpers-and-utilities) section above, if dropdown toggle button used `caret` element, it must be replaced by an icon from available icon library.
-4. Likewise, if dropdown toggle button used a descriptive text of class `sr-only`, it should be changed to `visually-hidden`.
-5. List items do not expect any particular CSS class but elements within them do. This is especially relevant for separators (dividers).
-6. Clickable items (mainly `button` and `a` elements) should be of `dropdown-item` class.
-7. Separators (dividers) should be `hr` elements with `dropdown-divider` class.
+* Dropdown wrapper component is no longer of class `btn-group` but `dropdown` instead.
+* Dropdown toggle button `data-toggle` attribute has been renamed to `data-bs-toggle`, and `aria-haspopup` attribute is no longer recommended.
+* As already mentioned in [Helper classes / Helpers and Utilities](#helper-classes--helpers-and-utilities) section above, if dropdown toggle button used `caret` element, it must be replaced by an icon from available icon library.
+* Likewise, if dropdown toggle button used a descriptive text of class `sr-only`, it should be changed to `visually-hidden`.
+* List items do not expect any particular CSS class but elements within them do. This is especially relevant for separators (dividers).
+* Clickable items (mainly `button` and `a` elements) should be of `dropdown-item` class.
+* Separators (dividers) should be `hr` elements with `dropdown-divider` class.
 
 Let's take a look at this example from [Bootstrap v3.4.1 Single button dropdowns](https://getbootstrap.com/docs/3.4/components/#btn-dropdowns-single) documentation and how to migrate it over to Bootstrap v5.x:
 
