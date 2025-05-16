@@ -108,6 +108,7 @@ class WirelessNetworkUIViewSet(NautobotUIViewSet):
             object_detail.ObjectFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
+                fields="__all__",
             ),
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.FULL_WIDTH,
