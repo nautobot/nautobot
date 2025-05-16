@@ -35,6 +35,8 @@ from nautobot.dcim.graphql.types import (
     FrontPortType,
     InterfaceType,
     LocationType,
+    ModuleBayType,
+    ModuleType,
     PlatformType,
     PowerFeedType,
     PowerOutletType,
@@ -62,6 +64,8 @@ registry["graphql_types"]["dcim.consoleserverport"] = ConsoleServerPortType
 registry["graphql_types"]["dcim.device"] = DeviceType
 registry["graphql_types"]["dcim.frontport"] = FrontPortType
 registry["graphql_types"]["dcim.interface"] = InterfaceType
+registry["graphql_types"]["dcim.modulebay"] = ModuleBayType
+registry["graphql_types"]["dcim.module"] = ModuleType
 registry["graphql_types"]["dcim.platform"] = PlatformType
 registry["graphql_types"]["dcim.powerfeed"] = PowerFeedType
 registry["graphql_types"]["dcim.poweroutlet"] = PowerOutletType
@@ -91,6 +95,7 @@ CUSTOM_FIELD_MAPPING = {
     CustomFieldTypeChoices.TYPE_URL: graphene.String(),
     CustomFieldTypeChoices.TYPE_SELECT: graphene.String(),
     CustomFieldTypeChoices.TYPE_JSON: JSON(),
+    CustomFieldTypeChoices.TYPE_MULTISELECT: graphene.List(graphene.String),
 }
 
 

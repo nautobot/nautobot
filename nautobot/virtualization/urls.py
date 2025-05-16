@@ -5,51 +5,18 @@ from nautobot.extras.views import ObjectChangeLogView, ObjectDynamicGroupsView, 
 from nautobot.ipam.views import ServiceEditView
 
 from . import views
-from .models import Cluster, VirtualMachine, VMInterface
+from .models import VirtualMachine, VMInterface
 
 app_name = "virtualization"
 
 router = NautobotUIViewSetRouter()
 router.register("cluster-groups", views.ClusterGroupUIViewSet)
+router.register("clusters", views.ClusterUIViewSet)
 router.register("cluster-types", views.ClusterTypeUIViewSet)
 
 
 urlpatterns = [
     # Clusters
-    path("clusters/", views.ClusterListView.as_view(), name="cluster_list"),
-    path("clusters/add/", views.ClusterEditView.as_view(), name="cluster_add"),
-    path("clusters/import/", views.ClusterBulkImportView.as_view(), name="cluster_import"),  # 3.0 TODO: remove, unused
-    path("clusters/edit/", views.ClusterBulkEditView.as_view(), name="cluster_bulk_edit"),
-    path(
-        "clusters/delete/",
-        views.ClusterBulkDeleteView.as_view(),
-        name="cluster_bulk_delete",
-    ),
-    path("clusters/<uuid:pk>/", views.ClusterView.as_view(), name="cluster"),
-    path("clusters/<uuid:pk>/edit/", views.ClusterEditView.as_view(), name="cluster_edit"),
-    path(
-        "clusters/<uuid:pk>/delete/",
-        views.ClusterDeleteView.as_view(),
-        name="cluster_delete",
-    ),
-    path(
-        "clusters/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="cluster_changelog",
-        kwargs={"model": Cluster},
-    ),
-    path(  # 3.0 TODO: remove, no longer needed/used since 2.3
-        "clusters/<uuid:pk>/dynamic-groups/",
-        ObjectDynamicGroupsView.as_view(),
-        name="cluster_dynamicgroups",
-        kwargs={"model": Cluster},
-    ),
-    path(
-        "clusters/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="cluster_notes",
-        kwargs={"model": Cluster},
-    ),
     path(
         "clusters/<uuid:pk>/devices/add/",
         views.ClusterAddDevicesView.as_view(),

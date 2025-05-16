@@ -166,6 +166,78 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.8 (2025-05-12)
+
+### Security in v2.4.8
+
+- [#7223](https://github.com/nautobot/nautobot/issues/7223) - Updated dependency `h11` to `0.16.0` to address `CVE-2025-43859`. This is a development dependency and will not auto-update when upgrading Nautobot. Please be sure to update your local environment.
+- [#7273](https://github.com/nautobot/nautobot/issues/7273) - Updated `Django` to 4.2.21 to address `CVE-2025-32873`.
+
+### Added in v2.4.8
+
+- [#6053](https://github.com/nautobot/nautobot/issues/6053) - Added `primary_ip` property to GraphQL `DeviceType` to simplify lookup of primary IPs when a mixture of IPv4 and IPv6 are involved.
+- [#6053](https://github.com/nautobot/nautobot/issues/6053) - Added `device` property to GraphQL `ModuleType` to simplify lookup of the Device containing a given Module.
+- [#7048](https://github.com/nautobot/nautobot/issues/7048) - Added Bulk Edit functionality for the Platform model.
+- [#7075](https://github.com/nautobot/nautobot/issues/7075) - Added Bulk Edit functionality for the Webhook model.
+- [#7107](https://github.com/nautobot/nautobot/issues/7107) - Added Bulk Edit functionality for the JobHook model.
+- [#7126](https://github.com/nautobot/nautobot/issues/7126) - Added Bulk Edit functionality for the CustomLink model.
+- [#7148](https://github.com/nautobot/nautobot/issues/7148) - Added Bulk Edit functionality for the RackGroup model.
+- [#7154](https://github.com/nautobot/nautobot/issues/7154) - Added index to `created` field in `JobLogEntry`.
+- [#7159](https://github.com/nautobot/nautobot/issues/7159) - Added Bulk Edit functionality for the ComputedField model.
+- [#7232](https://github.com/nautobot/nautobot/issues/7232) - Added Bulk Edit functionality for the CircuitType model.
+- [#7234](https://github.com/nautobot/nautobot/issues/7234) - Added Bulk Edit functionality for the CircuitTermination model.
+
+### Changed in v2.4.8
+
+- [#7219](https://github.com/nautobot/nautobot/issues/7219) - Enhanced Contact and Team search to include matching by email and phone number.
+- [#7224](https://github.com/nautobot/nautobot/issues/7224) - Changed `ObjectsTablePanel.__init__()` to enforce that a `related_field_name` is required when specifying a `table_attribute`.
+- [#7267](https://github.com/nautobot/nautobot/issues/7267) - Changed the `contacts` tab in object detail views to not render if users do not have permission to view contact-associations.
+
+### Fixed in v2.4.8
+
+- [#6053](https://github.com/nautobot/nautobot/issues/6053) - Added `all_interfaces`, `all_modules`, etc. properties to GraphQL `DeviceType` to facilitate lookup of components belonging to descendant modules.
+- [#6053](https://github.com/nautobot/nautobot/issues/6053) - Added `common_vc_interfaces`, `vc_interfaces` properties to GraphQL `DeviceType` to facilitate lookup of components when VirtualChassis are involved.
+- [#6157](https://github.com/nautobot/nautobot/issues/6157) - Fixed invalid specs for ChoiceFields and EmailFields in the swagger schema.
+- [#6985](https://github.com/nautobot/nautobot/issues/6985) - Added `filterset_form` to `RackElevationListView`.
+- [#7026](https://github.com/nautobot/nautobot/issues/7026) - Fixed collapsing/expanding on the jobs page.
+- [#7102](https://github.com/nautobot/nautobot/issues/7102) - Fixed that event payload's `prechange` field is empty when relevant object's previous changelog entries do not exist.
+- [#7154](https://github.com/nautobot/nautobot/issues/7154) - Fixed memory issue in cleanup Job Results by changing `delete` to `_raw_delete` in `recursive_delete_with_cascade` method.
+- [#7184](https://github.com/nautobot/nautobot/issues/7184) - Fixed missing support for `value_transforms` with certain model field types in `ObjectFieldsPanel`.
+- [#7188](https://github.com/nautobot/nautobot/issues/7188) - Fixed broken advanced filters in Nautobot v2.4.7
+- [#7224](https://github.com/nautobot/nautobot/issues/7224) - Fixed table filter issues in CloudNetwork model related UI component.
+
+### Documentation in v2.4.8
+
+- [#7140](https://github.com/nautobot/nautobot/issues/7140) - Fixed a typo in front port documentation.
+- [#7240](https://github.com/nautobot/nautobot/issues/7240) - Reorganized and expanded the Nautobot Jobs documentation across both the User Guide and the Development Guide. The goals of this update are to improve navigation, reduce page length for easier readability, standardize examples, and align the documentation with Nautobot 2.4.x behavior.
+
+### Housekeeping in v2.4.8
+
+- [#6157](https://github.com/nautobot/nautobot/issues/6157) - Added a unit test to validate the generated OpenAPI spec.
+- [#7047](https://github.com/nautobot/nautobot/issues/7047) - Refactored VLANGroup model related UI views to use `NautobotUIViewSet` and `UI Component Framework`.
+- [#7048](https://github.com/nautobot/nautobot/issues/7048) - Refactored Platform model related UI views to use `NautobotUIViewSet` and `UI Component Framework`.
+- [#7056](https://github.com/nautobot/nautobot/issues/7056) - Refactored Cluster model related UI views to use `NautobotUIViewSet` and `UI component framework`.
+- [#7075](https://github.com/nautobot/nautobot/issues/7075) - Refactored webhook model related UI views to use `NautobotUIViewSet` and `UI Component Framework`.
+- [#7107](https://github.com/nautobot/nautobot/issues/7107) - Refactored JobHook model related UI views to use `NautobotUIViewSet` and `UI component framework`.
+- [#7126](https://github.com/nautobot/nautobot/issues/7126) - Refactored CustomLink model related UI views to use `NautobotUIViewSet` and `UI component framework`.
+- [#7141](https://github.com/nautobot/nautobot/issues/7141) - Refactored PowerPanel model related UI views to use `NautobotUIViewSet` and `UI component framework`.
+- [#7148](https://github.com/nautobot/nautobot/issues/7148) - Refactored RackGroup model related UI views to use `NautobotUIViewSet` and `UI component framework`.
+- [#7153](https://github.com/nautobot/nautobot/issues/7153) - Refactored SupportedDataRate model related UI views to use `UI component framework`.
+- [#7155](https://github.com/nautobot/nautobot/issues/7155) - Refactored RackReservation model related UI views to use `NautobotUIViewSet`.
+- [#7158](https://github.com/nautobot/nautobot/issues/7158) - Refactored CloudNetwork model related UI views to use `UI component framework`.
+- [#7159](https://github.com/nautobot/nautobot/issues/7159) - Refactored ComputedField model related UI views to use `NautobotUIViewSet`.
+- [#7162](https://github.com/nautobot/nautobot/issues/7162) - Refactored CloudService model related UI views to use `UI component framework`.
+- [#7172](https://github.com/nautobot/nautobot/issues/7172) - Refactored PowerFeed model related UI views to use `NautobotUIViewSet`.
+- [#7173](https://github.com/nautobot/nautobot/issues/7173) - Refactored JobQueue model related UI views to use `UI component framework`.
+- [#7175](https://github.com/nautobot/nautobot/issues/7175) - Refactored JobButton model related UI views to use `UI component framework`.
+- [#7184](https://github.com/nautobot/nautobot/issues/7184) - Refactored RadioProfile model related UI views to use `UI component framework`.
+- [#7187](https://github.com/nautobot/nautobot/issues/7187) - Added upstream testing for next/next-3.0 in Apps.
+- [#7187](https://github.com/nautobot/nautobot/issues/7187) - Removed upstream testing for ltm-1.6.
+- [#7189](https://github.com/nautobot/nautobot/issues/7189) - Updated `mkdocs-material` documentation dependency to `~9.6.12`.
+- [#7189](https://github.com/nautobot/nautobot/issues/7189) - Updated `mkdocs-section-index` documentation dependency to `~0.3.10`.
+- [#7204](https://github.com/nautobot/nautobot/issues/7204) - Refactored SoftwareVersion model related UI views to use `UI component framework`.
+- [#7212](https://github.com/nautobot/nautobot/issues/7212) - Refactored SoftwareImageFile model related UI views to use `UI component framework`.
+
 ## v2.4.7 (2025-04-14)
 
 ### Added in v2.4.7
@@ -173,9 +245,9 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#4171](https://github.com/nautobot/nautobot/issues/4171) - Added `TYPE_NOTES` and `TYPE_URL` to SecretsGroupSecretTypeChoices.
 - [#6923](https://github.com/nautobot/nautobot/issues/6923) - Added `AutoPopulateWidget` to support form fields with auto-population logic.
 - [#6998](https://github.com/nautobot/nautobot/issues/6998) - Added browser and backend caching for `/api/swagger` OpenAPI endpoint to speed up Swagger and Redoc loading time.
-- [#7115](https://github.com/nautobot/nautobot/issues/7115) - Added bulk-edit support for the Relationship model.
-- [#7127](https://github.com/nautobot/nautobot/issues/7127) - Added bulk-edit support for the ExportTemplate model.
-- [#7134](https://github.com/nautobot/nautobot/issues/7134) - Added bulk-edit support for the Manufacturer model.
+- [#7115](https://github.com/nautobot/nautobot/issues/7115) - Added Bulk Edit functionality for the Relationship model.
+- [#7127](https://github.com/nautobot/nautobot/issues/7127) - Added Bulk Edit functionality for the ExportTemplate model.
+- [#7134](https://github.com/nautobot/nautobot/issues/7134) - Added Bulk Edit functionality for the Manufacturer model.
 
 ### Changed in v2.4.7
 
@@ -216,8 +288,8 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#5780](https://github.com/nautobot/nautobot/issues/5780) - Added object permission enforcement to related objects when modifying records through the REST API.
 - [#6957](https://github.com/nautobot/nautobot/issues/6957) - Added optional `display_field` parameter to `LinkedCountColumn`.
 - [#7003](https://github.com/nautobot/nautobot/issues/7003) - Added `external_integration` foreign key field to `SoftwareImageFile` model, which allows the enrichment of file data to include download options, secrets, etc.
-- [#7041](https://github.com/nautobot/nautobot/issues/7041) - Added bulk-edit support for the ClusterType model.
-- [#7044](https://github.com/nautobot/nautobot/issues/7044) - Added bulk-edit support for the ClusterGroup model.
+- [#7041](https://github.com/nautobot/nautobot/issues/7041) - Added Bulk Edit functionality for the ClusterType model.
+- [#7044](https://github.com/nautobot/nautobot/issues/7044) - Added Bulk Edit functionality for the ClusterGroup model.
 - [#7088](https://github.com/nautobot/nautobot/issues/7088) - Added support for removing content types in Status bulk-edit and Role bulk-edit.
 - [#7091](https://github.com/nautobot/nautobot/issues/7091) - Added Nautobot DNS Models app to the Apps Marketplace.
 
@@ -285,7 +357,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#6384](https://github.com/nautobot/nautobot/issues/6384) - Added `Job.logger.failure()` API for Job logging, using custom `FAILURE` log level (between `WARNING` and `ERROR`).
 - [#6384](https://github.com/nautobot/nautobot/issues/6384) - Added `Job.fail()` API, which can be used to fail a Job more gracefully than by raising an uncaught exception.
 - [#6384](https://github.com/nautobot/nautobot/issues/6384) - Added `NautobotTestCaseMixin.assertJobResultStatus()` testing helper API.
-- [#7001](https://github.com/nautobot/nautobot/issues/7001) - Added bulk-edit support for the RIR model.
+- [#7001](https://github.com/nautobot/nautobot/issues/7001) - Added Bulk Edit functionality for the RIR model.
 
 ### Changed in v2.4.5
 

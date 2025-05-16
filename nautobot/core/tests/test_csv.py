@@ -17,6 +17,8 @@ from nautobot.users.factory import UserFactory
 
 
 class CSVParsingRelatedTestCase(TestCase):
+    maxDiff = None
+
     def setUp(self):
         location = Location.objects.filter(
             parent__isnull=False,
@@ -249,7 +251,7 @@ class CSVParsingRelatedTestCase(TestCase):
             serializer_data.pop("custom_fields")
             serializer_data.pop("created")
             serializer_data.pop("last_updated")
-            self.assertEqual(expected_data, serializer_data)
+            self.assertDictEqual(expected_data, dict(serializer_data))
 
     @override_settings(ALLOWED_HOSTS=["*"])
     def test_round_trip_export_import(self):

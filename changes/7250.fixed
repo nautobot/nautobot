@@ -1,0 +1,1 @@
+Fixed MULTISELECT custom field representation in GraphQL to be a JSON array instead of a string.

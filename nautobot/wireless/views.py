@@ -1,9 +1,11 @@
+from functools import partial
+
 from django.core.exceptions import ValidationError
 from django_tables2 import RequestConfig
 
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui.choices import SectionChoices
-from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel
+from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectsTablePanel
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.wireless.api.serializers import (
@@ -46,18 +48,30 @@ class RadioProfileUIViewSet(NautobotUIViewSet):
     form_class = RadioProfileForm
     bulk_update_form_class = RadioProfileBulkEditForm
 
-    def get_extra_context(self, request, instance=None):
-        context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            # Supported Data Rates
-            supported_data_rates = instance.supported_data_rates.restrict(request.user, "view")
-            supported_data_rates_table = SupportedDataRateTable(supported_data_rates)
-            RequestConfig(
-                request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-            ).configure(supported_data_rates_table)
-            context["supported_data_rates_table"] = supported_data_rates_table
-
-        return context
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                value_transforms={
+                    "tx_power_min": [helpers.dbm],
+                    "tx_power_max": [helpers.dbm],
+                    "rx_power_min": [helpers.dbm],
+                    "channel_width": [partial(helpers.label_list, suffix="MHz")],
+                    "allowed_channel_list": [helpers.label_list],
+                },
+            ),
+            ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_title="Supported Data Rates",
+                table_class=SupportedDataRateTable,
+                table_filter="radio_profiles",
+                add_button_route=None,
+            ),
+        )
+    )
 
 
 class SupportedDataRateUIViewSet(NautobotUIViewSet):

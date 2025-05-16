@@ -1,0 +1,56 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block content_left_page %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Computed Field</strong>
+                </div>
+
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Content Type</td>
+                        <td><span>{{ object.content_type }}</span></td>
+                    </tr>
+                    <tr>
+                        <td>Label</td>
+                        <td><span>{{ object.label }}</span></td>
+                    </tr>
+                    <tr>
+                        <td>Key</td>
+                        <td><span>{{ object.key }}</span></td>
+                    </tr>
+                    <tr>
+                        <td>Grouping</td>
+                        <td>{{ object.grouping | placeholder }}</td>
+                    </tr>
+                    <tr>
+                        <td>Description</td>
+                        <td><span>{{ object.description|placeholder }}</span></td>
+                    </tr>
+                    <tr>
+                        <td>Fallback Value</td>
+                        <td><span>{{ object.fallback_value }}</span></td>
+                    </tr>
+                    <tr>
+                        <td>Weight</td>
+                        <td><span>{{ object.weight }}</span></td>
+                    </tr>
+                    <tr>
+                        <td>Move to Advanced Tab</td>
+                        <td><span>{{ object.advanced_ui | render_boolean }}</span></td>
+                    </tr>
+                </table>
+            </div>
+{% endblock content_left_page %}
+
+{% block content_full_width_page %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Template</strong>
+                </div>
+                <div class="panel-body">
+                    <pre>{{ object.template }}</pre>
+                </div>
+            </div>
+{% endblock content_full_width_page %}

@@ -32,7 +32,7 @@ You can refer to the [plugin development guide](../development/apps/api/ui-exten
 
 Jobs can now specify a `template_name` property and provide a custom template with additional JavaScript and CSS to help with user input on the Job submission form.
 
-You can refer to the [Job class metadata attribute documentation](../development/jobs/index.md#template_name) on how to build and define this template.
+You can refer to the [Job class metadata attribute documentation](../development/jobs/job-structure.md#template_name) on how to build and define this template.
 
 #### Dynamic Groups Support Additional Models ([#2200](https://github.com/nautobot/nautobot/pull/2200))
 

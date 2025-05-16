@@ -1,5 +1,6 @@
 from drf_spectacular.renderers import OpenApiYamlRenderer
 from drf_spectacular.settings import spectacular_settings
+from openapi_spec_validator import validate
 import yaml
 
 from nautobot.core.testing import TestCase
@@ -67,3 +68,9 @@ class OpenAPITest(TestCase):
                 self.assertEqual("integer", query_param_info["schema"]["items"]["type"])
                 at_least_one_test = True
         self.assertTrue(at_least_one_test)
+
+    def test_validate_openapi_spec(self):
+        """
+        Validate that the generated OpenAPI spec is valid according to the OpenAPI 3.0 schema.
+        """
+        validate(self.schema)

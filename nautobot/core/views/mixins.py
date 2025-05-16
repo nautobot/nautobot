@@ -542,6 +542,18 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
                     raise TemplateDoesNotExist("")
             except TemplateDoesNotExist:
                 template_name = f"generic/object_{action}.html"
+                try:
+                    select_template([template_name])
+                except TemplateDoesNotExist:
+                    # Most likely a custom action in detail view.
+                    # Fallback to the default detail view template
+                    template_name = f"{app_label}/{model_opts.model_name}_retrieve.html"
+                    try:
+                        select_template([template_name])
+                    except TemplateDoesNotExist:
+                        # Try a different detail view template format
+                        template_name = f"{app_label}/{model_opts.model_name}.html"
+                        select_template([template_name])
         return template_name
 
     def get_form(self, *args, **kwargs):

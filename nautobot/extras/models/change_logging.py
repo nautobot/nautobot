@@ -193,7 +193,7 @@ class ObjectChange(BaseModel):
             return related_changes.restrict(user, permission)
         return related_changes
 
-    def get_snapshots(self):
+    def get_snapshots(self, pre_object_data=None, pre_object_data_v2=None):
         """
         Return a dictionary with the changed object's serialized data before and after this change
         occurred and a key with a shallow diff of those dictionaries.
@@ -210,21 +210,28 @@ class ObjectChange(BaseModel):
         """
         prechange = None
         postchange = None
+        prior_change = None
 
-        prior_change = self.get_prev_change(only=["object_data_v2", "object_data"])
+        # Populate the prechange field, create actions do not need to have a prechange field
+        if self.action != ObjectChangeActionChoices.ACTION_CREATE:
+            prior_change = self.get_prev_change(only=["object_data_v2", "object_data"])
+            # Deal with the cases where we are trying to capture an object deletion/update and there is no prior change record.
+            # This can happen when the object is first created and the changelog for that object creation action is deleted.
+            if prior_change is not None:
+                prechange = prior_change.object_data_v2 or prior_change.object_data
+            elif self.action == ObjectChangeActionChoices.ACTION_DELETE:
+                prechange = self.object_data_v2 or self.object_data
+            else:
+                prechange = pre_object_data_v2 or pre_object_data
 
-        if self.action != ObjectChangeActionChoices.ACTION_CREATE and prior_change is not None:
-            prechange = prior_change.object_data_v2
-            if prechange is None:
-                prechange = prior_change.object_data
-
+        # Populate the postchange field, delete actions do not need to have a postchange field
         if self.action != ObjectChangeActionChoices.ACTION_DELETE:
             postchange = self.object_data_v2
             if postchange is None:
                 postchange = self.object_data
 
         if prechange and postchange:
-            if self.object_data_v2 is None or prior_change.object_data_v2 is None:
+            if self.object_data_v2 is None or (prior_change and prior_change.object_data_v2 is None):
                 prechange = prior_change.object_data
                 postchange = self.object_data
             diff_added = shallow_compare_dict(prechange, postchange, exclude=["last_updated"])

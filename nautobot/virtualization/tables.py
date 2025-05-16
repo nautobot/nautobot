@@ -126,6 +126,7 @@ class VirtualMachineTable(StatusTableMixin, RoleTableMixin, BaseTable):
     name = tables.LinkColumn()
     cluster = tables.Column(linkify=True)
     tenant = TenantColumn()
+    actions = ButtonsColumn(VirtualMachine)
 
     class Meta(BaseTable.Meta):
         model = VirtualMachine
@@ -139,6 +140,7 @@ class VirtualMachineTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "vcpus",
             "memory",
             "disk",
+            "actions",
         )
 
 

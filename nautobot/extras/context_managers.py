@@ -26,11 +26,25 @@ class ChangeContext:
     :param context: Context of the transaction, must match a choice in nautobot.extras.choices.ObjectChangeEventContextChoices
     :param context_detail: Optional extra details about the transaction (ex: the plugin name that initiated the change)
     :param change_id: Optional uuid object to uniquely identify the transaction. One will be generated if not supplied
+
+    The next two parameters are used as caching fields when updating an object with no previous ObjectChange instances.
+    They are used to populate the `pre_change` field of an ObjectChange snapshot in get_snapshot().
+    :param pre_object_data: Optional dictionary of serialized object data to be used in the object snapshot
+    :param pre_object_data_v2: Optional dictionary of serialized object data to be used in the object snapshot
     """
 
     defer_object_changes = False  # advanced usage, for creating object changes in bulk
 
-    def __init__(self, user=None, request=None, context=None, context_detail="", change_id=None):
+    def __init__(
+        self,
+        user=None,
+        request=None,
+        context=None,
+        context_detail="",
+        change_id=None,
+        pre_object_data={},
+        pre_object_data_v2={},
+    ):  # pylint: disable=dangerous-default-value
         self.request = request
         self.user = user
         self.reset_deferred_object_changes()
@@ -51,6 +65,8 @@ class ChangeContext:
         self.change_id = change_id
         if self.change_id is None:
             self.change_id = uuid.uuid4()
+        self.pre_object_data = pre_object_data
+        self.pre_object_data_v2 = pre_object_data_v2
 
     def get_user(self, instance=None):
         """Return self.user if set, otherwise return self.request.user"""
@@ -66,6 +82,8 @@ class ChangeContext:
             "user": self.get_user(instance),
             "change_id": self.change_id,
             "context": self.context,
+            "pre_object_data": self.pre_object_data,
+            "pre_object_data_v2": self.pre_object_data_v2,
         }
         return context
 
@@ -200,9 +218,12 @@ def web_request_context(
         request = RequestFactory().request(SERVER_NAME="web_request_context")
         request.user = user
     change_context = valid_contexts[context](request=request, context_detail=context_detail, change_id=change_id)
+    pre_object_data, pre_object_data_v2 = None, None
     try:
         with change_logging(change_context):
             yield request
+            change_context = change_context_state.get()
+            pre_object_data, pre_object_data_v2 = change_context.pre_object_data, change_context.pre_object_data_v2
     finally:
         jobs_reloaded = False
         # In bulk operations, we are performing the same action (create/update/delete) on the same content-type.
@@ -232,7 +253,10 @@ def web_request_context(
 
             # TODO: get_snapshots() currently requires a DB query per object change processed.
             # We need to develop a more efficient approach: https://github.com/nautobot/nautobot/issues/6303
-            snapshots = oc.get_snapshots()
+            snapshots = oc.get_snapshots(
+                pre_object_data.get(str(oc.changed_object_id), None),
+                pre_object_data_v2.get(str(oc.changed_object_id), None),
+            )
             webhook_queryset = enqueue_webhooks(oc, snapshots=snapshots, webhook_queryset=webhook_queryset)
 
             # topic examples: "nautobot.change.dcim.device", "nautobot.add.ipam.ipaddress"
