@@ -4110,18 +4110,32 @@ class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.DeviceRedundancyGroupSerializer
     table_class = tables.DeviceRedundancyGroupTable
 
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-
-        if self.action == "retrieve" and instance:
-            devices = instance.devices_sorted.restrict(request.user)
-            devices_table = tables.DeviceTable(devices)
-            devices_table.columns.show("device_redundancy_group_priority")
-            context["devices_table"] = devices_table
-            controllers = instance.controllers_sorted.restrict(request.user)
-            controllers_table = tables.ControllerTable(controllers)
-            context["controllers_table"] = controllers_table
-        return context
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=100,
+                table_class=tables.ControllerTable,
+                table_attribute="controllers_sorted",
+                related_field_name="controller_device_redundancy_group",
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=200,
+                table_class=tables.DeviceTable,
+                table_attribute="devices_sorted",
+                related_field_name="device_redundancy_group",
+                include_columns=[
+                    "device_redundancy_group_priority",
+                ],
+            ),
+        )
+    )
 
 
 class InterfaceRedundancyGroupUIViewSet(NautobotUIViewSet):

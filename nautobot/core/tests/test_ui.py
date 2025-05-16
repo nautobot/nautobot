@@ -3,10 +3,13 @@
 from unittest.mock import patch
 
 from django.template import Context
+from django.test import RequestFactory
 
 from nautobot.core.templatetags.helpers import HTML_NONE
 from nautobot.core.testing import TestCase
-from nautobot.core.ui.object_detail import BaseTextPanel, DataTablePanel, Panel
+from nautobot.core.ui.object_detail import BaseTextPanel, DataTablePanel, ObjectsTablePanel, Panel
+from nautobot.dcim.models import DeviceRedundancyGroup
+from nautobot.dcim.tables.devices import DeviceTable
 
 
 class DataTablePanelTest(TestCase):
@@ -148,3 +151,52 @@ class BaseTextPanelTest(TestCase):
         panel = BaseTextPanel(weight=100)
         with self.assertRaises(NotImplementedError):
             panel.get_value({})
+
+
+class ObjectsTablePanelTest(TestCase):
+    def setUp(self):
+        super().setUp()
+        self.factory = RequestFactory()
+        self.request = self.factory.get("/")
+        self.request.user = self.user
+
+    def test_include_exclude_columns(self):
+        panel = ObjectsTablePanel(
+            weight=100,
+            table_class=DeviceTable,
+            table_attribute="devices_sorted",
+            related_field_name="device_redundancy_group",
+            include_columns=[
+                "device_redundancy_group_priority",
+            ],
+            exclude_columns=[
+                "rack",
+            ],
+        )
+        redundancy_group = DeviceRedundancyGroup.objects.first()
+        context = {
+            "request": self.request,
+            "object": redundancy_group,
+        }
+        result = panel.get_extra_context(context)
+        columns = result["body_content_table"].columns
+        self.assertIn("device_redundancy_group_priority", [col.name for col in columns])
+        self.assertNotIn("rack", [col.name for col in columns])
+
+    def test_invalid_include_columns(self):
+        with self.assertRaises(ValueError) as context:
+            panel = ObjectsTablePanel(
+                weight=100,
+                table_class=DeviceTable,
+                table_attribute="devices_sorted",
+                related_field_name="device_redundancy_group",
+                include_columns=["non_existent_column"],
+            )
+            redundancy_group = DeviceRedundancyGroup.objects.first()
+            context_data = {
+                "request": self.request,
+                "object": redundancy_group,
+            }
+            panel.get_extra_context(context_data)
+
+        self.assertIn("non-existent column `non_existent_column`", str(context.exception))
