@@ -1,5 +1,6 @@
 """Tables for the vpn models."""
 
+from django.utils.html import format_html
 import django_tables2 as tables
 
 from nautobot.apps.tables import (
@@ -25,13 +26,11 @@ class VPNProfileTable(RoleTableMixin, BaseTable):
     vpn_phase1_policy_count = LinkedCountColumn(
         viewname="vpn:vpnphase1policy_list",
         verbose_name="VPN Phase 1 Policy",
-        # TODO INIT Add the URL Params below, and optionally the reverse_lookup.
         url_params={"vpn_profiles": "pk"},
     )
     vpn_phase2_policy_count = LinkedCountColumn(
         viewname="vpn:vpnphase2policy_list",
         verbose_name="VPN Phase 2 Policy",
-        # TODO INIT Add the URL Params below, and optionally the reverse_lookup.
         url_params={"vpn_profiles": "pk"},
     )
     actions = ButtonsColumn(models.VPNProfile)
@@ -54,7 +53,6 @@ class VPNProfileTable(RoleTableMixin, BaseTable):
             "secrets_group",
             "role",
         )
-        # TODO INIT Add or Remove the columns below to change the list view default columns.
         default_columns = (
             "pk",
             "name",
@@ -69,6 +67,11 @@ class VPNProfileTable(RoleTableMixin, BaseTable):
             "role",
             "actions",
         )
+
+
+def _render_multi_select(values):
+    """Renders multiselect values as labels."""
+    return format_html("<br>".join([f'<span class="label label-default">{v}</span>' for v in values]))
 
 
 class VPNPhase1PolicyTable(BaseTable):
@@ -97,7 +100,6 @@ class VPNPhase1PolicyTable(BaseTable):
             "lifetime_kb",
             "authentication_method",
         )
-        # TODO INIT Add or Remove the columns below to change the list view default columns.
         default_columns = (
             "pk",
             "name",
@@ -112,6 +114,15 @@ class VPNPhase1PolicyTable(BaseTable):
             "authentication_method",
             "actions",
         )
+
+    def render_encryption_algorithm(self, value):
+        return _render_multi_select(value)
+
+    def render_integrity_algorithm(self, value):
+        return _render_multi_select(value)
+
+    def render_dh_group(self, value):
+        return _render_multi_select(value)
 
 
 class VPNPhase2PolicyTable(BaseTable):
@@ -136,7 +147,6 @@ class VPNPhase2PolicyTable(BaseTable):
             "pfs_group",
             "lifetime",
         )
-        # TODO INIT Add or Remove the columns below to change the list view default columns.
         default_columns = (
             "pk",
             "name",
@@ -147,6 +157,15 @@ class VPNPhase2PolicyTable(BaseTable):
             "lifetime",
             "actions",
         )
+
+    def render_encryption_algorithm(self, value):
+        return _render_multi_select(value)
+
+    def render_integrity_algorithm(self, value):
+        return _render_multi_select(value)
+
+    def render_pfs_group(self, value):
+        return _render_multi_select(value)
 
 
 class VPNProfilePhase1PolicyAssignmentTable(BaseTable):
@@ -209,12 +228,6 @@ class VPNTable(RoleTableMixin, BaseTable):
         url_params={"vpn": "pk"},
     )
     tenant = TenantColumn()
-    # contact_associations_count = LinkedCountColumn(
-    #     viewname="vpn:contactassociations_list",
-    #     verbose_name="Contact Associations",
-    #     # TODO INIT Add the URL Params below, and optionally the reverse_lookup.
-    #     url_params={},
-    # )
     actions = ButtonsColumn(models.VPN)
     tags = TagColumn(url_name="vpn:vpn_list")
 
@@ -232,7 +245,6 @@ class VPNTable(RoleTableMixin, BaseTable):
             "tenant",
             "role",
         )
-        # TODO INIT Add or Remove the columns below to change the list view default columns.
         default_columns = (
             "pk",
             "vpn_profile",
@@ -277,7 +289,6 @@ class VPNTunnelTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "role",
             "status",
         )
-        # TODO INIT Add or Remove the columns below to change the list view default columns.
         default_columns = (
             "pk",
             "name",
@@ -339,7 +350,6 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
             "role",
             "status",
         )
-        # TODO INIT Add or Remove the columns below to change the list view default columns.
         default_columns = (
             "pk",
             "name",

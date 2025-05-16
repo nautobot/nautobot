@@ -22,16 +22,13 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
     filterset_class = filters.VPNProfileFilterSet
     filterset_form_class = forms.VPNProfileFilterForm
     form_class = forms.VPNProfileForm
-    # TODO INIT verify this is the lookup field you want
     lookup_field = "pk"
     queryset = models.VPNProfile.objects.all()
     serializer_class = serializers.VPNProfileSerializer
     table_class = tables.VPNProfileTable
-    # base_template = "generic/object_retrieve.html"
 
     object_detail_content = ObjectDetailContent(
         panels=[
-            # TODO INIT ensure these are the fields you want to show
             ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
@@ -108,16 +105,13 @@ class VPNPhase1PolicyUIViewSet(NautobotUIViewSet):
     filterset_class = filters.VPNPhase1PolicyFilterSet
     filterset_form_class = forms.VPNPhase1PolicyFilterForm
     form_class = forms.VPNPhase1PolicyForm
-    # TODO INIT verify this is the lookup field you want
     lookup_field = "pk"
     queryset = models.VPNPhase1Policy.objects.all()
     serializer_class = serializers.VPNPhase1PolicySerializer
     table_class = tables.VPNPhase1PolicyTable
-    # base_template = "generic/object_retrieve.html"
 
     object_detail_content = ObjectDetailContent(
         panels=[
-            # TODO INIT ensure these are the fields you want to show
             ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
@@ -145,16 +139,13 @@ class VPNPhase2PolicyUIViewSet(NautobotUIViewSet):
     filterset_class = filters.VPNPhase2PolicyFilterSet
     filterset_form_class = forms.VPNPhase2PolicyFilterForm
     form_class = forms.VPNPhase2PolicyForm
-    # TODO INIT verify this is the lookup field you want
     lookup_field = "pk"
     queryset = models.VPNPhase2Policy.objects.all()
     serializer_class = serializers.VPNPhase2PolicySerializer
     table_class = tables.VPNPhase2PolicyTable
-    # base_template = "generic/object_retrieve.html"
 
     object_detail_content = ObjectDetailContent(
         panels=[
-            # TODO INIT ensure these are the fields you want to show
             ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
@@ -171,12 +162,10 @@ class VPNUIViewSet(NautobotUIViewSet):
     filterset_class = filters.VPNFilterSet
     filterset_form_class = forms.VPNFilterForm
     form_class = forms.VPNForm
-    # TODO INIT verify this is the lookup field you want
     lookup_field = "pk"
     queryset = models.VPN.objects.all()
     serializer_class = serializers.VPNSerializer
     table_class = tables.VPNTable
-    base_template = "generic/object_retrieve.html"
 
     object_detail_content = ObjectDetailContent(
         panels=[
@@ -203,16 +192,13 @@ class VPNTunnelUIViewSet(NautobotUIViewSet):
     filterset_class = filters.VPNTunnelFilterSet
     filterset_form_class = forms.VPNTunnelFilterForm
     form_class = forms.VPNTunnelForm
-    # TODO INIT verify this is the lookup field you want
     lookup_field = "pk"
     queryset = models.VPNTunnel.objects.all()
     serializer_class = serializers.VPNTunnelSerializer
     table_class = tables.VPNTunnelTable
-    base_template = "generic/object_retrieve.html"
 
     object_detail_content = ObjectDetailContent(
         panels=[
-            # TODO INIT ensure these are the fields you want to show
             ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
@@ -271,16 +257,13 @@ class VPNTunnelEndpointUIViewSet(NautobotUIViewSet):
     filterset_class = filters.VPNTunnelEndpointFilterSet
     filterset_form_class = forms.VPNTunnelEndpointFilterForm
     form_class = forms.VPNTunnelEndpointForm
-    # TODO INIT verify this is the lookup field you want
     lookup_field = "pk"
     queryset = models.VPNTunnelEndpoint.objects.all()
     serializer_class = serializers.VPNTunnelEndpointSerializer
     table_class = tables.VPNTunnelEndpointTable
-    base_template = "generic/object_retrieve.html"
 
     object_detail_content = ObjectDetailContent(
         panels=[
-            # TODO INIT ensure these are the fields you want to show
             ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
