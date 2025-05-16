@@ -302,6 +302,11 @@ class ViewTestCases:
         slug_source = None
         slugify_function = staticmethod(slugify)
         slug_test_object = ""
+        expected_create_form_buttons = [
+            '<button type="submit" name="_create" class="btn btn-primary">Create</button>',
+            '<button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>',
+        ]
+        expected_edit_form_buttons = ['<button type="submit" name="_update" class="btn btn-primary">Update</button>']
 
         def test_create_object_without_permission(self):
             # Try GET without permission
@@ -328,16 +333,11 @@ class ViewTestCases:
             response = self.client.get(self._get_url("add"))
             self.assertHttpStatus(response, 200)
             # The response content should contain the expected form buttons
-            self.assertNotContains(
-                response, '<button type="submit" name="_update" class="btn btn-primary">Update</button>'
-            )
-            self.assertBodyContains(
-                response, '<button type="submit" name="_create" class="btn btn-primary">Create</button>'
-            )
-            self.assertBodyContains(
-                response,
-                '<button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>',
-            )
+            for button in self.expected_create_form_buttons:
+                self.assertBodyContains(response, button)
+            # The response content should not contain the expected form buttons
+            for button in self.expected_edit_form_buttons:
+                self.assertNotContains(response, button)
 
             # Try POST with model-level permission
             request = {
@@ -451,6 +451,11 @@ class ViewTestCases:
 
         form_data = {}
         update_data = {}
+        expected_edit_form_buttons = ['<button type="submit" name="_update" class="btn btn-primary">Update</button>']
+        expected_create_form_buttons = [
+            '<button type="submit" name="_create" class="btn btn-primary">Create</button>',
+            '<button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>',
+        ]
 
         def test_edit_object_without_permission(self):
             instance = self._get_queryset().first()
@@ -477,18 +482,14 @@ class ViewTestCases:
 
             # Try GET with model-level permission
             response = self.client.get(self._get_url("edit", instance))
-            # The response content should contain the expected form buttons
             self.assertHttpStatus(response, 200)
-            self.assertBodyContains(
-                response, '<button type="submit" name="_update" class="btn btn-primary">Update</button>'
-            )
-            self.assertNotContains(
-                response, '<button type="submit" name="_create" class="btn btn-primary">Create</button>'
-            )
-            self.assertNotContains(
-                response,
-                '<button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>',
-            )
+            # The response content should contain the expected form buttons
+            for button in self.expected_edit_form_buttons:
+                self.assertBodyContains(response, button)
+
+            # The response content should not contain the unexpected form buttons
+            for button in self.expected_create_form_buttons:
+                self.assertNotContains(response, button)
 
             # Try POST with model-level permission
             update_data = self.update_data or self.form_data
