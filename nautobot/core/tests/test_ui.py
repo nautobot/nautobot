@@ -182,3 +182,21 @@ class ObjectsTablePanelTest(TestCase):
         columns = result["body_content_table"].columns
         self.assertIn("device_redundancy_group_priority", [col.name for col in columns])
         self.assertNotIn("rack", [col.name for col in columns])
+
+    def test_invalid_include_columns(self):
+        with self.assertRaises(ValueError) as context:
+            panel = ObjectsTablePanel(
+                weight=100,
+                table_class=DeviceTable,
+                table_attribute="devices_sorted",
+                related_field_name="device_redundancy_group",
+                include_columns=["non_existent_column"],
+            )
+            redundancy_group = DeviceRedundancyGroup.objects.first()
+            context_data = {
+                "request": self.request,
+                "object": redundancy_group,
+            }
+            panel.get_extra_context(context_data)
+
+        self.assertIn("non-existent column `non_existent_column`", str(context.exception))
