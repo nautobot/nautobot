@@ -9,7 +9,6 @@ from nautobot.extras.models import (
     DynamicGroup,
     GitRepository,
     GraphQLQuery,
-    Job,
     Note,
     Relationship,
     SecretsGroup,
