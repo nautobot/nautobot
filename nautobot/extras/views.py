@@ -540,36 +540,27 @@ class ObjectAssignContactOrTeamView(generic.ObjectEditView):
 #
 
 
-class CustomFieldListView(generic.ObjectListView):
+class CustomFieldUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.CustomFieldBulkEditForm
     queryset = CustomField.objects.all()
-    table = tables.CustomFieldTable
-    filterset = filters.CustomFieldFilterSet
-    filterset_form = forms.CustomFieldFilterForm
+    serializer_class = serializers.CustomFieldSerializer
+    filterset_class = filters.CustomFieldFilterSet
+    filterset_form_class = forms.CustomFieldFilterForm
+    form_class = forms.CustomFieldForm
+    table_class = tables.CustomFieldTable
     action_buttons = ("add",)
-
-
-class CustomFieldView(generic.ObjectView):
-    queryset = CustomField.objects.all()
-
-
-class CustomFieldEditView(generic.ObjectEditView):
-    queryset = CustomField.objects.all()
-    model_form = forms.CustomFieldForm
-    template_name = "extras/customfield_edit.html"
 
     def get_extra_context(self, request, instance):
         ctx = super().get_extra_context(request, instance)
-
         if request.POST:
             ctx["choices"] = forms.CustomFieldChoiceFormSet(data=request.POST, instance=instance)
         else:
             ctx["choices"] = forms.CustomFieldChoiceFormSet(instance=instance)
-
         return ctx
 
-    def post(self, request, *args, **kwargs):
+    def update(self, request, *args, **kwargs):
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
-        form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
+        form = self.form_class(data=request.POST, files=request.FILES, instance=obj)
         restrict_form_fields(form, request.user)
 
         if form.is_valid():
@@ -592,6 +583,7 @@ class CustomFieldEditView(generic.ObjectEditView):
                     else:
                         raise RuntimeError(choices.errors)
                     # <--- END difference from ObjectEditView.post()
+
                 verb = "Created" if object_created else "Modified"
                 msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
@@ -619,6 +611,7 @@ class CustomFieldEditView(generic.ObjectEditView):
                 msg = "Object save failed due to object-level permissions violation"
                 logger.debug(msg)
                 form.add_error(None, msg)
+
             # ---> BEGIN difference from ObjectEditView.post()
             except RuntimeError:
                 msg = "Errors encountered when saving custom field choices. See below."
@@ -638,7 +631,7 @@ class CustomFieldEditView(generic.ObjectEditView):
 
         return render(
             request,
-            self.template_name,
+            self.get_template_names()[0],
             {
                 "obj": obj,
                 "obj_type": self.queryset.model._meta.verbose_name,
@@ -648,17 +641,6 @@ class CustomFieldEditView(generic.ObjectEditView):
                 **self.get_extra_context(request, obj),
             },
         )
-
-
-class CustomFieldDeleteView(generic.ObjectDeleteView):
-    queryset = CustomField.objects.all()
-
-
-class CustomFieldBulkDeleteView(generic.BulkDeleteView):
-    queryset = CustomField.objects.all()
-    table = tables.CustomFieldTable
-    filterset = filters.CustomFieldFilterSet
-    form = forms.CustomFieldBulkDeleteForm
 
 
 #

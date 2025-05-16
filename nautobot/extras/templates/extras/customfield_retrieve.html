@@ -1,0 +1,129 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load buttons %}
+{% load helpers %}
+
+{% block content_left_page %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Custom Field</strong>
+                </div>
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Label</td>
+                        <td>{{ object.label }}</td>
+                    </tr>
+                    <tr>
+                        <td>Key</td>
+                        <td>{{ object.key }}</td>
+                    </tr>
+                    <tr>
+                        <td>Type</td>
+                        <td>{{ object.type | capfirst }}</td>
+                    </tr>
+                    <tr>
+                        <td>Weight</td>
+                        <td>{{ object.weight }}</td>
+                    </tr>
+                    <tr>
+                        <td>Grouping</td>
+                        <td>{{ object.grouping | placeholder }}</td>
+                    </tr>
+                    <tr>
+                        <td>Description</td>
+                        <td>{{ object.description | render_markdown | placeholder }}</td>
+                    </tr>
+                    <tr>
+                        <td>Required</td>
+                        <td>{{ object.required | render_boolean }}</td>
+                    </tr>
+                    <tr>
+                        <td>Default</td>
+                        <td>
+                            {% if object.type == "markdown" %}
+                                {{ object.default | render_markdown | placeholder }}
+                            {% elif object.type == "json" and object.default is not None %}
+                                <pre>{{ object.default | render_json }}</pre>
+                            {% else %}
+                                {{ object.default | placeholder }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Filter Logic</td>
+                        <td>{{ object.filter_logic | capfirst }}</td>
+                    </tr>
+                    <tr>
+                        <td>Move to Advanced Tab</td>
+                        <td>{{ object.advanced_ui | render_boolean }}</td>
+                    </tr>
+                </table>
+            </div>
+            {% if object.custom_field_choices.exists %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Custom Field Choices</strong>
+                </div>
+                <table class="table table-hover panel-body attr-table">
+                    <thead>
+                        <tr>
+                            <th>Value</th>
+                            <th>Weight</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for choice in object.custom_field_choices.all %}
+                        <tr>
+                            <td>{{ choice.value }}</td>
+                            <td>{{ choice.weight }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Assignment</strong>
+                </div>
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Content Types</td>
+                        <td>
+                            <ul>
+                                {% for ct in object.content_types.all %}
+                                    <li>{{ ct }}</li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Validation Rules</strong>
+                </div>
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Minimum Value/Length</td>
+                        <td>{{ object.validation_minimum | placeholder }}</td>
+                    </tr>
+                    <tr>
+                        <td>Maximum Value/Length</td>
+                        <td>{{ object.validation_maximum | placeholder }}</td>
+                    </tr>
+                    <tr>
+                        <td>Validation Regex</td>
+                        <td>
+                            {% if object.validation_regex %}
+                                <code>{{ object.validation_regex | placeholder }}</code>
+                            {% else %}
+                                {{ object.validation_regex | placeholder }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+{% endblock content_right_page %}
