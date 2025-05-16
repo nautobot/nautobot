@@ -572,8 +572,10 @@ class ApproverDashboardView(ObjectListViewMixin):
         Filter the queryset to only include approval workflow stages that are pending approval
         and are assigned to the current user for approval.
         """
-        queryset = super().get_queryset()
         user = self.request.user
+        if user.is_anonymous:
+            return ApprovalWorkflowStage.objects.none()
+        queryset = super().get_queryset()
         group_pks = user.groups.all().values_list("pk", flat=True)
         # we only want currently active stages on the approver
         active_stage_pks = [workflow.active_stage.pk for workflow in ApprovalWorkflow.objects.all()]
@@ -639,8 +641,10 @@ class ApproveeDashboardView(ObjectListViewMixin):
         """
         Filter the queryset to only include workflows that triggered by the current users.
         """
-        queryset = super().get_queryset()
         user = self.request.user
+        if user.is_anonymous:
+            return ApprovalWorkflow.objects.none()
+        queryset = super().get_queryset()
         return queryset.filter(user=user).order_by("created")
 
     def list(self, request, *args, **kwargs):
