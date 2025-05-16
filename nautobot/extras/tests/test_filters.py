@@ -35,11 +35,11 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.filters import (
+    ApprovalWorkflowDefinitionFilterSet,
     ApprovalWorkflowFilterSet,
-    ApprovalWorkflowInstanceFilterSet,
+    ApprovalWorkflowStageDefinitionFilterSet,
     ApprovalWorkflowStageFilterSet,
-    ApprovalWorkflowStageInstanceFilterSet,
-    ApprovalWorkflowStageInstanceResponseFilterSet,
+    ApprovalWorkflowStageResponseFilterSet,
     ComputedFieldFilterSet,
     ConfigContextFilterSet,
     ContactAssociationFilterSet,
@@ -79,10 +79,10 @@ from nautobot.extras.filters import (
 )
 from nautobot.extras.models import (
     ApprovalWorkflow,
-    ApprovalWorkflowInstance,
+    ApprovalWorkflowDefinition,
     ApprovalWorkflowStage,
-    ApprovalWorkflowStageInstance,
-    ApprovalWorkflowStageInstanceResponse,
+    ApprovalWorkflowStageDefinition,
+    ApprovalWorkflowStageResponse,
     ComputedField,
     ConfigContext,
     Contact,
@@ -159,255 +159,255 @@ class ApprovalWorkflowTestMixin:
             user.groups.add(cls.approver_group_2)
             user.groups.add(cls.approver_group_3)
 
-        cls.approval_workflow_1 = ApprovalWorkflow.objects.create(
-            name="Test Approval Workflow 1",
+        cls.approval_workflow_1_definition = ApprovalWorkflowDefinition.objects.create(
+            name="Test Approval Workflow 1 Definition",
             model_content_type=cls.job_ct,
         )
-        cls.approval_workflow_2 = ApprovalWorkflow.objects.create(
-            name="Test Approval Workflow 2",
+        cls.approval_workflow_2_definition = ApprovalWorkflowDefinition.objects.create(
+            name="Test Approval Workflow 2 Definition",
             model_content_type=cls.scheduledjob_ct,
             model_constraints={"name": "Bulk Delete Objects"},
         )
-        cls.approval_workflow_3 = ApprovalWorkflow.objects.create(
-            name="Test Approval Workflow 3",
+        cls.approval_workflow_3_definition = ApprovalWorkflowDefinition.objects.create(
+            name="Test Approval Workflow 3 Definition",
             model_content_type=cls.job_ct,
             model_constraints={"name": "Bulk Delete Objects"},
         )
-        cls.approval_workflow_4 = ApprovalWorkflow.objects.create(
-            name="Test Approval Workflow 4",
+        cls.approval_workflow_4_definition = ApprovalWorkflowDefinition.objects.create(
+            name="Test Approval Workflow 4 Definition",
             model_content_type=cls.job_ct,
             model_constraints={"name": "Bulk Delete Objects"},
         )
-        cls.approval_workflow_5 = ApprovalWorkflow.objects.create(
-            name="Test Approval Workflow 5",
+        cls.approval_workflow_5_definition = ApprovalWorkflowDefinition.objects.create(
+            name="Test Approval Workflow 5 Definition",
             model_content_type=cls.job_ct,
             model_constraints={"name": "Bulk Delete Objects"},
         )
-        cls.approval_workflow_1_stage_1 = ApprovalWorkflowStage.objects.create(
-            approval_workflow=cls.approval_workflow_1,
+        cls.approval_workflow_1_stage_1_definition = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=cls.approval_workflow_1_definition,
             weight=100,
-            name="Test Approval Workflow 1 Stage 1",
+            name="Test Approval Workflow 1 Stage 1 Definition",
             min_approvers=2,
             denial_message="Stage 1 Denial Message",
             approver_group=cls.approver_group_1,
         )
-        cls.approval_workflow_1_stage_2 = ApprovalWorkflowStage.objects.create(
-            approval_workflow=cls.approval_workflow_1,
+        cls.approval_workflow_1_stage_2_definition = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=cls.approval_workflow_1_definition,
             weight=200,
-            name="Test Approval Workflow 1 Stage 2",
+            name="Test Approval Workflow 1 Stage 2 Definition",
             min_approvers=2,
             denial_message="Stage 2 Denial Message",
             approver_group=cls.approver_group_2,
         )
-        cls.approval_workflow_1_stage_3 = ApprovalWorkflowStage.objects.create(
-            approval_workflow=cls.approval_workflow_1,
+        cls.approval_workflow_1_stage_3_definition = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=cls.approval_workflow_1_definition,
             weight=300,
-            name="Test Approval Workflow 1 Stage 3",
+            name="Test Approval Workflow 1 Stage 3 Definition",
             min_approvers=3,
             denial_message="Stage 3 Denial Message",
             approver_group=cls.approver_group_3,
         )
-        cls.approval_workflow_1_stage_4 = ApprovalWorkflowStage.objects.create(
-            approval_workflow=cls.approval_workflow_1,
+        cls.approval_workflow_1_stage_4_definition = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=cls.approval_workflow_1_definition,
             weight=400,
-            name="Test Approval Workflow 1 Stage 4",
+            name="Test Approval Workflow 1 Stage 4 Definition",
             min_approvers=5,
             denial_message="Stage 4 Denial Message",
             approver_group=cls.approver_group_1,
         )
-        cls.approval_workflow_1_stage_5 = ApprovalWorkflowStage.objects.create(
-            approval_workflow=cls.approval_workflow_1,
+        cls.approval_workflow_1_stage_5_definition = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=cls.approval_workflow_1_definition,
             weight=500,
-            name="Test Approval Workflow 1 Stage 5",
+            name="Test Approval Workflow 1 Stage 5 Definition",
             min_approvers=2,
             denial_message="Stage 5 Denial Message",
             approver_group=cls.approver_group_2,
         )
-        cls.approval_workflow_1_stage_6 = ApprovalWorkflowStage.objects.create(
-            approval_workflow=cls.approval_workflow_1,
+        cls.approval_workflow_1_stage_6_definition = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=cls.approval_workflow_1_definition,
             weight=600,
-            name="Test Approval Workflow 1 Stage 6",
+            name="Test Approval Workflow 1 Stage 6 Definition",
             min_approvers=2,
             denial_message="Stage 6 Denial Message",
             approver_group=cls.approver_group_3,
         )
-        cls.approval_workflow_2_stage_1 = ApprovalWorkflowStage.objects.create(
-            approval_workflow=cls.approval_workflow_2,
+        cls.approval_workflow_2_stage_1_definition = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=cls.approval_workflow_2_definition,
             weight=100,
-            name="Test Approval Workflow 2 Stage 1",
+            name="Test Approval Workflow 2 Stage 1 Definition",
             min_approvers=2,
             denial_message="Stage 1 Denial Message",
             approver_group=cls.approver_group_1,
         )
-        cls.approval_workflow_2_stage_2 = ApprovalWorkflowStage.objects.create(
-            approval_workflow=cls.approval_workflow_2,
+        cls.approval_workflow_2_stage_2_definition = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=cls.approval_workflow_2_definition,
             weight=200,
-            name="Test Approval Workflow 2 Stage 2",
+            name="Test Approval Workflow 2 Stage 2 Definition",
             min_approvers=2,
             denial_message="Stage 2 Denial Message",
             approver_group=cls.approver_group_2,
         )
-        cls.approval_workflow_2_stage_3 = ApprovalWorkflowStage.objects.create(
-            approval_workflow=cls.approval_workflow_2,
+        cls.approval_workflow_2_stage_3_definition = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=cls.approval_workflow_2_definition,
             weight=300,
-            name="Test Approval Workflow 2 Stage 3",
+            name="Test Approval Workflow 2 Stage 3 Definition",
             min_approvers=2,
             denial_message="Stage 3 Denial Message",
             approver_group=cls.approver_group_3,
         )
-        cls.approval_workflow_3_stage_1 = ApprovalWorkflowStage.objects.create(
-            approval_workflow=cls.approval_workflow_3,
+        cls.approval_workflow_3_stage_1_definition = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=cls.approval_workflow_3_definition,
             weight=100,
-            name="Test Approval Workflow 3 Stage 1",
+            name="Test Approval Workflow 3 Stage 1 Definition",
             min_approvers=2,
             denial_message="Stage 1 Denial Message",
             approver_group=cls.approver_group_1,
         )
-        cls.approval_workflow_3_stage_2 = ApprovalWorkflowStage.objects.create(
-            approval_workflow=cls.approval_workflow_3,
+        cls.approval_workflow_3_stage_2_definition = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=cls.approval_workflow_3_definition,
             weight=200,
-            name="Test Approval Workflow 3 Stage 2",
+            name="Test Approval Workflow 3 Stage 2 Definition",
             min_approvers=2,
             denial_message="Stage 2 Denial Message",
             approver_group=cls.approver_group_2,
         )
-        cls.approval_workflow_3_stage_3 = ApprovalWorkflowStage.objects.create(
-            approval_workflow=cls.approval_workflow_3,
+        cls.approval_workflow_3_stage_3_definition = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=cls.approval_workflow_3_definition,
             weight=300,
-            name="Test Approval Workflow 3 Stage 3",
+            name="Test Approval Workflow 3 Stage 3 Definition",
             min_approvers=2,
             denial_message="Stage 3 Denial Message",
             approver_group=cls.approver_group_3,
         )
-        cls.approval_workflow_1_instance_1 = ApprovalWorkflowInstance.objects.create(
-            approval_workflow=cls.approval_workflow_1,
+        cls.approval_workflow_1_instance_1 = ApprovalWorkflow.objects.create(
+            approval_workflow_definition=cls.approval_workflow_1_definition,
             object_under_review_content_type=cls.job_ct,
             object_under_review_object_id=cls.jobs[0].pk,
             current_state=ApprovalWorkflowStateChoices.PENDING,
         )
-        cls.approval_workflow_1_instance_2 = ApprovalWorkflowInstance.objects.create(
-            approval_workflow=cls.approval_workflow_3,
+        cls.approval_workflow_1_instance_2 = ApprovalWorkflow.objects.create(
+            approval_workflow_definition=cls.approval_workflow_3_definition,
             object_under_review_content_type=cls.job_ct,
             object_under_review_object_id=cls.jobs[1].pk,
             current_state=ApprovalWorkflowStateChoices.PENDING,
         )
-        cls.approval_workflow_1_instance_3 = ApprovalWorkflowInstance.objects.create(
-            approval_workflow=cls.approval_workflow_3,
+        cls.approval_workflow_1_instance_3 = ApprovalWorkflow.objects.create(
+            approval_workflow_definition=cls.approval_workflow_3_definition,
             object_under_review_content_type=cls.job_ct,
             object_under_review_object_id=cls.jobs[2].pk,
             current_state=ApprovalWorkflowStateChoices.APPROVED,
         )
-        cls.approval_workflow_1_instance_4 = ApprovalWorkflowInstance.objects.create(
-            approval_workflow=cls.approval_workflow_4,
+        cls.approval_workflow_1_instance_4 = ApprovalWorkflow.objects.create(
+            approval_workflow_definition=cls.approval_workflow_4_definition,
             object_under_review_content_type=cls.job_ct,
             object_under_review_object_id=cls.jobs[3].pk,
             current_state=ApprovalWorkflowStateChoices.APPROVED,
         )
-        cls.approval_workflow_1_instance_5 = ApprovalWorkflowInstance.objects.create(
-            approval_workflow=cls.approval_workflow_5,
+        cls.approval_workflow_1_instance_5 = ApprovalWorkflow.objects.create(
+            approval_workflow_definition=cls.approval_workflow_5_definition,
             object_under_review_content_type=cls.job_ct,
             object_under_review_object_id=cls.jobs[4].pk,
             current_state=ApprovalWorkflowStateChoices.DENIED,
         )
-        cls.approval_workflow_1_instance_6 = ApprovalWorkflowInstance.objects.create(
-            approval_workflow=cls.approval_workflow_5,
+        cls.approval_workflow_1_instance_6 = ApprovalWorkflow.objects.create(
+            approval_workflow_definition=cls.approval_workflow_5_definition,
             object_under_review_content_type=cls.job_ct,
             object_under_review_object_id=cls.jobs[5].pk,
             current_state=ApprovalWorkflowStateChoices.DENIED,
         )
-        cls.approval_workflow_1_instance_7 = ApprovalWorkflowInstance.objects.create(
-            approval_workflow=cls.approval_workflow_2,
+        cls.approval_workflow_1_instance_7 = ApprovalWorkflow.objects.create(
+            approval_workflow_definition=cls.approval_workflow_2_definition,
             object_under_review_content_type=cls.scheduledjob_ct,
             object_under_review_object_id=cls.scheduled_job.pk,
             current_state=ApprovalWorkflowStateChoices.APPROVED,
         )
-        cls.approval_workflow_1_stage_instance_1 = ApprovalWorkflowStageInstance.objects.create(
-            approval_workflow_instance=cls.approval_workflow_1_instance_1,
-            approval_workflow_stage=cls.approval_workflow_1_stage_1,
+        cls.approval_workflow_1_stage_instance_1 = ApprovalWorkflowStage.objects.create(
+            approval_workflow=cls.approval_workflow_1_instance_1,
+            approval_workflow_stage_definition=cls.approval_workflow_1_stage_1_definition,
             state=ApprovalWorkflowStateChoices.APPROVED,
             decision_date=datetime.now(ZoneInfo("America/New_York")),
         )
-        cls.approval_workflow_1_stage_instance_2 = ApprovalWorkflowStageInstance.objects.create(
-            approval_workflow_instance=cls.approval_workflow_1_instance_1,
-            approval_workflow_stage=cls.approval_workflow_1_stage_2,
+        cls.approval_workflow_1_stage_instance_2 = ApprovalWorkflowStage.objects.create(
+            approval_workflow=cls.approval_workflow_1_instance_1,
+            approval_workflow_stage_definition=cls.approval_workflow_1_stage_2_definition,
             state=ApprovalWorkflowStateChoices.PENDING,
         )
-        cls.approval_workflow_1_stage_instance_3 = ApprovalWorkflowStageInstance.objects.create(
-            approval_workflow_instance=cls.approval_workflow_1_instance_1,
-            approval_workflow_stage=cls.approval_workflow_1_stage_3,
+        cls.approval_workflow_1_stage_instance_3 = ApprovalWorkflowStage.objects.create(
+            approval_workflow=cls.approval_workflow_1_instance_1,
+            approval_workflow_stage_definition=cls.approval_workflow_1_stage_3_definition,
             state=ApprovalWorkflowStateChoices.PENDING,
         )
-        cls.approval_workflow_2_stage_instance_1 = ApprovalWorkflowStageInstance.objects.create(
-            approval_workflow_instance=cls.approval_workflow_1_instance_2,
-            approval_workflow_stage=cls.approval_workflow_1_stage_1,
+        cls.approval_workflow_2_stage_instance_1 = ApprovalWorkflowStage.objects.create(
+            approval_workflow=cls.approval_workflow_1_instance_2,
+            approval_workflow_stage_definition=cls.approval_workflow_1_stage_1_definition,
             state=ApprovalWorkflowStateChoices.DENIED,
             decision_date=datetime(2025, 4, 15, 10, 30, 0, tzinfo=ZoneInfo("America/New_York")),
         )
-        cls.approval_workflow_2_stage_instance_2 = ApprovalWorkflowStageInstance.objects.create(
-            approval_workflow_instance=cls.approval_workflow_1_instance_2,
-            approval_workflow_stage=cls.approval_workflow_1_stage_2,
+        cls.approval_workflow_2_stage_instance_2 = ApprovalWorkflowStage.objects.create(
+            approval_workflow=cls.approval_workflow_1_instance_2,
+            approval_workflow_stage_definition=cls.approval_workflow_1_stage_2_definition,
             state=ApprovalWorkflowStateChoices.PENDING,
         )
-        cls.approval_workflow_2_stage_instance_3 = ApprovalWorkflowStageInstance.objects.create(
-            approval_workflow_instance=cls.approval_workflow_1_instance_2,
-            approval_workflow_stage=cls.approval_workflow_1_stage_3,
+        cls.approval_workflow_2_stage_instance_3 = ApprovalWorkflowStage.objects.create(
+            approval_workflow=cls.approval_workflow_1_instance_2,
+            approval_workflow_stage_definition=cls.approval_workflow_1_stage_3_definition,
             state=ApprovalWorkflowStateChoices.PENDING,
         )
-        cls.approval_workflow_3_stage_instance_1 = ApprovalWorkflowStageInstance.objects.create(
-            approval_workflow_instance=cls.approval_workflow_1_instance_3,
-            approval_workflow_stage=cls.approval_workflow_3_stage_1,
+        cls.approval_workflow_3_stage_instance_1 = ApprovalWorkflowStage.objects.create(
+            approval_workflow=cls.approval_workflow_1_instance_3,
+            approval_workflow_stage_definition=cls.approval_workflow_3_stage_1_definition,
             state=ApprovalWorkflowStateChoices.DENIED,
             decision_date=datetime(2025, 4, 14, 10, 30, 0, tzinfo=ZoneInfo("America/New_York")),
         )
-        ApprovalWorkflowStageInstanceResponse.objects.create(
-            approval_workflow_stage_instance=cls.approval_workflow_1_stage_instance_1,
+        ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=cls.approval_workflow_1_stage_instance_1,
             user=cls.users[0],
             comments="Approved by user 1",
             state=ApprovalWorkflowStateChoices.APPROVED,
         )
-        ApprovalWorkflowStageInstanceResponse.objects.create(
-            approval_workflow_stage_instance=cls.approval_workflow_1_stage_instance_2,
+        ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=cls.approval_workflow_1_stage_instance_2,
             user=cls.users[1],
             comments="Denied by user 2",
             state=ApprovalWorkflowStateChoices.DENIED,
         )
-        ApprovalWorkflowStageInstanceResponse.objects.create(
-            approval_workflow_stage_instance=cls.approval_workflow_1_stage_instance_1,
+        ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=cls.approval_workflow_1_stage_instance_1,
             user=cls.users[1],
             comments="Approved by user 2",
             state=ApprovalWorkflowStateChoices.APPROVED,
         )
-        ApprovalWorkflowStageInstanceResponse.objects.create(
-            approval_workflow_stage_instance=cls.approval_workflow_1_stage_instance_2,
+        ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=cls.approval_workflow_1_stage_instance_2,
             user=cls.users[0],
             comments="Approved by user 1",
             state=ApprovalWorkflowStateChoices.APPROVED,
         )
-        ApprovalWorkflowStageInstanceResponse.objects.create(
-            approval_workflow_stage_instance=cls.approval_workflow_1_stage_instance_2,
+        ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=cls.approval_workflow_1_stage_instance_2,
             user=cls.users[2],
             comments="Denied by user 3",
             state=ApprovalWorkflowStateChoices.DENIED,
         )
-        ApprovalWorkflowStageInstanceResponse.objects.create(
-            approval_workflow_stage_instance=cls.approval_workflow_1_stage_instance_2,
+        ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=cls.approval_workflow_1_stage_instance_2,
             user=cls.users[2],
             comments="Approved by user 3",
             state=ApprovalWorkflowStateChoices.APPROVED,
         )
-        ApprovalWorkflowStageInstanceResponse.objects.create(
-            approval_workflow_stage_instance=cls.approval_workflow_1_stage_instance_3,
+        ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=cls.approval_workflow_1_stage_instance_3,
             user=cls.users[3],
             comments="",
             state=ApprovalWorkflowStateChoices.PENDING,
         )
 
 
-class ApprovalWorkflowFilterTestCase(ApprovalWorkflowTestMixin, FilterTestCases.FilterTestCase):
-    """ApprovalWorkflowFilterSet Test Case."""
+class ApprovalWorkflowDefinitionFilterTestCase(ApprovalWorkflowTestMixin, FilterTestCases.FilterTestCase):
+    """ApprovalWorkflowDefinitionFilterSet Test Case."""
 
-    queryset = ApprovalWorkflow.objects.all()
-    filterset = ApprovalWorkflowFilterSet
+    queryset = ApprovalWorkflowDefinition.objects.all()
+    filterset = ApprovalWorkflowDefinitionFilterSet
     generic_filter_tests = (
         ("id",),
         ("created",),
@@ -429,16 +429,16 @@ class ApprovalWorkflowFilterTestCase(ApprovalWorkflowTestMixin, FilterTestCases.
         )
 
 
-class ApprovalWorkflowStageFilterTestCase(ApprovalWorkflowTestMixin, FilterTestCases.FilterTestCase):
-    """ApprovalWorkflowStageFilterSet Test Case."""
+class ApprovalWorkflowStageDefinitionFilterTestCase(ApprovalWorkflowTestMixin, FilterTestCases.FilterTestCase):
+    """ApprovalWorkflowStageDefinitionFilterSet Test Case."""
 
-    queryset = ApprovalWorkflowStage.objects.all()
-    filterset = ApprovalWorkflowStageFilterSet
+    queryset = ApprovalWorkflowStageDefinition.objects.all()
+    filterset = ApprovalWorkflowStageDefinitionFilterSet
     generic_filter_tests = (
         ("id",),
         ("created",),
         ("last_updated",),
-        ("approval_workflow",),
+        ("approval_workflow_definition",),
         ("weight",),
         ("name",),
         ("min_approvers",),
@@ -447,16 +447,16 @@ class ApprovalWorkflowStageFilterTestCase(ApprovalWorkflowTestMixin, FilterTestC
     )
 
 
-class ApprovalWorkflowInstanceFilterTestCase(ApprovalWorkflowTestMixin, FilterTestCases.FilterTestCase):
-    """ApprovalWorkflowInstanceFilterSet Test Case."""
+class ApprovalWorkflowFilterTestCase(ApprovalWorkflowTestMixin, FilterTestCases.FilterTestCase):
+    """ApprovalWorkflowFilterSet Test Case."""
 
-    queryset = ApprovalWorkflowInstance.objects.all()
-    filterset = ApprovalWorkflowInstanceFilterSet
+    queryset = ApprovalWorkflow.objects.all()
+    filterset = ApprovalWorkflowFilterSet
     generic_filter_tests = (
         ("id",),
         ("created",),
         ("last_updated",),
-        ("approval_workflow",),
+        ("approval_workflow_definition",),
         # ("object_under_review_content_type",), # TODO we only have two values so far
         ("object_under_review_object_id",),
         ("current_state",),
@@ -477,30 +477,30 @@ class ApprovalWorkflowInstanceFilterTestCase(ApprovalWorkflowTestMixin, FilterTe
         )
 
 
-class ApprovalWorkflowStageInstanceFilterTestCase(ApprovalWorkflowTestMixin, FilterTestCases.FilterTestCase):
-    """ApprovalWorkflowStageInstanceFilterSet Test Case."""
+class ApprovalWorkflowStageFilterTestCase(ApprovalWorkflowTestMixin, FilterTestCases.FilterTestCase):
+    """ApprovalWorkflowStageFilterSet Test Case."""
 
-    queryset = ApprovalWorkflowStageInstance.objects.all()
-    filterset = ApprovalWorkflowStageInstanceFilterSet
+    queryset = ApprovalWorkflowStage.objects.all()
+    filterset = ApprovalWorkflowStageFilterSet
     generic_filter_tests = (
         ("id",),
         ("created",),
         ("last_updated",),
-        ("approval_workflow_instance",),
-        ("approval_workflow_stage",),
+        ("approval_workflow",),
+        ("approval_workflow_stage_definition",),
         ("state",),
         ("decision_date",),
     )
 
 
-class ApprovalWorkflowStageInstanceResponseFilterTestCase(ApprovalWorkflowTestMixin, FilterTestCases.FilterTestCase):
-    """ApprovalWorkflowStageInstanceResponseFilterSet Test Case."""
+class ApprovalWorkflowStageResponseFilterTestCase(ApprovalWorkflowTestMixin, FilterTestCases.FilterTestCase):
+    """ApprovalWorkflowStageResponseFilterSet Test Case."""
 
-    queryset = ApprovalWorkflowStageInstanceResponse.objects.all()
-    filterset = ApprovalWorkflowStageInstanceResponseFilterSet
+    queryset = ApprovalWorkflowStageResponse.objects.all()
+    filterset = ApprovalWorkflowStageResponseFilterSet
     generic_filter_tests = (
         ("id",),
-        ("approval_workflow_stage_instance",),
+        ("approval_workflow_stage",),
         ("user",),
         ("comments",),
         ("state",),

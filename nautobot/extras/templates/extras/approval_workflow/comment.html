@@ -1,0 +1,9 @@
+{% extends 'utilities/comment_form.html' %}
+{% load form_helpers %}
+
+{% block title %}Comment on {{ obj_type }}{% endblock %}
+
+{% block message %}
+    <p>Making a comment on <strong>{{ obj }}</strong> for <strong> {{ object_under_review }}</strong>.</p>
+    {% block message_extra %}{% endblock %}
+{% endblock %}

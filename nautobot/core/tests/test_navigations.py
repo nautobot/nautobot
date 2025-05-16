@@ -39,7 +39,11 @@ class NavMenuTestCase(TestCase):
                                 "Wireless Controllers",
                             }:
                                 expected_name = bettertitle(view_model._meta.verbose_name_plural)
-                                if expected_name == "VM Interfaces":
+                                if expected_name == "Approval Workflow Definitions":
+                                    expected_name = "Workflow Definitions"
+                                elif expected_name == "Approval Workflow Stages":
+                                    expected_name = "Approval Dashboard"
+                                elif expected_name == "VM Interfaces":
                                     expected_name = "Interfaces"
                                 elif expected_name == "Object Changes":
                                     expected_name = "Change Log"

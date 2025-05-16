@@ -49,10 +49,10 @@ from nautobot.extras.constants import APPROVAL_WORKFLOW_MODELS
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
     ApprovalWorkflow,
-    ApprovalWorkflowInstance,
+    ApprovalWorkflowDefinition,
     ApprovalWorkflowStage,
-    ApprovalWorkflowStageInstance,
-    ApprovalWorkflowStageInstanceResponse,
+    ApprovalWorkflowStageDefinition,
+    ApprovalWorkflowStageResponse,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -117,12 +117,42 @@ logger = logging.getLogger(__name__)
 #
 
 
-class ApprovalWorkflowSerializer(NautobotModelSerializer):
-    """ApprovalWorkflow Serializer."""
+class ApprovalWorkflowDefinitionSerializer(NautobotModelSerializer):
+    """ApprovalWorkflowDefinition Serializer."""
 
     model_content_type = ContentTypeField(
         queryset=ContentType.objects.filter(APPROVAL_WORKFLOW_MODELS).order_by("app_label", "model"),
     )
+
+    class Meta:
+        """Meta attributes."""
+
+        model = ApprovalWorkflowDefinition
+        fields = "__all__"
+
+
+class ApprovalWorkflowStageDefinitionSerializer(NautobotModelSerializer):
+    """ApprovalWorkflowStageDefinition Serializer."""
+
+    approver_group = GroupField(
+        queryset=Group.objects.all(),
+        help_text="The group that will be assigned to approve this stage.",
+    )
+
+    class Meta:
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStageDefinition
+        fields = "__all__"
+
+
+class ApprovalWorkflowSerializer(NautobotModelSerializer):
+    """ApprovalWorkflow Serializer."""
+
+    object_under_review_content_type = ContentTypeField(
+        queryset=ContentType.objects.filter(APPROVAL_WORKFLOW_MODELS).order_by("app_label", "model"),
+    )
+    decision_date = serializers.DateTimeField(read_only=True, allow_null=True)
 
     class Meta:
         """Meta attributes."""
@@ -134,10 +164,7 @@ class ApprovalWorkflowSerializer(NautobotModelSerializer):
 class ApprovalWorkflowStageSerializer(NautobotModelSerializer):
     """ApprovalWorkflowStage Serializer."""
 
-    approver_group = GroupField(
-        queryset=Group.objects.all(),
-        help_text="The group that will be assigned to approve this stage.",
-    )
+    decision_date = serializers.DateTimeField(read_only=True, allow_null=True)
 
     class Meta:
         """Meta attributes."""
@@ -146,40 +173,13 @@ class ApprovalWorkflowStageSerializer(NautobotModelSerializer):
         fields = "__all__"
 
 
-class ApprovalWorkflowInstanceSerializer(NautobotModelSerializer):
-    """ApprovalWorkflowInstance Serializer."""
-
-    object_under_review_content_type = ContentTypeField(
-        queryset=ContentType.objects.filter(APPROVAL_WORKFLOW_MODELS).order_by("app_label", "model"),
-    )
-    decision_date = serializers.DateTimeField(read_only=True, allow_null=True)
+class ApprovalWorkflowStageResponseSerializer(ValidatedModelSerializer):
+    """ApprovalWorkflowStageResponse Serializer."""
 
     class Meta:
         """Meta attributes."""
 
-        model = ApprovalWorkflowInstance
-        fields = "__all__"
-
-
-class ApprovalWorkflowStageInstanceSerializer(NautobotModelSerializer):
-    """ApprovalWorkflowStageInstance Serializer."""
-
-    decision_date = serializers.DateTimeField(read_only=True, allow_null=True)
-
-    class Meta:
-        """Meta attributes."""
-
-        model = ApprovalWorkflowStageInstance
-        fields = "__all__"
-
-
-class ApprovalWorkflowStageInstanceResponseSerializer(ValidatedModelSerializer):
-    """ApprovalWorkflowStageInstanceResponse Serializer."""
-
-    class Meta:
-        """Meta attributes."""
-
-        model = ApprovalWorkflowStageInstanceResponse
+        model = ApprovalWorkflowStageResponse
         fields = "__all__"
 
 

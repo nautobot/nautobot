@@ -14,52 +14,22 @@ menu_items = (
                 weight=50,
                 items=(
                     NavMenuItem(
-                        link="extras:approvalworkflow_list",
-                        name="Approval Workflows",
+                        link="extras:approvalworkflowdefinition_list",
+                        name="Workflow Definitions",
                         weight=100,
-                        permissions=["extras.view_approvalworkflow"],
+                        permissions=["extras.view_approvalworkflowdefinition"],
                         buttons=(
                             NavMenuAddButton(
-                                link="extras:approvalworkflow_add",
-                                permissions=["extras.add_approvalworkflow"],
+                                link="extras:approvalworkflowdefinition_add",
+                                permissions=["extras.add_approvalworkflowdefinition"],
                             ),
                         ),
                     ),
                     NavMenuItem(
-                        link="extras:approvalworkflowstage_list",
-                        name="Approval Workflow Stages",
+                        link="extras:approver_dashboard",
+                        name="Approval Dashboard",
                         weight=200,
-                        permissions=["extras.view_approvalworkflowstage"],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="extras:approvalworkflowstage_add",
-                                permissions=["extras.add_approvalworkflowstage"],
-                            ),
-                        ),
-                    ),
-                    NavMenuItem(
-                        link="extras:approvalworkflowinstance_list",
-                        name="Approval Workflow Instances",
-                        weight=300,
-                        permissions=["extras.view_approvalworkflowinstance"],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="extras:approvalworkflowinstance_add",
-                                permissions=["extras.add_approvalworkflowinstance"],
-                            ),
-                        ),
-                    ),
-                    NavMenuItem(
-                        link="extras:approvalworkflowstageinstance_list",
-                        name="Approval Workflow Stage Instances",
-                        weight=400,
-                        permissions=["extras.view_approvalworkflowstageinstance"],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="extras:approvalworkflowstageinstance_add",
-                                permissions=["extras.add_approvalworkflowstageinstance"],
-                            ),
-                        ),
+                        permissions=["extras.view_approvalworkflow"],
                     ),
                 ),
             ),

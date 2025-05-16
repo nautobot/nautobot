@@ -21,7 +21,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name="ApprovalWorkflow",
+            name="ApprovalWorkflowDefinition",
             fields=[
                 (
                     "id",
@@ -50,7 +50,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 "ordering": ["name"],
-                "verbose_name": "Approval Workflow",
+                "verbose_name": "Approval Workflow Definition",
             },
             bases=(
                 nautobot.extras.models.mixins.DynamicGroupMixin,
@@ -59,7 +59,7 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.CreateModel(
-            name="ApprovalWorkflowInstance",
+            name="ApprovalWorkflow",
             fields=[
                 (
                     "id",
@@ -76,11 +76,11 @@ class Migration(migrations.Migration):
                 ("object_under_review_object_id", models.UUIDField(db_index=True)),
                 ("current_state", models.CharField(default="Pending", max_length=255)),
                 (
-                    "approval_workflow",
+                    "approval_workflow_definition",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.PROTECT,
-                        related_name="approval_workflow_instances",
-                        to="extras.approvalworkflow",
+                        related_name="approval_workflows",
+                        to="extras.approvalworkflowdefinition",
                     ),
                 ),
                 ("decision_date", models.DateTimeField(blank=True, null=True)),
@@ -93,14 +93,78 @@ class Migration(migrations.Migration):
                         to="contenttypes.contenttype",
                     ),
                 ),
-                ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
+                (
+                    "user",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="approval_workflows",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                ("user_name", models.CharField(editable=False, max_length=150, db_index=True)),
             ],
             options={
-                "verbose_name": "Approval Workflow Instance",
+                "verbose_name": "Approval Workflow",
                 "unique_together": {
-                    ("approval_workflow", "object_under_review_content_type", "object_under_review_object_id")
+                    (
+                        "approval_workflow_definition",
+                        "object_under_review_content_type",
+                        "object_under_review_object_id",
+                    )
                 },
-                "ordering": ["approval_workflow"],
+                "ordering": ["approval_workflow_definition"],
+            },
+            bases=(
+                nautobot.extras.models.mixins.DynamicGroupMixin,
+                nautobot.extras.models.mixins.NotesMixin,
+                models.Model,
+            ),
+        ),
+        migrations.CreateModel(
+            name="ApprovalWorkflowStageDefinition",
+            fields=[
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                ("created", models.DateTimeField(auto_now_add=True, null=True)),
+                ("last_updated", models.DateTimeField(auto_now=True, null=True)),
+                ("weight", models.PositiveIntegerField()),
+                ("name", models.CharField(max_length=255)),
+                ("min_approvers", models.PositiveIntegerField()),
+                ("denial_message", models.CharField(blank=True, max_length=255)),
+                (
+                    "approval_workflow_definition",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="approval_workflow_stage_definitions",
+                        to="extras.approvalworkflowdefinition",
+                    ),
+                ),
+                (
+                    "_custom_field_data",
+                    models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
+                ),
+                (
+                    "approver_group",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="approval_workflow_stage_definitions",
+                        to="auth.group",
+                    ),
+                ),
+            ],
+            options={
+                "verbose_name": "Approval Workflow Stage Definition",
+                "unique_together": {
+                    ("approval_workflow_definition", "name"),
+                    ("approval_workflow_definition", "weight"),
+                },
+                "ordering": ["approval_workflow_definition", "weight"],
             },
             bases=(
                 nautobot.extras.models.mixins.DynamicGroupMixin,
@@ -123,32 +187,29 @@ class Migration(migrations.Migration):
                     "_custom_field_data",
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
-                ("weight", models.PositiveIntegerField()),
-                ("name", models.CharField(max_length=255)),
-                ("min_approvers", models.PositiveIntegerField()),
-                ("denial_message", models.CharField(blank=True, max_length=255)),
+                ("state", models.CharField(default="Pending", max_length=255)),
+                ("decision_date", models.DateTimeField(blank=True, null=True)),
                 (
                     "approval_workflow",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.PROTECT,
+                        on_delete=django.db.models.deletion.CASCADE,
                         related_name="approval_workflow_stages",
                         to="extras.approvalworkflow",
                     ),
                 ),
                 (
-                    "approver_group",
+                    "approval_workflow_stage_definition",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.PROTECT,
+                        on_delete=django.db.models.deletion.CASCADE,
                         related_name="approval_workflow_stages",
-                        to="auth.group",
+                        to="extras.approvalworkflowstagedefinition",
                     ),
                 ),
-                ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={
                 "verbose_name": "Approval Workflow Stage",
-                "unique_together": {("approval_workflow", "name"), ("approval_workflow", "weight")},
-                "ordering": ["approval_workflow", "weight"],
+                "unique_together": {("approval_workflow", "approval_workflow_stage_definition")},
+                "ordering": ["approval_workflow", "approval_workflow_stage_definition__weight"],
             },
             bases=(
                 nautobot.extras.models.mixins.DynamicGroupMixin,
@@ -157,52 +218,7 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.CreateModel(
-            name="ApprovalWorkflowStageInstance",
-            fields=[
-                (
-                    "id",
-                    models.UUIDField(
-                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
-                    ),
-                ),
-                ("created", models.DateTimeField(auto_now_add=True, null=True)),
-                ("last_updated", models.DateTimeField(auto_now=True, null=True)),
-                (
-                    "_custom_field_data",
-                    models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
-                ),
-                ("state", models.CharField(default="Pending", max_length=255)),
-                ("decision_date", models.DateTimeField(blank=True, null=True)),
-                (
-                    "approval_workflow_instance",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.PROTECT,
-                        related_name="approval_workflow_stage_instances",
-                        to="extras.approvalworkflowinstance",
-                    ),
-                ),
-                (
-                    "approval_workflow_stage",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.PROTECT,
-                        related_name="approval_workflow_stage_instances",
-                        to="extras.approvalworkflowstage",
-                    ),
-                ),
-                ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
-            ],
-            options={
-                "verbose_name": "Approval Workflow Stage Instance",
-                "unique_together": {("approval_workflow_instance", "approval_workflow_stage")},
-            },
-            bases=(
-                nautobot.extras.models.mixins.DynamicGroupMixin,
-                nautobot.extras.models.mixins.NotesMixin,
-                models.Model,
-            ),
-        ),
-        migrations.CreateModel(
-            name="ApprovalWorkflowStageInstanceResponse",
+            name="ApprovalWorkflowStageResponse",
             fields=[
                 (
                     "id",
@@ -213,25 +229,26 @@ class Migration(migrations.Migration):
                 ("comments", models.CharField(blank=True, max_length=255)),
                 ("state", models.CharField(default="Pending", max_length=255)),
                 (
-                    "approval_workflow_stage_instance",
+                    "approval_workflow_stage",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.PROTECT,
-                        related_name="approval_workflow_stage_instance_responses",
-                        to="extras.approvalworkflowstageinstance",
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="approval_workflow_stage_responses",
+                        to="extras.approvalworkflowstage",
                     ),
                 ),
                 (
                     "user",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.PROTECT,
-                        related_name="approval_workflow_stage_instance_responses",
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="approval_workflow_stage_responses",
                         to=settings.AUTH_USER_MODEL,
                     ),
                 ),
             ],
             options={
+                "ordering": ["approval_workflow_stage", "user"],
                 "db_table": "extras_approvaluserresponse",
-                "verbose_name": "Approval Workflow Stage Instance Response",
+                "verbose_name": "Approval Workflow Stage Response",
             },
         ),
     ]
