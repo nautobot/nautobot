@@ -16,7 +16,12 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
-from nautobot.core.templatetags.helpers import render_boolean, render_json, render_markdown
+from nautobot.core.templatetags.helpers import (
+    render_boolean,
+    render_json,
+    render_markdown,
+)
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.tenancy.tables import TenantColumn
 
 from .choices import MetadataTypeDataTypeChoices
@@ -724,7 +729,9 @@ class JobTable(BaseTable):
     time_limit = tables.Column()
     default_job_queue = tables.Column(linkify=True)
     job_queues_count = LinkedCountColumn(
-        viewname="extras:jobqueue_list", url_params={"jobs": "pk"}, verbose_name="Job Queues"
+        viewname="extras:jobqueue_list",
+        url_params={"jobs": "pk"},
+        verbose_name="Job Queues",
     )
     last_run = tables.TemplateColumn(
         accessor="latest_result",
@@ -904,18 +911,20 @@ class JobResultTable(BaseTable):
         """
         Define custom rendering for the summary column.
         """
-        return format_html(
-            """<label class="label label-default">{}</label>
-            <label class="label label-success">{}</label>
-            <label class="label label-info">{}</label>
-            <label class="label label-warning">{}</label>
-            <label class="label label-danger">{}</label>""",
-            record.debug_log_count,
-            record.success_log_count,
-            record.info_log_count,
-            record.warning_log_count,
-            record.error_log_count,
-        )
+        if get_settings_or_config("JOB_RESULTS_SUMMARY_FIELD_ENABLED"):
+            return format_html(
+                """<label class="label label-default">{}</label>
+                <label class="label label-success">{}</label>
+                <label class="label label-info">{}</label>
+                <label class="label label-warning">{}</label>
+                <label class="label label-danger">{}</label>""",
+                record.debug_log_count,
+                record.success_log_count,
+                record.info_log_count,
+                record.warning_log_count,
+                record.error_log_count,
+            )
+        return None
 
     class Meta(BaseTable.Meta):
         model = JobResult
@@ -1050,7 +1059,11 @@ class ObjectMetadataTable(BaseTable):
             return render_boolean(record.value)
         elif record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
             if record.contact:
-                return format_html('<a href="{}">{}</a>', record.contact.get_absolute_url(), record.contact)
+                return format_html(
+                    '<a href="{}">{}</a>',
+                    record.contact.get_absolute_url(),
+                    record.contact,
+                )
             else:
                 return format_html('<a href="{}">{}</a>', record.team.get_absolute_url(), record.team)
         return record.value
