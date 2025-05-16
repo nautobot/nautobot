@@ -20,9 +20,8 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.encoding import iri_to_uri
 from django.utils.functional import cached_property
-from django.utils.html import format_html
+from django.utils.html import escape, format_html
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.utils.safestring import mark_safe
 from django.views.generic import View
 from django_tables2 import RequestConfig
 from rest_framework.decorators import action
@@ -36,7 +35,7 @@ from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
-from nautobot.core.templatetags.helpers import has_perms, hyperlinked_object
+from nautobot.core.templatetags.helpers import has_perms
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.lookup import get_form_for_model
@@ -4131,7 +4130,6 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            # Unified panel for Power Feed + Connected Device
             object_detail.KeyValueTablePanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
@@ -4140,7 +4138,7 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
             ),
             object_detail.ObjectFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
-                weight=300,
+                weight=400,
                 label="Electrical Characteristics",
                 fields=["supply", "voltage", "amperage", "phase", "max_utilization"],
                 value_transforms={
@@ -4149,7 +4147,6 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
                     "max_utilization": [lambda p: f"{p}%"],
                 },
             ),
-            # Connection panel remains as-is
             object_detail.KeyValueTablePanel(
                 section=SectionChoices.RIGHT_HALF,
                 weight=200,
@@ -4161,70 +4158,68 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
-
         if not instance:
             return context
 
-        # Build Power Feed details
+        # Safe foreign key access
+        power_panel = getattr(instance, "power_panel", None)
+        rack = getattr(instance, "rack", None)
+        status = getattr(instance, "status", None)
+
         powerfeed_data = {
-            "Power Panel": instance.power_panel,
-            "Rack": instance.rack,
+            "Power Panel": power_panel or format_html('<span class="text-muted">None</span>'),
+            "Rack": rack or format_html('<span class="text-muted">None</span>'),
             "Type": format_html(
                 '<span class="label label-{}">{}</span>',
-                instance.get_type_class(),
-                instance.get_type_display(),
+                escape(instance.get_type_class() or "default"),
+                escape(instance.get_type_display() or "Unknown"),
             ),
-            "Status": helpers.hyperlinked_object_with_color(instance.status),
+            "Status": helpers.hyperlinked_object_with_color(status)
+            if status
+            else format_html('<span class="text-muted">Unknown</span>'),
         }
 
-        # Merge Connected Device data
         connected_device_data = self.get_connected_device_data(instance)
         powerfeed_data.update(connected_device_data)
 
-        # Assign merged data to context
         context["powerfeed_connected_data"] = powerfeed_data
         context["connection_data"] = self._get_connection_data(request, instance)
-
         return context
 
     def get_connected_device_data(self, instance):
-        """
-        Retrieves and formats the connected device data.
-        """
         connected_device = self._get_connected_device_html(instance)
         utilization_label = self._get_utilization_display(instance)
 
         return {
-            "Connected Device": mark_safe(connected_device),
-            "Utilization (Allocated)": mark_safe(utilization_label),
+            "Connected Device": connected_device,
+            "Utilization (Allocated)": utilization_label,
         }
 
     def _get_connected_device_html(self, instance):
-        """
-        Returns HTML for the connected device, including the device name and power port.
-        """
         if instance.connected_endpoint:
-            device = instance.connected_endpoint.device
+            device = getattr(instance.connected_endpoint, "device", None)
             power_port = instance.connected_endpoint
-
             if device and power_port:
-                return f"{hyperlinked_object(device)} ({power_port.name})"
-        return '<span class="text-muted">None</span>'
+                return format_html(
+                    "{} ({})",
+                    helpers.hyperlinked_object(device),
+                    escape(power_port.name),
+                )
+        return format_html('<span class="text-muted">None</span>')
 
     def _get_utilization_display(self, instance):
         endpoint = getattr(instance, "connected_endpoint", None)
         if not endpoint or not hasattr(endpoint, "get_power_draw"):
-            return '<span class="text-muted">N/A</span>'
+            return format_html('<span class="text-muted">N/A</span>')
 
         utilization = endpoint.get_power_draw()
         if not utilization or "allocated" not in utilization:
-            return '<span class="text-muted">N/A</span>'
+            return format_html('<span class="text-muted">N/A</span>')
 
         allocated = utilization["allocated"]
         available = instance.available_power or 0
 
         if available > 0:
-            # Render the utilization bar only (without showing the % text)
             graph_html = render_to_string(
                 "utilities/templatetags/utilization_graph.html",
                 helpers.utilization_graph_raw_data(allocated, available),
@@ -4233,10 +4228,9 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
                 "{}VA / {}VA {}",
                 allocated,
                 available,
-                graph_html,  # just the bar, no percentage text
+                graph_html,
             )
-
-        return f"{allocated}VA / {available}VA"
+        return format_html("{}VA / {}VA", allocated, available)
 
     def _get_connection_data(self, request, instance):
         if not instance:
@@ -4244,32 +4238,35 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
 
         if instance.cable:
             trace_url = reverse("dcim:powerfeed_trace", kwargs={"pk": instance.pk})
-            cable_html = mark_safe(
-                f"{helpers.hyperlinked_object(instance.cable)} "
-                f"<a href='{trace_url}' class='btn btn-primary btn-xs' title='Trace'>"
-                f"<i class='mdi mdi-transit-connection-variant'></i></a>"
+            cable_html = format_html(
+                '{} <a href="{}" class="btn btn-primary btn-xs" title="Trace">'
+                '<i class="mdi mdi-transit-connection-variant"></i></a>',
+                helpers.hyperlinked_object(instance.cable),
+                trace_url,
             )
 
             data = {"Cable": cable_html}
 
             endpoint = getattr(instance, "connected_endpoint", None)
             if endpoint:
+                endpoint_type = "Device" if getattr(endpoint, "device", None) else "Module"
                 data.update(
                     {
-                        "Device" if endpoint.device else "Module": helpers.hyperlinked_object(
-                            endpoint.device or endpoint.module
+                        endpoint_type: helpers.hyperlinked_object(
+                            getattr(endpoint, "device", None) or getattr(endpoint, "module", None)
                         ),
                         "Power Port": helpers.hyperlinked_object(endpoint),
-                        "Type": getattr(endpoint, "get_type_display", lambda: "")(),
-                        "Description": getattr(endpoint, "description", ""),
-                        "Path Status": mark_safe(
-                            '<span class="label label-success">Reachable</span>'
+                        "Type": escape(getattr(endpoint, "get_type_display", lambda: "")()),
+                        "Description": escape(getattr(endpoint, "description", "")),
+                        "Path Status": format_html(
+                            '<span class="label label-{}">{}</span>',
+                            "success" if getattr(instance, "path", None) and instance.path.is_active else "danger",
+                            "Reachable"
                             if getattr(instance, "path", None) and instance.path.is_active
-                            else '<span class="label label-danger">Not Reachable</span>'
+                            else "Not Reachable",
                         ),
                     }
                 )
-
             return data
 
         if request.user.has_perm("dcim.add_cable"):
@@ -4280,11 +4277,12 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
                 )
                 + f"?return_url={instance.get_absolute_url()}"
             )
-            connect_link = (
-                f'<a href="{connect_url}" class="btn btn-primary btn-sm pull-right">'
-                f'<span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect</a>'
+            connect_link = format_html(
+                '<a href="{}" class="btn btn-primary btn-sm pull-right">'
+                '<span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect</a>',
+                connect_url,
             )
-            return {"Connection": mark_safe(f"Not connected {connect_link}")}
+            return {"Connection": format_html("Not connected {}", connect_link)}
 
         return {"Connection": "Not connected"}
 
