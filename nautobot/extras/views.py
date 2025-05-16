@@ -46,7 +46,7 @@ from nautobot.core.utils.lookup import (
 )
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import is_single_choice_field, normalize_querydict
-from nautobot.core.views import generic, viewsets
+from nautobot.core.views import generic, mixins, viewsets
 from nautobot.core.views.mixins import (
     GetReturnURLMixin,
     ObjectBulkCreateViewMixin,
@@ -1984,10 +1984,19 @@ class SavedViewUIViewSet(
         return super().destroy(request, *args, **kwargs)
 
 
-class ScheduledJobUIViewSet(NautobotUIViewSet):
-    queryset = ScheduledJob.objects.all()
-    filterset_class = filters.ScheduledJobFilterSet
+class ScheduledJobUIViewSet(
+    mixins.ObjectDetailViewMixin,
+    mixins.ObjectListViewMixin,
+    mixins.ObjectEditViewMixin,
+    mixins.ObjectDestroyViewMixin,
+    mixins.ObjectBulkDestroyViewMixin,
+    mixins.ObjectBulkCreateViewMixin,
+    mixins.ObjectChangeLogViewMixin,
+    mixins.ObjectNotesViewMixin,
+):
     filterset_form_class = forms.ScheduledJobFilterForm
+    queryset = ScheduledJob.objects.enabled()
+    filterset_class = filters.ScheduledJobFilterSet
     serializer_class = serializers.ScheduledJobSerializer
     table_class = tables.ScheduledJobTable
     action_buttons = ()
