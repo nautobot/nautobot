@@ -30,6 +30,7 @@ from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_dri
 from nautobot.extras.models import ChangeLoggedModel, ConfigContextModel, RoleField, StatusField
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
+from nautobot.wireless.models import ControllerManagedDeviceGroupWirelessNetworkAssignment
 
 from .device_components import (
     ConsolePort,
@@ -1453,6 +1454,12 @@ class Controller(PrimaryModel):
         if not self.capabilities:
             return format_html('<span class="text-muted">&mdash;</span>')
         return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in self.capabilities))
+
+    @property
+    def device_group_wireless_network_assignments(self):
+        return ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
+            controller_managed_device_group__controller=self
+        )
 
 
 @extras_features(
