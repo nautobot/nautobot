@@ -2312,14 +2312,39 @@ class MetadataTypeUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.MetadataTypeSerializer
     table_class = tables.MetadataTypeTable
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                exclude_fields=("content_types",),
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                context_table_key="choices",
+                table_title="Choices",
+            ),
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                fields=["content_types"],
+                label="Assignment",
+            ),
+        ),
+    )
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
 
-        if self.action in ("create", "update"):
-            if request.POST:
-                context["choices"] = forms.MetadataChoiceFormSet(data=request.POST, instance=instance)
-            else:
-                context["choices"] = forms.MetadataChoiceFormSet(instance=instance)
+        if instance is not None:
+            if self.action in ("create", "update"):
+                if request.POST:
+                    context["choices"] = forms.MetadataChoiceFormSet(data=request.POST, instance=instance)
+                else:
+                    context["choices"] = forms.MetadataChoiceFormSet(instance=instance)
+            elif self.action == "retrieve":
+                context["choices"] = tables.MetadataChoiceTable(instance.choices.all())
 
         return context
 
