@@ -3,8 +3,8 @@
 import graphene
 from graphene_django import DjangoObjectType
 
-from nautobot.vpn.models import VPNTunnelEndpoint
 from nautobot.vpn.filters import VPNTunnelEndpointFilterSet
+from nautobot.vpn.models import VPNTunnelEndpoint
 
 
 class VPNTunnelEndpointType(DjangoObjectType):
