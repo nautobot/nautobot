@@ -5,7 +5,6 @@ from nautobot.extras import views
 from nautobot.extras.models import (
     ConfigContext,
     ConfigContextSchema,
-    CustomField,
     DynamicGroup,
     GitRepository,
     GraphQLQuery,

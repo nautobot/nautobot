@@ -539,7 +539,7 @@ class ObjectAssignContactOrTeamView(generic.ObjectEditView):
 # Custom fields
 #
 
- 
+
 class CustomFieldUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.CustomFieldBulkEditForm
     queryset = CustomField.objects.all()
@@ -549,7 +549,7 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
     form_class = forms.CustomFieldForm
     table_class = tables.CustomFieldTable
     action_buttons = ("add",)
- 
+
     def get_extra_context(self, request, instance):
         ctx = super().get_extra_context(request, instance)
         if request.POST:
@@ -557,23 +557,23 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
         else:
             ctx["choices"] = forms.CustomFieldChoiceFormSet(instance=instance)
         return ctx
- 
+
     def update(self, request, *args, **kwargs):
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
         form = self.form_class(data=request.POST, files=request.FILES, instance=obj)
         restrict_form_fields(form, request.user)
- 
+
         if form.is_valid():
             logger.debug("Form validation was successful")
- 
+
             try:
                 with transaction.atomic():
                     object_created = not form.instance.present_in_database
                     obj = form.save()
- 
+
                     # Check that the new object conforms with any assigned object-level permissions
                     self.queryset.get(pk=obj.pk)
- 
+
                     # ---> BEGIN difference from ObjectEditView.post()
                     # Process the formsets for choices
                     ctx = self.get_extra_context(request, obj)
@@ -583,7 +583,7 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
                     else:
                         raise RuntimeError(choices.errors)
                     # <--- END difference from ObjectEditView.post()
- 
+
                 verb = "Created" if object_created else "Modified"
                 msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
@@ -592,26 +592,26 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
                 except AttributeError:
                     msg = format_html("{} {}", msg, obj)
                 messages.success(request, msg)
- 
+
                 if "_addanother" in request.POST:
                     # If the object has clone_fields, pre-populate a new instance of the form
                     if hasattr(obj, "clone_fields"):
                         url = f"{request.path}?{prepare_cloned_fields(obj)}"
                         return redirect(url)
- 
+
                     return redirect(request.get_full_path())
- 
+
                 return_url = form.cleaned_data.get("return_url")
                 if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
                     return redirect(iri_to_uri(return_url))
                 else:
                     return redirect(self.get_return_url(request, obj))
- 
+
             except ObjectDoesNotExist:
                 msg = "Object save failed due to object-level permissions violation"
                 logger.debug(msg)
                 form.add_error(None, msg)
- 
+
             # ---> BEGIN difference from ObjectEditView.post()
             except RuntimeError:
                 msg = "Errors encountered when saving custom field choices. See below."
@@ -625,10 +625,10 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
                 logger.debug(msg)
                 form.add_error(None, msg)
             # <--- END difference from ObjectEditView.post()
- 
+
         else:
             logger.debug("Form validation failed")
- 
+
         return render(
             request,
             self.get_template_names()[0],
@@ -641,7 +641,7 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
                 **self.get_extra_context(request, obj),
             },
         )
- 
+
 
 #
 # Custom Links
