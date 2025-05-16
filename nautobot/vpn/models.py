@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 from nautobot.apps.constants import CHARFIELD_MAX_LENGTH
-from nautobot.apps.models import BaseModel, extras_features, PrimaryModel, StatusField
+from nautobot.apps.models import BaseModel, extras_features, JSONArrayField, PrimaryModel, StatusField
 from nautobot.extras.models import RoleField
 from nautobot.vpn import choices
 
@@ -100,18 +100,21 @@ class VPNPhase1Policy(PrimaryModel):  # pylint: disable=too-many-ancestors
         default=False,
         help_text="Only applicable to IKEv1",
     )
-    encryption_algorithm = models.CharField(  # TODO try making them multichoice. Make it private field, and public property with list.
-        max_length=CHARFIELD_MAX_LENGTH,
-        choices=choices.EncryptionAlgorithmChoices,
+    encryption_algorithm = JSONArrayField(
+        base_field=models.CharField(choices=choices.EncryptionAlgorithmChoices),
         blank=True,
+        null=True,
     )
-    integrity_algorithm = models.CharField(  # TODO Same
-        max_length=CHARFIELD_MAX_LENGTH,
-        choices=choices.IntegrityAlgorithmChoices,
+    integrity_algorithm = JSONArrayField(
+        base_field=models.CharField(choices=choices.IntegrityAlgorithmChoices),
         blank=True,
+        null=True,
     )
-    dh_group = models.CharField(  # TODO Same, also ph2 policy.
-        max_length=CHARFIELD_MAX_LENGTH, choices=choices.DhGroupChoices, blank=True, verbose_name="Diffie-Hellman group"
+    dh_group = JSONArrayField(
+        base_field=models.CharField(choices=choices.DhGroupChoices),
+        blank=True,
+        null=True,
+        verbose_name="Diffie-Hellman group",
     )
     lifetime_seconds = models.PositiveIntegerField(blank=True, null=True, verbose_name="Lifetime (seconds)")
     lifetime_kb = models.PositiveIntegerField(blank=True, null=True, verbose_name="Lifetime (kilobytes)")
@@ -164,20 +167,20 @@ class VPNPhase2Policy(PrimaryModel):  # pylint: disable=too-many-ancestors
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
-    encryption_algorithm = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        choices=choices.EncryptionAlgorithmChoices,
+    encryption_algorithm = JSONArrayField(
+        base_field=models.CharField(choices=choices.EncryptionAlgorithmChoices),
         blank=True,
+        null=True,
     )
-    integrity_algorithm = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        choices=choices.IntegrityAlgorithmChoices,
+    integrity_algorithm = JSONArrayField(
+        base_field=models.CharField(choices=choices.IntegrityAlgorithmChoices),
         blank=True,
+        null=True,
     )
-    pfs_group = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        choices=choices.DhGroupChoices,
+    pfs_group = JSONArrayField(
+        base_field=models.CharField(choices=choices.DhGroupChoices),
         blank=True,
+        null=True,
         verbose_name="PFS group",
     )
     lifetime = models.PositiveIntegerField(blank=True, null=True, verbose_name="Lifetime (seconds)")
@@ -420,7 +423,7 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
         blank=True,
         null=True,
         verbose_name="Source IP Address",
-        help_text="Mutually Exclusive with Source FQDN."
+        help_text="Mutually Exclusive with Source FQDN.",
     )
     source_fqdn = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
@@ -496,11 +499,7 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
 
     def clean(self):
         if self.source_ipaddress and self.source_fqdn:
-            raise ValidationError(
-                "Source IP Address and Source FQDN are mutually exclusive fields. Select only one."
-            )
+            raise ValidationError("Source IP Address and Source FQDN are mutually exclusive fields. Select only one.")
         if not any([self.source_interface, self.source_ipaddress, self.source_fqdn]):
-            raise ValidationError(
-                "Source Interface or Source IP Address or Source FQDN Is required."
-            )
+            raise ValidationError("Source Interface or Source IP Address or Source FQDN Is required.")
         return super().clean()

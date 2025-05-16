@@ -10,6 +10,7 @@ from nautobot.apps.forms import (
     BulkEditNullBooleanSelect,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
+    JSONArrayFormField,
     NautobotBulkEditForm,
     NautobotFilterForm,
     NautobotModelForm,
@@ -127,24 +128,6 @@ class VPNPhase1PolicyForm(NautobotModelForm, TenancyForm):  # pylint: disable=to
         widget=StaticSelect2,
         label="IKE Version",
     )
-    encryption_algorithm = forms.ChoiceField(
-        required=False,
-        choices=add_blank_choice(choices.EncryptionAlgorithmChoices),
-        widget=StaticSelect2,
-        label="Encryption Algorithm",
-    )
-    integrity_algorithm = forms.ChoiceField(
-        required=False,
-        choices=add_blank_choice(choices.IntegrityAlgorithmChoices),
-        widget=StaticSelect2,
-        label="Integrity Algorithm",
-    )
-    dh_group = forms.ChoiceField(
-        required=False,
-        choices=add_blank_choice(choices.DhGroupChoices),
-        widget=StaticSelect2,
-        label="Diffie-Hellman Group",
-    )
     authentication_method = forms.ChoiceField(
         required=False,
         choices=add_blank_choice(choices.AuthenticationMethodChoices),
@@ -172,22 +155,22 @@ class VPNPhase1PolicyBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm): 
         label="Ike Version",
     )
     aggressive_mode = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect, label="Aggressive Mode")
-    encryption_algorithm = forms.ChoiceField(
+    encryption_algorithm = JSONArrayFormField(
+        choices=choices.EncryptionAlgorithmChoices,
+        base_field=forms.CharField(),
         required=False,
-        choices=add_blank_choice(choices.EncryptionAlgorithmChoices),
-        widget=StaticSelect2,
         label="Encryption Algorithm",
     )
-    integrity_algorithm = forms.ChoiceField(
+    integrity_algorithm = JSONArrayFormField(
+        choices=choices.IntegrityAlgorithmChoices,
+        base_field=forms.CharField(),
         required=False,
-        choices=add_blank_choice(choices.IntegrityAlgorithmChoices),
-        widget=StaticSelect2,
         label="Integrity Algorithm",
     )
-    dh_group = forms.ChoiceField(
+    dh_group = JSONArrayFormField(
+        choices=choices.DhGroupChoices,
+        base_field=forms.CharField(),
         required=False,
-        choices=add_blank_choice(choices.DhGroupChoices),
-        widget=StaticSelect2,
         label="Dh Group",
     )
     authentication_method = forms.ChoiceField(
@@ -225,25 +208,6 @@ class VPNPhase1PolicyFilterForm(NautobotFilterForm, TenancyFilterForm):  # pylin
 class VPNPhase2PolicyForm(NautobotModelForm, TenancyForm):  # pylint: disable=too-many-ancestors
     """Form for creating and updating VPNPhase2Policy."""
 
-    encryption_algorithm = forms.ChoiceField(
-        required=False,
-        choices=add_blank_choice(choices.EncryptionAlgorithmChoices),
-        widget=StaticSelect2,
-        label="Encryption Algorithm",
-    )
-    integrity_algorithm = forms.ChoiceField(
-        required=False,
-        choices=add_blank_choice(choices.IntegrityAlgorithmChoices),
-        widget=StaticSelect2,
-        label="Integrity Algorithm",
-    )
-    pfs_group = forms.ChoiceField(
-        required=False,
-        choices=add_blank_choice(choices.DhGroupChoices),
-        widget=StaticSelect2,
-        label="PFS Group",
-    )
-
     class Meta:
         """Meta attributes."""
 
@@ -257,22 +221,22 @@ class VPNPhase2PolicyBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm): 
     pk = forms.ModelMultipleChoiceField(queryset=models.VPNPhase2Policy.objects.all(), widget=forms.MultipleHiddenInput)
     name = forms.CharField(required=False, label="Name")
     description = forms.CharField(required=False, label="Description")
-    encryption_algorithm = forms.ChoiceField(
+    encryption_algorithm = JSONArrayFormField(
+        choices=choices.EncryptionAlgorithmChoices,
+        base_field=forms.CharField(),
         required=False,
-        choices=add_blank_choice(choices.EncryptionAlgorithmChoices),
-        widget=StaticSelect2,
         label="Encryption Algorithm",
     )
-    integrity_algorithm = forms.ChoiceField(
+    integrity_algorithm = JSONArrayFormField(
+        choices=choices.IntegrityAlgorithmChoices,
+        base_field=forms.CharField(),
         required=False,
-        choices=add_blank_choice(choices.IntegrityAlgorithmChoices),
-        widget=StaticSelect2,
         label="Integrity Algorithm",
     )
-    pfs_group = forms.ChoiceField(
+    pfs_group = JSONArrayFormField(
+        choices=choices.DhGroupChoices,
+        base_field=forms.CharField(),
         required=False,
-        choices=add_blank_choice(choices.DhGroupChoices),
-        widget=StaticSelect2,
         label="Pfs Group",
     )
 
