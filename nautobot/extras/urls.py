@@ -22,6 +22,7 @@ router = NautobotUIViewSetRouter()
 router.register("computed-fields", views.ComputedFieldUIViewSet)
 router.register("contacts", views.ContactUIViewSet)
 router.register("contact-associations", views.ContactAssociationUIViewSet)
+router.register("custom-fields", views.CustomFieldUIViewSet)
 router.register("custom-links", views.CustomLinkUIViewSet)
 router.register("export-templates", views.ExportTemplateUIViewSet)
 router.register("external-integrations", views.ExternalIntegrationUIViewSet)
@@ -151,37 +152,6 @@ urlpatterns = [
         "contact-associations/assign-contact-team/",
         views.ObjectAssignContactOrTeamView.as_view(),
         name="object_contact_team_assign",
-    ),
-    # Custom fields
-    path("custom-fields/", views.CustomFieldListView.as_view(), name="customfield_list"),
-    path("custom-fields/add/", views.CustomFieldEditView.as_view(), name="customfield_add"),
-    path(
-        "custom-fields/delete/",
-        views.CustomFieldBulkDeleteView.as_view(),
-        name="customfield_bulk_delete",
-    ),
-    path("custom-fields/<uuid:pk>/", views.CustomFieldView.as_view(), name="customfield"),
-    path(
-        "custom-fields/<uuid:pk>/edit/",
-        views.CustomFieldEditView.as_view(),
-        name="customfield_edit",
-    ),
-    path(
-        "custom-fields/<uuid:pk>/delete/",
-        views.CustomFieldDeleteView.as_view(),
-        name="customfield_delete",
-    ),
-    path(
-        "custom-fields/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="customfield_changelog",
-        kwargs={"model": CustomField},
-    ),
-    path(
-        "custom-fields/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="customfield_notes",
-        kwargs={"model": CustomField},
     ),
     # Dynamic Groups
     path("dynamic-groups/", views.DynamicGroupListView.as_view(), name="dynamicgroup_list"),
