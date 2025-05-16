@@ -337,18 +337,6 @@ urlpatterns = [
     ),
     path("jobs/<uuid:pk>/edit/", views.JobEditView.as_view(), name="job_edit"),
     path("jobs/<uuid:pk>/delete/", views.JobDeleteView.as_view(), name="job_delete"),
-    path(
-        "jobs/<uuid:pk>/changelog/",
-        views.JobObjectChangeLogView.as_view(),
-        name="job_changelog",
-        kwargs={"model": Job},
-    ),
-    path(
-        "jobs/<uuid:pk>/notes/",
-        views.JobObjectNotesView.as_view(),
-        name="job_notes",
-        kwargs={"model": Job},
-    ),
     path("jobs/<uuid:pk>/run/", views.JobRunView.as_view(), name="job_run"),
     path("jobs/<str:class_path>/run/", views.JobRunView.as_view(), name="job_run_by_class_path"),
     path("jobs/edit/", views.JobBulkEditView.as_view(), name="job_bulk_edit"),
