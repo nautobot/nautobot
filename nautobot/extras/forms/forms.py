@@ -465,48 +465,44 @@ class CustomFieldDescriptionField(CommentField):
     def default_helptext(self):
         return "Also used as the help text when editing models using this custom field.<br>" + super().default_helptext
 
-class CustomFieldBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin, BulkEditForm):
 
+class CustomFieldBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin, BulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=CustomField.objects.all(), widget=forms.MultipleHiddenInput)
-    grouping = forms.CharField(required=False, max_length=255, label="Grouping", help_text="Human-readable grouping that this custom field belongs to.")
-    description = forms.CharField(
+    grouping = forms.CharField(
         required=False,
         max_length=255,
-        label="Description",
-        help_text="A helpful description for this field."
+        label="Grouping",
+        help_text="Human-readable grouping that this custom field belongs to.",
+    )
+    description = forms.CharField(
+        required=False, max_length=255, label="Description", help_text="A helpful description for this field."
     )
     required = forms.NullBooleanField(
         required=False,
         widget=BulkEditNullBooleanSelect,
         label="Required",
-        help_text="If true, this field is required when creating new objects or editing an existing object."
+        help_text="If true, this field is required when creating new objects or editing an existing object.",
     )
     filter_logic = forms.ChoiceField(
         required=False,
         choices=add_blank_choice(CustomFieldFilterLogicChoices),
         label="Filter logic",
-        help_text="Loose matches any instance of a given string; Exact matches the entire field."
+        help_text="Loose matches any instance of a given string; Exact matches the entire field.",
     )
     weight = forms.IntegerField(
-        required=False,
-        label="Weight",
-        help_text="Fields with higher weights appear lower in a form."
+        required=False, label="Weight", help_text="Fields with higher weights appear lower in a form."
     )
     advanced_ui = forms.NullBooleanField(
         required=False,
         widget=BulkEditNullBooleanSelect,
         label="Move to Advanced tab",
-        help_text="Hide this field from the object's primary information tab. It will appear in the 'Advanced' tab instead."
+        help_text="Hide this field from the object's primary information tab. It will appear in the 'Advanced' tab instead.",
     )
     add_content_types = MultipleContentTypeField(
-        limit_choices_to=FeatureQuery("custom_fields"),
-        required=False,
-        label="Add Content Types"
+        limit_choices_to=FeatureQuery("custom_fields"), required=False, label="Add Content Types"
     )
     remove_content_types = MultipleContentTypeField(
-        limit_choices_to=FeatureQuery("custom_fields"),
-        required=False,
-        label="Remove Content Types"
+        limit_choices_to=FeatureQuery("custom_fields"), required=False, label="Remove Content Types"
     )
 
     class Meta:

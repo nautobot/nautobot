@@ -616,11 +616,10 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
 
         return self.form_invalid(form)
 
+
 #
 # Custom Links
 #
-
-
 class CustomLinkUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.CustomLinkBulkEditForm
     filterset_class = filters.CustomLinkFilterSet
