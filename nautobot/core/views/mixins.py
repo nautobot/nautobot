@@ -68,6 +68,8 @@ PERMISSIONS_ACTION_MAP = {
     "bulk_update": "change",
     "changelog": "view",
     "notes": "view",
+    "approve": "change",
+    "deny": "change",
 }
 
 

@@ -100,7 +100,7 @@ from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_jobs import get_job_class_and_model
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
-from nautobot.extras.utils import RoleModelsQuery, TaggableClassesQuery
+from nautobot.extras.utils import get_pending_approval_workflow_stages, RoleModelsQuery, TaggableClassesQuery
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
@@ -349,6 +349,109 @@ class ApprovalWorkflowStageViewTestCase(
         cls.bulk_edit_data = {
             "state": ApprovalWorkflowStateChoices.DENIED,
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approver_dashboard(self):
+        """Test the approval dashboard endpoint."""
+        self.client.force_login(self.user)
+        self.add_permissions("extras.view_approvalworkflowstage")
+
+        # Try GET with model-level permission
+        url = reverse("extras:approver_dashboard")
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "My Approvals")  # Assert the dashboard title is present
+        stages = get_pending_approval_workflow_stages(self.user, ApprovalWorkflowStage.objects.all())
+        for stage in stages:
+            self.assertBodyContains(response, str(stage.pk))  # Assert the stage uuid is present in the response
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approvee_dashboard(self):
+        """Test the approval dashboard endpoint."""
+        self.client.force_login(self.user)
+        self.add_permissions("extras.view_approvalworkflowstage")
+
+        # Try GET with model-level permission
+        url = reverse("extras:approvee_dashboard")
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "My Requests")  # Assert the dashboard title is present
+        stages = ApprovalWorkflow.objects.filter(user=self.user)
+        for stage in stages:
+            self.assertBodyContains(response, str(stage.pk))  # Assert the stage uuid is present in the response
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approve_endpoint(self):
+        """Test the approve endpoint."""
+        approval_workflow_stage = ApprovalWorkflowStage.objects.first()
+        self.client.force_login(self.user)
+        self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
+
+        # Try GET with model-level permission
+        url = reverse("extras:approvalworkflowstage_approve", args=[approval_workflow_stage.pk])
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, '<div class="panel panel-success">')  # Assert the success panel is present
+
+        # Try POST with model-level permission
+        request = {
+            "path": url,
+            "data": post_data({"comments": "Approved!"}),
+        }
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        approval_workflow_stage.refresh_from_db()
+        # New response should be created
+        new_response = ApprovalWorkflowStageResponse.objects.get(
+            approval_workflow_stage=approval_workflow_stage, user=self.user
+        )
+        self.assertEqual(new_response.state, ApprovalWorkflowStateChoices.APPROVED)
+        self.assertEqual(new_response.comments, "Approved!")
+        self.assertBodyContains(
+            response, f"You approved {approval_workflow_stage}."
+        )  # Assert the approval message is present
+
+        # Check approval work flow stage detail view
+        url = reverse("extras:approvalworkflowstage", args=[approval_workflow_stage.pk])
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "Approval Date")  # Assert the approval date is present
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_deny_endpoint(self):
+        """Test the deny endpoint."""
+        approval_workflow_stage = ApprovalWorkflowStage.objects.first()
+        self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
+
+        # Try GET with model-level permission
+        url = reverse("extras:approvalworkflowstage_deny", args=[approval_workflow_stage.pk])
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, '<div class="panel panel-danger">')  # Assert the danger panel is present
+
+        # Try POST with model-level permission
+        request = {
+            "path": url,
+            "data": post_data({"comments": "Denied!"}),
+        }
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        approval_workflow_stage.refresh_from_db()
+        # New response should be created
+        new_response = ApprovalWorkflowStageResponse.objects.get(
+            approval_workflow_stage=approval_workflow_stage, user=self.user
+        )
+        self.assertEqual(new_response.state, ApprovalWorkflowStateChoices.DENIED)
+        self.assertEqual(new_response.comments, "Denied!")
+        self.assertBodyContains(
+            response, f"You denied {approval_workflow_stage}."
+        )  # Assert the denial message is present
+
+        # Check approval work flow stage detail view
+        url = reverse("extras:approvalworkflowstage", args=[approval_workflow_stage.pk])
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "Denial Date")  # Assert the denial date is present
 
 
 class ApprovalWorkflowStageResponseViewTestCase(

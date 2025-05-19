@@ -74,7 +74,13 @@ from nautobot.dcim.tables import (
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.templatetags.approvals import render_approval_workflow_state
-from nautobot.extras.utils import fixup_filterset_query_params, get_base_template, get_job_queue, get_worker_count
+from nautobot.extras.utils import (
+    fixup_filterset_query_params,
+    get_base_template,
+    get_job_queue,
+    get_pending_approval_workflow_stages,
+    get_worker_count,
+)
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
@@ -443,6 +449,7 @@ class ApprovalWorkflowStageUIViewSet(
         approval_workflow_stage_response.comments = request.data.get("comments")
         approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.APPROVED
         approval_workflow_stage_response.save()
+        instance.refresh_from_db()
         messages.success(request, f"You approved {instance}.")
         return redirect(self.get_return_url(request))
 
@@ -483,6 +490,7 @@ class ApprovalWorkflowStageUIViewSet(
         approval_workflow_stage_response.comments = request.data.get("comments")
         approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.DENIED
         approval_workflow_stage_response.save()
+        instance.refresh_from_db()
         messages.success(request, f"You denied {instance}.")
         return redirect(self.get_return_url(request))
 
@@ -532,33 +540,7 @@ class ApproverDashboardView(ObjectListViewMixin):
         Filter the queryset to only include approval workflow stages that are pending approval
         and are assigned to the current user for approval.
         """
-        user = self.request.user
-        if user.is_anonymous:
-            return ApprovalWorkflowStage.objects.none()
-        queryset = super().get_queryset()
-        group_pks = user.groups.all().values_list("pk", flat=True)
-        # we only want currently active stages on the approver
-        active_stage_pks = [workflow.active_stage.pk for workflow in ApprovalWorkflow.objects.all()]
-
-        # Get the ApprovalWorkflowStages that are already approved by the current user
-        approved_approval_workflow_stages = ApprovalWorkflowStageResponse.objects.filter(
-            state=ApprovalWorkflowStateChoices.APPROVED,
-            user=user,
-        ).values_list("approval_workflow_stage", flat=True)
-
-        # Return only the approval workflow stages that are pending and active currently
-        # and belong to a pending approval workflow
-        # and are assigned to the current user or any of the groups the user belongs to
-        return (
-            queryset.filter(
-                pk__in=active_stage_pks,
-                approval_workflow__current_state=ApprovalWorkflowStateChoices.PENDING,
-                state=ApprovalWorkflowStateChoices.PENDING,
-                approval_workflow_stage_definition__approver_group__pk__in=group_pks,
-            )
-            .exclude(pk__in=approved_approval_workflow_stages)
-            .order_by("created")
-        )
+        return get_pending_approval_workflow_stages(self.request.user, super().get_queryset())
 
     def list(self, request, *args, **kwargs):
         """
