@@ -558,32 +558,27 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
             ctx["choices"] = forms.CustomFieldChoiceFormSet(instance=instance)
         return ctx
 
-    def update(self, request, *args, **kwargs):
-        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
-        form = self.form_class(data=request.POST, files=request.FILES, instance=obj)
-        restrict_form_fields(form, request.user)
+    def form_valid(self, form):
+        request = self.request
+        instance = form.instance
+        context = self.get_extra_context(request, instance)
+        choices = context.get("choices")
 
-        if form.is_valid():
-            logger.debug("Form validation was successful")
+        try:
+            with transaction.atomic():
+                object_created = not instance.present_in_database
+                obj = form.save()
 
-            try:
-                with transaction.atomic():
-                    object_created = not form.instance.present_in_database
-                    obj = form.save()
+                # Permissions check
+                self.queryset.get(pk=obj.pk)
 
-                    # Check that the new object conforms with any assigned object-level permissions
-                    self.queryset.get(pk=obj.pk)
+                # Save formset
+                if choices.is_valid():
+                    choices.save()
+                else:
+                    raise RuntimeError(choices.errors)
 
-                    # ---> BEGIN difference from ObjectEditView.post()
-                    # Process the formsets for choices
-                    ctx = self.get_extra_context(request, obj)
-                    choices = ctx["choices"]
-                    if choices.is_valid():
-                        choices.save()
-                    else:
-                        raise RuntimeError(choices.errors)
-                    # <--- END difference from ObjectEditView.post()
-
+                # Logging & success message
                 verb = "Created" if object_created else "Modified"
                 msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
@@ -594,54 +589,32 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
                 messages.success(request, msg)
 
                 if "_addanother" in request.POST:
-                    # If the object has clone_fields, pre-populate a new instance of the form
                     if hasattr(obj, "clone_fields"):
                         url = f"{request.path}?{prepare_cloned_fields(obj)}"
                         return redirect(url)
-
                     return redirect(request.get_full_path())
 
                 return_url = form.cleaned_data.get("return_url")
                 if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
                     return redirect(iri_to_uri(return_url))
-                else:
-                    return redirect(self.get_return_url(request, obj))
+                return redirect(self.get_return_url(request, obj))
 
-            except ObjectDoesNotExist:
-                msg = "Object save failed due to object-level permissions violation"
-                logger.debug(msg)
-                form.add_error(None, msg)
+        except ObjectDoesNotExist:
+            msg = "Object save failed due to object-level permissions violation"
+            logger.debug(msg)
+            form.add_error(None, msg)
+        except RuntimeError:
+            msg = "Errors encountered when saving custom field choices. See below."
+            logger.debug(msg)
+            form.add_error(None, msg)
+        except ProtectedError as err:
+            err_msg = err.args[0]
+            protected_obj = err.protected_objects[0]
+            msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
+            logger.debug(msg)
+            form.add_error(None, msg)
 
-            # ---> BEGIN difference from ObjectEditView.post()
-            except RuntimeError:
-                msg = "Errors encountered when saving custom field choices. See below."
-                logger.debug(msg)
-                form.add_error(None, msg)
-            except ProtectedError as err:
-                # e.g. Trying to delete a choice that is in use.
-                err_msg = err.args[0]
-                protected_obj = err.protected_objects[0]
-                msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
-                logger.debug(msg)
-                form.add_error(None, msg)
-            # <--- END difference from ObjectEditView.post()
-
-        else:
-            logger.debug("Form validation failed")
-
-        return render(
-            request,
-            self.get_template_names()[0],
-            {
-                "obj": obj,
-                "obj_type": self.queryset.model._meta.verbose_name,
-                "form": form,
-                "return_url": self.get_return_url(request, obj),
-                "editing": obj.present_in_database,
-                **self.get_extra_context(request, obj),
-            },
-        )
-
+        return self.form_invalid(form)
 
 #
 # Custom Links
