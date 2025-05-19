@@ -24,6 +24,16 @@
 {{ block.super }}
 {% endblock content %}
 
+{% block extra_nav_tabs %}
+    {% if perms.extras.view_approvalworkflow %}
+        {% if active_tab != 'approval_workflow' and object.get_approval_workflow_url or active_tab == 'approval_workflow' %}
+            <li role="presentation"{% if active_tab == 'approval_workflow' %} class="active"{% endif %}>
+                <a href="{{ object.get_approval_workflow_url }}">Approval Workflow</a>
+            </li>
+        {% endif %}
+    {% endif %}
+{% endblock extra_nav_tabs %}
+
 {% block content_left_page %}
       <div class="panel panel-default">
           <div class="panel-heading">

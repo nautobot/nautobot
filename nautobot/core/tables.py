@@ -439,6 +439,49 @@ class ButtonsColumn(django_tables2.TemplateColumn):
         return ""
 
 
+class ApprovalButtonsColumn(django_tables2.TemplateColumn):
+    """
+    Render detail, changelog, approve, deny, and comment buttons for an approval workflow stage.
+
+    :param model: Model class to use for calculating URL view names
+    :param prepend_template: Additional template content to render in the column (optional)
+    :param return_url_extra: String to append to the return URL (e.g. for specifying a tab) (optional)
+    """
+
+    buttons = ("detail", "changelog", "approve", "deny")
+    attrs = {"td": {"class": "text-right text-nowrap noprint"}}
+    template_name = "extras/inc/approval_buttons_column.html"
+
+    def __init__(
+        self,
+        model,
+        *args,
+        buttons=None,
+        return_url_extra="",
+        **kwargs,
+    ):
+        app_label = model._meta.app_label
+        changelog_route = get_route_for_model(model, "changelog")
+        approval_route = "extras:approvalworkflowstage_approve"
+        deny_route = "extras:approvalworkflowstage_deny"
+
+        super().__init__(template_name=self.template_name, *args, **kwargs)
+
+        self.extra_context.update(
+            {
+                "buttons": buttons or self.buttons,
+                "return_url_extra": return_url_extra,
+                "changelog_route": changelog_route,
+                "approval_route": approval_route,
+                "deny_route": deny_route,
+                "have_permission": f"perms.{app_label}.change_{model._meta.model_name,}",
+            }
+        )
+
+    def header(self):  # pylint: disable=invalid-overridden-method
+        return ""
+
+
 class ChoiceFieldColumn(django_tables2.Column):
     """
     Render a ChoiceField value inside a <span> indicating a particular CSS class. This is useful for displaying colored

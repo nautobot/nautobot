@@ -38,10 +38,10 @@ from nautobot.extras.filters import RoleFilterSet
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
     ApprovalWorkflow,
-    ApprovalWorkflowInstance,
+    ApprovalWorkflowDefinition,
     ApprovalWorkflowStage,
-    ApprovalWorkflowStageInstance,
-    ApprovalWorkflowStageInstanceResponse,
+    ApprovalWorkflowStageDefinition,
+    ApprovalWorkflowStageResponse,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -266,6 +266,22 @@ class NautobotModelViewSet(NotesViewSetMixin, CustomFieldModelViewSet):
 #
 
 
+class ApprovalWorkflowDefinitionViewSet(NautobotModelViewSet):
+    """ApprovalWorkflowDefinition viewset."""
+
+    queryset = ApprovalWorkflowDefinition.objects.all()
+    serializer_class = serializers.ApprovalWorkflowDefinitionSerializer
+    filterset_class = filters.ApprovalWorkflowDefinitionFilterSet
+
+
+class ApprovalWorkflowStageDefinitionViewSet(NautobotModelViewSet):
+    """ApprovalWorkflowStageDefinition viewset."""
+
+    queryset = ApprovalWorkflowStageDefinition.objects.all()
+    serializer_class = serializers.ApprovalWorkflowStageDefinitionSerializer
+    filterset_class = filters.ApprovalWorkflowStageDefinitionFilterSet
+
+
 class ApprovalWorkflowViewSet(NautobotModelViewSet):
     """ApprovalWorkflow viewset."""
 
@@ -282,28 +298,12 @@ class ApprovalWorkflowStageViewSet(NautobotModelViewSet):
     filterset_class = filters.ApprovalWorkflowStageFilterSet
 
 
-class ApprovalWorkflowInstanceViewSet(NautobotModelViewSet):
-    """ApprovalWorkflowInstance viewset."""
+class ApprovalWorkflowStageResponseViewSet(ModelViewSet):
+    """ApprovalWorkflowStageResponse viewset."""
 
-    queryset = ApprovalWorkflowInstance.objects.all()
-    serializer_class = serializers.ApprovalWorkflowInstanceSerializer
-    filterset_class = filters.ApprovalWorkflowInstanceFilterSet
-
-
-class ApprovalWorkflowStageInstanceViewSet(NautobotModelViewSet):
-    """ApprovalWorkflowStageInstance viewset."""
-
-    queryset = ApprovalWorkflowStageInstance.objects.all()
-    serializer_class = serializers.ApprovalWorkflowStageInstanceSerializer
-    filterset_class = filters.ApprovalWorkflowStageInstanceFilterSet
-
-
-class ApprovalWorkflowStageInstanceResponseViewSet(ModelViewSet):
-    """ApprovalWorkflowStageInstanceResponse viewset."""
-
-    queryset = ApprovalWorkflowStageInstanceResponse.objects.all()
-    serializer_class = serializers.ApprovalWorkflowStageInstanceResponseSerializer
-    filterset_class = filters.ApprovalWorkflowStageInstanceResponseFilterSet
+    queryset = ApprovalWorkflowStageResponse.objects.all()
+    serializer_class = serializers.ApprovalWorkflowStageResponseSerializer
+    filterset_class = filters.ApprovalWorkflowStageResponseFilterSet
 
 
 #

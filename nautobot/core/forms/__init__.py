@@ -35,6 +35,7 @@ from nautobot.core.forms.fields import (
 )
 from nautobot.core.forms.forms import (
     AddressFieldMixin,
+    ApprovalForm,
     BootstrapMixin,
     BulkEditForm,
     BulkRenameForm,
@@ -87,6 +88,7 @@ __all__ = (
     "APISelect",
     "APISelectMultiple",
     "AddressFieldMixin",
+    "ApprovalForm",
     "AutoPopulateWidget",
     "AutoPositionField",
     "AutoPositionPatternField",
