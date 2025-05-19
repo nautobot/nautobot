@@ -10,6 +10,8 @@ from django.db.models import Q
 from django.db.models.deletion import PROTECT
 from tree_queries.models import TreeNodeForeignKey
 
+from nautobot.core.templatetags.helpers import bettertitle
+
 # Use the proper swappable User model
 User = get_user_model()
 
@@ -117,3 +119,20 @@ def generate_random_device_asset_tag_of_specified_size(size):
     """
     asset_tag = "".join(random.choices(string.ascii_letters + string.digits, k=size))  # noqa: S311  # suspicious-non-cryptographic-random-usage
     return asset_tag
+
+def get_expected_menu_item_name(view_model) -> str:
+    """Return the expected menu item name for a given model."""
+    name_map = {
+        "VM Interfaces": "Interfaces",
+        "Object Changes": "Change Log",
+        "Controller Managed Device Groups": "Device Groups",
+        "Min Max Validation Rules": "Min/Max Rules",
+        "Regular Expression Validation Rules": "Regex Rules",
+        "Required Validation Rules": "Required Rules",
+        "Unique Validation Rules": "Unique Rules",
+        "Approval Workflow Definitions": "Workflow Definitions",
+        "Approval Workflow Stages": "Approval Dashboard",
+    }
+
+    expected = bettertitle(view_model._meta.verbose_name_plural)
+    return name_map.get(expected, expected)

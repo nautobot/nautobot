@@ -393,10 +393,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
             elif self.action == "bulk_destroy":
                 self._process_bulk_destroy_form(form)
             elif self.action in ["create", "update"]:
-                if not (
-                    hasattr(self, "call_process_create_or_update_form") and not self.call_process_create_or_update_form
-                ):
-                    self._process_create_or_update_form(form)
+                self._process_create_or_update_form(form)
             elif self.action == "bulk_update":
                 self._process_bulk_update_form(form)
             elif self.action == "bulk_create":  # 3.0 TODO: remove, replaced by system Job

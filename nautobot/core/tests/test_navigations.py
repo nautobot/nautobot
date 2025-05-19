@@ -2,7 +2,7 @@ from django.test import tag, TestCase
 from django.urls import resolve
 
 from nautobot.core.choices import ButtonActionColorChoices, ButtonActionIconChoices
-from nautobot.core.templatetags.helpers import bettertitle
+from nautobot.core.testing.utils import get_expected_menu_item_name
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.extras.registry import registry
@@ -38,25 +38,7 @@ class NavMenuTestCase(TestCase):
                                 "Job Approval Queue",
                                 "Wireless Controllers",
                             }:
-                                expected_name = bettertitle(view_model._meta.verbose_name_plural)
-                                if expected_name == "Approval Workflow Definitions":
-                                    expected_name = "Workflow Definitions"
-                                elif expected_name == "Approval Workflow Stages":
-                                    expected_name = "Approval Dashboard"
-                                elif expected_name == "VM Interfaces":
-                                    expected_name = "Interfaces"
-                                elif expected_name == "Object Changes":
-                                    expected_name = "Change Log"
-                                elif expected_name == "Controller Managed Device Groups":
-                                    expected_name = "Device Groups"
-                                elif expected_name == "Min Max Validation Rules":
-                                    expected_name = "Min/Max Rules"
-                                elif expected_name == "Regular Expression Validation Rules":
-                                    expected_name = "Regex Rules"
-                                elif expected_name == "Required Validation Rules":
-                                    expected_name = "Required Rules"
-                                elif expected_name == "Unique Validation Rules":
-                                    expected_name = "Unique Rules"
+                                expected_name = get_expected_menu_item_name(view_model)
                                 self.assertEqual(item_details["name"], expected_name)
                             if item_url == get_route_for_model(view_model, "list"):
                                 # Not assertEqual as some menu items have additional permissions defined.
