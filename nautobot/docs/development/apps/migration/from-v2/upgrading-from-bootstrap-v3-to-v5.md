@@ -111,7 +111,7 @@ Above is a short summary for the positioning and layout changes in Bootstrap v5.
 
 ## Responsive utilities
 
-Bootstrap v3.4.1 shipped with [Responsive utilities](https://getbootstrap.com/docs/3.4/css/#responsive-utilities) which provided simple mechanisms to display and hide elements on various screen sizes and for print. Bootstrap v5.x takes this idea a step further and delivers media breakpoints for **all** [Helpers and Utilities](#helper-classes--helpers-and-utilities), no longer constraining responsive utility classes to an arbitrary set.
+Bootstrap v3.4.1 shipped with [Responsive utilities](https://getbootstrap.com/docs/3.4/css/#responsive-utilities) which provided simple mechanisms to display and hide elements on various screen sizes and for print. Bootstrap v5.x takes this idea a step further and delivers media breakpoints for **all** [Helpers and Utilities](#helper-classes-helpers-and-utilities), no longer constraining responsive utility classes to an arbitrary set.
 
 - Breakpoint values and names have changed, refer to [Bootstrap v3.4.1 breakpoints](https://getbootstrap.com/docs/3.4/css/#responsive-utilities-classes) and [Bootstrap v5.x breakpoints](https://getbootstrap.com/docs/5.3/layout/breakpoints/#available-breakpoints) for more detail.
 - `xs` breakpoint no longer exists (at least not in CSS class names). It is a result of Bootstrap v5.x (and web, in general) mobile-first approach which defaults layouts to the smallest breakpoint available and goes up from there. Do not worry, it does not mean you have to support mobile layouts. But in case you do, see how is `xs` migrated in examples below.
@@ -147,7 +147,7 @@ Bootstrap v5.x:
 
 - `btn-default` is replaced by `btn-secondary`. *Nautobot will keep supporting `btn-default` class, nevertheless it is recommended to replace old `btn-default` class name with `btn-secondary`.*
 - `btn-xs` (extra small) is removed; use `btn-sm` as the smallest size. *Similarly to `btn-default` and `btn-secondary`, Nautobot will keep supporting `btn-xs` class but despite its name, it looks and behaves exactly the same as `btn-sm`.*
-- `close` is replaced by `btn-close` as mentioned above in [Helper classes / Helpers and Utilities](#helper-classes--helpers-and-utilities).
+- `close` is replaced by `btn-close` as mentioned above in [Helper classes / Helpers and Utilities](#helper-classes-helpers-and-utilities).
 
 Bootstrap v3.4.1:
 
@@ -173,7 +173,7 @@ Differences include:
 
 - Dropdown wrapper component is no longer of class `btn-group` but `dropdown` instead.
 - Dropdown toggle button `data-toggle` attribute has been renamed to `data-bs-toggle`, and `aria-haspopup` attribute is no longer recommended.
-- As already mentioned in [Helper classes / Helpers and Utilities](#helper-classes--helpers-and-utilities) section above, if dropdown toggle button used `caret` element, it must be replaced by an icon from available icon library.
+- As already mentioned in [Helper classes / Helpers and Utilities](#helper-classes-helpers-and-utilities) section above, if dropdown toggle button used `caret` element, it must be replaced by an icon from available icon library.
 - Likewise, if dropdown toggle button used a descriptive text of class `sr-only`, it should be changed to `visually-hidden`.
 - List items do not expect any particular CSS class but elements within them do. This is especially relevant for separators (dividers).
 - Clickable items (mainly `button` and `a` elements) should be of `dropdown-item` class.
