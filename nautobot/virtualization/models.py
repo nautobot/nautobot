@@ -146,7 +146,7 @@ class Cluster(PrimaryModel):
         # the parent Location or the child location of host Device?
         if self.present_in_database and self.location is not None:
             nonlocation_devices = (
-                Device.objects.filter(cluster=self)
+                Device.objects.filter(clusters=self)
                 .exclude(location=self.location)
                 .exclude(location__isnull=True)
                 .count()

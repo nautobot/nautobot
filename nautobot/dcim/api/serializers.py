@@ -524,6 +524,7 @@ class DeviceBaySerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
 class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     face = ChoiceField(choices=DeviceFaceChoices, allow_blank=True, required=False)
     config_context = serializers.SerializerMethodField()
+    cluster = serializers.SerializerMethodField()
 
     class Meta:
         model = Device
@@ -545,11 +546,21 @@ class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         fields = list(super().get_field_names(declared_fields, info))
         self.extend_field_names(fields, "parent_bay")
         self.extend_field_names(fields, "config_context", opt_in_only=True)
+        if "cluster" not in fields:
+            fields.append("cluster")
         return fields
 
     @extend_schema_field(serializers.DictField)
     def get_config_context(self, obj):
         return obj.get_config_context()
+
+    @extend_schema_field(serializers.DictField)
+    def get_cluster(self, obj):
+        """Return the first cluster for backward compatibility"""
+        try:
+            return obj.cluster.pk if obj.cluster else None
+        except obj.clusters.model.MultipleObjectsReturned:
+            return obj.clusters.first().pk if obj.clusters.exists() else None
 
     def validate(self, attrs):
         # Validate uniqueness of (rack, position, face) since we omitted the automatically-created validator from Meta.
