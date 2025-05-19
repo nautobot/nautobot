@@ -5,7 +5,7 @@ With the release of Nautobot v3.0, the UI has undergone significant improvements
 The following is a detailed migration guide outlining the steps to help app authors update their app's UI for compatibility with the Bootstrap upgrade. Additional changes that are needed and might not be captured here can be found in the [Bootstrap 5.x migration guide](https://getbootstrap.com/docs/5.3/migration/).
 
 !!! note
-This document does not cover all the UI/UX changes brought to Bootstrap and Nautobot components. Instead, this guide scope is narrowed down to only the technicalities concerning HTML element structures and attributes, and CSS class names.
+    This document does not cover all the UI/UX changes brought to Bootstrap and Nautobot components. Instead, this guide scope is narrowed down to only the technicalities concerning HTML element structures and attributes, and CSS class names.
 
 ## Dependency management
 
@@ -103,8 +103,8 @@ Everything presented in this section was simplified for the default font size eq
     - `offset` classes control positioning.
 - Bootstrap v5.x grid system:
     - No more `xs` breakpoint.
-    - Uses `.col-*` auto-sizing if not specified (no need for exact column width).
-    - Specifies `gutter` width via `.g-*` classes.
+    - Uses `col-*` auto-sizing if not specified (no need for exact column width).
+    - Specifies `gutter` width via `g-*` classes.
     - `offset` classes are placed with `ms-auto`, `me-auto`, and `mx-auto`.
 
 Above is a short summary for the positioning and layout changes in Bootstrap v5.x, see more details in the Bootstrap v5.x documentation about [columns](https://getbootstrap.com/docs/5.3/layout/columns/), [float](https://getbootstrap.com/docs/5.3/utilities/float/), and [position](https://getbootstrap.com/docs/5.3/utilities/position/).
