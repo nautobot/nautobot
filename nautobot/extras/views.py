@@ -486,49 +486,6 @@ class ApprovalWorkflowStageUIViewSet(
         messages.success(request, f"You denied {instance}.")
         return redirect(self.get_return_url(request))
 
-    @action(detail=True, url_path="comment", methods=["get", "post"])
-    def comment(self, request, *args, **kwargs):
-        """
-        Comment the approval workflow stage instance response.
-        """
-        # The user is allowed to comment on the stage regardless of its state
-        instance = self.get_object()
-        try:
-            approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.get(
-                approval_workflow_stage=instance,
-                user=request.user,
-            )
-        except ApprovalWorkflowStageResponse.DoesNotExist:
-            approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.create(
-                approval_workflow_stage=instance,
-                user=request.user,
-            )
-
-        if request.method == "GET":
-            obj = approval_workflow_stage_response
-            form = ApprovalForm(
-                initial={"comments": obj.comments},
-            )
-
-            return render(
-                request,
-                "extras/approval_workflow/comment.html",
-                {
-                    "obj": obj.approval_workflow_stage,
-                    "object_under_review": obj.approval_workflow_stage.approval_workflow.object_under_review,
-                    "form": form,
-                    "obj_type": ApprovalWorkflowStage._meta.verbose_name,
-                    "return_url": self.get_return_url(request, obj),
-                    "button_class": "info",
-                    "panel_class": "info",
-                },
-            )
-
-        approval_workflow_stage_response.comments = request.data.get("comments")
-        approval_workflow_stage_response.save()
-        messages.success(request, f"You left comments on {instance}.")
-        return redirect(self.get_return_url(request))
-
 
 class ApprovalWorkflowStageResponseUIViewSet(
     ObjectBulkDestroyViewMixin,

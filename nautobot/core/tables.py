@@ -448,7 +448,7 @@ class ApprovalButtonsColumn(django_tables2.TemplateColumn):
     :param return_url_extra: String to append to the return URL (e.g. for specifying a tab) (optional)
     """
 
-    buttons = ("detail", "changelog", "approve", "deny", "comment")
+    buttons = ("detail", "changelog", "approve", "deny")
     attrs = {"td": {"class": "text-right text-nowrap noprint"}}
     template_name = "extras/inc/approval_buttons_column.html"
 
@@ -464,7 +464,6 @@ class ApprovalButtonsColumn(django_tables2.TemplateColumn):
         changelog_route = get_route_for_model(model, "changelog")
         approval_route = "extras:approvalworkflowstage_approve"
         deny_route = "extras:approvalworkflowstage_deny"
-        comment_route = "extras:approvalworkflowstage_comment"
 
         super().__init__(template_name=self.template_name, *args, **kwargs)
 
@@ -475,7 +474,6 @@ class ApprovalButtonsColumn(django_tables2.TemplateColumn):
                 "changelog_route": changelog_route,
                 "approval_route": approval_route,
                 "deny_route": deny_route,
-                "comment_route": comment_route,
                 "have_permission": f"perms.{app_label}.change_{model._meta.model_name,}",
             }
         )

@@ -22,8 +22,3 @@
         </a>
     </span>
 {% endif %}
-{% if "comment" in buttons and have_permission %}
-    <a href="{% url comment_route pk=record.pk %}?return_url={{ request.path }}{{ return_url_extra }}" class="btn btn-xs btn-default" title="Comment">
-        <i class="mdi mdi-comment-outline"></i>
-    </a>
-{% endif %}
