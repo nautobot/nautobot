@@ -566,7 +566,7 @@ class DynamicModelChoiceMixin:
         return super().prepare_value(value)
 
     def get_bound_field(self, form, field_name):
-        bound_field = BoundField(form, self, field_name)
+        bound_field = super().get_bound_field(form, field_name)
 
         # Set initial value based on prescribed child fields (if not already set)
         if not self.initial and self.initial_params:
@@ -574,7 +574,20 @@ class DynamicModelChoiceMixin:
             for kwarg, child_field in self.initial_params.items():
                 value = form.initial.get(child_field.lstrip("$"))
                 if value:
-                    filter_kwargs[kwarg] = value
+                    # Handle case where value is a many-to-many or iterable
+                    if ((hasattr(value, 'all') and callable(value.all)) or (isinstance(value, (list, tuple)) and len(value) > 0)):
+                        # For M2M fields or lists, pick the first value
+                        if hasattr(value, 'first') and callable(value.first):
+                            first_value = value.first()
+                        elif hasattr(value, 'all') and callable(value.all):
+                            first_value = next(iter(value.all()), None)
+                        else:
+                            first_value = value[0] if value else None
+
+                        if first_value is not None:
+                            filter_kwargs[kwarg] = first_value
+                    else:
+                        filter_kwargs[kwarg] = value
             if filter_kwargs:
                 self.initial = self.queryset.filter(**filter_kwargs).first()
 

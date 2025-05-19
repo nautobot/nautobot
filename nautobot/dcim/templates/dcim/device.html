@@ -231,17 +231,6 @@
                                             </td>
                                         </tr>
                                     {% endif %}
-                                    {% if object.cluster %}
-                                        <tr>
-                                            <td>Cluster</td>
-                                            <td>
-                                                {% if object.cluster.cluster_group %}
-                                                    {{ object.cluster.cluster_group|hyperlinked_object }} /
-                                                {% endif %}
-                                                {{ object.cluster|hyperlinked_object }}
-                                            </td>
-                                        </tr>
-                                    {% endif %}
                                     {% include 'dcim/inc/detail_softwareversion_softwareimagefile_rows.html' %}
                                 </table>
                             </div>
@@ -328,6 +317,43 @@
                                             <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Assign service
                                         </a>
                                     </div>
+                                {% endif %}
+                            </div>
+                            <div class="panel panel-default">
+                                <div class="panel-heading">
+                                    <strong>Clusters</strong>
+                                </div>
+                                {% if object.clusters.exists %}
+                                    {% if perms.virtualization.change_cluster %}
+                                        <form action="{% url 'dcim:device_remove_from_clusters' pk=object.pk %}" method="post">
+                                        {% csrf_token %}
+                                    {% endif %}
+                                    {% include 'responsive_table.html' with table=cluster_table bulk_select_pk=object.pk %}
+                                    {% if perms.virtualization.change_cluster %}
+                                        <div class="panel-footer noprint">
+                                            <button type="submit" class="btn btn-danger btn-xs">
+                                                <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
+                                                Remove from clusters
+                                            </button>
+                                            <div class="pull-right">
+                                                <a href="{% url 'dcim:device_add_to_clusters' pk=object.pk %}" class="btn btn-primary btn-xs">
+                                                    <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add to clusters
+                                                </a>
+                                            </div>
+                                        </div>
+                                        </form>
+                                    {% endif %}
+                                {% else %}
+                                    <div class="panel-body text-muted">
+                                        None
+                                    </div>
+                                    {% if perms.virtualization.add_cluster %}
+                                        <div class="panel-footer text-right noprint">
+                                            <a href="{% url 'dcim:device_add_to_clusters' pk=object.pk %}" class="btn btn-primary btn-xs">
+                                                <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add to clusters
+                                            </a>
+                                        </div>
+                                    {% endif %}
                                 {% endif %}
                             </div>
                             <div class="panel panel-default">

@@ -572,6 +572,12 @@ class Device(PrimaryModel, ConfigContextModel):
 
     @property
     def cluster(self):
+        """
+        Returns the first cluster assigned to this device.
+        
+        This property is maintained for backward compatibility only.
+        New code should use the `clusters` relationship instead.
+        """
         if self.clusters.count() > 1:
             raise self.clusters.model.MultipleObjectsReturned(
                 "Multiple Cluster objects returned. Please refer to clusters."
@@ -580,11 +586,20 @@ class Device(PrimaryModel, ConfigContextModel):
 
     @cluster.setter
     def cluster(self, value):
+        """
+        Sets the clusters field to a single value, replacing any existing values.
+        
+        This property is maintained for backward compatibility only.
+        New code should use the `clusters` relationship instead.
+        """
         if self.clusters.count() > 1:
             raise self.clusters.model.MultipleObjectsReturned(
                 "Multiple Cluster objects returned. Please refer to clusters."
             )
-        self.clusters.set([value])
+        if value is None:
+            self.clusters.clear()
+        else:
+            self.clusters.set([value])
 
     virtual_chassis = models.ForeignKey(
         to="VirtualChassis",
@@ -656,7 +671,7 @@ class Device(PrimaryModel, ConfigContextModel):
         "location",
         "rack",
         "status",
-        "cluster",
+        "clusters",
         "secrets_group",
     ]
 
@@ -825,14 +840,14 @@ class Device(PrimaryModel, ConfigContextModel):
 
         # A Device can only be assigned to a Cluster in the same location or parent location, if any
         if (
-            self.cluster is not None
+            self.clusters.exists()
             and self.location is not None
-            and self.cluster.location is not None
-            and self.cluster.location not in self.location.ancestors(include_self=True)
         ):
-            raise ValidationError(
-                {"cluster": f"The assigned cluster belongs to a location that does not include {self.location}."}
-            )
+            for cluster in self.clusters.all():
+                if cluster.location is not None and cluster.location not in self.location.ancestors(include_self=True):
+                    raise ValidationError(
+                        {"clusters": f"The assigned cluster '{cluster}' belongs to a location that does not include {self.location}."}
+                    )
 
         # Validate virtual chassis assignment
         if self.virtual_chassis and self.vc_position is None:

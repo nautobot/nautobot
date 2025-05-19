@@ -37,6 +37,7 @@ from nautobot.core.forms import (
 )
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import LaxURLField
+from nautobot.core.forms.forms import ConfirmationForm
 from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
     LocatableModelFilterFormMixin,
@@ -2305,7 +2306,7 @@ class DeviceBulkEditForm(
     rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(), required=False, query_params={"location": "$location"}
     )
-    cluster = DynamicModelChoiceField(queryset=Cluster.objects.all(), required=False)
+    clusters = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False)
     comments = CommentField(widget=SmallTextarea, label="Comments")
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
@@ -2328,7 +2329,7 @@ class DeviceBulkEditForm(
             "rack",
             "position",
             "face",
-            "cluster",
+            "clusters",
             "comments",
             "secrets_group",
             "device_redundancy_group",
@@ -2475,6 +2476,10 @@ class DeviceFilterForm(
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     tags = TagFilterField(model)
+
+
+class DeviceRemoveFromClustersForm(ConfirmationForm):
+    pk = forms.ModelMultipleChoiceField(queryset=Cluster.objects.all(), widget=forms.MultipleHiddenInput())
 
 
 #
@@ -5763,3 +5768,40 @@ class VirtualDeviceContextFilterForm(
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     tags = TagFilterField(model)
+
+
+class DeviceAddToClusterForm(BootstrapMixin, forms.Form):
+    """Form for adding a device to one or more clusters."""
+    location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+    )
+    cluster_group = DynamicModelChoiceField(
+        queryset=ClusterGroup.objects.all(),
+        required=False,
+        query_params={"location": "$location"},
+    )
+    clusters = DynamicModelMultipleChoiceField(
+        queryset=Cluster.objects.all(),
+        required=True,
+        query_params={"cluster_group": "$cluster_group"},
+    )
+
+
+    def __init__(self, device, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Only show clusters that the device isn't already a member of
+        self.fields['clusters'].queryset = Cluster.objects.exclude(
+            pk__in=device.clusters.values_list('pk', flat=True)
+        ).order_by('name')
+        self.fields['clusters'].widget.add_query_param('devices__n', device.id)
+
+        if self.fields['clusters'].queryset.exists():
+            if self.fields['clusters'].queryset.count() == 1:
+                self.fields['clusters'].initial = self.fields['clusters'].queryset.first().pk
+        else:
+            self.fields['location'].disabled = True
+            self.fields['cluster_group'].disabled = True
+            self.fields['clusters'].disabled = True
+            self.fields['clusters'].help_text = "This device already belongs to all available clusters"
