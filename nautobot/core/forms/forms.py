@@ -110,12 +110,12 @@ class ConfirmationForm(BootstrapMixin, ReturnURLForm):
     confirm = forms.BooleanField(required=True, widget=forms.HiddenInput(), initial=True)
 
 
-class CommentForm(BootstrapMixin, ReturnURLForm):
+class ApprovalForm(BootstrapMixin, ReturnURLForm):
     """
     A generic comment form. The form is not valid unless the confirm field is checked.
     """
 
-    comments = CommentField(label="Comments", required=True)
+    comments = CommentField(label="Comments", required=False)
     confirm = forms.BooleanField(required=True, widget=forms.HiddenInput(), initial=True)
 
 

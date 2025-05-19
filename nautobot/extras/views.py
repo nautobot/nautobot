@@ -28,7 +28,7 @@ from nautobot.apps.ui import BaseTextPanel
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.events import publish_event
 from nautobot.core.exceptions import FilterSetFieldNotFound
-from nautobot.core.forms import CommentForm, ConfirmationForm, restrict_form_fields
+from nautobot.core.forms import ApprovalForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query, serialize_object_v2
 from nautobot.core.tables import ButtonsColumn
@@ -425,7 +425,7 @@ class ApprovalWorkflowStageUIViewSet(
 
         if request.method == "GET":
             obj = approval_workflow_stage_response
-            form = ConfirmationForm(initial=request.GET)
+            form = ApprovalForm(initial={"comments": obj.comments})
 
             return render(
                 request,
@@ -440,6 +440,7 @@ class ApprovalWorkflowStageUIViewSet(
                     "button_class": "success",
                 },
             )
+        approval_workflow_stage_response.comments = request.data.get("comments")
         approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.APPROVED
         approval_workflow_stage_response.save()
         messages.success(request, f"You approved {instance}.")
@@ -466,7 +467,7 @@ class ApprovalWorkflowStageUIViewSet(
 
         if request.method == "GET":
             obj = approval_workflow_stage_response
-            form = ConfirmationForm(initial=request.GET)
+            form = ApprovalForm(initial={"comments": obj.comments})
 
             return render(
                 request,
@@ -479,7 +480,7 @@ class ApprovalWorkflowStageUIViewSet(
                     "return_url": self.get_return_url(request, obj),
                 },
             )
-
+        approval_workflow_stage_response.comments = request.data.get("comments")
         approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.DENIED
         approval_workflow_stage_response.save()
         messages.success(request, f"You denied {instance}.")
@@ -505,7 +506,9 @@ class ApprovalWorkflowStageUIViewSet(
 
         if request.method == "GET":
             obj = approval_workflow_stage_response
-            form = CommentForm(initial=request.GET)
+            form = ApprovalForm(
+                initial={"comments": obj.comments},
+            )
 
             return render(
                 request,

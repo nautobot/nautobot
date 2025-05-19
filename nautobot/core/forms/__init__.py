@@ -35,10 +35,10 @@ from nautobot.core.forms.fields import (
 )
 from nautobot.core.forms.forms import (
     AddressFieldMixin,
+    ApprovalForm,
     BootstrapMixin,
     BulkEditForm,
     BulkRenameForm,
-    CommentForm,
     ConfirmationForm,
     CSVModelForm,
     DynamicFilterForm,
@@ -88,6 +88,7 @@ __all__ = (
     "APISelect",
     "APISelectMultiple",
     "AddressFieldMixin",
+    "ApprovalForm",
     "AutoPopulateWidget",
     "AutoPositionField",
     "AutoPositionPatternField",
@@ -106,7 +107,6 @@ __all__ = (
     "ClearableFileInput",
     "ColorSelect",
     "CommentField",
-    "CommentForm",
     "ConfirmationForm",
     "ContentTypeSelect",
     "DatePicker",

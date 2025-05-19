@@ -120,6 +120,7 @@ def generate_random_device_asset_tag_of_specified_size(size):
     asset_tag = "".join(random.choices(string.ascii_letters + string.digits, k=size))  # noqa: S311  # suspicious-non-cryptographic-random-usage
     return asset_tag
 
+
 def get_expected_menu_item_name(view_model) -> str:
     """Return the expected menu item name for a given model."""
     name_map = {
