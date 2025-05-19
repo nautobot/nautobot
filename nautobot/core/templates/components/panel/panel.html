@@ -1,10 +1,10 @@
-<div class="card mb-10">
+<div class="card mb-16">
     {% if label.strip or header_extra_content.strip %}
         <div class="card-header">
             {% if label %}
                 <strong>{{ label }}</strong>
             {% endif %}
-            <a class="float-end text-reset text-decoration-none" data-bs-toggle="collapse" panel-id="{{body_id}}" href="#{{body_id}}" role="button" aria-expanded="true" aria-controls="{{body_id}}">
+            <a class="btn stretched-link nb-collapse-toggle" data-bs-toggle="collapse" panel-id="{{body_id}}" href="#{{body_id}}" role="button" aria-expanded="true" aria-controls="{{body_id}}">
                 <span class="mdi mdi-chevron-down"></span>
             </a>
             {{ header_extra_content }}
