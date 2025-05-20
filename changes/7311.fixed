@@ -1,0 +1,1 @@
+Added f-strings to 2 places where they were missing (nautobot/core/utils/filtering.py in `generate_query` method and in migration file `nautobot/extras/migrations/0024_job_data_migration.py`).
