@@ -705,11 +705,17 @@ class RelationshipColumn(django_tables2.Column):
         if len(value) < 1:
             return "—"
 
+        v = value[0]
+        peer = v.get_peer(record)
+
         # Handle Relationships on the many side.
         if self.relationship.has_many(self.peer_side):
-            v = value[0]
-            meta = type(v.get_peer(record))._meta
-            name = meta.verbose_name_plural if len(value) > 1 else meta.verbose_name
+            if peer is not None:
+                meta = type(peer)._meta
+                name = meta.verbose_name_plural if len(value) > 1 else meta.verbose_name
+            else:  # Perhaps a relationship to an uninstalled App's models?
+                peer_type = getattr(self.relationship, f"{self.peer_side}_type")
+                name = f"{peer_type} object(s)"
             return format_html(
                 '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
                 reverse("extras:relationshipassociation_list"),
@@ -721,6 +727,7 @@ class RelationshipColumn(django_tables2.Column):
             )
         # Handle Relationships on the one side.
         else:
-            v = value[0]
-            peer = v.get_peer(record)
-            return format_html('<a href="{}">{}</a>', peer.get_absolute_url(), peer)
+            if peer is not None:
+                return format_html('<a href="{}">{}</a>', peer.get_absolute_url(), peer)
+            else:
+                return format_html("(unknown)")
