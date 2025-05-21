@@ -2,6 +2,7 @@
 
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
+from django.utils.timezone import now
 
 from nautobot.core.testing import APIViewTestCases
 from nautobot.extras import choices, models
@@ -14,6 +15,7 @@ class ApprovalWorkflowTestMixin:
     @classmethod
     def setUpTestData(cls):
         job_ct = ContentType.objects.get(app_label="extras", model="job")
+        scheduled_job_ct = ContentType.objects.get_for_model(models.ScheduledJob)
         jobs = list(models.Job.objects.all())
         cls.approver_group_1 = Group.objects.create(name="Approver Group 1")
         cls.approver_group_2 = Group.objects.create(name="Approver Group 2")
@@ -25,26 +27,35 @@ class ApprovalWorkflowTestMixin:
         cls.approval_workflow_def_1 = models.ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow Definition 1",
             model_content_type=job_ct,
+            priority=1,
         )
         cls.approval_workflow_def_2 = models.ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow Definition 2",
             model_content_type=job_ct,
             model_constraints={"name": "Bulk Delete Objects"},
+            priority=2,
         )
         cls.approval_workflow_def_3 = models.ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow Definition 3",
             model_content_type=ContentType.objects.get(app_label="extras", model="job"),
             model_constraints={"name": "Bulk Delete Objects"},
+            priority=3,
         )
         cls.approval_workflow_def_4 = models.ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow Definition 4",
             model_content_type=job_ct,
             model_constraints={"name": "Bulk Delete Objects"},
+            priority=4,
         )
         cls.approval_workflow_def_5 = models.ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow Definition 5",
             model_content_type=job_ct,
             model_constraints={"name": "Bulk Delete Objects"},
+            priority=5,
+        )
+        cls.approval_workflow_def_6 = models.ApprovalWorkflowDefinition.objects.create(
+            name="Test Approval Workflow Definition 6",
+            model_content_type=scheduled_job_ct,
         )
         cls.approval_workflow_1_instance_1 = models.ApprovalWorkflow.objects.create(
             approval_workflow_definition=cls.approval_workflow_def_1,
@@ -148,6 +159,14 @@ class ApprovalWorkflowTestMixin:
             denial_message="Stage 3 Denial Message",
             approver_group=cls.approver_group_2,
         )
+        cls.approval_workflow_6_stage_def_1 = models.ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=cls.approval_workflow_def_6,
+            weight=100,
+            name="Test Approval Workflow 6 Stage 1",
+            min_approvers=2,
+            denial_message="Stage 1 Denial Message",
+            approver_group=cls.approver_group_1,
+        )
         cls.approval_workflow_1_stage_instance_1 = models.ApprovalWorkflowStage.objects.create(
             approval_workflow=cls.approval_workflow_1_instance_1,
             approval_workflow_stage_definition=cls.approval_workflow_1_stage_def_1,
@@ -223,6 +242,7 @@ class ApprovalWorkflowDefinitionAPITest(ApprovalWorkflowTestMixin, APIViewTestCa
                 "name": "Approval Workflow Definition 3",
                 "model_content_type": "extras.scheduledjob",
                 "model_constraints": {"name": "Bulk Delete Objects"},
+                "priority": 1,
             },
         ]
 
@@ -231,6 +251,20 @@ class ApprovalWorkflowDefinitionAPITest(ApprovalWorkflowTestMixin, APIViewTestCa
             "model_content_type": "extras.scheduledjob",
             "model_constraints": {"approval_required": True},
         }
+
+    def test_find_for_model(self):
+        highest_priority_approval_workflow_definition = models.ApprovalWorkflowDefinition.objects.get(
+            model_content_type=ContentType.objects.get_for_model(models.ScheduledJob), priority=0
+        )
+        models.ApprovalWorkflowDefinition.objects.create(
+            name="Test",
+            model_content_type=ContentType.objects.get_for_model(models.ScheduledJob),
+            priority=1,
+        )
+        self.assertEqual(
+            models.ApprovalWorkflowDefinition.find_for_model(models.ScheduledJob),
+            highest_priority_approval_workflow_definition,
+        )
 
 
 class ApprovalWorkflowStageDefinitionAPITest(ApprovalWorkflowTestMixin, APIViewTestCases.APIViewTestCase):
@@ -318,6 +352,143 @@ class ApprovalWorkflowAPITest(ApprovalWorkflowTestMixin, APIViewTestCases.APIVie
             "approval_workflow_definition": cls.approval_workflow_def_2.pk,
             "current_state": choices.ApprovalWorkflowStateChoices.APPROVED,
         }
+
+
+class ApprovalWorkflowTriggerAPITest(ApprovalWorkflowTestMixin, APIViewTestCases.APIViewTestCase):
+    """
+    Test suite for verifying the trigger and approval handling of approval workflows.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.job_model = models.Job.objects.get_for_class_path("pass.TestPassJob")
+        self.content_type = ContentType.objects.get_for_model(models.ScheduledJob)
+
+    def test_no_initialization_approval_workflow_for_scheduled_job(self):
+        """
+        Test that creating a ScheduledJob without approval workflow definition doesn't initialize an approval workflow.
+
+        The test verifies:
+        - No approval workflows definition exist for ScheduledJob before creation.
+        - No approval workflows exist for ScheduledJob before creation.
+        - An approval workflow is not created automatically upon ScheduledJob creation.
+        - The ScheduledJob is not associated with the approval workflow.
+        - The ScheduledJob is created with `enabled=True`.
+        """
+        models.ApprovalWorkflowDefinition.objects.filter(model_content_type=self.content_type).delete()
+        self.assertFalse(
+            models.ApprovalWorkflowDefinition.objects.filter(model_content_type=self.content_type).exists()
+        )
+        self.assertFalse(
+            models.ApprovalWorkflow.objects.filter(object_under_review_content_type=self.content_type).exists()
+        )
+
+        scheduled_job = models.ScheduledJob.objects.create(
+            name="test0",
+            task="pass.TestPassJob",
+            job_model=self.job_model,
+            interval=choices.JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            start_time=now(),
+        )
+        self.assertFalse(scheduled_job.associated_approval_workflows.exists())
+        self.assertFalse(
+            models.ApprovalWorkflow.objects.filter(object_under_review_content_type=self.content_type).exists()
+        )
+        self.assertTrue(scheduled_job.enabled)
+
+    def test_initialization_approval_workflow_for_scheduled_job(self):
+        """
+        Test that creating a ScheduledJob initializes an approval workflow.
+
+        The test verifies:
+        - No approval workflows exist for ScheduledJob before creation.
+        - An approval workflow is created automatically upon ScheduledJob creation.
+        - Approval workflow stages are created automatically upon ScheduledJob creation
+        - The ScheduledJob is associated with the approval workflow.
+        - The ScheduledJob is created with `enabled=False`.
+        """
+        self.assertFalse(
+            models.ApprovalWorkflow.objects.filter(object_under_review_content_type=self.content_type).exists()
+        )
+
+        scheduled_job = models.ScheduledJob.objects.create(
+            name="test1",
+            task="pass.TestPassJob",
+            job_model=self.job_model,
+            interval=choices.JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            start_time=now(),
+        )
+        self.assertTrue(scheduled_job.associated_approval_workflows.exists())
+        self.assertFalse(scheduled_job.enabled)
+        approval_workflow = scheduled_job.associated_approval_workflows.first()
+        self.assertEqual(approval_workflow.approval_workflow_stages.count(), 1)
+
+    def test_approval_workflow_approved_for_scheduled_job(self):
+        """
+        Test that approval workflow approval enables the scheduled job.
+
+        This test ensures:
+        - No approval workflows exist for ScheduledJob before creation.
+        - An approval workflow and its stages are automatically created when a ScheduledJob is created.
+        - The ScheduledJob is associated with the created approval workflow.
+        - The ScheduledJob is initially created with `enabled=False`.
+        - When the active approval workflow stage is approved and the workflow is saved,
+        the workflow's state transitions to APPROVED.
+        - Once the workflow is approved, the ScheduledJob is automatically enabled.
+        """
+        scheduled_job = models.ScheduledJob.objects.create(
+            name="test2",
+            task="pass.TestPassJob",
+            job_model=self.job_model,
+            interval=choices.JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            start_time=now(),
+        )
+        self.assertFalse(scheduled_job.enabled)
+
+        approval_workflow = scheduled_job.associated_approval_workflows.first()
+        self.assertEqual(approval_workflow.approval_workflow_stages.count(), 1)
+        active_stage = approval_workflow.active_stage
+        active_stage.state = choices.ApprovalWorkflowStateChoices.APPROVED
+        active_stage.save()
+        approval_workflow.save()
+        self.assertEqual(approval_workflow.current_state, choices.ApprovalWorkflowStateChoices.APPROVED)
+
+        scheduled_job.refresh_from_db()
+        self.assertTrue(scheduled_job.enabled)
+
+    def test_approval_workflow_denied_for_scheduled_job(self):
+        """
+        Test that denial of an approval workflow keeps the scheduled job disabled.
+
+        This test ensures:
+        - An approval workflow and its stages are automatically created when a ScheduledJob is created.
+        - The ScheduledJob is initially created with `enabled=False`.
+        - When the active approval workflow stage is marked as DENIED and the workflow is saved,
+        the workflow's state transitions to DENIED.
+        - A DENIED workflow prevents the ScheduledJob from being enabled.
+        """
+        scheduled_job = models.ScheduledJob.objects.create(
+            name="test3",
+            task="pass.TestPassJob",
+            job_model=self.job_model,
+            interval=choices.JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            start_time=now(),
+        )
+        self.assertFalse(scheduled_job.enabled)
+        approval_workflow = scheduled_job.associated_approval_workflows.first()
+        self.assertEqual(approval_workflow.approval_workflow_stages.count(), 1)
+        active_stage = approval_workflow.active_stage
+        active_stage.state = choices.ApprovalWorkflowStateChoices.DENIED
+        active_stage.save()
+        approval_workflow.save()
+        self.assertEqual(approval_workflow.current_state, choices.ApprovalWorkflowStateChoices.DENIED)
+
+        scheduled_job.refresh_from_db()
+        self.assertFalse(scheduled_job.enabled)
 
 
 class ApprovalWorkflowStageAPITest(ApprovalWorkflowTestMixin, APIViewTestCases.APIViewTestCase):

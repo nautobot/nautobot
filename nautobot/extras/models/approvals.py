@@ -1,3 +1,5 @@
+from typing import Optional
+
 from django.conf import settings
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -41,18 +43,38 @@ class ApprovalWorkflowDefinition(PrimaryModel):
         default=dict,
         help_text="Constraints to filter the objects that can be approved using this workflow.",
     )
+    priority = models.IntegerField(
+        default=0, help_text="Determines workflow relevance when multiple apply. Lower values indicate higher priority."
+    )
     documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
     is_dynamic_group_associable = False
 
     class Meta:
-        """Meta class for ApprovalWorkflow."""
+        """Meta class for ApprovalWorkflow Definition."""
 
         verbose_name = "Approval Workflow Definition"
         ordering = ["name"]
+        unique_together = [["model_content_type", "priority"]]
 
     def __str__(self):
         """Stringify instance."""
         return self.name
+
+    @classmethod
+    def find_for_model(cls, model_instance) -> Optional["ApprovalWorkflowDefinition"]:
+        """Find the appropriate approval workflow definition for specific content-type.
+
+        Returns:
+            ApprovalWorkflowDefinition or None: The matching workflow definition or None if none found.
+        """
+        ct = ContentType.objects.get_for_model(model_instance)
+
+        # Find all workflows for this content type and order by priority
+        workflows_definition = cls.objects.filter(
+            model_content_type=ct,
+        ).order_by("priority")
+
+        return workflows_definition.first() if workflows_definition else None
 
 
 @extras_features(
@@ -219,6 +241,12 @@ class ApprovalWorkflow(OrganizationalModel):
         if previous_state != self.current_state:
             self.decision_date = timezone.now()
         super().save(*args, **kwargs)
+
+        if previous_state != self.current_state:
+            if self.current_state == ApprovalWorkflowStateChoices.APPROVED:
+                self.object_under_review.on_workflow_approved(self)
+            elif self.current_state == ApprovalWorkflowStateChoices.DENIED:
+                self.object_under_review.on_workflow_denied(self)
 
 
 @extras_features(

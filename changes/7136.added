@@ -1,0 +1,2 @@
+Added callbacks to called when a workflow has been initiated, approved or rejected.
+Added `begin_approval_workflow` to `ApprovableModelMixin` to can use it in save method of models which inherit from `ApprovableModelMixin`.
