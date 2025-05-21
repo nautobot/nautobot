@@ -129,7 +129,7 @@ The Admin sub-site within Nautobot (`/admin/` and its child pages) has been reva
 Job log messages are now stored in a separate database table as a separate `JobLogEntry` data model, instead of being stored as JSON on the `JobResult` model/table. This provides faster and more robust rendering of `JobResult`-related views and lays groundwork for future enhancements of the Jobs feature.
 
 !!! note
-    If you are executing Jobs inside your tests, there are some changes you will need to make for your tests to support this feature correctly. Refer to the [Jobs documentation](../development/jobs/index.md#testing-jobs) for details.
+    If you are executing Jobs inside your tests, there are some changes you will need to make for your tests to support this feature correctly. Refer to the [Jobs documentation](../development/jobs/testing.md) for details.
 
 !!! note
     Because `JobLogEntry` records reference their associated `JobResult`, the pattern `job.job_result = JobResult()` (creating only an in-memory `JobResult` object, rather than a database entry) will no longer work. Instead you will need to create a proper JobResult database object `job.job_result = JobResult.objects.create(...)`.
@@ -271,7 +271,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 ### Documentation in v1.2.6
 
 - [#1283](https://github.com/nautobot/nautobot/pull/1283) - Update Sentinel docs to have 3 hosts (minimum per Redis docs), and change `CELERY_BROKER_URL` to a multiline string instead of a Tuple (tuple is invalid, and raises an exception when job completes).
-- [#1328](https://github.com/nautobot/nautobot/pull/1328) - Fixed an error in the [Job class-path documentation](../user-guide/platform-functionality/jobs/index.md#jobs-and-class_path).
+- [#1328](https://github.com/nautobot/nautobot/pull/1328) - Fixed an error in the [Job class-path documentation](../user-guide/platform-functionality/jobs/models.md#understanding-job-class-paths).
 - [#1386](https://github.com/nautobot/nautobot/issues/1386) - Updated release schedule in docs for patch releases, now every two weeks.
 
 ### Housekeeping in v1.2.6
