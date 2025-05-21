@@ -333,7 +333,7 @@ class ApprovalWorkflowStageTable(BaseTable):
         verbose_name="Actions Needed",
     )
     state = ApprovalChoiceFieldColumn()
-    actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("approve", "deny", "comment"))
+    actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("detail", "changelog", "approve", "deny"))
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
