@@ -3969,10 +3969,12 @@ class DeviceClusterAssignmentTestCase(ModelTestCases.BaseModelTestCase):
             cluster=self.clusters[0],
         )
         assignment.validated_save()
-        self.assertTrue(DeviceClusterAssignment.objects.filter(
-            device=self.devices[1],
-            cluster=self.clusters[0],
-        ).exists())
+        self.assertTrue(
+            DeviceClusterAssignment.objects.filter(
+                device=self.devices[1],
+                cluster=self.clusters[0],
+            ).exists()
+        )
         self.assertEqual(self.devices[1].clusters.count(), 1)
         self.assertEqual(self.devices[1].clusters.first(), self.clusters[0])
         self.assertEqual(self.clusters[0].devices.count(), 2)
