@@ -2338,13 +2338,13 @@ class MetadataTypeUIViewSet(NautobotUIViewSet):
             ),
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.LEFT_HALF,
-                weight=100,
+                weight=200,
                 context_table_key="choices",
                 table_title="Choices",
             ),
             object_detail.ObjectFieldsPanel(
                 section=SectionChoices.RIGHT_HALF,
-                weight=200,
+                weight=100,
                 fields=["content_types"],
                 label="Assignment",
             ),
