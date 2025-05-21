@@ -36,6 +36,7 @@ from nautobot.dcim.filters import (
     ControllerManagedDeviceGroupFilterSet,
     DeviceBayFilterSet,
     DeviceBayTemplateFilterSet,
+    DeviceClusterAssignmentFilterSet,
     DeviceFamilyFilterSet,
     DeviceFilterSet,
     DeviceRedundancyGroupFilterSet,
@@ -85,6 +86,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceClusterAssignment,
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
@@ -4431,4 +4433,62 @@ class ModuleFamilyTestCase(FilterTestCases.FilterTestCase):
             ModuleType.objects.create(
                 manufacturer=manufacturers[1], model="Model 2", module_family=cls.module_families[1]
             ),
+        )
+
+
+class DeviceClusterAssignmentTestCase(FilterTestCases.FilterTestCase):
+    queryset = DeviceClusterAssignment.objects.all()
+    filterset = DeviceClusterAssignmentFilterSet
+    generic_filter_tests = [
+        ("device", "device__id"),
+        ("device", "device__name"),
+        ("cluster", "cluster__id"),
+        ("cluster", "cluster__name"),
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(
+            manufacturer=manufacturer,
+            model="Test Device Type Filter 1",
+        )
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        devices = (
+            Device.objects.create(
+                device_type=device_type,
+                role=device_role,
+                name="Test Device Filter 1",
+                location=location,
+                status=device_status,
+            ),
+            Device.objects.create(
+                device_type=device_type,
+                role=device_role,
+                name="Test Device Filter 2",
+                location=location,
+                status=device_status,
+            ),
+            Device.objects.create(
+                device_type=device_type,
+                role=device_role,
+                name="Test Device Filter 3",
+                location=location,
+                status=device_status,
+            ),
+        )
+        cluster_type = ClusterType.objects.create(name="Test Cluster Type Filter")
+        clusters = (
+            Cluster.objects.create(name="Test Cluster Filter 1", cluster_type=cluster_type),
+            Cluster.objects.create(name="Test Cluster Filter 2", cluster_type=cluster_type),
+            Cluster.objects.create(name="Test Cluster Filter 3", cluster_type=cluster_type),
+        )
+        cls.device_cluster_assignments = (
+            DeviceClusterAssignment.objects.create(device=devices[0], cluster=clusters[0]),
+            DeviceClusterAssignment.objects.create(device=devices[1], cluster=clusters[1]),
+            DeviceClusterAssignment.objects.create(device=devices[0], cluster=clusters[1]),
+            DeviceClusterAssignment.objects.create(device=devices[1], cluster=clusters[2]),
+            DeviceClusterAssignment.objects.create(device=devices[2], cluster=clusters[0]),
         )
