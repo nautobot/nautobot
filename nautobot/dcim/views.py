@@ -3386,20 +3386,13 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
             object_detail.ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
-                fields=(
-                    "parent_device",
-                    "parent_module",
-                    "name",
-                    "position",
-                    "label",
-                    "description",
-                ),
+                fields="__all__",
                 hide_if_unset=("parent_device", "parent_module"),
             ),
-            object_detail.KeyValueTablePanel(
+            object_detail.ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.RIGHT_HALF,
-                context_data_key="installed_module_data",
+                context_object_key="installed_module_data",
                 label="Installed Module",
             ),
         )
@@ -3423,19 +3416,7 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
         return context
 
     def _get_installed_module_context(self, instance):
-        module = getattr(instance, "installed_module", None)
-        if not module:
-            return {}
-
-        return {
-            "module": module,
-            "module_type": module.module_type,
-            "status": module.status,
-            "role": module.role,
-            "serial": module.serial,
-            "asset_tag": module.asset_tag,
-            "tenant": module.tenant,
-        }
+        return getattr(instance, "installed_module", None)
 
     def get_selected_objects_parents_name(self, selected_objects):
         selected_object = selected_objects.first()
