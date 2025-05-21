@@ -310,9 +310,9 @@
                                     {% include 'responsive_table.html' with table=cluster_table bulk_select_pk=object.pk %}
                                     {% if perms.virtualization.change_cluster %}
                                         <div class="panel-footer noprint">
-                                            <button type="submit" class="btn btn-danger btn-xs">
+                                            <button type="submit" class="btn btn-danger btn-xs" id="remove_from_clusters_btn" disabled="disabled" title="Select at least one cluster to remove device from">
                                                 <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
-                                                Remove from clusters
+                                                Remove from cluster
                                             </button>
                                             <div class="pull-right">
                                                 <a href="{% url 'dcim:device_add_to_clusters' pk=object.pk %}" class="btn btn-primary btn-xs">
@@ -482,3 +482,26 @@
 {% endif %}
 </div>
 {% endblock content %}
+
+{% block javascript %}
+{{ block.super }}
+<script>
+    $(document).ready(function() {
+        $('input:checkbox').click(function() {
+            let btn = $('#remove_from_clusters_btn');
+            let icon = btn.find('span.mdi').clone();
+            let checkedCount = $('input:checkbox[name=pk]:checked').length;
+            
+            if (checkedCount > 0) {
+                btn.empty().append(icon).append(' Remove from ' + checkedCount + ' cluster' + (checkedCount > 1 ? 's' : ''));
+                btn.tooltip('destroy');
+            } else {
+                btn.empty().append(icon).append(' Remove from cluster');
+                btn.tooltip();
+            }
+            
+            btn.prop('disabled', checkedCount === 0);
+        });
+    });
+</script>
+{% endblock javascript %}
