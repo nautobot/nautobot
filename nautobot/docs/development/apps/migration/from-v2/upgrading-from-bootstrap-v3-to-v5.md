@@ -1,6 +1,6 @@
 # Upgrading from Bootstrap v3.4.1 to v5.x
 
-With the release of Nautobot v3.0, the UI has undergone significant improvements to enhance usability, flexibility, and maintainability. This version introduces an upgrade from [Bootstrap v3.4.1](https://getbootstrap.com/docs/3.4/) to [Boostrap 5.x](https://getbootstrap.com/docs/5.3/). This transition brings modern UI enhancements, improved accessibility, and better responsiveness. While these changes provide a more consistent and intuitive user experience, they also introduce necessary modifications that may impact existing custom UI components and templates.
+With the release of Nautobot v3.0, the UI has undergone significant improvements to enhance usability, flexibility, and maintainability. This version introduces an upgrade from [Bootstrap v3.4](https://getbootstrap.com/docs/3.4/) to [Bootstrap v5.3](https://getbootstrap.com/docs/5.3/). This transition brings modern UI enhancements, improved accessibility, and better responsiveness. While these changes provide a more consistent and intuitive user experience, they also introduce necessary modifications that may impact existing custom UI components and templates.
 
 The following is a detailed migration guide outlining the steps to help app authors update their app's UI for compatibility with the Bootstrap upgrade. Additional changes that are needed and might not be captured here can be found in the [Bootstrap 5.x migration guide](https://getbootstrap.com/docs/5.3/migration/).
 
