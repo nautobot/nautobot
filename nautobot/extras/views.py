@@ -2337,14 +2337,13 @@ class MetadataTypeUIViewSet(NautobotUIViewSet):
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
 
-        if instance is not None:
-            if self.action in ("create", "update"):
-                if request.POST:
-                    context["choices"] = forms.MetadataChoiceFormSet(data=request.POST, instance=instance)
-                else:
-                    context["choices"] = forms.MetadataChoiceFormSet(instance=instance)
-            elif self.action == "retrieve":
-                context["choices"] = tables.MetadataChoiceTable(instance.choices.all())
+        if self.action in ("create", "update"):
+            if request.POST:
+                context["choices"] = forms.MetadataChoiceFormSet(data=request.POST, instance=instance)
+            else:
+                context["choices"] = forms.MetadataChoiceFormSet(instance=instance)
+        elif self.action == "retrieve":
+            context["choices"] = tables.MetadataChoiceTable(instance.choices.all())
 
         return context
 
