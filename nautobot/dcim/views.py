@@ -54,6 +54,7 @@ from nautobot.core.views.mixins import (
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.views.utils import get_obj_from_context
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
@@ -743,6 +744,34 @@ class ManufacturerUIViewSet(NautobotUIViewSet):
 #
 # Device types
 #
+
+
+class DeviceTypeCustomFieldsPanel(object_detail.ObjectFieldsPanel):
+    """
+    Custom panel for DeviceType that renders front_image and rear_image
+    as image previews with links, and falls back to normal rendering for other fields.
+    """
+
+    def render_value(self, key, value, context):
+        obj = get_obj_from_context(context, self.context_object_key)
+
+        if key in ["front_image", "rear_image"]:
+            image = getattr(obj, key, None)
+            if image:
+                return format_html(
+                    f'<a href="{image.url}" target="_blank">'
+                    f'<img src="{image.url}" alt="{image.name}" class="img-responsive" />'
+                    f"</a>"
+                )
+            return format_html('<span class="text-muted">&mdash;</span>')
+
+        if key == "manufacturer" and obj.manufacturer:
+            url = f"{reverse('dcim:devicetype_list')}?manufacturer={obj.manufacturer.name}"
+            return format_html(f'<a href="{url}">{obj.manufacturer}</a>')
+
+        return super().render_value(key, value, context)
+
+
 class DeviceTypeUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.DeviceTypeBulkEditForm
     filterset_class = filters.DeviceTypeFilterSet
@@ -752,81 +781,309 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
     table_class = tables.DeviceTypeTable
     queryset = DeviceType.objects.select_related("manufacturer").prefetch_related("software_image_files")
 
-    def get_extra_context(self, request, instance):
-        if self.action != "retrieve":
-            return {}
-        instance_count = Device.objects.restrict(request.user).filter(device_type=instance).count()
-
-        # Component tables
-        consoleport_table = tables.ConsolePortTemplateTable(
-            ConsolePortTemplate.objects.restrict(request.user, "view").filter(device_type=instance),
-            orderable=False,
-        )
-        consoleserverport_table = tables.ConsoleServerPortTemplateTable(
-            ConsoleServerPortTemplate.objects.restrict(request.user, "view").filter(device_type=instance),
-            orderable=False,
-        )
-        powerport_table = tables.PowerPortTemplateTable(
-            PowerPortTemplate.objects.restrict(request.user, "view").filter(device_type=instance),
-            orderable=False,
-        )
-        poweroutlet_table = tables.PowerOutletTemplateTable(
-            PowerOutletTemplate.objects.restrict(request.user, "view").filter(device_type=instance),
-            orderable=False,
-        )
-        interface_table = tables.InterfaceTemplateTable(
-            list(InterfaceTemplate.objects.restrict(request.user, "view").filter(device_type=instance)),
-            orderable=False,
-        )
-        front_port_table = tables.FrontPortTemplateTable(
-            FrontPortTemplate.objects.restrict(request.user, "view").filter(device_type=instance),
-            orderable=False,
-        )
-        rear_port_table = tables.RearPortTemplateTable(
-            RearPortTemplate.objects.restrict(request.user, "view").filter(device_type=instance),
-            orderable=False,
-        )
-        devicebay_table = tables.DeviceBayTemplateTable(
-            DeviceBayTemplate.objects.restrict(request.user, "view").filter(device_type=instance),
-            orderable=False,
-        )
-        modulebay_table = tables.ModuleBayTemplateTable(
-            ModuleBayTemplate.objects.restrict(request.user, "view").filter(device_type=instance),
-            orderable=False,
-        )
-        if request.user.has_perm("dcim.change_devicetype"):
-            consoleport_table.columns.show("pk")
-            consoleserverport_table.columns.show("pk")
-            powerport_table.columns.show("pk")
-            poweroutlet_table.columns.show("pk")
-            interface_table.columns.show("pk")
-            front_port_table.columns.show("pk")
-            rear_port_table.columns.show("pk")
-            devicebay_table.columns.show("pk")
-            modulebay_table.columns.show("pk")
-
-        software_image_files_table = tables.SoftwareImageFileTable(
-            instance.software_image_files.restrict(request.user, "view").annotate(
-                device_type_count=count_related(DeviceType, "software_image_files"),
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            DeviceTypeCustomFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
             ),
-            orderable=False,
-            exclude=["actions", "tags"],
-        )
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                table_class=tables.SoftwareImageFileTable,
+                table_filter="device_types",
+                select_related_fields=["software_version", "status"],
+                exclude_columns=["actions", "tags"],
+                related_field_name="device_types",
+                add_button_route=None,
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.DeviceTable,
+                table_filter="device_type",
+                related_field_name="device_type",
+                table_title="Device Instances",
+                exclude_columns=["actions", "tags"],
+            ),
+        ),
+        extra_buttons=(
+            object_detail.DropdownButton(
+                weight=100,
+                color=ButtonColorChoices.BLUE,
+                label="Add Components",
+                attributes={"id": "device-type-add-components-button"},
+                icon="mdi-plus-thick",
+                required_permissions=["dcim.change_devicetype"],
+                children=(
+                    object_detail.Button(
+                        weight=100,
+                        link_name="dcim:consoleporttemplate_add",
+                        label="Console Ports",
+                        icon="mdi-console",
+                        required_permissions=["dcim.add_consoleporttemplate"],
+                        link_includes_pk=False,
+                    ),
+                    object_detail.Button(
+                        weight=200,
+                        link_name="dcim:consoleserverporttemplate_add",
+                        label="Console Server Ports",
+                        icon="mdi-console-network-outline",
+                        required_permissions=["dcim.add_consoleserverporttemplate"],
+                        link_includes_pk=False,
+                    ),
+                    object_detail.Button(
+                        weight=300,
+                        link_name="dcim:powerporttemplate_add",
+                        label="Power Ports",
+                        icon="mdi-power-plug-outline",
+                        required_permissions=["dcim.add_powerporttemplate"],
+                        link_includes_pk=False,
+                    ),
+                    object_detail.Button(
+                        weight=400,
+                        link_name="dcim:poweroutlettemplate_add",
+                        label="Power Outlets",
+                        icon="mdi-power-socket",
+                        required_permissions=["dcim.add_poweroutlettemplate"],
+                        link_includes_pk=False,
+                    ),
+                    object_detail.Button(
+                        weight=500,
+                        link_name="dcim:interfacetemplate_add",
+                        label="Interfaces",
+                        icon="mdi-ethernet",
+                        required_permissions=["dcim.add_interfacetemplate"],
+                        link_includes_pk=False,
+                    ),
+                    object_detail.Button(
+                        weight=600,
+                        link_name="dcim:frontporttemplate_add",
+                        label="Front Ports",
+                        icon="mdi-square-rounded-outline",
+                        required_permissions=["dcim.add_frontporttemplate"],
+                        link_includes_pk=False,
+                    ),
+                    object_detail.Button(
+                        weight=700,
+                        link_name="dcim:rearporttemplate_add",
+                        label="Rear Ports",
+                        icon="mdi-square-rounded-outline",
+                        required_permissions=["dcim.add_rearporttemplate"],
+                        link_includes_pk=False,
+                    ),
+                    object_detail.Button(
+                        weight=800,
+                        link_name="dcim:devicebaytemplate_add",
+                        label="Device Bays",
+                        icon="mdi-circle-outline",
+                        required_permissions=["dcim.add_devicebaytemplate"],
+                        link_includes_pk=False,
+                    ),
+                    object_detail.Button(
+                        weight=900,
+                        link_name="dcim:modulebaytemplate_add",
+                        label="Module Bays",
+                        icon="mdi-tray",
+                        required_permissions=["dcim.add_modulebaytemplate"],
+                        link_includes_pk=False,
+                    ),
+                ),
+            ),
+        ),
+        extra_tabs=(
+            object_detail.DistinctViewTab(
+                weight=100,
+                tab_id="interfaces",
+                label="Interfaces",
+                url_name="dcim:devicetype_interfaces",
+                related_object_attribute="interfaces",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Interfaces",
+                        table_class=tables.InterfaceTemplateTable,
+                        table_filter="device_type",
+                        tab_id="interfaces",
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=100,
+                tab_id="frontports",
+                label="Front Ports",
+                url_name="dcim:devicetype_frontports",
+                related_object_attribute="frontports",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Front Ports",
+                        table_class=tables.FrontPortTemplateTable,
+                        table_filter="device_type",
+                        tab_id="frontports",
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=100,
+                tab_id="rearports",
+                label="Rear Ports",
+                url_name="dcim:devicetype_rearports",
+                related_object_attribute="rearports",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Rear Ports",
+                        table_class=tables.RearPortTemplateTable,
+                        table_filter="device_type",
+                        tab_id="rearports",
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=100,
+                tab_id="consoleports",
+                label="Console Ports",
+                url_name="dcim:devicetype_consoleports",
+                related_object_attribute="consoleports",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Console Ports",
+                        table_class=tables.ConsolePortTemplateTable,
+                        table_filter="device_type",
+                        tab_id="consoleports",
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=100,
+                tab_id="consoleserverports",
+                label="Console Server Ports",
+                url_name="dcim:devicetype_consoleserverports",
+                related_object_attribute="consoleserverports",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Console Server Ports",
+                        table_class=tables.ConsoleServerPortTemplateTable,
+                        table_filter="device_type",
+                        tab_id="consoleserverports",
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=100,
+                tab_id="powerports",
+                label="Power Ports",
+                url_name="dcim:devicetype_powerports",
+                related_object_attribute="powerports",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Power Ports",
+                        table_class=tables.PowerPortTemplateTable,
+                        table_filter="device_type",
+                        tab_id="powerports",
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=100,
+                tab_id="poweroutlets",
+                label="Power Outlets",
+                url_name="dcim:devicetype_poweroutlets",
+                related_object_attribute="poweroutlets",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Power Outlets",
+                        table_class=tables.PowerOutletTemplateTable,
+                        table_filter="device_type",
+                        tab_id="poweroutlets",
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=100,
+                tab_id="devicebays",
+                label="Device Bays",
+                url_name="dcim:devicetype_devicebays",
+                related_object_attribute="devicebays",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Device Bays",
+                        table_class=tables.DeviceBayTemplateTable,
+                        table_filter="device_type",
+                        tab_id="devicebays",
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=100,
+                tab_id="modulebays",
+                label="Module Bays",
+                url_name="dcim:devicetype_modulebays",
+                related_object_attribute="modulebays",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Module Bays",
+                        table_class=tables.ModuleBayTemplateTable,
+                        table_filter="device_type",
+                        tab_id="modulebays",
+                    ),
+                ),
+            ),
+        ),
+    )
 
-        return {
-            "instance_count": instance_count,
-            "consoleport_table": consoleport_table,
-            "consoleserverport_table": consoleserverport_table,
-            "powerport_table": powerport_table,
-            "poweroutlet_table": poweroutlet_table,
-            "interface_table": interface_table,
-            "front_port_table": front_port_table,
-            "rear_port_table": rear_port_table,
-            "devicebay_table": devicebay_table,
-            "modulebay_table": modulebay_table,
-            "software_image_files_table": software_image_files_table,
-            **super().get_extra_context(request, instance),
-        }
+    @action(detail=True, url_path="interfaces")
+    def interfaces(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(detail=True, url_path="frontports")
+    def frontports(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(detail=True, url_path="rearports")
+    def rearports(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(detail=True, url_path="consoleports")
+    def consoleports(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(detail=True, url_path="consoleserverports")
+    def consoleserverports(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(detail=True, url_path="powerports")
+    def powerports(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(detail=True, url_path="poweroutlets")
+    def poweroutlets(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(detail=True, url_path="devicebays")
+    def devicebays(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(detail=True, url_path="modulebays")
+    def modulebays(self, request, *args, **kwargs):
+        return Response({})
 
 
 class DeviceTypeImportView(generic.ObjectImportView):
