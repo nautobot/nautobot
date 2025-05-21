@@ -106,6 +106,7 @@ from .models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceClusterAssignment,
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
@@ -5272,8 +5273,7 @@ class DeviceRemoveFromClustersView(generic.ObjectEditView):
             if form.is_valid():
                 cluster_pks = form.cleaned_data["pk"]
                 with transaction.atomic():
-                    for cluster in Cluster.objects.filter(pk__in=cluster_pks):
-                        cluster.devices.remove(device)
+                    DeviceClusterAssignment.objects.filter(device=device, cluster__in=cluster_pks).delete()
                 messages.success(
                     request,
                     f"Removed device from {len(cluster_pks)} clusters",
