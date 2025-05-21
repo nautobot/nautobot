@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template import Context
 from django.utils.html import format_html
 from django_tables2 import RequestConfig
 
@@ -64,6 +65,45 @@ class CircuitTerminationUIViewSet(NautobotUIViewSet):
     queryset = CircuitTermination.objects.all()
     serializer_class = serializers.CircuitTerminationSerializer
     table_class = tables.CircuitTerminationTable
+
+    class CircuitTerminationObjectFieldsPanel(ObjectFieldsPanel):
+        def get_extra_context(self, context):
+            return {"termination": context["object"]}
+
+        def render_value(self, key, value, context: Context):
+            if key == "cable":
+                if not value:
+                    return ""
+                return render_component_template("circuits/inc/circuit_termination_cable_fragment.html", context)
+
+            if key == "port_speed":
+                return self.format_speed(value, "mdi-arrow-down-bold", "Downstream")
+
+            if key == "upstream_speed":
+                return self.format_speed(value, "mdi-arrow-up-bold", "Upstream")
+
+            return super().render_value(key, value, context)
+
+        def format_speed(self, value, icon, title):
+            if not value:
+                return None
+            if icon:
+                return format_html('<i class="mdi {}" title="{}"></i> {}', icon, title, humanize_speed(value))
+            return None
+
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            CircuitTerminationObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+                hide_if_unset=["location", "provider_network", "cloud_network", "port_speed", "upstream_speed"],
+                exclude_fields=[
+                    "circuit",
+                ],
+            ),
+        )
+    )
 
     def get_object(self):
         obj = super().get_object()
