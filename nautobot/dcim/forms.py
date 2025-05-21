@@ -118,6 +118,7 @@ from .models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceClusterAssignment,
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
@@ -151,7 +152,6 @@ from .models import (
     SoftwareVersion,
     VirtualChassis,
     VirtualDeviceContext,
-    DeviceClusterAssignment,
 )
 
 logger = logging.getLogger(__name__)
