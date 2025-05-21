@@ -153,6 +153,23 @@ class ComputedFieldUIViewSet(NautobotUIViewSet):
     table_class = tables.ComputedFieldTable
     queryset = ComputedField.objects.all()
     action_buttons = ("add",)
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+                exclude_fields=["template"],
+            ),
+            ObjectTextPanel(
+                label="Template",
+                section=SectionChoices.FULL_WIDTH,
+                weight=100,
+                object_field="template",
+                render_as=ObjectTextPanel.RenderOptions.CODE,
+            ),
+        ),
+    )
 
 
 #
