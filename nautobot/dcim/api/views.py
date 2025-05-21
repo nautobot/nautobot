@@ -36,6 +36,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceClusterAssignment,
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
@@ -836,3 +837,9 @@ class InterfaceVDCAssignmentViewSet(ModelViewSet):
     queryset = InterfaceVDCAssignment.objects.all()
     serializer_class = serializers.InterfaceVDCAssignmentSerializer
     filterset_class = filters.InterfaceVDCAssignmentFilterSet
+
+
+class DeviceClusterAssignmentViewSet(ModelViewSet):
+    queryset = DeviceClusterAssignment.objects.all()
+    serializer_class = serializers.DeviceClusterAssignmentSerializer
+    filterset_class = filters.DeviceClusterAssignmentFilterSet
