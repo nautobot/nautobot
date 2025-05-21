@@ -2177,11 +2177,17 @@ class DeviceBulkEditForm(
     rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(), required=False, query_params={"location": "$location"}
     )
-    add_clusters = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False, label="Add to clusters")
-    remove_clusters = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False, label="Remove from clusters")
+    add_clusters = DynamicModelMultipleChoiceField(
+        queryset=Cluster.objects.all(), required=False, label="Add to clusters"
+    )
+    remove_clusters = DynamicModelMultipleChoiceField(
+        queryset=Cluster.objects.all(), required=False, label="Remove from clusters"
+    )
     # NullBooleanField can return True, False, or None
     # Make sure we're handling all possible values correctly
-    remove_all_clusters = forms.NullBooleanField(required=False, label="Remove from all clusters", widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    remove_all_clusters = forms.NullBooleanField(
+        required=False, label="Remove from all clusters", widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
+    )
     comments = CommentField(widget=SmallTextarea, label="Comments")
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
@@ -2228,9 +2234,9 @@ class DeviceBulkEditForm(
 
         # Process clusters
         devices = Device.objects.filter(pk__in=pk_list)
-        add_clusters = self.cleaned_data.get('add_clusters')
-        remove_clusters = self.cleaned_data.get('remove_clusters')
-        remove_all_clusters = self.cleaned_data.get('remove_all_clusters')
+        add_clusters = self.cleaned_data.get("add_clusters")
+        remove_clusters = self.cleaned_data.get("remove_clusters")
+        remove_all_clusters = self.cleaned_data.get("remove_all_clusters")
 
         # TODO: This isn't working for unclear reasons.
         if remove_all_clusters:
@@ -2249,7 +2255,6 @@ class DeviceBulkEditForm(
 
         if remove_clusters:
             DeviceClusterAssignment.objects.filter(device__in=devices, cluster__in=remove_clusters).delete()
-
 
         return result
 
@@ -5499,6 +5504,7 @@ class VirtualDeviceContextFilterForm(
 
 class DeviceAddToClusterForm(BootstrapMixin, forms.Form):
     """Form for adding a device to one or more clusters."""
+
     location = DynamicModelChoiceField(
         queryset=Location.objects.all(),
         required=False,
@@ -5514,21 +5520,20 @@ class DeviceAddToClusterForm(BootstrapMixin, forms.Form):
         query_params={"cluster_group": "$cluster_group"},
     )
 
-
     def __init__(self, device, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         # Only show clusters that the device isn't already a member of
-        self.fields['clusters'].queryset = Cluster.objects.exclude(
-            pk__in=device.clusters.values_list('pk', flat=True)
-        ).order_by('name')
-        self.fields['clusters'].widget.add_query_param('devices__n', device.id)
+        self.fields["clusters"].queryset = Cluster.objects.exclude(
+            pk__in=device.clusters.values_list("pk", flat=True)
+        ).order_by("name")
+        self.fields["clusters"].widget.add_query_param("devices__n", device.id)
 
-        if self.fields['clusters'].queryset.exists():
-            if self.fields['clusters'].queryset.count() == 1:
-                self.fields['clusters'].initial = self.fields['clusters'].queryset.first().pk
+        if self.fields["clusters"].queryset.exists():
+            if self.fields["clusters"].queryset.count() == 1:
+                self.fields["clusters"].initial = self.fields["clusters"].queryset.first().pk
         else:
-            self.fields['location'].disabled = True
-            self.fields['cluster_group'].disabled = True
-            self.fields['clusters'].disabled = True
-            self.fields['clusters'].help_text = "This device already belongs to all available clusters"
+            self.fields["location"].disabled = True
+            self.fields["cluster_group"].disabled = True
+            self.fields["clusters"].disabled = True
+            self.fields["clusters"].help_text = "This device already belongs to all available clusters"

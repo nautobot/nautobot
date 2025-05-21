@@ -574,11 +574,13 @@ class DynamicModelChoiceMixin:
                 value = form.initial.get(child_field.lstrip("$"))
                 if value:
                     # Handle case where value is a many-to-many or iterable
-                    if ((hasattr(value, 'all') and callable(value.all)) or (isinstance(value, (list, tuple)) and len(value) > 0)):
+                    if (hasattr(value, "all") and callable(value.all)) or (
+                        isinstance(value, (list, tuple)) and len(value) > 0
+                    ):
                         # For M2M fields or lists, pick the first value
-                        if hasattr(value, 'first') and callable(value.first):
+                        if hasattr(value, "first") and callable(value.first):
                             first_value = value.first()
-                        elif hasattr(value, 'all') and callable(value.all):
+                        elif hasattr(value, "all") and callable(value.all):
                             first_value = next(iter(value.all()), None)
                         else:
                             first_value = value[0] if value else None

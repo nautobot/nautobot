@@ -571,7 +571,7 @@ class Device(PrimaryModel, ConfigContextModel):
     def cluster(self):
         """
         Returns the first cluster assigned to this device.
-        
+
         This property is maintained for backward compatibility only.
         New code should use the `clusters` relationship instead.
         """
@@ -585,7 +585,7 @@ class Device(PrimaryModel, ConfigContextModel):
     def cluster(self, value):
         """
         Sets the clusters field to a single value, replacing any existing values.
-        
+
         This property is maintained for backward compatibility only.
         New code should use the `clusters` relationship instead.
         """
@@ -836,14 +836,13 @@ class Device(PrimaryModel, ConfigContextModel):
                 )
 
         # A Device can only be assigned to a Cluster in the same location or parent location, if any
-        if (
-            self.clusters.exists()
-            and self.location is not None
-        ):
+        if self.clusters.exists() and self.location is not None:
             for cluster in self.clusters.all():
                 if cluster.location is not None and cluster.location not in self.location.ancestors(include_self=True):
                     raise ValidationError(
-                        {"clusters": f"The assigned cluster '{cluster}' belongs to a location that does not include {self.location}."}
+                        {
+                            "clusters": f"The assigned cluster '{cluster}' belongs to a location that does not include {self.location}."
+                        }
                     )
 
         # Validate virtual chassis assignment
@@ -1092,11 +1091,8 @@ class Device(PrimaryModel, ConfigContextModel):
 
 @extras_features("graphql")
 class DeviceClusterAssignment(BaseModel):
-
     device = models.ForeignKey("dcim.Device", on_delete=models.CASCADE, related_name="cluster_assignments")
-
     cluster = models.ForeignKey("virtualization.Cluster", on_delete=models.CASCADE, related_name="device_assignments")
-
     is_metadata_associable_model = False
 
     class Meta:

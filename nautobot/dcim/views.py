@@ -1678,11 +1678,7 @@ class DeviceView(generic.ObjectView):
         "software_version",
         "status",
         "tenant__tenant_group",
-    ).prefetch_related(
-        "images",
-        "software_image_files",
-        "clusters"
-    )
+    ).prefetch_related("images", "software_image_files", "clusters")
 
     object_detail_content = object_detail.ObjectDetailContent(
         extra_buttons=(
@@ -1873,8 +1869,8 @@ class DeviceView(generic.ObjectView):
         clusters = instance.clusters.all()
         cluster_table = ClusterTable(clusters, orderable=False) if clusters.exists() else None
         if cluster_table is not None and (
-            request.user.has_perm("virtualization.change_cluster") or 
-            request.user.has_perm("virtualization.delete_cluster")
+            request.user.has_perm("virtualization.change_cluster")
+            or request.user.has_perm("virtualization.delete_cluster")
         ):
             cluster_table.columns.show("pk")
 
@@ -3718,6 +3714,7 @@ class CableCreateView(generic.ObjectEditView):
             },
         )
 
+
 class CableEditView(generic.ObjectEditView):
     queryset = Cable.objects.all()
     model_form = forms.CableForm
@@ -4593,6 +4590,7 @@ class DeviceAddToClusterView(GetReturnURLMixin, ObjectPermissionRequiredMixin, V
     """
     View to add a device to one or more clusters.
     """
+
     queryset = Device.objects.all()
     template_name = "dcim/device_add_to_clusters.html"
 
@@ -4636,4 +4634,3 @@ class DeviceAddToClusterView(GetReturnURLMixin, ObjectPermissionRequiredMixin, V
                 "return_url": self.get_return_url(request, device),
             },
         )
-
