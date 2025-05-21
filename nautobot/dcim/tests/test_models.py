@@ -35,6 +35,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceClusterAssignment,
     DeviceRedundancyGroup,
     DeviceType,
     DeviceTypeToSoftwareImageFile,
@@ -64,7 +65,6 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualDeviceContext,
-    DeviceClusterAssignment,
 )
 from nautobot.extras import context_managers
 from nautobot.extras.choices import CustomFieldTypeChoices
