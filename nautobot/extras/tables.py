@@ -301,6 +301,18 @@ class ApprovalWorkflowTable(BaseTable):
         )
 
 
+class ApprovalChoiceFieldColumn(ChoiceFieldColumn):
+    """
+    Render a ChoiceField value just like ChoiceFieldColumn, but only if the record should be rendered.
+    Otherwise, render a muted dash.
+    """
+
+    def render(self, *, record, bound_column, value):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
+        if record.should_render_state:
+            return super().render(record=record, bound_column=bound_column, value=value)
+        return format_html('<span class="text-muted">&mdash;</span>')
+
+
 class ApprovalWorkflowStageTable(BaseTable):
     """Table for ApprovalWorkflowStage list view."""
 
@@ -320,7 +332,7 @@ class ApprovalWorkflowStageTable(BaseTable):
         orderable=False,
         verbose_name="Actions Needed",
     )
-    state = ChoiceFieldColumn()
+    state = ApprovalChoiceFieldColumn()
     actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("approve", "deny", "comment"))
 
     class Meta(BaseTable.Meta):
