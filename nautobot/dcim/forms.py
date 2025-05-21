@@ -5826,7 +5826,7 @@ class DeviceAddToClusterForm(BootstrapMixin, forms.Form):
 
     def __init__(self, device, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
+
         # Only show clusters that the device isn't already a member of
         self.fields['clusters'].queryset = Cluster.objects.exclude(
             pk__in=device.clusters.values_list('pk', flat=True)
