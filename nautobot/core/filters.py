@@ -397,7 +397,7 @@ class MappedPredicatesFilterMixin:
                 lookup_expr = lookup_info.get("lookup_expr")
                 preprocessor = lookup_info.get("preprocessor")
                 if not callable(preprocessor):
-                    raise TypeError("Preprocessor {preprocessor} must be callable!")
+                    raise TypeError(f"Preprocessor {preprocessor} must be callable!")
             else:
                 raise TypeError(f"Predicate value must be a str or a dict! Got: {type(lookup_info)}")
 
