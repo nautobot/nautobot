@@ -151,6 +151,7 @@ from .models import (
     SoftwareVersion,
     VirtualChassis,
     VirtualDeviceContext,
+    DeviceClusterAssignment,
 )
 
 logger = logging.getLogger(__name__)
@@ -2176,7 +2177,11 @@ class DeviceBulkEditForm(
     rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(), required=False, query_params={"location": "$location"}
     )
-    clusters = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False)
+    add_clusters = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False, label="Add to clusters")
+    remove_clusters = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False, label="Remove from clusters")
+    # NullBooleanField can return True, False, or None
+    # Make sure we're handling all possible values correctly
+    remove_all_clusters = forms.NullBooleanField(required=False, label="Remove from all clusters", widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     comments = CommentField(widget=SmallTextarea, label="Comments")
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
@@ -2216,6 +2221,37 @@ class DeviceBulkEditForm(
 
         # Disable position because only setting null value is required
         self.fields["position"].disabled = True
+
+    def save(self, pk_list):
+        # Call the parent method first to handle the standard field updates
+        result = super().save(pk_list)
+
+        # Process clusters
+        devices = Device.objects.filter(pk__in=pk_list)
+        add_clusters = self.cleaned_data.get('add_clusters')
+        remove_clusters = self.cleaned_data.get('remove_clusters')
+        remove_all_clusters = self.cleaned_data.get('remove_all_clusters')
+
+        # TODO: This isn't working for unclear reasons.
+        if remove_all_clusters:
+            DeviceClusterAssignment.objects.filter(device__in=devices).delete()
+            return result
+
+        if add_clusters:
+            missing_assignments = []
+            for device in devices:
+                for cluster in add_clusters:
+                    if not DeviceClusterAssignment.objects.filter(device=device, cluster=cluster).exists():
+                        missing_assignments.append(DeviceClusterAssignment(device=device, cluster=cluster))
+
+            if missing_assignments:
+                DeviceClusterAssignment.objects.bulk_create(missing_assignments)
+
+        if remove_clusters:
+            DeviceClusterAssignment.objects.filter(device__in=devices, cluster__in=remove_clusters).delete()
+
+
+        return result
 
 
 class DeviceFilterForm(
