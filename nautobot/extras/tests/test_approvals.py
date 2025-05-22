@@ -5,7 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils.timezone import now
 
 from nautobot.core.jobs import BulkDeleteObjects
-from nautobot.core.testing import APITestCase, APIViewTestCases
+from nautobot.core.testing import APITestCase, APIViewTestCases, TestCase
 from nautobot.extras import choices, models
 from nautobot.users.models import User
 
@@ -254,14 +254,55 @@ class ApprovalWorkflowDefinitionAPITest(ApprovalWorkflowTestMixin, APIViewTestCa
             "model_constraints": {"approval_required": True},
         }
 
+
+class ApprovalWorkflowDefinitionManagerTest(TestCase):
+    def setUp(self):
+        scheduled_job_ct = ContentType.objects.get_for_model(models.ScheduledJob)
+        job_model = models.Job.objects.get_for_class_path(BulkDeleteObjects.class_path)
+        self.scheduled_job = models.ScheduledJob.objects.create(
+            name="Bulk Delete Objects Scheduled Job",
+            task=BulkDeleteObjects.class_path,
+            job_model=job_model,
+            interval=choices.JobExecutionType.TYPE_IMMEDIATELY,
+            user=User.objects.first(),
+            start_time=now(),
+        )
+        self.approval_workflow_defs = [
+            models.ApprovalWorkflowDefinition.objects.create(
+                name=f"Test Approval Workflow Definition {i}",
+                model_content_type=scheduled_job_ct,
+                priority=i,
+            )
+            for i in range(4)
+        ]
+
     def test_find_for_model(self):
         highest_priority_approval_workflow_definition = models.ApprovalWorkflowDefinition.objects.get(
             model_content_type=ContentType.objects.get_for_model(models.ScheduledJob), priority=0
         )
         self.assertEqual(
-            models.ApprovalWorkflowDefinition.find_for_model(models.ScheduledJob),
+            models.ApprovalWorkflowDefinition.objects.find_for_model(self.scheduled_job),
             highest_priority_approval_workflow_definition,
         )
+
+    def test_find_for_model_with_match_contrains(self):
+        highest_priority_approval_workflow_definition = models.ApprovalWorkflowDefinition.objects.get(
+            model_content_type=ContentType.objects.get_for_model(models.ScheduledJob), priority=0
+        )
+        highest_priority_approval_workflow_definition.model_constraints = {"name": "Bulk Delete Objects Scheduled Job"}
+        highest_priority_approval_workflow_definition.save()
+        self.assertEqual(
+            models.ApprovalWorkflowDefinition.objects.find_for_model(self.scheduled_job),
+            highest_priority_approval_workflow_definition,
+        )
+
+    def test_find_for_model_with_no_match_contrains(self):
+        highest_priority_approval_workflow_definition = models.ApprovalWorkflowDefinition.objects.get(
+            model_content_type=ContentType.objects.get_for_model(models.ScheduledJob), priority=0
+        )
+        highest_priority_approval_workflow_definition.model_constraints = {"name": "Bulk Delete Objects Scheduled Job1"}
+        highest_priority_approval_workflow_definition.save()
+        self.assertIsNone(models.ApprovalWorkflowDefinition.objects.find_for_model(self.scheduled_job))
 
 
 class ApprovalWorkflowStageDefinitionAPITest(ApprovalWorkflowTestMixin, APIViewTestCases.APIViewTestCase):

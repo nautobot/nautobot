@@ -1232,8 +1232,10 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
                 self.last_run_at = self.start_time - timedelta(
                     **{JobExecutionType.CELERY_INTERVAL_MAP[self.interval]: multiplier},
                 )
-
+        is_new = not self.present_in_database
         super().save(*args, **kwargs)
+        if is_new:
+            self.begin_approval_workflow()
 
     def clean(self):
         """
