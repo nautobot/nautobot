@@ -557,132 +557,87 @@ class ObjectAssignContactOrTeamView(generic.ObjectEditView):
 #
 
 
-class CustomFieldListView(generic.ObjectListView):
+class CustomFieldUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.CustomFieldBulkEditForm
     queryset = CustomField.objects.all()
-    table = tables.CustomFieldTable
-    filterset = filters.CustomFieldFilterSet
-    filterset_form = forms.CustomFieldFilterForm
+    serializer_class = serializers.CustomFieldSerializer
+    filterset_class = filters.CustomFieldFilterSet
+    filterset_form_class = forms.CustomFieldFilterForm
+    form_class = forms.CustomFieldForm
+    table_class = tables.CustomFieldTable
     action_buttons = ("add",)
-
-
-class CustomFieldView(generic.ObjectView):
-    queryset = CustomField.objects.all()
-
-
-class CustomFieldEditView(generic.ObjectEditView):
-    queryset = CustomField.objects.all()
-    model_form = forms.CustomFieldForm
-    template_name = "extras/customfield_edit.html"
 
     def get_extra_context(self, request, instance):
         ctx = super().get_extra_context(request, instance)
-
-        if request.POST:
+        if request.method == "POST":
             ctx["choices"] = forms.CustomFieldChoiceFormSet(data=request.POST, instance=instance)
         else:
             ctx["choices"] = forms.CustomFieldChoiceFormSet(instance=instance)
-
         return ctx
 
-    def post(self, request, *args, **kwargs):
-        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
-        form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
+    def perform_create(self, request, *args, **kwargs):
+        self.obj = self.get_object()
+        form_class = self.get_form_class()
+        form = form_class(
+            data=request.POST,
+            files=request.FILES,
+            initial=normalize_querydict(request.GET, form_class=form_class),
+            instance=self.obj,
+        )
         restrict_form_fields(form, request.user)
+        if "content_types" in request.POST:
+            raw_cts = request.POST.getlist("content_types")
+            try:
+                cleaned_cts = [int(pk) for pk in raw_cts]
+                form.data = form.data.copy()
+                form.data.setlist("content_types", cleaned_cts)
+            except (ValueError, TypeError):
+                logger.warning("Invalid content_types in POST: %s", raw_cts)
 
         if form.is_valid():
-            logger.debug("Form validation was successful")
-
             try:
-                with transaction.atomic():
-                    object_created = not form.instance.present_in_database
-                    obj = form.save()
+                response = self.form_valid(form)
+                choices = self.get_extra_context(request, form.instance).get("choices")
+                if choices and choices.is_valid():
+                    choices.save()
+                elif choices:
+                    msg = "Errors encountered when saving custom field choices. See below."
+                    logger.debug("%s: %s", msg, choices.errors)
+                    form.add_error(None, msg)
+                    return self.form_invalid(form)
 
-                    # Check that the new object conforms with any assigned object-level permissions
-                    self.queryset.get(pk=obj.pk)
-
-                    # ---> BEGIN difference from ObjectEditView.post()
-                    # Process the formsets for choices
-                    ctx = self.get_extra_context(request, obj)
-                    choices = ctx["choices"]
-                    if choices.is_valid():
-                        choices.save()
-                    else:
-                        raise RuntimeError(choices.errors)
-                    # <--- END difference from ObjectEditView.post()
-                verb = "Created" if object_created else "Modified"
-                msg = f"{verb} {self.queryset.model._meta.verbose_name}"
-                logger.info(f"{msg} {obj} (PK: {obj.pk})")
-                try:
-                    msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
-                except AttributeError:
-                    msg = format_html("{} {}", msg, obj)
-                messages.success(request, msg)
-
-                if "_addanother" in request.POST:
-                    # If the object has clone_fields, pre-populate a new instance of the form
-                    if hasattr(obj, "clone_fields"):
-                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
-                        return redirect(url)
-
-                    return redirect(request.get_full_path())
-
-                return_url = form.cleaned_data.get("return_url")
-                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(iri_to_uri(return_url))
-                else:
-                    return redirect(self.get_return_url(request, obj))
+                return response
 
             except ObjectDoesNotExist:
                 msg = "Object save failed due to object-level permissions violation"
                 logger.debug(msg)
                 form.add_error(None, msg)
-            # ---> BEGIN difference from ObjectEditView.post()
+
             except RuntimeError:
                 msg = "Errors encountered when saving custom field choices. See below."
                 logger.debug(msg)
                 form.add_error(None, msg)
+
             except ProtectedError as err:
-                # e.g. Trying to delete a choice that is in use.
                 err_msg = err.args[0]
                 protected_obj = err.protected_objects[0]
                 msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
                 logger.debug(msg)
                 form.add_error(None, msg)
-            # <--- END difference from ObjectEditView.post()
+
+            return self.form_invalid(form)
 
         else:
-            logger.debug("Form validation failed")
+            logger.warning("Form invalid: %s", form.errors.as_json())
+            return self.form_invalid(form)
 
-        return render(
-            request,
-            self.template_name,
-            {
-                "obj": obj,
-                "obj_type": self.queryset.model._meta.verbose_name,
-                "form": form,
-                "return_url": self.get_return_url(request, obj),
-                "editing": obj.present_in_database,
-                **self.get_extra_context(request, obj),
-            },
-        )
-
-
-class CustomFieldDeleteView(generic.ObjectDeleteView):
-    queryset = CustomField.objects.all()
-
-
-class CustomFieldBulkDeleteView(generic.BulkDeleteView):
-    queryset = CustomField.objects.all()
-    table = tables.CustomFieldTable
-    filterset = filters.CustomFieldFilterSet
-    form = forms.CustomFieldBulkDeleteForm
+    def perform_update(self, request, *args, **kwargs):
+        return self.perform_create(request, *args, **kwargs)
 
 
 #
 # Custom Links
 #
-
-
 class CustomLinkUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.CustomLinkBulkEditForm
     filterset_class = filters.CustomLinkFilterSet
