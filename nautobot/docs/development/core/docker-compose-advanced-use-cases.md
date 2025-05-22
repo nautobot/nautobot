@@ -159,21 +159,15 @@ For users of Microsoft Visual Studio Code, several files are included to ease de
 
 +/- 2.1.2
 
-#### `PYTHON_VER` Environment Variable
-
-The `PYTHON_VER` environment variable must be set in the `development/.env` file or the container build will fail.
-
-You can run `invoke` with the `vscode` target to generate this file and re-open the VSCode session under the workspace.
-
-```bash
-invoke vscode
-```
-
 ### Using Dev Containers
 
-To open VS Code in the development container, first open VS Code in your local copy of the Nautobot Git repository. Open the command palette (`Ctrl+Shift+P` or `Cmd+Shift+P`) and select **Reopen in Container** to build and start the development containers. Once your window is connected to the container, you can open the workspace file `nautobot.code-workspace` which enables support for Run/Debug.
+To open VS Code in the development container, first open VS Code in your local copy of the Nautobot Git repository. Open the command palette (`Ctrl+Shift+P` or `Cmd+Shift+P`) and select **Reopen in Container** to build and start the development containers.
 
-To start Nautobot, select **Run Without Debugging** or **Start Debugging** from the Run menu. Once Nautobot has started, you will be prompted to open a browser to connect to Nautobot.
+### Debugging inside a Dev Container
+
+You can use [VS Code to debug](https://code.visualstudio.com/docs/python/debugging) inside the Dev Container using two launch targets:
+- **Python: Nautobot** - Targets the Django server process
+- **Python: Nautobot-Celery** - Targets the Celery worker, useful for debugging jobs.
 
 !!! note
     You can run tests with `nautobot-server --config=nautobot/core/tests/nautobot_config.py test nautobot` while inside the Container.
