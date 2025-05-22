@@ -109,7 +109,20 @@ from nautobot.users.models import ObjectPermission
 User = get_user_model()
 
 
-class ApprovalWorkflowDefinitionViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+class ApprovalWorkflowDefinitionViewTestCase(
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.GetObjectNotesViewTestCase,
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+    # This is almost like ViewTestCases.PrimaryObjectViewTestCase, but without BulkEditObjectsViewTestCase,
+    # because ApprovalWorkflowDefinition doesn't have any fields that support bulk editing.
+    # Currently, `model_content_type` only accepts one content type: ScheduledJob.
+    # See nautobot/extras/constants.py:APPROVAL_WORKFLOW_MODELS for details.
+):
     """Test the ApprovalWorkflowDefinition views."""
 
     model = ApprovalWorkflowDefinition
@@ -118,27 +131,24 @@ class ApprovalWorkflowDefinitionViewTestCase(ViewTestCases.PrimaryObjectViewTest
     def setUpTestData(cls):
         """Set up test data."""
         super().setUpTestData()
-        cls.job_ct = ContentType.objects.get_for_model(Job)
         cls.scheduledjob_ct = ContentType.objects.get_for_model(ScheduledJob)
         for i in range(5):
             ApprovalWorkflowDefinition.objects.create(
                 name=f"Test Approval Workflow {i}",
-                model_content_type=cls.job_ct,
+                model_content_type=cls.scheduledjob_ct,
+                priority=i,
             )
 
         cls.form_data = {
             "name": "Test Approval Workflow Definition 5",
-            "model_content_type": cls.job_ct.pk,
+            "model_content_type": cls.scheduledjob_ct.pk,
             "model_constraints": '{"name": "Bulk Delete Objects"}',
+            "priority": 5,
             # These are the "management_form" fields required by the dynamic CustomFieldChoice formsets.
             "approval_workflow_stage_definitions-TOTAL_FORMS": "0",  # Set to 0 so validation succeeds until we need it
             "approval_workflow_stage_definitions-INITIAL_FORMS": "1",
             "approval_workflow_stage_definitions-MIN_NUM_FORMS": "0",
             "approval_workflow_stage_definitions-MAX_NUM_FORMS": "1000",
-        }
-
-        cls.bulk_edit_data = {
-            "model_content_type": cls.scheduledjob_ct.pk,
         }
 
 
@@ -151,11 +161,11 @@ class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectVie
     def setUpTestData(cls):
         """Set up test data."""
         super().setUpTestData()
-        cls.job_ct = ContentType.objects.get_for_model(Job)
         cls.scheduledjob_ct = ContentType.objects.get_for_model(ScheduledJob)
         cls.approval_workflow_definition = ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow Definition 1",
-            model_content_type=cls.job_ct,
+            model_content_type=cls.scheduledjob_ct,
+            priority=10,
         )
         cls.approver_group = Group.objects.create(name="Test Group 1")
         cls.updated_approver_group = Group.objects.create(name="Test Group 2")
@@ -244,21 +254,31 @@ class ApprovalWorkflowViewTestCase(
     def setUpTestData(cls):
         """Set up test data."""
         super().setUpTestData()
-        cls.jobs = list(Job.objects.all())
-        cls.job_ct = ContentType.objects.get_for_model(Job)
         cls.scheduledjob_ct = ContentType.objects.get_for_model(ScheduledJob)
+        job_model = Job.objects.get_for_class_path("pass.TestPassJob")
+        user = User.objects.first()
+        cls.scheduled_jobs = [
+            ScheduledJob.objects.create(
+                name=f"TessPassJob Scheduled Job {i}",
+                task="pass.TestPassJob",
+                job_model=job_model,
+                interval=JobExecutionType.TYPE_IMMEDIATELY,
+                user=user,
+                start_time=timezone.now(),
+            )
+            for i in range(7)
+        ]
         approval_workflow_definitions = [
             ApprovalWorkflowDefinition.objects.create(
-                name=f"Test Approval Workflow {i}",
-                model_content_type=cls.job_ct,
+                name=f"Test Approval Workflow {i}", model_content_type=cls.scheduledjob_ct, priority=i
             )
             for i in range(5)
         ]
         cls.approval_workflows = [
             ApprovalWorkflow.objects.create(
                 approval_workflow_definition=approval_workflow_definitions[i],
-                object_under_review_content_type=cls.job_ct,
-                object_under_review_object_id=cls.jobs[i].pk,
+                object_under_review_content_type=cls.scheduledjob_ct,
+                object_under_review_object_id=cls.scheduled_jobs[i].pk,
                 current_state=ApprovalWorkflowStateChoices.PENDING,
             )
             for i in range(5)
@@ -266,15 +286,15 @@ class ApprovalWorkflowViewTestCase(
 
         cls.form_data = {
             "approval_workflow_definition": approval_workflow_definitions[3].pk,
-            "object_under_review_content_type": cls.job_ct.pk,
-            "object_under_review_object_id": cls.jobs[5].pk,
+            "object_under_review_content_type": cls.scheduledjob_ct.pk,
+            "object_under_review_object_id": cls.scheduled_jobs[5].pk,
             "current_state": ApprovalWorkflowStateChoices.PENDING,
         }
 
         cls.update_data = {
             "approval_workflow_definition": approval_workflow_definitions[3].pk,
-            "object_under_review_content_type": cls.job_ct.pk,
-            "object_under_review_object_id": cls.jobs[6].pk,
+            "object_under_review_content_type": cls.scheduledjob_ct.pk,
+            "object_under_review_object_id": cls.scheduled_jobs[6].pk,
             "current_state": ApprovalWorkflowStateChoices.APPROVED,
         }
 
@@ -299,14 +319,26 @@ class ApprovalWorkflowStageViewTestCase(
     def setUpTestData(cls):
         """Set up test data."""
         super().setUpTestData()
-        cls.jobs = list(Job.objects.all())
-        cls.job_ct = ContentType.objects.get_for_model(Job)
         cls.scheduledjob_ct = ContentType.objects.get_for_model(ScheduledJob)
+        job_model = Job.objects.get_for_class_path("pass.TestPassJob")
+        user = User.objects.first()
+        cls.scheduled_jobs = [
+            ScheduledJob.objects.create(
+                name=f"TessPassJob Scheduled Job {i}",
+                task="pass.TestPassJob",
+                job_model=job_model,
+                interval=JobExecutionType.TYPE_IMMEDIATELY,
+                user=user,
+                start_time=timezone.now(),
+            )
+            for i in range(6)
+        ]
         cls.approver_groups = [Group.objects.create(name=f"Test Group {i}") for i in range(3)]
         cls.approval_workflow_definitions = [
             ApprovalWorkflowDefinition.objects.create(
                 name=f"Test Approval Workflow {i}",
-                model_content_type=cls.job_ct,
+                model_content_type=cls.scheduledjob_ct,
+                priority=i,
             )
             for i in range(5)
         ]
@@ -326,8 +358,8 @@ class ApprovalWorkflowStageViewTestCase(
         cls.approval_workflows = [
             ApprovalWorkflow.objects.create(
                 approval_workflow_definition=cls.approval_workflow_definitions[i],
-                object_under_review_content_type=cls.job_ct,
-                object_under_review_object_id=cls.jobs[i].pk,
+                object_under_review_content_type=cls.scheduledjob_ct,
+                object_under_review_object_id=cls.scheduled_jobs[i].pk,
                 current_state=ApprovalWorkflowStateChoices.PENDING,
             )
             for i in range(5)
@@ -466,8 +498,6 @@ class ApprovalWorkflowStageResponseViewTestCase(
     def setUpTestData(cls):
         """Set up test data."""
         super().setUpTestData()
-        cls.jobs = list(Job.objects.all())
-        cls.job_ct = ContentType.objects.get_for_model(Job)
         cls.scheduledjob_ct = ContentType.objects.get_for_model(ScheduledJob)
         cls.approver_groups = [Group.objects.create(name=f"Test Group {i}") for i in range(3)]
         cls.users = User.objects.all()
@@ -475,10 +505,24 @@ class ApprovalWorkflowStageResponseViewTestCase(
             for group in cls.approver_groups:
                 user.groups.add(group)
 
+        job_model = Job.objects.get_for_class_path("pass.TestPassJob")
+        cls.scheduled_jobs = [
+            ScheduledJob.objects.create(
+                name=f"TessPassJob Scheduled Job {i}",
+                task="pass.TestPassJob",
+                job_model=job_model,
+                interval=JobExecutionType.TYPE_IMMEDIATELY,
+                user=cls.users[0],
+                start_time=timezone.now(),
+            )
+            for i in range(6)
+        ]
+
         cls.approval_workflow_definitions = [
             ApprovalWorkflowDefinition.objects.create(
                 name=f"Test Approval Workflow {i} Definition",
-                model_content_type=cls.job_ct,
+                model_content_type=cls.scheduledjob_ct,
+                priority=i,
             )
             for i in range(5)
         ]
@@ -498,8 +542,8 @@ class ApprovalWorkflowStageResponseViewTestCase(
         cls.approval_workflows = [
             ApprovalWorkflow.objects.create(
                 approval_workflow_definition=cls.approval_workflow_definitions[i],
-                object_under_review_content_type=cls.job_ct,
-                object_under_review_object_id=cls.jobs[i].pk,
+                object_under_review_content_type=cls.scheduledjob_ct,
+                object_under_review_object_id=cls.scheduled_jobs[i].pk,
                 current_state=ApprovalWorkflowStateChoices.PENDING,
             )
             for i in range(5)

@@ -4,7 +4,8 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.utils.timezone import now
 
-from nautobot.core.testing import APIViewTestCases
+from nautobot.core.jobs import BulkDeleteObjects
+from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.extras import choices, models
 from nautobot.users.models import User
 
@@ -14,9 +15,8 @@ class ApprovalWorkflowTestMixin:
 
     @classmethod
     def setUpTestData(cls):
-        job_ct = ContentType.objects.get(app_label="extras", model="job")
         scheduled_job_ct = ContentType.objects.get_for_model(models.ScheduledJob)
-        jobs = list(models.Job.objects.all())
+        scheduled_jobs = list(models.ScheduledJob.objects.all())
         cls.approver_group_1 = Group.objects.create(name="Approver Group 1")
         cls.approver_group_2 = Group.objects.create(name="Approver Group 2")
         users = list(User.objects.all())
@@ -24,67 +24,75 @@ class ApprovalWorkflowTestMixin:
             user.groups.add(cls.approver_group_1)
             user.groups.add(cls.approver_group_2)
 
+        job_model = models.Job.objects.get_for_class_path(BulkDeleteObjects.class_path)
+        scheduled_jobs = [
+            models.ScheduledJob.objects.create(
+                name=f"Bulk Delete Objects Scheduled Job {i}",
+                task=BulkDeleteObjects.class_path,
+                job_model=job_model,
+                interval=choices.JobExecutionType.TYPE_IMMEDIATELY,
+                user=users[0],
+                start_time=now(),
+            )
+            for i in range(8)
+        ]
         cls.approval_workflow_def_1 = models.ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow Definition 1",
-            model_content_type=job_ct,
-            priority=1,
+            model_content_type=scheduled_job_ct,
+            priority=0,
         )
         cls.approval_workflow_def_2 = models.ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow Definition 2",
-            model_content_type=job_ct,
+            model_content_type=scheduled_job_ct,
             model_constraints={"name": "Bulk Delete Objects"},
-            priority=2,
+            priority=1,
         )
         cls.approval_workflow_def_3 = models.ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow Definition 3",
-            model_content_type=ContentType.objects.get(app_label="extras", model="job"),
+            model_content_type=scheduled_job_ct,
             model_constraints={"name": "Bulk Delete Objects"},
-            priority=3,
+            priority=2,
         )
         cls.approval_workflow_def_4 = models.ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow Definition 4",
-            model_content_type=job_ct,
+            model_content_type=scheduled_job_ct,
             model_constraints={"name": "Bulk Delete Objects"},
-            priority=4,
+            priority=3,
         )
         cls.approval_workflow_def_5 = models.ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow Definition 5",
-            model_content_type=job_ct,
-            model_constraints={"name": "Bulk Delete Objects"},
-            priority=5,
-        )
-        cls.approval_workflow_def_6 = models.ApprovalWorkflowDefinition.objects.create(
-            name="Test Approval Workflow Definition 6",
             model_content_type=scheduled_job_ct,
+            model_constraints={"name": "Bulk Delete Objects"},
+            priority=4,
         )
         cls.approval_workflow_1_instance_1 = models.ApprovalWorkflow.objects.create(
             approval_workflow_definition=cls.approval_workflow_def_1,
-            object_under_review_content_type=job_ct,
-            object_under_review_object_id=jobs[0].pk,
+            object_under_review_content_type=scheduled_job_ct,
+            object_under_review_object_id=scheduled_jobs[0].pk,
             current_state=choices.ApprovalWorkflowStateChoices.PENDING,
         )
         cls.approval_workflow_1_instance_2 = models.ApprovalWorkflow.objects.create(
             approval_workflow_definition=cls.approval_workflow_def_2,
-            object_under_review_content_type=job_ct,
-            object_under_review_object_id=jobs[1].pk,
+            object_under_review_content_type=scheduled_job_ct,
+            object_under_review_object_id=scheduled_jobs[1].pk,
             current_state=choices.ApprovalWorkflowStateChoices.PENDING,
         )
         cls.approval_workflow_1_instance_3 = models.ApprovalWorkflow.objects.create(
             approval_workflow_definition=cls.approval_workflow_def_1,
-            object_under_review_content_type=job_ct,
-            object_under_review_object_id=jobs[2].pk,
+            object_under_review_content_type=scheduled_job_ct,
+            object_under_review_object_id=scheduled_jobs[2].pk,
             current_state=choices.ApprovalWorkflowStateChoices.APPROVED,
         )
         cls.approval_workflow_1_instance_4 = models.ApprovalWorkflow.objects.create(
             approval_workflow_definition=cls.approval_workflow_def_2,
-            object_under_review_content_type=job_ct,
-            object_under_review_object_id=jobs[3].pk,
+            object_under_review_content_type=scheduled_job_ct,
+            object_under_review_object_id=scheduled_jobs[3].pk,
             current_state=choices.ApprovalWorkflowStateChoices.DENIED,
         )
         cls.approval_workflow_1_instance_5 = models.ApprovalWorkflow.objects.create(
             approval_workflow_definition=cls.approval_workflow_def_2,
-            object_under_review_content_type=job_ct,
-            object_under_review_object_id=jobs[4].pk,
+            object_under_review_content_type=scheduled_job_ct,
+            object_under_review_object_id=scheduled_jobs[4].pk,
             current_state=choices.ApprovalWorkflowStateChoices.PENDING,
         )
         cls.approval_workflow_1_stage_def_1 = models.ApprovalWorkflowStageDefinition.objects.create(
@@ -159,14 +167,6 @@ class ApprovalWorkflowTestMixin:
             denial_message="Stage 3 Denial Message",
             approver_group=cls.approver_group_2,
         )
-        cls.approval_workflow_6_stage_def_1 = models.ApprovalWorkflowStageDefinition.objects.create(
-            approval_workflow_definition=cls.approval_workflow_def_6,
-            weight=100,
-            name="Test Approval Workflow 6 Stage 1",
-            min_approvers=2,
-            denial_message="Stage 1 Denial Message",
-            approver_group=cls.approver_group_1,
-        )
         cls.approval_workflow_1_stage_instance_1 = models.ApprovalWorkflowStage.objects.create(
             approval_workflow=cls.approval_workflow_1_instance_1,
             approval_workflow_stage_definition=cls.approval_workflow_1_stage_def_1,
@@ -230,19 +230,21 @@ class ApprovalWorkflowDefinitionAPITest(ApprovalWorkflowTestMixin, APIViewTestCa
         cls.create_data = [
             {
                 "name": "Approval Workflow Definition 1",
-                "model_content_type": "extras.job",
+                "model_content_type": "extras.scheduledjob",
                 "model_constraints": {"name": "Bulk Delete Objects"},
+                "priority": 5,
             },
             {
                 "name": "Approval Workflow Definition 2",
-                "model_content_type": "extras.job",
+                "model_content_type": "extras.scheduledjob",
                 "model_constraints": {},
+                "priority": 6,
             },
             {
                 "name": "Approval Workflow Definition 3",
                 "model_content_type": "extras.scheduledjob",
                 "model_constraints": {"name": "Bulk Delete Objects"},
-                "priority": 1,
+                "priority": 7,
             },
         ]
 
@@ -255,11 +257,6 @@ class ApprovalWorkflowDefinitionAPITest(ApprovalWorkflowTestMixin, APIViewTestCa
     def test_find_for_model(self):
         highest_priority_approval_workflow_definition = models.ApprovalWorkflowDefinition.objects.get(
             model_content_type=ContentType.objects.get_for_model(models.ScheduledJob), priority=0
-        )
-        models.ApprovalWorkflowDefinition.objects.create(
-            name="Test",
-            model_content_type=ContentType.objects.get_for_model(models.ScheduledJob),
-            priority=1,
         )
         self.assertEqual(
             models.ApprovalWorkflowDefinition.find_for_model(models.ScheduledJob),
@@ -325,25 +322,25 @@ class ApprovalWorkflowAPITest(ApprovalWorkflowTestMixin, APIViewTestCases.APIVie
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-        jobs = list(models.Job.objects.all())
+        scheduled_jobs = list(models.ScheduledJob.objects.all())
 
         cls.create_data = [
             {
                 "approval_workflow_definition": cls.approval_workflow_def_1.pk,
-                "object_under_review_content_type": "extras.job",
-                "object_under_review_object_id": jobs[5].pk,
+                "object_under_review_content_type": "extras.scheduledjob",
+                "object_under_review_object_id": scheduled_jobs[5].pk,
                 "current_state": choices.ApprovalWorkflowStateChoices.PENDING,
             },
             {
                 "approval_workflow_definition": cls.approval_workflow_def_1.pk,
-                "object_under_review_content_type": "extras.job",
-                "object_under_review_object_id": jobs[6].pk,
+                "object_under_review_content_type": "extras.scheduledjob",
+                "object_under_review_object_id": scheduled_jobs[6].pk,
                 "current_state": choices.ApprovalWorkflowStateChoices.PENDING,
             },
             {
                 "approval_workflow_definition": cls.approval_workflow_def_1.pk,
-                "object_under_review_content_type": "extras.job",
-                "object_under_review_object_id": jobs[7].pk,
+                "object_under_review_content_type": "extras.scheduledjob",
+                "object_under_review_object_id": scheduled_jobs[7].pk,
                 "current_state": choices.ApprovalWorkflowStateChoices.PENDING,
             },
         ]
@@ -354,15 +351,31 @@ class ApprovalWorkflowAPITest(ApprovalWorkflowTestMixin, APIViewTestCases.APIVie
         }
 
 
-class ApprovalWorkflowTriggerAPITest(ApprovalWorkflowTestMixin, APIViewTestCases.APIViewTestCase):
+class ApprovalWorkflowTriggerAPITest(APITestCase):
     """
     Test suite for verifying the trigger and approval handling of approval workflows.
     """
 
     def setUp(self):
         super().setUp()
+        approver_group_1 = Group.objects.create(name="Approver Group 1")
+        users = list(User.objects.all())
+        for user in users:
+            user.groups.add(approver_group_1)
         self.job_model = models.Job.objects.get_for_class_path("pass.TestPassJob")
         self.content_type = ContentType.objects.get_for_model(models.ScheduledJob)
+        self.approval_workflow_def = models.ApprovalWorkflowDefinition.objects.create(
+            name="Test Approval Workflow Definition",
+            model_content_type=self.content_type,
+        )
+        models.ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=self.approval_workflow_def,
+            weight=100,
+            name="Test Approval Workflow Stage 1",
+            min_approvers=2,
+            denial_message="Stage 1 Denial Message",
+            approver_group=approver_group_1,
+        )
 
     def test_no_initialization_approval_workflow_for_scheduled_job(self):
         """

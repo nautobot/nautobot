@@ -2054,27 +2054,6 @@ class JobView(generic.ObjectView):
     queryset = JobModel.objects.all()
     template_name = "extras/job_detail.html"
 
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        approval_workflows = instance.associated_approval_workflows.all()
-        approval_workflows_count = approval_workflows.count()
-        approval_workflow_table = tables.ApprovalWorkflowTable(
-            data=approval_workflows,
-            user=request.user,
-            exclude=["object_under_review", "object_under_review_content_type"],
-        )
-
-        RequestConfig(
-            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-        ).configure(approval_workflow_table)
-        context.update(
-            {
-                "approval_workflows_count": approval_workflows_count,
-                "approval_workflow_table": approval_workflow_table,
-            }
-        )
-        return context
-
 
 class JobEditView(generic.ObjectEditView):
     queryset = JobModel.objects.all()
@@ -2554,22 +2533,45 @@ class ScheduledJobView(generic.ObjectView):
     queryset = ScheduledJob.objects.all()
 
     def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+
+        # Add job class labels
         job_class = get_job(instance.task)
         labels = {}
         if job_class is not None:
             for name, var in job_class._get_vars().items():
                 field = var.as_field()
-                if field.label:
-                    labels[name] = field.label
-                else:
-                    labels[name] = pretty_name(name)
+                labels[name] = field.label if field.label else pretty_name(name)
 
-        return {
-            "labels": labels,
-            "job_class_found": (job_class is not None),
-            "default_time_zone": get_current_timezone(),
-            **super().get_extra_context(request, instance),
-        }
+        context.update(
+            {
+                "labels": labels,
+                "job_class_found": (job_class is not None),
+                "default_time_zone": get_current_timezone(),
+            }
+        )
+
+        # Add approval workflow table
+        approval_workflows = instance.associated_approval_workflows.all()
+        approval_workflows_count = approval_workflows.count()
+        approval_workflow_table = tables.ApprovalWorkflowTable(
+            data=approval_workflows,
+            user=request.user,
+            exclude=["object_under_review", "object_under_review_content_type"],
+        )
+
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(approval_workflow_table)
+
+        context.update(
+            {
+                "approval_workflows_count": approval_workflows_count,
+                "approval_workflow_table": approval_workflow_table,
+            }
+        )
+
+        return context
 
 
 class ScheduledJobDeleteView(generic.ObjectDeleteView):
