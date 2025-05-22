@@ -71,6 +71,7 @@ from nautobot.wireless.models import (
 from nautobot.wireless.tables import (
     ControllerManagedDeviceGroupRadioProfileAssignmentTable,
     ControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
+    DeviceGroupWirelessNetworkTable,
     RadioProfileTable,
 )
 
@@ -4509,8 +4510,9 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
                         section=SectionChoices.FULL_WIDTH,
                         weight=100,
                         table_title="Wireless Networks",
-                        table_class=ControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
+                        table_class=DeviceGroupWirelessNetworkTable,
                         table_filter="controller_managed_device_group",
+                        related_field_name="controller_managed_device_groups",
                         tab_id="wireless_networks",
                         add_button_route=None,
                         exclude_columns=["controller_managed_device_group", "controller"],
