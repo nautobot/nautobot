@@ -4417,6 +4417,10 @@ class ControllerUIViewSet(NautobotUIViewSet):
                 table_class=tables.DeviceTable,
                 table_title="Managed Devices",
                 table_filter="controller_managed_device_group__controller",
+                include_columns=[
+                    "capabilities",
+                    "controller_managed_device_group",
+                ],
                 related_field_name="controllers",
                 add_button_route=None,
             ),
