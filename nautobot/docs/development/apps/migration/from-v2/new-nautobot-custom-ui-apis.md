@@ -137,7 +137,7 @@ Nautobot v2.1 introduced reorderable panels on the homepage. In v3.0 we internal
 Nautobot extends Bootstrap utilities with its own subset of CSS classes, properties and values.
 
 !!! note
-    We elaborate more on [Bootstrap v5.x Helpers and Utilities](./upgrading-from-bootstrap-v3-to-v5.md#helper-classes--helpers-and-utilities) in another migration guide.
+    We elaborate more on [Bootstrap v5.x Helpers and Utilities](./upgrading-from-bootstrap-v3-to-v5.md#helper-classes-helpers-and-utilities) in another migration guide.
 
 | Class                | Style                              |
 |----------------------|------------------------------------|
