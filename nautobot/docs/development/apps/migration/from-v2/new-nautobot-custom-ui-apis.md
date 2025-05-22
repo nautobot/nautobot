@@ -95,3 +95,54 @@ The best place to see how to use Offcanvas is Bootstrap v5.x documentation. For 
     </section>
 {% endblock %}
 ```
+
+## Draggable
+
+Nautobot v2.1 introduced reorderable panels on the homepage. In v3.0 we internally standardized reordering items with native [HTML Drag and Drop API](https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API) and now are ready to give it away to use in Nautobot apps as well. Here's what you need to know about Nautobot draggable API:
+
+1. First and foremost, Nautobot draggable API is tailored specifically for reordering elements. In case your feature requires other kinds of drag and drop behavior, you still have to implement it on your own.
+2. Drag and drop interactive area must be surrounded by a wrapper element of `nb-draggable-container` class.
+3. Draggable elements must have a unique `id` and `nb-draggable` class. Note that you should not attribute these elements with `draggable=true` in HTML because this is already handled by Nautobot core draggable script.
+4. Drag handle requires `nb-draggable-handle` class. Handle is the element you can interact with to grab `nb-draggable`. If an entire `nb-draggable` is intended to be *"grabbable"* (not to be confused with *"draggable"*), it should be given both` nb-draggable` and `nb-draggable-handle` classes.
+5. To subscribe to the DOM node order changes, for example to be able to save it in a persistent storage, create a custom JavaScript script to observe `nb-draggable-container` using native `MutationObserver` with `{ childList: true }` config.
+
+```html
+<ul class="list-group nb-draggable-container">
+    <li class="list-group-item nb-draggable" id="draggable-1">
+        <button class="btn nb-draggable-handle">Grab me 1</button>
+    </li>
+    <li class="list-group-item nb-draggable" id="draggable-2">
+        <button class="btn nb-draggable-handle">Grab me 2</button>
+    </li>
+    <li class="list-group-item nb-draggable" id="draggable-3">
+        <button class="btn nb-draggable-handle">Grab me 3</button>
+    </li>
+</ul>
+
+<script>
+    (() => {
+        window.addEventListener('DOMContentLoaded', () => {
+            const draggableContainer = document.querySelector('.nb-draggable-container');
+            const mutationObserver = new MutationObserver(() => {
+                // Do something...
+            });
+            mutationObserver.observe(draggableContainer, { childList: true });
+        });
+    })();
+</script>
+```
+
+## Extended Bootstrap Utilities
+
+Nautobot extends Bootstrap utilities with its own subset of CSS classes, properties and values.
+
+!!! note
+    We elaborate more on [Bootstrap v5.x Helpers and Utilities](./upgrading-from-bootstrap-v3-to-v5.md#helper-classes--helpers-and-utilities) in another migration guide.
+
+| Class                | Style                              |
+|----------------------|------------------------------------|
+| `text-none`          | `text-transform: none;`            |
+| `width-0`            | `width: 0;`                        |
+| `nb-cursor-unset`    | `cursor: unset;`                   |
+| `nb-transition-base` | `transition: all .2s ease-in-out;` |
+| `nb-transition-fade` | `transition: opacity .15s linear;` |

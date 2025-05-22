@@ -15,113 +15,188 @@
     <noscript>
         <style>
             #draggable-homepage-panels {
-                opacity: 100 !important;
+                opacity: 1 !important;
             }
-            #draggable-homepage-panels .panel-heading {
+            #draggable-homepage-panels .nb-draggable-handle {
                 cursor: default;
             }
-            .collapse-icon {
+            #draggable-homepage-panels .nb-collapse-toggle {
                 display: none;
             }
         </style>
     </noscript>
 {% endblock %}
 
+{% block extra_styles %}
+    <style>
+        #draggable-homepage-panels {
+            column-gap: 1.25rem; /* 20px */
+            columns: 4 22.5rem; /* 360px */
+            /* Height, margin and padding adjustments below enable drag and drop mechanism over the entire homepage. */
+            height: calc(100% + 2 * 1rem); /* (100% + 2 * 16px); the latter compensates negative vertical margins. */
+            margin: -1rem -1.25rem; /* -16px -20px; negate parent container paddings. */
+            padding: inherit; /* Inherit padding from parent container to imitate its content boundaries. */
+        }
+        #draggable-homepage-panels > .card.nb-draggable:not(:first-child) {
+            margin-block-start: 1.25rem; /* 20px */
+        }
+        #draggable-homepage-panels > .card.nb-draggable > .list-group {
+            max-height: 25rem; /* 400px */
+        }
+    </style>
+{% endblock %}
 
 {% block content %}
     {% registry %}
-    <div class="row">
-        <div class="col-sm-12">
-            <div class="homepage_column" id="draggable-homepage-panels" style="columns: 4 360px">
-                {% for panel_name, panel_details in registry.homepage_layout.panels.items %}
-                    {% if request.user|has_one_or_more_perms:panel_details.permissions %}
-                        <div class="panel panel-default" id="{{ panel_name|slugify }}" style="break-inside: avoid" data-panel-weight="{{ panel_details.weight }}">
-                            {% with cookie_key='homepanel-'|add:panel_name|slugify %}
-                                <div class="panel-heading">
-                                    <strong>{{ panel_name }}</strong>
-                                    <span id="collapse-icon-{{ panel_name|slugify }}" class="glyphicon glyphicon-chevron-down collapse-icon{% if request.COOKIES|default:''|get_item:cookie_key|default:'False' == 'False' %} rotated180{% endif %}" type="button" data-toggle="collapse" data-target="#homepanel-{{ panel_name|slugify }}" aria-expanded="false" aria-controls="homepanel-{{ panel_name|slugify }}"></span>
-                                </div>
-                                <div class="list-group collapse{% if request.COOKIES|default:''|get_item:cookie_key|default:'False' == 'False' %} in{% endif %} collapsible-div" id="homepanel-{{ panel_name|slugify }}" >
-                            {% endwith %}
-                                {% if panel_details.rendered_html %}
-                                    {% autoescape off %}{{ panel_details.rendered_html }}{% endautoescape %}
-                                {% elif panel_details.items %}
-                                    {% for item_name, item_details in panel_details.items.items %}
-                                        {% if item_details.rendered_html %}
-                                            <div class="list-group-item" data-item-weight="{{ item_details.weight }}">
-                                                {% if request.user|has_one_or_more_perms:item_details.permissions %}
-                                                    {% autoescape off %}{{ item_details.rendered_html }}{% endautoescape %}
-                                                {% endif %}
-                                            </div>
-                                        {% elif not item_details.items.items %}
-                                            {% if request.user|has_one_or_more_perms:item_details.permissions %}
-                                                <div class="list-group-item" data-item-weight="{{ item_details.weight }}">
-                                                    {% if request.user|has_perms:item_details.permissions %}
-                                                        <span class="badge pull-right">{{ item_details.count }}</span>
-                                                        <h4 class="list-group-item-heading">
+    <div id="draggable-homepage-panels" class="opacity-0 nb-draggable-container nb-transition-fade">
+        {% for panel_name, panel_details in registry.homepage_layout.panels.items %}
+            {% if request.user|has_one_or_more_perms:panel_details.permissions %}
+                <div class="card nb-draggable" id="{{ panel_name|slugify }}" data-panel-weight="{{ panel_details.weight }}">
+                    {% with cookie_key='homepanel-'|add:panel_name|slugify %}
+                        <div class="card-header nb-draggable-handle">
+                            <strong class="text-body text-none">{{ panel_name }}</strong>
+                            <button
+                                class="btn stretched-link nb-collapse-toggle nb-cursor-unset"
+                                type="button"
+                                panel-id="homepanel-{{ panel_name|slugify }}"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#homepanel-{{ panel_name|slugify }}"
+                                aria-expanded="{% if request.COOKIES|default:''|get_item:cookie_key|default:'False' == 'False' %}true{% else %}false{% endif %}"
+                                aria-controls="homepanel-{{ panel_name|slugify }}"
+                            >
+                                <span class="mdi mdi-chevron-down"></span>
+                            </button>
+                        </div>
+                        <ul
+                            id="homepanel-{{ panel_name|slugify }}"
+                            class="list-group collapse overflow-y-auto{% if request.COOKIES|default:''|get_item:cookie_key|default:'False' == 'False' %} show{% endif %}"
+                        >
+                    {% endwith %}
+                        {% if panel_details.rendered_html %}
+                            {% autoescape off %}{{ panel_details.rendered_html }}{% endautoescape %}
+                        {% elif panel_details.items %}
+                            {% for item_name, item_details in panel_details.items.items %}
+                                {% if item_details.rendered_html %}
+                                    <li class="list-group-item" data-item-weight="{{ item_details.weight }}">
+                                        {% if request.user|has_one_or_more_perms:item_details.permissions %}
+                                            {% autoescape off %}{{ item_details.rendered_html }}{% endautoescape %}
+                                        {% endif %}
+                                    </li>
+                                {% elif not item_details.items.items %}
+                                    {% if request.user|has_one_or_more_perms:item_details.permissions %}
+                                        <li class="list-group-item" data-item-weight="{{ item_details.weight }}">
+                                            {% if request.user|has_perms:item_details.permissions %}
+                                                <span class="badge bg-primary float-end my-1">{{ item_details.count }}</span>
+                                                <h4 class="fw-normal lh-base">
+                                                    {% comment %}
+                                                        Use 'url xxx as variable' so that an invalid
+                                                        link doesn't throw a NoReverseMatch exception.
+                                                    {% endcomment %}
+                                                    {% url item_details.link as item_url %}
+                                                    {% if item_url %}
+                                                        <a href="{{ item_url }}">{{ item_name }}</a>
+                                                    {% else %}
+                                                        <a>ERROR: Invalid link!</a>
+                                                    {% endif %}
+                                                </h4>
+                                            {% else %}
+                                                <span class="badge bg-primary float-end my-1"><span class="mdi mdi-lock" aria-hidden="true"></span></span>
+                                                <h4 class="fw-normal lh-base">{{ item_name }}</h4>
+                                            {% endif %}
+                                            <p class="fs-5 mb-0 mt-4 text-secondary">{{ item_details.description }}</p>
+                                        </li>
+                                    {% endif %}
+                                {% else %}
+                                    <li class="list-group-item" data-item-weight="{{ item_details.weight }}">
+                                        <h4 class="fw-normal lh-base">{{ item_name }}</h4>
+                                        {% for group_item_name, group_item_details in item_details.items.items %}
+                                            {% if request.user|has_one_or_more_perms:group_item_details.permissions %}
+                                                {% if request.user|has_perms:group_item_details.permissions %}
+                                                    {% if group_item_details.rendered_html %}
+                                                        {% autoescape off %}
+                                                            {{ group_item_details.rendered_html }}
+                                                        {% endautoescape %}
+                                                    {% else %}
+                                                        <span class="badge bg-primary float-end mt-4">{{ group_item_details.count }}</span>
+                                                        <p class="mb-0 mt-4 ps-20">
                                                             {% comment %}
                                                                 Use 'url xxx as variable' so that an invalid
                                                                 link doesn't throw a NoReverseMatch exception.
                                                             {% endcomment %}
-                                                            {% url item_details.link as item_url %}
-                                                            {% if item_url %}
-                                                                <a href="{{ item_url }}">{{ item_name }}</a>
+                                                            {% url group_item_details.link as group_url %}
+                                                            {% if group_url %}
+                                                                <a href="{{ group_url }}">{{ group_item_name }}</a>
                                                             {% else %}
                                                                 <a>ERROR: Invalid link!</a>
                                                             {% endif %}
-                                                        </h4>
-                                                    {% else %}
-                                                        <span class="badge pull-right"><i class="mdi mdi-lock"></i></span>
-                                                        <h4 class="list-group-item-heading">{{ item_name }}</h4>
+                                                        </p>
                                                     {% endif %}
-                                                    <p class="list-group-item-text text-muted">{{ item_details.description }}</p>
-                                                </div>
+                                                {% else %}
+                                                    <span class="badge bg-primary float-end mt-4"><span class="mdi mdi-lock" aria-hidden="true"></span></span>
+                                                    <p class="mb-0 mt-4 ps-20">{{ group_item_name }}</p>
+                                                {% endif %}
                                             {% endif %}
-                                        {% else %}
-                                            <div class="list-group-item" data-item-weight="{{ item_details.weight }}">
-                                                <h4 class="list-group-item-heading">{{ item_name }}</h4>
-                                                {% for group_item_name, group_item_details in item_details.items.items %}
-                                                    {% if request.user|has_one_or_more_perms:group_item_details.permissions %}
-                                                        {% if request.user|has_perms:group_item_details.permissions %}
-                                                            {% if group_item_details.rendered_html %}
-                                                                {% autoescape off %}
-                                                                    {{ group_item_details.rendered_html }}
-                                                                {% endautoescape %}
-                                                            {% else %}
-                                                                <span class="badge pull-right">{{ group_item_details.count }}</span>
-                                                                <p style="padding-left: 20px;">
-                                                                    {% comment %}
-                                                                        Use 'url xxx as variable' so that an invalid
-                                                                        link doesn't throw a NoReverseMatch exception.
-                                                                    {% endcomment %}
-                                                                    {% url group_item_details.link as group_url %}
-                                                                    {% if group_url %}
-                                                                        <a href="{{ group_url }}">{{ group_item_name }}</a>
-                                                                    {% else %}
-                                                                        <a>ERROR: Invalid link!</a>
-                                                                    {% endif %}
-                                                                </p>
-                                                            {% endif %}
-                                                        {% else %}
-                                                            <span class="badge pull-right"><i class="mdi mdi-lock"></i></span>
-                                                            <p style="padding-left: 20px;">{{ group_item_name }}</p>
-                                                        {% endif %}
-                                                    {% endif %}
-                                                {% endfor %}
-                                            </div>
-                                        {% endif %}
-                                    {% endfor %}
+                                        {% endfor %}
+                                    </li>
                                 {% endif %}
-                            </div>
-                        </div>
-                    {% endif %}
-                {% endfor %}
-            </div>
-        </div>
+                            {% endfor %}
+                        {% endif %}
+                    </ul>
+                </div>
+            {% endif %}
+        {% endfor %}
     </div>
 {% endblock %}
 {% block javascript %}
-{{ block.super }}
-<script src="{% versioned_static 'js/homepage_layout.js' %}"
-        onerror="window.location='{% url 'media_failure' %}?filename=js/homepagelayout.js'"></script>
+    {{ block.super }}
+    <script>
+        (() => {
+            window.addEventListener('DOMContentLoaded', () => {
+                const draggableHomepagePanels = document.querySelector('#draggable-homepage-panels');
+
+                [...draggableHomepagePanels.querySelectorAll('.card .collapse')].forEach((collapseToggle) => {
+                    collapseToggle.addEventListener('hide.bs.collapse', (event) => {
+                        document.cookie = event.currentTarget.id + '=True; path=/';
+                    });
+                    collapseToggle.addEventListener('show.bs.collapse', (event) => {
+                        document.cookie = event.currentTarget.id + '=False; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+                    });
+                });
+
+                const PANEL_ORDER_LOCAL_STORAGE_KEY = 'homepage-panels-order';
+
+                const loadPanelOrder = () => {
+                    const homepagePanelsOrder = localStorage.getItem(PANEL_ORDER_LOCAL_STORAGE_KEY);
+
+                    const panelOrder = (() => {
+                        try {
+                            return homepagePanelsOrder ? JSON.parse(homepagePanelsOrder) : undefined;
+                        } catch (exception) {
+                            localStorage.removeItem(PANEL_ORDER_LOCAL_STORAGE_KEY);
+                            return undefined;
+                        }
+                    })();
+
+                    panelOrder?.forEach((panelId) => {
+                        const panel = document.getElementById(panelId);
+                        if (panel) {
+                            draggableHomepagePanels.appendChild(panel);
+                        }
+                    });
+                };
+
+                const savePanelOrder = () => {
+                    const panelOrder = [...draggableHomepagePanels.children].map((child) => child.id);
+                    localStorage.setItem(PANEL_ORDER_LOCAL_STORAGE_KEY, JSON.stringify(panelOrder));
+                };
+
+                const mutationObserver = new MutationObserver(savePanelOrder);
+                mutationObserver.observe(draggableHomepagePanels, { childList: true });
+
+                loadPanelOrder();
+
+                draggableHomepagePanels.classList.remove('opacity-0');
+            });
+        })();
+    </script>
 {% endblock %}
