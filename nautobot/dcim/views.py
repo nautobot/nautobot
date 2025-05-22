@@ -5309,7 +5309,7 @@ class DeviceAddToClusterView(GetReturnURLMixin, ObjectPermissionRequiredMixin, V
 
     def get(self, request, pk):
         device = get_object_or_404(self.queryset, pk=pk)
-        form = forms.DeviceAddToClusterForm(device=device, initial=request.GET)
+        form = forms.DeviceAddToClustersForm(device=device, initial=request.GET)
         return render(
             request,
             self.template_name,
@@ -5322,7 +5322,7 @@ class DeviceAddToClusterView(GetReturnURLMixin, ObjectPermissionRequiredMixin, V
 
     def post(self, request, pk):
         device = get_object_or_404(self.queryset, pk=pk)
-        form = forms.DeviceAddToClusterForm(device=device, data=request.POST)
+        form = forms.DeviceAddToClustersForm(device=device, data=request.POST)
         if form.is_valid():
             cluster_ids = form.cleaned_data.get("clusters")
             if cluster_ids:
