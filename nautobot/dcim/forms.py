@@ -5467,7 +5467,7 @@ class VirtualDeviceContextFilterForm(
     tags = TagFilterField(model)
 
 
-class DeviceAddToClusterForm(BootstrapMixin, forms.Form):
+class DeviceAddToClustersForm(BootstrapMixin, forms.Form):
     """Form for adding a device to one or more clusters."""
 
     location = DynamicModelChoiceField(
