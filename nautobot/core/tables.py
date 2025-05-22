@@ -49,7 +49,6 @@ class BaseTable(django_tables2.Table):
         hide_hierarchy_ui=False,
         order_by=None,
         data_transform_callback=None,
-        list_url=None,
         **kwargs,
     ):
         """
