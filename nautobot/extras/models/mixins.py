@@ -86,83 +86,21 @@ class ApprovableModelMixin(models.Model):
             ]
         )
 
-        self.on_workflow_initiated(approval_workflow)
+        self.on_workflow_initiated()
 
         return approval_workflow
 
-    def _validate_workflow_instance(self, approval_workflow, state):
-        """
-        Validate that the workflow instance is associated with this object.
+    def on_workflow_initiated(self):
+        """Called when an approval workflow is initiated."""
+        raise NotImplementedError("Subclasses must implement `on_workflow_initiated`.")
 
-        Args:
-            workflow_instance: The ApprovalWorkflowInstance to validate
+    def on_workflow_approved(self):
+        """Called when an approval workflow is approved."""
+        raise NotImplementedError("Subclasses must implement `on_workflow_approved`.")
 
-        Raises:
-            ValueError: If the workflow is not associated with this object
-        """
-        if not self.associated_approval_workflows.filter(
-            object_under_review_object_id=self.pk, current_state=state
-        ).exists():
-            raise ValueError(
-                f"Approval Workflow {approval_workflow.pk} with current state {state} is not associated with this {self.__class__.__name__} (ID: {self.pk})"
-            )
-
-    def on_workflow_initiated(self, approval_workflow: "ApprovalWorkflow"):  # noqa: F821
-        """
-        Entry point for handling the initiation of an approval workflow.
-
-        Args:
-            approval_workflow: The ApprovalWorkflow being initiated.
-        """
-        self._validate_workflow_instance(approval_workflow, ApprovalWorkflowStateChoices.PENDING)
-        self._handle_workflow_initiated()
-
-    def _handle_workflow_initiated(self):
-        """
-        Hook method to be implemented by subclasses to define behavior on workflow initiation.
-
-        Raises:
-            NotImplementedError: If not implemented by subclass.
-        """
-        raise NotImplementedError("Subclasses must implement _handle_workflow_initiated")
-
-    def on_workflow_approved(self, approval_workflow: "ApprovalWorkflow"):  # noqa: F821
-        """
-        Entry point for handling the approval of an approval workflow.
-
-        Args:
-            approval_workflow: The ApprovalWorkflow that was approved.
-        """
-        self._validate_workflow_instance(approval_workflow, ApprovalWorkflowStateChoices.APPROVED)
-        self._handle_workflow_approved()
-
-    def _handle_workflow_approved(self):
-        """
-        Hook method to be implemented by subclasses to define behavior on workflow approval.
-
-        Raises:
-            NotImplementedError: If not implemented by subclass.
-        """
-        raise NotImplementedError("Subclasses must implement _handle_workflow_approved")
-
-    def on_workflow_denied(self, approval_workflow: "ApprovalWorkflow"):  # noqa: F821
-        """
-        Entry point for handling the denial of an approval workflow.
-
-        Args:
-            approval_workflow: The ApprovalWorkflow that was denied.
-        """
-        self._validate_workflow_instance(approval_workflow, ApprovalWorkflowStateChoices.DENIED)
-        self._handle_workflow_denied()
-
-    def _handle_workflow_denied(self):
-        """
-        Hook method to be implemented by subclasses to define behavior on workflow denial.
-
-        Raises:
-            NotImplementedError: If not implemented by subclass.
-        """
-        raise NotImplementedError("Subclasses must implement _handle_workflow_denied")
+    def on_workflow_denied(self):
+        """Called when an approval workflow is denied."""
+        raise NotImplementedError("Subclasses must implement `on_workflow_denied`.")
 
 
 class ContactMixin(models.Model):
