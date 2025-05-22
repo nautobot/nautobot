@@ -3848,207 +3848,177 @@ class InterfaceConnectionsListView(ConnectionsListView):
 #
 
 
-class VirtualChassisListView(generic.ObjectListView):
+class VirtualChassisUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.VirtualChassisBulkEditForm
+    filterset_class = filters.VirtualChassisFilterSet
+    filterset_form_class = forms.VirtualChassisFilterForm
+    form_class = forms.VirtualChassisCreateForm
+    serializer_class = serializers.VirtualChassisSerializer
+    table_class = tables.VirtualChassisTable
     queryset = VirtualChassis.objects.all()
-    table = tables.VirtualChassisTable
-    filterset = filters.VirtualChassisFilterSet
-    filterset_form = forms.VirtualChassisFilterForm
 
+    def get_template_name(self):
+        if self.action == "create":
+            return "dcim/virtualchassis_add.html"
+        elif self.action == "update":
+            return "dcim/virtualchassis_update.html"
+        return super().get_template_name()
 
-class VirtualChassisView(generic.ObjectView):
-    queryset = VirtualChassis.objects.all()
+    def get_form_class(self, *args, **kwargs):
+        if self.action == "create":
+            return forms.VirtualChassisCreateForm
+        return super().get_form_class(*args, **kwargs)
 
     def get_extra_context(self, request, instance):
-        members = Device.objects.restrict(request.user).filter(virtual_chassis=instance)
+        context = super().get_extra_context(request, instance)
 
-        return {"members": members, **super().get_extra_context(request, instance)}
+        if self.action == "update":
+            VCMemberFormSet = modelformset_factory(
+                model=Device,
+                form=forms.DeviceVCMembershipForm,
+                formset=forms.BaseVCMemberFormSet,
+                extra=0,
+            )
+            members_queryset = instance.members.select_related("rack").order_by("vc_position")
+            formset = VCMemberFormSet(queryset=members_queryset)
 
+            context.update(
+                {
+                    "formset": formset,
+                    "vc_form": self.get_form_class()(instance=instance),
+                    "return_url": self.get_return_url(request, instance),
+                }
+            )
 
-class VirtualChassisCreateView(generic.ObjectEditView):
-    queryset = VirtualChassis.objects.all()
-    model_form = forms.VirtualChassisCreateForm
-    template_name = "dcim/virtualchassis_add.html"
+        elif self.action == "retrieve":
+            members = Device.objects.restrict(request.user).filter(virtual_chassis=instance)
+            context.update({"members": members})
 
+        return context
 
-class VirtualChassisEditView(ObjectPermissionRequiredMixin, GetReturnURLMixin, View):
-    queryset = VirtualChassis.objects.all()
+    def perform_create(self, request, *args, **kwargs):
+        form_class = self.get_form_class()
+        form = form_class(
+            data=request.POST,
+            files=request.FILES,
+            initial=normalize_querydict(request.GET, form_class=form_class),
+        )
+        restrict_form_fields(form, request.user)
+        if not form.is_valid():
+            return self.form_invalid(form)
 
-    def get_required_permission(self):
-        return "dcim.change_virtualchassis"
+        obj = form.save(commit=False)
+        restricted_qs = self.queryset.model.objects.restrict(request.user, "add")
+        try:
+            with transaction.atomic():
+                obj.save()
+                if not restricted_qs.filter(pk=obj.pk).exists():
+                    raise PermissionDenied()
+                self.object_created = True
+                self.object = obj
+        except PermissionDenied:
+            form.add_error(None, "You do not have permission to add this object.")
+            return self.form_invalid(form)
 
-    def get(self, request, pk):
-        virtual_chassis = get_object_or_404(self.queryset, pk=pk)
+        return self.form_valid(form)
+
+    def perform_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        form_class = self.get_form_class()
+        form = form_class(data=request.POST, files=request.FILES, instance=instance)
+        restrict_form_fields(form, request.user)
+
         VCMemberFormSet = modelformset_factory(
             model=Device,
             form=forms.DeviceVCMembershipForm,
             formset=forms.BaseVCMemberFormSet,
             extra=0,
         )
-        members_queryset = virtual_chassis.members.select_related("rack").order_by("vc_position")
-
-        vc_form = forms.VirtualChassisForm(instance=virtual_chassis)
-        vc_form.fields["master"].queryset = members_queryset
-        formset = VCMemberFormSet(queryset=members_queryset)
-
-        return render(
-            request,
-            "dcim/virtualchassis_edit.html",
-            {
-                "vc_form": vc_form,
-                "formset": formset,
-                "return_url": self.get_return_url(request, virtual_chassis),
-            },
-        )
-
-    def post(self, request, pk):
-        virtual_chassis = get_object_or_404(self.queryset, pk=pk)
-        VCMemberFormSet = modelformset_factory(
-            model=Device,
-            form=forms.DeviceVCMembershipForm,
-            formset=forms.BaseVCMemberFormSet,
-            extra=0,
-        )
-        members_queryset = virtual_chassis.members.select_related("rack").order_by("vc_position")
-
-        vc_form = forms.VirtualChassisForm(request.POST, instance=virtual_chassis)
-        vc_form.fields["master"].queryset = members_queryset
+        members_queryset = instance.members.select_related("rack").order_by("vc_position")
         formset = VCMemberFormSet(request.POST, queryset=members_queryset)
 
-        if vc_form.is_valid() and formset.is_valid():
-            with transaction.atomic():
-                # Save the VirtualChassis
-                vc_form.save()
+        if not form.is_valid() or not formset.is_valid():
+            return self.form_invalid(form)
 
-                # Nullify the vc_position of each member first to allow reordering without raising an IntegrityError on
-                # duplicate positions. Then save each member instance.
-                members = formset.save(commit=False)
-                devices = Device.objects.filter(pk__in=[m.pk for m in members])
-                for device in devices:
-                    device.vc_position = None
-                    device.save()
-                for member in members:
-                    member.save()
+        with transaction.atomic():
+            # Save the VirtualChassis
+            form.save()
 
-            return redirect(virtual_chassis.get_absolute_url())
-
-        return render(
-            request,
-            "dcim/virtualchassis_edit.html",
-            {
-                "vc_form": vc_form,
-                "formset": formset,
-                "return_url": self.get_return_url(request, virtual_chassis),
-            },
-        )
-
-
-class VirtualChassisDeleteView(generic.ObjectDeleteView):
-    queryset = VirtualChassis.objects.all()
-
-
-class VirtualChassisAddMemberView(ObjectPermissionRequiredMixin, GetReturnURLMixin, View):
-    queryset = VirtualChassis.objects.all()
-
-    def get_required_permission(self):
-        return "dcim.change_virtualchassis"
-
-    def get(self, request, pk):
-        virtual_chassis = get_object_or_404(self.queryset, pk=pk)
-
-        initial_data = {k: request.GET[k] for k in request.GET}
-        member_select_form = forms.VCMemberSelectForm(initial=initial_data)
-        membership_form = forms.DeviceVCMembershipForm(initial=initial_data)
-
-        return render(
-            request,
-            "dcim/virtualchassis_add_member.html",
-            {
-                "virtual_chassis": virtual_chassis,
-                "member_select_form": member_select_form,
-                "membership_form": membership_form,
-                "return_url": self.get_return_url(request, virtual_chassis),
-            },
-        )
-
-    def post(self, request, pk):
-        virtual_chassis = get_object_or_404(self.queryset, pk=pk)
-
-        member_select_form = forms.VCMemberSelectForm(request.POST)
-
-        if member_select_form.is_valid():
-            device = member_select_form.cleaned_data["device"]
-            device.virtual_chassis = virtual_chassis
-            data = {k: request.POST[k] for k in ["vc_position", "vc_priority"]}
-            membership_form = forms.DeviceVCMembershipForm(data=data, validate_vc_position=True, instance=device)
-
-            if membership_form.is_valid():
-                membership_form.save()
-                msg = format_html('Added member <a href="{}">{}</a>', device.get_absolute_url(), device)
-                messages.success(request, msg)
-
-                if "_addanother" in request.POST:
-                    return redirect(request.get_full_path())
-
-                return redirect(self.get_return_url(request, device))
-
-        else:
-            membership_form = forms.DeviceVCMembershipForm(data=request.POST)
-
-        return render(
-            request,
-            "dcim/virtualchassis_add_member.html",
-            {
-                "virtual_chassis": virtual_chassis,
-                "member_select_form": member_select_form,
-                "membership_form": membership_form,
-                "return_url": self.get_return_url(request, virtual_chassis),
-            },
-        )
-
-
-class VirtualChassisRemoveMemberView(ObjectPermissionRequiredMixin, GetReturnURLMixin, View):
-    queryset = Device.objects.all()
-
-    def get_required_permission(self):
-        return "dcim.change_device"
-
-    def get(self, request, pk):
-        device = get_object_or_404(self.queryset, pk=pk, virtual_chassis__isnull=False)
-        form = ConfirmationForm(initial=request.GET)
-
-        return render(
-            request,
-            "dcim/virtualchassis_remove_member.html",
-            {
-                "device": device,
-                "form": form,
-                "return_url": self.get_return_url(request, device),
-            },
-        )
-
-    def post(self, request, pk):
-        device = get_object_or_404(self.queryset, pk=pk, virtual_chassis__isnull=False)
-        form = ConfirmationForm(request.POST)
-
-        # Protect master device from being removed
-        virtual_chassis = VirtualChassis.objects.filter(master=device).first()
-        if virtual_chassis is not None:
-            msg = format_html("Unable to remove master device {} from the virtual chassis.", device)
-            messages.error(request, msg)
-            return redirect(device.get_absolute_url())
-
-        if form.is_valid():
-            devices = Device.objects.filter(pk=device.pk)
+            # Nullify the vc_position of each member first to allow reordering without raising an IntegrityError on
+            # duplicate positions. Then save each member instance.
+            members = formset.save(commit=False)
+            devices = Device.objects.filter(pk__in=[m.pk for m in members])
             for device in devices:
+                device.vc_position = None
+                device.save()
+            for member in members:
+                member.save()
+
+        return self.form_valid(form)
+
+    @action(detail=True, methods=["get", "post"], url_path="add-member", url_name="add_member")
+    def add_member(self, request, pk=None):
+        virtual_chassis = get_object_or_404(VirtualChassis.objects.all(), pk=pk)
+
+        if request.method == "POST":
+            member_select_form = forms.VCMemberSelectForm(request.POST)
+            if member_select_form.is_valid():
+                device = member_select_form.cleaned_data["device"]
+                device.virtual_chassis = virtual_chassis
+                data = {k: request.POST[k] for k in ["vc_position", "vc_priority"]}
+                membership_form = forms.DeviceVCMembershipForm(data=data, validate_vc_position=True, instance=device)
+
+                if membership_form.is_valid():
+                    membership_form.save()
+                    msg = format_html('Added member <a href="{}">{}</a>', device.get_absolute_url(), device)
+                    messages.success(request, msg)
+
+                    if "_addanother" in request.POST:
+                        return redirect(request.get_full_path())
+                    return redirect(self.get_return_url(request, device))
+            else:
+                membership_form = forms.DeviceVCMembershipForm(data=request.POST)
+        else:
+            initial_data = {k: request.GET[k] for k in request.GET}
+            member_select_form = forms.VCMemberSelectForm(initial=initial_data)
+            membership_form = forms.DeviceVCMembershipForm(initial=initial_data)
+
+        return render(
+            request,
+            "dcim/virtualchassis_add_member.html",
+            {
+                "virtual_chassis": virtual_chassis,
+                "member_select_form": member_select_form,
+                "membership_form": membership_form,
+                "return_url": self.get_return_url(request, virtual_chassis),
+            },
+        )
+
+    @action(detail=True, methods=["get", "post"], url_path="remove-member", url_name="remove_member")
+    def remove_member(self, request, pk=None):
+        device = get_object_or_404(Device.objects.all(), pk=pk, virtual_chassis__isnull=False)
+        virtual_chassis = VirtualChassis.objects.filter(master=device).first()
+
+        if request.method == "POST":
+            form = ConfirmationForm(request.POST)
+            if virtual_chassis is not None:
+                msg = format_html("Unable to remove master device {} from the virtual chassis.", device)
+                messages.error(request, msg)
+                return redirect(device.get_absolute_url())
+
+            if form.is_valid():
+                vc_name = device.virtual_chassis
                 device.virtual_chassis = None
                 device.vc_position = None
                 device.vc_priority = None
                 device.save()
 
-            msg = f"Removed {device} from virtual chassis {device.virtual_chassis}"
-            messages.success(request, msg)
+                msg = f"Removed {device} from virtual chassis {vc_name}"
+                messages.success(request, msg)
 
-            return redirect(self.get_return_url(request, device))
+                return redirect(self.get_return_url(request, device))
+        else:
+            form = ConfirmationForm(initial=request.GET)
 
         return render(
             request,
@@ -4063,19 +4033,6 @@ class VirtualChassisRemoveMemberView(ObjectPermissionRequiredMixin, GetReturnURL
 
 class VirtualChassisBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = VirtualChassis.objects.all()
-    table = tables.VirtualChassisTable
-
-
-class VirtualChassisBulkEditView(generic.BulkEditView):
-    queryset = VirtualChassis.objects.all()
-    filterset = filters.VirtualChassisFilterSet
-    table = tables.VirtualChassisTable
-    form = forms.VirtualChassisBulkEditForm
-
-
-class VirtualChassisBulkDeleteView(generic.BulkDeleteView):
-    queryset = VirtualChassis.objects.all()
-    filterset = filters.VirtualChassisFilterSet
     table = tables.VirtualChassisTable
 
 
