@@ -1,0 +1,1 @@
+Fixed an AttributeError exception when rendering a table column describing a Relationship association to an unknown content-type.
