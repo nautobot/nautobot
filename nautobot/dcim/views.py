@@ -3356,13 +3356,42 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
     table_class = tables.ModuleBayTable
     create_template_name = "dcim/device_component_add.html"
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                hide_if_unset=("parent_device", "parent_module"),
+            ),
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                context_object_key="installed_module_data",
+                label="Installed Module",
+            ),
+        )
+    )
+
     def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+
         if instance:
-            return {
-                "device_breadcrumb_url": "dcim:device_modulebays",
-                "module_breadcrumb_url": "dcim:module_modulebays",
-            }
-        return {}
+            # Set breadcrumbs always
+            context.update(
+                {
+                    "device_breadcrumb_url": "dcim:device_modulebays",
+                    "module_breadcrumb_url": "dcim:module_modulebays",
+                }
+            )
+
+            # Add installed module context
+            context["installed_module_data"] = self._get_installed_module_context(instance)
+
+        return context
+
+    def _get_installed_module_context(self, instance):
+        return getattr(instance, "installed_module", None)
 
     def get_selected_objects_parents_name(self, selected_objects):
         selected_object = selected_objects.first()
