@@ -179,6 +179,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     software_version = tables.Column(linkify=True, verbose_name="Software Version")
     secrets_group = tables.Column(linkify=True)
     capabilities = tables.Column(orderable=False, accessor="controller_managed_device_group.capabilities")
+    manufacturer = tables.Column(orderable=False, accessor="device_type.manufacturer")
     tags = TagColumn(url_name="dcim:device_list")
     actions = ButtonsColumn(Device)
 
@@ -211,6 +212,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "controller_managed_device_group",
             "secrets_group",
             "capabilities",
+            "manufacturer",
             "tags",
             "actions",
         )

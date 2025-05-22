@@ -4420,6 +4420,7 @@ class ControllerUIViewSet(NautobotUIViewSet):
                 include_columns=[
                     "capabilities",
                     "controller_managed_device_group",
+                    "manufacturer",
                 ],
                 related_field_name="controllers",
                 add_button_route=None,
