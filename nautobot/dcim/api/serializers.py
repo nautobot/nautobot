@@ -9,10 +9,10 @@ from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
 from nautobot.core.api import (
     ChoiceField,
     ContentTypeField,
+    NautobotHyperlinkedRelatedField,
     NautobotModelSerializer,
     TimeZoneSerializerField,
     TreeModelSerializerMixin,
-    NautobotHyperlinkedRelatedField,
     ValidatedModelSerializer,
 )
 from nautobot.core.api.serializers import PolymorphicProxySerializer
@@ -104,11 +104,11 @@ from nautobot.dcim.models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
-from nautobot.virtualization.models import Cluster
 from nautobot.extras.api.mixins import (
     TaggedModelSerializerMixin,
 )
 from nautobot.extras.utils import FeatureQuery
+from nautobot.virtualization.models import Cluster
 
 
 class CableTerminationModelSerializerMixin(serializers.ModelSerializer):
