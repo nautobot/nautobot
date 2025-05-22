@@ -3900,23 +3900,23 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
             initial=normalize_querydict(request.GET, form_class=form_class),
         )
         restrict_form_fields(form, request.user)
-        if form.is_valid():
-            obj = form.save(commit=False)
-            restricted_qs = self.queryset.model.objects.restrict(request.user, "add")
-            try:
-                with transaction.atomic():
-                    obj.save()
+        if not form.is_valid():
+            return self.form_invalid(form)
 
-                    if not restricted_qs.filter(pk=obj.pk).exists():
-                        raise PermissionDenied()
+        obj = form.save(commit=False)
+        restricted_qs = self.queryset.model.objects.restrict(request.user, "add")
+        try:
+            with transaction.atomic():
+                obj.save()
+                if not restricted_qs.filter(pk=obj.pk).exists():
+                    raise PermissionDenied()
+                self.object_created = True
+                self.object = obj
+        except PermissionDenied:
+            form.add_error(None, "You do not have permission to add this object.")
+            return self.form_invalid(form)
 
-                    self.object_created = True
-                    self.object = obj
-            except PermissionDenied:
-                form.add_error(None, "You do not have permission to add this object.")
-                return self.form_invalid(form)
-            return self.form_valid(form)
-        return self.form_invalid(form)
+        return self.form_valid(form)
 
     def perform_update(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -3933,18 +3933,24 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
         members_queryset = instance.members.select_related("rack").order_by("vc_position")
         formset = VCMemberFormSet(request.POST, queryset=members_queryset)
 
-        if form.is_valid() and formset.is_valid():
-            with transaction.atomic():
-                form.save()
-                members = formset.save(commit=False)
-                devices = Device.objects.filter(pk__in=[m.pk for m in members])
-                for device in devices:
-                    device.vc_position = None
-                    device.save()
-                for member in members:
-                    member.save()
-            return self.form_valid(form)
-        return self.form_invalid(form)
+        if not form.is_valid() or not formset.is_valid():
+            return self.form_invalid(form)
+
+        with transaction.atomic():
+            # Save the VirtualChassis
+            form.save()
+
+            # Nullify the vc_position of each member first to allow reordering without raising an IntegrityError on
+            # duplicate positions. Then save each member instance.
+            members = formset.save(commit=False)
+            devices = Device.objects.filter(pk__in=[m.pk for m in members])
+            for device in devices:
+                device.vc_position = None
+                device.save()
+            for member in members:
+                member.save()
+
+        return self.form_valid(form)
 
     @action(detail=True, methods=["get", "post"], url_path="add-member", url_name="add_member")
     def add_member(self, request, pk=None):
@@ -3997,12 +4003,13 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
                 return redirect(device.get_absolute_url())
 
             if form.is_valid():
+                vc_name = device.virtual_chassis
                 device.virtual_chassis = None
                 device.vc_position = None
                 device.vc_priority = None
                 device.save()
 
-                msg = f"Removed {device} from virtual chassis"
+                msg = f"Removed {device} from virtual chassis {vc_name}"
                 messages.success(request, msg)
 
                 return redirect(self.get_return_url(request, device))
