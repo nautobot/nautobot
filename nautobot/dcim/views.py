@@ -4485,6 +4485,9 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
                     "tenant",
                     "description",
                 ],
+                value_transforms={
+                    "capabilities": [helpers.label_list],
+                },
             ),
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.FULL_WIDTH,
