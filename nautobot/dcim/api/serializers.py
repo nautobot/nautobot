@@ -12,6 +12,7 @@ from nautobot.core.api import (
     NautobotModelSerializer,
     TimeZoneSerializerField,
     TreeModelSerializerMixin,
+    NautobotHyperlinkedRelatedField,
     ValidatedModelSerializer,
 )
 from nautobot.core.api.serializers import PolymorphicProxySerializer
@@ -99,6 +100,7 @@ from nautobot.dcim.models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
+from nautobot.virtualization.models import Cluster
 from nautobot.extras.api.mixins import (
     TaggedModelSerializerMixin,
 )
@@ -525,7 +527,14 @@ class DeviceBaySerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
 class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     face = ChoiceField(choices=DeviceFaceChoices, allow_blank=True, required=False)
     config_context = serializers.SerializerMethodField()
-    cluster = serializers.SerializerMethodField()
+    # for backward compatibility where a Device had only a single Cluster
+    cluster = NautobotHyperlinkedRelatedField(
+        allow_null=True,
+        queryset=Cluster.objects.all(),
+        required=False,
+        view_name="virtualization-api:cluster-detail",
+        write_only=True,
+    )
 
     class Meta:
         model = Device
@@ -554,14 +563,6 @@ class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     @extend_schema_field(serializers.DictField)
     def get_config_context(self, obj):
         return obj.get_config_context()
-
-    @extend_schema_field(serializers.DictField)
-    def get_cluster(self, obj):
-        """Return the first cluster for backward compatibility"""
-        try:
-            return obj.cluster.pk if obj.cluster else None
-        except obj.clusters.model.MultipleObjectsReturned:
-            return obj.clusters.first().pk if obj.clusters.exists() else None
 
     def validate(self, attrs):
         # Validate uniqueness of (rack, position, face) since we omitted the automatically-created validator from Meta.
