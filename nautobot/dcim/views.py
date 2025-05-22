@@ -692,7 +692,7 @@ class RackReservationUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 label="Rack",
-                context_data_key="Rack",
+                context_data_key="rack_data",
             ),
             object_detail.ObjectFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
@@ -711,7 +711,7 @@ class RackReservationUIViewSet(NautobotUIViewSet):
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
-            context["Rack"] = self.get_rack_context(instance)
+            context["rack_data"] = self.get_rack_context(instance)
         return context
 
     def get_rack_context(self, instance):
@@ -721,7 +721,7 @@ class RackReservationUIViewSet(NautobotUIViewSet):
 
         return {
             "location": rack.location,
-            "group": rack.rack_group,
+            "rack_group": rack.rack_group,
             "rack": rack,
         }
 
