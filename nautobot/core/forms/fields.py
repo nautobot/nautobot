@@ -566,7 +566,7 @@ class DynamicModelChoiceMixin:
         return super().prepare_value(value)
 
     def get_bound_field(self, form, field_name):
-        bound_field = super().get_bound_field(form, field_name)
+        bound_field = BoundField(form, self, field_name)
 
         # Set initial value based on prescribed child fields (if not already set)
         if not self.initial and self.initial_params:
