@@ -29,7 +29,7 @@ from rest_framework.response import Response
 
 from nautobot.circuits.models import Circuit
 from nautobot.cloud.tables import CloudAccountTable
-from nautobot.core.choices import ButtonColorChoices
+from nautobot.core.choices import ButtonActionColorChoices, ButtonColorChoices
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
@@ -906,7 +906,41 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                         table_title="Interfaces",
                         table_class=tables.InterfaceTemplateTable,
                         table_filter="device_type",
+                        enable_bulk_actions=True,
                         tab_id="interfaces",
+                        form_id="devicetype_form",
+                        footer_buttons=[
+                            object_detail.FormButton(
+                                link_name="dcim:interfacetemplate_bulk_rename",
+                                link_includes_pk=False,
+                                label="Rename",
+                                color=ButtonActionColorChoices.RENAME,
+                                icon="mdi-pencil",
+                                size="xs",
+                                form_id="devicetype_form",
+                                weight=200,
+                            ),
+                            object_detail.FormButton(
+                                link_name="dcim:interfacetemplate_bulk_edit",
+                                link_includes_pk=False,
+                                label="Edit",
+                                color=ButtonActionColorChoices.EDIT,
+                                icon="mdi-pencil",
+                                size="xs",
+                                form_id="devicetype_form",
+                                weight=200,
+                            ),
+                            object_detail.FormButton(
+                                link_name="dcim:interfacetemplate_bulk_delete",
+                                link_includes_pk=False,
+                                label="Delete",
+                                color=ButtonActionColorChoices.DELETE,
+                                icon="mdi-trash-can-outline",
+                                size="xs",
+                                form_id="devicetype_form",
+                                weight=100,
+                            ),
+                        ],
                     ),
                 ),
             ),
