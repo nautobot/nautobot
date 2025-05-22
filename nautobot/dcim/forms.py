@@ -118,7 +118,6 @@ from .models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
-    DeviceClusterAssignment,
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
