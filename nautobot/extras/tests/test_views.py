@@ -1162,6 +1162,15 @@ class GitRepositoryTestCase(
 ):
     model = GitRepository
     slugify_function = staticmethod(slugify_dashes_to_underscores)
+    expected_edit_form_buttons = [
+        '<button type="submit" name="_dryrun_update" class="btn btn-warning">Update & Dry Run</button>',
+        '<button type="submit" name="_update" class="btn btn-primary">Update & Sync</button>',
+    ]
+    expected_create_form_buttons = [
+        '<button type="submit" name="_dryrun_create" class="btn btn-info">Create & Dry Run</button>',
+        '<button type="submit" name="_create" class="btn btn-primary">Create & Sync</button>',
+        '<button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>',
+    ]
 
     @classmethod
     def setUpTestData(cls):
@@ -3858,6 +3867,7 @@ class WebhookTestCase(
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = Webhook
 
@@ -3888,6 +3898,9 @@ class WebhookTestCase(
         )
 
         obj_type = ContentType.objects.get_for_model(ConsolePort)
+        device_ct = ContentType.objects.get_for_model(Device)
+        ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
+        prefix_ct = ContentType.objects.get_for_model(Prefix)
 
         for webhook in webhooks:
             webhook.save()
@@ -3901,6 +3914,23 @@ class WebhookTestCase(
             "payload_url": "http://test-url.com/test-4",
             "http_method": "POST",
             "http_content_type": "application/json",
+        }
+        cls.bulk_edit_data = {
+            "name": "webhook-4",
+            "enabled": True,
+            "type_create": True,
+            "type_update": True,
+            "type_delete": False,
+            "payload_url": "http://test-url.com/test-4",
+            "http_method": "POST",
+            "http_content_type": "application/json",
+            "additional_headers": "Authorization: Token abc123\nX-Custom-Header: ExampleValue",
+            "body_template": '{"event": "{{ event }}", "data": {{ data | tojson }}}',
+            "secret": "my-secret-key",
+            "ssl_verification": True,
+            "ca_file_path": "/etc/ssl/certs/ca-certificates.crt",
+            "add_content_types": [ipaddress_ct.pk, prefix_ct.pk],
+            "remove_content_types": [device_ct.pk],
         }
 
 
