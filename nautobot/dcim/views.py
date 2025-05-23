@@ -4167,16 +4167,14 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
         status = getattr(instance, "status", None)
 
         powerfeed_data = {
-            "Power Panel": power_panel or format_html('<span class="text-muted">None</span>'),
+            "Power Panel": power_panel or helpers.HTML_NONE,
             "Rack": rack or format_html('<span class="text-muted">None</span>'),
             "Type": format_html(
                 '<span class="label label-{}">{}</span>',
                 escape(instance.get_type_class() or "default"),
                 escape(instance.get_type_display() or "Unknown"),
             ),
-            "Status": helpers.hyperlinked_object_with_color(status)
-            if status
-            else format_html('<span class="text-muted">Unknown</span>'),
+            "Status": helpers.hyperlinked_object_with_color(status) if status else helpers.HTML_NONE,
         }
 
         connected_device_data = self.get_connected_device_data(instance)
