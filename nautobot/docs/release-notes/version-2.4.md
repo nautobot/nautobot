@@ -165,6 +165,34 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 
 <!-- towncrier release notes start -->
+## v2.4.9 (2025-05-23)
+
+### Security in v2.4.9
+
+- [#7317](https://github.com/nautobot/nautobot/issues/7317) - Updated `setuptools` to `78.1.1` to address `CVE-2025-47273`. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
+### Fixed in v2.4.9
+
+- [#7172](https://github.com/nautobot/nautobot/issues/7172) - Restored missing `rd` column in `VRFTable`.
+- [#7245](https://github.com/nautobot/nautobot/issues/7245) - Fixed `ExportObjectList` job now initializes `filter_params` from the selected SavedView's config when `?saved_view` is present and filters haven't been cleared. If additional query parameters are included, they override matching filters from the saved view.
+- [#7250](https://github.com/nautobot/nautobot/issues/7250) - Fixed MULTISELECT custom field representation in GraphQL to be a JSON array instead of a string.
+- [#7308](https://github.com/nautobot/nautobot/issues/7308) - Fixed incorrect form buttons rendered in create/update views provided by NautobotUIViewSet.
+- [#7309](https://github.com/nautobot/nautobot/issues/7309) - Fixed Content-Type filtering on ObjectMetaData.
+- [#7311](https://github.com/nautobot/nautobot/issues/7311) - Added f-strings to 2 places where they were missing (nautobot/core/utils/filtering.py in `generate_query` method and in migration file `nautobot/extras/migrations/0024_job_data_migration.py`).
+- [#7318](https://github.com/nautobot/nautobot/issues/7318) - Fixed an AttributeError exception when rendering a table column describing a Relationship association to an unknown content-type.
+- [#7328](https://github.com/nautobot/nautobot/issues/7328) - Fixed an issue in the Golden Config App where clicking a Configuration Compliance Feature Navigation link or loading a page with a hash would not scroll to the correct section due to conflicting legacy scroll offset logic.
+
+### Housekeeping in v2.4.9
+
+- [#7104](https://github.com/nautobot/nautobot/issues/7104) - Resolved bug in VS Code devcontainer workflow.
+- [#7163](https://github.com/nautobot/nautobot/issues/7163) - Refactored CloudResourceType model related UI views to use `UI component framework`.
+- [#7231](https://github.com/nautobot/nautobot/issues/7231) - Refactored DeviceFamily model related UI views to use `UI component framework`.
+- [#7237](https://github.com/nautobot/nautobot/issues/7237) - Refactored DeviceRedundancyGroup model related UI views to use `UI component framework`.
+- [#7243](https://github.com/nautobot/nautobot/issues/7243) - Refactored DeviceType model related UI views to use `NautobotUIViewSet`.
+- [#7246](https://github.com/nautobot/nautobot/issues/7246) - Refactored WirelessNetwork model related UI views to use `UI component framework`.
+- [#7248](https://github.com/nautobot/nautobot/issues/7248) - Refactored ModuleBayUIViewSet model related UI views to use `UI component framework`.
+- [#7271](https://github.com/nautobot/nautobot/issues/7271) - Refactored ComputedField model related UI views to use `UI component framework`.
+- [#7287](https://github.com/nautobot/nautobot/issues/7287) - Refactored CircuitTypeUIViewSet model related UI views to use `UI component framework`.
 
 ## v2.4.8 (2025-05-12)
 
