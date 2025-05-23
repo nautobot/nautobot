@@ -21,7 +21,6 @@ from nautobot.core.templatetags.helpers import (
     render_json,
     render_markdown,
 )
-from nautobot.core.utils.config import get_settings_or_config
 from nautobot.tenancy.tables import TenantColumn
 
 from .choices import MetadataTypeDataTypeChoices
