@@ -40,6 +40,7 @@ from .models import (
     JobLogEntry,
     JobQueue,
     JobResult,
+    MetadataChoice,
     MetadataType,
     Note,
     ObjectChange,
@@ -1006,6 +1007,15 @@ class MetadataTypeTable(BaseTable):
             "data_type",
             "actions",
         )
+
+
+class MetadataChoiceTable(BaseTable):
+    value = tables.Column()
+    weight = tables.Column()
+
+    class Meta(BaseTable.Meta):
+        model = MetadataChoice
+        fields = ("value", "weight")
 
 
 class ObjectMetadataTable(BaseTable):
