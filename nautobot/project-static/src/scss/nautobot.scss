@@ -1,5 +1,6 @@
 /* nautobot.scss */
 
+@use "sass:list";
 @use "sass:map";
 @use "sass:meta";
 
@@ -383,6 +384,10 @@ $badge-color:       $body-color;
 $badge-padding-y:   map.get($spacers, 2);
 $badge-padding-x:   map.get($spacers, 8);
 
+/* List group */
+$list-group-item-padding-y: $table-cell-padding-y;
+$list-group-item-padding-x: $table-cell-padding-x;
+
 /* Breadcrumbs */
 $breadcrumb-item-padding-x: map.get($spacers, 4);
 $breadcrumb-margin-bottom:  0;
@@ -421,14 +426,30 @@ $theme-colors-rgb-dark: map-loop($theme-colors-dark, to-rgb, "$value");
 $utilities: map-merge(
   $utilities,
   (
-    "width": map-merge(
-      map-get($utilities, "width"),
-      (
-        values: map-merge(
-            map-get(map-get($utilities, "width"), "values"),
-            (0: 0),
-        ),
+    "nb-cursor": (
+      class: nb-cursor,
+      property: cursor,
+      values: unset,
+    ),
+    "nb-text": (
+      class: nb-text,
+      property: text-transform,
+      values: none,
+    ),
+    "nb-transition": (
+      class: nb-transition,
+      property: transition,
+      values: (
+        base: $transition-base,
+        fade: $transition-fade,
       ),
+    ),
+    "nb-w": (
+      class: nb-w,
+      property: width,
+      values: (
+        0: 0,
+      )
     ),
   )
 );
@@ -798,6 +819,19 @@ $btn-variants: (
       > tr:last-child { /* Bottommost row in case simplified table structure is used (i.e. without `thead`, `tbody`). */
         @include remove-row-border-bottom;
       }
+    }
+  }
+
+  .list-group {
+    /* Remove borders (except `border-bottom`) from list group items in cards, cards already have their own borders. */
+    .list-group-item {
+      border-block-start: none;
+      border-inline: none;
+    }
+
+    /* Remove `border-bottom` from the very last group list item because it duplicates card's own `border-bottom`. */
+    &:last-child .list-group-item:last-child {
+      border-block-end: none;
     }
   }
 }
@@ -1290,4 +1324,17 @@ $nb-drawer-open-width: 20rem; /* 320px */
   padding-inline-start: 0.4375rem; /* 7px */
   padding-inline-end: 1.9375rem; /* 31px */
   width: 4.5rem; /* 72px */
+}
+
+/* Draggable */
+.nb-draggable-container {
+  .nb-draggable {
+    &.nb-dragging {
+      opacity: 0.5;
+    }
+
+    .nb-draggable-handle {
+      cursor: move;
+    }
+  }
 }

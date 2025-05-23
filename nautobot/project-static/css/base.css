@@ -513,33 +513,6 @@ td span.hover_copy:hover .hover_copy_button {
     overflow-y: scroll;
 }
 
-/* Collapse icon on homepage panels */
-.collapse-icon {
-    float: right;
-    cursor: pointer !important;
-    transition: transform 0.3s ease;
-}
-
-/* Rotates element 180 degrees */
-.rotated180 {
-    transform: rotate(180deg);
-}
-
-/* Draggable homepage panels fade in effect on page load */
-#draggable-homepage-panels {
-    opacity: 0;
-}
-
-/* Change cursor when hovering over panel headings on homepage */
-#draggable-homepage-panels .panel-heading {
-    cursor: move;
-}
-
-/* Make panel being dragged opaque */
-.dragging {
-    opacity: 0.5;
-}
-
 /* Special diff block `<pre><code>...</code></pre>` backgrounds */
 pre.diff-added {
     background-color: #e6ffec;

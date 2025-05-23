@@ -20,7 +20,7 @@
                         {% endif %}
                     {% endfor %}
                     {% if table.configurable and last_column_name != 'actions' %}
-                        <th class="nb-actionable w-0">
+                        <th class="nb-actionable nb-w-0">
                             {% table_config_button table %}
                         </th>
                     {% endif %}
@@ -34,7 +34,7 @@
                         <td {{ column.attrs.td.as_html }}>{{ cell }}</td>
                     {% endfor %}
                     {% if table.configurable and last_column_name != "actions" %}
-                        <td class="w-0" />
+                        <td class="nb-w-0" />
                     {% endif %}
                 </tr>
             {% empty %}
@@ -57,7 +57,7 @@
                         <td>{{ column.footer }}</td>
                     {% endfor %}
                     {% if table.configurable and last_column_name != "actions" %}
-                        <td class="w-0" />
+                        <td class="nb-w-0" />
                     {% endif %}
                 </tr>
             </tfoot>

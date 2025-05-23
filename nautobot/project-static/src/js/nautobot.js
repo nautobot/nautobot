@@ -29,6 +29,7 @@ window.$ = window.jQuery;
 import 'jquery-ui';
 import 'select2';
 
+import { initializeDraggable } from './draggable.js';
 import { initializeDrawers } from './drawer.js';
 import { observeCollapseTabs } from './tabs.js';
 
@@ -75,6 +76,9 @@ document.addEventListener('DOMContentLoaded', function () {
         : document.addEventListener('click', onClickDocument);
     });
   });
+
+  // Draggable
+  initializeDraggable();
 
   // Drawer
   initializeDrawers();
