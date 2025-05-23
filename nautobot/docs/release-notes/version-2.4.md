@@ -165,6 +165,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 
 <!-- towncrier release notes start -->
+
 ## v2.4.9 (2025-05-27)
 
 ### Security in v2.4.9
@@ -178,7 +179,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#7250](https://github.com/nautobot/nautobot/issues/7250) - Fixed MULTISELECT custom field representation in GraphQL to be a JSON array instead of a string.
 - [#7308](https://github.com/nautobot/nautobot/issues/7308) - Fixed incorrect form buttons rendered in create/update views provided by NautobotUIViewSet.
 - [#7309](https://github.com/nautobot/nautobot/issues/7309) - Fixed Content-Type filtering on ObjectMetaData.
-- [#7311](https://github.com/nautobot/nautobot/issues/7311) - Added f-strings to 2 places where they were missing (nautobot/core/utils/filtering.py in `generate_query` method and in migration file `nautobot/extras/migrations/0024_job_data_migration.py`).
+- [#7311](https://github.com/nautobot/nautobot/issues/7311) - Added f-strings to 2 places where they were missing (`nautobot/core/utils/filtering.py` in `generate_query` method and in migration file `nautobot/extras/migrations/0024_job_data_migration.py`).
 - [#7318](https://github.com/nautobot/nautobot/issues/7318) - Fixed an AttributeError exception when rendering a table column describing a Relationship association to an unknown content-type.
 - [#7328](https://github.com/nautobot/nautobot/issues/7328) - Fixed an issue in the Golden Config App where clicking a Configuration Compliance Feature Navigation link or loading a page with a hash would not scroll to the correct section due to conflicting legacy scroll offset logic.
 
