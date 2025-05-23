@@ -1,0 +1,1 @@
+Added support for `job_queue` parameter to `JobResult.execute_job()`, `JobResult.enqueue_job()`, and `ScheduledJob.create_schedule()`.

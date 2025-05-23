@@ -76,6 +76,7 @@ class NautobotScheduleEntry(ModelEntry):
             self._disable(model)
 
         if isinstance(model.celery_kwargs, Mapping):
+            # TODO: this allows model.celery_kwargs to override keys like `nautobot_job_user_id`; is that desirable?
             self.options.update(model.celery_kwargs)
 
         # copy-paste from django_celery_beat.schedulers

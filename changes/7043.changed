@@ -1,0 +1,1 @@
+Changed "Run Job" form to display a warning when submitting a Job against a Celery queue that has no active workers, but allow the job to be submitted, instead of blocking the Job altogether.
