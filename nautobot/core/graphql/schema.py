@@ -95,6 +95,7 @@ CUSTOM_FIELD_MAPPING = {
     CustomFieldTypeChoices.TYPE_URL: graphene.String(),
     CustomFieldTypeChoices.TYPE_SELECT: graphene.String(),
     CustomFieldTypeChoices.TYPE_JSON: JSON(),
+    CustomFieldTypeChoices.TYPE_MULTISELECT: graphene.List(graphene.String),
 }
 
 

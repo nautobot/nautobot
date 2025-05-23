@@ -714,6 +714,17 @@ class LookupRelatedFunctionTest(TestCase):
                 form_field.queryset, extras_utils.ChangeLoggedModelsQuery().as_queryset()
             )
 
+            form_field = filtering.get_filterset_parameter_form_field(
+                extras_models.ObjectMetadata, "assigned_object_type"
+            )
+            self.assertIsInstance(form_field, forms.MultipleContentTypeField)
+            self.assertQuerysetEqualAndNotEmpty(
+                form_field.queryset,
+                ContentType.objects.filter(extras_utils.FeatureQuery("metadata").get_query()).order_by(
+                    "app_label", "model"
+                ),
+            )
+
         with self.subTest("Test prefers_id"):
             form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, "location")
             self.assertEqual("id", form_field.to_field_name)
