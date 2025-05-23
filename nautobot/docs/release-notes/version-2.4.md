@@ -165,7 +165,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 
 <!-- towncrier release notes start -->
-## v2.4.9 (2025-05-23)
+## v2.4.9 (2025-05-27)
 
 ### Security in v2.4.9
 
