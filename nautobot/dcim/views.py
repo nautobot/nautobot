@@ -4143,7 +4143,7 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
 
         powerfeed_data = {
             "Power Panel": power_panel or helpers.HTML_NONE,
-            "Rack": rack or format_html('<span class="text-muted">None</span>'),
+            "Rack": rack or helpers.HTML_NONE,
             "Type": format_html(
                 '<span class="label label-{}">{}</span>',
                 escape(instance.get_type_class() or "default"),
@@ -4169,16 +4169,11 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
         }
 
     def _get_connected_device_html(self, instance):
-        if instance.connected_endpoint:
-            device = getattr(instance.connected_endpoint, "device", None)
-            power_port = instance.connected_endpoint
-            if device and power_port:
-                return format_html(
-                    "{} ({})",
-                    helpers.hyperlinked_object(device),
-                    escape(power_port.name),
-                )
-        return format_html('<span class="text-muted">None</span>')
+        if instance.connected_endpoint and instance.connected_endpoint.parent:
+            parent = helpers.hyperlinked_object(instance.connected_endpoint.parent)
+            return format_html("{} ({})", parent, instance.connected_endpoint)
+        else:
+            return helpers.HTML_NONE
 
     def _get_utilization_display(self, instance):
         endpoint = getattr(instance, "connected_endpoint", None)
