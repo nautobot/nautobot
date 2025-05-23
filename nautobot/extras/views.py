@@ -2541,7 +2541,7 @@ class ScheduledJobView(generic.ObjectView):
         if job_class is not None:
             for name, var in job_class._get_vars().items():
                 field = var.as_field()
-                labels[name] = field.label if field.label else pretty_name(name)
+                labels[name] = field.label or pretty_name(name)
 
         context.update(
             {

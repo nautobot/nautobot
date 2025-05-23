@@ -28,18 +28,25 @@ class ApprovalWorkflowDefinitionManager(BaseManager.from_queryset(RestrictedQuer
             ApprovalWorkflowDefinition or None: The matching workflow definition or None if none found.
         """
         content_type = ContentType.objects.get_for_model(model_instance)
-        highest_priority_approval_workflow = (
-            self.get_queryset().filter(model_content_type=content_type).order_by("priority").first()
-        )
 
-        # check model_constraints
-        if highest_priority_approval_workflow and highest_priority_approval_workflow.model_constraints:
-            if not all(
-                getattr(model_instance, constraint_field, None) == constraint_value
-                for constraint_field, constraint_value in highest_priority_approval_workflow.model_constraints.items()
-            ):
-                return None
-        return highest_priority_approval_workflow
+        # Get all workflow definitions for this content type, ordered by priority (lowest first = highest priority)
+        workflow_definitions = self.get_queryset().filter(model_content_type=content_type).order_by("priority")
+
+        for workflow_definition in workflow_definitions:
+            if not workflow_definition.model_constraints:
+                return workflow_definition
+
+            model_class = model_instance.__class__
+            try:
+                # Try to get the specific instance using the constraints
+                # TODO: we want this to support various filtering options besides exact-match. This implementation should be filterset based.
+                # should work very similarly to Relationship.source_filter and Relationship.destination_filter
+                model_class.objects.filter(**workflow_definition.model_constraints).get(pk=model_instance.pk)
+                return workflow_definition
+            except model_class.DoesNotExist:
+                continue
+
+        return None
 
 
 @extras_features(

@@ -277,31 +277,98 @@ class ApprovalWorkflowDefinitionManagerTest(TestCase):
         ]
 
     def test_find_for_model(self):
-        highest_priority_approval_workflow_definition = models.ApprovalWorkflowDefinition.objects.get(
-            model_content_type=ContentType.objects.get_for_model(models.ScheduledJob), priority=0
-        )
+        """Test that the workflow definition with the highest priority and no constraints is returned."""
         self.assertEqual(
             models.ApprovalWorkflowDefinition.objects.find_for_model(self.scheduled_job),
-            highest_priority_approval_workflow_definition,
+            self.approval_workflow_defs[0],
         )
+        self.assertEqual(self.approval_workflow_defs[0].priority, 0)
 
     def test_find_for_model_with_match_contrains(self):
-        highest_priority_approval_workflow_definition = models.ApprovalWorkflowDefinition.objects.get(
-            model_content_type=ContentType.objects.get_for_model(models.ScheduledJob), priority=0
-        )
-        highest_priority_approval_workflow_definition.model_constraints = {"name": "Bulk Delete Objects Scheduled Job"}
-        highest_priority_approval_workflow_definition.save()
+        """Test that a workflow definition with matching constraints is correctly returned."""
+        self.approval_workflow_defs[0].model_constraints = {"name": "Bulk Delete Objects Scheduled Job"}
+        self.approval_workflow_defs[0].save()
         self.assertEqual(
             models.ApprovalWorkflowDefinition.objects.find_for_model(self.scheduled_job),
-            highest_priority_approval_workflow_definition,
+            self.approval_workflow_defs[0],
+        )
+        self.assertEqual(self.approval_workflow_defs[0].priority, 0)
+
+    def test_find_for_model_returns_highest_priority_when_all_match(self):
+        """
+        Test that when all workflow definitions match the model instance,
+        the one with the highest priority (lowest number) is returned.
+        """
+        # Set all definitions to have matching constraints
+        for definition in self.approval_workflow_defs:
+            definition.model_constraints = {"name": "Bulk Delete Objects Scheduled Job"}
+            definition.save()
+
+        self.assertEqual(
+            models.ApprovalWorkflowDefinition.objects.find_for_model(self.scheduled_job),
+            self.approval_workflow_defs[0],
+        )
+        self.assertEqual(self.approval_workflow_defs[0].priority, 0)
+
+    def test_find_for_model_skips_unmatched_constraints_and_returns_next_without_constraints(self):
+        """
+        Test that if the highest priority workflow definition has unmatched constraints,
+        the method skips it and returns the next one with no constraints.
+        """
+        # Set constraints on the highest priority definition that do not match the instance
+        self.approval_workflow_defs[0].model_constraints = {"name": "Non Matching Name"}
+        self.approval_workflow_defs[0].save()
+
+        # Ensure the next workflow has no constraints
+        self.approval_workflow_defs[1].model_constraints = {}
+        self.approval_workflow_defs[1].save()
+
+        self.assertEqual(
+            models.ApprovalWorkflowDefinition.objects.find_for_model(self.scheduled_job),
+            self.approval_workflow_defs[1],
+        )
+        self.assertEqual(self.approval_workflow_defs[1].priority, 1)
+
+    def test_find_for_model_matches_lower_priority_if_higher_fails(self):
+        """
+        Test that if the highest priority workflow definition's constraints don't match,
+        the next matching lower-priority definition is returned.
+        """
+        self.approval_workflow_defs[0].model_constraints = {"name": "Non Matching Name"}
+        self.approval_workflow_defs[0].save()
+
+        self.approval_workflow_defs[1].model_constraints = {"name": "Bulk Delete Objects Scheduled Job"}
+        self.approval_workflow_defs[1].save()
+
+        self.assertEqual(
+            models.ApprovalWorkflowDefinition.objects.find_for_model(self.scheduled_job),
+            self.approval_workflow_defs[1],
+        )
+        self.assertEqual(self.approval_workflow_defs[1].priority, 1)
+
+    def test_find_for_model_ignores_constraints_matching_different_instance(self):
+        """
+        Test that a workflow definition is not returned if its constraints match a different instance
+        rather than the one provided to the method.
+        """
+        models.ScheduledJob.objects.create(
+            name="Other Job",
+            task=BulkDeleteObjects.class_path,
+            job_model=self.scheduled_job.job_model,
+            interval=choices.JobExecutionType.TYPE_IMMEDIATELY,
+            user=User.objects.first(),
+            start_time=now(),
         )
 
-    def test_find_for_model_with_no_match_contrains(self):
-        highest_priority_approval_workflow_definition = models.ApprovalWorkflowDefinition.objects.get(
-            model_content_type=ContentType.objects.get_for_model(models.ScheduledJob), priority=0
-        )
-        highest_priority_approval_workflow_definition.model_constraints = {"name": "Bulk Delete Objects Scheduled Job1"}
-        highest_priority_approval_workflow_definition.save()
+        for approval_workflow_def in self.approval_workflow_defs:
+            approval_workflow_def.model_constraints = {"name": "Other Job"}
+            approval_workflow_def.save()
+
+        self.assertIsNone(models.ApprovalWorkflowDefinition.objects.find_for_model(self.scheduled_job))
+
+    def test_find_for_model_returns_none_if_no_definitions(self):
+        """Test that None is returned if there are no workflow definitions available."""
+        models.ApprovalWorkflowDefinition.objects.all().delete()
         self.assertIsNone(models.ApprovalWorkflowDefinition.objects.find_for_model(self.scheduled_job))
 
 
