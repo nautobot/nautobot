@@ -3,11 +3,13 @@ Class-modifying mixins that need to be standalone to avoid circular imports.
 """
 
 from django.contrib.contenttypes.fields import GenericRelation
+from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.urls import NoReverseMatch, reverse
 
 from nautobot.core.utils.deprecation import method_deprecated_in_favor_of
 from nautobot.core.utils.lookup import get_route_for_model
+from nautobot.extras.choices import ApprovalWorkflowStateChoices
 
 
 class ApprovableModelMixin(models.Model):
@@ -42,6 +44,63 @@ class ApprovableModelMixin(models.Model):
                 continue
 
         return None
+
+    def begin_approval_workflow(self):
+        """Find and start the appropriate approval workflow for this object."""
+        from nautobot.extras.models.approvals import (
+            ApprovalWorkflow,
+            ApprovalWorkflowDefinition,
+            ApprovalWorkflowStage,
+            ApprovalWorkflowStageDefinition,
+        )  # because of circular import
+
+        # First check if there's already a pending workflow instance
+        if self.associated_approval_workflows.filter(current_state=ApprovalWorkflowStateChoices.PENDING).exists():
+            return self.approval_workflow_instances.filter(current_state=ApprovalWorkflowStateChoices.PENDING).first()
+
+        # Check if there's a relevant workflow definition
+        workflow_definition = ApprovalWorkflowDefinition.objects.find_for_model(self)
+        if not workflow_definition:
+            return None
+
+        approval_workflow = ApprovalWorkflow.objects.create(
+            approval_workflow_definition=workflow_definition,
+            object_under_review_content_type=ContentType.objects.get_for_model(self),
+            object_under_review_object_id=self.pk,
+            current_state=ApprovalWorkflowStateChoices.PENDING,
+        )
+
+        # Create workflow stages if the definition has any
+        approval_workflow_stage_definitions = ApprovalWorkflowStageDefinition.objects.filter(
+            approval_workflow_definition=workflow_definition
+        )
+
+        ApprovalWorkflowStage.objects.bulk_create(
+            [
+                ApprovalWorkflowStage(
+                    approval_workflow=approval_workflow,
+                    approval_workflow_stage_definition=definition,
+                    state=ApprovalWorkflowStateChoices.PENDING,
+                )
+                for definition in approval_workflow_stage_definitions
+            ]
+        )
+
+        self.on_workflow_initiated()
+
+        return approval_workflow
+
+    def on_workflow_initiated(self):
+        """Called when an approval workflow is initiated."""
+        raise NotImplementedError("Subclasses must implement `on_workflow_initiated`.")
+
+    def on_workflow_approved(self):
+        """Called when an approval workflow is approved."""
+        raise NotImplementedError("Subclasses must implement `on_workflow_approved`.")
+
+    def on_workflow_denied(self):
+        """Called when an approval workflow is denied."""
+        raise NotImplementedError("Subclasses must implement `on_workflow_denied`.")
 
 
 class ContactMixin(models.Model):
