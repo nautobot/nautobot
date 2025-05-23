@@ -1058,6 +1058,7 @@ properties:
       If `True`, the Job Result "summary" column will be available in the Job Results list UI.
       If `False`, the column will not be available.
     environment_variable: "NAUTOBOT_JOB_RESULTS_SUMMARY_FIELD_ENABLED"
+    is_constance_config: true
     type: "boolean"
     version_added: "2.4.8"
   JOBS_ROOT:
