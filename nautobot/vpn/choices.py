@@ -3,6 +3,30 @@
 from nautobot.apps.choices import ChoiceSet
 
 
+class VPNTunnelStatusChoices(ChoiceSet):
+    STATUS_ACTIVE = "active"
+    STATUS_DOWN = "down"
+    STATUS_DEPRECATED = "deprecated"
+
+    CHOICES = (
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_DOWN, "Down"),
+        (STATUS_DEPRECATED, "Deprecated"),
+    )
+
+
+class VPNTunnelEndpointRoleChoices(ChoiceSet):
+    ROLE_PEER = "peer"
+    ROLE_HUB = "hub"
+    ROLE_SPOKE = "spoke"
+
+    CHOICES = (
+        (ROLE_PEER, "Peer"),
+        (ROLE_HUB, "Hub"),
+        (ROLE_SPOKE, "Spoke"),
+    )
+
+
 class IkeVersionChoices(ChoiceSet):
     """Choices for the ike_version field on the VPNPhase1Policy model."""
 
