@@ -3321,7 +3321,8 @@ class JobTestCase(
             self.assertEqual(errors, ["var: This field is required."])
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_run_now_with_args(self, _):
+    @mock.patch("nautobot.extras.models.mixins.ApprovableModelMixin.begin_approval_workflow")
+    def test_immediate_job_run_with_args_no_trigger_approval(self, mock_begin_approval_workflow, _):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_jobresult")
 
@@ -3335,6 +3336,7 @@ class JobTestCase(
 
             result = JobResult.objects.latest()
             self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
+            mock_begin_approval_workflow.assert_not_called()
 
     def test_rerun_job(self):
         self.add_permissions("extras.run_job")
@@ -3435,7 +3437,8 @@ class JobTestCase(
             )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_run_later(self, _):
+    @mock.patch("nautobot.extras.models.mixins.ApprovableModelMixin.begin_approval_workflow")
+    def test_run_later_triggers_approval_workflow(self, mock_begin_approval_workflow, _):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
 
@@ -3453,6 +3456,7 @@ class JobTestCase(
 
             scheduled = ScheduledJob.objects.get(name=f"test {i}")
             self.assertEqual(scheduled.start_time, start_time)
+        mock_begin_approval_workflow.assert_called()
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_job_with_sensitive_variables_for_future(self, _):
@@ -3536,6 +3540,23 @@ class JobTestCase(
                 "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
                 "One of these two flags must be removed before this job can be scheduled or run.",
             )
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    @mock.patch("nautobot.extras.models.mixins.ApprovableModelMixin.begin_approval_workflow")
+    def test_run_job_with_requires_approval_triggers_approval_workflow(self, mock_begin_approval_workflow, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        self.test_pass.approval_required = True
+        self.test_pass.save()
+
+        data = {
+            "_schedule_type": "immediately",
+        }
+        for run_url in self.run_urls:
+            response = self.client.post(run_url, data)
+            self.assertRedirects(response, reverse("extras:scheduledjob_approval_queue_list"))
+            mock_begin_approval_workflow.assert_called()
 
     def test_job_object_change_log_view(self):
         """Assert Job change log view displays appropriate header"""
