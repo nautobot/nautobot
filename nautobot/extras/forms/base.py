@@ -1,4 +1,5 @@
 from nautobot.core.forms import BootstrapMixin
+from nautobot.data_validation.form_mixin import DataValidationFormMixin
 
 from .mixins import (
     ContactTeamModelFilterFormMixin,
@@ -19,7 +20,6 @@ __all__ = (
     "NautobotModelForm",
 )
 
-
 #
 # Nautobot base forms for use in most new custom model forms.
 #
@@ -28,6 +28,7 @@ __all__ = (
 class NautobotModelForm(
     BootstrapMixin,
     # The below must be listed *after* BootstrapMixin so that BootstrapMixin applies to their dynamic form fields
+    DataValidationFormMixin,
     CustomFieldModelFormMixin,
     DynamicGroupModelFormMixin,
     NoteModelFormMixin,
