@@ -2064,10 +2064,10 @@ class JobHookUIViewSet(NautobotUIViewSet):
 #
 
 
-def get_annotated_jobresult_queryset():
-    if get_settings_or_config("JOB_RESULTS_SUMMARY_FIELD_ENABLED"):
+def get_annotated_jobresult_queryset(queryset=None):
+    if get_settings_or_config("JOB_RESULTS_SUMMARY_FIELD_ENABLED") and queryset:
         return (
-            JobResult.objects.defer("result")
+            queryset.defer("result")
             .select_related("job_model", "user")
             .annotate(
                 debug_log_count=count_related(
@@ -2116,38 +2116,7 @@ class JobResultListView(generic.ObjectListView):
         """
         queryset = super().alter_queryset(request)
 
-        if get_settings_or_config("JOB_RESULTS_SUMMARY_FIELD_ENABLED"):
-            return (
-                queryset.defer("result")
-                .select_related("job_model", "user")
-                .annotate(
-                    debug_log_count=count_related(
-                        JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_DEBUG}
-                    ),
-                    success_log_count=count_related(
-                        JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_SUCCESS}
-                    ),
-                    info_log_count=count_related(
-                        JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_INFO}
-                    ),
-                    warning_log_count=count_related(
-                        JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_WARNING}
-                    ),
-                    error_log_count=count_related(
-                        JobLogEntry,
-                        "job_result",
-                        filter_dict={
-                            "log_level__in": [
-                                LogLevelChoices.LOG_FAILURE,
-                                LogLevelChoices.LOG_ERROR,
-                                LogLevelChoices.LOG_CRITICAL,
-                            ],
-                        },
-                    ),
-                )
-            )
-
-        return queryset.defer("result").select_related("job_model", "user")
+        return get_annotated_jobresult_queryset(queryset)
 
 
 class JobResultDeleteView(generic.ObjectDeleteView):
@@ -2155,7 +2124,7 @@ class JobResultDeleteView(generic.ObjectDeleteView):
 
 
 class JobResultBulkDeleteView(generic.BulkDeleteView):
-    queryset = get_annotated_jobresult_queryset()
+    queryset = JobResult.objects.all()
     table = tables.JobResultTable
     filterset = filters.JobResultFilterSet
 
