@@ -512,12 +512,19 @@ class JobViewSetBase(
     serializer_class = serializers.JobSerializer
     filterset_class = filters.JobFilterSet
 
+    def get_object(self):
+        """Get the Job instance and reload the job class to ensure we have the latest version of the job code."""
+        obj = super().get_object()
+        get_job(obj.class_path, reload=True)
+
+        return obj
+
     @extend_schema(responses={"200": serializers.JobVariableSerializer(many=True)})
     @action(detail=True, filterset_class=None)
     def variables(self, request, *args, **kwargs):
         """Get details of the input variables that may/must be specified to run a particular Job."""
         job_model = self.get_object()
-        job_class = get_job(job_model.class_path, reload=True)
+        job_class = job_model.job_class
         if job_class is None:
             raise Http404
         variables_dict = job_class._get_vars()
@@ -599,7 +606,7 @@ class JobViewSetBase(
                     "One of these two flags must be removed before this job can be scheduled or run."
                 )
 
-        job_class = get_job(job_model.class_path, reload=True)
+        job_class = job_model.job_class
         if job_class is None:
             raise MethodNotAllowed(
                 request.method, detail="This job's source code could not be located and cannot be run"
