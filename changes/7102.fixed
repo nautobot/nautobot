@@ -1,1 +1,0 @@
-Fixed that event payload's `prechange` field is empty when relevant object's previous changelog entries do not exist.
