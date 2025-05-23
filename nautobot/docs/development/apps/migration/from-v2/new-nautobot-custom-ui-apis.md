@@ -103,7 +103,7 @@ Nautobot v2.1 introduced reorderable panels on the homepage. In v3.0 we internal
 1. First and foremost, Nautobot draggable API is tailored specifically for reordering elements. In case your feature requires other kinds of drag and drop behavior, you still have to implement it on your own.
 2. Drag and drop interactive area must be surrounded by a wrapper element of `nb-draggable-container` class.
 3. Draggable elements must have the `nb-draggable` class and a unique `id`. Note that you should not attribute these elements with `draggable=true` in HTML because this is already handled by Nautobot core draggable script.
-4. Drag handle requires `nb-draggable-handle` class. Handle is the element you can interact with to grab `nb-draggable`. If an entire `nb-draggable` is intended to be *"grabbable"* (not to be confused with *"draggable"*), it should be given both `nb-draggable` and `nb-draggable-handle` classes.
+4. Drag handle requires `nb-draggable-handle` class. Handle is the element you can interact with to grab `nb-draggable`. If an entire `nb-draggable` is intended to be *"grabbable"*, it should be given both `nb-draggable` and `nb-draggable-handle` classes.
 5. To subscribe to the DOM node order changes, for example to be able to save it in a persistent storage, create a custom JavaScript script to observe `nb-draggable-container` using native `MutationObserver` with `{ childList: true }` config.
 
 ```html
@@ -124,7 +124,7 @@ Nautobot v2.1 introduced reorderable panels on the homepage. In v3.0 we internal
         window.addEventListener('DOMContentLoaded', () => {
             const draggableContainer = document.querySelector('.nb-draggable-container');
             const mutationObserver = new MutationObserver(() => {
-                // Do something...
+                // Do something, for example save the new element order to a persistent storage.
             });
             mutationObserver.observe(draggableContainer, { childList: true });
         });
@@ -141,8 +141,8 @@ Nautobot extends Bootstrap utilities with its own subset of CSS classes, propert
 
 | Class                | Style                              |
 |----------------------|------------------------------------|
-| `text-none`          | `text-transform: none;`            |
-| `width-0`            | `width: 0;`                        |
 | `nb-cursor-unset`    | `cursor: unset;`                   |
+| `nb-text-none`       | `text-transform: none;`            |
 | `nb-transition-base` | `transition: all .2s ease-in-out;` |
 | `nb-transition-fade` | `transition: opacity .15s linear;` |
+| `nb-w-0`             | `width: 0;`                        |

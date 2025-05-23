@@ -426,36 +426,30 @@ $theme-colors-rgb-dark: map-loop($theme-colors-dark, to-rgb, "$value");
 $utilities: map-merge(
   $utilities,
   (
-    "text-transform": map-merge(
-      map-get($utilities, "text-transform"),
-      (
-        values: list.append(
-            map-get(map-get($utilities, "text-transform"), "values"),
-            none,
-        ),
-      ),
-    ),
-    "width": map-merge(
-      map-get($utilities, "width"),
-      (
-        values: map-merge(
-            map-get(map-get($utilities, "width"), "values"),
-            (0: 0),
-        ),
-      ),
-    ),
     "nb-cursor": (
       class: nb-cursor,
       property: cursor,
       values: unset,
+    ),
+    "nb-text": (
+      class: nb-text,
+      property: text-transform,
+      values: none,
     ),
     "nb-transition": (
       class: nb-transition,
       property: transition,
       values: (
         base: $transition-base,
-        fade: $transition-fade
+        fade: $transition-fade,
       ),
+    ),
+    "nb-w": (
+      class: nb-w,
+      property: width,
+      values: (
+        0: 0,
+      )
     ),
   )
 );

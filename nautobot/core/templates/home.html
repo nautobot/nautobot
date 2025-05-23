@@ -54,7 +54,7 @@
                 <div class="card nb-draggable" id="{{ panel_name|slugify }}" data-panel-weight="{{ panel_details.weight }}">
                     {% with cookie_key='homepanel-'|add:panel_name|slugify %}
                         <div class="card-header nb-draggable-handle">
-                            <strong class="text-body text-none">{{ panel_name }}</strong>
+                            <strong class="text-body nb-text-none">{{ panel_name }}</strong>
                             <button
                                 class="btn stretched-link nb-collapse-toggle nb-cursor-unset"
                                 type="button"

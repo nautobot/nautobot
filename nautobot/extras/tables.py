@@ -1161,9 +1161,9 @@ class ScheduledJobApprovalQueueTable(BaseTable):
     actions = tables.TemplateColumn(
         SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS,
         attrs={
-            "td": {"class": "text-end text-nowrap w-0 noprint nb-actions"},
-            "tf": {"class": "w-0"},
-            "th": {"class": "nb-actionable w-0"},
+            "td": {"class": "text-end text-nowrap noprint nb-actions nb-w-0"},
+            "tf": {"class": "nb-w-0"},
+            "th": {"class": "nb-actionable nb-w-0"},
         },
     )
 
