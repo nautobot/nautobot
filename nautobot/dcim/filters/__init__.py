@@ -56,6 +56,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceClusterAssignment,
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
@@ -119,6 +120,7 @@ __all__ = (
     "ControllerManagedDeviceGroupFilterSet",
     "DeviceBayFilterSet",
     "DeviceBayTemplateFilterSet",
+    "DeviceClusterAssignmentFilterSet",
     "DeviceFamilyFilterSet",
     "DeviceFilterSet",
     "DeviceRedundancyGroupFilterSet",
@@ -131,6 +133,7 @@ __all__ = (
     "InterfaceRedundancyGroupAssociationFilterSet",
     "InterfaceRedundancyGroupFilterSet",
     "InterfaceTemplateFilterSet",
+    "InterfaceVDCAssignmentFilterSet",
     "InventoryItemFilterSet",
     "LocationFilterSet",
     "LocationTypeFilterSet",
@@ -2362,3 +2365,34 @@ class InterfaceVDCAssignmentFilterSet(NautobotFilterSet):
             "interface",
             "virtual_device_context",
         ]
+
+
+class DeviceClusterAssignmentFilterSet(NautobotFilterSet):
+    """Filters for DeviceClusterAssignment model."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "device__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "cluster__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+        }
+    )
+    device = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        to_field_name="name",
+        label="Device (name or ID)",
+    )
+    cluster = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Cluster.objects.all(),
+        to_field_name="name",
+        label="Cluster (name or ID)",
+    )
+
+    class Meta:
+        model = DeviceClusterAssignment
+        fields = ["device", "cluster"]

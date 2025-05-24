@@ -33,6 +33,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceClusterAssignment,
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
@@ -3792,3 +3793,73 @@ class InterfaceVDCAssignmentTestCase(APIViewTestCases.APIViewTestCase):
     def test_docs(self):
         """Skip: InterfaceVDCAssignment has no docs yet"""
         # TODO(timizuo): Add docs for Interface VDC Assignment
+
+
+class DeviceClusterAssignmentTestCase(APIViewTestCases.APIViewTestCase):
+    model = DeviceClusterAssignment
+
+    @classmethod
+    def setUpTestData(cls):
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(
+            manufacturer=manufacturer,
+            model="Test Device Type 1",
+        )
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        devices = (
+            Device.objects.create(
+                device_type=device_type,
+                role=device_role,
+                name="Test Device API 1",
+                location=location,
+                status=device_status,
+            ),
+            Device.objects.create(
+                device_type=device_type,
+                role=device_role,
+                name="Test Device API 2",
+                location=location,
+                status=device_status,
+            ),
+            Device.objects.create(
+                device_type=device_type,
+                role=device_role,
+                name="Test Device API 3",
+                location=location,
+                status=device_status,
+            ),
+        )
+        cluster_type = ClusterType.objects.create(name="Test Cluster Type API")
+        clusters = (
+            Cluster.objects.create(name="Test Cluster API 1", cluster_type=cluster_type),
+            Cluster.objects.create(name="Test Cluster API 2", cluster_type=cluster_type),
+            Cluster.objects.create(name="Test Cluster API 3", cluster_type=cluster_type),
+        )
+        DeviceClusterAssignment.objects.create(
+            device=devices[0],
+            cluster=clusters[0],
+        )
+        DeviceClusterAssignment.objects.create(
+            device=devices[0],
+            cluster=clusters[1],
+        )
+        DeviceClusterAssignment.objects.create(
+            device=devices[1],
+            cluster=clusters[0],
+        )
+        cls.create_data = [
+            {
+                "device": devices[1].pk,
+                "cluster": clusters[1].pk,
+            },
+            {
+                "device": devices[1].pk,
+                "cluster": clusters[2].pk,
+            },
+            {
+                "device": devices[2].pk,
+                "cluster": clusters[0].pk,
+            },
+        ]

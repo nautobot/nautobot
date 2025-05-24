@@ -560,13 +560,44 @@ class Device(PrimaryModel, ConfigContextModel):
         null=True,
         verbose_name="Primary IPv6",
     )
-    cluster = models.ForeignKey(
+    clusters = models.ManyToManyField(
         to="virtualization.Cluster",
-        on_delete=models.SET_NULL,
         related_name="devices",
+        through="dcim.DeviceClusterAssignment",
         blank=True,
-        null=True,
     )
+
+    @property
+    def cluster(self):
+        """
+        Returns the first cluster assigned to this device.
+
+        This property is maintained for backward compatibility only.
+        New code should use the `clusters` relationship instead.
+        """
+        if self.clusters.count() > 1:
+            raise self.clusters.model.MultipleObjectsReturned(
+                "Multiple Cluster objects returned. Please refer to clusters."
+            )
+        return self.clusters.first()
+
+    @cluster.setter
+    def cluster(self, value):
+        """
+        Sets the clusters field to a single value, replacing any existing values.
+
+        This property is maintained for backward compatibility only.
+        New code should use the `clusters` relationship instead.
+        """
+        if self.clusters.count() > 1:
+            raise self.clusters.model.MultipleObjectsReturned(
+                "Multiple Cluster objects returned. Please refer to clusters."
+            )
+        if value is None:
+            self.clusters.clear()
+        else:
+            self.clusters.set([value])
+
     virtual_chassis = models.ForeignKey(
         to="VirtualChassis",
         on_delete=models.SET_NULL,
@@ -637,7 +668,7 @@ class Device(PrimaryModel, ConfigContextModel):
         "location",
         "rack",
         "status",
-        "cluster",
+        "clusters",
         "secrets_group",
     ]
 
@@ -805,15 +836,14 @@ class Device(PrimaryModel, ConfigContextModel):
                 )
 
         # A Device can only be assigned to a Cluster in the same location or parent location, if any
-        if (
-            self.cluster is not None
-            and self.location is not None
-            and self.cluster.location is not None
-            and self.cluster.location not in self.location.ancestors(include_self=True)
-        ):
-            raise ValidationError(
-                {"cluster": f"The assigned cluster belongs to a location that does not include {self.location}."}
-            )
+        if self.clusters.exists() and self.location is not None:
+            for cluster in self.clusters.all():
+                if cluster.location is not None and cluster.location not in self.location.ancestors(include_self=True):
+                    raise ValidationError(
+                        {
+                            "clusters": f"The assigned cluster '{cluster}' belongs to a location that does not include {self.location}."
+                        }
+                    )
 
         # Validate virtual chassis assignment
         if self.virtual_chassis and self.vc_position is None:
@@ -1057,6 +1087,20 @@ class Device(PrimaryModel, ConfigContextModel):
         Return all Rear Ports that are installed in the device or in modules that are installed in the device.
         """
         return RearPort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+
+
+@extras_features("graphql")
+class DeviceClusterAssignment(BaseModel):
+    device = models.ForeignKey("dcim.Device", on_delete=models.CASCADE, related_name="cluster_assignments")
+    cluster = models.ForeignKey("virtualization.Cluster", on_delete=models.CASCADE, related_name="device_assignments")
+    is_metadata_associable_model = False
+
+    class Meta:
+        unique_together = ["device", "cluster"]
+        ordering = ["device", "cluster"]
+
+    def __str__(self):
+        return f"{self.device}: {self.cluster}"
 
 
 #

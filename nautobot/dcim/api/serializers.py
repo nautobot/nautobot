@@ -9,6 +9,7 @@ from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
 from nautobot.core.api import (
     ChoiceField,
     ContentTypeField,
+    NautobotHyperlinkedRelatedField,
     NautobotModelSerializer,
     TimeZoneSerializerField,
     TreeModelSerializerMixin,
@@ -61,6 +62,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceClusterAssignment,
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
@@ -102,6 +104,7 @@ from nautobot.extras.api.mixins import (
     TaggedModelSerializerMixin,
 )
 from nautobot.extras.utils import FeatureQuery
+from nautobot.virtualization.models import Cluster
 
 
 class CableTerminationModelSerializerMixin(serializers.ModelSerializer):
@@ -524,6 +527,14 @@ class DeviceBaySerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
 class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     face = ChoiceField(choices=DeviceFaceChoices, allow_blank=True, required=False)
     config_context = serializers.SerializerMethodField()
+    # for backward compatibility where a Device had only a single Cluster
+    cluster = NautobotHyperlinkedRelatedField(
+        allow_null=True,
+        queryset=Cluster.objects.all(),
+        required=False,
+        view_name="virtualization-api:cluster-detail",
+        write_only=True,
+    )
 
     class Meta:
         model = Device
@@ -545,6 +556,8 @@ class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         fields = list(super().get_field_names(declared_fields, info))
         self.extend_field_names(fields, "parent_bay")
         self.extend_field_names(fields, "config_context", opt_in_only=True)
+        if "cluster" not in fields:
+            fields.append("cluster")
         return fields
 
     @extend_schema_field(serializers.DictField)
@@ -1123,4 +1136,12 @@ class VirtualDeviceContextSerializer(TaggedModelSerializerMixin, NautobotModelSe
 class InterfaceVDCAssignmentSerializer(ValidatedModelSerializer):
     class Meta:
         model = InterfaceVDCAssignment
+        fields = "__all__"
+
+
+class DeviceClusterAssignmentSerializer(ValidatedModelSerializer):
+    """Serializer for DeviceClusterAssignment model."""
+
+    class Meta:
+        model = DeviceClusterAssignment
         fields = "__all__"

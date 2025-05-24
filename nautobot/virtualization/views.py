@@ -110,7 +110,7 @@ class ClusterUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.RIGHT_HALF,
                 table_class=DeviceTable,
-                table_filter="cluster",
+                table_filter="clusters",
                 table_title="Host Devices",
                 enable_bulk_actions=True,
                 add_button_route=None,
@@ -174,8 +174,8 @@ class ClusterAddDevicesView(generic.ObjectEditView):
             with transaction.atomic():
                 # Assign the selected Devices to the Cluster
                 for device in Device.objects.filter(pk__in=device_pks):
-                    device.cluster = cluster
-                    device.save()
+                    # Using the add method for the M2M relationship instead of reassignment
+                    device.clusters.add(cluster)
 
             messages.success(
                 request,
@@ -209,8 +209,7 @@ class ClusterRemoveDevicesView(generic.ObjectEditView):
                 with transaction.atomic():
                     # Remove the selected Devices from the Cluster
                     for device in Device.objects.filter(pk__in=device_pks):
-                        device.cluster = None
-                        device.save()
+                        device.clusters.remove(cluster)
 
                 messages.success(
                     request,
