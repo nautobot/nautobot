@@ -11,7 +11,7 @@ The buttons appear at the top right corner of an object's individual detail page
 * **Name** - A unique name for the Job Button.
 * **Object type(s)** - The type or types of Nautobot object that the button will be associated to.
 * **Text** - The text that will be displayed on the button.
-* **Job** - The [Job Button Receiver](../../../development/jobs/index.md#job-button-receivers) that this button will run.
+* **Job** - The [Job Button Receiver](../../../development/jobs/job-extensions.md#job-button-receivers) that this button will run.
 * **Enabled** - Whether this Job Button will appear in relevant UI. A Job Button may be disabled if, for example, the underlying Job Button Receiver is uninstalled or temporarily disabled.
 * **Weight** - The number used for determining the order the buttons will appear.
 * **Group** - The name of the dropdown group to add this button into (optional).
@@ -23,7 +23,7 @@ The buttons appear at the top right corner of an object's individual detail page
 
 ![Job Button Form](../../../media/models/jobbutton_form.png "Job Button Form")
 
-For any Job that is loaded into Nautobot, the Job must be enabled to run. See [Enabling Jobs for Running](./index.md#enabling-jobs-for-running) for more details.
+For any Job that is loaded into Nautobot, the Job must be enabled to run. See [Enabling Jobs for Running](./managing-jobs.md#enabling-and-disabling-jobs) for more details.
 
 ## Required Permissions
 
