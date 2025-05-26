@@ -3980,7 +3980,9 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
 
     @action(detail=True, methods=["get", "post"], url_path="remove-member", url_name="remove_member")
     def remove_member(self, request, pk=None):
-        device = get_object_or_404(Device.objects.restrict(request.user, "change"), pk=pk, virtual_chassis__isnull=False)
+        device = get_object_or_404(
+            Device.objects.restrict(request.user, "change"), pk=pk, virtual_chassis__isnull=False
+        )
 
         virtual_chassis = VirtualChassis.objects.filter(master=device).first()
 
