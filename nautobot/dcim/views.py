@@ -3853,18 +3853,6 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
     table_class = tables.VirtualChassisTable
     queryset = VirtualChassis.objects.all()
 
-    def get_template_name(self):
-        if self.action == "create":
-            return "dcim/virtualchassis_add.html"
-        elif self.action == "update":
-            return "dcim/virtualchassis_update.html"
-        return super().get_template_name()
-
-    def get_form_class(self, *args, **kwargs):
-        if self.action == "create":
-            return forms.VirtualChassisCreateForm
-        return super().get_form_class(*args, **kwargs)
-
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
 
@@ -3954,7 +3942,7 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
 
     @action(detail=True, methods=["get", "post"], url_path="add-member", url_name="add_member")
     def add_member(self, request, pk=None):
-        virtual_chassis = get_object_or_404(VirtualChassis.objects.all(), pk=pk)
+        virtual_chassis = self.get_object()
 
         if request.method == "POST":
             member_select_form = forms.VCMemberSelectForm(request.POST)
@@ -3992,7 +3980,8 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
 
     @action(detail=True, methods=["get", "post"], url_path="remove-member", url_name="remove_member")
     def remove_member(self, request, pk=None):
-        device = get_object_or_404(Device.objects.all(), pk=pk, virtual_chassis__isnull=False)
+        device = get_object_or_404(Device.objects.restrict(request.user, "change"), pk=pk, virtual_chassis__isnull=False)
+
         virtual_chassis = VirtualChassis.objects.filter(master=device).first()
 
         if request.method == "POST":
@@ -4025,11 +4014,6 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
                 "return_url": self.get_return_url(request, device),
             },
         )
-
-
-class VirtualChassisBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = VirtualChassis.objects.all()
-    table = tables.VirtualChassisTable
 
 
 #
