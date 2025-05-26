@@ -908,7 +908,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                         table_filter="device_type",
                         tab_id="interfaces",
                         enable_bulk_actions=True,
-                        form_id="devicetype_form",
+                        form_id="interfacetemplate_form",
                         footer_buttons=[
                             object_detail.FormButton(
                                 link_name="dcim:interfacetemplate_bulk_rename",
@@ -917,7 +917,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.RENAME,
                                 icon="mdi-pencil",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="interfacetemplate_form",
                                 weight=200,
                             ),
                             object_detail.FormButton(
@@ -927,7 +927,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.EDIT,
                                 icon="mdi-pencil",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="interfacetemplate_form",
                                 weight=200,
                             ),
                             object_detail.FormButton(
@@ -937,7 +937,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.DELETE,
                                 icon="mdi-trash-can-outline",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="interfacetemplate_form",
                                 weight=100,
                             ),
                         ],
@@ -959,7 +959,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                         table_filter="device_type",
                         tab_id="frontports",
                         enable_bulk_actions=True,
-                        form_id="devicetype_form",
+                        form_id="frontporttemplate_form",
                         footer_buttons=[
                             object_detail.FormButton(
                                 link_name="dcim:frontporttemplate_bulk_rename",
@@ -968,7 +968,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.RENAME,
                                 icon="mdi-pencil",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="frontporttemplate_form",
                                 weight=200,
                             ),
                             object_detail.FormButton(
@@ -978,7 +978,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.EDIT,
                                 icon="mdi-pencil",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="frontporttemplate_form",
                                 weight=200,
                             ),
                             object_detail.FormButton(
@@ -988,7 +988,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.DELETE,
                                 icon="mdi-trash-can-outline",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="frontporttemplate_form",
                                 weight=100,
                             ),
                         ],
@@ -1010,7 +1010,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                         table_filter="device_type",
                         tab_id="rearports",
                         enable_bulk_actions=True,
-                        form_id="devicetype_form",
+                        form_id="rearporttemplate_form",
                         footer_buttons=[
                             object_detail.FormButton(
                                 link_name="dcim:rearporttemplate_bulk_rename",
@@ -1019,7 +1019,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.RENAME,
                                 icon="mdi-pencil",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="rearporttemplate_form",
                                 weight=200,
                             ),
                             object_detail.FormButton(
@@ -1029,7 +1029,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.EDIT,
                                 icon="mdi-pencil",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="rearporttemplate_form",
                                 weight=200,
                             ),
                             object_detail.FormButton(
@@ -1039,7 +1039,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.DELETE,
                                 icon="mdi-trash-can-outline",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="rearporttemplate_form",
                                 weight=100,
                             ),
                         ],
@@ -1061,7 +1061,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                         table_filter="device_type",
                         tab_id="consoleports",
                         enable_bulk_actions=True,
-                        form_id="devicetype_form",
+                        form_id="consoleporttemplate_form",
                         footer_buttons=[
                             object_detail.FormButton(
                                 link_name="dcim:consoleporttemplate_bulk_rename",
@@ -1070,7 +1070,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.RENAME,
                                 icon="mdi-pencil",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="consoleporttemplate_form",
                                 weight=200,
                             ),
                             object_detail.FormButton(
@@ -1080,7 +1080,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.EDIT,
                                 icon="mdi-pencil",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="consoleporttemplate_form",
                                 weight=200,
                             ),
                             object_detail.FormButton(
@@ -1090,7 +1090,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.DELETE,
                                 icon="mdi-trash-can-outline",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="consoleporttemplate_form",
                                 weight=100,
                             ),
                         ],
@@ -1112,7 +1112,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                         table_filter="device_type",
                         tab_id="consoleserverports",
                         enable_bulk_actions=True,
-                        form_id="devicetype_form",
+                        form_id="consoleserverporttemplate_form",
                         footer_buttons=[
                             object_detail.FormButton(
                                 link_name="dcim:consoleserverporttemplate_bulk_rename",
@@ -1121,7 +1121,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.RENAME,
                                 icon="mdi-pencil",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="consoleserverporttemplate_form",
                                 weight=200,
                             ),
                             object_detail.FormButton(
@@ -1131,7 +1131,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.EDIT,
                                 icon="mdi-pencil",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="consoleserverporttemplate_form",
                                 weight=200,
                             ),
                             object_detail.FormButton(
@@ -1141,7 +1141,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.DELETE,
                                 icon="mdi-trash-can-outline",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="consoleserverporttemplate_form",
                                 weight=100,
                             ),
                         ],
@@ -1163,7 +1163,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                         table_filter="device_type",
                         tab_id="powerports",
                         enable_bulk_actions=True,
-                        form_id="devicetype_form",
+                        form_id="powerporttemplate_form",
                         footer_buttons=[
                             object_detail.FormButton(
                                 link_name="dcim:powerporttemplate_bulk_rename",
@@ -1172,7 +1172,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.RENAME,
                                 icon="mdi-pencil",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="powerporttemplate_form",
                                 weight=200,
                             ),
                             object_detail.FormButton(
@@ -1182,7 +1182,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.EDIT,
                                 icon="mdi-pencil",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="powerporttemplate_form",
                                 weight=200,
                             ),
                             object_detail.FormButton(
@@ -1192,7 +1192,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.DELETE,
                                 icon="mdi-trash-can-outline",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="powerporttemplate_form",
                                 weight=100,
                             ),
                         ],
@@ -1214,7 +1214,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                         table_filter="device_type",
                         tab_id="poweroutlets",
                         enable_bulk_actions=True,
-                        form_id="devicetype_form",
+                        form_id="poweroutlettemplate_form",
                         footer_buttons=[
                             object_detail.FormButton(
                                 link_name="dcim:poweroutlettemplate_bulk_rename",
@@ -1223,7 +1223,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.RENAME,
                                 icon="mdi-pencil",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="poweroutlettemplate_form",
                                 weight=200,
                             ),
                             object_detail.FormButton(
@@ -1233,7 +1233,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.EDIT,
                                 icon="mdi-pencil",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="poweroutlettemplate_form",
                                 weight=200,
                             ),
                             object_detail.FormButton(
@@ -1243,7 +1243,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.DELETE,
                                 icon="mdi-trash-can-outline",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="poweroutlettemplate_form",
                                 weight=100,
                             ),
                         ],
@@ -1265,7 +1265,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                         table_filter="device_type",
                         tab_id="devicebays",
                         enable_bulk_actions=True,
-                        form_id="devicetype_form",
+                        form_id="devicebaytemplate_form",
                         footer_buttons=[
                             object_detail.FormButton(
                                 link_name="dcim:devicebaytemplate_bulk_rename",
@@ -1274,7 +1274,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.RENAME,
                                 icon="mdi-pencil",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="devicebaytemplate_form",
                                 weight=200,
                             ),
                             object_detail.FormButton(
@@ -1284,7 +1284,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.EDIT,
                                 icon="mdi-pencil",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="devicebaytemplate_form",
                                 weight=200,
                             ),
                             object_detail.FormButton(
@@ -1294,7 +1294,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.DELETE,
                                 icon="mdi-trash-can-outline",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="devicebaytemplate_form",
                                 weight=100,
                             ),
                         ],
@@ -1316,7 +1316,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                         table_filter="device_type",
                         tab_id="modulebays",
                         enable_bulk_actions=True,
-                        form_id="devicetype_form",
+                        form_id="modulebaytemplate_form",
                         footer_buttons=[
                             object_detail.FormButton(
                                 link_name="dcim:modulebaytemplate_bulk_rename",
@@ -1325,7 +1325,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.RENAME,
                                 icon="mdi-pencil",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="modulebaytemplate_form",
                                 weight=200,
                             ),
                             object_detail.FormButton(
@@ -1335,7 +1335,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.EDIT,
                                 icon="mdi-pencil",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="modulebaytemplate_form",
                                 weight=200,
                             ),
                             object_detail.FormButton(
@@ -1345,7 +1345,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                                 color=ButtonActionColorChoices.DELETE,
                                 icon="mdi-trash-can-outline",
                                 size="xs",
-                                form_id="devicetype_form",
+                                form_id="modulebaytemplate_form",
                                 weight=100,
                             ),
                         ],
