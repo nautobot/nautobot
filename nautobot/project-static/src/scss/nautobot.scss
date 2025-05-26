@@ -451,6 +451,22 @@ $utilities: map-merge(
         0: 0,
       )
     ),
+    "nb-z-index": (
+      class: nb-z,
+      property: z-index,
+      values: (
+        dropdown:           $zindex-dropdown,           /* 1000 */
+        sticky:             $zindex-sticky,             /* 1020 */
+        fixed:              $zindex-fixed,              /* 1030 */
+        offcanvas-backdrop: $zindex-offcanvas-backdrop, /* 1040 */
+        offcanvas:          $zindex-offcanvas,          /* 1045 */
+        modal-backdrop:     $zindex-modal-backdrop,     /* 1050 */
+        modal:              $zindex-modal,              /* 1055 */
+        popover:            $zindex-popover,            /* 1070 */
+        tooltip:            $zindex-tooltip,            /* 1080 */
+        toast:              $zindex-toast,              /* 1090 */
+      )
+    ),
   )
 );
 

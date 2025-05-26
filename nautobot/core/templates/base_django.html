@@ -10,6 +10,12 @@
     {% include 'inc/media.html' %}
     {% block extra_styles %}{% endblock %}
     {% htmx_script %}
+    {% if search_model_choices %}
+        <script type="text/javascript">
+            window.nb = window.nb || {};
+            window.nb.search_model_choices = `{{ search_model_choices }}`;
+        </script>
+    {% endif %}
 </head>
 <body hx-headers='{"x-csrftoken": "{{ csrf_token }}"}'>
     {% include 'inc/nav_menu.html' %}

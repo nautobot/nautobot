@@ -1,5 +1,6 @@
 import contextlib
 import datetime
+import json
 import logging
 import os
 import platform
@@ -44,7 +45,7 @@ from rest_framework.views import APIView
 
 from nautobot.core.celery import app
 from nautobot.core.constants import SEARCH_MAX_RESULTS
-from nautobot.core.forms import SearchForm
+from nautobot.core.forms import search_model_choices
 from nautobot.core.releases import get_latest_release
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_route_for_model
@@ -99,7 +100,7 @@ class HomeView(AccessMixin, TemplateView):
         context = self.get_context_data()
         context.update(
             {
-                "search_form": SearchForm(),
+                "search_model_choices": json.dumps(search_model_choices()),
                 "new_release": new_release,
             }
         )
