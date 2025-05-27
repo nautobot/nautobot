@@ -2782,10 +2782,14 @@ class JobTestCase(
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=0)
     def test_run_now_no_worker(self, _):
         self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
 
         for run_url in self.run_urls:
-            response = self.client.post(run_url, self.data_run_immediately)
-            self.assertBodyContains(response, "Celery worker process not running.")
+            response = self.client.post(run_url, self.data_run_immediately, follow=True)
+
+            result = JobResult.objects.latest()
+            self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
+            self.assertBodyContains(response, "No celery workers found")
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_now(self, _):

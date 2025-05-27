@@ -1,0 +1,1 @@
+Fixed regression introduced in 2.4.0 involving inability to specify a non-default job queue when scheduling a Job.
