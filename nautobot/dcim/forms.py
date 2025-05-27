@@ -2112,7 +2112,6 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         queryset=ClusterGroup.objects.all(),
         required=False,
         null_option="None",
-        initial_params={"clusters": "$clusters"},
     )
     clusters = DynamicModelMultipleChoiceField(
         queryset=Cluster.objects.all(),
@@ -2238,6 +2237,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
                 self.initial["location"] = self.instance.parent_bay.device.location_id
                 self.initial["rack"] = self.instance.parent_bay.device.rack_id
 
+            self.initial["clusters"] = self.instance.clusters.values_list("id", flat=True)
             self.initial["vrfs"] = self.instance.vrfs.values_list("id", flat=True)
 
         else:
@@ -2274,6 +2274,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
     def save(self, *args, **kwargs):
         instance = super().save(*args, **kwargs)
         instance.vrfs.set(self.cleaned_data["vrfs"])
+        instance.clusters.set(self.cleaned_data["clusters"])
         return instance
 
 
