@@ -77,9 +77,9 @@ from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, 
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable, VRFTable
 from nautobot.virtualization.models import VirtualMachine
+from nautobot.virtualization.tables import VirtualMachineTable
 from nautobot.vpn.models import VPNTunnelEndpoint
 from nautobot.vpn.tables import VPNTunnelEndpointTable
-from nautobot.virtualization.tables import VirtualMachineTable
 from nautobot.wireless.forms import ControllerManagedDeviceGroupWirelessNetworkFormSet
 from nautobot.wireless.models import (
     ControllerManagedDeviceGroupRadioProfileAssignment,

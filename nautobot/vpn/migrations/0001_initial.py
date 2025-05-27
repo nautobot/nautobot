@@ -281,7 +281,7 @@ class Migration(migrations.Migration):
                     models.OneToOneField(
                         blank=True,
                         null=True,
-                        on_delete=django.db.models.deletion.PROTECT,
+                        on_delete=django.db.models.deletion.CASCADE,
                         related_name="vpn_tunnel_endpoints_src_int",
                         to="dcim.interface",
                     ),
@@ -291,7 +291,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         blank=True,
                         null=True,
-                        on_delete=django.db.models.deletion.PROTECT,
+                        on_delete=django.db.models.deletion.SET_NULL,
                         related_name="vpn_tunnel_endpoints_src_ip",
                         to="ipam.ipaddress",
                     ),

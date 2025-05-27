@@ -1,12 +1,27 @@
-"""Unit tests for nautobot_vpn_models."""
+"""Unit tests for vpn."""
 
 from nautobot.apps.testing import APIViewTestCases
-from nautobot.vpn import models
+from nautobot.dcim.models import Interface
+from nautobot.extras.models import Status
+from nautobot.ipam.models import Prefix
+from nautobot.vpn import choices, models
 
 
 class VPNProfileAPITest(APIViewTestCases.APIViewTestCase):
     """VPNProfile API tests."""
 
+    # Removes 'crypt' because of encryption_algorithm field.
+    VERBOTEN_STRINGS = (
+        "password",
+        "argon2",
+        "bcrypt",
+        "md5",
+        "pbkdf2",
+        "scrypt",
+        "sha1",
+        "sha256",
+        "sha512",
+    )
     model = models.VPNProfile
     choices_fields = ()
 
@@ -16,63 +31,60 @@ class VPNProfileAPITest(APIViewTestCases.APIViewTestCase):
 
         cls.create_data = [
             {
-                "vpn_phase1_policy": "replaceme",
-                "vpn_phase2_policy": "replaceme",
-                "name": "replaceme",
-                "description": "replaceme",
-                "keepalive_enabled": "replaceme",
-                "keepalive_interval": "replaceme",
-                "keepalive_retries": "replaceme",
-                "nat_traversal": "replaceme",
-                "extra_options": "replaceme",
-                "secrets_group": "replaceme",
-                "role": "replaceme",
+                "name": "test 1",
+                "description": "test value",
+                "keepalive_enabled": True,
+                "keepalive_interval": 3,
+                "keepalive_retries": 5,
+                "nat_traversal": False,
+                "extra_options": None,
             },
             {
-                "vpn_phase1_policy": "replaceme",
-                "vpn_phase2_policy": "replaceme",
-                "name": "replaceme",
-                "description": "replaceme",
-                "keepalive_enabled": "replaceme",
-                "keepalive_interval": "replaceme",
-                "keepalive_retries": "replaceme",
-                "nat_traversal": "replaceme",
-                "extra_options": "replaceme",
-                "secrets_group": "replaceme",
-                "role": "replaceme",
+                "name": "test 2",
+                "description": "test value",
+                "keepalive_enabled": True,
+                "keepalive_interval": 15,
+                "keepalive_retries": 3,
+                "nat_traversal": False,
+                "extra_options": None,
             },
             {
-                "vpn_phase1_policy": "replaceme",
-                "vpn_phase2_policy": "replaceme",
-                "name": "replaceme",
-                "description": "replaceme",
-                "keepalive_enabled": "replaceme",
-                "keepalive_interval": "replaceme",
-                "keepalive_retries": "replaceme",
-                "nat_traversal": "replaceme",
-                "extra_options": "replaceme",
-                "secrets_group": "replaceme",
-                "role": "replaceme",
+                "name": "test 3",
+                "description": "test value",
+                "keepalive_enabled": True,
+                "keepalive_interval": 30,
+                "keepalive_retries": 3,
+                "nat_traversal": True,
+                "extra_options": None,
             },
         ]
 
         cls.update_data = {
-            "vpn_phase1_policy": "replaceme",
-            "vpn_phase2_policy": "replaceme",
-            "description": "replaceme",
-            "keepalive_enabled": "replaceme",
-            "keepalive_interval": "replaceme",
-            "keepalive_retries": "replaceme",
-            "nat_traversal": "replaceme",
-            "extra_options": "replaceme",
-            "secrets_group": "replaceme",
-            "role": "replaceme",
+            "name": "test 1",
+            "description": "updated value",
+            "keepalive_enabled": True,
+            "keepalive_interval": 60,
+            "keepalive_retries": 3,
+            "nat_traversal": False,
+            "extra_options": None,
         }
 
 
 class VPNPhase1PolicyAPITest(APIViewTestCases.APIViewTestCase):
     """VPNPhase1Policy API tests."""
 
+    # Removes 'crypt' because of encryption_algorithm field.
+    VERBOTEN_STRINGS = (
+        "password",
+        "argon2",
+        "bcrypt",
+        "md5",
+        "pbkdf2",
+        "scrypt",
+        "sha1",
+        "sha256",
+        "sha512",
+    )
     model = models.VPNPhase1Policy
     choices_fields = (
         "ike_version",
@@ -88,59 +100,67 @@ class VPNPhase1PolicyAPITest(APIViewTestCases.APIViewTestCase):
 
         cls.create_data = [
             {
-                "name": "replaceme",
-                "description": "replaceme",
-                "ike_version": "replaceme",
-                "aggressive_mode": "replaceme",
-                "encryption_algorithm": "replaceme",
-                "integrity_algorithm": "replaceme",
-                "dh_group": "replaceme",
-                "lifetime_seconds": "replaceme",
-                "lifetime_kb": "replaceme",
-                "authentication_method": "replaceme",
+                "name": "test 1",
+                "description": "test value",
+                "ike_version": choices.IkeVersionChoices.ike_v2,
+                "aggressive_mode": False,
+                "encryption_algorithm": [choices.EncryptionAlgorithmChoices.aes_128_cbc],
+                "integrity_algorithm": [choices.IntegrityAlgorithmChoices.sha1],
+                "dh_group": [choices.DhGroupChoices.group5],
+                "lifetime_seconds": 10,
+                "lifetime_kb": None,
+                "authentication_method": choices.AuthenticationMethodChoices.rsa,
             },
             {
-                "name": "replaceme",
-                "description": "replaceme",
-                "ike_version": "replaceme",
-                "aggressive_mode": "replaceme",
-                "encryption_algorithm": "replaceme",
-                "integrity_algorithm": "replaceme",
-                "dh_group": "replaceme",
-                "lifetime_seconds": "replaceme",
-                "lifetime_kb": "replaceme",
-                "authentication_method": "replaceme",
+                "name": "test 2",
+                "description": "test value",
+                "ike_version": choices.IkeVersionChoices.ike_v2,
+                "aggressive_mode": False,
+                "encryption_algorithm": [choices.EncryptionAlgorithmChoices.aes_256_gcm],
+                "integrity_algorithm": [choices.IntegrityAlgorithmChoices.sha256],
+                "dh_group": [choices.DhGroupChoices.group14],
+                "lifetime_seconds": 10,
+                "lifetime_kb": None,
+                "authentication_method": choices.AuthenticationMethodChoices.ecdsa,
             },
             {
-                "name": "replaceme",
-                "description": "replaceme",
-                "ike_version": "replaceme",
-                "aggressive_mode": "replaceme",
-                "encryption_algorithm": "replaceme",
-                "integrity_algorithm": "replaceme",
-                "dh_group": "replaceme",
-                "lifetime_seconds": "replaceme",
-                "lifetime_kb": "replaceme",
-                "authentication_method": "replaceme",
+                "name": "test 3",
+                "description": "test value",
+                "ike_version": choices.IkeVersionChoices.ike_v2,
+                "aggressive_mode": False,
+                "encryption_algorithm": [choices.EncryptionAlgorithmChoices.aes_192_cbc],
+                "integrity_algorithm": [choices.IntegrityAlgorithmChoices.sha512],
+                "dh_group": [choices.DhGroupChoices.group21],
+                "lifetime_seconds": 10,
+                "lifetime_kb": None,
+                "authentication_method": choices.AuthenticationMethodChoices.certificate,
             },
         ]
 
         cls.update_data = {
-            "description": "replaceme",
-            "ike_version": "replaceme",
-            "aggressive_mode": "replaceme",
-            "encryption_algorithm": "replaceme",
-            "integrity_algorithm": "replaceme",
-            "dh_group": "replaceme",
-            "lifetime_seconds": "replaceme",
-            "lifetime_kb": "replaceme",
-            "authentication_method": "replaceme",
+            "name": "test 1",
+            "description": "updated value",
+            "ike_version": choices.IkeVersionChoices.ike_v1,
+            "lifetime_seconds": 5,
+            "authentication_method": choices.AuthenticationMethodChoices.ecdsa,
         }
 
 
 class VPNPhase2PolicyAPITest(APIViewTestCases.APIViewTestCase):
     """VPNPhase2Policy API tests."""
 
+    # Removes 'crypt' because of encryption_algorithm field.
+    VERBOTEN_STRINGS = (
+        "password",
+        "argon2",
+        "bcrypt",
+        "md5",
+        "pbkdf2",
+        "scrypt",
+        "sha1",
+        "sha256",
+        "sha512",
+    )
     model = models.VPNPhase2Policy
     choices_fields = (
         "encryption_algorithm",
@@ -154,37 +174,35 @@ class VPNPhase2PolicyAPITest(APIViewTestCases.APIViewTestCase):
 
         cls.create_data = [
             {
-                "name": "replaceme",
-                "description": "replaceme",
-                "encryption_algorithm": "replaceme",
-                "integrity_algorithm": "replaceme",
-                "pfs_group": "replaceme",
-                "lifetime": "replaceme",
+                "name": "test 1",
+                "description": "test value",
+                "encryption_algorithm": [choices.EncryptionAlgorithmChoices.aes_128_cbc],
+                "integrity_algorithm": [choices.IntegrityAlgorithmChoices.sha1],
+                "pfs_group": [choices.DhGroupChoices.group5],
+                "lifetime": 10,
             },
             {
-                "name": "replaceme",
-                "description": "replaceme",
-                "encryption_algorithm": "replaceme",
-                "integrity_algorithm": "replaceme",
-                "pfs_group": "replaceme",
-                "lifetime": "replaceme",
+                "name": "test 2",
+                "description": "test value",
+                "encryption_algorithm": [choices.EncryptionAlgorithmChoices.aes_256_gcm],
+                "integrity_algorithm": [choices.IntegrityAlgorithmChoices.sha256],
+                "pfs_group": [choices.DhGroupChoices.group14],
+                "lifetime": 10,
             },
             {
-                "name": "replaceme",
-                "description": "replaceme",
-                "encryption_algorithm": "replaceme",
-                "integrity_algorithm": "replaceme",
-                "pfs_group": "replaceme",
-                "lifetime": "replaceme",
+                "name": "test 3",
+                "description": "test value",
+                "encryption_algorithm": [choices.EncryptionAlgorithmChoices.aes_192_cbc],
+                "integrity_algorithm": [choices.IntegrityAlgorithmChoices.sha512],
+                "pfs_group": [choices.DhGroupChoices.group21],
+                "lifetime": 10,
             },
         ]
 
         cls.update_data = {
-            "description": "replaceme",
-            "encryption_algorithm": "replaceme",
-            "integrity_algorithm": "replaceme",
-            "pfs_group": "replaceme",
-            "lifetime": "replaceme",
+            "name": "test 1",
+            "description": "updated value",
+            "lifetime_seconds": 5,
         }
 
 
@@ -198,43 +216,32 @@ class VPNAPITest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         super().setUpTestData()
 
+        profiles = models.VPNProfile.objects.all()
+
         cls.create_data = [
             {
-                "vpn_profile": "replaceme",
-                "name": "replaceme",
-                "description": "replaceme",
-                "vpn_id": "replaceme",
-                "tenant": "replaceme",
-                "role": "replaceme",
-                "contact_associations": "replaceme",
+                "name": "test 1",
+                "description": "test value",
+                "vpn_id": "test value",
+                "vpn_profile": profiles[1].pk,
             },
             {
-                "vpn_profile": "replaceme",
-                "name": "replaceme",
-                "description": "replaceme",
-                "vpn_id": "replaceme",
-                "tenant": "replaceme",
-                "role": "replaceme",
-                "contact_associations": "replaceme",
+                "name": "test 2",
+                "description": "test value",
+                "vpn_id": "test value",
+                "vpn_profile": profiles[2].pk,
             },
             {
-                "vpn_profile": "replaceme",
-                "name": "replaceme",
-                "description": "replaceme",
-                "vpn_id": "replaceme",
-                "tenant": "replaceme",
-                "role": "replaceme",
-                "contact_associations": "replaceme",
+                "name": "test 3",
+                "description": "test value",
+                "vpn_id": "test value",
+                "vpn_profile": profiles[3].pk,
             },
         ]
 
         cls.update_data = {
-            "vpn_profile": "replaceme",
-            "description": "replaceme",
-            "vpn_id": "replaceme",
-            "tenant": "replaceme",
-            "role": "replaceme",
-            "contact_associations": "replaceme",
+            "name": "test 3",
+            "vpn_profile": profiles[4].pk,
         }
 
 
@@ -248,51 +255,49 @@ class VPNTunnelAPITest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         super().setUpTestData()
 
+        endpoints = models.VPNTunnelEndpoint.objects.all()
+
         cls.create_data = [
             {
-                "vpn_profile": "replaceme",
-                "vpn": "replaceme",
-                "name": "replaceme",
-                "description": "replaceme",
-                "tunnel_id": "replaceme",
-                "encapsulation": "replaceme",
-                "tenant": "replaceme",
-                "role": "replaceme",
-                "contact_associations": "replaceme",
+                "name": "test 1",
+                "description": "test value",
+                "vpn_profile": models.VPNProfile.objects.first().pk,
+                "vpn": models.VPN.objects.first().pk,
+                "tunnel_id": "test value",
+                "status": Status.objects.get(name="Active").pk,
+                "encapsulation": choices.EncapsulationChoices.ipsec_tunnel,
+                "endpoint_a": endpoints[1].pk,
+                "endpoint_z": endpoints[2].pk,
             },
             {
-                "vpn_profile": "replaceme",
-                "vpn": "replaceme",
-                "name": "replaceme",
-                "description": "replaceme",
-                "tunnel_id": "replaceme",
-                "encapsulation": "replaceme",
-                "tenant": "replaceme",
-                "role": "replaceme",
-                "contact_associations": "replaceme",
+                "name": "test 2",
+                "description": "test value",
+                "vpn_profile": models.VPNProfile.objects.first().pk,
+                "vpn": models.VPN.objects.first().pk,
+                "tunnel_id": "test value",
+                "status": Status.objects.get(name="Active").pk,
+                "encapsulation": choices.EncapsulationChoices.l2tp,
+                "endpoint_a": endpoints[3].pk,
+                "endpoint_z": endpoints[4].pk,
             },
             {
-                "vpn_profile": "replaceme",
-                "vpn": "replaceme",
-                "name": "replaceme",
-                "description": "replaceme",
-                "tunnel_id": "replaceme",
-                "encapsulation": "replaceme",
-                "tenant": "replaceme",
-                "role": "replaceme",
-                "contact_associations": "replaceme",
+                "name": "test 3",
+                "description": "test value",
+                "vpn_profile": models.VPNProfile.objects.first().pk,
+                "vpn": models.VPN.objects.first().pk,
+                "tunnel_id": "test value",
+                "status": Status.objects.get(name="Active").pk,
+                "encapsulation": choices.EncapsulationChoices.ipsec_transport,
+                "endpoint_a": endpoints[5].pk,
+                "endpoint_z": endpoints[6].pk,
             },
         ]
 
         cls.update_data = {
-            "vpn_profile": "replaceme",
-            "vpn": "replaceme",
-            "description": "replaceme",
-            "tunnel_id": "replaceme",
-            "encapsulation": "replaceme",
-            "tenant": "replaceme",
-            "role": "replaceme",
-            "contact_associations": "replaceme",
+            "name": "test 3",
+            "encapsulation": choices.EncapsulationChoices.ipsec_transport,
+            "endpoint_a": endpoints[7].pk,
+            "endpoint_z": endpoints[8].pk,
         }
 
 
@@ -306,61 +311,32 @@ class VPNTunnelEndpointAPITest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         super().setUpTestData()
 
+        interfaces = Interface.objects.filter(device__isnull=False, vpn_tunnel_endpoints_src_int__isnull=True)
+
         cls.create_data = [
             {
-                "vpn_profile": "replaceme",
-                "vpn_tunnel": "replaceme",
-                "source_ipaddress": "replaceme",
-                "source_interface": "replaceme",
-                "destination_ipaddress": "replaceme",
-                "destination_fqdn": "replaceme",
-                "tunnel_interface": "replaceme",
-                "protected_prefixes_dg": "replaceme",
-                "protected_prefixes": "replaceme",
-                "role": "replaceme",
-                "contact_associations": "replaceme",
+                "device": interfaces[0].device.pk,
+                "source_interface": interfaces[0].pk,
+                "vpn_profile": models.VPNProfile.objects.first().pk,
+                "protected_prefixes": [Prefix.objects.first().pk],
             },
             {
-                "vpn_profile": "replaceme",
-                "vpn_tunnel": "replaceme",
-                "source_ipaddress": "replaceme",
-                "source_interface": "replaceme",
-                "destination_ipaddress": "replaceme",
-                "destination_fqdn": "replaceme",
-                "tunnel_interface": "replaceme",
-                "protected_prefixes_dg": "replaceme",
-                "protected_prefixes": "replaceme",
-                "role": "replaceme",
-                "contact_associations": "replaceme",
+                "device": interfaces[1].device.pk,
+                "source_interface": interfaces[1].pk,
+                "vpn_profile": models.VPNProfile.objects.first().pk,
+                "protected_prefixes": [Prefix.objects.first().pk],
             },
             {
-                "vpn_profile": "replaceme",
-                "vpn_tunnel": "replaceme",
-                "source_ipaddress": "replaceme",
-                "source_interface": "replaceme",
-                "destination_ipaddress": "replaceme",
-                "destination_fqdn": "replaceme",
-                "tunnel_interface": "replaceme",
-                "protected_prefixes_dg": "replaceme",
-                "protected_prefixes": "replaceme",
-                "role": "replaceme",
-                "contact_associations": "replaceme",
+                "device": interfaces[2].device.pk,
+                "source_interface": interfaces[2].pk,
+                "vpn_profile": models.VPNProfile.objects.first().pk,
+                "protected_prefixes": [Prefix.objects.first().pk],
             },
         ]
 
         cls.update_data = {
-            "vpn_profile": "replaceme",
-            "vpn_tunnel": "replaceme",
-            "source_ipaddress": "replaceme",
-            "source_interface": "replaceme",
-            "destination_ipaddress": "replaceme",
-            "destination_fqdn": "replaceme",
-            "tunnel_interface": "replaceme",
-            "protected_prefixes_dg": "replaceme",
-            "protected_prefixes": "replaceme",
-            "role": "replaceme",
-            "contact_associations": "replaceme",
+            "device": interfaces[2].device.pk,
+            "source_interface": interfaces[2].pk,
+            "vpn_profile": models.VPNProfile.objects.last().pk,
+            "protected_prefixes": [Prefix.objects.last().pk],
         }
-
-
-# TODO: Verify GQL !!!
