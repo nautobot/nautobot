@@ -118,8 +118,7 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
     @classmethod
     def setUpTestData(cls):
         # Prepare the test data
-        job_ct = ContentType.objects.get(app_label="extras", model="job")
-        job = JobModel.objects.first()
+        cls.scheduledjob_ct = ContentType.objects.get_for_model(ScheduledJob)
         cls.approver_group_1 = Group.objects.create(name="Approver Group 1")
         cls.approver_group_2 = Group.objects.create(name="Approver Group 2")
         cls.approver_group_3 = Group.objects.create(name="Approver Group 3")
@@ -130,6 +129,15 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
             User.objects.create(username="User 4", is_active=True),
             User.objects.create(username="User 5", is_active=True),
         )
+        job_model = JobModel.objects.get_for_class_path("pass.TestPassJob")
+        cls.scheduled_job = ScheduledJob.objects.create(
+            name="Test Pass Scheduled Job",
+            task="pass.TestPassJob",
+            job_model=job_model,
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=cls.users[0],
+            start_time=now(),
+        )
         cls.approver_group_1.user_set.set([cls.users[0]])
         cls.approver_group_2.user_set.set([cls.users[1], cls.users[2]])
         cls.approver_group_3.user_set.set([cls.users[3], cls.users[4]])
@@ -137,7 +145,8 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
         # Create an Approval Workflow Definition
         cls.approval_workflow_definition = ApprovalWorkflowDefinition.objects.create(
             name="Approval Workflow with Three Stages",
-            model_content_type=job_ct,
+            model_content_type=cls.scheduledjob_ct,
+            priority=1,
         )
         # Create three stages of the Approval Workflow Definition
         cls.approval_workflow_stage_definition_1 = ApprovalWorkflowStageDefinition.objects.create(
@@ -168,8 +177,8 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
         # Create an Approval Workflow
         cls.approval_workflow = ApprovalWorkflow.objects.create(
             approval_workflow_definition=cls.approval_workflow_definition,
-            object_under_review_content_type=job_ct,
-            object_under_review_object_id=job.pk,
+            object_under_review_content_type=cls.scheduledjob_ct,
+            object_under_review_object_id=cls.scheduled_job.pk,
             current_state=ApprovalWorkflowStateChoices.PENDING,
         )
         # Create three Approval Workflow Stage Instances
@@ -314,6 +323,7 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
         approval_workflow_definition = ApprovalWorkflowDefinition.objects.create(
             name="Scheduled Job Approval Workflow",
             model_content_type=scheduled_job_ct,
+            priority=2,
         )
         approval_workflow = ApprovalWorkflow(
             approval_workflow_definition=approval_workflow_definition,
