@@ -1,0 +1,1 @@
+Added RackRoleFilterForm, ManufacturerFilterForm, DeviceRoleFilterForm, PlatformFilterForm, RoleFilterForm, TenantGroupFilterForm, ClusterTypeFilterForm, ClusterGroupFilterForm and set them to proper `filterset_form` in views.

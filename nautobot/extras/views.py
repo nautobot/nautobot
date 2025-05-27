@@ -356,6 +356,7 @@ class CustomFieldListView(generic.ObjectListView):
     queryset = CustomField.objects.all()
     table = tables.CustomFieldTable
     filterset = filters.CustomFieldFilterSet
+    filterset_form = forms.CustomFieldFilterForm
     action_buttons = ("add",)
 
 

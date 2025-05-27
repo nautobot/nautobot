@@ -2,6 +2,10 @@ import re
 from unittest import mock
 import urllib.parse
 
+from django.conf import settings
+import inspect
+import importlib
+
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
@@ -214,6 +218,38 @@ class FilterFormsTestCase(TestCase):
 >×</span>""",  # noqa: RUF001 - ambiguous-unicode-character-string
             response_content,
         )
+
+    def test_all_list_views_have_set_filterset_form(self):
+        """Test that all ListView classes in Nautobot apps have a non-None `filterset_form` attribute."""
+        listview_classes = []
+
+        # Filter only 'nautobot' apps
+        nautobot_apps = [app for app in settings.INSTALLED_APPS if app.startswith("nautobot")]
+
+        nautobot_apps = sorted(set(nautobot_apps))
+
+        for app in nautobot_apps:
+            try:
+                views_module = importlib.import_module(f"{app}.views")
+            except ModuleNotFoundError:
+                continue
+            for name, obj in inspect.getmembers(views_module, inspect.isclass):
+                if name.endswith("ListView"):
+                    listview_classes.append(obj)
+
+        # ignore ConnectionsListView because it's base class for ConsoleConnectionsListView where filterset_form is defined
+        ignore_list = [
+            "ConnectionsListView",
+        ]
+        classes_with_none_filterset_form = [
+            cls
+            for cls in listview_classes
+            if cls.__name__ not in ignore_list
+            and hasattr(cls, "filterset_form")
+            and getattr(cls, "filterset_form") is None
+        ]
+
+        self.assertEqual(classes_with_none_filterset_form, [])
 
 
 class ForceScriptNameTestcase(TestCase):

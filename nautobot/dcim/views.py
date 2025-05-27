@@ -511,6 +511,7 @@ class RackGroupBulkDeleteView(generic.BulkDeleteView):
 class RackRoleListView(generic.ObjectListView):
     queryset = RackRole.objects.annotate(rack_count=count_related(Rack, "role"))
     filterset = filters.RackRoleFilterSet
+    filterset_form = forms.RackRoleFilterForm
     table = tables.RackRoleTable
 
 
@@ -764,6 +765,7 @@ class ManufacturerListView(generic.ObjectListView):
         platform_count=count_related(Platform, "manufacturer"),
     )
     filterset = filters.ManufacturerFilterSet
+    filterset_form = forms.ManufacturerForm
     table = tables.ManufacturerTable
 
 
@@ -1241,6 +1243,7 @@ class DeviceRoleListView(generic.ObjectListView):
         vm_count=count_related(VirtualMachine, "role"),
     )
     filterset = filters.DeviceRoleFilterSet
+    filterset_form = forms.DeviceRoleFilterForm
     table = tables.DeviceRoleTable
 
 
@@ -1300,6 +1303,7 @@ class PlatformListView(generic.ObjectListView):
         vm_count=count_related(VirtualMachine, "platform"),
     )
     filterset = filters.PlatformFilterSet
+    filterset_form = forms.PlatformFilterForm
     table = tables.PlatformTable
 
 
