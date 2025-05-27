@@ -34,7 +34,7 @@ from nautobot.extras.utils import remove_prefix_from_cf_key
 logger = logging.getLogger(__name__)
 
 
-__all__ = (# noqa:RUF022
+__all__ = (  # noqa:RUF022
     "ContactTeamModelFilterFormMixin",
     "CustomFieldModelBulkEditFormMixin",
     "CustomFieldModelFilterFormMixin",

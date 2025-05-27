@@ -412,7 +412,7 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
     )
     source_interface = models.OneToOneField(
         to="dcim.Interface",
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         related_name="vpn_tunnel_endpoints_src_int",
         blank=True,
         null=True,
