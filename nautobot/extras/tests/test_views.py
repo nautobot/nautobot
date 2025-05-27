@@ -1162,6 +1162,15 @@ class GitRepositoryTestCase(
 ):
     model = GitRepository
     slugify_function = staticmethod(slugify_dashes_to_underscores)
+    expected_edit_form_buttons = [
+        '<button type="submit" name="_dryrun_update" class="btn btn-warning">Update & Dry Run</button>',
+        '<button type="submit" name="_update" class="btn btn-primary">Update & Sync</button>',
+    ]
+    expected_create_form_buttons = [
+        '<button type="submit" name="_dryrun_create" class="btn btn-info">Create & Dry Run</button>',
+        '<button type="submit" name="_create" class="btn btn-primary">Create & Sync</button>',
+        '<button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>',
+    ]
 
     @classmethod
     def setUpTestData(cls):
@@ -2773,10 +2782,14 @@ class JobTestCase(
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=0)
     def test_run_now_no_worker(self, _):
         self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
 
         for run_url in self.run_urls:
-            response = self.client.post(run_url, self.data_run_immediately)
-            self.assertBodyContains(response, "Celery worker process not running.")
+            response = self.client.post(run_url, self.data_run_immediately, follow=True)
+
+            result = JobResult.objects.latest()
+            self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
+            self.assertBodyContains(response, "No celery workers found")
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_now(self, _):
