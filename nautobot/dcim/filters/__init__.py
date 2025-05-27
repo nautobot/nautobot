@@ -869,7 +869,9 @@ class DeviceFilterSet(
         to_field_name="name",
         label="Rack (name or ID)",
     )
+    # Even though devices can be assigned to multiple clusters, we only want to filter by one.
     cluster = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="clusters",
         queryset=Cluster.objects.all(),
         to_field_name="name",
         label="VM cluster (name or ID)",
