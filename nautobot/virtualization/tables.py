@@ -79,8 +79,8 @@ class ClusterTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     tenant = tables.Column(linkify=True)
-    cluster_type = tables.Column(linkify=True)
-    cluster_group = tables.Column(linkify=True)
+    cluster_type = tables.Column(linkify=True, verbose_name="Cluster Type")
+    cluster_group = tables.Column(linkify=True, verbose_name="Cluster Group")
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
         url_params={"cluster": "pk"},
