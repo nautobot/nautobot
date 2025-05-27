@@ -358,6 +358,21 @@ class ApprovalWorkflowStage(OrganizationalModel):
             for response in self.approval_workflow_stage_responses.filter(state=ApprovalWorkflowStateChoices.APPROVED)
         ]
 
+    @property
+    def should_render_state(self):
+        """
+        Check if the stage state should be rendered in the UI.
+        The stage state should be rendered if the stage is approved or denied or it is currently active and pending.
+        Returns:
+            bool: True if the stage state should be rendered, False otherwise.
+        """
+        if self.is_active_stage or self.state in [
+            ApprovalWorkflowStateChoices.APPROVED,
+            ApprovalWorkflowStateChoices.DENIED,
+        ]:
+            return True
+        return False
+
     def save(self, *args, **kwargs):
         """
         Override save method:
