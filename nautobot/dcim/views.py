@@ -9,7 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.core.paginator import EmptyPage, PageNotAnInteger
 from django.db import IntegrityError, transaction
-from django.db.models import Count, F, Prefetch
+from django.db.models import F, Prefetch
 from django.forms import (
     modelformset_factory,
     ModelMultipleChoiceField,
