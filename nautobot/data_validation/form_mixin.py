@@ -1,9 +1,9 @@
-from django.contrib.contenttypes.models import ContentType
+from django.utils.html import strip_tags
 
 from nautobot.data_validation.models import RequiredValidationRule
 
 
-class DataValidationFormMixin:
+class DataValidationModelFormMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -11,16 +11,15 @@ class DataValidationFormMixin:
 
     def _apply_data_validation_rules(self):
         # Use only with ModelForm's
-        if hasattr(self, "_meta") and hasattr(self._meta, "model"):
-            content_type = ContentType.objects.get_for_model(self._meta.model)
-            required_fields_rules = RequiredValidationRule.objects.get_enabled_for_model(
-                f"{content_type.app_label}.{content_type.model}"
-            )
+        if not hasattr(self, "_meta") or not hasattr(self._meta, "model"):
+            raise TypeError("This mixin works only with ModelForms")
 
-            for rule in required_fields_rules:
-                if rule.field in self.fields:
-                    field = self.fields[rule.field]
-                    field.required = True
+        required_fields_rules = RequiredValidationRule.objects.get_enabled_for_model(self._meta.model._meta.label_lower)
 
-                    if rule.error_message:
-                        field.widget.attrs["oninvalid"] = f"this.setCustomValidity('{rule.error_message}')"
+        for rule in required_fields_rules:
+            if rule.field in self.fields:
+                field = self.fields[rule.field]
+                field.required = True
+
+                if rule.error_message:
+                    field.widget.attrs["oninvalid"] = f"this.setCustomValidity('{strip_tags(rule.error_message)}')"

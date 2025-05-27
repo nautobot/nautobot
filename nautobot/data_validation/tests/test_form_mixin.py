@@ -3,12 +3,13 @@ from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
 from nautobot.core.testing.mixins import NautobotTestCaseMixin
-from nautobot.data_validation.form_mixin import DataValidationFormMixin
+from nautobot.data_validation.form_mixin import DataValidationModelFormMixin
 from nautobot.data_validation.models import RequiredValidationRule
+from nautobot.data_validation.tests import ValidationRuleTestCaseMixin
 from nautobot.dcim.models import Location
 
 
-class DataValidationFormMixinTestCase(NautobotTestCaseMixin, TestCase):
+class DataValidationFormMixinTestCase(ValidationRuleTestCaseMixin, NautobotTestCaseMixin, TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.content_type = ContentType.objects.get_for_model(Location)
@@ -23,12 +24,12 @@ class DataValidationFormMixinTestCase(NautobotTestCaseMixin, TestCase):
     def test_mixin_sets_required_field_with_rule(self):
         """Test that fields become required when rules exist."""
 
-        class TestForm(DataValidationFormMixin, forms.ModelForm):
+        class TestModelForm(DataValidationModelFormMixin, forms.ModelForm):
             class Meta:
                 model = self.TestModel
                 fields = ["name", "facility", "description"]
 
-        form = TestForm()
+        form = TestModelForm()
         self.assertTrue(form.fields["name"].required)  # Required by default
         self.assertTrue(form.fields["facility"].required)
         self.assertFalse(form.fields["description"].required)
@@ -42,12 +43,12 @@ class DataValidationFormMixinTestCase(NautobotTestCaseMixin, TestCase):
             name="Description required",
         )
 
-        class TestForm(DataValidationFormMixin, forms.ModelForm):
+        class TestModelForm(DataValidationModelFormMixin, forms.ModelForm):
             class Meta:
                 model = self.TestModel
                 fields = ["name", "facility", "description"]
 
-        form = TestForm()
+        form = TestModelForm()
         self.assertTrue(form.fields["name"].required)  # Required by default
         self.assertTrue(form.fields["facility"].required)
         self.assertTrue(form.fields["description"].required)
@@ -60,18 +61,18 @@ class DataValidationFormMixinTestCase(NautobotTestCaseMixin, TestCase):
             enabled=False,
         )
 
-        class TestForm(DataValidationFormMixin, forms.ModelForm):
+        class TestModelForm(DataValidationModelFormMixin, forms.ModelForm):
             class Meta:
                 model = self.TestModel
                 fields = ["facility", "time_zone"]
 
-        form = TestForm()
+        form = TestModelForm()
         self.assertTrue(form.fields["facility"].required)
         self.assertFalse(form.fields["time_zone"].required)
 
     def test_custom_error_message_applied(self):
         """Test custom error messages populate widget attributes."""
-        error_msg = "Custom error message"
+        error_msg = "<div>Custom error message</div>"
 
         RequiredValidationRule.objects.get_or_create(
             content_type=self.content_type,
@@ -81,32 +82,32 @@ class DataValidationFormMixinTestCase(NautobotTestCaseMixin, TestCase):
             error_message=error_msg,
         )
 
-        class TestForm(DataValidationFormMixin, forms.ModelForm):
+        class TestModelForm(DataValidationModelFormMixin, forms.ModelForm):
             class Meta:
                 model = self.TestModel
                 fields = ["asn"]
 
-        form = TestForm()
+        form = TestModelForm()
         widget_attrs = form.fields["asn"].widget.attrs
-        self.assertEqual(widget_attrs["oninvalid"], f"this.setCustomValidity('{error_msg}')")
+        self.assertEqual(widget_attrs["oninvalid"], "this.setCustomValidity('Custom error message')")
 
     def test_no_changes_in_form_if_no_rules(self):
         """Test fields remain unmodified without rules."""
 
-        class TestForm(DataValidationFormMixin, forms.ModelForm):
+        class TestModelForm(DataValidationModelFormMixin, forms.ModelForm):
             class Meta:
                 model = self.TestModel
                 fields = ["name", "description"]
 
-        form = TestForm()
+        form = TestModelForm()
         self.assertTrue(form.fields["name"].required)
         self.assertFalse(form.fields["description"].required)
 
     def test_non_model_form_ignored(self):
         """Test mixin skips processing for non-ModelForms."""
 
-        class TestForm(DataValidationFormMixin, forms.Form):
+        class TestModelForm(DataValidationModelFormMixin, forms.Form):
             facility = forms.CharField(required=False)
 
-        form = TestForm()
-        self.assertFalse(form.fields["facility"].required)
+        with self.assertRaises(TypeError):
+            TestModelForm()
