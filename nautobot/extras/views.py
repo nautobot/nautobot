@@ -2521,21 +2521,13 @@ class RelationshipUIViewSet(NautobotUIViewSet):
     )
 
 
-class RelationshipAssociationListView(generic.ObjectListView):
-    queryset = RelationshipAssociation.objects.all()
-    filterset = filters.RelationshipAssociationFilterSet
-    filterset_form = forms.RelationshipAssociationFilterForm
-    table = tables.RelationshipAssociationTable
-    action_buttons = ()
-
-
-class RelationshipAssociationBulkDeleteView(generic.BulkDeleteView):
-    queryset = RelationshipAssociation.objects.all()
-    table = tables.RelationshipAssociationTable
-    filterset = filters.RelationshipAssociationFilterSet
-
-
-class RelationshipAssociationDeleteView(generic.ObjectDeleteView):
+class RelationshipAssociationUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.RelationshipAssociationBulkEditForm
+    filterset_class = filters.RelationshipAssociationFilterSet
+    filterset_form_class = forms.RelationshipAssociationFilterForm
+    form_class = forms.RelationshipAssociationForm
+    serializer_class = serializers.RelationshipAssociationSerializer
+    table_class = tables.RelationshipAssociationTable
     queryset = RelationshipAssociation.objects.all()
 
 

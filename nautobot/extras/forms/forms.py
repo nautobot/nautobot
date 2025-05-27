@@ -184,7 +184,9 @@ __all__ = (
     "ObjectChangeFilterForm",
     "ObjectMetadataFilterForm",
     "PasswordInputWithPlaceholder",
+    "RelationshipAssociationBulkEditForm",
     "RelationshipAssociationFilterForm",
+    "RelationshipAssociationForm",
     "RelationshipBulkEditForm",
     "RelationshipFilterForm",
     "RelationshipForm",
@@ -2011,6 +2013,33 @@ class RelationshipFilterForm(BootstrapMixin, forms.Form):
     )
 
 
+class RelationshipAssociationBulkEditForm(
+    BootstrapMixin, CustomFieldModelBulkEditFormMixin, NoteModelBulkEditFormMixin
+):
+    pk = forms.ModelMultipleChoiceField(
+        queryset=RelationshipAssociation.objects.all(), widget=forms.MultipleHiddenInput()
+    )
+    relationship = forms.ModelChoiceField(
+        queryset=Relationship.objects.all(),
+        required=False,
+        help_text="Select a new relationship for these associations (optional).",
+    )
+    source_type = CSVContentTypeField(
+        queryset=ContentType.objects.all(), required=False, help_text="Set a new source content type."
+    )
+    destination_type = CSVContentTypeField(
+        queryset=ContentType.objects.all(), required=False, help_text="Set a new destination content type."
+    )
+
+    class Meta:
+        model = RelationshipAssociation
+        fields = [
+            "relationship",
+            "source_type",
+            "destination_type",
+        ]
+
+
 class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
     model = RelationshipAssociation
 
@@ -2027,6 +2056,61 @@ class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
     destination_type = MultipleContentTypeField(
         feature="relationships", choices_as_strings=True, required=False, label="Destination Type"
     )
+
+
+class RelationshipAssociationForm(BootstrapMixin, forms.ModelForm):
+    relationship = forms.ModelChoiceField(
+        queryset=Relationship.objects.all(),
+        help_text="The relationship being instantiated by this association.",
+    )
+
+    source_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.all(),
+        help_text="The type of the source object.",
+    )
+    source_id = forms.UUIDField(
+        help_text="The UUID of the source object.",
+    )
+
+    destination_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.all(),
+        help_text="The type of the destination object.",
+    )
+    destination_id = forms.UUIDField(
+        help_text="The UUID of the destination object.",
+    )
+
+    class Meta:
+        model = RelationshipAssociation
+        fields = [
+            "relationship",
+            "source_type",
+            "source_id",
+            "destination_type",
+            "destination_id",
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.instance and self.instance.present_in_database:
+            self.fields["relationship"].widget.attrs["readonly"] = True
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        # Add validation to ensure the source and destination match the relationship type
+        relationship = cleaned_data.get("relationship")
+        source_type = cleaned_data.get("source_type")
+        destination_type = cleaned_data.get("destination_type")
+
+        if relationship:
+            if source_type != relationship.source_type:
+                self.add_error("source_type", "Source type must match the relationship's source type.")
+            if destination_type != relationship.destination_type:
+                self.add_error("destination_type", "Destination type must match the relationship's destination type.")
+
+        return cleaned_data
 
 
 #
