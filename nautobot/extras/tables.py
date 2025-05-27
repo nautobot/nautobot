@@ -17,7 +17,7 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
-from nautobot.core.templatetags.helpers import render_boolean, render_json, render_markdown
+from nautobot.core.templatetags.helpers import HTML_NONE, render_boolean, render_json, render_markdown
 from nautobot.tenancy.tables import TenantColumn
 
 from .choices import LogLevelChoices, MetadataTypeDataTypeChoices
@@ -310,7 +310,7 @@ class ApprovalChoiceFieldColumn(ChoiceFieldColumn):
     def render(self, *, record, bound_column, value):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
         if record.should_render_state:
             return super().render(record=record, bound_column=bound_column, value=value)
-        return format_html('<span class="text-muted">&mdash;</span>')
+        return HTML_NONE
 
 
 class ApprovalWorkflowStageTable(BaseTable):
