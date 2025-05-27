@@ -83,7 +83,7 @@ JOB_RESULT_METRIC = Histogram(
     "job_results",
     "webhooks",
 )
-class Job(ApprovableModelMixin, PrimaryModel):
+class Job(PrimaryModel):
     """
     Database model representing an installed Job class.
     """
@@ -1232,8 +1232,10 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
                 self.last_run_at = self.start_time - timedelta(
                     **{JobExecutionType.CELERY_INTERVAL_MAP[self.interval]: multiplier},
                 )
-
+        is_new = not self.present_in_database
         super().save(*args, **kwargs)
+        if is_new:
+            self.begin_approval_workflow()
 
     def clean(self):
         """
@@ -1244,6 +1246,21 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         # bitwise xor also works on booleans, but not on complex values
         if bool(self.approved_by_user) ^ bool(self.approved_at):
             raise ValidationError("Approval by user and approval time must either both be set or both be undefined")
+
+    def on_workflow_initiated(self):
+        """When initiated, set enabled to False."""
+        self.enabled = False
+        self.save()
+
+    def on_workflow_approved(self):
+        """When approved, set enabled to True."""
+        self.enabled = True
+        self.save()
+
+    def on_workflow_denied(self):
+        """When denied, set enabled to False."""
+        self.enabled = False
+        self.save()
 
     @property
     def schedule(self):

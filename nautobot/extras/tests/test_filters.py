@@ -9,6 +9,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings, RequestFactory
 from django.utils.timezone import now
 
+from nautobot.core.jobs import BulkDeleteObjects
 from nautobot.core.testing import FilterTestCases
 from nautobot.dcim.filters import DeviceFilterSet
 from nautobot.dcim.models import (
@@ -138,18 +139,7 @@ class ApprovalWorkflowTestMixin:
 
     @classmethod
     def setUpTestData(cls):
-        cls.job_ct = ContentType.objects.get(app_label="extras", model="job")
-        cls.scheduledjob_ct = ContentType.objects.get(app_label="extras", model="scheduledjob")
-        cls.jobs = list(Job.objects.all())
-        cls.scheduled_job = ScheduledJob.objects.create(
-            name="test",
-            task="pass.TestPassJob",
-            job_model=cls.jobs[0],
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=User.objects.first(),
-            approval_required=True,
-            start_time=now(),
-        )
+        cls.scheduledjob_ct = ContentType.objects.get_for_model(ScheduledJob)
         cls.approver_group_1 = Group.objects.create(name="Approver Group 1")
         cls.approver_group_2 = Group.objects.create(name="Approver Group 2")
         cls.approver_group_3 = Group.objects.create(name="Approver Group 3")
@@ -159,29 +149,46 @@ class ApprovalWorkflowTestMixin:
             user.groups.add(cls.approver_group_2)
             user.groups.add(cls.approver_group_3)
 
+        job_model = Job.objects.get_for_class_path(BulkDeleteObjects.class_path)
+        cls.scheduled_jobs = [
+            ScheduledJob.objects.create(
+                name=f"Bulk Delete Objects Scheduled Job {i}",
+                task=BulkDeleteObjects.class_path,
+                job_model=job_model,
+                interval=JobExecutionType.TYPE_IMMEDIATELY,
+                user=cls.users[0],
+                start_time=now(),
+            )
+            for i in range(7)
+        ]
         cls.approval_workflow_1_definition = ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow 1 Definition",
-            model_content_type=cls.job_ct,
+            model_content_type=cls.scheduledjob_ct,
+            priority=1,
         )
         cls.approval_workflow_2_definition = ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow 2 Definition",
             model_content_type=cls.scheduledjob_ct,
             model_constraints={"name": "Bulk Delete Objects"},
+            priority=2,
         )
         cls.approval_workflow_3_definition = ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow 3 Definition",
-            model_content_type=cls.job_ct,
+            model_content_type=cls.scheduledjob_ct,
             model_constraints={"name": "Bulk Delete Objects"},
+            priority=3,
         )
         cls.approval_workflow_4_definition = ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow 4 Definition",
-            model_content_type=cls.job_ct,
+            model_content_type=cls.scheduledjob_ct,
             model_constraints={"name": "Bulk Delete Objects"},
+            priority=4,
         )
         cls.approval_workflow_5_definition = ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow 5 Definition",
-            model_content_type=cls.job_ct,
+            model_content_type=cls.scheduledjob_ct,
             model_constraints={"name": "Bulk Delete Objects"},
+            priority=5,
         )
         cls.approval_workflow_1_stage_1_definition = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_1_definition,
@@ -281,44 +288,44 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_1_instance_1 = ApprovalWorkflow.objects.create(
             approval_workflow_definition=cls.approval_workflow_1_definition,
-            object_under_review_content_type=cls.job_ct,
-            object_under_review_object_id=cls.jobs[0].pk,
+            object_under_review_content_type=cls.scheduledjob_ct,
+            object_under_review_object_id=cls.scheduled_jobs[0].pk,
             current_state=ApprovalWorkflowStateChoices.PENDING,
         )
         cls.approval_workflow_1_instance_2 = ApprovalWorkflow.objects.create(
             approval_workflow_definition=cls.approval_workflow_3_definition,
-            object_under_review_content_type=cls.job_ct,
-            object_under_review_object_id=cls.jobs[1].pk,
+            object_under_review_content_type=cls.scheduledjob_ct,
+            object_under_review_object_id=cls.scheduled_jobs[1].pk,
             current_state=ApprovalWorkflowStateChoices.PENDING,
         )
         cls.approval_workflow_1_instance_3 = ApprovalWorkflow.objects.create(
             approval_workflow_definition=cls.approval_workflow_3_definition,
-            object_under_review_content_type=cls.job_ct,
-            object_under_review_object_id=cls.jobs[2].pk,
+            object_under_review_content_type=cls.scheduledjob_ct,
+            object_under_review_object_id=cls.scheduled_jobs[2].pk,
             current_state=ApprovalWorkflowStateChoices.APPROVED,
         )
         cls.approval_workflow_1_instance_4 = ApprovalWorkflow.objects.create(
             approval_workflow_definition=cls.approval_workflow_4_definition,
-            object_under_review_content_type=cls.job_ct,
-            object_under_review_object_id=cls.jobs[3].pk,
+            object_under_review_content_type=cls.scheduledjob_ct,
+            object_under_review_object_id=cls.scheduled_jobs[3].pk,
             current_state=ApprovalWorkflowStateChoices.APPROVED,
         )
         cls.approval_workflow_1_instance_5 = ApprovalWorkflow.objects.create(
             approval_workflow_definition=cls.approval_workflow_5_definition,
-            object_under_review_content_type=cls.job_ct,
-            object_under_review_object_id=cls.jobs[4].pk,
+            object_under_review_content_type=cls.scheduledjob_ct,
+            object_under_review_object_id=cls.scheduled_jobs[4].pk,
             current_state=ApprovalWorkflowStateChoices.DENIED,
         )
         cls.approval_workflow_1_instance_6 = ApprovalWorkflow.objects.create(
             approval_workflow_definition=cls.approval_workflow_5_definition,
-            object_under_review_content_type=cls.job_ct,
-            object_under_review_object_id=cls.jobs[5].pk,
+            object_under_review_content_type=cls.scheduledjob_ct,
+            object_under_review_object_id=cls.scheduled_jobs[5].pk,
             current_state=ApprovalWorkflowStateChoices.DENIED,
         )
         cls.approval_workflow_1_instance_7 = ApprovalWorkflow.objects.create(
             approval_workflow_definition=cls.approval_workflow_2_definition,
             object_under_review_content_type=cls.scheduledjob_ct,
-            object_under_review_object_id=cls.scheduled_job.pk,
+            object_under_review_object_id=cls.scheduled_jobs[6].pk,
             current_state=ApprovalWorkflowStateChoices.APPROVED,
         )
         cls.approval_workflow_1_stage_instance_1 = ApprovalWorkflowStage.objects.create(
@@ -422,11 +429,6 @@ class ApprovalWorkflowDefinitionFilterTestCase(ApprovalWorkflowTestMixin, Filter
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(model_content_type=self.scheduledjob_ct),
         )
-        params = {"model_content_type": ["extras.job"]}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(model_content_type=self.job_ct),
-        )
 
 
 class ApprovalWorkflowStageDefinitionFilterTestCase(ApprovalWorkflowTestMixin, FilterTestCases.FilterTestCase):
@@ -472,7 +474,7 @@ class ApprovalWorkflowFilterTestCase(ApprovalWorkflowTestMixin, FilterTestCases.
         params = {"object_under_review_content_type": ["extras.job"]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(object_under_review_content_type=self.job_ct),
+            self.queryset.filter(object_under_review_content_type=self.scheduledjob_ct),
             ordered=False,
         )
 
