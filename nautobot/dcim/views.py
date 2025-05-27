@@ -250,6 +250,7 @@ class LocationTypeUIViewSet(NautobotUIViewSet):
 # Locations
 #
 
+
 class LocationUIViewSet(NautobotUIViewSet):
     queryset = Location.objects.all()
     filterset_class = filters.LocationFilterSet
@@ -314,7 +315,7 @@ class LocationUIViewSet(NautobotUIViewSet):
             "stats": stats,
             "contact_association_permission": ["extras.add_contactassociation"],
             # show the button if any of these fields have non-empty value.
-            "show_convert_to_contact_button": bool(instance.contact_name or instance.contact_phone or instance.contact_email),
+            "show_convert_to_contact_button": instance.contact_name or instance.contact_phone or instance.contact_email,
             **super().get_extra_context(request, instance),
         }
 
