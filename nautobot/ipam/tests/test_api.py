@@ -770,6 +770,68 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         response = self.client.get(url, **self.header)
         self.assertEqual(len(response.data), 6)  # 8 - 2 because prefix.type = network
 
+    def test_list_available_ips_with_limit(self):
+        """
+        Test retrieval with a limit of all available IP addresses within a parent prefix.
+        """
+        prefix = Prefix.objects.create(
+            prefix="192.0.3.0/29",
+            type=choices.PrefixTypeChoices.TYPE_POOL,
+            namespace=self.namespace,
+            status=self.status,
+        )
+        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
+        limit = 2
+        url = self.add_query_params_to_url(
+            url=reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk}),
+            query_dict={"limit": limit},
+        )
+        response = self.client.get(url, **self.header)
+        self.assertEqual(len(response.data), limit)
+
+    def test_list_available_ips_with_offset(self):
+        """
+        Test retrieval with an offset of all available IP addresses within a parent prefix.
+        """
+        prefix = Prefix.objects.create(
+            prefix="192.0.3.0/29",
+            type=choices.PrefixTypeChoices.TYPE_POOL,
+            namespace=self.namespace,
+            status=self.status,
+        )
+        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
+        offset = 2
+        url = self.add_query_params_to_url(
+            url=reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk}),
+            query_dict={"offset": offset},
+        )
+        response = self.client.get(url, **self.header)
+        self.assertEqual(len(response.data), 8 - offset)  # 8 - offset because prefix type = pool
+        self.assertIn("address", response.data[0])
+        self.assertIn("192.0.3.2/29", response.data[0]["address"])
+
+    def test_list_available_ips_with_offset_and_limit(self):
+        """
+        Test retrieval with offset and limit of all available IP addresses within a parent prefix.
+        """
+        prefix = Prefix.objects.create(
+            prefix="192.0.3.0/29",
+            type=choices.PrefixTypeChoices.TYPE_POOL,
+            namespace=self.namespace,
+            status=self.status,
+        )
+        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
+        offset = 2
+        limit = 2
+        url = self.add_query_params_to_url(
+            url=reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk}),
+            query_dict={"offset": offset, "limit": limit},
+        )
+        response = self.client.get(url, **self.header)
+        self.assertEqual(len(response.data), limit)
+        self.assertIn("address", response.data[0])
+        self.assertIn("192.0.3.2/29", response.data[0]["address"])
+
     def test_list_available_ips_calculate_child_ips(self):
         """
         Test retrieval of all available IP addresses when child IP's exists.
@@ -873,6 +935,36 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
         self.assertIn("detail", response.data)
 
+    def test_create_single_available_ip_with_offset(self):
+        prefix = Prefix.objects.create(
+            prefix="192.0.2.0/29",
+            namespace=self.namespace,
+            type=choices.PrefixTypeChoices.TYPE_NETWORK,
+            status=self.status,
+        )
+        self.add_permissions("ipam.view_prefix", "ipam.view_namespace", "ipam.add_ipaddress", "extras.view_status")
+
+        offset = 2
+        url = self.add_query_params_to_url(
+            reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk}),
+            {"offset": offset},
+        )
+        # Create available IPs with offset
+        for i in range(1, 7 - offset):
+            data = {
+                "description": f"Test IP {i}",
+                "status": self.status.pk,
+            }
+            response = self.client.post(url, data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_201_CREATED)
+            self.assertEqual(str(response.data["parent"]["url"]), self.absolute_api_url(prefix))
+            self.assertEqual(response.data["description"], data["description"])
+
+        # Next creation request with offset should be denied
+        response = self.client.post(url, {"status": self.status.pk}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
+        self.assertIn("detail", response.data)
+
     def test_create_multiple_available_ips(self):
         """
         Test the creation of available IP addresses within a parent prefix.
@@ -912,6 +1004,33 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         self.assertIn("custom_fields", response.data[0])
         self.assertIn("ipcf", response.data[0]["custom_fields"])
         self.assertEqual("1", response.data[0]["custom_fields"]["ipcf"])
+
+    def test_create_multiple_available_ips_with_offset(self):
+        prefix = Prefix.objects.create(
+            prefix="192.0.2.0/29",
+            type=choices.PrefixTypeChoices.TYPE_NETWORK,
+            namespace=self.namespace,
+            status=self.status,
+        )
+        self.add_permissions("ipam.view_prefix", "ipam.add_ipaddress", "ipam.view_namespace", "extras.view_status")
+
+        offset = 2
+        url = self.add_query_params_to_url(
+            reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk}),
+            {"offset": offset},
+        )
+        # create all 6 minus offset available IPs in a single request
+        data = [
+            {"description": f"Test IP {i}", "status": self.status.pk, "custom_fields": {"ipcf": str(i)}}
+            for i in range(1, 7 - offset)
+        ]
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(len(response.data), 6 - offset)
+        # next attempt with only one IP requested should fail (prefix space exhausted)
+        data = data[0]
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
 
     def test_create_available_ips_with_permissions_constraint(self):
         # Prepare prefix and permissions
