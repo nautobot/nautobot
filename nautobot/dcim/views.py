@@ -4432,7 +4432,7 @@ class ControllerUIViewSet(NautobotUIViewSet):
             ),
             object_detail.ObjectFieldsPanel(
                 section=SectionChoices.RIGHT_HALF,
-                weight=100,
+                weight=200,
                 label="Integration",
                 fields=[
                     "external_integration",
