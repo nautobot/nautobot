@@ -4158,7 +4158,7 @@ class InterfaceRedundancyGroupUIViewSet(NautobotUIViewSet):
                 fields="__all__",
             ),
             object_detail.ObjectsTablePanel(
-                weight=100,
+                weight=200,
                 section=SectionChoices.FULL_WIDTH,
                 table_class=tables.InterfaceRedundancyGroupAssociationTable,
                 table_attribute="interface_redundancy_group_associations",
