@@ -686,6 +686,45 @@ class RackReservationUIViewSet(NautobotUIViewSet):
     table_class = tables.RackReservationTable
     queryset = RackReservation.objects.all()
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.KeyValueTablePanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                label="Rack",
+                context_data_key="rack_data",
+            ),
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                label="Reservation Details",
+                fields=["unit_list", "tenant", "user", "description"],
+            ),
+            object_detail.Panel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                template_path="dcim/rack_elevation.html",
+            ),
+        ),
+    )
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            context["rack_data"] = self.get_rack_context(instance)
+        return context
+
+    def get_rack_context(self, instance):
+        rack = getattr(instance, "rack", None)
+        if not rack:
+            return {}
+
+        return {
+            "location": rack.location,
+            "rack_group": rack.rack_group,
+            "rack": rack,
+        }
+
     def get_object(self):
         obj = super().get_object()
 
