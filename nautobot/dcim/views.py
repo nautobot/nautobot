@@ -2159,11 +2159,7 @@ class DeviceView(generic.ObjectView):
         vdcs_table_add_url = f"{vdc_url}?device={instance.id}&return_url={return_url}"
 
         # Clusters table for device
-        cluster_pks = instance.clusters.values_list("pk", flat=True)
-        clusters = Cluster.objects.filter(pk__in=cluster_pks).annotate(
-            device_count=count_related(Device, "clusters", distinct=True),
-            vm_count=count_related(VirtualMachine, "cluster", distinct=True),
-        )
+        clusters = instance.clusters.all()
         cluster_table = ClusterTable(clusters, orderable=False) if clusters.exists() else None
         if cluster_table is not None and (
             request.user.has_perm("virtualization.change_cluster")
