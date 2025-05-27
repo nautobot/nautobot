@@ -1906,7 +1906,7 @@ class DeviceView(generic.ObjectView):
 
         # Clusters table for device
         clusters = instance.clusters.all()
-        cluster_table = ClusterTable(clusters, orderable=False) if clusters.exists() else None
+        cluster_table = ClusterTable(clusters, orderable=False, exclude=("device_count", "vm_count")) if clusters.exists() else None
         if cluster_table is not None and (
             request.user.has_perm("virtualization.change_cluster")
             or request.user.has_perm("virtualization.delete_cluster")
