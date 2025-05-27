@@ -728,6 +728,16 @@ class RackReservationForm(NautobotModelForm, TenancyForm):
             "tags",
         ]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        rack = getattr(self.instance, "rack", None)
+        if rack:
+            if not self.initial.get("location"):
+                self.initial["location"] = rack.location
+            if not self.initial.get("rack_group"):
+                self.initial["rack_group"] = rack.rack_group
+
 
 class RackReservationBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=RackReservation.objects.all(), widget=forms.MultipleHiddenInput())
