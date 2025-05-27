@@ -249,17 +249,13 @@ class LocationTypeUIViewSet(NautobotUIViewSet):
 #
 # Locations
 #
-class LocationUIViewSet(NautobotUIViewSet):
-    """
-    UI viewset for Location model using NautobotUIViewSet.
-    Replaces the legacy generic views.
-    """
 
+class LocationUIViewSet(NautobotUIViewSet):
     queryset = Location.objects.all()
     filterset_class = filters.LocationFilterSet
     filterset_form_class = forms.LocationFilterForm
-    form_class = forms.LocationForm
     table_class = tables.LocationTable
+    form_class = forms.LocationForm
     bulk_update_form_class = forms.LocationBulkEditForm
     serializer_class = serializers.LocationSerializer
 
@@ -318,7 +314,7 @@ class LocationUIViewSet(NautobotUIViewSet):
             "stats": stats,
             "contact_association_permission": ["extras.add_contactassociation"],
             # show the button if any of these fields have non-empty value.
-            "show_convert_to_contact_button": instance.contact_name or instance.contact_phone or instance.contact_email,
+            "show_convert_to_contact_button": bool(instance.contact_name or instance.contact_phone or instance.contact_email),
             **super().get_extra_context(request, instance),
         }
 
