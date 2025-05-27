@@ -400,6 +400,17 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
         )
 
 
+class CustomFieldFilterForm(NautobotFilterForm):
+    model = CustomField
+    q = forms.CharField(required=False, label="Search")
+    content_types = MultipleContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()),
+        choices_as_strings=True,
+        required=False,
+        label="Content Type(s)",
+    )
+
+
 class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelFormMixin):
     """Base class for CSV export of models that support custom fields."""
 
