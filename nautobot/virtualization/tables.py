@@ -84,6 +84,7 @@ class ClusterTable(BaseTable):
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
         url_params={"cluster": "pk"},
+        reverse_lookup="clusters",
         verbose_name="Devices",
     )
     vm_count = LinkedCountColumn(
