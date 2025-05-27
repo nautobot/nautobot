@@ -2172,7 +2172,9 @@ class DeviceView(generic.ObjectView):
             "paginator_class": EnhancedPaginator,
             "per_page": get_paginate_count(request),
         }
-        RequestConfig(request, paginate).configure(vdcs_table)
+        request_config = RequestConfig(request, paginate)
+        request_config.configure(vdcs_table)
+        request_config.configure(cluster_table)
 
         return {
             **super().get_extra_context(request, instance),
