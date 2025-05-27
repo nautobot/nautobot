@@ -172,8 +172,17 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 - [#7317](https://github.com/nautobot/nautobot/issues/7317) - Updated `setuptools` to `78.1.1` to address `CVE-2025-47273`. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
 
+### Added in v2.4.9
+
+- [#7043](https://github.com/nautobot/nautobot/issues/7043) - Added support for `job_queue` parameter to `JobResult.execute_job()`, `JobResult.enqueue_job()`, and `ScheduledJob.create_schedule()`.
+
+### Changed in v2.4.9
+
+- [#7043](https://github.com/nautobot/nautobot/issues/7043) - Changed "Run Job" form to display a warning when submitting a Job against a Celery queue that has no active workers, but allow the job to be submitted, instead of blocking the Job altogether.
+
 ### Fixed in v2.4.9
 
+- [#7043](https://github.com/nautobot/nautobot/issues/7043) - Fixed regression introduced in 2.4.0 involving inability to specify a non-default job queue when scheduling a Job.
 - [#7172](https://github.com/nautobot/nautobot/issues/7172) - Restored missing `rd` column in `VRFTable`.
 - [#7245](https://github.com/nautobot/nautobot/issues/7245) - Fixed `ExportObjectList` job now initializes `filter_params` from the selected SavedView's config when `?saved_view` is present and filters haven't been cleared. If additional query parameters are included, they override matching filters from the saved view.
 - [#7250](https://github.com/nautobot/nautobot/issues/7250) - Fixed MULTISELECT custom field representation in GraphQL to be a JSON array instead of a string.
@@ -182,6 +191,12 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#7311](https://github.com/nautobot/nautobot/issues/7311) - Added f-strings to 2 places where they were missing (`nautobot/core/utils/filtering.py` in `generate_query` method and in migration file `nautobot/extras/migrations/0024_job_data_migration.py`).
 - [#7318](https://github.com/nautobot/nautobot/issues/7318) - Fixed an AttributeError exception when rendering a table column describing a Relationship association to an unknown content-type.
 - [#7328](https://github.com/nautobot/nautobot/issues/7328) - Fixed an issue in the Golden Config App where clicking a Configuration Compliance Feature Navigation link or loading a page with a hash would not scroll to the correct section due to conflicting legacy scroll offset logic.
+- [#7340](https://github.com/nautobot/nautobot/issues/7340) - Fixed incorrect rendering of "Last run" column in Job list view.
+
+### Dependencies in v2.4.9
+
+- [#7277](https://github.com/nautobot/nautobot/issues/7277) - Updated `cryptography` dependency to `~44.0.3`.
+- [#7277](https://github.com/nautobot/nautobot/issues/7277) - Updated `pyuwsgi` dependency to `~2.0.29`.
 
 ### Housekeeping in v2.4.9
 
@@ -192,8 +207,13 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#7243](https://github.com/nautobot/nautobot/issues/7243) - Refactored DeviceType model related UI views to use `NautobotUIViewSet`.
 - [#7246](https://github.com/nautobot/nautobot/issues/7246) - Refactored WirelessNetwork model related UI views to use `UI component framework`.
 - [#7248](https://github.com/nautobot/nautobot/issues/7248) - Refactored ModuleBayUIViewSet model related UI views to use `UI component framework`.
+- [#7265](https://github.com/nautobot/nautobot/issues/7265) - Refactored MetadataType model related UI views to use `UI component framework`.
 - [#7271](https://github.com/nautobot/nautobot/issues/7271) - Refactored ComputedField model related UI views to use `UI component framework`.
+- [#7277](https://github.com/nautobot/nautobot/issues/7277) - Updated documentation dependency `mkdocs-material` to `~9.6.14`.
+- [#7277](https://github.com/nautobot/nautobot/issues/7277) - Updated development dependency `pylint` to `~3.3.7`.
+- [#7277](https://github.com/nautobot/nautobot/issues/7277) - Updated development dependency `pymarkdownlnt` to `~0.9.30`.
 - [#7287](https://github.com/nautobot/nautobot/issues/7287) - Refactored CircuitTypeUIViewSet model related UI views to use `UI component framework`.
+- [#7300](https://github.com/nautobot/nautobot/issues/7300) - Refactored RackReservation model related UI views to use `UI component framework`.
 
 ## v2.4.8 (2025-05-12)
 
