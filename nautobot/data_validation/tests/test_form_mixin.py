@@ -10,6 +10,8 @@ from nautobot.dcim.models import Location
 
 
 class DataValidationFormMixinTestCase(ValidationRuleTestCaseMixin, NautobotTestCaseMixin, TestCase):
+    model = RequiredValidationRule
+
     @classmethod
     def setUpTestData(cls):
         cls.content_type = ContentType.objects.get_for_model(Location)
