@@ -1,4 +1,4 @@
-"""Test nautobot_vpn_models models."""
+"""Test vpn models."""
 
 from nautobot.apps.testing import ModelTestCases
 from nautobot.vpn import models
@@ -9,27 +9,11 @@ class TestVPNProfileModel(ModelTestCases.BaseModelTestCase):
 
     model = models.VPNProfile
 
-    @classmethod
-    def setUpTestData(cls):
-        """Set up test data."""
-        super().setUpTestData()
-        # Add test data here
-
-        # Attempt to create the foreign key relationship models
-
 
 class TestVPNPhase1PolicyModel(ModelTestCases.BaseModelTestCase):
     """Test VPNPhase1Policy model."""
 
     model = models.VPNPhase1Policy
-
-    @classmethod
-    def setUpTestData(cls):
-        """Set up test data."""
-        super().setUpTestData()
-        # Add test data here
-
-        # Attempt to create the foreign key relationship models
 
 
 class TestVPNPhase2PolicyModel(ModelTestCases.BaseModelTestCase):
@@ -37,13 +21,17 @@ class TestVPNPhase2PolicyModel(ModelTestCases.BaseModelTestCase):
 
     model = models.VPNPhase2Policy
 
-    @classmethod
-    def setUpTestData(cls):
-        """Set up test data."""
-        super().setUpTestData()
-        # Add test data here
 
-        # Attempt to create the foreign key relationship models
+class VPNProfilePhase1PolicyAssignmentModel(ModelTestCases.BaseModelTestCase):
+    """Test VPNPhase1Policy model."""
+
+    model = models.VPNProfilePhase1PolicyAssignment
+
+
+class VPNProfilePhase2PolicyAssignmentModel(ModelTestCases.BaseModelTestCase):
+    """Test VPNPhase1Policy model."""
+
+    model = models.VPNProfilePhase2PolicyAssignment
 
 
 class TestVPNModel(ModelTestCases.BaseModelTestCase):
@@ -51,27 +39,11 @@ class TestVPNModel(ModelTestCases.BaseModelTestCase):
 
     model = models.VPN
 
-    @classmethod
-    def setUpTestData(cls):
-        """Set up test data."""
-        super().setUpTestData()
-        # Add test data here
-
-        # Attempt to create the foreign key relationship models
-
 
 class TestVPNTunnelModel(ModelTestCases.BaseModelTestCase):
     """Test VPNTunnel model."""
 
     model = models.VPNTunnel
-
-    @classmethod
-    def setUpTestData(cls):
-        """Set up test data."""
-        super().setUpTestData()
-        # Add test data here
-
-        # Attempt to create the foreign key relationship models
 
 
 class TestVPNTunnelEndpointModel(ModelTestCases.BaseModelTestCase):
@@ -79,10 +51,8 @@ class TestVPNTunnelEndpointModel(ModelTestCases.BaseModelTestCase):
 
     model = models.VPNTunnelEndpoint
 
-    @classmethod
-    def setUpTestData(cls):
-        """Set up test data."""
-        super().setUpTestData()
-        # Add test data here
+    def test_composite_key(self):
+        """Model doesn't support this property."""
 
-        # Attempt to create the foreign key relationship models
+    def test_natural_key_symmetry(self):
+        """Model doesn't support this property."""

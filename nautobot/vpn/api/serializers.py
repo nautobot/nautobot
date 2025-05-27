@@ -1,6 +1,8 @@
+from rest_framework.serializers import ChoiceField, ListField, ReadOnlyField
+
 from nautobot.apps.api import NautobotModelSerializer, TaggedModelSerializerMixin
 
-from .. import models
+from .. import choices, models
 
 
 class VPNProfileSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):  # pylint: disable=too-many-ancestors
@@ -16,6 +18,22 @@ class VPNProfileSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
 class VPNPhase1PolicySerializer(TaggedModelSerializerMixin, NautobotModelSerializer):  # pylint: disable=too-many-ancestors
     """VPNPhase1Policy Serializer."""
 
+    encryption_algorithm = ListField(
+        child=ChoiceField(choices=choices.EncryptionAlgorithmChoices),
+        allow_empty=True,
+        required=False,
+    )
+    integrity_algorithm = ListField(
+        child=ChoiceField(choices=choices.IntegrityAlgorithmChoices),
+        allow_empty=True,
+        required=False,
+    )
+    dh_group = ListField(
+        child=ChoiceField(choices=choices.DhGroupChoices),
+        allow_empty=True,
+        required=False,
+    )
+
     class Meta:
         """Meta attributes."""
 
@@ -25,6 +43,22 @@ class VPNPhase1PolicySerializer(TaggedModelSerializerMixin, NautobotModelSeriali
 
 class VPNPhase2PolicySerializer(TaggedModelSerializerMixin, NautobotModelSerializer):  # pylint: disable=too-many-ancestors
     """VPNPhase2Policy Serializer."""
+
+    encryption_algorithm = ListField(
+        child=ChoiceField(choices=choices.EncryptionAlgorithmChoices),
+        allow_empty=True,
+        required=False,
+    )
+    integrity_algorithm = ListField(
+        child=ChoiceField(choices=choices.IntegrityAlgorithmChoices),
+        allow_empty=True,
+        required=False,
+    )
+    pfs_group = ListField(
+        child=ChoiceField(choices=choices.DhGroupChoices),
+        allow_empty=True,
+        required=False,
+    )
 
     class Meta:
         """Meta attributes."""
@@ -72,8 +106,11 @@ class VPNTunnelSerializer(TaggedModelSerializerMixin, NautobotModelSerializer): 
 class VPNTunnelEndpointSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):  # pylint: disable=too-many-ancestors
     """VPNTunnelEndpoint Serializer."""
 
+    name = ReadOnlyField()
+
     class Meta:
         """Meta attributes."""
 
         model = models.VPNTunnelEndpoint
         fields = "__all__"
+        read_only_fields = ("name",)

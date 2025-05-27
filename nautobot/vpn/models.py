@@ -15,7 +15,7 @@ from nautobot.vpn import choices
     "webhooks",
 )
 class VPNProfile(PrimaryModel):  # pylint: disable=too-many-ancestors
-    """VPNProfile model for nautobot_vpn_models."""
+    """VPNProfile model."""
 
     vpn_phase1_policies = models.ManyToManyField(
         to="vpn.VPNPhase1Policy",
@@ -89,7 +89,7 @@ class VPNProfile(PrimaryModel):  # pylint: disable=too-many-ancestors
     "webhooks",
 )
 class VPNPhase1Policy(PrimaryModel):  # pylint: disable=too-many-ancestors
-    """VPNPhase1Policy model for nautobot_vpn_models."""
+    """VPNPhase1Policy model."""
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
@@ -163,7 +163,7 @@ class VPNPhase1Policy(PrimaryModel):  # pylint: disable=too-many-ancestors
     "webhooks",
 )
 class VPNPhase2Policy(PrimaryModel):  # pylint: disable=too-many-ancestors
-    """VPNPhase2Policy model for nautobot_vpn_models."""
+    """VPNPhase2Policy model."""
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
@@ -221,6 +221,7 @@ class VPNProfilePhase1PolicyAssignment(BaseModel):
     )
     weight = models.PositiveIntegerField(default=100, help_text="Higher weights appear later in the list")
     is_metadata_associable_model = False
+    documentation_static_path = "docs/user-guide/core-data-model/vpn/vpnprofile.html"
 
     class Meta:
         unique_together = ["vpn_profile", "vpn_phase1_policy"]
@@ -240,6 +241,7 @@ class VPNProfilePhase2PolicyAssignment(BaseModel):
     )
     weight = models.PositiveIntegerField(default=100, help_text="Higher weights appear later in the list")
     is_metadata_associable_model = False
+    documentation_static_path = "docs/user-guide/core-data-model/vpn/vpnprofile.html"
 
     class Meta:
         unique_together = ["vpn_profile", "vpn_phase2_policy"]
@@ -257,7 +259,7 @@ class VPNProfilePhase2PolicyAssignment(BaseModel):
     "webhooks",
 )
 class VPN(PrimaryModel):  # pylint: disable=too-many-ancestors
-    """VPN model for nautobot_vpn_models."""
+    """VPN model."""
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
@@ -307,7 +309,7 @@ class VPN(PrimaryModel):  # pylint: disable=too-many-ancestors
     "webhooks",
 )
 class VPNTunnel(PrimaryModel):  # pylint: disable=too-many-ancestors
-    """VPNTunnel model for nautobot_vpn_models."""
+    """VPNTunnel model."""
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
@@ -398,7 +400,7 @@ class VPNTunnel(PrimaryModel):  # pylint: disable=too-many-ancestors
     "webhooks",
 )
 class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
-    """VPNTunnelEndpoint model for nautobot_vpn_models."""
+    """VPNTunnelEndpoint model."""
 
     device = models.ForeignKey(
         to="dcim.Device",
@@ -410,7 +412,7 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
     )
     source_interface = models.OneToOneField(
         to="dcim.Interface",
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         related_name="vpn_tunnel_endpoints_src_int",
         blank=True,
         null=True,
@@ -418,7 +420,7 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
     )
     source_ipaddress = models.ForeignKey(
         to="ipam.IPAddress",
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         related_name="vpn_tunnel_endpoints_src_ip",
         blank=True,
         null=True,
@@ -470,6 +472,7 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
 
     clone_fields = [
         "vpn_profile",
+        "device",
         "source_interface",
         "source_ipaddress",
         "source_fqdn",
@@ -502,4 +505,11 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
             raise ValidationError("Source IP Address and Source FQDN are mutually exclusive fields. Select only one.")
         if not any([self.source_interface, self.source_ipaddress, self.source_fqdn]):
             raise ValidationError("Source Interface or Source IP Address or Source FQDN Is required.")
+        if self.source_interface and not self.source_interface.device:
+            raise ValidationError("Source Interface must belong to a device.")
         return super().clean()
+
+    def save(self, *args, **kwargs):
+        if self.source_interface and not self.device:
+            self.device = self.source_interface.device
+        super().save(*args, **kwargs)

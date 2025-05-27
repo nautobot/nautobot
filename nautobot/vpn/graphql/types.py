@@ -1,13 +1,13 @@
 """GraphQL implementation for the vpn models."""
 
 import graphene
-from graphene_django import DjangoObjectType
 
+from nautobot.core.graphql.types import OptimizedNautobotObjectType
 from nautobot.vpn.filters import VPNTunnelEndpointFilterSet
 from nautobot.vpn.models import VPNTunnelEndpoint
 
 
-class VPNTunnelEndpointType(DjangoObjectType):
+class VPNTunnelEndpointType(OptimizedNautobotObjectType):
     """Graphql Type Object for the VPNTunnelEndpoint model."""
 
     name = graphene.String()

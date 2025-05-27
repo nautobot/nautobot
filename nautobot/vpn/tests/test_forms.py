@@ -1,7 +1,13 @@
-"""Test nautobot_vpn_models forms."""
+"""Test vpn forms."""
+
+from django.contrib.contenttypes.models import ContentType
 
 from nautobot.apps.testing import FormTestCases
-from nautobot.vpn import forms
+from nautobot.dcim.models import Interface
+from nautobot.extras.models import DynamicGroup, Role, SecretsGroup, Status
+from nautobot.ipam.models import Prefix
+from nautobot.tenancy.models import Tenant
+from nautobot.vpn import choices, forms, models
 
 
 class VPNProfileFormTest(FormTestCases.BaseFormTestCase):
@@ -11,19 +17,20 @@ class VPNProfileFormTest(FormTestCases.BaseFormTestCase):
 
     def test_specifying_all_fields_success(self):
         """Test specifying all fields."""
+        profile_role, _ = Role.objects.get_or_create(name="Default")
+        profile_role.content_types.add(ContentType.objects.get_for_model(models.VPNProfile))
 
         data = {
-            "vpn_phase1_policy": "test value",
-            "vpn_phase2_policy": "test value",
-            "name": "test value",
+            "name": "test 1",
             "description": "test value",
-            "keepalive_enabled": "test value",
-            "keepalive_interval": "test value",
-            "keepalive_retries": "test value",
-            "nat_traversal": "test value",
-            "extra_options": "test value",
-            "secrets_group": "test value",
-            "role": "test value",
+            "role": profile_role,
+            "secrets_group": SecretsGroup.objects.first(),
+            "keepalive_enabled": True,
+            "keepalive_interval": 3,
+            "keepalive_retries": 5,
+            "nat_traversal": False,
+            "extra_options": {"option": "value"},
+            "tenant": Tenant.objects.first(),
         }
         form = self.form_class(data=data)
         self.assertTrue(form.is_valid())
@@ -34,8 +41,6 @@ class VPNProfileFormTest(FormTestCases.BaseFormTestCase):
 
         data = {
             "name": "test value",
-            "keepalive_enabled": "test value",
-            "nat_traversal": "test value",
         }
         form = self.form_class(data=data)
         self.assertTrue(form.is_valid())
@@ -45,58 +50,16 @@ class VPNProfileFormTest(FormTestCases.BaseFormTestCase):
         """Test that the name field is required."""
 
         data = {
-            "vpn_phase1_policy": "test value",
-            "vpn_phase2_policy": "test value",
             "description": "test value",
-            "keepalive_enabled": "test value",
-            "keepalive_interval": "test value",
-            "keepalive_retries": "test value",
-            "nat_traversal": "test value",
-            "extra_options": "test value",
-            "secrets_group": "test value",
-            "role": "test value",
+            "keepalive_enabled": True,
+            "keepalive_interval": 3,
+            "keepalive_retries": 5,
+            "nat_traversal": False,
+            "extra_options": None,
         }
         form = self.form_class(data=data)
         self.assertFalse(form.is_valid())
         self.assertIn("This field is required.", form.errors["name"])
-
-    def test_validate_keepalive_enabled_is_required(self):
-        """Test that the keepalive_enabled field is required."""
-
-        data = {
-            "vpn_phase1_policy": "test value",
-            "vpn_phase2_policy": "test value",
-            "name": "test value",
-            "description": "test value",
-            "keepalive_interval": "test value",
-            "keepalive_retries": "test value",
-            "nat_traversal": "test value",
-            "extra_options": "test value",
-            "secrets_group": "test value",
-            "role": "test value",
-        }
-        form = self.form_class(data=data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("This field is required.", form.errors["keepalive_enabled"])
-
-    def test_validate_nat_traversal_is_required(self):
-        """Test that the nat_traversal field is required."""
-
-        data = {
-            "vpn_phase1_policy": "test value",
-            "vpn_phase2_policy": "test value",
-            "name": "test value",
-            "description": "test value",
-            "keepalive_enabled": "test value",
-            "keepalive_interval": "test value",
-            "keepalive_retries": "test value",
-            "extra_options": "test value",
-            "secrets_group": "test value",
-            "role": "test value",
-        }
-        form = self.form_class(data=data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("This field is required.", form.errors["nat_traversal"])
 
 
 class VPNPhase1PolicyFormTest(FormTestCases.BaseFormTestCase):
@@ -108,16 +71,17 @@ class VPNPhase1PolicyFormTest(FormTestCases.BaseFormTestCase):
         """Test specifying all fields."""
 
         data = {
-            "name": "test value",
+            "name": "test 1",
             "description": "test value",
-            "ike_version": "test value",
-            "aggressive_mode": "test value",
-            "encryption_algorithm": "test value",
-            "integrity_algorithm": "test value",
-            "dh_group": "test value",
-            "lifetime_seconds": "test value",
-            "lifetime_kb": "test value",
-            "authentication_method": "test value",
+            "ike_version": choices.IkeVersionChoices.ike_v2,
+            "aggressive_mode": False,
+            "encryption_algorithm": [choices.EncryptionAlgorithmChoices.aes_128_cbc],
+            "integrity_algorithm": [choices.IntegrityAlgorithmChoices.sha1],
+            "dh_group": [choices.DhGroupChoices.group5],
+            "lifetime_seconds": 10,
+            "lifetime_kb": 1024,
+            "authentication_method": choices.AuthenticationMethodChoices.rsa,
+            "tenant": Tenant.objects.first(),
         }
         form = self.form_class(data=data)
         self.assertTrue(form.is_valid())
@@ -128,7 +92,6 @@ class VPNPhase1PolicyFormTest(FormTestCases.BaseFormTestCase):
 
         data = {
             "name": "test value",
-            "aggressive_mode": "test value",
         }
         form = self.form_class(data=data)
         self.assertTrue(form.is_valid())
@@ -139,36 +102,19 @@ class VPNPhase1PolicyFormTest(FormTestCases.BaseFormTestCase):
 
         data = {
             "description": "test value",
-            "ike_version": "test value",
-            "aggressive_mode": "test value",
-            "encryption_algorithm": "test value",
-            "integrity_algorithm": "test value",
-            "dh_group": "test value",
-            "lifetime_seconds": "test value",
-            "lifetime_kb": "test value",
-            "authentication_method": "test value",
+            "ike_version": choices.IkeVersionChoices.ike_v2,
+            "aggressive_mode": False,
+            "encryption_algorithm": [choices.EncryptionAlgorithmChoices.aes_128_cbc],
+            "integrity_algorithm": [choices.IntegrityAlgorithmChoices.sha1],
+            "dh_group": [choices.DhGroupChoices.group5],
+            "lifetime_seconds": 10,
+            "lifetime_kb": 1024,
+            "authentication_method": choices.AuthenticationMethodChoices.rsa,
+            "tenant": Tenant.objects.first(),
         }
         form = self.form_class(data=data)
         self.assertFalse(form.is_valid())
         self.assertIn("This field is required.", form.errors["name"])
-
-    def test_validate_aggressive_mode_is_required(self):
-        """Test that the aggressive_mode field is required."""
-
-        data = {
-            "name": "test value",
-            "description": "test value",
-            "ike_version": "test value",
-            "encryption_algorithm": "test value",
-            "integrity_algorithm": "test value",
-            "dh_group": "test value",
-            "lifetime_seconds": "test value",
-            "lifetime_kb": "test value",
-            "authentication_method": "test value",
-        }
-        form = self.form_class(data=data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("This field is required.", form.errors["aggressive_mode"])
 
 
 class VPNPhase2PolicyFormTest(FormTestCases.BaseFormTestCase):
@@ -180,12 +126,13 @@ class VPNPhase2PolicyFormTest(FormTestCases.BaseFormTestCase):
         """Test specifying all fields."""
 
         data = {
-            "name": "test value",
+            "name": "test 1",
             "description": "test value",
-            "encryption_algorithm": "test value",
-            "integrity_algorithm": "test value",
-            "pfs_group": "test value",
-            "lifetime": "test value",
+            "encryption_algorithm": [choices.EncryptionAlgorithmChoices.aes_128_cbc],
+            "integrity_algorithm": [choices.IntegrityAlgorithmChoices.sha1],
+            "pfs_group": [choices.DhGroupChoices.group5],
+            "lifetime": 10,
+            "tenant": Tenant.objects.first(),
         }
         form = self.form_class(data=data)
         self.assertTrue(form.is_valid())
@@ -206,10 +153,11 @@ class VPNPhase2PolicyFormTest(FormTestCases.BaseFormTestCase):
 
         data = {
             "description": "test value",
-            "encryption_algorithm": "test value",
-            "integrity_algorithm": "test value",
-            "pfs_group": "test value",
-            "lifetime": "test value",
+            "encryption_algorithm": [choices.EncryptionAlgorithmChoices.aes_128_cbc],
+            "integrity_algorithm": [choices.IntegrityAlgorithmChoices.sha1],
+            "pfs_group": [choices.DhGroupChoices.group5],
+            "lifetime": 10,
+            "tenant": Tenant.objects.first(),
         }
         form = self.form_class(data=data)
         self.assertFalse(form.is_valid())
@@ -223,15 +171,16 @@ class VPNFormTest(FormTestCases.BaseFormTestCase):
 
     def test_specifying_all_fields_success(self):
         """Test specifying all fields."""
+        vpn_role, _ = Role.objects.get_or_create(name="Default")
+        vpn_role.content_types.add(ContentType.objects.get_for_model(models.VPN))
 
         data = {
-            "vpn_profile": "test value",
-            "name": "test value",
+            "name": "test 1",
             "description": "test value",
             "vpn_id": "test value",
-            "tenant": "test value",
-            "role": "test value",
-            "contact_associations": "test value",
+            "role": vpn_role,
+            "vpn_profile": models.VPNProfile.objects.first(),
+            "tenant": Tenant.objects.first(),
         }
         form = self.form_class(data=data)
         self.assertTrue(form.is_valid())
@@ -251,12 +200,10 @@ class VPNFormTest(FormTestCases.BaseFormTestCase):
         """Test that the name field is required."""
 
         data = {
-            "vpn_profile": "test value",
             "description": "test value",
             "vpn_id": "test value",
-            "tenant": "test value",
-            "role": "test value",
-            "contact_associations": "test value",
+            "vpn_profile": models.VPNProfile.objects.first(),
+            "tenant": Tenant.objects.first(),
         }
         form = self.form_class(data=data)
         self.assertFalse(form.is_valid())
@@ -270,17 +217,21 @@ class VPNTunnelFormTest(FormTestCases.BaseFormTestCase):
 
     def test_specifying_all_fields_success(self):
         """Test specifying all fields."""
-
+        endpoints = models.VPNTunnelEndpoint.objects.all()
+        tunnel_role, _ = Role.objects.get_or_create(name="Default")
+        tunnel_role.content_types.add(ContentType.objects.get_for_model(models.VPNTunnel))
         data = {
-            "vpn_profile": "test value",
-            "vpn": "test value",
-            "name": "test value",
+            "name": "test 1",
             "description": "test value",
+            "vpn_profile": models.VPNProfile.objects.first(),
+            "vpn": models.VPN.objects.first(),
             "tunnel_id": "test value",
-            "encapsulation": "test value",
-            "tenant": "test value",
-            "role": "test value",
-            "contact_associations": "test value",
+            "status": Status.objects.get(name="Active"),
+            "role": tunnel_role,
+            "encapsulation": choices.EncapsulationChoices.ipsec_tunnel,
+            "endpoint_a": endpoints[1],
+            "endpoint_z": endpoints[2],
+            "tenant": Tenant.objects.first(),
         }
         form = self.form_class(data=data)
         self.assertTrue(form.is_valid())
@@ -291,6 +242,8 @@ class VPNTunnelFormTest(FormTestCases.BaseFormTestCase):
 
         data = {
             "name": "test value",
+            "status": Status.objects.get(name="Active"),
+            "encapsulation": choices.EncapsulationChoices.ipsec_tunnel,
         }
         form = self.form_class(data=data)
         self.assertTrue(form.is_valid())
@@ -300,14 +253,13 @@ class VPNTunnelFormTest(FormTestCases.BaseFormTestCase):
         """Test that the name field is required."""
 
         data = {
-            "vpn_profile": "test value",
-            "vpn": "test value",
             "description": "test value",
+            "vpn_profile": models.VPNProfile.objects.first(),
+            "vpn": models.VPN.objects.first(),
             "tunnel_id": "test value",
-            "encapsulation": "test value",
-            "tenant": "test value",
-            "role": "test value",
-            "contact_associations": "test value",
+            "status": Status.objects.get(name="Active"),
+            "encapsulation": choices.EncapsulationChoices.ipsec_tunnel,
+            "tenant": Tenant.objects.first(),
         }
         form = self.form_class(data=data)
         self.assertFalse(form.is_valid())
@@ -321,19 +273,13 @@ class VPNTunnelEndpointFormTest(FormTestCases.BaseFormTestCase):
 
     def test_specifying_all_fields_success(self):
         """Test specifying all fields."""
-
+        interfaces = Interface.objects.filter(device__isnull=False, vpn_tunnel_endpoints_src_int__isnull=True)
         data = {
-            "vpn_profile": "test value",
-            "vpn_tunnel": "test value",
-            "source_ipaddress": "test value",
-            "source_interface": "test value",
-            "destination_ipaddress": "test value",
-            "destination_fqdn": "test value",
-            "tunnel_interface": "test value",
-            "protected_prefixes_dg": "test value",
-            "protected_prefixes": "test value",
-            "role": "test value",
-            "contact_associations": "test value",
+            "device": interfaces[0].device,
+            "source_interface": interfaces[0],
+            "vpn_profile": models.VPNProfile.objects.first(),
+            "protected_prefixes": [Prefix.objects.first()],
+            "protected_prefixes_dg": [DynamicGroup.objects.first()],
         }
         form = self.form_class(data=data)
         self.assertTrue(form.is_valid())
@@ -342,7 +288,7 @@ class VPNTunnelEndpointFormTest(FormTestCases.BaseFormTestCase):
     def test_specifying_required_fields_success(self):
         """Test specifying only required fields."""
 
-        data = {}
+        data = {"source_fqdn": "To Cloud"}
         form = self.form_class(data=data)
         self.assertTrue(form.is_valid())
         self.assertTrue(form.save())

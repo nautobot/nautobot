@@ -8,20 +8,30 @@ from nautobot.apps.filters import (
     StatusModelFilterSetMixin,
     TenancyModelFilterSetMixin,
 )
+from nautobot.dcim.models import Device, Interface
+from nautobot.ipam.models import IPAddress
 
 from . import models
 
 
-class VPNProfileFilterSet(NautobotFilterSet):  # pylint: disable=too-many-ancestors
+class VPNProfileFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: disable=too-many-ancestors
     """Filter for VPNProfile."""
 
-    # TODO INIT Validate the filter_predicates below. If the only field you want to search is `name`, you can remove the SearchFilter
-    # and instead use the NameSearchFilterSet in the class inheritance.
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
             "description": "icontains",
         }
+    )
+    vpn_phase1_policies = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.VPNPhase1Policy.objects.all(),
+        to_field_name="name",
+        label="Phase 1 Policy (name or ID)",
+    )
+    vpn_phase2_policies = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.VPNPhase2Policy.objects.all(),
+        to_field_name="name",
+        label="Phase 2 Policy (name or ID)",
     )
 
     class Meta:
@@ -31,26 +41,18 @@ class VPNProfileFilterSet(NautobotFilterSet):  # pylint: disable=too-many-ancest
         fields = "__all__"
 
 
-class VPNPhase1PolicyFilterSet(NautobotFilterSet):  # pylint: disable=too-many-ancestors
+class VPNPhase1PolicyFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: disable=too-many-ancestors
     """Filter for VPNPhase1Policy."""
 
-    # TODO INIT Validate the filter_predicates below. If the only field you want to search is `name`, you can remove the SearchFilter
-    # and instead use the NameSearchFilterSet in the class inheritance.
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "description": "icontains",
-            "ike_version": "icontains",
-            "encryption_algorithm": "icontains",
-            "integrity_algorithm": "icontains",
-            "dh_group": "icontains",
-            "authentication_method": "icontains",
         }
     )
     vpn_profiles = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.VPNProfile.objects.all(),
         to_field_name="name",
-        label="VPN Profile",
+        label="VPN Profile (name or ID)",
     )
 
     class Meta:
@@ -60,24 +62,19 @@ class VPNPhase1PolicyFilterSet(NautobotFilterSet):  # pylint: disable=too-many-a
         fields = "__all__"
 
 
-class VPNPhase2PolicyFilterSet(NautobotFilterSet):  # pylint: disable=too-many-ancestors
+class VPNPhase2PolicyFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: disable=too-many-ancestors
     """Filter for VPNPhase2Policy."""
 
-    # TODO INIT Validate the filter_predicates below. If the only field you want to search is `name`, you can remove the SearchFilter
-    # and instead use the NameSearchFilterSet in the class inheritance.
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
             "description": "icontains",
-            "encryption_algorithm": "icontains",
-            "integrity_algorithm": "icontains",
-            "pfs_group": "icontains",
         }
     )
     vpn_profiles = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.VPNProfile.objects.all(),
         to_field_name="name",
-        label="VPN Profile",
+        label="VPN Profile (name or ID)",
     )
 
     class Meta:
@@ -99,12 +96,12 @@ class VPNProfilePhase1PolicyAssignmentFilterSet(BaseFilterSet):
 
     vpn_profile = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.VPNProfile.objects.all(),
-        label="VPN Profile (ID or name)",
+        label="VPN Profile (name or ID)",
         to_field_name="name",
     )
     vpn_phase1_policy = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.VPNPhase1Policy.objects.all(),
-        label="Phase 1 Policy (ID or name)",
+        label="Phase 1 Policy (name or ID)",
         to_field_name="name",
     )
 
@@ -125,12 +122,12 @@ class VPNProfilePhase2PolicyAssignmentFilterSet(BaseFilterSet):
 
     vpn_profile = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.VPNProfile.objects.all(),
-        label="VPN Profile (ID or name)",
+        label="VPN Profile (name or ID)",
         to_field_name="name",
     )
     vpn_phase2_policy = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.VPNPhase2Policy.objects.all(),
-        label="Phase 2 Policy (ID or name)",
+        label="Phase 2 Policy (name or ID)",
         to_field_name="name",
     )
 
@@ -142,14 +139,17 @@ class VPNProfilePhase2PolicyAssignmentFilterSet(BaseFilterSet):
 class VPNFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: disable=too-many-ancestors
     """Filter for VPN."""
 
-    # TODO INIT Validate the filter_predicates below. If the only field you want to search is `name`, you can remove the SearchFilter
-    # and instead use the NameSearchFilterSet in the class inheritance.
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
             "description": "icontains",
             "vpn_id": "icontains",
         }
+    )
+    vpn_profile = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.VPNProfile.objects.all(),
+        label="VPN Profile (name or ID)",
+        to_field_name="name",
     )
 
     class Meta:
@@ -162,15 +162,22 @@ class VPNFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: di
 class VPNTunnelFilterSet(StatusModelFilterSetMixin, TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: disable=too-many-ancestors
     """Filter for VPNTunnel."""
 
-    # TODO INIT Validate the filter_predicates below. If the only field you want to search is `name`, you can remove the SearchFilter
-    # and instead use the NameSearchFilterSet in the class inheritance.
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
             "description": "icontains",
             "tunnel_id": "icontains",
-            "encapsulation": "icontains",
         }
+    )
+    vpn_profile = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.VPNProfile.objects.all(),
+        label="VPN Profile (name or ID)",
+        to_field_name="name",
+    )
+    vpn = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.VPN.objects.all(),
+        label="VPN (name or ID)",
+        to_field_name="name",
     )
 
     class Meta:
@@ -180,15 +187,33 @@ class VPNTunnelFilterSet(StatusModelFilterSetMixin, TenancyModelFilterSetMixin, 
         fields = "__all__"
 
 
-class VPNTunnelEndpointFilterSet(NautobotFilterSet):  # pylint: disable=too-many-ancestors
+class VPNTunnelEndpointFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: disable=too-many-ancestors
     """Filter for VPNTunnelEndpoint."""
 
-    # TODO INIT Validate the filter_predicates below. If the only field you want to search is `name`, you can remove the SearchFilter
-    # and instead use the NameSearchFilterSet in the class inheritance.
     q = SearchFilter(
         filter_predicates={
             "source_fqdn": "icontains",
         }
+    )
+    device = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        to_field_name="name",
+        label="Device (ID or name)",
+    )
+    source_interface = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Interface.objects.all(),
+        to_field_name="name",
+        label="Source Interface (ID or name)",
+    )
+    source_ipaddress = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=IPAddress.objects.all(),
+        to_field_name="name",
+        label="Source IPAddress (ID or name)",
+    )
+    tunnel_interface = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Interface.objects.filter(type="tunnel"),
+        to_field_name="name",
+        label="Tunnel Interface (ID or name)",
     )
     endpoint_a_vpn_tunnels = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.VPNTunnel.objects.all(),

@@ -75,9 +75,6 @@ class VPNProfileBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # py
 
         model = models.VPNProfile
         nullable_fields = [
-            # TODO INIT Add any fields that should be nullable
-            # "vpn_phase1_policy",
-            # "vpn_phase2_policy",
             "description",
             "keepalive_interval",
             "keepalive_retries",
@@ -453,7 +450,6 @@ class VPNTunnelEndpointBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm)
         queryset=DynamicGroup.objects.all(),
         required=False,
         label="Dynamic Group",
-        # TODO INIT defaulting to the common field `name`, you may want to change this.
         to_field_name="name",
     )
     protected_prefixes = DynamicModelMultipleChoiceField(
@@ -469,7 +465,6 @@ class VPNTunnelEndpointBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm)
 
         model = models.VPNTunnelEndpoint
         nullable_fields = [
-            # TODO INIT Add any fields that should be nullable
             "vpn_profile",
             "source_ipaddress",
             "source_interface",
