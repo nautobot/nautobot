@@ -1,3 +1,5 @@
+from typing import Optional
+
 from django.conf import settings
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -7,12 +9,44 @@ from django.db import models
 from django.utils import timezone
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
-from nautobot.core.models import BaseModel
+from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.extras.choices import ApprovalWorkflowStateChoices
 from nautobot.extras.constants import APPROVAL_WORKFLOW_MODELS
 from nautobot.extras.utils import extras_features
 from nautobot.users.models import User
+
+
+class ApprovalWorkflowDefinitionManager(BaseManager.from_queryset(RestrictedQuerySet)):
+    use_in_migrations = True
+
+    def find_for_model(self, model_instance: models.Model) -> Optional["ApprovalWorkflowDefinition"]:
+        """Find the appropriate approval workflow definition for specific content-type.
+
+        Returns:
+            ApprovalWorkflowDefinition or None: The matching workflow definition or None if none found.
+        """
+        content_type = ContentType.objects.get_for_model(model_instance)
+
+        # Get all workflow definitions for this content type, ordered by priority (lowest first = highest priority)
+        workflow_definitions = self.get_queryset().filter(model_content_type=content_type).order_by("priority")
+
+        for workflow_definition in workflow_definitions:
+            if not workflow_definition.model_constraints:
+                return workflow_definition
+
+            model_class = model_instance.__class__
+            try:
+                # Try to get the specific instance using the constraints
+                # TODO: we want this to support various filtering options besides exact-match. This implementation should be filterset based.
+                # should work very similarly to Relationship.source_filter and Relationship.destination_filter
+                model_class.objects.filter(**workflow_definition.model_constraints).get(pk=model_instance.pk)
+                return workflow_definition
+            except model_class.DoesNotExist:
+                continue
+
+        return None
 
 
 @extras_features(
@@ -41,14 +75,19 @@ class ApprovalWorkflowDefinition(PrimaryModel):
         default=dict,
         help_text="Constraints to filter the objects that can be approved using this workflow.",
     )
+    priority = models.IntegerField(
+        default=0, help_text="Determines workflow relevance when multiple apply. Lower values indicate higher priority."
+    )
     documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
     is_dynamic_group_associable = False
+    objects = ApprovalWorkflowDefinitionManager()
 
     class Meta:
-        """Meta class for ApprovalWorkflow."""
+        """Meta class for ApprovalWorkflow Definition."""
 
         verbose_name = "Approval Workflow Definition"
         ordering = ["name"]
+        unique_together = [["model_content_type", "priority"]]
 
     def __str__(self):
         """Stringify instance."""
@@ -219,6 +258,12 @@ class ApprovalWorkflow(OrganizationalModel):
         if previous_state != self.current_state:
             self.decision_date = timezone.now()
         super().save(*args, **kwargs)
+
+        if previous_state != self.current_state:
+            if self.current_state == ApprovalWorkflowStateChoices.APPROVED:
+                self.object_under_review.on_workflow_approved()
+            elif self.current_state == ApprovalWorkflowStateChoices.DENIED:
+                self.object_under_review.on_workflow_denied()
 
 
 @extras_features(
