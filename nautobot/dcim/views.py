@@ -3985,7 +3985,7 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
 
     def get_required_permission(self):
         if getattr(self, "action", None) in ["add_member", "remove_member"]:
-            return "dcim.change_virtualchassis"
+            return ["dcim.change_virtualchassis"]
         return super().get_required_permission()
 
     @action(detail=True, methods=["get", "post"], url_path="add-member", url_name="add_member")
