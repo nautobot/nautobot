@@ -38,7 +38,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.dcim.utils import cable_status_color_css
 from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
-from nautobot.tenancy.tables import TenantColumn, LinkedCountColumn
+from nautobot.tenancy.tables import TenantColumn
 
 from .template_code import (
     CABLETERMINATION,
