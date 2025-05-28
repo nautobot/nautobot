@@ -310,7 +310,7 @@
                                     {% include 'responsive_table.html' with table=cluster_table bulk_select_pk=object.pk %}
                                     {% if perms.virtualization.change_cluster %}
                                         <div class="panel-footer noprint">
-                                            <button type="submit" class="btn btn-danger btn-xs" id="remove_from_clusters_btn" disabled="disabled" title="Select at least one cluster to remove device from">
+                                            <button type="submit" class="btn btn-danger btn-xs btn-bulk-delete" data-text="Remove from cluster" data-text-plural="Remove from {count} clusters" data-help-msg="Select a cluster to remove device from">
                                                 <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
                                                 Remove from cluster
                                             </button>
@@ -487,20 +487,19 @@
 {{ block.super }}
 <script>
     $(document).ready(function() {
-        $('input:checkbox').click(function() {
-            let btn = $('#remove_from_clusters_btn');
-            let icon = btn.find('span.mdi').clone();
-            let checkedCount = $('input:checkbox[name=pk]:checked').length;
+        const btn = $('.btn-bulk-delete');
+        const table = btn.closest('form').find('table');
+        if (!table.length) return;
+        btn.prop('disabled', true).attr('title', btn.data('help-msg')).tooltip();
+        table.on('change', 'input:checkbox', function() {
+            const count = table.find('input:checkbox[name=pk]:checked').length;
+            const text = count > 1 ? btn.data('text-plural').replace('{count}', count) : btn.data('text');
             
-            if (checkedCount > 0) {
-                btn.empty().append(icon).append(' Remove from ' + checkedCount + ' cluster' + (checkedCount > 1 ? 's' : ''));
-                btn.tooltip('destroy');
-            } else {
-                btn.empty().append(icon).append(' Remove from cluster');
-                btn.tooltip();
-            }
+            btn.prop('disabled', !count)
+               .tooltip('destroy')
+               .html(btn.find('span.mdi').clone().prop('outerHTML') + ' ' + text);
             
-            btn.prop('disabled', checkedCount === 0);
+            if (!count) btn.attr('title', btn.data('help-msg')).tooltip();
         });
     });
 </script>
