@@ -310,7 +310,14 @@
                                     {% include 'responsive_table.html' with table=cluster_table bulk_select_pk=object.pk %}
                                     {% if perms.virtualization.change_cluster %}
                                         <div class="panel-footer noprint">
-                                            <button type="submit" class="btn btn-danger btn-xs btn-bulk-delete" data-form-id="cluster_form" data-help-msg="Select clusters to remove device from">
+                                            <button
+                                                type="submit"
+                                                class="btn btn-danger btn-xs btn-bulk-delete"
+                                                data-form-id="cluster_form"
+                                                data-help-msg="Select clusters to remove device from"
+                                                data-label-checked-single="Remove from 1 cluster"
+                                                data-label-checked-multiple="Remove from [count] clusters"
+                                            >
                                                 <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
                                                 Remove from clusters
                                             </button>
