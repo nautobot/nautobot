@@ -304,15 +304,15 @@
                                 </div>
                                 {% if object.clusters.exists %}
                                     {% if perms.virtualization.change_cluster %}
-                                        <form action="{% url 'dcim:device_remove_from_clusters' pk=object.pk %}" method="post">
+                                        <form id="cluster_form" action="{% url 'dcim:device_remove_from_clusters' pk=object.pk %}" method="post">
                                         {% csrf_token %}
                                     {% endif %}
                                     {% include 'responsive_table.html' with table=cluster_table bulk_select_pk=object.pk %}
                                     {% if perms.virtualization.change_cluster %}
                                         <div class="panel-footer noprint">
-                                            <button type="submit" class="btn btn-danger btn-xs btn-bulk-delete" data-text="Remove from cluster" data-text-plural="Remove from {count} clusters" data-help-msg="Select a cluster to remove device from">
+                                            <button type="submit" class="btn btn-danger btn-xs btn-bulk-delete" data-form-id="cluster_form" data-help-msg="Select clusters to remove device from">
                                                 <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
-                                                Remove from cluster
+                                                Remove from clusters
                                             </button>
                                             <div class="pull-right">
                                                 <a href="{% url 'dcim:device_add_to_clusters' pk=object.pk %}" class="btn btn-primary btn-xs">

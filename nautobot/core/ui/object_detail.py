@@ -313,6 +313,58 @@ class FormButton(Button):
         }
 
 
+class BulkDeleteFormButton(FormButton):
+    """
+    A FormButton subclass that automatically adds the necessary data attributes for bulk delete functionality.
+
+    This button will be progressively enhanced by JavaScript to:
+    - Start disabled with a helpful tooltip
+    - Enable when items are selected
+    """
+
+    def __init__(
+        self,
+        *,
+        help_message=None,
+        **kwargs,
+    ):
+        """
+        Initialize a BulkDeleteFormButton instance.
+
+        Args:
+            help_message (str, optional): Tooltip text when disabled. Defaults to generic message.
+        """
+        # Ensure we have the bulk delete CSS class
+        if "attributes" not in kwargs:
+            kwargs["attributes"] = {}
+
+        # Add btn-bulk-delete class to existing classes or create new
+        existing_class = kwargs["attributes"].get("class", "")
+        if "btn-bulk-delete" not in existing_class:
+            kwargs["attributes"]["class"] = f"{existing_class} btn-bulk-delete".strip()
+
+        super().__init__(**kwargs)
+
+        self.help_message = help_message
+
+    def get_extra_context(self, context: Context):
+        """Add bulk delete data attributes to the button context."""
+        extra_context = super().get_extra_context(context)
+
+        # Set up data attributes for the JavaScript
+        if "attributes" not in extra_context:
+            extra_context["attributes"] = {}
+
+        extra_context["attributes"].update(
+            {
+                "data-label": self.label,
+                "data-help-msg": self.help_message or "Select items to delete",
+            }
+        )
+
+        return extra_context
+
+
 class Tab(Component):
     """Base class for UI framework definition of a single tabbed pane within an Object Detail (Object Retrieve) page."""
 

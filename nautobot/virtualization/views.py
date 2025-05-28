@@ -116,10 +116,11 @@ class ClusterUIViewSet(NautobotUIViewSet):
                 add_button_route=None,
                 form_id="device_form",
                 footer_buttons=[
-                    object_detail.FormButton(
+                    object_detail.BulkDeleteFormButton(
                         form_id="device_form",
                         link_name="virtualization:cluster_remove_devices",
-                        label="Remove Devices",
+                        label="Remove devices",
+                        help_message="Select devices to remove from cluster",
                         weight=100,
                         color=ButtonActionColorChoices.DELETE,
                         icon="mdi-trash-can-outline",
@@ -127,7 +128,7 @@ class ClusterUIViewSet(NautobotUIViewSet):
                     ),
                     object_detail.Button(
                         link_name="virtualization:cluster_add_devices",
-                        label="Add Devices",
+                        label="Add devices",
                         weight=200,
                         color=ButtonActionColorChoices.ADD,
                         icon="mdi-plus",
