@@ -1,14 +1,14 @@
 from django.contrib import messages
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
-from django.template import Context
-from django.utils.html import format_html
+from django.utils.html import escape, format_html
 from django_tables2 import RequestConfig
 
 from nautobot.core.forms import ConfirmationForm
-from nautobot.core.templatetags.helpers import bettertitle, humanize_speed, placeholder
+from nautobot.core.templatetags.helpers import bettertitle, HTML_NONE, humanize_speed, hyperlinked_object, placeholder
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import (
+    KeyValueTablePanel,
     ObjectDetailContent,
     ObjectFieldsPanel,
     ObjectsTablePanel,
@@ -66,44 +66,86 @@ class CircuitTerminationUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.CircuitTerminationSerializer
     table_class = tables.CircuitTerminationTable
 
-    class CircuitTerminationObjectFieldsPanel(ObjectFieldsPanel):
-        def get_extra_context(self, context):
-            return {"termination": context["object"]}
-
-        def render_value(self, key, value, context: Context):
-            if key == "cable":
-                if not value:
-                    return ""
-                return render_component_template("circuits/inc/circuit_termination_cable_fragment.html", context)
-
-            if key == "port_speed":
-                return self.format_speed(value, "mdi-arrow-down-bold", "Downstream")
-
-            if key == "upstream_speed":
-                return self.format_speed(value, "mdi-arrow-up-bold", "Upstream")
-
-            return super().render_value(key, value, context)
-
-        def format_speed(self, value, icon, title):
-            if not value:
-                return None
-            if icon:
-                return format_html('<i class="mdi {}" title="{}"></i> {}', icon, title, humanize_speed(value))
-            return None
-
     object_detail_content = ObjectDetailContent(
         panels=(
-            CircuitTerminationObjectFieldsPanel(
+            KeyValueTablePanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
-                fields="__all__",
-                hide_if_unset=["location", "provider_network", "cloud_network", "port_speed", "upstream_speed"],
-                exclude_fields=[
-                    "circuit",
-                ],
+                context_data_key="circuit_termination_data",
             ),
         )
     )
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance) or {}
+        if not instance:
+            return context
+
+        connected_endpoint = getattr(instance, "connected_endpoint", None)
+        cable = getattr(instance, "cable", None)
+        port_speed = getattr(instance, "port_speed", None)
+        upstream_speed = getattr(instance, "upstream_speed", None)
+        location = getattr(instance, "location", None)
+        provider_network = getattr(instance, "provider_network", None)
+        cloud_network = getattr(instance, "cloud_network", None)
+        xconnect_id = getattr(instance, "xconnect_id", None)
+        pp_info = getattr(instance, "pp_info", None)
+        description = getattr(instance, "description", None)
+        ip_addressing = self.get_ip_addressing_html(instance) if connected_endpoint else HTML_NONE
+
+        circuit_termination_data = {}
+        if location:
+            circuit_termination_data["location"] = location
+        if provider_network:
+            circuit_termination_data["provider_network"] = provider_network
+        if cloud_network:
+            circuit_termination_data["cloud_network"] = cloud_network
+
+        circuit_termination_data.update(
+            {
+                "Cable": self.cable_data(cable, context),
+                "Speed": self.format_speed_block(port_speed, upstream_speed),
+                "IP_Addressing": ip_addressing,
+                "Cross-Connect": placeholder(xconnect_id) if xconnect_id else HTML_NONE,
+                "Patch Panel/Port": placeholder(pp_info) if pp_info else HTML_NONE,
+                "Description": placeholder(description) if description else HTML_NONE,
+            }
+        )
+        context["circuit_termination_data"] = circuit_termination_data
+        return context
+
+    def get_ip_addressing_html(self, instance):
+        ip_html_parts = []
+        ip_addresses = getattr(instance, "ip_addresses", None)
+        if ip_addresses:
+            ip_queryset = ip_addresses.all()
+            for idx, ip in enumerate(ip_queryset):
+                if idx > 0:
+                    ip_html_parts.append("<br/>")
+                hyperlinked_ip = hyperlinked_object(ip)
+                vrf = getattr(ip, "vrf", None) or "Global"
+                ip_html_parts.append(f"{hyperlinked_ip} ({escape(vrf)})")
+        else:
+            ip_html_parts.append(HTML_NONE)
+        return format_html("".join(ip_html_parts))
+
+    def cable_data(self, cable, context):
+        if not cable or not context:
+            return HTML_NONE
+        # return render_component_template("circuits/inc/circuit_termination_cable_fragment.html", context)
+
+    def format_speed_block(self, port_speed, upstream_speed):
+        if port_speed and upstream_speed:
+            return format_html(
+                '<i class="mdi mdi-arrow-down-bold" title="Downstream"></i> {} &nbsp;'
+                '<i class="mdi mdi-arrow-up-bold" title="Upstream"></i> {}',
+                humanize_speed(port_speed),
+                humanize_speed(upstream_speed),
+            )
+        elif port_speed:
+            return format_html("{}", humanize_speed(port_speed))
+        else:
+            return HTML_NONE
 
     def get_object(self):
         obj = super().get_object()
