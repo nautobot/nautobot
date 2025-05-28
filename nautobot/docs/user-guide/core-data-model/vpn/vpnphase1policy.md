@@ -1,6 +1,7 @@
 # VPN Phase 1 Policy
 
-The VPNPhase1Policy model for nautobot_vpn_models provides the following fields:
+The VPNPhase1Policy model for VPNs provides the following fields:
+
 - `name`: Name
 - `description`: Description
 - `ike_version`: IKEv1, IKEv2
