@@ -63,7 +63,6 @@ from nautobot.core.views.mixins import (
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import prepare_cloned_fields
 from nautobot.core.views.viewsets import (
-    mixins as nautobot_mixins,
     NautobotUIViewSet,
 )
 from nautobot.dcim.models import Controller, Device, Interface, Module, Rack, VirtualDeviceContext
@@ -2524,24 +2523,9 @@ class RelationshipUIViewSet(NautobotUIViewSet):
     )
 
 
-class RelationshipAssociationCustomUIViewSet(
-    nautobot_mixins.ObjectDetailViewMixin,
-    nautobot_mixins.ObjectListViewMixin,
-    nautobot_mixins.ObjectEditViewMixin,
-    nautobot_mixins.ObjectDestroyViewMixin,
-    nautobot_mixins.ObjectBulkDestroyViewMixin,
-    nautobot_mixins.ObjectBulkCreateViewMixin,
-    nautobot_mixins.ObjectChangeLogViewMixin,
-    nautobot_mixins.ObjectNotesViewMixin,
+class RelationshipAssociationUIViewSet(
+    ObjectListViewMixin, ObjectDestroyViewMixin, ObjectBulkDestroyViewMixin, ObjectBulkCreateViewMixin
 ):
-    """
-    Nautobot BaseViewSet that is intended for UI use only. It provides default Nautobot functionalities such as
-    `create()`, `update()`, `partial_update()`,  `destroy()`, `bulk_destroy()`, `retrieve()`
-    `notes()`, `changelog()` and `list()` actions.
-    """
-
-
-class RelationshipAssociationUIViewSet(RelationshipAssociationCustomUIViewSet):
     filterset_class = filters.RelationshipAssociationFilterSet
     filterset_form_class = forms.RelationshipAssociationFilterForm
     serializer_class = serializers.RelationshipAssociationSerializer
