@@ -10,7 +10,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import URLValidator
 from django.test import override_settings, tag, TestCase as _TestCase
-from django.urls import NoReverseMatch, reverse
+from django.urls import NoReverseMatch, resolve, reverse
 from django.utils.html import escape
 from django.utils.http import urlencode
 from django.utils.text import slugify
@@ -946,6 +946,17 @@ class ViewTestCases:
                 f"<div>You are viewing a table of {self.model._meta.verbose_name_plural}</div>",
                 html=True,
             )
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_filterset_form_attribute(self):
+            """Test that view class has a non-None `filterset_form` attribute."""
+            view_func = resolve(self._get_url("list")).func
+
+            # Check if it's a class-based view
+            if hasattr(view_func, "view_class"):
+                view_class = view_func.view_class
+                self.assertTrue(hasattr(view_class, "filterset_form"))
+                self.assertIsNotNone(getattr(view_class, "filterset_form"))
 
     class CreateMultipleObjectsViewTestCase(ModelViewTestCase):
         """
