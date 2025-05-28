@@ -120,7 +120,7 @@ class ClusterUIViewSet(NautobotUIViewSet):
                         form_id="device_form",
                         link_name="virtualization:cluster_remove_devices",
                         label="Remove devices",
-                        help_message="Select devices to remove from cluster",
+                        help_message="Select devices to remove",
                         weight=100,
                         color=ButtonActionColorChoices.DELETE,
                         icon="mdi-trash-can-outline",
