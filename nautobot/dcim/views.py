@@ -3984,14 +3984,9 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
         return self.form_valid(form)
 
     def get_required_permission(self):
-        if not hasattr(self, "action") or not self.action:
-            return super().get_required_permission()
-        if self.action in ["add_member", "remove_member"]:
+        if getattr(self, "action", None) in ["add_member", "remove_member"]:
             return "dcim.change_virtualchassis"
-        permission = super().get_required_permission()
-        if not isinstance(permission, str) or "." not in permission:
-            raise ValueError(f"Invalid permission string: '{permission}'")
-        return permission
+        return super().get_required_permission()
 
     @action(detail=True, methods=["get", "post"], url_path="add-member", url_name="add_member")
     def add_member(self, request, pk=None):
