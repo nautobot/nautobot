@@ -1695,6 +1695,8 @@ class PlatformUIViewSet(NautobotUIViewSet):
 class DeviceListView(generic.ObjectListView):
     queryset = Device.objects.select_related(
         "device_type__manufacturer",  # Needed for __str__() on device_type
+    ).annotate(
+        cluster_count=count_related(Cluster, "devices", distinct=True),
     )
     filterset = filters.DeviceFilterSet
     filterset_form = forms.DeviceFilterForm
