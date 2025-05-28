@@ -1,6 +1,7 @@
 # VPN Tunnel
 
-The VPNTunnel model for nautobot_vpn_models provides the following fields:
+The VPNTunnel model for VPNs provides the following fields:
+
 - `vpn_profile`: VPN Profile
 - `vpn`: FK,UK VPN
 - `name`: Name

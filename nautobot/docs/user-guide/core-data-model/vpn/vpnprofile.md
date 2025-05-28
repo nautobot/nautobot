@@ -1,6 +1,7 @@
 # VPN Profile
 
-The VPNProfile model for nautobot_vpn_models provides the following fields:
+The VPNProfile model for VPNs provides the following fields:
+
 - `vpn_phase1_policy`: Phase 1 Policy
 - `vpn_phase2_policy`: Phase 2 Policy
 - `name`: Name

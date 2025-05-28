@@ -1,6 +1,7 @@
 # VPN
 
-The VPN model for nautobot_vpn_models provides the following fields:
+The VPN model for VPNs provides the following fields:
+
 - `vpn_profile`: VPN Profile
 - `name`: Name
 - `description`: Description

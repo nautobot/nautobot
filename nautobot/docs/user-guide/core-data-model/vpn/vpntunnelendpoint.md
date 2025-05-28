@@ -1,6 +1,7 @@
 # VPN Tunnel Endpoint
 
-The VPNTunnelEndpoint model for nautobot_vpn_models provides the following fields:
+The VPNTunnelEndpoint model for VPNs provides the following fields:
+
 - `vpn_profile`: VPN Profile
 - `vpn_tunnel`: FK,UK VPN Tunnel
 - `source_ipaddress`: FK,UK Source IP Address
