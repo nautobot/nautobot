@@ -48,7 +48,7 @@ from nautobot.extras.jobs import (
     StringVar,
     TextVar,
 )
-from nautobot.extras.models import ExportTemplate, GitRepository
+from nautobot.extras.models import ExportTemplate, GitRepository, SavedView
 from nautobot.extras.plugins import CustomValidator, ValidationError
 from nautobot.extras.registry import registry
 
@@ -162,6 +162,16 @@ class ExportObjectList(Job):
         soft_time_limit = 1800
         time_limit = 2000
 
+    def _get_saved_view_filter_params(self, query_params):
+        """Extract filter params from saved view if applicable."""
+        if "saved_view" in query_params and "all_filters_removed" not in query_params:
+            saved_view_filters = SavedView.objects.get(pk=query_params["saved_view"]).config.get("filter_params", {})
+            if len(query_params) > 1:
+                # Retain only filters also present in query_params
+                saved_view_filters = {key: value for key, value in saved_view_filters.items() if key in query_params}
+            return saved_view_filters
+        return {}
+
     def run(self, *, content_type, query_string="", export_format="csv", export_template=None):  # pylint:disable=arguments-differ
         if not self.user.has_perm(f"{content_type.app_label}.view_{content_type.model}"):
             self.logger.error('User "%s" does not have permission to view %s objects', self.user, content_type.model)
@@ -190,8 +200,9 @@ class ExportObjectList(Job):
             "sort",
             "table_changes_pending",
         )
-        filter_params = get_filterable_params_from_filter_params(
-            query_params, default_non_filter_params, filterset_class()
+        filter_params = self._get_saved_view_filter_params(query_params)
+        filter_params.update(
+            get_filterable_params_from_filter_params(query_params, default_non_filter_params, filterset_class())
         )
         self.logger.debug("Filterset params: `%s`", filter_params)
         filterset = filterset_class(filter_params, queryset)

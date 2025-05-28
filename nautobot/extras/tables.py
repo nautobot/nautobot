@@ -46,6 +46,7 @@ from .models import (
     JobLogEntry,
     JobQueue,
     JobResult,
+    MetadataChoice,
     MetadataType,
     Note,
     ObjectChange,
@@ -1036,7 +1037,7 @@ class JobTable(BaseTable):
         accessor="latest_result",
         template_code="""
             {% if value %}
-                {{ value.created }} by {{ value.user }}
+                {{ value.date_created|date:settings.SHORT_DATETIME_FORMAT }} by {{ value.user }}
             {% else %}
                 <span class="text-muted">Never</span>
             {% endif %}
@@ -1331,6 +1332,15 @@ class MetadataTypeTable(BaseTable):
             "data_type",
             "actions",
         )
+
+
+class MetadataChoiceTable(BaseTable):
+    value = tables.Column()
+    weight = tables.Column()
+
+    class Meta(BaseTable.Meta):
+        model = MetadataChoice
+        fields = ("value", "weight")
 
 
 class ObjectMetadataTable(BaseTable):
