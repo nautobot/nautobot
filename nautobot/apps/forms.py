@@ -68,6 +68,7 @@ from nautobot.core.forms.widgets import (
     StaticSelect2Multiple,
     TimePicker,
 )
+from nautobot.data_validation.form_mixin import DataValidationModelFormMixin
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelCSVForm,
@@ -125,6 +126,7 @@ __all__ = (
     "CustomFieldModelCSVForm",
     "CustomFieldModelFilterFormMixin",
     "CustomFieldModelFormMixin",
+    "DataValidationModelFormMixin",
     "DatePicker",
     "DateTimePicker",
     "DynamicFilterForm",

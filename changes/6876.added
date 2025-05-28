@@ -1,0 +1,1 @@
+Added `DataValidationFormMixin` to indicate on the forms that fields are required due to `RequiredValidationRule` set.
