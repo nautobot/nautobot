@@ -82,6 +82,8 @@ from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
+from nautobot.vpn.models import VPN, VPNProfile, VPNTunnel, VPNTunnelEndpoint
+from nautobot.vpn.tables import VPNProfileTable, VPNTable, VPNTunnelEndpointTable, VPNTunnelTable
 
 from . import filters, forms, jobs_ui, tables
 from .api import serializers
@@ -3063,6 +3065,30 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 vdc_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(vdc_table)
                 context["vdc_table"] = vdc_table
+            if ContentType.objects.get_for_model(VPN) in context["content_types"]:
+                vpns = instance.vpns.restrict(request.user, "view")
+                vpn_table = VPNTable(vpns)
+                vpn_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(vpn_table)
+                context["vpn_table"] = vpn_table
+            if ContentType.objects.get_for_model(VPNProfile) in context["content_types"]:
+                vpn_profiles = instance.vpn_profiles.restrict(request.user, "view")
+                vpn_profile_table = VPNProfileTable(vpn_profiles)
+                vpn_profile_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(vpn_profile_table)
+                context["vpn_profile_table"] = vpn_profile_table
+            if ContentType.objects.get_for_model(VPNTunnel) in context["content_types"]:
+                vpn_tunnels = instance.vpn_tunnels.restrict(request.user, "view")
+                vpn_tunnel_table = VPNTunnelTable(vpn_tunnels)
+                vpn_tunnel_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(vpn_tunnel_table)
+                context["vpn_tunnel_table"] = vpn_tunnel_table
+            if ContentType.objects.get_for_model(VPNTunnelEndpoint) in context["content_types"]:
+                vpn_tunnel_endpoints = instance.vpn_tunnel_endpoints.restrict(request.user, "view")
+                vpn_tunnel_endpoint_table = VPNTunnelEndpointTable(vpn_tunnel_endpoints)
+                vpn_tunnel_endpoint_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(vpn_tunnel_endpoint_table)
+                context["vpn_tunnel_endpoint_table"] = vpn_tunnel_endpoint_table
         return context
 
 
