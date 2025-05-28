@@ -482,25 +482,3 @@
 {% endif %}
 </div>
 {% endblock content %}
-
-{% block javascript %}
-{{ block.super }}
-<script>
-    $(document).ready(function() {
-        const btn = $('.btn-bulk-delete');
-        const table = btn.closest('form').find('table');
-        if (!table.length) return;
-        btn.prop('disabled', true).attr('title', btn.data('help-msg')).tooltip();
-        table.on('change', 'input:checkbox', function() {
-            const count = table.find('input:checkbox[name=pk]:checked').length;
-            const text = count > 1 ? btn.data('text-plural').replace('{count}', count) : btn.data('text');
-            
-            btn.prop('disabled', !count)
-               .tooltip('destroy')
-               .html(btn.find('span.mdi').clone().prop('outerHTML') + ' ' + text);
-            
-            if (!count) btn.attr('title', btn.data('help-msg')).tooltip();
-        });
-    });
-</script>
-{% endblock javascript %}
