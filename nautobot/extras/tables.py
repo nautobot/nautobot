@@ -17,7 +17,7 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
-from nautobot.core.templatetags.helpers import render_boolean, render_json, render_markdown
+from nautobot.core.templatetags.helpers import HTML_NONE, render_boolean, render_json, render_markdown
 from nautobot.tenancy.tables import TenantColumn
 
 from .choices import LogLevelChoices, MetadataTypeDataTypeChoices
@@ -301,6 +301,18 @@ class ApprovalWorkflowTable(BaseTable):
         )
 
 
+class ApprovalChoiceFieldColumn(ChoiceFieldColumn):
+    """
+    Render a ChoiceField value just like ChoiceFieldColumn, but only if the record should be rendered.
+    Otherwise, render a muted dash.
+    """
+
+    def render(self, *, record, bound_column, value):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
+        if record.should_render_state:
+            return super().render(record=record, bound_column=bound_column, value=value)
+        return HTML_NONE
+
+
 class ApprovalWorkflowStageTable(BaseTable):
     """Table for ApprovalWorkflowStage list view."""
 
@@ -320,8 +332,8 @@ class ApprovalWorkflowStageTable(BaseTable):
         orderable=False,
         verbose_name="Actions Needed",
     )
-    state = ChoiceFieldColumn()
-    actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("approve", "deny", "comment"))
+    state = ApprovalChoiceFieldColumn()
+    actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("detail", "changelog", "approve", "deny"))
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -363,6 +375,7 @@ class ApproverDashboardTable(ApprovalWorkflowStageTable):
     object_under_review = tables.TemplateColumn(
         template_code="<a href={{record.approval_workflow.object_under_review.get_absolute_url }}>{{ record.approval_workflow.object_under_review }}</a>"
     )
+    actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("approve", "deny"))
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -397,6 +410,7 @@ class RelatedApprovalWorkflowStageTable(ApprovalWorkflowStageTable):
         template_code="<a href={{record.get_absolute_url}}>{{ record.approval_workflow_stage_definition.name }}</a>",
         verbose_name="Stage",
     )
+    actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("approve", "deny"))
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
