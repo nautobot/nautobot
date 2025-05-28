@@ -4152,14 +4152,14 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
             "Status": helpers.hyperlinked_object_with_color(status) if status else helpers.HTML_NONE,
         }
 
-        connected_device_data = self.get_connected_device_data(instance)
+        connected_device_data = self._get_connected_device_data(instance)
         powerfeed_data.update(connected_device_data)
 
         context["powerfeed_connected_data"] = powerfeed_data
         context["connection_data"] = self._get_connection_data(request, instance)
         return context
 
-    def get_connected_device_data(self, instance):
+    def _get_connected_device_data(self, instance):
         connected_device = self._get_connected_device_html(instance)
         utilization_label = self._get_utilization_display(instance)
 
