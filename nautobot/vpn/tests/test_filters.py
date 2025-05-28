@@ -29,7 +29,7 @@ class VPNPhase1PolicyFilterTestCase(FilterTestCases.FilterTestCase):
     generic_filter_tests = (
         ("name",),
         ("description",),
-        # ("ike_version",),
+        ("ike_version",),
         ("lifetime_seconds",),
         ("lifetime_kb",),
         ("authentication_method",),
