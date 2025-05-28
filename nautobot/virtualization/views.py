@@ -120,6 +120,8 @@ class ClusterUIViewSet(NautobotUIViewSet):
                         form_id="device_form",
                         link_name="virtualization:cluster_remove_devices",
                         label="Remove devices",
+                        label_checked_single="Remove 1 device",
+                        label_checked_multiple="Remove [count] devices",
                         help_message="Select devices to remove",
                         weight=100,
                         color=ButtonActionColorChoices.DELETE,

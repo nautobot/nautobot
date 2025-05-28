@@ -332,6 +332,8 @@ class BulkDeleteFormButton(FormButton):
         self,
         *,
         help_message=None,
+        label_checked_single=None,
+        label_checked_multiple=None,
         **kwargs,
     ):
         """
@@ -339,6 +341,8 @@ class BulkDeleteFormButton(FormButton):
 
         Args:
             help_message (str, optional): Tooltip text when disabled. Defaults to generic message.
+            label_checked_single (str, optional): Text for button when a single item is selected.
+            label_checked_multiple (str, optional): Text for button when multiple items are selected.
         """
         # Ensure we have the bulk delete CSS class
         if "attributes" not in kwargs:
@@ -352,6 +356,8 @@ class BulkDeleteFormButton(FormButton):
         super().__init__(**kwargs)
 
         self.help_message = help_message
+        self.label_checked_single = label_checked_single
+        self.label_checked_multiple = label_checked_multiple
 
     def get_extra_context(self, context: Context):
         """Add bulk delete data attributes to the button context."""
@@ -367,6 +373,10 @@ class BulkDeleteFormButton(FormButton):
                 "data-help-msg": self.help_message or "Select items to delete",
             }
         )
+        if self.label_checked_single:
+            extra_context["attributes"]["data-label-checked-single"] = self.label_checked_single
+        if self.label_checked_multiple:
+            extra_context["attributes"]["data-label-checked-multiple"] = self.label_checked_multiple
 
         return extra_context
 
