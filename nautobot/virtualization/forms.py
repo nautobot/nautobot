@@ -202,8 +202,7 @@ class ClusterAddDevicesForm(BootstrapMixin, forms.Form):
         self.cluster = cluster
 
         super().__init__(*args, **kwargs)
-
-        self.fields["devices"].choices = []
+        self.fields["devices"].widget.add_query_param("cluster__n", cluster.id)
 
     def clean(self):
         super().clean()
