@@ -686,6 +686,45 @@ class RackReservationUIViewSet(NautobotUIViewSet):
     table_class = tables.RackReservationTable
     queryset = RackReservation.objects.all()
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.KeyValueTablePanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                label="Rack",
+                context_data_key="rack_data",
+            ),
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                label="Reservation Details",
+                fields=["unit_list", "tenant", "user", "description"],
+            ),
+            object_detail.Panel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                template_path="dcim/rack_elevation.html",
+            ),
+        ),
+    )
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            context["rack_data"] = self.get_rack_context(instance)
+        return context
+
+    def get_rack_context(self, instance):
+        rack = getattr(instance, "rack", None)
+        if not rack:
+            return {}
+
+        return {
+            "location": rack.location,
+            "rack_group": rack.rack_group,
+            "rack": rack,
+        }
+
     def get_object(self):
         obj = super().get_object()
 
@@ -743,20 +782,18 @@ class ManufacturerUIViewSet(NautobotUIViewSet):
 #
 # Device types
 #
-
-
-class DeviceTypeListView(generic.ObjectListView):
-    queryset = DeviceType.objects.all()
-    filterset = filters.DeviceTypeFilterSet
-    filterset_form = forms.DeviceTypeFilterForm
-    table = tables.DeviceTypeTable
-    template_name = "dcim/devicetype_list.html"
-
-
-class DeviceTypeView(generic.ObjectView):
+class DeviceTypeUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.DeviceTypeBulkEditForm
+    filterset_class = filters.DeviceTypeFilterSet
+    filterset_form_class = forms.DeviceTypeFilterForm
+    form_class = forms.DeviceTypeForm
+    serializer_class = serializers.DeviceTypeSerializer
+    table_class = tables.DeviceTypeTable
     queryset = DeviceType.objects.select_related("manufacturer").prefetch_related("software_image_files")
 
     def get_extra_context(self, request, instance):
+        if self.action != "retrieve":
+            return {}
         instance_count = Device.objects.restrict(request.user).filter(device_type=instance).count()
 
         # Component tables
@@ -831,16 +868,6 @@ class DeviceTypeView(generic.ObjectView):
         }
 
 
-class DeviceTypeEditView(generic.ObjectEditView):
-    queryset = DeviceType.objects.all()
-    model_form = forms.DeviceTypeForm
-    template_name = "dcim/devicetype_edit.html"
-
-
-class DeviceTypeDeleteView(generic.ObjectDeleteView):
-    queryset = DeviceType.objects.all()
-
-
 class DeviceTypeImportView(generic.ObjectImportView):
     additional_permissions = [
         "dcim.add_devicetype",
@@ -869,19 +896,6 @@ class DeviceTypeImportView(generic.ObjectImportView):
             ("module-bays", forms.ModuleBayTemplateImportForm),
         )
     )
-
-
-class DeviceTypeBulkEditView(generic.BulkEditView):
-    queryset = DeviceType.objects.all()
-    filterset = filters.DeviceTypeFilterSet
-    table = tables.DeviceTypeTable
-    form = forms.DeviceTypeBulkEditForm
-
-
-class DeviceTypeBulkDeleteView(generic.BulkDeleteView):
-    queryset = DeviceType.objects.all()
-    filterset = filters.DeviceTypeFilterSet
-    table = tables.DeviceTypeTable
 
 
 #
@@ -3381,13 +3395,42 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
     table_class = tables.ModuleBayTable
     create_template_name = "dcim/device_component_add.html"
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                hide_if_unset=("parent_device", "parent_module"),
+            ),
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                context_object_key="installed_module_data",
+                label="Installed Module",
+            ),
+        )
+    )
+
     def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+
         if instance:
-            return {
-                "device_breadcrumb_url": "dcim:device_modulebays",
-                "module_breadcrumb_url": "dcim:module_modulebays",
-            }
-        return {}
+            # Set breadcrumbs always
+            context.update(
+                {
+                    "device_breadcrumb_url": "dcim:device_modulebays",
+                    "module_breadcrumb_url": "dcim:module_modulebays",
+                }
+            )
+
+            # Add installed module context
+            context["installed_module_data"] = self._get_installed_module_context(instance)
+
+        return context
+
+    def _get_installed_module_context(self, instance):
+        return getattr(instance, "installed_module", None)
 
     def get_selected_objects_parents_name(self, selected_objects):
         selected_object = selected_objects.first()
@@ -4083,18 +4126,32 @@ class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.DeviceRedundancyGroupSerializer
     table_class = tables.DeviceRedundancyGroupTable
 
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-
-        if self.action == "retrieve" and instance:
-            devices = instance.devices_sorted.restrict(request.user)
-            devices_table = tables.DeviceTable(devices)
-            devices_table.columns.show("device_redundancy_group_priority")
-            context["devices_table"] = devices_table
-            controllers = instance.controllers_sorted.restrict(request.user)
-            controllers_table = tables.ControllerTable(controllers)
-            context["controllers_table"] = controllers_table
-        return context
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=100,
+                table_class=tables.ControllerTable,
+                table_attribute="controllers_sorted",
+                related_field_name="controller_device_redundancy_group",
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=200,
+                table_class=tables.DeviceTable,
+                table_attribute="devices_sorted",
+                related_field_name="device_redundancy_group",
+                include_columns=[
+                    "device_redundancy_group_priority",
+                ],
+            ),
+        )
+    )
 
 
 class InterfaceRedundancyGroupUIViewSet(NautobotUIViewSet):
@@ -4159,36 +4216,31 @@ class DeviceFamilyUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.DeviceFamilySerializer
     table_class = tables.DeviceFamilyTable
     lookup_field = "pk"
-
-    def get_extra_context(self, request, instance):
-        # Related device types table
-        context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            device_types = (
-                DeviceType.objects.restrict(request.user, "view")
-                .filter(device_family=instance)
-                .select_related("manufacturer")
-                .annotate(device_count=count_related(Device, "device_type"))
-            )
-            device_type_table = tables.DeviceTypeTable(device_types, orderable=False)
-
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(device_type_table)
-
-            context["device_type_table"] = device_type_table
-
-            total_devices = 0
-            device_type_count = 0
-            for device_type in device_types:
-                total_devices += device_type.device_count
-                device_type_count += 1
-            context["total_devices"] = total_devices
-            context["device_type_count"] = device_type_count
-
-        return context
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.DeviceTypeTable,
+                table_filter="device_family",
+                select_related_fields=["manufacturer"],
+                exclude_columns=["device_family"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.DeviceTable,
+                table_filter="device_type__device_family",
+                related_field_name="device_family",
+                exclude_columns=["device_family"],
+            ),
+        )
+    )
 
 
 #
