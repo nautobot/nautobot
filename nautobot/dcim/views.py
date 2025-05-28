@@ -4071,7 +4071,6 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
 # Power panels
 #
 
-
 class PowerPanelUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.PowerPanelBulkEditForm
     filterset_class = filters.PowerPanelFilterSet
