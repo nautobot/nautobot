@@ -103,6 +103,7 @@ __all__ = (
     "CustomFieldModelCSVForm",
     "CustomFieldBulkCreateForm",  # 2.0 TODO remove this deprecated class
     "CustomFieldChoiceFormSet",
+    "CustomFieldViewFilterForm",
     "CustomLinkForm",
     "CustomLinkFilterForm",
     "DynamicGroupForm",
@@ -400,7 +401,7 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
         )
 
 
-class CustomFieldFilterForm(NautobotFilterForm):
+class CustomFieldViewFilterForm(BootstrapMixin, forms.Form):
     model = CustomField
     q = forms.CharField(required=False, label="Search")
     content_types = MultipleContentTypeField(

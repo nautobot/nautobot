@@ -1,1 +1,2 @@
 Added RackRoleFilterForm, ManufacturerFilterForm, DeviceRoleFilterForm, PlatformFilterForm, RoleFilterForm, TenantGroupFilterForm, ClusterTypeFilterForm, ClusterGroupFilterForm, CustomFieldFilterForm and set them to proper `filterset_form` in views.
+Added unittest `test_filterset_form_attribute`.

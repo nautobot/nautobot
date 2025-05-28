@@ -62,6 +62,7 @@ from nautobot.utilities.forms import (
     StaticSelect2,
     StaticSelect2Multiple,
     TagFilterField,
+    BOOLEAN_CHOICES,
 )
 from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.virtualization.models import Cluster, ClusterGroup
@@ -634,6 +635,7 @@ class RackRoleForm(NautobotModelForm):
 class RackRoleFilterForm(NautobotFilterForm):
     model = RackRole
     q = forms.CharField(required=False, label="Search")
+    color = forms.CharField(max_length=6, required=False, widget=ColorSelect())  # RGB color code
 
 
 class RackRoleCSVForm(CustomFieldModelCSVForm):
@@ -1780,6 +1782,7 @@ class DeviceRoleForm(NautobotModelForm):
 class DeviceRoleFilterForm(NautobotFilterForm):
     model = DeviceRole
     q = forms.CharField(required=False, label="Search")
+    vm_role = forms.ChoiceField(choices=BOOLEAN_CHOICES, required=False, label="VM Role")
 
 
 class DeviceRoleCSVForm(CustomFieldModelCSVForm):

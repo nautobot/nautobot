@@ -315,7 +315,7 @@ class RoleListView(generic.ObjectListView):
         vlan_count=count_related(VLAN, "role"),
     )
     filterset = filters.RoleFilterSet
-    filterset_form = forms.Role
+    filterset_form = forms.RoleFilterForm
     table = tables.RoleTable
 
 

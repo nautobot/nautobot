@@ -11,7 +11,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase as _TestCase, override_settings, tag
-from django.urls import reverse, NoReverseMatch
+from django.urls import reverse, NoReverseMatch, resolve
 from django.utils.text import slugify
 from django.utils.html import escape
 from django.utils.http import urlencode
@@ -849,6 +849,17 @@ class ViewTestCases:
             instance1_csv_headers = list(self.model.csv_headers) + instance1_cf_headers
             self.assertEqual(instance1_csv_headers, list(data.keys()))
             self.assertEqual(instance1_csv_data, list(data.values()))
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_filterset_form_attribute(self):
+            """Test that view class has a non-None `filterset_form` attribute."""
+            view_func = resolve(self._get_url("list")).func
+
+            # Check if it's a class-based view
+            if hasattr(view_func, "view_class"):
+                view_class = view_func.view_class
+                self.assertTrue(hasattr(view_class, "filterset_form"))
+                self.assertIsNotNone(getattr(view_class, "filterset_form"))
 
     class CreateMultipleObjectsViewTestCase(ModelViewTestCase):
         """

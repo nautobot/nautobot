@@ -765,7 +765,7 @@ class ManufacturerListView(generic.ObjectListView):
         platform_count=count_related(Platform, "manufacturer"),
     )
     filterset = filters.ManufacturerFilterSet
-    filterset_form = forms.ManufacturerForm
+    filterset_form = forms.ManufacturerFilterForm
     table = tables.ManufacturerTable
 
 

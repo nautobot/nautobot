@@ -337,6 +337,7 @@ class RoleForm(NautobotModelForm):
 class RoleFilterForm(NautobotFilterForm):
     model = Role
     q = forms.CharField(required=False, label="Search")
+    weight = forms.IntegerField(required=False, label="Weight")
 
 
 class RoleCSVForm(CustomFieldModelCSVForm):
