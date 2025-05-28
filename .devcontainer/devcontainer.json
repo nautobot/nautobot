@@ -4,25 +4,29 @@
         "../development/docker-compose.yml",
         "../development/docker-compose.postgres.yml",
         "../development/docker-compose.dev.yml",
-        "../development/docker-compose.vscode-rdb.yml"
+        "../development/docker-compose.vscode-rdb.yml",
+        "../development/docker-compose.static-ports.yml"
     ],
     "features": {
-        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": { }
+        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
     },
     "service": "nautobot",
     "shutdownAction": "stopCompose",
+    "containerEnv": {
+        "INVOKE_NAUTOBOT_PROJECT_NAME": "development"
+    },
     "customizations": {
         "vscode": {
             "extensions": [
                 "charliermarsh.ruff",
                 "DavidAnson.vscode-markdownlint",
-                "eamodio.gitlens",
                 "EditorConfig.EditorConfig",
                 "GitHub.vscode-pull-request-github",
                 "ms-python.python",
                 "ms-python.vscode-pylance",
                 "samuelcolvin.jinjahtml",
-                "tamasfe.even-better-toml"
+                "tamasfe.even-better-toml",
+                "rioj7.command-variable" // Used for dynamic port finding in tests
             ],
             "settings": {
                 // Global editor settings
@@ -54,10 +58,59 @@
                     "${workspaceFolder}"
                 ],
                 "python.defaultInterpreterPath": "/usr/local/bin/python",
-                "python.pythonPath": "/usr/local/bin/python"
+                "python.pythonPath": "/usr/local/bin/python",
+                "launch": {
+                    "version": "0.2.0",
+                    "inputs": [
+                        {
+                            "id": "celeryport",
+                            "type": "command",
+                            "command": "extension.commandvariable.file.content",
+                            "args": {
+                                "fileName": "${workspaceFolder}/.service_ports.json",
+                                "json": "content.celery_worker['6898']",
+                                "default": "6898",
+                            }
+                        },
+                        {
+                            "id": "nautobotport",
+                            "type": "command",
+                            "command": "extension.commandvariable.file.content",
+                            "args": {
+                                "fileName": "${workspaceFolder}/.service_ports.json",
+                                "json": "content.nautobot['6899']",
+                                "default": "6899",
+                            }
+                        }
+                    ],
+                    "configurations": [
+                        {
+                            "name": "Python: Nautobot",
+                            "type": "debugpy",
+                            "request": "attach",
+                            "connect": {
+                                "host": "127.0.0.1",
+                                "port": "${input:nautobotport}"
+                            },
+                            "django": true,
+                        },
+                        {
+                            "name": "Python: Nautobot-Celery",
+                            "type": "debugpy",
+                            "request": "attach",
+                            "connect": {
+                                "host": "celery_worker",
+                                "port": "${input:celeryport}"
+                            },
+                            "django": true
+                        }
+                    ]
+                }
             }
         }
     },
     "workspaceFolder": "/source",
-    "postCreateCommand": "bash .devcontainer/postCreateCommand.sh"
+    "postCreateCommand": "bash .devcontainer/postCreateCommand.sh",
+    "postAttachCommand": "bash .devcontainer/postStartCommand.sh",
+    "initializeCommand": "bash .devcontainer/initializeCommand.sh",
 }
