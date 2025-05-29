@@ -1035,7 +1035,6 @@ class ModuleTypeForm(NautobotModelForm):
         queryset=ModuleFamily.objects.all(),
         required=False,
         label="Family",
-        help_text="Modules are only installable in module bays of the same family, or module bays that are not assigned to a family",
     )
     comments = CommentField(label="Comments")
 
@@ -1075,11 +1074,12 @@ class ModuleTypeImportForm(BootstrapMixin, forms.ModelForm):
 class ModuleTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=ModuleType.objects.all(), widget=forms.MultipleHiddenInput())
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
+    module_family = DynamicModelChoiceField(queryset=ModuleFamily.objects.all(), required=False, label="Family")
     part_number = forms.CharField(required=False)
     comments = CommentField(label="Comments", required=False)
 
     class Meta:
-        nullable_fields = []
+        nullable_fields = ["module_family"]
 
 
 class ModuleTypeFilterForm(NautobotFilterForm):
@@ -1691,6 +1691,9 @@ class ModuleBayTemplateForm(ModularComponentTemplateForm):
             "description",
         ]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["module_family"].help_text = "If assigned to a family, this module bay will only accept module types in the same family."
 
 class ModuleBayBaseCreateForm(BootstrapMixin, forms.Form):
     module_family = DynamicModelChoiceField(
