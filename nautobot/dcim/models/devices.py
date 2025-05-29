@@ -28,9 +28,9 @@ from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.constants import MODULE_RECURSION_DEPTH_LIMIT
+from nautobot.dcim.querysets import DeviceQuerySet
 from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_driver_mapping_tool_names
 from nautobot.extras.models import ChangeLoggedModel, ConfigContextModel, RoleField, StatusField
-from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
 from nautobot.wireless.models import ControllerManagedDeviceGroupWirelessNetworkAssignment
 
@@ -661,7 +661,7 @@ class Device(PrimaryModel, ConfigContextModel):
         null=True,
     )
 
-    objects = BaseManager.from_queryset(ConfigContextModelQuerySet)()
+    objects = BaseManager.from_queryset(DeviceQuerySet)()
 
     clone_fields = [
         "device_type",
