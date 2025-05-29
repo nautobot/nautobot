@@ -74,7 +74,7 @@ from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
 from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VLANLocationAssignment, VRF
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
+from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType, VirtualMachine
 from nautobot.wireless.models import RadioProfile
 
 from .choices import (
@@ -2483,6 +2483,50 @@ class DeviceFilterForm(
     )
     tags = TagFilterField(model)
 
+
+class DeviceAddToClustersForm(BootstrapMixin, forms.Form):
+    """Form for adding a device to one or more clusters."""
+
+    location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+    )
+    cluster_type = DynamicModelChoiceField(
+        queryset=ClusterType.objects.all(),
+        required=False,
+    )
+    cluster_group = DynamicModelChoiceField(
+        queryset=ClusterGroup.objects.all(),
+        required=False,
+        query_params={"location": "$location"},
+    )
+    clusters = DynamicModelMultipleChoiceField(
+        queryset=Cluster.objects.all(),
+        required=True,
+        query_params={"cluster_group": "$cluster_group", "cluster_type": "$cluster_type"},
+    )
+
+    def __init__(self, device, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        def disable_fields(help_text: str):
+            self.fields["location"].disabled = True
+            self.fields["cluster_type"].disabled = True
+            self.fields["cluster_group"].disabled = True
+            self.fields["clusters"].disabled = True
+            self.fields["clusters"].help_text = help_text
+
+        if self.fields["clusters"].queryset.exists():
+            available_clusters = Cluster.objects.exclude(
+                pk__in=device.clusters.values_list("pk", flat=True)
+            ).order_by("name")
+            if not available_clusters.exists():
+                disable_fields("This device already belongs to all available clusters.")
+        else:
+            disable_fields('No clusters exist. <a href="/virtualization/clusters/add">Create a cluster</a>.')
+
+        # Only show clusters that the device isn't already a member of
+        self.fields["clusters"].widget.add_query_param("devices__n", device.id)
 
 class DeviceRemoveFromClustersForm(ConfirmationForm):
     pk = forms.ModelMultipleChoiceField(queryset=Cluster.objects.all(), widget=forms.MultipleHiddenInput())
@@ -5774,40 +5818,3 @@ class VirtualDeviceContextFilterForm(
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     tags = TagFilterField(model)
-
-
-class DeviceAddToClustersForm(BootstrapMixin, forms.Form):
-    """Form for adding a device to one or more clusters."""
-
-    location = DynamicModelChoiceField(
-        queryset=Location.objects.all(),
-        required=False,
-    )
-    cluster_group = DynamicModelChoiceField(
-        queryset=ClusterGroup.objects.all(),
-        required=False,
-        query_params={"location": "$location"},
-    )
-    clusters = DynamicModelMultipleChoiceField(
-        queryset=Cluster.objects.all(),
-        required=True,
-        query_params={"cluster_group": "$cluster_group"},
-    )
-
-    def __init__(self, device, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Only show clusters that the device isn't already a member of
-        self.fields["clusters"].queryset = Cluster.objects.exclude(
-            pk__in=device.clusters.values_list("pk", flat=True)
-        ).order_by("name")
-        self.fields["clusters"].widget.add_query_param("devices__n", device.id)
-
-        if self.fields["clusters"].queryset.exists():
-            if self.fields["clusters"].queryset.count() == 1:
-                self.fields["clusters"].initial = self.fields["clusters"].queryset.first().pk
-        else:
-            self.fields["location"].disabled = True
-            self.fields["cluster_group"].disabled = True
-            self.fields["clusters"].disabled = True
-            self.fields["clusters"].help_text = "This device already belongs to all available clusters"
