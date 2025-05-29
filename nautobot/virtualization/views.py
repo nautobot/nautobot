@@ -124,9 +124,6 @@ class ClusterUIViewSet(NautobotUIViewSet):
                         label_checked_multiple="Remove [count] devices",
                         help_message="Select devices to remove",
                         weight=100,
-                        color=ButtonActionColorChoices.DELETE,
-                        icon="mdi-trash-can-outline",
-                        size="xs",
                     ),
                     object_detail.Button(
                         link_name="virtualization:cluster_add_devices",

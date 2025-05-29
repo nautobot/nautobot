@@ -20,7 +20,7 @@ from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, format_html_join
 from django_tables2 import RequestConfig
 
-from nautobot.core.choices import ButtonColorChoices
+from nautobot.core.choices import ButtonActionColorChoices, ButtonColorChoices
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags.helpers import (
     badge,
@@ -344,11 +344,12 @@ class BulkDeleteFormButton(FormButton):
             label_checked_single (str, optional): Text for button when a single item is selected.
             label_checked_multiple (str, optional): Text for button when multiple items are selected.
         """
-        # Ensure we have the bulk delete CSS class
+        kwargs.setdefault("size", "xs")
+        kwargs.setdefault("color", ButtonActionColorChoices.DELETE)
+        kwargs.setdefault("icon", "mdi-trash-can-outline")
         if "attributes" not in kwargs:
             kwargs["attributes"] = {}
 
-        # Add btn-bulk-delete class to existing classes or create new
         existing_class = kwargs["attributes"].get("class", "")
         if "btn-bulk-delete" not in existing_class:
             kwargs["attributes"]["class"] = f"{existing_class} btn-bulk-delete".strip()
