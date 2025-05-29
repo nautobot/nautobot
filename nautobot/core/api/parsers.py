@@ -186,12 +186,13 @@ class NautobotCSVParser(BaseParser):
         flat_data = flatten_dict(data)
 
         # Convert dictionary to list of dictionaries
-        values_count = set([len(value) for value in flat_data.values()])
+        values_count = {len(value) for value in flat_data.values()}
         if len(values_count) > 1:
             raise ParseError(f"Incorrect number of values provided for the {field} field")
         values_count = values_count.pop()
         return [
-            self._group_data_by_field_name({key: flat_data[key][i] for key in flat_data}) for i in range(values_count)
+            self._group_data_by_field_name({key: value[i] for key, value in flat_data.items()})
+            for i in range(values_count)
         ]
 
     def row_elements_to_data(self, counter, row, serializer):
