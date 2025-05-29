@@ -34,7 +34,6 @@ router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet
 router.register("device-types", views.DeviceTypeUIViewSet)
 router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
 router.register("interface-redundancy-groups-associations", views.InterfaceRedundancyGroupAssociationUIViewSet)
-router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
 router.register("location-types", views.LocationTypeUIViewSet)
 router.register("manufacturers", views.ManufacturerUIViewSet)
 router.register("module-bay-templates", views.ModuleBayTemplateUIViewSet)
