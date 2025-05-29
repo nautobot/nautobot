@@ -2487,10 +2487,6 @@ class DeviceFilterForm(
 class DeviceAddToClustersForm(BootstrapMixin, forms.Form):
     """Form for adding a device to one or more clusters."""
 
-    location = DynamicModelChoiceField(
-        queryset=Location.objects.all(),
-        required=False,
-    )
     cluster_type = DynamicModelChoiceField(
         queryset=ClusterType.objects.all(),
         required=False,
@@ -2500,12 +2496,21 @@ class DeviceAddToClustersForm(BootstrapMixin, forms.Form):
         required=False,
         query_params={"location": "$location"},
     )
+    tenant = DynamicModelChoiceField(
+        queryset=Tenant.objects.all(),
+        required=False,
+    )
+    location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+    )
     clusters = DynamicModelMultipleChoiceField(
         queryset=Cluster.objects.all(),
         required=True,
         query_params={
-            "cluster_group": "$cluster_group",
             "cluster_type": "$cluster_type",
+            "cluster_group": "$cluster_group",
+            "tenant": "$tenant",
             "location": "$location",
         },
     )
