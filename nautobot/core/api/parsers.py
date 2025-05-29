@@ -136,6 +136,64 @@ class NautobotCSVParser(BaseParser):
 
         return data_without_missing_field_lookups_values
 
+    def _convert_m2m_dict_to_list_of_dicts(self, data, field):
+        """
+        Converts a nested dictionary into list of flat dictionaries for M2M serializer.
+
+        Example:
+            Input:
+                {
+                    'manufacturer': {
+                        'name': 'Cisco,Cisco,Aruba',
+                    },
+                    'model': 'C9300,C9500,CX 6300'
+                }
+
+            Output:
+                [
+                    {
+                        'manufacturer': {
+                            'name': 'Cisco',
+                        },
+                        'model': 'C9300'
+                    },
+                    {
+                        'manufacturer': {
+                            'name': 'Cisco',
+                        },
+                        'model': 'C9500'
+                    },
+                    {
+                        'manufacturer': {
+                            'name': 'Aruba',
+                        },
+                        'model': 'CX 6300'
+                    }
+                ]
+        """
+
+        def flatten_dict(d, parent_key=""):
+            """Flatten nested dictionary with __ separated keys"""
+            items = []
+            for k, v in d.items():
+                new_key = f"{parent_key}__{k}" if parent_key else k
+                if isinstance(v, dict):
+                    items.extend(flatten_dict(v, new_key).items())
+                else:
+                    items.append((new_key, v.split(",")))
+            return dict(items)
+
+        flat_data = flatten_dict(data)
+
+        # Convert dictionary to list of dictionaries
+        values_count = set([len(value) for value in flat_data.values()])
+        if len(values_count) > 1:
+            raise ParseError(f"Incorrect number of values provided for the {field} field")
+        values_count = values_count.pop()
+        return [
+            self._group_data_by_field_name({key: flat_data[key][i] for key in flat_data}) for i in range(values_count)
+        ]
+
     def row_elements_to_data(self, counter, row, serializer):
         """
         Parse a single row of CSV data (represented as a dict) into a dict suitable for consumption by the serializer.
@@ -171,9 +229,13 @@ class NautobotCSVParser(BaseParser):
                 continue
 
             if isinstance(serializer_field, serializers.ManyRelatedField):
-                # A list of related objects, represented as a list of composite-keys
                 if value:
-                    value = value.split(",")
+                    # A list of related objects, represented as a list of composite-keys
+                    if isinstance(value, str):
+                        value = value.split(",")
+                    # A dictionary of fields identifying the objects
+                    elif isinstance(value, dict):
+                        value = self._convert_m2m_dict_to_list_of_dicts(value, key)
                 else:
                     value = []
             elif isinstance(serializer_field, serializers.RelatedField):
