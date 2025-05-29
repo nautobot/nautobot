@@ -21,7 +21,7 @@ from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags import helpers
 from nautobot.core.testing import mixins, utils
 from nautobot.core.utils import lookup
-from nautobot.dcim.models.device_components import ComponentModel
+from nautobot.dcim.models.device_components import ComponentModel, ModularComponentModel
 from nautobot.extras import choices as extras_choices, models as extras_models, querysets as extras_querysets
 from nautobot.extras.forms import CustomFieldModelFormMixin, RelationshipModelFormMixin
 from nautobot.extras.models import CustomFieldModel, RelationshipModel
@@ -1564,20 +1564,17 @@ class ViewTestCases:
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_modular_component_create_form_fields(self):
             """Test that the modular component create form has the expected fields."""
-            expected_fields = [
-                '<label class="col-md-3 control-label" for="id_description">Description</label>',
-                '<label class="col-md-3 control-label" for="id_device">Device</label>',
-                '<label class="col-md-3 control-label" for="id_module">Module</label>',
-            ]
+            expected_labels = ["Description", "Device"]
+            if issubclass(self.model, ModularComponentModel):
+                expected_labels.append("Module")
+
             self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
 
             response = self.client.get(self._get_url("add"))
             self.assertHttpStatus(response, 200)
             response_body = utils.extract_page_body(response.content.decode(response.charset))
 
-            # Check that the form contains the expected fields
-            for field in expected_fields:
-                self.assertInHTML(
-                    field,
-                    response_body,
-                )
+            for label in expected_labels:
+                # Regex used here as Module Bays have "Required device" rather than just "Device"
+                pattern = rf"<label[^>]*>[^<]*{label}[^<]*</label>"
+                self.assertRegex(response_body, re.compile(pattern, flags=re.IGNORECASE))
