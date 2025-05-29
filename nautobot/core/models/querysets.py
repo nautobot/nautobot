@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from django.db.models import Count, OuterRef, Q, QuerySet, Subquery
 from django.db.models.functions import Coalesce
 
@@ -184,3 +186,57 @@ class RestrictedQuerySet(CompositeKeyQuerySetMixin, QuerySet):
 
         """
         return self.order_by().values_list(*fields, flat=flat, named=named).distinct()
+
+
+class ManyToManyQuerySetBaseMixin:
+    """
+    Base mixin to provide backward compatibility for fields that have been changed from ForeignKey to ManyToManyField.
+
+    The FIELD_MAP class variable is a tuple of two strings, the old field name (when it was a ForeignKey) and
+    the new field name (now a ManyToManyField).
+    """
+
+    FIELD_MAP: ClassVar[tuple[str, str]] = ()
+
+    def _convert_to_m2m_field(self, kwargs):
+        if not self.FIELD_MAP:
+            return kwargs
+
+        old_field, new_field = self.FIELD_MAP
+        updated_kwargs = {}
+
+        for field, value in kwargs.items():
+            if field == old_field:
+                # Direct field query becomes __in for ManyToMany
+                updated_kwargs[f"{new_field}__in"] = [value]
+            elif field.startswith(f"{old_field}__"):
+                # Replace old field prefix with new field prefix
+                updated_kwargs[field.replace(old_field, new_field, 1)] = value
+            else:
+                updated_kwargs[field] = value
+
+        return updated_kwargs
+
+    def filter(self, *args, **kwargs):
+        kwargs = self._convert_to_m2m_field(kwargs)
+        return super().filter(*args, **kwargs)
+
+    def exclude(self, *args, **kwargs):
+        kwargs = self._convert_to_m2m_field(kwargs)
+        return super().exclude(*args, **kwargs)
+
+
+class LocationToLocationsQuerySetMixin(ManyToManyQuerySetBaseMixin):
+    """
+    Mixin to convert 'location' to 'locations' in queryset parameters.
+    """
+
+    FIELD_MAP = ("location", "locations")
+
+
+class ClusterToClustersQuerySetMixin(ManyToManyQuerySetBaseMixin):
+    """
+    Mixin to convert 'cluster' to 'clusters' in queryset parameters.
+    """
+
+    FIELD_MAP = ("cluster", "clusters")
