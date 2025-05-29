@@ -91,7 +91,6 @@ class Command(BaseCommand):
                 ManufacturerFactory,
                 ModuleBayTemplateFactory,
                 ModuleFactory,
-                ModuleFamilyFactory,
                 ModuleTypeFactory,
                 PlatformFactory,
                 PowerOutletTemplateFactory,
@@ -217,7 +216,6 @@ class Command(BaseCommand):
         _create_batch(ExternalIntegrationFactory, 20)
         _create_batch(SoftwareImageFileFactory, 25, description="to be usable by DeviceTypes")
         _create_batch(ManufacturerFactory, 4, description="without Platforms")  # 4 more hard-coded Manufacturers
-        _create_batch(ModuleFamilyFactory, 20, description="to be used by module types and module bays")
         _create_batch(DeviceTypeFactory, 30)
         _create_batch(ModuleTypeFactory, 20)
         _create_batch(ConsolePortTemplateFactory, 30)

@@ -368,17 +368,6 @@ class DeviceFamilyFactory(PrimaryModelFactory):
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
 
 
-class ModuleFamilyFactory(PrimaryModelFactory):
-    class Meta:
-        model = ModuleFamily
-        exclude = ("has_description",)
-
-    name = UniqueFaker("word")
-
-    has_description = NautobotBoolIterator()
-    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
-
-
 class ManufacturerFactory(OrganizationalModelFactory):
     class Meta:
         model = Manufacturer
