@@ -32,8 +32,9 @@ class TagFilterTestCase(SeleniumTestCase):
     def test_tag_matching_content_type(self):
         # Navigate to the Provider list view
         self.browser.links.find_by_text("Circuits").click()
+        time.sleep(0.5)
         self.browser.links.find_by_text("Providers").click()
-
+        time.sleep(0.5)
         # Open the filter form
         self.browser.find_by_id("id__filterbtn").click()
         time.sleep(0.5)
