@@ -189,7 +189,7 @@ class RestrictedQuerySet(CompositeKeyQuerySetMixin, QuerySet):
         return self.order_by().values_list(*fields, flat=flat, named=named).distinct()
 
 
-class ManyToManyQuerySetBaseMixin:
+class BaseManyToManyQuerySetMixin:
     """
     Base mixin to provide backward compatibility for fields that have been changed from ForeignKey to ManyToManyField.
 
@@ -227,7 +227,7 @@ class ManyToManyQuerySetBaseMixin:
         return super().exclude(*args, **kwargs)
 
 
-class LocationToLocationsQuerySetMixin(ManyToManyQuerySetBaseMixin):
+class LocationToLocationsQuerySetMixin(BaseManyToManyQuerySetMixin):
     """
     Mixin to convert 'location' to 'locations' in queryset parameters.
     """
@@ -235,7 +235,7 @@ class LocationToLocationsQuerySetMixin(ManyToManyQuerySetBaseMixin):
     FIELD_MAP = ("location", "locations")
 
 
-class ClusterToClustersQuerySetMixin(ManyToManyQuerySetBaseMixin):
+class ClusterToClustersQuerySetMixin(BaseManyToManyQuerySetMixin):
     """
     Mixin to convert 'cluster' to 'clusters' in queryset parameters.
     """
