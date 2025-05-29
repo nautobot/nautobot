@@ -72,6 +72,7 @@ class ClusterTypeForm(NautobotModelForm):
 class ClusterTypeFilterForm(NautobotFilterForm):
     model = ClusterType
     q = forms.CharField(required=False, label="Search")
+    clusters = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), to_field_name="name", required=False)
 
 
 class ClusterTypeCSVForm(CustomFieldModelCSVForm):

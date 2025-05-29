@@ -11,7 +11,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase as _TestCase, override_settings, tag
-from django.urls import reverse, NoReverseMatch, resolve
+from django.urls import reverse, NoReverseMatch
 from django.utils.text import slugify
 from django.utils.html import escape
 from django.utils.http import urlencode
@@ -24,7 +24,13 @@ from nautobot.extras.models.mixins import NotesMixin
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
-from nautobot.utilities.utils import get_changes_for_model, get_filterset_for_model, get_form_for_model, csv_format
+from nautobot.utilities.utils import (
+    get_changes_for_model,
+    get_filterset_for_model,
+    get_form_for_model,
+    get_view_for_model,
+    csv_format,
+)
 from .utils import disable_warnings, extract_page_body, get_deletable_objects, post_data
 
 
@@ -662,6 +668,16 @@ class ViewTestCases:
         def get_title(self):
             return bettertitle(self.model._meta.verbose_name_plural)
 
+        def get_list_view(self):
+            return get_view_for_model(self.model, view_type="List")
+
+        def test_list_view_has_filter_form(self):
+            view = self.get_list_view()
+            if hasattr(view, "filterset_form"):  # ObjectListView
+                self.assertIsNotNone(view.filterset_form, "List view lacks a FilterForm")
+            if hasattr(view, "filterset_form_class"):  # ObjectListViewMixin
+                self.assertIsNotNone(view.filterset_form_class, "List viewset lacks a FilterForm")
+
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):
             # Make the request as an unauthenticated user
@@ -849,17 +865,6 @@ class ViewTestCases:
             instance1_csv_headers = list(self.model.csv_headers) + instance1_cf_headers
             self.assertEqual(instance1_csv_headers, list(data.keys()))
             self.assertEqual(instance1_csv_data, list(data.values()))
-
-        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-        def test_filterset_form_attribute(self):
-            """Test that view class has a non-None `filterset_form` attribute."""
-            view_func = resolve(self._get_url("list")).func
-
-            # Check if it's a class-based view
-            if hasattr(view_func, "view_class"):
-                view_class = view_func.view_class
-                self.assertTrue(hasattr(view_class, "filterset_form"))
-                self.assertIsNotNone(getattr(view_class, "filterset_form"))
 
     class CreateMultipleObjectsViewTestCase(ModelViewTestCase):
         """
