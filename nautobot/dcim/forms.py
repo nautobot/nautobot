@@ -2727,7 +2727,7 @@ class ModularComponentEditForm(ComponentEditForm):
         queryset=ModuleFamily.objects.all(), required=False, help_text="Refine module type by family", label="Family"
     )
     module = DynamicModelChoiceField(
-        queryset=Module.objects.all(), required=False, query_params={"module_type__module_family": "$module_family"}
+        queryset=Module.objects.all(), required=False, query_params={"module_family": "$module_family"}
     )
 
     def __init__(self, *args, **kwargs):
