@@ -2399,9 +2399,9 @@ class DeviceAddToClustersForm(BootstrapMixin, forms.Form):
             self.fields["clusters"].help_text = help_text
 
         if self.fields["clusters"].queryset.exists():
-            available_clusters = Cluster.objects.exclude(
-                pk__in=device.clusters.values_list("pk", flat=True)
-            ).order_by("name")
+            available_clusters = Cluster.objects.exclude(pk__in=device.clusters.values_list("pk", flat=True)).order_by(
+                "name"
+            )
             if not available_clusters.exists():
                 disable_fields("This device already belongs to all available clusters.")
         else:
@@ -2409,6 +2409,7 @@ class DeviceAddToClustersForm(BootstrapMixin, forms.Form):
 
         # Only show clusters that the device isn't already a member of
         self.fields["clusters"].widget.add_query_param("devices__n", device.id)
+
 
 class DeviceRemoveFromClustersForm(ConfirmationForm):
     pk = forms.ModelMultipleChoiceField(queryset=Cluster.objects.all(), widget=forms.MultipleHiddenInput())
