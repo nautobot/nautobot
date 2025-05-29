@@ -1266,6 +1266,10 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         self.enabled = False
         self.save()
 
+    def on_workflow_not_initiated(self):
+        """When no workflow was initiated. Delete the object."""
+        self.delete()
+
     @property
     def schedule(self):
         if self.interval == JobExecutionType.TYPE_FUTURE:

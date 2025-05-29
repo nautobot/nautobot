@@ -1,0 +1,2 @@
+Added support for job approvals via approval workflows.
+Added `on_workflow_not_initiated` method to `ApprovableModelMixin`.

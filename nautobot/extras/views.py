@@ -1994,29 +1994,38 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             ignore_singleton_lock = job_form.cleaned_data.pop("_ignore_singleton_lock", False)
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
-            if (not dryrun and job_model.approval_required) or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
-                scheduled_job = ScheduledJob.create_schedule(
-                    job_model,
-                    request.user,
-                    name=schedule_form.cleaned_data.get("_schedule_name"),
-                    start_time=schedule_form.cleaned_data.get("_schedule_start_time"),
-                    interval=schedule_type,
-                    crontab=schedule_form.cleaned_data.get("_recurrence_custom_time"),
-                    approval_required=job_model.approval_required,
-                    job_queue=job_queue,
-                    profile=profile,
-                    ignore_singleton_lock=ignore_singleton_lock,
-                    **job_class.serialize_data(job_form.cleaned_data),
+            # if (not dryrun and job_model.approval_required) or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
+            print(dryrun)  # TBD: how dryrun should affect for this process ?
+            scheduled_job = ScheduledJob.create_schedule(
+                job_model,
+                request.user,
+                name=schedule_form.cleaned_data.get("_schedule_name"),
+                start_time=schedule_form.cleaned_data.get("_schedule_start_time"),
+                interval=schedule_type,
+                crontab=schedule_form.cleaned_data.get("_recurrence_custom_time"),
+                approval_required=job_model.approval_required,
+                job_queue=job_queue,
+                profile=profile,
+                ignore_singleton_lock=ignore_singleton_lock,
+                **job_class.serialize_data(job_form.cleaned_data),
+            )
+            # if approval workflow was created otherwise scheduled_job.pk should be None
+            if scheduled_job.associated_approval_workflows.filter(
+                current_state=ApprovalWorkflowStateChoices.PENDING
+            ).exists():
+                messages.success(request, f"Job '{scheduled_job.name}' successfully submitted for approval")
+                return redirect(return_url or reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk]))
+            elif job_model.approval_required:
+                messages.error(
+                    request,
+                    f"Job '{scheduled_job.name}' was not successfully submitted for approval. No approval workflow definition is defined for it.",
                 )
-
-                if job_model.approval_required:
-                    messages.success(request, f"Job {scheduled_job.name} successfully submitted for approval")
-                    return redirect(return_url or "extras:scheduledjob_approval_queue_list")
-                else:
-                    messages.success(request, f"Job {scheduled_job.name} successfully scheduled")
-                    return redirect(return_url or "extras:scheduledjob_list")
+            elif schedule_type in JobExecutionType.SCHEDULE_CHOICES:
+                messages.success(request, f"Job {scheduled_job.name} successfully scheduled")
+                return redirect(return_url or "extras:scheduledjob_list")
 
             else:
+                scheduled_job.on_workflow_not_initiated()
                 # Enqueue job for immediate execution
                 job_kwargs = job_class.prepare_job_kwargs(job_form.cleaned_data)
                 job_result = JobResult.enqueue_job(
