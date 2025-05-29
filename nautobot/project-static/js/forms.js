@@ -131,14 +131,14 @@ function watchRegenerateButton(context, targetField, repopulate){
     regenerateButton.addEventListener('click', repopulate)
 }
 
-function getSlugField(context){
-    const slugField = context.getElementById("id_slug");
+function getSlugField(){
+    const slugField = document.getElementById("id_slug");
     if(slugField){
         return slugField
     }
     // If id_slug field is not to be found
     // check if it is renamed to key field like what we did for CustomField and Relationship
-    return context.getElementById("id_key");
+    return document.getElementById("id_key");
 }
 
 function initializeAutoField(context, field, sourceFieldsAttrName, defaultMaxLength = 255, transformValue = null){
@@ -158,7 +158,7 @@ function initializeAutoField(context, field, sourceFieldsAttrName, defaultMaxLen
 function initializeSlugField(context){
     // Function to support slug fields auto-populate and slugify logic
     const vanilla_context = context[0] // jsify form passes jquery context
-    const slugField = getSlugField(vanilla_context)
+    const slugField = getSlugField()
     if(!slugField){
         return
     }
@@ -1003,17 +1003,3 @@ $(document).ready((e) => {
     document.querySelectorAll("textarea.form-control").forEach(function(element) {element.addEventListener("keydown", submitOnEnter)});
 })
 
-// Scroll up an offset equal to the first nav element if a hash is present
-// Cannot use '#navbar' because it is not always visible, like in small windows
-function headerOffsetScroll() {
-    if (window.location.hash) {
-        // Short wait needed to allow the page to scroll to the element
-        setTimeout(function() {
-            window.scrollBy(0, -$('nav').height())
-        }, 10);
-    }
-}
-
-// Account for the header height when hash-scrolling
-window.addEventListener('load', headerOffsetScroll);
-window.addEventListener('hashchange', headerOffsetScroll);

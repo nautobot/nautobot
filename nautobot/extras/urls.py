@@ -3,11 +3,9 @@ from django.urls import path
 from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras import views
 from nautobot.extras.models import (
-    ComputedField,
     ConfigContext,
     ConfigContextSchema,
     CustomField,
-    CustomLink,
     DynamicGroup,
     GitRepository,
     GraphQLQuery,
@@ -16,14 +14,15 @@ from nautobot.extras.models import (
     Relationship,
     SecretsGroup,
     Tag,
-    Webhook,
 )
 
 app_name = "extras"
 
 router = NautobotUIViewSetRouter()
+router.register("computed-fields", views.ComputedFieldUIViewSet)
 router.register("contacts", views.ContactUIViewSet)
 router.register("contact-associations", views.ContactAssociationUIViewSet)
+router.register("custom-links", views.CustomLinkUIViewSet)
 router.register("export-templates", views.ExportTemplateUIViewSet)
 router.register("external-integrations", views.ExternalIntegrationUIViewSet)
 router.register("job-buttons", views.JobButtonUIViewSet)
@@ -38,42 +37,12 @@ router.register("secrets", views.SecretUIViewSet)
 router.register("static-group-associations", views.StaticGroupAssociationUIViewSet)
 router.register("statuses", views.StatusUIViewSet)
 router.register("teams", views.TeamUIViewSet)
+router.register("webhooks", views.WebhookUIViewSet)
 
 urlpatterns = [
     # Change logging
     path("object-changes/", views.ObjectChangeListView.as_view(), name="objectchange_list"),
     path("object-changes/<uuid:pk>/", views.ObjectChangeView.as_view(), name="objectchange"),
-    # Computed Fields
-    path("computed-fields/", views.ComputedFieldListView.as_view(), name="computedfield_list"),
-    path("computed-fields/add/", views.ComputedFieldEditView.as_view(), name="computedfield_add"),
-    path(
-        "computed-fields/delete/",
-        views.ComputedFieldBulkDeleteView.as_view(),
-        name="computedfield_bulk_delete",
-    ),
-    path("computed-fields/<uuid:pk>/", views.ComputedFieldView.as_view(), name="computedfield"),
-    path(
-        "computed-fields/<uuid:pk>/edit/",
-        views.ComputedFieldEditView.as_view(),
-        name="computedfield_edit",
-    ),
-    path(
-        "computed-fields/<uuid:pk>/delete/",
-        views.ComputedFieldDeleteView.as_view(),
-        name="computedfield_delete",
-    ),
-    path(
-        "computed-fields/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="computedfield_changelog",
-        kwargs={"model": ComputedField},
-    ),
-    path(
-        "computed-fields/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="computedfield_notes",
-        kwargs={"model": ComputedField},
-    ),
     # Config contexts
     path(
         "config-contexts/",
@@ -213,37 +182,6 @@ urlpatterns = [
         views.ObjectNotesView.as_view(),
         name="customfield_notes",
         kwargs={"model": CustomField},
-    ),
-    # Custom links
-    path("custom-links/", views.CustomLinkListView.as_view(), name="customlink_list"),
-    path("custom-links/add/", views.CustomLinkEditView.as_view(), name="customlink_add"),
-    path(
-        "custom-links/delete/",
-        views.CustomLinkBulkDeleteView.as_view(),
-        name="customlink_bulk_delete",
-    ),
-    path("custom-links/<uuid:pk>/", views.CustomLinkView.as_view(), name="customlink"),
-    path(
-        "custom-links/<uuid:pk>/edit/",
-        views.CustomLinkEditView.as_view(),
-        name="customlink_edit",
-    ),
-    path(
-        "custom-links/<uuid:pk>/delete/",
-        views.CustomLinkDeleteView.as_view(),
-        name="customlink_delete",
-    ),
-    path(
-        "custom-links/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="customlink_changelog",
-        kwargs={"model": CustomLink},
-    ),
-    path(
-        "custom-links/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="customlink_notes",
-        kwargs={"model": CustomLink},
     ),
     # Dynamic Groups
     path("dynamic-groups/", views.DynamicGroupListView.as_view(), name="dynamicgroup_list"),
@@ -520,33 +458,6 @@ urlpatterns = [
         views.ObjectNotesView.as_view(),
         name="tag_notes",
         kwargs={"model": Tag},
-    ),
-    # Webhook
-    path("webhooks/", views.WebhookListView.as_view(), name="webhook_list"),
-    path("webhooks/add/", views.WebhookEditView.as_view(), name="webhook_add"),
-    path(
-        "webhooks/delete/",
-        views.WebhookBulkDeleteView.as_view(),
-        name="webhook_bulk_delete",
-    ),
-    path("webhooks/<uuid:pk>/", views.WebhookView.as_view(), name="webhook"),
-    path("webhooks/<uuid:pk>/edit/", views.WebhookEditView.as_view(), name="webhook_edit"),
-    path(
-        "webhooks/<uuid:pk>/delete/",
-        views.WebhookDeleteView.as_view(),
-        name="webhook_delete",
-    ),
-    path(
-        "webhooks/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="webhook_changelog",
-        kwargs={"model": Webhook},
-    ),
-    path(
-        "webhooks/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="webhook_notes",
-        kwargs={"model": Webhook},
     ),
 ]
 

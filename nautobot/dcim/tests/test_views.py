@@ -430,7 +430,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(location.contact_email, "")
 
 
-class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = RackGroup
     sort_on_field = "name"
 
@@ -451,6 +451,10 @@ class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "name": "Rack Group X",
             "location": location.pk,
             "description": "A new rack group",
+        }
+        cls.bulk_edit_data = {
+            "description": "Updated description",
+            "location": location.pk,
         }
 
 

@@ -11,7 +11,9 @@ from nautobot.dcim.filters import (
     FrontPortFilterSet,
     InterfaceFilterSet,
     LocationFilterSet,
+    ModuleBayFilterSet,
     ModuleFamilyFilterSet,
+    ModuleFilterSet,
     PlatformFilterSet,
     PowerFeedFilterSet,
     PowerOutletFilterSet,
@@ -29,6 +31,8 @@ from nautobot.dcim.models import (
     FrontPort,
     Interface,
     Location,
+    Module,
+    ModuleBay,
     ModuleFamily,
     Platform,
     PowerFeed,
@@ -57,10 +61,36 @@ class DeviceType(OptimizedNautobotObjectType):
         filterset_class = DeviceFilterSet
         exclude = ["_name"]
 
+    all_console_ports = graphene.List("nautobot.dcim.graphql.types.ConsolePortType")
+    all_console_server_ports = graphene.List("nautobot.dcim.graphql.types.ConsoleServerPortType")
+    all_front_ports = graphene.List("nautobot.dcim.graphql.types.FrontPortType")
+    all_interfaces = graphene.List("nautobot.dcim.graphql.types.InterfaceType")
+    all_module_bays = graphene.List("nautobot.dcim.graphql.types.ModuleBayType")
+    all_modules = graphene.List("nautobot.dcim.graphql.types.ModuleType")
+    all_power_ports = graphene.List("nautobot.dcim.graphql.types.PowerPortType")
+    all_power_outlets = graphene.List("nautobot.dcim.graphql.types.PowerOutletType")
+    all_rear_ports = graphene.List("nautobot.dcim.graphql.types.RearPortType")
+    common_vc_interfaces = graphene.List("nautobot.dcim.graphql.types.InterfaceType")
     dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
+    primary_ip = graphene.Field("nautobot.ipam.graphql.types.IPAddressType")
+    vc_interfaces = graphene.List("nautobot.dcim.graphql.types.InterfaceType")
 
     def resolve_dynamic_groups(self, args):
         return DynamicGroup.objects.get_for_object(self)
+
+
+class ModuleBayType(OptimizedNautobotObjectType):
+    class Meta:
+        model = ModuleBay
+        filterset_class = ModuleBayFilterSet
+
+
+class ModuleType(OptimizedNautobotObjectType):
+    device = graphene.Field("nautobot.dcim.graphql.types.DeviceType")
+
+    class Meta:
+        model = Module
+        filterset_class = ModuleFilterSet
 
 
 class PlatformType(OptimizedNautobotObjectType):

@@ -1,6 +1,5 @@
 {% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
-
 {% block breadcrumbs %}
                 {% if object.parent_device %}
                     <li><a href="{% url 'dcim:device_list' %}">Devices</a></li>

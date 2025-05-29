@@ -474,6 +474,13 @@ class LocationMigrateDataToContactForm(NautobotModelForm):
 #
 # Rack groups
 #
+class RackGroupBulkEditForm(LocatableModelBulkEditFormMixin, NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=RackGroup.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    class Meta:
+        model = RackGroup
+        nullable_fields = ["description"]
 
 
 class RackGroupForm(LocatableModelFormMixin, NautobotModelForm):
@@ -720,6 +727,16 @@ class RackReservationForm(NautobotModelForm, TenancyForm):
             "description",
             "tags",
         ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        rack = getattr(self.instance, "rack", None)
+        if rack:
+            if not self.initial.get("location"):
+                self.initial["location"] = rack.location
+            if not self.initial.get("rack_group"):
+                self.initial["rack_group"] = rack.rack_group
 
 
 class RackReservationBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):

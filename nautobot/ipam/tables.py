@@ -214,7 +214,7 @@ class NamespaceTable(BaseTable):
 class VRFTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    # rd = tables.Column(verbose_name="RD")
+    rd = tables.Column(verbose_name="RD")
     tenant = TenantColumn()
     import_targets = tables.TemplateColumn(template_code=VRF_TARGETS, orderable=False)
     export_targets = tables.TemplateColumn(template_code=VRF_TARGETS, orderable=False)
@@ -225,7 +225,7 @@ class VRFTable(StatusTableMixin, BaseTable):
         fields = (
             "pk",
             "name",
-            # "rd",
+            "rd",
             "status",
             "namespace",
             "tenant",
@@ -234,8 +234,7 @@ class VRFTable(StatusTableMixin, BaseTable):
             "export_targets",
             "tags",
         )
-        # default_columns = ("pk", "name", "rd", "namespace", "tenant", "description")
-        default_columns = ("pk", "name", "status", "namespace", "tenant", "description")
+        default_columns = ("pk", "name", "rd", "status", "namespace", "tenant", "description")
 
 
 class VRFDeviceAssignmentTable(BaseTable):
@@ -373,6 +372,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     cloud_networks_count = LinkedCountColumn(
         viewname="cloud:cloudnetwork_list", url_params={"prefixes": "pk"}, verbose_name="Cloud Networks"
     )
+    actions = ButtonsColumn(Prefix)
 
     class Meta(BaseTable.Meta):
         model = Prefix
@@ -392,6 +392,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "rir",
             "date_allocated",
             "description",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -405,6 +406,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "vlan",
             "role",
             "description",
+            "actions",
         )
         row_attrs = {
             "class": lambda record: "success" if not record.present_in_database else "",
