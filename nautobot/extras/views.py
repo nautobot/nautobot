@@ -3005,17 +3005,18 @@ class StatusUIViewSet(NautobotUIViewSet):
 #
 
 
-class TagListView(generic.ObjectListView):
+class TagUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.TagBulkEditForm
+    filterset_class = filters.TagFilterSet
+    filterset_form_class = forms.TagFilterForm
+    form_class = forms.TagForm
     queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
-    filterset = filters.TagFilterSet
-    filterset_form = forms.TagFilterForm
-    table = tables.TagTable
-
-
-class TagView(generic.ObjectView):
-    queryset = Tag.objects.all()
+    serializer_class = serializers.TagSerializer
+    table_class = tables.TagTable
 
     def get_extra_context(self, request, instance):
+        if instance is None:
+            return super().get_extra_context(request, instance)
         tagged_items = (
             TaggedItem.objects.filter(tag=instance).select_related("content_type").prefetch_related("content_object")
         )
@@ -3034,34 +3035,6 @@ class TagView(generic.ObjectView):
             "content_types": instance.content_types.order_by("app_label", "model"),
             **super().get_extra_context(request, instance),
         }
-
-
-class TagEditView(generic.ObjectEditView):
-    queryset = Tag.objects.all()
-    model_form = forms.TagForm
-    template_name = "extras/tag_edit.html"
-
-
-class TagDeleteView(generic.ObjectDeleteView):
-    queryset = Tag.objects.all()
-
-
-class TagBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Tag.objects.all()
-    table = tables.TagTable
-
-
-class TagBulkEditView(generic.BulkEditView):
-    queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
-    table = tables.TagTable
-    form = forms.TagBulkEditForm
-    filterset = filters.TagFilterSet
-
-
-class TagBulkDeleteView(generic.BulkDeleteView):
-    queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
-    table = tables.TagTable
-    filterset = filters.TagFilterSet
 
 
 #
