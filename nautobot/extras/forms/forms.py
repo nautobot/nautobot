@@ -466,7 +466,7 @@ class CustomFieldDescriptionField(CommentField):
         return "Also used as the help text when editing models using this custom field.<br>" + super().default_helptext
 
 
-class CustomFieldBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin, NautobotBulkEditForm):
+class CustomFieldBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=CustomField.objects.all(), widget=forms.MultipleHiddenInput)
     grouping = forms.CharField(
         required=False,
