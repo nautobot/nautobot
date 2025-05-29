@@ -1088,6 +1088,9 @@ class ModuleTypeFilterForm(NautobotFilterForm):
     manufacturer = DynamicModelMultipleChoiceField(
         queryset=Manufacturer.objects.all(), to_field_name="name", required=False
     )
+    module_family = DynamicModelMultipleChoiceField(
+        queryset=ModuleFamily.objects.all(), to_field_name="name", required=False
+    )
     has_console_ports = forms.NullBooleanField(
         required=False,
         label="Has console ports",
@@ -2635,6 +2638,9 @@ class ModuleFilterForm(
         required=False,
         label="Model",
         query_params={"manufacturer": "$manufacturer"},
+    )
+    module_family = DynamicModelMultipleChoiceField(
+        queryset=ModuleFamily.objects.all(), to_field_name="name", required=False
     )
     mac_address = forms.CharField(required=False, label="MAC address")
     has_console_ports = forms.NullBooleanField(
