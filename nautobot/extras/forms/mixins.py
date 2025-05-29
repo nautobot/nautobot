@@ -50,7 +50,7 @@ __all__ = (  # noqa:RUF022
     "TagsBulkEditFormMixin",
     # 2.0 TODO: remove the below deprecated aliases
     "AddRemoveTagsForm",
-    # "CustomFieldBulkEditForm",
+    "CustomFieldBulkEditForm",
     "CustomFieldModelForm",
     "RelationshipModelForm",
     "RoleModelBulkEditFormMixin",
