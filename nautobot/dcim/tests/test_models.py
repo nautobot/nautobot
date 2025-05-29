@@ -1505,6 +1505,12 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         )
         self.device.validated_save()
 
+        self.cluster_type = ClusterType.objects.create(name="Test Cluster Type")
+        self.cluster = Cluster.objects.create(
+            name="Test Cluster", cluster_type=self.cluster_type, location=self.location_3
+        )
+        self.device.clusters.add(self.cluster)
+
     def test_natural_key_default(self):
         """Ensure that default natural-key for Device is (name, tenant, location)."""
         self.assertEqual([self.device.name, None, *self.device.location.natural_key()], self.device.natural_key())
@@ -1965,6 +1971,42 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         child_mtime_after_parent_site_update_save = str(Device.objects.get(name="Child Device 1").last_updated)
 
         self.assertNotEqual(child_mtime_after_parent_rack_update_save, child_mtime_after_parent_site_update_save)
+
+    def test_cluster_queries(self):
+        with self.subTest("Assert filtering and excluding `cluster`"):
+            self.assertQuerysetEqualAndNotEmpty(
+                Device.objects.filter(cluster=self.cluster),
+                Device.objects.filter(clusters__in=[self.cluster]),
+            )
+            self.assertQuerysetEqualAndNotEmpty(
+                Device.objects.exclude(cluster=self.cluster),
+                Device.objects.exclude(clusters__in=[self.cluster]),
+            )
+            self.assertQuerysetEqualAndNotEmpty(
+                Device.objects.filter(cluster__in=[self.cluster]),
+                Device.objects.filter(clusters__in=[self.cluster]),
+            )
+            self.assertQuerysetEqualAndNotEmpty(
+                Device.objects.exclude(cluster__in=[self.cluster]),
+                Device.objects.exclude(clusters__in=[self.cluster]),
+            )
+
+        # We use `assertQuerysetEqualAndNotEmpty` for test validation. Including a nullable field could lead
+        # to flaky tests where querysets might return None, causing tests to fail. Therefore, we select
+        # fields that consistently contain values to ensure reliable filtering.
+        query_params = ["name", "cluster_type", "location"]
+
+        for field_name in query_params:
+            with self.subTest(f"Assert cluster__{field_name} query."):
+                value = getattr(self.cluster, field_name)
+                self.assertQuerysetEqualAndNotEmpty(
+                    Device.objects.filter(**{f"cluster__{field_name}": value}),
+                    Device.objects.filter(**{f"clusters__{field_name}": value}),
+                )
+                self.assertQuerysetEqualAndNotEmpty(
+                    Device.objects.exclude(**{f"cluster__{field_name}": value}),
+                    Device.objects.exclude(**{f"clusters__{field_name}": value}),
+                )
 
 
 class DeviceBayTestCase(ModelTestCases.BaseModelTestCase):
