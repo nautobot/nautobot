@@ -1560,3 +1560,24 @@ class ViewTestCases:
                     response = self.client.post(self._get_url("bulk_rename"), data, follow=True)
                     expected_message = f"No valid {verbose_name_plural} were selected."
                     self.assertBodyContains(response, expected_message)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_modular_component_create_form_fields(self):
+            """Test that the modular component create form has the expected fields."""
+            expected_fields = [
+                '<label class="col-md-3 control-label" for="id_description">Description</label>',
+                '<label class="col-md-3 control-label" for="id_device">Device</label>',
+                '<label class="col-md-3 control-label" for="id_module">Module</label>',
+            ]
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+
+            response = self.client.get(self._get_url("add"))
+            self.assertHttpStatus(response, 200)
+            response_body = utils.extract_page_body(response.content.decode(response.charset))
+
+            # Check that the form contains the expected fields
+            for field in expected_fields:
+                self.assertInHTML(
+                    field,
+                    response_body,
+                )

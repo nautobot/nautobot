@@ -2565,6 +2565,7 @@ class ModularComponentCreateForm(ModularComponentForm):
 
     device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
     module = DynamicModelChoiceField(queryset=Module.objects.all(), required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
 
 class ComponentEditForm(NautobotModelForm):
