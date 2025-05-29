@@ -2162,8 +2162,7 @@ class DeviceView(generic.ObjectView):
 
         # Clusters table for device
         clusters = instance.clusters.all()
-        exclude = ("device_count", "vm_count")
-        cluster_table = ClusterTable(clusters, orderable=False, exclude=exclude)
+        cluster_table = ClusterTable(clusters, orderable=False)
         if request.user.has_perm("virtualization.delete_cluster"):
             cluster_table.columns.show("pk")
 
