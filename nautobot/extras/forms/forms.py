@@ -466,21 +466,19 @@ class CustomFieldDescriptionField(CommentField):
         return "Also used as the help text when editing models using this custom field.<br>" + super().default_helptext
 
 
-class CustomFieldBulkEditForm(
-    BootstrapMixin,
-    NoteModelBulkEditFormMixin,
-    CustomFieldModelBulkEditFormMixin,
-    BulkEditForm,
-):
+class CustomFieldBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=CustomField.objects.all(), widget=forms.MultipleHiddenInput)
     grouping = forms.CharField(
         required=False,
-        max_length=255,
+        max_length=CHARFIELD_MAX_LENGTH,
         label="Grouping",
         help_text="Human-readable grouping that this custom field belongs to.",
     )
     description = forms.CharField(
-        required=False, max_length=255, label="Description", help_text="A helpful description for this field."
+        required=False,
+        max_length=CHARFIELD_MAX_LENGTH,
+        label="Description",
+        help_text="A helpful description for this field.",
     )
     required = forms.NullBooleanField(
         required=False,
