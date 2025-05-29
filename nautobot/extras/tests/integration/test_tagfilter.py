@@ -19,7 +19,7 @@ class TagFilterTestCase(SeleniumTestCase):
         # Dynamic model dropdowns like TagFilter default to 50 items at a time from the API
         provider_ct = ContentType.objects.get_for_model(Provider)
         for i in range(1, 52):
-            self.tag = Tag.objects.create(name=f"{i:02d} Provider Tag")
+            self.tag = Tag.objects.create(name=f"A Provider Tag {i:02d}")
             self.tag.content_types.add(provider_ct)
 
     def test_tag_matching_content_type(self):
