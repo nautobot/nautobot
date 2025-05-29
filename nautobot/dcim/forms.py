@@ -5,6 +5,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db.models import Q
+from django.urls import reverse
 from timezone_field import TimeZoneFormField
 
 from nautobot.circuits.models import Circuit, CircuitTermination, Provider
@@ -2519,20 +2520,27 @@ class DeviceAddToClustersForm(BootstrapMixin, forms.Form):
         super().__init__(*args, **kwargs)
 
         def disable_fields(help_text: str):
-            self.fields["location"].disabled = True
             self.fields["cluster_type"].disabled = True
             self.fields["cluster_group"].disabled = True
+            self.fields["tenant"].disabled = True
+            self.fields["location"].disabled = True
             self.fields["clusters"].disabled = True
             self.fields["clusters"].help_text = help_text
+
+        cluster_add_url = (
+            f"{reverse("virtualization:cluster_add")}?return_url="
+            f"{reverse("dcim:device_add_to_clusters", kwargs={"pk": device.pk})}"
+        )
+        cluster_add_link = f'<a href="{cluster_add_url}">Create a new cluster</a>'
 
         if self.fields["clusters"].queryset.exists():
             available_clusters = Cluster.objects.exclude(pk__in=device.clusters.values_list("pk", flat=True)).order_by(
                 "name"
             )
             if not available_clusters.exists():
-                disable_fields("This device already belongs to all available clusters.")
+                disable_fields(f"This device already belongs to all available clusters. {cluster_add_link}.")
         else:
-            disable_fields('No clusters exist. <a href="/virtualization/clusters/add">Create a cluster</a>.')
+            disable_fields(f"No clusters exist. {cluster_add_link}.")
 
         # Only show clusters that the device isn't already a member of
         self.fields["clusters"].widget.add_query_param("devices__n", device.id)
