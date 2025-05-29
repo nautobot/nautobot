@@ -103,6 +103,7 @@ __all__ = (
     "CustomFieldModelCSVForm",
     "CustomFieldBulkCreateForm",  # 2.0 TODO remove this deprecated class
     "CustomFieldChoiceFormSet",
+    "CustomFieldViewFilterForm",
     "CustomLinkForm",
     "CustomLinkFilterForm",
     "DynamicGroupForm",
@@ -398,6 +399,17 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
             "validation_maximum",
             "validation_regex",
         )
+
+
+class CustomFieldViewFilterForm(BootstrapMixin, forms.Form):
+    model = CustomField
+    q = forms.CharField(required=False, label="Search")
+    content_types = MultipleContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()),
+        choices_as_strings=True,
+        required=False,
+        label="Content Type(s)",
+    )
 
 
 class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelFormMixin):

@@ -20,6 +20,7 @@ class TenantGroupListView(generic.ObjectListView):
         TenantGroup.objects.all(), Tenant, "group", "tenant_count", cumulative=True
     )
     filterset = filters.TenantGroupFilterSet
+    filterset_form = forms.TenantGroupFilterForm
     table = tables.TenantGroupTable
 
 

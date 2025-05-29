@@ -24,7 +24,13 @@ from nautobot.extras.models.mixins import NotesMixin
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
-from nautobot.utilities.utils import get_changes_for_model, get_filterset_for_model, get_form_for_model, csv_format
+from nautobot.utilities.utils import (
+    get_changes_for_model,
+    get_filterset_for_model,
+    get_form_for_model,
+    get_view_for_model,
+    csv_format,
+)
 from .utils import disable_warnings, extract_page_body, get_deletable_objects, post_data
 
 
@@ -661,6 +667,16 @@ class ViewTestCases:
 
         def get_title(self):
             return bettertitle(self.model._meta.verbose_name_plural)
+
+        def get_list_view(self):
+            return get_view_for_model(self.model, view_type="List")
+
+        def test_list_view_has_filter_form(self):
+            view = self.get_list_view()
+            if hasattr(view, "filterset_form"):  # ObjectListView
+                self.assertIsNotNone(view.filterset_form, "List view lacks a FilterForm")
+            if hasattr(view, "filterset_form_class"):  # ObjectListViewMixin
+                self.assertIsNotNone(view.filterset_form_class, "List viewset lacks a FilterForm")
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):

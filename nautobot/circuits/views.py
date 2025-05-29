@@ -30,6 +30,7 @@ class CircuitTypeUIViewSet(
 ):
     bulk_create_form_class = forms.CircuitTypeCSVForm
     filterset_class = filters.CircuitTypeFilterSet
+    filterset_form_class = forms.CircuitTypeFilterForm
     form_class = forms.CircuitTypeForm
     queryset = CircuitType.objects.annotate(circuit_count=count_related(Circuit, "type"))
     serializer_class = serializers.CircuitTypeSerializer
