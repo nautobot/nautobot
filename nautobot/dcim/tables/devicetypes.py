@@ -158,6 +158,7 @@ class ModuleTypeTable(BaseTable):
     pk = ToggleColumn()
     manufacturer = tables.Column(linkify=True)
     model = tables.Column(linkify=True, verbose_name="Module Type")
+    module_family = tables.Column(linkify=True)
     module_count = LinkedCountColumn(
         viewname="dcim:module_list",
         url_params={"module_type": "pk"},
