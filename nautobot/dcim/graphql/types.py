@@ -12,7 +12,6 @@ from nautobot.dcim.filters import (
     InterfaceFilterSet,
     LocationFilterSet,
     ModuleBayFilterSet,
-    ModuleFamilyFilterSet,
     ModuleFilterSet,
     PlatformFilterSet,
     PowerFeedFilterSet,
@@ -33,7 +32,6 @@ from nautobot.dcim.models import (
     Location,
     Module,
     ModuleBay,
-    ModuleFamily,
     Platform,
     PowerFeed,
     PowerOutlet,
@@ -403,12 +401,3 @@ class CableTerminationTypes(graphene.Union):
             return RearPortType
 
         return None
-
-
-class ModuleFamilyType(OptimizedNautobotObjectType):
-    """GraphQL type for ModuleFamily model."""
-
-    class Meta:
-        model = ModuleFamily
-        fields = "__all__"
-        filterset_class = ModuleFamilyFilterSet
