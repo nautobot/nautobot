@@ -862,9 +862,9 @@ class AddRemoveTagsForm(TagsBulkEditFormMixin):
     pass
 
 
-# @class_deprecated_in_favor_of(CustomFieldModelBulkEditFormMixin)
-# class CustomFieldBulkEditForm(CustomFieldModelBulkEditFormMixin):
-#     pass
+@class_deprecated_in_favor_of(CustomFieldModelBulkEditFormMixin)
+class CustomFieldBulkEditForm(CustomFieldModelBulkEditFormMixin):
+    pass
 
 
 @class_deprecated_in_favor_of(CustomFieldModelFormMixin)
