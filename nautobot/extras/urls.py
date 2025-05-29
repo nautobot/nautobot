@@ -13,7 +13,6 @@ from nautobot.extras.models import (
     Note,
     Relationship,
     SecretsGroup,
-    Tag,
 )
 
 app_name = "extras"
