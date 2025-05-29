@@ -1693,7 +1693,10 @@ class ModuleBayTemplateForm(ModularComponentTemplateForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["module_family"].help_text = "If assigned to a family, this module bay will only accept module types in the same family."
+        self.fields[
+            "module_family"
+        ].help_text = "If assigned to a family, this module bay will only accept module types in the same family."
+
 
 class ModuleBayBaseCreateForm(BootstrapMixin, forms.Form):
     module_family = DynamicModelChoiceField(

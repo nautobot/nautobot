@@ -4341,6 +4341,10 @@ class ModuleFamilyTestCase(FilterTestCases.FilterTestCase):
         )
 
         cls.module_types = (
-            ModuleType.objects.create(manufacturer=manufacturers[0], model="Model 1", module_family=cls.module_families[0]),
-            ModuleType.objects.create(manufacturer=manufacturers[1], model="Model 2", module_family=cls.module_families[1]),
+            ModuleType.objects.create(
+                manufacturer=manufacturers[0], model="Model 1", module_family=cls.module_families[0]
+            ),
+            ModuleType.objects.create(
+                manufacturer=manufacturers[1], model="Model 2", module_family=cls.module_families[1]
+            ),
         )
