@@ -2503,7 +2503,11 @@ class DeviceAddToClustersForm(BootstrapMixin, forms.Form):
     clusters = DynamicModelMultipleChoiceField(
         queryset=Cluster.objects.all(),
         required=True,
-        query_params={"cluster_group": "$cluster_group", "cluster_type": "$cluster_type"},
+        query_params={
+            "cluster_group": "$cluster_group",
+            "cluster_type": "$cluster_type",
+            "location": "$location",
+        },
     )
 
     def __init__(self, device, *args, **kwargs):
