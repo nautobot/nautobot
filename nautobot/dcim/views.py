@@ -2164,10 +2164,7 @@ class DeviceView(generic.ObjectView):
         clusters = instance.clusters.all()
         exclude = ("device_count", "vm_count")
         cluster_table = ClusterTable(clusters, orderable=False, exclude=exclude)
-        if cluster_table is not None and (
-            request.user.has_perm("virtualization.change_cluster")
-            or request.user.has_perm("virtualization.delete_cluster")
-        ):
+        if request.user.has_perm("virtualization.delete_cluster"):
             cluster_table.columns.show("pk")
 
         paginate = {
