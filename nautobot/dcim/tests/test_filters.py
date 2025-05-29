@@ -677,13 +677,16 @@ def common_test_data(cls):
             manufacturer=cls.manufacturers[0], model="Filter Test Module Type 1", comments="Module Type 1"
         ),
         ModuleType.objects.create(
-            manufacturer=cls.manufacturers[1], model="Filter Test Module Type 2", comments="Module Type 2"
+            manufacturer=cls.manufacturers[1],
+            model="Filter Test Module Type 2",
+            comments="Module Type 2",
+            module_family=cls.module_families[0],
         ),
         ModuleType.objects.create(
             manufacturer=cls.manufacturers[2],
             model="Filter Test Module Type 3",
             comments="Module Type 3",
-            module_family=cls.module_families[0],
+            module_family=cls.module_families[1],
         ),
     )
 
@@ -4105,6 +4108,8 @@ class ModuleTypeTestCase(FilterTestCases.FilterTestCase):
         ("rear_port_templates", "rear_port_templates__id"),
         ("rear_port_templates", "rear_port_templates__name"),
         ("module_bay_templates", "module_bay_templates__id"),
+        ("module_family", "module_family__id"),
+        ("module_family", "module_family__name"),
     ]
 
     @classmethod
