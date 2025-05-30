@@ -1254,6 +1254,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
     def on_workflow_initiated(self):
         """When initiated, set enabled to False."""
         self.enabled = False
+        self.approval_required = True
         self.save()
 
     def on_workflow_approved(self):
@@ -1265,10 +1266,6 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         """When denied, set enabled to False."""
         self.enabled = False
         self.save()
-
-    def on_workflow_not_initiated(self):
-        """When no workflow was initiated. Delete the object."""
-        self.delete()
 
     @property
     def schedule(self):

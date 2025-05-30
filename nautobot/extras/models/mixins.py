@@ -102,10 +102,6 @@ class ApprovableModelMixin(models.Model):
         """Called when an approval workflow is denied."""
         raise NotImplementedError("Subclasses must implement `on_workflow_denied`.")
 
-    def on_workflow_not_initiated(self):
-        """Called if no workflow was initiated."""
-        raise NotImplementedError("Subclasses must implement `on_workflow_not_initiated`.")
-
 
 class ContactMixin(models.Model):
     """Abstract mixin for enabling Contact/Team association to a given model class."""

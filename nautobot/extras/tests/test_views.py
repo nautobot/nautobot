@@ -3555,8 +3555,12 @@ class JobTestCase(
             )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    @mock.patch("nautobot.extras.models.mixins.ApprovableModelMixin.begin_approval_workflow")
-    def test_run_job_with_requires_approval_triggers_approval_workflow(self, mock_begin_approval_workflow, _):
+    def test_run_job_with_requires_approval_triggers_approval_workflow(self, _):
+        ApprovalWorkflowDefinition.objects.create(
+            name="Test Approval Workflow Definition 1",
+            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+            priority=0,
+        )
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
 
@@ -3568,8 +3572,12 @@ class JobTestCase(
         }
         for run_url in self.run_urls:
             response = self.client.post(run_url, data)
-            self.assertRedirects(response, reverse("extras:scheduledjob_approval_queue_list"))
-            mock_begin_approval_workflow.assert_called()
+            scheduled_job = ScheduledJob.objects.last()
+            # Assert the redirect goes to that job's approval workflow view
+            self.assertRedirects(
+                response,
+                reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk]),
+            )
 
     def test_job_object_change_log_view(self):
         """Assert Job change log view displays appropriate header"""
