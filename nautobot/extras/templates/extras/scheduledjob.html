@@ -49,20 +49,24 @@
                   </td>
               </tr>
               <tr>
+                  <td>Job</td>
+                  <td>{{ object.job_model|hyperlinked_object }}</td>
+              </tr>
+              <tr>
                   <td>Requester</td>
                   <td>
-                      {{ object.user }}
+                      {{ object.user|placeholder }}
                   </td>
+              </tr>
+              <tr>
+                  <td>Approval Required?</td>
+                  <td>{{ object.approval_required | render_boolean }}</td>
               </tr>
               <tr>
                   <td>Approver</td>
                   <td>
                       {{ object.approved_by_user | placeholder }}
                   </td>
-              </tr>
-              <tr>
-                  <td>Approval Required?</td>
-                  <td>{{ object.approval_required | render_boolean }}</td>
               </tr>
               <tr>
                   <td>Approved At</td>
@@ -82,6 +86,10 @@
                   <td>{{ object.enabled | render_boolean }}</td>
               </tr>
               <tr>
+                  <td>Job Queue</td>
+                  <td>{{ object.job_queue | hyperlinked_object }}</td>
+              </tr>
+              <tr>
                   <td>Interval</td>
                   <td>
                       {{ object.interval }}
@@ -95,9 +103,9 @@
               <tr>
                   <td>Start Time</td>
                   <td>
-                      {{ object.start_time|timezone:object.time_zone|date:'Y-m-d H:i:s T' }}
+                      {{ object.start_time|timezone:object.time_zone|date:settings.SHORT_DATETIME_FORMAT }}
                       {% if default_time_zone != object.time_zone %}
-                          <br>{{ object.start_time|timezone:default_time_zone|date:'Y-m-d H:i:s T' }}
+                          <br>{{ object.start_time|timezone:default_time_zone|date:settings.SHORT_DATETIME_FORMAT }}
                       {% endif %}
                   </td>
               </tr>
@@ -105,9 +113,9 @@
                   <td>Last Run At</td>
                   <td>
                       {% if object.last_run_at %}
-                          {{ object.last_run_at|timezone:object.time_zone|date:'Y-m-d H:i:s T' }}
+                          {{ object.last_run_at|timezone:object.time_zone|date:settings.SHORT_DATETIME_FORMAT }}
                           {% if default_time_zone != object.time_zone %}
-                              <br>{{ object.last_run_at|timezone:default_time_zone|date:'Y-m-d H:i:s T' }}
+                              <br>{{ object.last_run_at|timezone:default_time_zone|date:SHORT_DATETIME_FORMAT }}
                           {% endif %}
                       {% else %}
                           {{ object.last_run_at|placeholder }}
@@ -141,4 +149,12 @@
           </table>
       </div>
     {% endif %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Celery Keyword Arguments</strong>
+        </div>
+        <div class="panel-body">
+            {% include 'extras/inc/json_data.html' with data=object.celery_kwargs format="json" %}
+        </div>
+    </div>
 {% endblock %}
