@@ -490,7 +490,7 @@ class CustomFieldBulkUpdateForm(
     )
     filter_logic = forms.ChoiceField(
         required=False,
-        choices=add_blank_choice(CustomFieldFilterLogicChoices),
+        choices=add_blank_choice(CustomFieldFilterLogicChoices.CHOICES),
         label="Filter logic",
         help_text="Loose matches any instance of a given string; Exact matches the entire field.",
     )

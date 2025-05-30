@@ -548,6 +548,7 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
     filterset_form_class = forms.CustomFieldFilterForm
     form_class = forms.CustomFieldForm
     table_class = tables.CustomFieldTable
+    template_name = "extras/customfield_edit.html"
     action_buttons = ("add",)
 
     def get_extra_context(self, request, instance):
