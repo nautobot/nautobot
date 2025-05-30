@@ -56,7 +56,7 @@ class ApprovableModelMixin(models.Model):
 
         # First check if there's already a pending workflow instance
         if self.associated_approval_workflows.filter(current_state=ApprovalWorkflowStateChoices.PENDING).exists():
-            return self.approval_workflow_instances.filter(current_state=ApprovalWorkflowStateChoices.PENDING).first()
+            return self.associated_approval_workflows.filter(current_state=ApprovalWorkflowStateChoices.PENDING).first()
 
         # Check if there's a relevant workflow definition
         workflow_definition = ApprovalWorkflowDefinition.objects.find_for_model(self)

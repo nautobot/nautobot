@@ -1254,6 +1254,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
     def on_workflow_initiated(self):
         """When initiated, set enabled to False."""
         self.enabled = False
+        self.approval_required = True
         self.save()
 
     def on_workflow_approved(self):
