@@ -577,7 +577,7 @@ class Device(PrimaryModel, ConfigContextModel):
         """
         # Ensures that the first cluster assigned to the device is returned for maximum
         # backward compatibility.
-        return self.clusters.order_by('created').first()
+        return self.clusters.order_by("created").first()
 
     @cluster.setter
     def cluster(self, value):
