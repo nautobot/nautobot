@@ -839,7 +839,7 @@ class Device(PrimaryModel, ConfigContextModel):
                 )
 
         # A Device can only be assigned to a Cluster in the same location or parent location, if any
-        if self.clusters.exists() and self.location is not None:
+        if self.location is not None:
             for cluster in self.clusters.all():
                 if cluster.location is not None and cluster.location not in self.location.ancestors(include_self=True):
                     raise ValidationError(
@@ -1120,6 +1120,7 @@ class DeviceClusterAssignment(BaseModel):
     device = models.ForeignKey("dcim.Device", on_delete=models.CASCADE, related_name="cluster_assignments")
     cluster = models.ForeignKey("virtualization.Cluster", on_delete=models.CASCADE, related_name="device_assignments")
     is_metadata_associable_model = False
+    documentation_static_path = "docs/user-guide/core-data-model/dcim/device.html"
 
     class Meta:
         unique_together = ["device", "cluster"]

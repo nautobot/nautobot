@@ -560,8 +560,6 @@ class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         fields = list(super().get_field_names(declared_fields, info))
         self.extend_field_names(fields, "parent_bay")
         self.extend_field_names(fields, "config_context", opt_in_only=True)
-        if "cluster" not in fields:
-            fields.append("cluster")
         return fields
 
     @extend_schema_field(serializers.DictField)

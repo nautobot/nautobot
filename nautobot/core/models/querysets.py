@@ -193,27 +193,45 @@ class BaseManyToManyQuerySetMixin:
     """
     Base mixin to provide backward compatibility for fields that have been changed from ForeignKey to ManyToManyField.
 
-    The FIELD_MAP class variable is a tuple of two strings, the old field name (when it was a ForeignKey) and
-    the new field name (now a ManyToManyField).
+    Subclasses should define FIELD_MAP as a dictionary of field mappings, where the key is the old field name
+    and the value is the new field name.
     """
 
-    FIELD_MAP: ClassVar[tuple[str, str]] = ()
+    FIELD_MAP: ClassVar[dict[str, str]] = {}
+
+    def __init_subclass__(cls, **kwargs):
+        """Combine FIELD_MAP from all parent classes into a single dictionary."""
+        super().__init_subclass__(**kwargs)
+        combined_field_map = {}
+        for base in reversed(cls.__mro__):
+            if hasattr(base, "FIELD_MAP") and isinstance(getattr(base, "FIELD_MAP"), dict):
+                combined_field_map.update(base.FIELD_MAP)
+        cls.FIELD_MAP = combined_field_map
 
     def _convert_to_m2m_field(self, kwargs):
-        if not self.FIELD_MAP:
+        field_mappings = self.FIELD_MAP
+        if not field_mappings:
             return kwargs
 
-        old_field, new_field = self.FIELD_MAP
         updated_kwargs = {}
 
         for field, value in kwargs.items():
-            if field == old_field:
-                # Direct field query becomes __in for ManyToMany
-                updated_kwargs[f"{new_field}__in"] = [value]
-            elif field.startswith(f"{old_field}__"):
-                # Replace old field prefix with new field prefix
-                updated_kwargs[field.replace(old_field, new_field, 1)] = value
-            else:
+            converted = False
+
+            # Check each field mapping
+            for old_field, new_field in field_mappings.items():
+                if field == old_field:
+                    # Direct field query becomes __in for ManyToMany
+                    updated_kwargs[f"{new_field}__in"] = [value]
+                    converted = True
+                    break
+                elif field.startswith(f"{old_field}__"):
+                    # Replace old field prefix with new field prefix
+                    updated_kwargs[field.replace(old_field, new_field, 1)] = value
+                    converted = True
+                    break
+
+            if not converted:
                 updated_kwargs[field] = value
 
         return updated_kwargs
@@ -232,7 +250,7 @@ class LocationToLocationsQuerySetMixin(BaseManyToManyQuerySetMixin):
     Mixin to convert 'location' to 'locations' in queryset parameters.
     """
 
-    FIELD_MAP = ("location", "locations")
+    FIELD_MAP = {"location": "locations"}
 
 
 class ClusterToClustersQuerySetMixin(BaseManyToManyQuerySetMixin):
@@ -240,4 +258,4 @@ class ClusterToClustersQuerySetMixin(BaseManyToManyQuerySetMixin):
     Mixin to convert 'cluster' to 'clusters' in queryset parameters.
     """
 
-    FIELD_MAP = ("cluster", "clusters")
+    FIELD_MAP = {"cluster": "clusters"}
