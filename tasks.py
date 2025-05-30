@@ -168,9 +168,14 @@ def docker_compose(context, command, **kwargs):
         **kwargs: Passed through to the context.run() call.
     """
     NAUTOBOT_VER = get_nautobot_major_minor_version(context)
+    project_name = (
+        "development"
+        if context.nautobot.project_name == "development"
+        else f"{context.nautobot.project_name}-{NAUTOBOT_VER.replace('.', '-')}"
+    )
     compose_command_tokens = [
         "docker compose",
-        f'--project-name "{context.nautobot.project_name}-{NAUTOBOT_VER.replace(".", "-")}"',
+        f'--project-name "{project_name}"',
         f'--project-directory "{context.nautobot.compose_dir}"',
     ]
 
@@ -400,6 +405,7 @@ def get_dependency_version(dependency_name):
     return version_match.group(1)
 
 
+@task
 def dump_service_ports_to_disk(context):
     """Useful for downstream utilities without direct docker access to determine ports.
 
@@ -534,19 +540,29 @@ def destroy(context):
     docker_compose(context, "down --volumes --remove-orphans")
 
 
-@task
-def vscode(context):
-    """Launch Visual Studio Code with the appropriate Environment variables to run in a container."""
-    command = "code nautobot.code-workspace"
+@task(help={"workspace_launch": "Relaunch vscode using workspace file? Defaults to True."})
+def vscode(context, workspace_launch=True):
+    """Visual Studio Code specific environment helpers.
 
+    workspace_launch: This will re-launch VSCode using the workspace file/settings. Has no
+    affect if user is already in the workspace.
+    """
     if not HAS_PYYAML:
         raise Exit("You must install pyyaml ('pip install --user pyyaml') to use this command.")
 
     # Setup PYTHON version if using docker dev containers
     env_file_path = os.path.join(BASE_DIR, "development/.env")
-    if not os.path.exists(env_file_path):
+    try:
+        with open(env_file_path, "r") as env_file_obj:
+            lines = env_file_obj.readlines()
+    except FileNotFoundError:
+        lines = []
+    finally:
+        cleaned_lines = [og_line for og_line in lines if not re.match(r"^(NAUTOBOT_VER|PYTHON_VER)=", og_line)]
+        cleaned_lines.append(f"PYTHON_VER={context.nautobot.python_ver}")
+        cleaned_lines.append(f"NAUTOBOT_VER={get_nautobot_major_minor_version(context)}")
         with open(env_file_path, "w") as env_file_obj:
-            env_file_obj.write(f"PYTHON_VER={context.nautobot.python_ver}")
+            env_file_obj.write("\n".join(cleaned_lines))
 
     # Start nautobot services with debugpy enabled
     try:
@@ -565,7 +581,9 @@ def vscode(context):
         with open("invoke.yml", "w") as f:
             yaml.dump(invoke_settings, f)
 
-    context.run(command, env={"PYTHON_VER": context.nautobot.python_ver})
+    if workspace_launch:
+        command = "code nautobot.code-workspace"
+        context.run(command, env={"PYTHON_VER": context.nautobot.python_ver})
 
 
 @task(

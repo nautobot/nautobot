@@ -429,7 +429,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(location.contact_email, "")
 
 
-class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = RackGroup
     sort_on_field = "name"
 
@@ -450,6 +450,10 @@ class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "name": "Rack Group X",
             "location": location.pk,
             "description": "A new rack group",
+        }
+        cls.bulk_edit_data = {
+            "description": "Updated description",
+            "location": location.pk,
         }
 
 
@@ -760,7 +764,7 @@ class DeviceFamilyTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         DeviceFamily.objects.create(name="Deletable Device Family 3")
 
 
-class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = Manufacturer
 
     @classmethod
@@ -768,6 +772,9 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         cls.form_data = {
             "name": "Manufacturer X",
             "description": "A new manufacturer",
+        }
+        cls.bulk_edit_data = {
+            "description": "Updated manufacturer description",
         }
 
     def get_deletable_object(self):
@@ -2033,7 +2040,7 @@ class ModuleBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
         }
 
 
-class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = Platform
 
     @classmethod
@@ -2052,6 +2059,13 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "napalm_args": None,
             "network_driver": "juniper_junos",
             "description": "A new platform",
+        }
+        cls.bulk_edit_data = {
+            "manufacturer": manufacturer.pk,
+            "napalm_driver": "iosxr",
+            "napalm_args": '{"timeout": 30, "retries": 3}',
+            "network_driver": "cisco_ios",
+            "description": "Updated platform description",
         }
 
 

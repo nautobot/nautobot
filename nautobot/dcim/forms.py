@@ -473,6 +473,13 @@ class LocationMigrateDataToContactForm(NautobotModelForm):
 #
 # Rack groups
 #
+class RackGroupBulkEditForm(LocatableModelBulkEditFormMixin, NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=RackGroup.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    class Meta:
+        model = RackGroup
+        nullable_fields = ["description"]
 
 
 class RackGroupForm(LocatableModelFormMixin, NautobotModelForm):
@@ -720,6 +727,16 @@ class RackReservationForm(NautobotModelForm, TenancyForm):
             "tags",
         ]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        rack = getattr(self.instance, "rack", None)
+        if rack:
+            if not self.initial.get("location"):
+                self.initial["location"] = rack.location
+            if not self.initial.get("rack_group"):
+                self.initial["rack_group"] = rack.rack_group
+
 
 class RackReservationBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=RackReservation.objects.all(), widget=forms.MultipleHiddenInput())
@@ -768,6 +785,16 @@ class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
 #
 
 
+class ManufacturerBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=Manufacturer.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    class Meta:
+        nullable_fields = [
+            "description",
+        ]
+
+
 class ManufacturerForm(NautobotModelForm):
     class Meta:
         model = Manufacturer
@@ -784,6 +811,25 @@ class ManufacturerFilterForm(NautobotFilterForm):
         queryset=DeviceType.objects.all(), to_field_name="model", required=False
     )
     platforms = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), to_field_name="name", required=False)
+
+
+#
+# Platform
+#
+
+
+class PlatformBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=Platform.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
+
+    network_driver = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    napalm_driver = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    napalm_args = forms.JSONField(required=False, widget=forms.Textarea(attrs={"rows": 4}))
+
+    class Meta:
+        nullable_fields = ["manufacturer", "network_driver", "napalm_driver", "napalm_args"]
 
 
 #
