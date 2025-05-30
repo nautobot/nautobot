@@ -2539,6 +2539,9 @@ class DeviceAddToClustersForm(BootstrapMixin, forms.Form):
             )
             if not available_clusters.exists():
                 disable_fields(f"This device already belongs to all available clusters. {cluster_add_link}.")
+            else:
+                if available_clusters.count() == 1:
+                    self.fields["clusters"].initial = [available_clusters.first().pk]
         else:
             disable_fields(f"No clusters exist. {cluster_add_link}.")
 
