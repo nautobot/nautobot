@@ -475,6 +475,14 @@ class APIRootView(AuthenticatedAPIRootView):
                         ),
                     ),
                     (
+                        "vpn",
+                        reverse(
+                            "vpn-api:api-root",
+                            request=request,
+                            format=format,
+                        ),
+                    ),
+                    (
                         "wireless",
                         reverse(
                             "wireless-api:api-root",

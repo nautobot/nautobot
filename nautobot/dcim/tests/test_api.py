@@ -3562,6 +3562,7 @@ class DeviceTypeToSoftwareImageFileTestCase(
 
 class ControllerTestCase(APIViewTestCases.APIViewTestCase):
     model = Controller
+    choices_fields = ("capabilities",)
 
     @classmethod
     def setUpTestData(cls):
@@ -3604,6 +3605,7 @@ class ControllerTestCase(APIViewTestCases.APIViewTestCase):
 
 class ControllerManagedDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
     model = ControllerManagedDeviceGroup
+    choices_fields = ("capabilities",)
 
     @classmethod
     def setUpTestData(cls):

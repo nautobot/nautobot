@@ -37,7 +37,7 @@ class SupportedDataRateTest(APIViewTestCases.APIViewTestCase):
 
 class RadioProfileTest(APIViewTestCases.APIViewTestCase):
     model = models.RadioProfile
-    choices_fields = ["frequency", "regulatory_domain"]
+    choices_fields = ["channel_width", "frequency", "regulatory_domain"]
 
     @classmethod
     def setUpTestData(cls):
