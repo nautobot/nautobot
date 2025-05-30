@@ -319,69 +319,6 @@ class FormButton(Button):
         }
 
 
-class BulkDeleteFormButton(FormButton):
-    """
-    A FormButton subclass that automatically adds the necessary data attributes for bulk delete functionality.
-
-    This button will be progressively enhanced by JavaScript to:
-    - Start disabled with a helpful tooltip
-    - Enable when items are selected
-    """
-
-    def __init__(
-        self,
-        *,
-        help_message=None,
-        label_checked_single=None,
-        label_checked_multiple=None,
-        **kwargs,
-    ):
-        """
-        Initialize a BulkDeleteFormButton instance.
-
-        Args:
-            help_message (str, optional): Tooltip text when disabled. Defaults to generic message.
-            label_checked_single (str, optional): Text for button when a single item is selected.
-            label_checked_multiple (str, optional): Text for button when multiple items are selected.
-        """
-        kwargs.setdefault("size", "xs")
-        kwargs.setdefault("color", ButtonActionColorChoices.DELETE)
-        kwargs.setdefault("icon", "mdi-trash-can-outline")
-        if "attributes" not in kwargs:
-            kwargs["attributes"] = {}
-
-        existing_class = kwargs["attributes"].get("class", "")
-        if "btn-bulk-delete" not in existing_class:
-            kwargs["attributes"]["class"] = f"{existing_class} btn-bulk-delete".strip()
-
-        super().__init__(**kwargs)
-
-        self.help_message = help_message
-        self.label_checked_single = label_checked_single
-        self.label_checked_multiple = label_checked_multiple
-
-    def get_extra_context(self, context: Context):
-        """Add bulk delete data attributes to the button context."""
-        extra_context = super().get_extra_context(context)
-
-        # Set up data attributes for the JavaScript
-        if "attributes" not in extra_context:
-            extra_context["attributes"] = {}
-
-        extra_context["attributes"].update(
-            {
-                "data-label": self.label,
-                "data-help-msg": self.help_message or "Select items to delete",
-            }
-        )
-        if self.label_checked_single:
-            extra_context["attributes"]["data-label-checked-single"] = self.label_checked_single
-        if self.label_checked_multiple:
-            extra_context["attributes"]["data-label-checked-multiple"] = self.label_checked_multiple
-
-        return extra_context
-
-
 class Tab(Component):
     """Base class for UI framework definition of a single tabbed pane within an Object Detail (Object Retrieve) page."""
 
