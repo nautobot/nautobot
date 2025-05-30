@@ -11,15 +11,22 @@ from django.utils.encoding import is_protected_type
 from django.utils.functional import classproperty
 
 from nautobot.core.models.managers import BaseManager
-from nautobot.core.models.querysets import CompositeKeyQuerySetMixin, RestrictedQuerySet
+from nautobot.core.models.querysets import (
+    ClusterToClustersQuerySetMixin,
+    CompositeKeyQuerySetMixin,
+    LocationToLocationsQuerySetMixin,
+    RestrictedQuerySet,
+)
 from nautobot.core.models.utils import construct_composite_key, construct_natural_slug, deconstruct_composite_key
 from nautobot.core.utils.lookup import get_route_for_model
 
 __all__ = (
     "BaseManager",
     "BaseModel",
+    "ClusterToClustersQuerySetMixin",
     "CompositeKeyQuerySetMixin",
     "ContentTypeRelatedQuerySet",
+    "LocationToLocationsQuerySetMixin",
     "RestrictedQuerySet",
     "construct_composite_key",
     "construct_natural_slug",
