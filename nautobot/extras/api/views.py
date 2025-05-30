@@ -753,10 +753,8 @@ class JobViewSetBase(
             # of errors under messages
             return Response({"errors": e.message_dict if hasattr(e, "error_dict") else e.messages}, status=400)
 
-        queue = get_job_queue(task_queue)
-        if queue is None:
-            queue = job_model.default_job_queue
-        if queue.queue_type == JobQueueTypeChoices.TYPE_CELERY and not get_worker_count(queue=task_queue):
+        job_queue = get_job_queue(task_queue) or job_model.default_job_queue
+        if job_queue.queue_type == JobQueueTypeChoices.TYPE_CELERY and not get_worker_count(queue=task_queue):
             raise CeleryWorkerNotRunningException(queue=task_queue)
 
         # Default to a null JobResult.
@@ -787,7 +785,7 @@ class JobViewSetBase(
                 interval=schedule_data.get("interval"),
                 crontab=schedule_data.get("crontab", ""),
                 approval_required=approval_required,
-                task_queue=task_queue,
+                job_queue=job_queue,
                 **job_class.serialize_data(cleaned_data),
             )
         else:
@@ -798,7 +796,7 @@ class JobViewSetBase(
             job_result = JobResult.enqueue_job(
                 job_model,
                 request.user,
-                task_queue=task_queue,
+                job_queue=job_queue,
                 **job_class.serialize_data(cleaned_data),
             )
 

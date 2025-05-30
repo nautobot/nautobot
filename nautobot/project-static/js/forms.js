@@ -1003,17 +1003,3 @@ $(document).ready((e) => {
     document.querySelectorAll("textarea.form-control").forEach(function(element) {element.addEventListener("keydown", submitOnEnter)});
 })
 
-// Scroll up an offset equal to the first nav element if a hash is present
-// Cannot use '#navbar' because it is not always visible, like in small windows
-function headerOffsetScroll() {
-    if (window.location.hash) {
-        // Short wait needed to allow the page to scroll to the element
-        setTimeout(function() {
-            window.scrollBy(0, -$('nav').height())
-        }, 10);
-    }
-}
-
-// Account for the header height when hash-scrolling
-window.addEventListener('load', headerOffsetScroll);
-window.addEventListener('hashchange', headerOffsetScroll);
