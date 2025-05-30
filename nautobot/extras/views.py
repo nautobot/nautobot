@@ -587,10 +587,8 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
         if form.is_valid():
             try:
                 with transaction.atomic():
-                    object_created = not form.instance.present_in_database
                     self._process_create_or_update_form(form)
-
-                    # Handle choices formset
+                    # Handle the formset for custom field choices
                     choices = self.get_extra_context(request, form.instance).get("choices")
                     if choices and choices.is_valid():
                         choices.save()
@@ -600,21 +598,7 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
                         form.add_error(None, msg)
                         raise RuntimeError("Choice formset is invalid")
 
-                verb = "Created" if object_created else "Modified"
-                msg = f"{verb} {self.queryset.model._meta.verbose_name}"
-                self.logger.info(f"{msg} {form.instance} (PK: {form.instance.pk})")
-
-                try:
-                    msg = format_html(
-                        '{} <a href="{}">{}</a>',
-                        msg,
-                        form.instance.get_absolute_url(),
-                        form.instance,
-                    )
-                except AttributeError:
-                    msg = format_html("{} {}", msg, form.instance)
-                messages.success(request, msg)
-
+                # Handle _addanother logic
                 if "_addanother" in request.POST:
                     if hasattr(form.instance, "clone_fields"):
                         url = f"{request.path}?{prepare_cloned_fields(form.instance)}"
@@ -640,11 +624,20 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
                 logger.debug(msg)
                 form.add_error(None, msg)
 
-            return self.form_invalid(form)
-
         else:
             logger.warning("Form invalid: %s", form.errors.as_json())
-            return self.form_invalid(form)
+
+        # Re-render form with validation errors and proper context
+        instance = form.instance
+        context = {
+            "obj": instance,
+            "obj_type": self.queryset.model._meta.verbose_name,
+            "form": form,
+            "return_url": self.get_return_url(request, instance),
+            "editing": instance.present_in_database,
+            **self.get_extra_context(request, instance),
+        }
+        return render(request, self.template_name, context)
 
 
 #
