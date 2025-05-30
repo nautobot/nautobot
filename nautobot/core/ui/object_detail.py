@@ -728,9 +728,7 @@ class ObjectsTablePanel(Panel):
             table_title (str, optional): The title to display in the panel heading for the table.
                 If None, defaults to the plural verbose name of the table model.
             include_columns (list, optional): A list of field names to include in the table display.
-                If provided, only these fields will be displayed in the table.
             exclude_columns (list, optional): A list of field names to exclude from the table display.
-                Mutually exclusive with `include_columns`.
             add_button_route (str, optional): The route used to generate the "add" button URL. Defaults to "default",
                 which uses the default table's model `add` route.
             add_permissions (list, optional): A list of permissions required for the "add" button to be displayed.
@@ -768,6 +766,8 @@ class ObjectsTablePanel(Panel):
             raise ValueError("You can only specify either `table_filter` or `table_attribute`")
         if table_class and not (table_filter or table_attribute):
             raise ValueError("You must specify either `table_filter` or `table_attribute`")
+        if table_attribute and not related_field_name:
+            raise ValueError("You must provide a `related_field_name` when specifying `table_attribute`")
         self.table_filter = table_filter
         self.table_attribute = table_attribute
         self.select_related_fields = select_related_fields
@@ -775,8 +775,6 @@ class ObjectsTablePanel(Panel):
         self.order_by_fields = order_by_fields
         self.table_title = table_title
         self.max_display_count = max_display_count
-        if exclude_columns and include_columns:
-            raise ValueError("You can only specify either `exclude_columns` or `include_columns`")
         self.include_columns = include_columns
         self.exclude_columns = exclude_columns
         self.add_button_route = add_button_route
@@ -876,14 +874,17 @@ class ObjectsTablePanel(Panel):
                 # to redirect the user back to the correct tab after editing/deleteing an object
                 body_content_table.columns["actions"].column.extra_context["return_url_extra"] = f"?tab={self.tab_id}"
 
-        if self.exclude_columns or self.include_columns:
+        if self.exclude_columns:
             for column in body_content_table.columns:
-                if (self.exclude_columns and column.name in self.exclude_columns) or (
-                    self.include_columns and column.name not in self.include_columns
-                ):
+                if column.name in self.exclude_columns:
                     body_content_table.columns.hide(column.name)
-                else:
-                    body_content_table.columns.show(column.name)
+
+        if self.include_columns:
+            for column in self.include_columns:
+                if column not in body_content_table.base_columns:
+                    raise ValueError(f"You are specifying a non-existent column `{column}`")
+                body_content_table.columns.show(column)
+
         # Enable bulk action toggle if the user has appropriate permissions
         user = request.user
         if self.enable_bulk_actions and (
@@ -904,10 +905,18 @@ class ObjectsTablePanel(Panel):
         body_content_table_model = body_content_table.Meta.model
         related_field_name = self.related_field_name or self.table_filter or obj._meta.model_name
 
+        list_url = getattr(self.table_class, "list_url", None)
+        if not list_url:
+            list_url = get_route_for_model(body_content_table_model, "list")
+
         try:
-            list_route = reverse(get_route_for_model(body_content_table_model, "list"))
-            body_content_table_list_url = f"{list_route}?{related_field_name}={obj.pk}"
+            list_route = reverse(list_url)
         except NoReverseMatch:
+            list_route = None
+
+        if list_route:
+            body_content_table_list_url = f"{list_route}?{related_field_name}={obj.pk}"
+        else:
             body_content_table_list_url = None
 
         body_content_table_add_url = self._get_table_add_url(context)
@@ -1178,6 +1187,12 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             field_instance = obj._meta.get_field(key)
         except FieldDoesNotExist:
             field_instance = None
+
+        if key in self.value_transforms:
+            display = value
+            for transform in self.value_transforms[key]:
+                display = transform(display)
+            return display
 
         if key == "_hierarchy":
             return render_ancestor_hierarchy(value)
@@ -1851,6 +1866,7 @@ class _ObjectDetailContactsTab(Tab):
                     weight=100,
                     table_class=AssociatedContactsTable,
                     table_attribute="associated_contacts",
+                    related_field_name="assigned_object_id",
                     order_by_fields=["role__name"],
                     enable_bulk_actions=True,
                     max_display_count=100,  # since there isn't a separate list view for ContactAssociations!
