@@ -57,6 +57,7 @@ from nautobot.extras.models import (
     ObjectChange,
 )
 from nautobot.extras.registry import registry
+from nautobot.extras.signals import nautobot_get_job_signal
 from nautobot.extras.utils import change_logged_models_queryset
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import (
@@ -1137,6 +1138,8 @@ def get_job(class_path, reload=False):
         reload (bool): If True, **and** the given class_path describes a JOBS_ROOT or GitRepository Job,
             then refresh **all** such Jobs before retrieving the job class.
     """
+    nautobot_get_job_signal.send(sender=class_path, reload=reload)
+
     if reload:
         if class_path.startswith("nautobot."):
             # System job - not reloadable
