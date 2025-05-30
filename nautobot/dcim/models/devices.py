@@ -578,11 +578,9 @@ class Device(PrimaryModel, ConfigContextModel):
         This property is maintained for backward compatibility only.
         New code should use the `clusters` relationship instead.
         """
-        if self.clusters.count() > 1:
-            raise self.clusters.model.MultipleObjectsReturned(
-                "Multiple Cluster objects returned. Please refer to clusters."
-            )
-        return self.clusters.first()
+        # Ensures that the first cluster assigned to the device is returned for maximum
+        # backward compatibility.
+        return self.clusters.order_by('created').first()
 
     @cluster.setter
     def cluster(self, value):
@@ -592,10 +590,6 @@ class Device(PrimaryModel, ConfigContextModel):
         This property is maintained for backward compatibility only.
         New code should use the `clusters` relationship instead.
         """
-        if self.clusters.count() > 1:
-            raise self.clusters.model.MultipleObjectsReturned(
-                "Multiple Cluster objects returned. Please refer to clusters."
-            )
         if value is None:
             self.clusters.clear()
         else:

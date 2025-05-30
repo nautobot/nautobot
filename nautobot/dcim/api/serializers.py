@@ -537,7 +537,6 @@ class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         queryset=Cluster.objects.all(),
         required=False,
         view_name="virtualization-api:cluster-detail",
-        write_only=True,
     )
 
     class Meta:
