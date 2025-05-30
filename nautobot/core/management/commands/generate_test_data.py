@@ -225,7 +225,8 @@ class Command(BaseCommand):
         _create_batch(InterfaceTemplateFactory, 30)
         _create_batch(PowerPortTemplateFactory, 30)
         _create_batch(PowerOutletTemplateFactory, 30)
-        _create_batch(ModuleBayTemplateFactory, 90)
+        _create_batch(ModuleBayTemplateFactory, 60, description="without module families", has_module_family=False)
+        _create_batch(ModuleBayTemplateFactory, 30, description="with module families", has_module_family=True)
         _create_batch(ManufacturerFactory, 2, description="without Platforms or DeviceTypes")  # Last 2 hard-coded
         _create_batch(DeviceRedundancyGroupFactory, 20)
         _create_batch(DeviceFactory, 20)

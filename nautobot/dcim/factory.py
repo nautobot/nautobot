@@ -49,6 +49,7 @@ from nautobot.dcim.models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     Platform,
     PowerOutletTemplate,
@@ -787,6 +788,7 @@ class ModuleTypeFactory(PrimaryModelFactory):
         exclude = ("has_part_number", "has_comments")
 
     manufacturer = random_instance(Manufacturer, allow_null=False)
+    module_family = random_instance(ModuleFamily, allow_null=True)
 
     has_part_number = NautobotBoolIterator()
     part_number = factory.Maybe("has_part_number", factory.Faker("ean", length=8), "")
@@ -968,6 +970,15 @@ class ModuleBayTemplateFactory(ModularDeviceComponentTemplateFactory):
         "has_device_type",
         factory.LazyAttribute(lambda o: o.device_type.module_bay_templates.count() + 1),
         factory.LazyAttribute(lambda o: o.module_type.module_bay_templates.count() + 1),
+    )
+
+    class Params:
+        has_module_family = NautobotBoolIterator()
+
+    module_family = factory.Maybe(
+        "has_module_family",
+        random_instance(ModuleFamily),
+        None,
     )
 
 

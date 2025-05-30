@@ -9,3 +9,5 @@ In addition to module bays within a device, module bays may also be defined with
 Module bays contain a required `position` field that is unique to the parent device or module. The position may be used when automatically populating the child components of a module, such as interface naming (`Ethernet1/<position>/1`).
 
 Since module bays can be nested within modules, there are two fields on module bay, `parent_module` and `installed_module` to reduce confusion.
+
+Module bays may be assigned to a [module family](modulefamily.md), which limits the module types that may be installed in it.
