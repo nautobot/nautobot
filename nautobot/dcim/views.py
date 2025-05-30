@@ -4685,8 +4685,7 @@ class DeviceAddToClusterView(GetReturnURLMixin, ObjectPermissionRequiredMixin, V
         if form.is_valid():
             cluster_ids = form.cleaned_data.get("clusters")
             if cluster_ids:
-                for cluster in cluster_ids:
-                    cluster.devices.add(device)
+                device.clusters.add(*cluster_ids)
                 messages.success(
                     request,
                     f"Added {device} to {len(cluster_ids)} cluster(s).",

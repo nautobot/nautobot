@@ -3592,9 +3592,6 @@ class DeviceClusterAssignmentTestCase(ModelTestCases.BaseModelTestCase):
             cluster=cls.clusters[0],
         )
 
-    def test_get_docs_url(self):
-        """No docs for this through table model."""
-
     def test_create_device_cluster_assignment(self):
         """Test creating a device-cluster assignment."""
         assignment = DeviceClusterAssignment(

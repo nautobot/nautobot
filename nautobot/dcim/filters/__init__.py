@@ -869,12 +869,19 @@ class DeviceFilterSet(
         to_field_name="name",
         label="Rack (name or ID)",
     )
-    # Even though devices can be assigned to multiple clusters, we only want to filter by one.
+    # TODO: This is deprecated, left for backwards compatibility.
     cluster = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="clusters",
         queryset=Cluster.objects.all(),
         to_field_name="name",
-        label="VM cluster (name or ID)",
+        label="Cluster (name or ID)",
+    )
+    # Even though devices can be assigned to multiple clusters, we only want to filter by one.
+    clusters = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="clusters",
+        queryset=Cluster.objects.all(),
+        to_field_name="name",
+        label="Cluster (name or ID)",
     )
     is_full_depth = django_filters.BooleanFilter(
         field_name="device_type__is_full_depth",
