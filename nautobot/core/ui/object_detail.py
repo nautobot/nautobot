@@ -20,7 +20,7 @@ from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, format_html_join
 from django_tables2 import RequestConfig
 
-from nautobot.core.choices import ButtonActionColorChoices, ButtonColorChoices
+from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags.helpers import (
     badge,
