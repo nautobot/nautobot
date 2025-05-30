@@ -13,12 +13,10 @@ def migrate_device_cluster_assignments(apps, schema_editor):
     """
     Device = apps.get_model("dcim", "Device")
     DeviceClusterAssignment = apps.get_model("dcim", "DeviceClusterAssignment")
-    devices_with_clusters = Device.objects.filter(cluster__isnull=False).select_related('cluster')
+    devices_with_clusters = Device.objects.filter(cluster__isnull=False).select_related("cluster")
     assignments_to_create = []
     for device in devices_with_clusters:
-        assignments_to_create.append(
-            DeviceClusterAssignment(device=device, cluster=device.cluster)
-        )
+        assignments_to_create.append(DeviceClusterAssignment(device=device, cluster=device.cluster))
     if assignments_to_create:
         DeviceClusterAssignment.objects.bulk_create(assignments_to_create, batch_size=1000)
 
@@ -31,10 +29,10 @@ def reverse_migrate_device_cluster_assignments(apps, schema_editor):
     DeviceClusterAssignment = apps.get_model("dcim", "DeviceClusterAssignment")
 
     # For each device, get the first cluster assignment and set it as the device's cluster
-    for assignment in DeviceClusterAssignment.objects.select_related('device', 'cluster'):
+    for assignment in DeviceClusterAssignment.objects.select_related("device", "cluster"):
         if not assignment.device.cluster:
             assignment.device.cluster = assignment.cluster
-            assignment.device.save(update_fields=['cluster'])
+            assignment.device.save(update_fields=["cluster"])
 
 
 class Migration(migrations.Migration):
