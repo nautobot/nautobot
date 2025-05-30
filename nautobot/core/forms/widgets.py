@@ -12,7 +12,9 @@ from nautobot.core.forms import utils
 __all__ = (
     "APISelect",
     "APISelectMultiple",
+    "AutoPopulateWidget",
     "BulkEditNullBooleanSelect",
+    "ClearableFileInput",
     "ColorSelect",
     "ContentTypeSelect",
     "DatePicker",
@@ -39,6 +41,23 @@ class SlugWidget(forms.TextInput):
     """
 
     template_name = "widgets/sluginput.html"
+
+    def get_context(self, name, value, attrs):
+        custom_title = self.attrs.pop("title", None)
+        context = super().get_context(name, value, attrs)
+        context["widget"]["custom_title"] = custom_title
+        return context
+
+
+class AutoPopulateWidget(SlugWidget):
+    """
+    Subclass SlugWidget and add support for auto-populate JavaScript logic from `form.js`.
+    """
+
+    def get_context(self, name, value, attrs):
+        attrs["data-autopopulate"] = ""
+        context = super().get_context(name, value, attrs)
+        return context
 
 
 class ColorSelect(forms.Select):
@@ -256,3 +275,10 @@ class MultiValueCharInput(StaticSelect2Multiple):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.attrs["class"] = "nautobot-select2-multi-value-char"
+
+
+class ClearableFileInput(forms.ClearableFileInput):
+    template_name = "widgets/clearable_file.html"
+
+    class Media:
+        js = ["bootstrap-filestyle-1.2.3/bootstrap-filestyle.min.js"]

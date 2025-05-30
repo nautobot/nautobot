@@ -9,7 +9,8 @@ Most changes in code location arise from the merging of the `nautobot.utilities`
 
 Other than models, most other imports from Nautobot should be imported from `nautobot.apps.*` as described here.
 
-??? info "Full table of nautobot.app code locations"
+<!-- pyml disable-num-lines 2 proper-names -->
+??? info "Full table of `nautobot.apps` code locations"
     {data-table user-guide/administration/upgrading/from-v1/tables/v2-code-nautobot-app-location.yaml}
 
 ## Replace PluginMenuItem with NavMenuItem
@@ -72,7 +73,7 @@ items = [
 menu_items = (
     NavMenuTab(
         name="Apps",
-        groups=(NavMenuGroup(name="Your App", weight=1000, items=tuple(items)),),
+        groups=(NavMenuGroup(weight=1000, name="Your App", items=tuple(items)),),
     ),
 )
 
@@ -122,7 +123,7 @@ App Model Serializers for any models that could have a Generic Foreign Key or a 
 (drf_spectacular.E001) Schema generation threw exception "Field name `object_type` is not valid for model `YourAppModel`.
 ```
 
-## Revamp Rest API Serializers
+## Revamp REST API Serializers
 
 `NestedSerializer` classes are no longer needed in Nautobot 2.0. If any `NestedSerializers` exist for your models, you should just remove their class definitions and references.
 
@@ -162,4 +163,4 @@ In addition, the `?brief=` API query parameter is replaced by `?depth=<0-10>`. A
 
 ## Revamp CSV Import and Export
 
-CSV Import for models are now done automatically via the Rest API. As a result of this change, `CSVForm` classes are no longer needed and should be deleted. In addition, the Model `csv_headers` attribute and `to_csv` method are no longer needed or used in CSV generation, and should be removed from your model definitions. Check out our [release notes](../../../release-notes/version-2.0.md#revamped-csv-import-and-export-254) for this specific change.
+CSV Import for models are now done automatically via the REST API. As a result of this change, `CSVForm` classes are no longer needed and should be deleted. In addition, the Model `csv_headers` attribute and `to_csv` method are no longer needed or used in CSV generation, and should be removed from your model definitions. Check out our [release notes](../../../release-notes/version-2.0.md#revamped-csv-import-and-export-254) for this specific change.

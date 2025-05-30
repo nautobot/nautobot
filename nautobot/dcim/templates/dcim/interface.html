@@ -101,11 +101,16 @@
                                     </a>
                                 </td>
                             </tr>
-                            {% if object.connected_endpoint.device %}
+                            {% if object.connected_endpoint.device or object.connected_endpoint.module %}
                                 {% with iface=object.connected_endpoint %}
                                     <tr>
-                                        <td>Device</td>
-                                        <td>{{ iface.device|hyperlinked_object }}</td>
+                                        {% if iface.device %}
+                                            <td>Device</td>
+                                            <td>{{ iface.device|hyperlinked_object }}</td>
+                                        {% else %}
+                                            <td>Module</td>
+                                            <td>{{ iface.module|hyperlinked_object }}</td>
+                                        {% endif %}
                                     </tr>
                                     <tr>
                                         <td>Interface</td>
@@ -201,7 +206,7 @@
                         <tbody>
                             {% for member in object.member_interfaces.all %}
                                 <tr>
-                                    <td>{{ member.device|hyperlinked_object }}</td>
+                                    <td>{{ member.parent|hyperlinked_object }}</td>
                                     <td>{{ member|hyperlinked_object }}</td>
                                     <td>
                                         {{ member.get_type_display }}
@@ -223,4 +228,5 @@
     {% include 'panel_table.html' with table=vlan_table heading="VLANs" %}
     {% include 'panel_table.html' with table=redundancy_table heading="Interface Redundancy Groups" %}
     {% include 'panel_table.html' with table=child_interfaces_table heading="Child Interfaces" %}
+    {% include 'panel_table.html' with table=virtual_device_contexts_table heading="Virtual Device Contexts" %}
 {% endblock content_full_width_page %}

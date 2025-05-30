@@ -345,7 +345,8 @@ class WebhookTest(APITestCase):
 
         all_changes = get_changes_for_model(location)
         self.assertEqual(all_changes.count(), 1)
-        mock_enqueue_webhooks.assert_called_once_with(all_changes.first(), webhook_queryset=None)
+        change = all_changes.first()
+        mock_enqueue_webhooks.assert_called_once_with(change, snapshots=change.get_snapshots(), webhook_queryset=None)
 
     def test_all_webhook_supported_models(self):
         """

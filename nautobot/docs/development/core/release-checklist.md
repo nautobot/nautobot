@@ -176,23 +176,23 @@ Once CI has completed on the PR, merge it.
 
 ### Create a New Release Tag
 
-You need to create a release tag locally so that you can use it later when you draft the new release for nautobot, for example, `v1.4.3`.
+You need to create a release tag locally so that you can use it later when you draft the new release for Nautobot, for example, `v1.4.3`.
 To create the tag locally:
 
 ```bash
-$ git tag v1.4.3
+git tag v1.4.3
 ```
 
 To list all the tags to see if it is created successfully:
 
 ```bash
-$ git tag
+git tag
 ```
 
 To push the tag upstream:
 
 ```bash
-$ git push origin v1.4.3
+git push origin v1.4.3
 ```
 
 ### Create a New Release
@@ -217,6 +217,9 @@ Draft a [new release](https://github.com/nautobot/nautobot/releases/new) with th
 
 ### Publish to PyPI
 
+!!! tip
+    This is normally done automatically by GitHub Actions after you create the release above. The below is only needed if the automated release fails for some reason.
+
 Now that there is a tagged release, the final step is to upload the package to the Python Package Index.
 
 First, you'll need to render the documentation.
@@ -239,10 +242,13 @@ poetry publish --username __token__ --password <api_token>
 
 ### Publish Docker Images
 
+!!! tip
+    This is normally done automatically by GitHub Actions after you create the release above. The below is only needed if the automated release fails for some reason.
+
 Build the images locally:
 
 ```no-highlight
-for ver in 3.8 3.9 3.10 3.11 3.12; do
+for ver in 3.9 3.10 3.11 3.12; do
   export INVOKE_NAUTOBOT_PYTHON_VER=$ver
   invoke buildx --target final --tag networktocode/nautobot-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
   invoke buildx --target final-dev --tag networktocode/nautobot-dev-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
@@ -264,10 +270,10 @@ nautobot:
     You should *not* include `docker-compose.dev.yml` in this test scenario!
 
 ```no-highlight
-for ver in 3.8 3.9 3.10 3.11 3.12; do
+for ver in 3.9 3.10 3.11 3.12; do
   export INVOKE_NAUTOBOT_PYTHON_VER=$ver
   invoke stop
-  invoke integration-tests
+  invoke tests --tag integration
 done
 ```
 
@@ -276,7 +282,7 @@ Push the images to GitHub Container Registry and Docker Hub
 ```no-highlight
 docker login
 docker login ghcr.io
-for ver in 3.8 3.9 3.10 3.11 3.12; do
+for ver in 3.9 3.10 3.11 3.12; do
   export INVOKE_NAUTOBOT_PYTHON_VER=$ver
   invoke docker-push main
 done
@@ -300,7 +306,3 @@ Bumping version from 1.1.0 to 1.1.1-alpha.0
 
 !!! important
     Do not squash merge this branch into `develop`. Make sure to select `Create a merge commit` when merging in GitHub.
-
-### Redeploy demo.nautobot.com Sandbox Environment
-
-Afer you publish the release, you need to blow away the current demo environment and redeploy it for `demo.nautobot.com`. The documentation on how to build a demo environment is available in the nautobot/sandboxes repository.

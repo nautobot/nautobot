@@ -9,8 +9,8 @@ Nautobot can use [`django-storages`](https://django-storages.readthedocs.io/en/s
 TLDR:
 
 ```shell
-$ echo "nautobot[remote_storage]" >> $NAUTOBOT_ROOT/local_requirements.txt
-$ pip3 install "nautobot[remote_storage]" boto3
+echo "nautobot[remote_storage]" >> $NAUTOBOT_ROOT/local_requirements.txt
+pip3 install "nautobot[remote_storage]" boto3
 ```
 
 ## Bucket Creation Terraform
@@ -70,7 +70,7 @@ The `STORAGE_CONFIG` has some valuable pieces of information.
 - Finally, region is where the s3 bucket resides.
 
 !!! info
-    The remaining options are not required, but django-storages documentation should be reviewed to understand the security requirements.
+    The remaining options are not required, but the `django-storages` documentation should be reviewed to understand the security requirements.
 
 By using the the settings listed above, the static files will be stored in the S3 bucket instead of on the Nautobot server's filesystem. Once the `nautobot-server collectstatic` is executed you will see the files.
 
@@ -109,7 +109,7 @@ The `models.FileField` alongside the `upload_to` argument can be used to store u
 
 The nice thing about using `django-storages` is the ease of use and the ability to easily extend storage backends. One use case for extending storage backends that has been used is to store certain App data attachments in its own S3 bucket with different permissions. If we take this concept to the example of `SoftwareFileAttachment` we can put the software images in their own S3 bucket by creating a custom storage backend that we can pass to our `models.FileField` model field.
 
-For this example I created a simple python file called `customer_storage.py` in the root of my App.
+For this example I created a simple Python file called `customer_storage.py` in the root of my App.
 
 ```python
 """Example of a custom extension to support flexible s3 storage."""

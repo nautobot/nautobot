@@ -2,9 +2,11 @@ import datetime
 import random
 
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Count
 from django.test import override_settings
 from django.urls import reverse
 from django.utils.html import strip_tags
+from django.utils.http import urlencode
 from django.utils.timezone import make_aware
 from netaddr import IPNetwork
 
@@ -13,7 +15,15 @@ from nautobot.core.templatetags.helpers import hyperlinked_object, queryset_to_p
 from nautobot.core.testing import ModelViewTestCase, post_data, ViewTestCases
 from nautobot.core.testing.utils import extract_page_body
 from nautobot.core.utils.lookup import get_route_for_model
-from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
+from nautobot.dcim.models import (
+    Device,
+    DeviceType,
+    Interface,
+    Location,
+    LocationType,
+    Manufacturer,
+    VirtualDeviceContext,
+)
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
 from nautobot.extras.models import (
     CustomField,
@@ -72,8 +82,9 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
         tenants = Tenant.objects.all()[:2]
-        namespace = Prefix.objects.first().namespace
+        namespace = Namespace.objects.annotate(prefix_count=Count("prefixes")).filter(prefix_count__gt=2).first()
         prefixes = Prefix.objects.filter(namespace=namespace)
+        vdcs = VirtualDeviceContext.objects.all()
         vrf_statuses = Status.objects.get_for_model(VRF)
 
         cls.form_data = {
@@ -85,6 +96,7 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "prefixes": [prefixes[1].id],
             "tags": [t.pk for t in Tag.objects.get_for_model(VRF)],
             "status": vrf_statuses.first().pk,
+            "virtual_device_contexts": [vdcs[0].id, vdcs[1].id],
         }
 
         cls.bulk_edit_data = {
@@ -94,6 +106,8 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "namespace": prefixes[0].namespace.id,
             "add_prefixes": [prefixes[0].id],
             "remove_prefixes": [prefixes[1].id],
+            "add_virtual_device_contexts": [vdcs[2].id, vdcs[3].id],
+            "remove_virtual_device_contexts": [vdcs[0].id],
         }
 
 
@@ -131,6 +145,25 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         super().setUp()
         # Ensure that we have at least one RIR with no prefixes that can be used for the "delete_object" tests.
         RIR.objects.create(name="RIR XYZ")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_list_objects_with_permission(self):
+        """Test rendering of LinkedCountColumn for related fields without display_field override."""
+        response = super().test_list_objects_with_permission()
+        response_body = extract_page_body(response.content.decode(response.charset))
+
+        prefix_list_url = reverse(get_route_for_model(Prefix, "list"))
+
+        for rir in self._get_queryset().all():
+            if str(rir.pk) in response_body:
+                count = rir.prefixes.count()
+                if count > 1:
+                    self.assertBodyContains(
+                        response,
+                        f'<a href="{prefix_list_url}?{urlencode({"rir": rir.name})}" class="badge">{count}</a>',
+                    )
+                elif count == 1:
+                    self.assertBodyContains(response, hyperlinked_object(rir.prefixes.first()))
 
 
 class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.ListObjectsViewTestCase):
@@ -181,7 +214,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_list_objects_with_permission(self):
-        """Test rendering of LinkedCountColumn for related fields."""
+        """Test rendering of LinkedCountColumn for related fields with display_field override."""
         response = super().test_list_objects_with_permission()
         response_body = extract_page_body(response.content.decode(response.charset))
 
@@ -195,7 +228,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                         response, f'<a href="{locations_list_url}?prefixes={prefix.pk}" class="badge">{count}</a>'
                     )
                 elif count == 1:
-                    self.assertBodyContains(response, hyperlinked_object(prefix.locations.first()))
+                    self.assertBodyContains(response, hyperlinked_object(prefix.locations.first(), "name"))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_empty_queryset(self):
@@ -1036,12 +1069,16 @@ class IPAddressMergeTestCase(ModelViewTestCase):
                     self.assertEqual(set(associations), set(correct_associations))
 
 
-class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class VLANGroupTestCase(
+    ViewTestCases.OrganizationalObjectViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
+):
     model = VLANGroup
 
     @classmethod
     def setUpTestData(cls):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        location_2 = Location.objects.filter(location_type=LocationType.objects.get(name="Building")).first()
 
         cls.form_data = {
             "name": "VLAN Group X",
@@ -1051,8 +1088,17 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "tags": [t.pk for t in Tag.objects.get_for_model(VLANGroup)],
         }
 
+        cls.bulk_edit_data = {
+            "location": location_2.pk,
+            "description": "Updated description for bulk edit",
+            "range": "1-4094",
+        }
+
     def get_deletable_object(self):
         return VLANGroup.objects.create(name="TEST DELETE ME")
+
+    def get_deletable_object_pks(self):
+        return [VLANGroup.objects.create(name="TEST DELETE ME").pk]
 
 
 class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -1223,3 +1269,25 @@ class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
         response = self.client.post(**request)
         self.assertBodyContains(response, "A service must be associated with either a device or a virtual machine.")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_port_bulk_edit_invalid(self):
+        self.add_permissions("ipam.change_service")
+        url = self._get_url("bulk_edit")
+        pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
+
+        data = {
+            "pk": pk_list,
+            "protocol": ServiceProtocolChoices.PROTOCOL_UDP,
+            "ports": "[106,107]",  # String representation of the list
+            "description": "New description",
+            "_apply": True,
+        }
+
+        response = self.client.post(url, data)
+        response_content = response.content.decode(response.charset)
+        self.assertHttpStatus(response, 200)
+        self.assertInHTML(
+            ' <strong class="panel-title">Ports</strong>: <ul class="errorlist"><li>invalid literal for int() with base 10: &#x27;[106&#x27;</li></ul>',
+            response_content,
+        )

@@ -1,3 +1,4 @@
+# pylint: disable=no-member  # it doesn't recognize the class attributes assigned in common_test_data()
 import uuid
 
 from django.contrib.auth import get_user_model
@@ -44,6 +45,7 @@ from nautobot.dcim.filters import (
     InterfaceRedundancyGroupAssociationFilterSet,
     InterfaceRedundancyGroupFilterSet,
     InterfaceTemplateFilterSet,
+    InterfaceVDCAssignmentFilterSet,
     InventoryItemFilterSet,
     LocationFilterSet,
     LocationTypeFilterSet,
@@ -67,6 +69,7 @@ from nautobot.dcim.filters import (
     SoftwareImageFileFilterSet,
     SoftwareVersionFilterSet,
     VirtualChassisFilterSet,
+    VirtualDeviceContextFilterSet,
 )
 from nautobot.dcim.models import (
     Cable,
@@ -89,6 +92,7 @@ from nautobot.dcim.models import (
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
+    InterfaceVDCAssignment,
     InventoryItem,
     Location,
     LocationType,
@@ -112,11 +116,13 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
 from nautobot.extras.models import ExternalIntegration, Role, SecretsGroup, Status, Tag
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, Service, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
+from nautobot.wireless.models import RadioProfile, WirelessNetwork
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -151,6 +157,8 @@ def common_test_data(cls):
     cls.loc0 = loc0
     cls.loc1 = loc1
     cls.nested_loc = nested_loc
+    cls.loc2 = loc2
+    cls.loc3 = loc3
 
     provider = Provider.objects.first()
     circuit_type = CircuitType.objects.first()
@@ -593,7 +601,6 @@ def common_test_data(cls):
     )
 
     device_statuses = Status.objects.get_for_model(Device)
-
     cls.devices = (
         Device.objects.create(
             name="Device 1",
@@ -994,11 +1001,12 @@ class PathEndpointModelTestMixin:
             )
 
 
-class LocationTypeFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class LocationTypeFilterSetTestCase(FilterTestCases.FilterTestCase):
     queryset = LocationType.objects.all()
     filterset = LocationTypeFilterSet
     generic_filter_tests = [
         ("description",),
+        ("name",),
         ("parent", "parent__id"),
         ("parent", "parent__name"),
     ]
@@ -1030,7 +1038,7 @@ class LocationTypeFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase):
             )
 
 
-class LocationFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
+class LocationFilterSetTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = Location.objects.all()
     filterset = LocationFilterSet
     tenancy_related_name = "locations"
@@ -1051,6 +1059,7 @@ class LocationFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase, FilterTe
         ("longitude",),
         ("location_type", "location_type__id"),
         ("location_type", "location_type__name"),
+        ("name",),
         ("parent", "parent__id"),
         ("parent", "parent__name"),
         ("physical_address",),
@@ -1101,17 +1110,13 @@ class LocationFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase, FilterTe
             Location.objects.filter(location_type__content_types=ct),
         )
 
-    def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
-        params = {"q": value}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, self.queryset.filter(pk=value))
 
-
-class RackGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class RackGroupTestCase(FilterTestCases.FilterTestCase):
     queryset = RackGroup.objects.all()
     filterset = RackGroupFilterSet
     generic_filter_tests = [
         ("description",),
+        ("name",),
         ("parent", "parent__id"),
         ("parent", "parent__name"),
         ("power_panels", "power_panels__id"),
@@ -1147,6 +1152,24 @@ class RackGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):
             name="Rack Group 4",
             location=cls.loc1,
         )
+        RackGroup.objects.create(
+            name="Rack Group 5",
+            location=cls.loc2,
+            description="C",
+        )
+        RackGroup.objects.create(
+            name="Rack Group 6",
+            location=cls.loc2,
+        )
+        RackGroup.objects.create(
+            name="Rack Group 7",
+            location=cls.loc3,
+            description="C",
+        )
+        RackGroup.objects.create(
+            name="Rack Group 8",
+            location=cls.loc3,
+        )
 
     def test_children(self):
         child_groups = RackGroup.objects.filter(name__startswith="Child").filter(parent__isnull=False)[:2]
@@ -1157,6 +1180,24 @@ class RackGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):
             rack_group_4 = RackGroup.objects.filter(name="Rack Group 4").first()
             params = {"children": [rack_group_4.pk, rack_group_4.pk]}
             self.assertFalse(self.filterset(params, self.queryset).qs.exists())
+
+    def test_ancestors(self):
+        with self.subTest():
+            pk_list = []
+            parent_locations = self.loc3.ancestors(include_self=True)
+            pk_list.extend([v.pk for v in parent_locations])
+            params = Q(location__pk__in=pk_list)
+            expected_queryset = RackGroup.objects.filter(params)
+            params = {"ancestors": [self.loc3.pk]}
+            self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected_queryset)
+        with self.subTest():
+            pk_list = []
+            parent_locations = self.loc2.ancestors(include_self=True)
+            pk_list.extend([v.pk for v in parent_locations])
+            params = Q(location__pk__in=pk_list)
+            expected_queryset = RackGroup.objects.filter(params)
+            params = {"ancestors": [self.loc2.pk]}
+            self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected_queryset)
 
 
 class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
@@ -1230,11 +1271,6 @@ class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             params = {"outer_unit": [RackDimensionUnitChoices.UNIT_MILLIMETER]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
-        params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
-
 
 class RackReservationTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = RackReservation.objects.all()
@@ -1254,13 +1290,8 @@ class RackReservationTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Te
     def setUpTestData(cls):
         common_test_data(cls)
 
-    def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
-        params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
-
-class ManufacturerTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class ManufacturerTestCase(FilterTestCases.FilterTestCase):
     queryset = Manufacturer.objects.all()
     filterset = ManufacturerFilterSet
     generic_filter_tests = [
@@ -1269,6 +1300,7 @@ class ManufacturerTestCase(FilterTestCases.NameOnlyFilterTestCase):
         ("device_types", "device_types__model"),
         ("inventory_items", "inventory_items__id"),
         ("inventory_items", "inventory_items__name"),
+        ("name",),
         ("platforms", "platforms__id"),
         ("platforms", "platforms__name"),
     ]
@@ -1284,13 +1316,14 @@ class ManufacturerTestCase(FilterTestCases.NameOnlyFilterTestCase):
         InventoryItem.objects.create(device=devices[2], name="Inventory Item 3", manufacturer=cls.manufacturers[2])
 
 
-class DeviceFamilyTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class DeviceFamilyTestCase(FilterTestCases.FilterTestCase):
     queryset = DeviceFamily.objects.all()
     filterset = DeviceFamilyFilterSet
     generic_filter_tests = [
         ("description",),
         ("device_types", "device_types__id"),
         ("device_types", "device_types__model"),
+        ("name",),
     ]
 
 
@@ -1480,11 +1513,6 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
                 self.queryset.exclude(device_bay_templates__isnull=False),
             )
 
-    def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
-        params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
-
 
 class ConsolePortTemplateTestCase(ModularComponentTemplateTestMixin, FilterTestCases.FilterTestCase):
     queryset = ConsolePortTemplate.objects.all()
@@ -1632,7 +1660,7 @@ class DeviceBayTemplateTestCase(ComponentTemplateTestMixin, FilterTestCases.Filt
     filterset = DeviceBayTemplateFilterSet
 
 
-class PlatformTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class PlatformTestCase(FilterTestCases.FilterTestCase):
     queryset = Platform.objects.all()
     filterset = PlatformFilterSet
     generic_filter_tests = [
@@ -1640,6 +1668,7 @@ class PlatformTestCase(FilterTestCases.NameOnlyFilterTestCase):
         ("devices", "devices__id"),
         ("manufacturer", "manufacturer__id"),
         ("manufacturer", "manufacturer__name"),
+        ("name",),
         ("napalm_driver",),
         ("virtual_machines", "virtual_machines__id"),
     ]
@@ -1716,6 +1745,8 @@ class DeviceTestCase(
         ("rack", "rack__name"),
         ("rack_group", "rack__rack_group__id"),
         ("rack_group", "rack__rack_group__name"),
+        ("radio_profiles", "controller_managed_device_group__radio_profiles__id"),
+        ("radio_profiles", "controller_managed_device_group__radio_profiles__name"),
         ("rear_ports", "rear_ports__id"),
         ("role", "role__id"),
         ("role", "role__name"),
@@ -1731,6 +1762,8 @@ class DeviceTestCase(
         ("vc_priority",),
         ("virtual_chassis", "virtual_chassis__id"),
         ("virtual_chassis", "virtual_chassis__name"),
+        ("wireless_networks", "controller_managed_device_group__wireless_networks__id"),
+        ("wireless_networks", "controller_managed_device_group__wireless_networks__name"),
     ]
 
     @classmethod
@@ -1772,6 +1805,14 @@ class DeviceTestCase(
         Service.objects.create(device=devices[1], name="dns", protocol="udp", ports=[53])
 
         cls.controller_managed_device_groups = list(ControllerManagedDeviceGroup.objects.all()[:2])
+        cls.controller_managed_device_groups[0].radio_profiles.set(RadioProfile.objects.all()[:2])
+        cls.controller_managed_device_groups[0].wireless_networks.set(
+            WirelessNetwork.objects.filter(controller_managed_device_groups__isnull=True)[:2]
+        )
+        cls.controller_managed_device_groups[1].radio_profiles.set(RadioProfile.objects.all()[2:4])
+        cls.controller_managed_device_groups[1].wireless_networks.set(
+            WirelessNetwork.objects.filter(controller_managed_device_groups__isnull=True)[2:4]
+        )
         cls.device_redundancy_groups = list(DeviceRedundancyGroup.objects.all()[:2])
         Device.objects.filter(pk=devices[0].pk).update(
             controller_managed_device_group=cls.controller_managed_device_groups[0],
@@ -1926,45 +1967,6 @@ class DeviceTestCase(
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 Device.objects.filter(local_config_context_data__isnull=True),
-            )
-
-    def test_search(self):
-        filter_fields = (
-            "name",
-            "serial",
-            "inventory_items__serial",
-            "asset_tag",
-            "device_type__manufacturer__name",
-            "comments",
-        )
-        for filter_field in filter_fields:
-            with self.subTest(f"test q filter by field {filter_field}"):
-                value = (
-                    self.queryset.values_list(filter_field, flat=True)
-                    .exclude(**{f"{filter_field}__in": ["", None]})
-                    .first()
-                )
-                params = {"q": value}
-                # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
-                # pylint: disable=unsupported-binary-operation
-                qs_filter = (
-                    Q(name__icontains=value)
-                    | Q(serial__icontains=value.strip())
-                    | Q(inventory_items__serial__icontains=value.strip())
-                    | Q(asset_tag__icontains=value.strip())
-                    | Q(device_type__manufacturer__name__icontains=value.strip())
-                    | Q(comments__icontains=value)
-                )
-                self.assertQuerysetEqualAndNotEmpty(
-                    self.filterset(params, self.queryset).qs,
-                    self.queryset.filter(qs_filter),
-                )
-
-        with self.subTest("test q filter by field pk"):
-            value = self.queryset.values_list("pk", flat=True).first()
-            params = {"q": value}
-            self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs, self.queryset.filter(id=value)
             )
 
 
@@ -2199,6 +2201,8 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
         ("tagged_vlans", "tagged_vlans__vid"),
         ("untagged_vlan", "untagged_vlan__id"),
         ("untagged_vlan", "untagged_vlan__vid"),
+        ("virtual_device_contexts", "virtual_device_contexts__id"),
+        ("virtual_device_contexts", "virtual_device_contexts__name"),
     ]
 
     @classmethod
@@ -2437,6 +2441,17 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
 
         cabled_interfaces[0].add_ip_addresses([ipaddresses[0], ipaddresses[2]])
         cabled_interfaces[1].add_ip_addresses([ipaddresses[1], ipaddresses[3]])
+        # Virtual Device Context
+        vdc_status = Status.objects.get_for_model(VirtualDeviceContext).first()
+        vdcs = [
+            VirtualDeviceContext.objects.create(
+                device=devices[2], status=vdc_status, identifier=200 + idx, name=f"Test VDC {idx}"
+            )
+            for idx in range(3)
+        ]
+        vdcs[0].interfaces.set(lag_interfaces)
+        vdcs[1].interfaces.set(lag_interfaces)
+        vdcs[2].interfaces.set(lag_interfaces)
 
     def test_enabled(self):
         # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
@@ -3088,11 +3103,6 @@ class InventoryItemTestCase(DeviceComponentTestMixin, FilterTestCases.FilterTest
             params = {"serial": "abc"}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-    def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
-        params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
-
 
 class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
     queryset = VirtualChassis.objects.all()
@@ -3176,11 +3186,6 @@ class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
         Device.objects.filter(pk=devices[1].pk).update(virtual_chassis=virtual_chassis[0])
         Device.objects.filter(pk=devices[3].pk).update(virtual_chassis=virtual_chassis[1])
         Device.objects.filter(pk=devices[5].pk).update(virtual_chassis=virtual_chassis[2])
-
-    def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
-        params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
 class CableTestCase(FilterTestCases.FilterTestCase):
@@ -3856,6 +3861,8 @@ class SoftwareImageFileFilterSetTestCase(FilterTestCases.FilterTestCase):
         ["software_version", "software_version__version"],
         ["status", "status__id"],
         ["status", "status__name"],
+        ["external_integration", "external_integration__id"],
+        ["external_integration", "external_integration__name"],
     )
 
     @classmethod
@@ -3975,6 +3982,8 @@ class ControllerFilterSetTestCase(FilterTestCases.FilterTestCase):
         ("controller_device", "controller_device__name"),
         ("controller_device_redundancy_group", "controller_device_redundancy_group__id"),
         ("controller_device_redundancy_group", "controller_device_redundancy_group__name"),
+        ("wireless_networks", "controller_managed_device_groups__wireless_networks__id"),
+        ("wireless_networks", "controller_managed_device_groups__wireless_networks__name"),
     )
 
     @classmethod
@@ -4117,3 +4126,145 @@ class ModuleBayTestCase(FilterTestCases.FilterTestCase):
         module_bays = ModuleBay.objects.all()[:2]
         module_bays[0].tags.set(Tag.objects.get_for_model(ModuleBay))
         module_bays[1].tags.set(Tag.objects.get_for_model(ModuleBay)[:3])
+
+
+class VirtualDeviceContextTestCase(FilterTestCases.FilterTestCase, FilterTestCases):
+    queryset = VirtualDeviceContext.objects.all()
+    filterset = VirtualDeviceContextFilterSet
+    generic_filter_tests = [
+        ("description",),
+        ("device", "device__name"),
+        ("device", "device__id"),
+        ("tenant", "tenant__name"),
+        ("tenant", "tenant__id"),
+        ("interfaces", "interfaces__id"),
+        ("interfaces", "interfaces__name"),
+        ("name",),
+        ("role", "role__name"),
+        ("status", "status__name"),
+        ("role", "role__id"),
+        ("status", "status__id"),
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        device = Device.objects.first()
+        intf_status = Status.objects.get_for_model(Interface).first()
+        vdc_status = Status.objects.get_for_model(VirtualDeviceContext).first()
+        intf_role = Role.objects.get_for_model(Interface).first()
+        interface = Interface.objects.create(
+            name="Int1", device=device, status=intf_status, role=intf_role, type=InterfaceTypeChoices.TYPE_100GE_CFP
+        )
+        cls.ips_v4 = IPAddress.objects.filter(ip_version=4)[:3]
+        cls.ips_v6 = IPAddress.objects.filter(ip_version=6)[:3]
+        interface.add_ip_addresses([*cls.ips_v4, *cls.ips_v6])
+        vdcs = [
+            VirtualDeviceContext.objects.create(
+                device=device,
+                status=vdc_status,
+                identifier=200 + idx,
+                name=f"Test VDC {idx}",
+                primary_ip4=cls.ips_v4[idx],
+                primary_ip6=cls.ips_v6[idx],
+            )
+            for idx in range(3)
+        ]
+        vdcs[0].tags.set(Tag.objects.get_for_model(VirtualDeviceContext))
+        vdcs[1].tags.set(Tag.objects.get_for_model(VirtualDeviceContext)[:3])
+
+        interfaces = [
+            Interface.objects.create(
+                device=device,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                name=f"Interface 00{idx}",
+                status=intf_status,
+            )
+            for idx in range(3)
+        ]
+        InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[0], interface=interfaces[0])
+        InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[1], interface=interfaces[0])
+        InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[1], interface=interfaces[1])
+        InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[2], interface=interfaces[2])
+
+    def test_has_primary_ip(self):
+        # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
+        with self.subTest():
+            params = {"has_primary_ip": True}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                VirtualDeviceContext.objects.filter(Q(primary_ip4__isnull=False) | Q(primary_ip6__isnull=False)),
+            )
+        with self.subTest():
+            params = {"has_primary_ip": False}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                VirtualDeviceContext.objects.filter(primary_ip4__isnull=True, primary_ip6__isnull=True),
+            )
+
+    def test_primary_ip4(self):
+        params = {"primary_ip4": ["192.0.2.1/24", self.ips_v4[0].pk]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, VirtualDeviceContext.objects.filter(primary_ip4=self.ips_v4[0])
+        )
+
+    def test_primary_ip6(self):
+        params = {"primary_ip6": ["fe80::8ef:3eff:fe4c:3895/24", self.ips_v6[1].pk]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, VirtualDeviceContext.objects.filter(primary_ip6=self.ips_v6[1])
+        )
+
+
+class InterfaceVDCAssignmentTestCase(FilterTestCases.FilterTestCase):
+    queryset = InterfaceVDCAssignment.objects.all()
+    filterset = InterfaceVDCAssignmentFilterSet
+    generic_filter_tests = [
+        ("virtual_device_context", "virtual_device_context__id"),
+        ("virtual_device_context", "virtual_device_context__name"),
+        ("interface", "interface__id"),
+        ("interface", "interface__name"),
+        ("device", "interface__device__id"),
+        ("device", "interface__device__name"),
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        device_1 = Device.objects.first()
+        device_2 = Device.objects.last()
+        vdc_status = Status.objects.get_for_model(VirtualDeviceContext)[0]
+        interface_status = Status.objects.get_for_model(Interface)[0]
+        interfaces = [
+            Interface.objects.create(
+                device=device_1,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                name=f"Interface 00{idx}",
+                status=interface_status,
+            )
+            for idx in range(3)
+        ]
+        vdcs = [
+            VirtualDeviceContext.objects.create(
+                device=device_1,
+                status=vdc_status,
+                identifier=200 + idx,
+                name=f"Test VDC {idx}",
+            )
+            for idx in range(3)
+        ]
+        InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[0], interface=interfaces[0])
+        InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[1], interface=interfaces[0])
+        InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[1], interface=interfaces[1])
+        InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[2], interface=interfaces[2])
+        InterfaceVDCAssignment.objects.create(
+            virtual_device_context=VirtualDeviceContext.objects.create(
+                device=device_2,
+                status=vdc_status,
+                identifier=200,
+                name="Test VDC 0",
+            ),
+            interface=Interface.objects.create(
+                device=device_2,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                name="Interface 000",
+                status=interface_status,
+            ),
+        )

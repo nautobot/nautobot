@@ -1,10 +1,10 @@
 import contextlib
 import logging
 
+from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import FieldDoesNotExist, FieldError
-from django.db import NotSupportedError
 from django.db.models import Prefetch
 from django.db.models.fields.related import ForeignKey, RelatedField
 from django.db.models.fields.reverse_related import ManyToOneRel
@@ -22,6 +22,7 @@ from tree_queries.models import TreeNode
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
 from nautobot.core.utils.lookup import get_model_for_view_name, get_related_field_for_models, get_route_for_model
+from nautobot.core.utils.querysets import maybe_prefetch_related, maybe_select_related
 from nautobot.extras import choices, models
 
 logger = logging.getLogger(__name__)
@@ -64,6 +65,9 @@ class BaseTable(django_tables2.Table):
                 returns new data. Runs after all of the queryset auto-optimization performed by this class.
                 Used for example in IPAM views to inject "fake" records for "available" Prefixes, IPAddresses, or VLANs.
             **kwargs (dict, optional): Passed through to django_tables2.Table
+        Warning:
+            Do not modify/set the `base_columns` attribute after BaseTable class is instantiated.
+            Do not modify/set the `base_columns` attribute after calling super().__init__() of BaseTable class.
         """
         # Add custom field columns
         model = self._meta.model
@@ -236,51 +240,10 @@ class BaseTable(django_tables2.Table):
                     prefetch_fields.append("__".join(prefetch_path))
 
             if select_fields:
-                # Django doesn't allow .select_related() on a QuerySet that had .values()/.values_list() applied, or
-                # one that has had union()/intersection()/difference() applied.
-                # We can detect and avoid these cases the same way that Django itself does.
-                if queryset._fields is not None:
-                    logger.debug(
-                        "NOT applying select_related(%s) to %s QuerySet as it includes .values()/.values_list()",
-                        select_fields,
-                        model.__name__,
-                    )
-                elif queryset.query.combinator:
-                    logger.debug(
-                        "NOT applying select_related(%s) to %s QuerySet as it is a combinator query",
-                        select_fields,
-                        model.__name__,
-                    )
-                else:
-                    logger.debug("Applying .select_related(%s) to %s QuerySet", select_fields, model.__name__)
-                    # Belt and suspenders - we should have avoided any error cases above, but be safe anyway:
-                    try:
-                        queryset = queryset.select_related(*select_fields)
-                    except (TypeError, ValueError, NotSupportedError) as exc:
-                        logger.warning(
-                            "Unexpected error when trying to .select_related() on %s QuerySet: %s",
-                            model.__name__,
-                            exc,
-                        )
+                queryset = maybe_select_related(queryset, select_fields)
 
             if prefetch_fields:
-                if queryset.query.combinator:
-                    logger.debug(
-                        "NOT applying prefetch_related(%s) to %s QuerySet as it is a combinator query",
-                        prefetch_fields,
-                        model.__name__,
-                    )
-                else:
-                    logger.debug("Applying .prefetch_related(%s) to %s QuerySet", prefetch_fields, model.__name__)
-                    # Belt and suspenders - we should have avoided any error cases above, but be safe anyway:
-                    try:
-                        queryset = queryset.prefetch_related(*prefetch_fields)
-                    except (AttributeError, TypeError, ValueError, NotSupportedError) as exc:
-                        logger.warning(
-                            "Unexpected error when trying to .prefetch_related() on %s QuerySet: %s",
-                            model.__name__,
-                            exc,
-                        )
+                queryset = maybe_prefetch_related(queryset, prefetch_fields)
 
             if count_fields:
                 for column_name, column_model, lookup_name, distinct in count_fields:
@@ -314,7 +277,9 @@ class BaseTable(django_tables2.Table):
     @property
     def configurable_columns(self):
         selected_columns = [
-            (name, self.columns[name].verbose_name) for name in self.sequence if name not in ["pk", "actions"]
+            (name, column.verbose_name)
+            for name, column in self.columns.items()
+            if name in self.sequence and name not in ["pk", "actions"]
         ]
         available_columns = [
             (name, column.verbose_name)
@@ -325,7 +290,7 @@ class BaseTable(django_tables2.Table):
 
     @property
     def visible_columns(self):
-        return [name for name in self.sequence if self.columns[name].visible and name not in self.exclude]
+        return [name for name, column in self.columns.items() if column.visible and name not in self.exclude]
 
     @property
     def order_by(self):
@@ -480,7 +445,7 @@ class ChoiceFieldColumn(django_tables2.Column):
     choices. The CSS class is derived by calling .get_FOO_class() on the row record.
     """
 
-    def render(self, record, bound_column, value):  # pylint: disable=arguments-differ
+    def render(self, *, record, bound_column, value):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
         if value:
             name = bound_column.name
             css_class = getattr(record, f"get_{name}_class")()
@@ -528,6 +493,9 @@ class LinkedCountColumn(django_tables2.Column):
         reverse_lookup (str, optional): The reverse lookup parameter to use to derive the count.
             If not specified, the first key in `url_params` will be implicitly used as the `reverse_lookup` value.
         distinct (bool, optional): Parameter passed through to `count_related()`.
+        display_field (str, optional): Name of the field to use when displaying an object rather than just a count.
+            This will be passed to hyperlinked_object() as the `field` parameter
+            If not specified, it will use the "display" field.
         **kwargs (dict, optional): As the parent Column class.
 
     Examples:
@@ -571,6 +539,7 @@ class LinkedCountColumn(django_tables2.Column):
         reverse_lookup=None,
         distinct=False,
         default=None,
+        display_field="display",
         **kwargs,
     ):
         self.viewname = viewname
@@ -579,10 +548,11 @@ class LinkedCountColumn(django_tables2.Column):
         self.url_params = url_params
         self.reverse_lookup = reverse_lookup or next(iter(url_params.keys()))
         self.distinct = distinct
+        self.display_field = display_field
         self.model = get_model_for_view_name(self.viewname)
         super().__init__(*args, default=default, **kwargs)
 
-    def render(self, bound_column, record, value):  # pylint: disable=arguments-differ
+    def render(self, *, bound_column, record, value):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
         related_record = None
         try:
             lookup = self.lookup or get_related_field_for_models(bound_column._table._meta.model, self.model).name
@@ -593,11 +563,14 @@ class LinkedCountColumn(django_tables2.Column):
                 related_record = related_records[0]
         url = reverse(self.viewname, kwargs=self.view_kwargs)
         if self.url_params:
-            url += "?" + urlencode({k: getattr(record, v) for k, v in self.url_params.items()})
+            url += "?" + urlencode(
+                # Replace None values with `FILTERS_NULL_CHOICE_VALUE` to handle URL parameters correctly
+                {k: (getattr(record, v) or settings.FILTERS_NULL_CHOICE_VALUE) for k, v in self.url_params.items()}
+            )
         if value > 1:
             return format_html('<a href="{}" class="badge">{}</a>', url, value)
         if related_record is not None:
-            return helpers.hyperlinked_object(related_record)
+            return helpers.hyperlinked_object(related_record, self.display_field)
         if value == 1:
             return format_html('<a href="{}" class="badge">{}</a>', url, value)
         return helpers.placeholder(value)
@@ -666,7 +639,7 @@ class ComputedFieldColumn(django_tables2.Column):
 
         super().__init__(*args, **kwargs)
 
-    def render(self, record):
+    def render(self, *, record):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
         return self.computedfield.render({"obj": record})
 
 
@@ -685,7 +658,7 @@ class CustomFieldColumn(django_tables2.Column):
 
         super().__init__(*args, **kwargs)
 
-    def render(self, record, bound_column, value):  # pylint: disable=arguments-differ
+    def render(self, *, record, bound_column, value):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
         if self.customfield.type == choices.CustomFieldTypeChoices.TYPE_BOOLEAN:
             template = helpers.render_boolean(value)
         elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MULTISELECT:
@@ -716,7 +689,7 @@ class RelationshipColumn(django_tables2.Column):
         kwargs.setdefault("accessor", Accessor("associations"))
         super().__init__(orderable=False, *args, **kwargs)
 
-    def render(self, record, value):  # pylint: disable=arguments-differ
+    def render(self, *, record, value):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
         # Filter the relationship associations by the relationship instance.
         # Since associations accessor returns all the relationship associations regardless of the relationship.
         value = [v for v in value if v.relationship == self.relationship]
@@ -731,11 +704,17 @@ class RelationshipColumn(django_tables2.Column):
         if len(value) < 1:
             return "—"
 
+        v = value[0]
+        peer = v.get_peer(record)
+
         # Handle Relationships on the many side.
         if self.relationship.has_many(self.peer_side):
-            v = value[0]
-            meta = type(v.get_peer(record))._meta
-            name = meta.verbose_name_plural if len(value) > 1 else meta.verbose_name
+            if peer is not None:
+                meta = type(peer)._meta
+                name = meta.verbose_name_plural if len(value) > 1 else meta.verbose_name
+            else:  # Perhaps a relationship to an uninstalled App's models?
+                peer_type = getattr(self.relationship, f"{self.peer_side}_type")
+                name = f"{peer_type} object(s)"
             return format_html(
                 '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
                 reverse("extras:relationshipassociation_list"),
@@ -747,6 +726,7 @@ class RelationshipColumn(django_tables2.Column):
             )
         # Handle Relationships on the one side.
         else:
-            v = value[0]
-            peer = v.get_peer(record)
-            return format_html('<a href="{}">{}</a>', peer.get_absolute_url(), peer)
+            if peer is not None:
+                return format_html('<a href="{}">{}</a>', peer.get_absolute_url(), peer)
+            else:
+                return format_html("(unknown)")

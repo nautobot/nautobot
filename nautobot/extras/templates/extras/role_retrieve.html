@@ -1,4 +1,4 @@
-{% extends 'generic/object_detail.html' %}
+{% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
 
 {% block content_left_page %}
@@ -206,5 +206,21 @@
             {% endif %}
         </div>
     {% include 'inc/paginator.html' with paginator=module_table.paginator page=module_table.page %}
+    {% endif %}
+    {% if vdc_table %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Virtual Device Contexts</strong>
+            </div>
+            {% include 'inc/table.html' with table=vdc_table %}
+            {% if perms.dcim.add_virtualdevicecontext %}
+                <div class="panel-footer text-right noprint">
+                    <a href="{% url 'dcim:virtualdevicecontext_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Virtual Device Context
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    {% include 'inc/paginator.html' with paginator=vdc_table.paginator page=vdc_table.page %}
     {% endif %}
  {% endblock content_full_width_page %}

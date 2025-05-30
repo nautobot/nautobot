@@ -15,7 +15,7 @@ from nautobot.dcim.models import Cable, Device, DeviceType, Interface, Location
 from nautobot.extras.models import Role, Status, Tag
 
 
-class ProviderTestCase(FilterTestCases.NameOnlyFilterTestCase, FilterTestCases.FilterTestCase):
+class ProviderTestCase(FilterTestCases.FilterTestCase):
     queryset = Provider.objects.all()
     filterset = ProviderFilterSet
 
@@ -26,6 +26,7 @@ class ProviderTestCase(FilterTestCases.NameOnlyFilterTestCase, FilterTestCases.F
         ["circuits", "circuits__id"],
         ["circuits", "circuits__cid"],
         ["comments"],
+        ["name"],
         ["noc_contact"],
         ["portal_url"],
         ["provider_networks", "provider_networks__id"],
@@ -64,7 +65,7 @@ class ProviderTestCase(FilterTestCases.NameOnlyFilterTestCase, FilterTestCases.F
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
 
 
-class CircuitTypeTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class CircuitTypeTestCase(FilterTestCases.FilterTestCase):
     queryset = CircuitType.objects.all()
     filterset = CircuitTypeFilterSet
 
@@ -117,11 +118,6 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
         params = {"location": [locations[0].name, locations[1].name]}
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
-
-    def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
-        params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
 class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
@@ -203,7 +199,7 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
         self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
 
 
-class ProviderNetworkTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class ProviderNetworkTestCase(FilterTestCases.FilterTestCase):
     queryset = ProviderNetwork.objects.all()
     filterset = ProviderNetworkFilterSet
 

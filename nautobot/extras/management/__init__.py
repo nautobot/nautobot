@@ -28,6 +28,7 @@ STATUS_CHOICESET_MAP = {
     "dcim.InterfaceRedundancyGroup": dcim_choices.InterfaceRedundancyGroupStatusChoices,
     "dcim.SoftwareImageFile": dcim_choices.SoftwareImageFileStatusChoices,
     "dcim.SoftwareVersion": dcim_choices.SoftwareVersionStatusChoices,
+    "dcim.VirtualDeviceContext": dcim_choices.VirtualDeviceContextStatusChoices,
     "extras.ContactAssociation": extras_choices.ContactAssociationStatusChoices,
     "ipam.IPAddress": ipam_choices.IPAddressStatusChoices,
     "ipam.Prefix": ipam_choices.PrefixStatusChoices,

@@ -4,6 +4,7 @@ import logging
 import os
 import shutil
 import traceback
+import uuid
 
 from db_file_storage.model_utils import delete_file
 from db_file_storage.storage import DatabaseFileStorage
@@ -28,9 +29,12 @@ from nautobot.extras.models import (
     ComputedField,
     ContactAssociation,
     CustomField,
+    CustomFieldChoice,
     DynamicGroup,
     DynamicGroupMembership,
     GitRepository,
+    Job as JobModel,
+    JobQueue as JobQueueModel,
     JobResult,
     MetadataType,
     ObjectChange,
@@ -48,6 +52,54 @@ logger = logging.getLogger(__name__)
 #
 # Change logging
 #
+
+
+def _cache_obj_data_in_change_context(action, sender, instance):
+    """
+    If this is an existing object that should have a change log entry,
+    we need to retrieve the existing object from the database and cache its data in the change context.
+    """
+    # We are caching the before object data in the change context so that it can be used later
+    change_context = change_context_state.get()
+
+    # Do nothing if the change_contex is None
+    if change_context is None:
+        return
+
+    # Is this an object without a change log?
+    if not hasattr(instance, "to_objectchange"):
+        return
+
+    # Does this object type not persist in the database?
+    if not hasattr(instance, "present_in_database"):
+        return
+
+    # Is this a new object?
+    if not instance.present_in_database:
+        return
+
+    # Does this object already have changes?
+    if ObjectChange.objects.filter(changed_object_id=instance.pk).exists():
+        return
+
+    # Retrieve the existing object from the database.
+    if action == ObjectChangeActionChoices.ACTION_UPDATE:
+        instance = sender.objects.get(pk=instance.pk)
+
+    change = instance.to_objectchange(
+        action=action,
+    )
+    change.request_id = uuid.uuid4()
+    change.user = change_context.get_user(instance)
+    # cache the previous object data in the change context
+    if change_context.pre_object_data is None:
+        change_context.pre_object_data = {}
+    if change_context.pre_object_data_v2 is None:
+        change_context.pre_object_data_v2 = {}
+
+    change_context.pre_object_data.setdefault(str(instance.pk), change.object_data)
+    change_context.pre_object_data_v2.setdefault(str(instance.pk), change.object_data_v2)
+    change_context_state.set(change_context)
 
 
 def get_user_if_authenticated(user, instance):
@@ -95,6 +147,19 @@ def invalidate_models_cache(sender, **kwargs):
             cache.delete_pattern(f"{manager.keys_for_model.cache_key_prefix}.*")
 
 
+@receiver(post_delete, sender=CustomField)
+@receiver(post_delete, sender=CustomFieldChoice)
+@receiver(post_save, sender=CustomFieldChoice)
+@receiver(post_save, sender=CustomField)
+def invalidate_choices_cache(sender, instance, **kwargs):
+    """Invalidate the choices cache for CustomFields."""
+    with contextlib.suppress(redis.exceptions.ConnectionError):
+        if sender is CustomField:
+            cache.delete(instance.choices_cache_key)
+        else:
+            cache.delete(instance.custom_field.choices_cache_key)
+
+
 @receiver(post_save, sender=Relationship)
 @receiver(m2m_changed, sender=Relationship)
 @receiver(post_delete, sender=Relationship)
@@ -107,6 +172,32 @@ def invalidate_relationship_models_cache(sender, **kwargs):
         with contextlib.suppress(redis.exceptions.ConnectionError):
             # TODO: *maybe* target more narrowly, e.g. only clear the cache for specific related content-types?
             cache.delete_pattern(f"{method.cache_key_prefix}.*")
+
+
+@receiver(post_save, sender=CustomField)
+@receiver(post_delete, sender=CustomField)
+@receiver(post_save, sender=Relationship)
+@receiver(m2m_changed, sender=Relationship)
+@receiver(post_delete, sender=Relationship)
+def invalidate_openapi_schema_cache(sender, **kwargs):
+    """Invalidate the openapi schema cache."""
+    with contextlib.suppress(redis.exceptions.ConnectionError):
+        cache.delete_pattern("openapi_schema_cache_*")
+
+
+@receiver(pre_save)
+def _handle_changed_object_pre_save(sender, instance, raw=False, **kwargs):
+    """
+    Fires before an object is created or updated.
+    It caches the current object data to capture the current state of the object.
+    This is used to ensure that a previous changelog entry exists for this object when this object is updated.
+    """
+    if raw:
+        return
+
+    # Ensure that a changelog entry exists for this object that is being updated
+    if not kwargs.get("created"):
+        _cache_obj_data_in_change_context(ObjectChangeActionChoices.ACTION_UPDATE, sender, instance)
 
 
 @receiver(post_save)
@@ -311,7 +402,9 @@ def post_migrate_clear_content_type_caches(sender, app_config, signal, **kwargs)
 
 def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
     """
-    Handle the cleanup of old custom field data when a CustomField is removed from one or more ContentTypes.
+    Handle provisioning/deprovisioning of custom_field_data when there are changes to CustomField.content_types.
+
+    The name of this function is misleading as this signal applies to *added* content-types as well.
     """
 
     change_context = change_context_state.get()
@@ -319,13 +412,39 @@ def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
         context = None
     else:
         context = change_context.as_dict(instance=instance)
-    if action == "post_remove":
-        # Existing content types have been removed from the custom field, delete their data
+
+    if action == "pre_remove":
+        # Existing content types may be removed from the custom field, delete their data if so.
+        # CAUTION: pk_set in this _remove case is the content-types that were *requested* to remove,
+        # **not** the content-types that actually *will need to be* removed. In other words, this is not idempotent:
+        # my_cf.content_types.remove(device_ct) --> pk_set = {device_ct.pk}
+        # my_cf.content_types.remove(device_ct) --> pk_set = {device_ct.pk} again even though it was already gone
+        # So we need to check which content types will actually be removed to not create unnecessary tasks:
+        removed_pk_set = pk_set.intersection(instance.content_types.values_list("pk", flat=True))
+        if not removed_pk_set:
+            return
+
         if context:
             context["context_detail"] = "delete custom field data from existing content types"
-        transaction.on_commit(lambda: delete_custom_field_data.delay(instance.key, pk_set, context))
+        transaction.on_commit(lambda: delete_custom_field_data.delay(instance.key, removed_pk_set, context))
+
+    elif action == "pre_clear":
+        # In this case, the provided pk_set is always empty, so we need to look at the current values instead:
+        cleared_pk_set = set(instance.content_types.values_list("pk", flat=True))
+        if not cleared_pk_set:
+            return
+
+        if context:
+            context["context_detail"] = "delete custom field data from existing content types"
+        transaction.on_commit(lambda: delete_custom_field_data.delay(instance.key, cleared_pk_set, context))
 
     elif action == "post_add":
+        # Unlike the above _remove case, in the _add case pk_set is the *new* content-types only,
+        # and for whatever reason, Django triggers this signal even if there was no actual change.
+        # To avoid creating unnecessary background tasks, we need to check for this case ourselves:
+        if not pk_set:
+            return
+
         # New content types have been added to the custom field, provision them
         if context:
             context["context_detail"] = "provision custom field data for new content types"
@@ -374,7 +493,7 @@ def git_repository_pre_delete(instance, **kwargs):
         app.control.broadcast("discard_git_repository", repository_slug=instance.slug)
         # But we don't have an equivalent way to broadcast to any other Django instances.
         # For now we just delete the one that we have locally and rely on other methods,
-        # such as the import_jobs() signal that runs on server startup,
+        # such as the import_jobs() signal that runs on post migrate,
         # to clean up other clones as they're encountered.
         if os.path.isdir(instance.filesystem_path):
             shutil.rmtree(instance.filesystem_path)
@@ -457,6 +576,35 @@ def job_result_delete_associated_files(instance, **kwargs):
             file_proxy.file.delete()
 
 
+@receiver(m2m_changed, sender=JobModel.job_queues.through)
+def add_default_job_queue_to_job_queues(instance, action, model, pk_set, **kwargs):
+    if action == "pre_remove":
+        if isinstance(instance, JobModel):  # job_model.job_queues.remove()
+            # Don't allow removing the default job queue
+            pk_set.discard(instance.default_job_queue.pk)
+        elif isinstance(instance, JobQueueModel):  # job_queue.jobs.remove()
+            # Don't allow removing jobs that this queue is default for
+            for job_model in instance.default_for_jobs.all():
+                pk_set.discard(job_model.pk)
+    elif action == "post_clear":
+        if isinstance(instance, JobModel):  # job_model.job_queues.clear()
+            # Re-add the default job queue
+            instance.job_queues.add(instance.default_job_queue)
+        elif isinstance(instance, JobQueueModel):  # job_queue.jobs.clear()
+            # Re-add the jobs this queue is default for
+            for job_model in instance.default_for_jobs.all():
+                job_model.job_queues.add(instance.pk)
+
+
+@receiver(post_save, sender=JobModel)
+def add_default_job_queue_to_job_queues_after_save(instance, raw=False, **kwargs):
+    if raw:
+        return
+    # Add specified default_job_queue to job.job_queues if it is not included.
+    default_job_queue = instance.default_job_queue
+    instance.job_queues.add(default_job_queue)
+
+
 def refresh_job_models(sender, *, apps, **kwargs):
     """
     Callback for the nautobot_database_ready signal; updates Jobs in the database based on Job source file availability.
@@ -466,6 +614,11 @@ def refresh_job_models(sender, *, apps, **kwargs):
     Job = apps.get_model("extras", "Job")
 
     # To make reverse migrations safe
+    try:
+        JobQueue = apps.get_model("extras", "JobQueue")
+    except LookupError:
+        JobQueue = None
+
     if not hasattr(Job, "job_class_name"):
         logger.info("Skipping refresh_job_models() as it appears Job model has not yet been migrated to latest.")
         return
@@ -475,7 +628,9 @@ def refresh_job_models(sender, *, apps, **kwargs):
     job_models = []
 
     for job_class in get_jobs().values():
-        job_model, _ = refresh_job_model_from_job_class(Job, job_class)
+        job_model, _ = refresh_job_model_from_job_class(
+            job_model_class=Job, job_class=job_class, job_queue_class=JobQueue
+        )
         if job_model is not None:
             job_models.append(job_model)
 

@@ -141,22 +141,35 @@ def get_filterable_params_from_filter_params(filter_params, non_filter_params, f
     return final_filter_params
 
 
-def normalize_querydict(querydict, form_class=None):
+def normalize_querydict(querydict, form_class=None, filterset=None):
     """
-    Convert a QueryDict to a normal, mutable dictionary, preserving list values. For example,
+    Converts a QueryDict into a standard, mutable dictionary while preserving multiple values as lists.
 
-        QueryDict('foo=1&bar=2&bar=3&baz=')
+    Example:
+        A QueryDict like:
+            QueryDict('foo=1&bar=2&bar=3&baz=')
 
-    becomes:
+        Converts to:
+            {'foo': '1', 'bar': ['2', '3'], 'baz': ''}
 
-        {'foo': '1', 'bar': ['2', '3'], 'baz': ''}
+    This function ensures that fields with multiple values are handled correctly, as QueryDict
+    does not inherently preserve multiple values as lists.
 
-    This function is necessary because QueryDict does not provide any built-in mechanism which preserves multiple
-    values.
+    Args:
+        querydict (QueryDict): The QueryDict to be normalized.
+        form_class (forms.Form, optional): A form class to identify fields that should be treated as
+            lists (e.g., `MultipleChoiceField` or `ModelMultipleChoiceField`).
+        filterset (django_filters.FilterSet, optional): A FilterSet instance to identify filters that
+            should preserve multiple values as lists (e.g., non-single-choice fields).
 
-    A `form_class` can be provided as a way to hint which query parameters should be treated as lists.
+    Raises:
+        AttributeError: If both `form_class` and `filterset` are provided.
     """
+    if form_class and filterset:
+        raise AttributeError("Either form_class or filterset_class is to be provided not both")
+
     result = {}
+
     if querydict:
         for key, value_list in querydict.lists():
             if len(value_list) > 1:
@@ -170,6 +183,8 @@ def normalize_querydict(querydict, form_class=None):
                 and isinstance(form_class.base_fields[key], (forms.MultipleChoiceField, forms.ModelMultipleChoiceField))
             ):
                 # Even though there's only a single value in the querydict for this key, the form wants it as a list
+                result[key] = value_list
+            elif filterset is not None and filterset.filters.get(key) and not is_single_choice_field(filterset, key):
                 result[key] = value_list
             else:
                 # Only a single value in the querydict for this key, and no guidance otherwise, so make it single

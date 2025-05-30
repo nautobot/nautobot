@@ -4,12 +4,14 @@ from django.urls import include, path
 from django.views.generic import TemplateView
 
 from nautobot.core.views import (
+    AboutView,
     CustomGraphQLView,
     get_file_with_authorization,
     HomeView,
     MediaView,
     NautobotMetricsView,
     NautobotMetricsViewAuth,
+    RenderJinjaView,
     SearchView,
     StaticMediaFailureView,
     ThemePreviewView,
@@ -27,6 +29,7 @@ from .admin import admin_site
 urlpatterns = [
     # Base views
     path("", HomeView.as_view(), name="home"),
+    path("about/", AboutView.as_view(), name="about"),
     path("search/", SearchView.as_view(), name="search"),
     # Login/logout
     path("login/", LoginView.as_view(), name="login"),
@@ -42,6 +45,7 @@ urlpatterns = [
     path("user/", include("nautobot.users.urls")),
     path("users/", include("nautobot.users.urls", "users")),
     path("virtualization/", include("nautobot.virtualization.urls")),
+    path("wireless/", include("nautobot.wireless.urls")),
     # API
     path("api/", include("nautobot.core.api.urls")),
     # GraphQL
@@ -69,6 +73,8 @@ urlpatterns = [
     ),
     # Celery worker status page
     path("worker-status/", WorkerStatusView.as_view(), name="worker_status"),
+    # Jinja template renderer tool
+    path("render-jinja-template/", RenderJinjaView.as_view(), name="render_jinja_template"),
     # Templated css file
     path(
         "template.css", TemplateView.as_view(template_name="template.css", content_type="text/css"), name="template_css"

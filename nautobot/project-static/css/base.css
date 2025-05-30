@@ -347,6 +347,15 @@ ul.software-image-hierarchy {
     padding-left: 18px;
 }
 
+ul.tree-hierarchy {
+    list-style-type: none;
+    padding-left: 0px;
+}
+ul.tree-hierarchy ul {
+    list-style-type: "↳ ";
+    padding-left: 18px;
+}
+
 /* Filters */
 .filter-container {
     box-sizing: border-box;
@@ -581,7 +590,8 @@ td span.hover_copy:hover .hover_copy_button {
 .accordion-toggle {
     border: 0;
     color: black;
-    font-size: 24px;
+    font-size: 14px;
+    font-weight: 700;
     padding: 0;
     text-decoration: none;
 }
@@ -592,7 +602,7 @@ td span.hover_copy:hover .hover_copy_button {
     padding: 0;
     text-decoration: none;
 }
-#accordion-toggle-all {
+.accordion-toggle-all {
     display: inline;
 }
 
@@ -880,6 +890,11 @@ td span.hover_copy:hover .hover_copy_button {
     cursor: move;
 }
 
+/* Make text in homepage panels selectable */
+#draggable-homepage-panels .list-group-item {
+    user-select: text !important;
+}
+
 /* Make panel being dragged opaque */
 .dragging {
     opacity: 0.5;
@@ -924,7 +939,7 @@ code.hljs {
 .tiles {
     display: grid;
     grid-gap: 20px;
-    grid-template-columns: repeat(auto-fit, minmax(445px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(445px, 1fr));
 }
 @media (max-width: 1007px) {
     .tiles {
@@ -940,6 +955,24 @@ code.hljs {
     display: flex;
     flex-direction: column;
     padding: 20px;
+}
+.tile.clickable {
+    cursor: pointer;
+    outline: none;
+    transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+.tile.clickable:active,
+.tile.clickable:focus-visible,
+.tile.clickable:hover {
+    border-color: #007dff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+a.tile.clickable,
+a.tile.clickable:hover,
+a.tile.clickable:focus,
+a.tile.clickable:visited {
+    color: inherit;
+    text-decoration: none;
 }
 .tile.disabled {
     background: #f4f4f4;
@@ -961,12 +994,19 @@ code.hljs {
     font-weight: 400;
     margin: 0;
 }
+.tile-header img {
+    float: left;
+    margin-right: 20px;
+}
 .tile-description {
     flex: 1;
 }
 .tile-footer {
     border-top: 1px solid #d8d8d8;
+    column-gap: 10px;
     display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
     padding-top: 10px;
 }
 
@@ -987,3 +1027,14 @@ code.hljs {
     text-decoration: none;
     background-color: #646464;
 }
+
+/* Monaco Editor container */
+.editor-container {
+    display: flex;  /* Use flexbox for layout */
+    flex-direction: column;
+    flex: 1;  /* Allow container to grow */
+    min-height: 100px;
+    position: relative;  /* Required for Monaco's absolute positioning */
+    overflow: hidden;  /* Let Monaco handle scrolling */
+}
+

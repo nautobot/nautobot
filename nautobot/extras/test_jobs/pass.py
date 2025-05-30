@@ -5,7 +5,7 @@ from nautobot.extras.jobs import get_task_logger, Job
 logger = get_task_logger(__name__)
 
 
-class TestPass(Job):
+class TestPassJob(Job):
     """
     Job with pass result.
     """
@@ -24,7 +24,7 @@ class TestPass(Job):
             raise RuntimeError(f"Expected kwargs to be empty, but it was {kwargs!r}")
         logger.info("before_start() was called as expected")
 
-    def run(self):
+    def run(self):  # pylint: disable=arguments-differ
         """
         Job function.
         """
@@ -61,4 +61,4 @@ class TestPass(Job):
         logger.info("after_return() was called as expected")
 
 
-register_jobs(TestPass)
+register_jobs(TestPassJob)

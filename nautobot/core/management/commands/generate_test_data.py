@@ -98,6 +98,7 @@ class Command(BaseCommand):
                 RearPortTemplateFactory,
                 SoftwareImageFileFactory,
                 SoftwareVersionFactory,
+                VirtualDeviceContextFactory,
             )
             from nautobot.extras.choices import MetadataTypeDataTypeChoices
             from nautobot.extras.factory import (
@@ -105,6 +106,7 @@ class Command(BaseCommand):
                 DynamicGroupFactory,
                 ExternalIntegrationFactory,
                 JobLogEntryFactory,
+                JobQueueFactory,
                 JobResultFactory,
                 MetadataChoiceFactory,
                 MetadataTypeFactory,
@@ -131,6 +133,14 @@ class Command(BaseCommand):
             )
             from nautobot.tenancy.factory import TenantFactory, TenantGroupFactory
             from nautobot.users.factory import UserFactory
+            from nautobot.wireless.factory import (
+                ControllerManagedDeviceGroupWithMembersFactory,
+                RadioProfileFactory,
+                RadioProfilesWithMembersFactory,
+                SupportedDataRateFactory,
+                WirelessNetworkFactory,
+                WirelessNetworksWithMembersFactory,
+            )
         except ImportError as err:
             raise CommandError('Unable to load data factories. Is the "factory-boy" package installed?') from err
 
@@ -203,6 +213,7 @@ class Command(BaseCommand):
         _create_batch(PlatformFactory, 20, description="with Manufacturers", has_manufacturer=True)
         _create_batch(PlatformFactory, 5, description="without Manufacturers", has_manufacturer=False)
         _create_batch(SoftwareVersionFactory, 20, description="to be usable by Devices")
+        _create_batch(ExternalIntegrationFactory, 20)
         _create_batch(SoftwareImageFileFactory, 25, description="to be usable by DeviceTypes")
         _create_batch(ManufacturerFactory, 4, description="without Platforms")  # 4 more hard-coded Manufacturers
         _create_batch(DeviceTypeFactory, 30)
@@ -218,6 +229,7 @@ class Command(BaseCommand):
         _create_batch(ManufacturerFactory, 2, description="without Platforms or DeviceTypes")  # Last 2 hard-coded
         _create_batch(DeviceRedundancyGroupFactory, 20)
         _create_batch(DeviceFactory, 20)
+        _create_batch(VirtualDeviceContextFactory, 30)
         _create_batch(ModuleFactory, 20)
         _create_batch(SoftwareVersionFactory, 5, description="without Devices")
         _create_batch(SoftwareImageFileFactory, 5, description="without DeviceTypes")
@@ -301,9 +313,17 @@ class Command(BaseCommand):
             has_pp_info=True,
             has_description=True,
         )
-        _create_batch(ExternalIntegrationFactory, 20)
         _create_batch(ControllerFactory, 10, description="with Devices or DeviceRedundancyGroups")
         _create_batch(ControllerManagedDeviceGroupFactory, 5, description="without any Devices")
+        _create_batch(SupportedDataRateFactory, 20)
+        _create_batch(RadioProfileFactory, 20)
+        _create_batch(WirelessNetworkFactory, 20)
+        _create_batch(ControllerManagedDeviceGroupWithMembersFactory, 5, description="with members")
+        _create_batch(RadioProfilesWithMembersFactory, 5, description="with members")
+        _create_batch(WirelessNetworksWithMembersFactory, 5, description="with members")
+        # make sure we have some supported data rates that have null relationships to make filter tests happy
+        _create_batch(SupportedDataRateFactory, 10, description="without any associated objects")
+        _create_batch(JobQueueFactory, 10)
         # make sure we have some tenants that have null relationships to make filter tests happy
         _create_batch(TenantFactory, 10, description="without any associated objects")
         # TODO: nautobot.tenancy.tests.test_filters currently calls the following additional factories:
@@ -329,6 +349,7 @@ class Command(BaseCommand):
         )
         _create_batch(MetadataChoiceFactory, 100)
         _create_batch(ObjectChangeFactory, 100)
+        _create_batch(JobQueueFactory, 30)
         _create_batch(JobResultFactory, 20)
         _create_batch(JobLogEntryFactory, 100)
         _create_batch(ObjectMetadataFactory, 100)

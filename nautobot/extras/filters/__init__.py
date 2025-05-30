@@ -23,6 +23,7 @@ from nautobot.core.filters import (
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.models import DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
+    JobQueueTypeChoices,
     JobResultStatusChoices,
     MetadataTypeDataTypeChoices,
     RelationshipTypeChoices,
@@ -73,6 +74,8 @@ from nautobot.extras.models import (
     JobButton,
     JobHook,
     JobLogEntry,
+    JobQueue,
+    JobQueueAssignment,
     JobResult,
     MetadataChoice,
     MetadataType,
@@ -116,13 +119,13 @@ __all__ = (
     "CustomFieldDateFilter",
     "CustomFieldFilterMixin",
     "CustomFieldJSONFilter",
+    "CustomFieldModelFilterSet",
+    "CustomFieldModelFilterSetMixin",
     "CustomFieldMultiSelectFilter",
     "CustomFieldMultiValueCharFilter",
     "CustomFieldMultiValueDateFilter",
     "CustomFieldMultiValueNumberFilter",
     "CustomFieldNumberFilter",
-    "CustomFieldModelFilterSet",
-    "CustomFieldModelFilterSetMixin",
     "CustomLinkFilterSet",
     "DynamicGroupFilterSet",
     "DynamicGroupMembershipFilterSet",
@@ -133,23 +136,25 @@ __all__ = (
     "ImageAttachmentFilterSet",
     "JobFilterSet",
     "JobLogEntryFilterSet",
+    "JobQueueAssignmentFilterSet",
+    "JobQueueFilterSet",
     "JobResultFilterSet",
     "LocalContextFilterSet",
     "LocalContextModelFilterSetMixin",
-    "MetadataTypeFilterSet",
     "MetadataChoiceFilterSet",
+    "MetadataTypeFilterSet",
     "NautobotFilterSet",
     "NoteFilterSet",
     "ObjectChangeFilterSet",
+    "RelationshipAssociationFilterSet",
     "RelationshipFilter",
     "RelationshipFilterSet",
-    "RelationshipAssociationFilterSet",
     "RoleFilterSet",
     "RoleModelFilterSetMixin",
     "ScheduledJobFilterSet",
     "SecretFilterSet",
-    "SecretsGroupFilterSet",
     "SecretsGroupAssociationFilterSet",
+    "SecretsGroupFilterSet",
     "StatusFilter",
     "StatusFilterSet",
     "StatusModelFilterSetMixin",
@@ -476,6 +481,14 @@ class NautobotFilterSet(
 class ContactTeamFilterSet(NameSearchFilterSet, NautobotFilterSet):
     """Base filter set for Contacts and Teams."""
 
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "email": "icontains",
+            "phone": "icontains",
+        },
+    )
+
     similar_to_location_data = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Location.objects.all(),
         label="Similar to location contact data",
@@ -521,6 +534,12 @@ class ContactTeamFilterSet(NameSearchFilterSet, NautobotFilterSet):
 
 
 class ContactFilterSet(ContactTeamFilterSet):
+    teams = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Team.objects.all(),
+        to_field_name="name",
+        label="Team (name or ID)",
+    )
+
     class Meta:
         model = Contact
         fields = "__all__"
@@ -849,6 +868,10 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
             "description": "icontains",
         },
     )
+    job_queues = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=JobQueue.objects.all(),
+        label="Job Queue (name or ID)",
+    )
 
     class Meta:
         model = Job
@@ -869,6 +892,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
             "is_job_button_receiver",
             "soft_time_limit",
             "time_limit",
+            "is_singleton",
             "grouping_override",
             "name_override",
             "approval_required_override",
@@ -878,6 +902,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
             "soft_time_limit_override",
             "time_limit_override",
             "has_sensitive_variables_override",
+            "is_singleton_override",
             "tags",
         ]
 
@@ -904,6 +929,60 @@ class JobHookFilterSet(BaseFilterSet):
             "type_update",
             "type_delete",
         ]
+
+
+class JobQueueFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "queue_type": "icontains",
+            "description": "icontains",
+            "tenant__name": "icontains",
+        },
+    )
+    queue_type = django_filters.MultipleChoiceFilter(choices=JobQueueTypeChoices, null_value=None)
+    jobs = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Job.objects.all(),
+        label="Job (name or ID)",
+    )
+    has_jobs = RelatedMembershipBooleanFilter(
+        field_name="jobs",
+        label="Has jobs",
+    )
+
+    class Meta:
+        model = JobQueue
+        fields = [
+            "id",
+            "name",
+            "description",
+            "tags",
+        ]
+
+
+class JobQueueAssignmentFilterSet(BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "job__name": "icontains",
+            "job__grouping": "icontains",
+            "job__description": "icontains",
+            "job_queue__name": "icontains",
+            "job_queue__description": "icontains",
+            "job_queue__queue_type": "icontains",
+        }
+    )
+    job = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Job.objects.all(),
+        label="Job (name or ID)",
+    )
+    job_queue = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=JobQueue.objects.all(),
+        label="Job Queue (name or ID)",
+    )
+
+    class Meta:
+        model = JobQueueAssignment
+        fields = ["id"]
 
 
 class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
@@ -1266,6 +1345,11 @@ class SecretsGroupFilterSet(
         filter_predicates={
             "name": "icontains",
         },
+    )
+    secrets = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Secret.objects.all(),
+        label="Secret (ID or name)",
+        to_field_name="name",
     )
 
     class Meta:

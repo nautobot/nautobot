@@ -57,6 +57,11 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(helpers.placeholder([]), '<span class="text-muted">&mdash;</span>')
         self.assertEqual(helpers.placeholder("something"), "something")
 
+    def test_pre_tag(self):
+        self.assertEqual(helpers.pre_tag(None), '<span class="text-muted">&mdash;</span>')
+        self.assertEqual(helpers.pre_tag([]), "<pre>[]</pre>")
+        self.assertEqual(helpers.pre_tag("something"), "<pre>something</pre>")
+
     def test_add_html_id(self):
         # Case where what we have isn't actually a HTML element but just a bare string
         self.assertEqual(helpers.add_html_id("hello", "my-id"), "hello")
@@ -322,3 +327,14 @@ class NautobotTemplatetagsHelperTest(TestCase):
             helpers.hyperlinked_object_target_new_tab(location, "foo"),
             f'<a href="/dcim/locations/{location.pk}/" title="An important location" target="_blank" rel="noreferrer">{location!s}</a>',
         )
+
+    def test_dbm(self):
+        self.assertEqual(
+            helpers.dbm(12),
+            "12 dBm",
+        )
+        self.assertEqual(
+            helpers.dbm(-85),
+            "-85 dBm",
+        )
+        self.assertEqual(helpers.dbm(None), helpers.placeholder(None))

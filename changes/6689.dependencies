@@ -1,2 +1,0 @@
-Updated `nh3` dependency to `~0.2.20`.
-Updated `django-tables2` dependency to `~2.7.4` in Python 3.9 and later, and pinned it to `==2.7.0` under Python 3.8.

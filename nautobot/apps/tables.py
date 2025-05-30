@@ -32,7 +32,7 @@ __all__ = (
     "RelationshipColumn",
     "RoleTableMixin",
     "StatusTableMixin",
-    "TagColumn",
     "TableExtension",
+    "TagColumn",
     "ToggleColumn",
 )

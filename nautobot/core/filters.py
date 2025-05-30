@@ -13,6 +13,7 @@ from django_filters.constants import EMPTY_VALUES
 from django_filters.utils import get_model_field, label_for_filter, resolve_field, verbose_lookup_expr
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
+import timezone_field
 
 from nautobot.core import constants, forms
 from nautobot.core.forms import widgets
@@ -396,7 +397,7 @@ class MappedPredicatesFilterMixin:
                 lookup_expr = lookup_info.get("lookup_expr")
                 preprocessor = lookup_info.get("preprocessor")
                 if not callable(preprocessor):
-                    raise TypeError("Preprocessor {preprocessor} must be callable!")
+                    raise TypeError(f"Preprocessor {preprocessor} must be callable!")
             else:
                 raise TypeError(f"Predicate value must be a str or a dict! Got: {type(lookup_info)}")
 
@@ -612,8 +613,11 @@ class BaseFilterSet(django_filters.FilterSet):
             models.UUIDField: {"filter_class": MultiValueUUIDFilter},
             core_fields.MACAddressCharField: {"filter_class": MultiValueMACAddressFilter},
             core_fields.TagsField: {"filter_class": TagFilter},
+            timezone_field.TimeZoneField: {"filter_class": MultiValueCharFilter},
         }
     )
+
+    USE_CHAR_FILTER_FOR_LOOKUPS = [django_filters.MultipleChoiceFilter]
 
     @staticmethod
     def _get_filter_lookup_dict(existing_filter):
@@ -668,7 +672,7 @@ class BaseFilterSet(django_filters.FilterSet):
         the form `<field_name>__<lookup_expr>`
         """
         magic_filters = {}
-        if filter_field.method is not None or filter_field.lookup_expr not in ["exact", "in"]:
+        if filter_field.method is not None or filter_field.lookup_expr not in ["exact", "in", "iexact"]:
             return magic_filters
 
         # Choose the lookup expression map based on the filter type
@@ -678,8 +682,7 @@ class BaseFilterSet(django_filters.FilterSet):
             return magic_filters
 
         # Get properties of the existing filter for later use
-        field_name = filter_field.field_name
-        field = get_model_field(cls._meta.model, field_name)
+        field = get_model_field(cls._meta.model, filter_field.field_name)  # pylint: disable=no-member
 
         # If there isn't a model field, return.
         if field is None:
@@ -696,25 +699,7 @@ class BaseFilterSet(django_filters.FilterSet):
             new_filter_name = f"{filter_name}__{lookup_name}"
 
             try:
-                if filter_name in cls.declared_filters and lookup_expr not in {"isnull"}:
-                    # The filter field has been explicitly defined on the filterset class so we must manually
-                    # create the new filter with the same type because there is no guarantee the defined type
-                    # is the same as the default type for the field. This does not apply if the filter
-                    # should retain the original lookup_expr type, such as `isnull` using a boolean field on a
-                    # char or date object.
-                    resolve_field(field, lookup_expr)  # Will raise FieldLookupError if the lookup is invalid
-                    new_filter = type(filter_field)(
-                        field_name=field_name,
-                        lookup_expr=lookup_expr,
-                        label=filter_field.label,
-                        exclude=filter_field.exclude,
-                        distinct=filter_field.distinct,
-                        **filter_field.extra,
-                    )
-                else:
-                    # The filter field is listed in Meta.fields so we can safely rely on default behavior
-                    # Will raise FieldLookupError if the lookup is invalid
-                    new_filter = cls.filter_for_field(field, field_name, lookup_expr)
+                new_filter = cls._get_new_filter(filter_field, field, filter_name, lookup_expr)
             except django_filters.exceptions.FieldLookupError:
                 # The filter could not be created because the lookup expression is not supported on the field
                 continue
@@ -727,7 +712,10 @@ class BaseFilterSet(django_filters.FilterSet):
             # If the base filter_field has a custom label, django_filters won't adjust it for the new_filter lookup,
             # so we have to do it.
             if filter_field.label and filter_field.label != label_for_filter(
-                cls.Meta.model, filter_field.field_name, filter_field.lookup_expr, filter_field.exclude
+                cls._meta.model,  # pylint: disable=no-member
+                filter_field.field_name,
+                filter_field.lookup_expr,
+                filter_field.exclude,
             ):
                 # Lightly adjusted from label_for_filter() implementation:
                 verbose_expression = ["exclude", filter_field.label] if new_filter.exclude else [filter_field.label]
@@ -741,6 +729,45 @@ class BaseFilterSet(django_filters.FilterSet):
         return magic_filters
 
     @classmethod
+    def _should_use_char_filter_for_lookups(cls, filter_field):
+        return type(filter_field) in cls.USE_CHAR_FILTER_FOR_LOOKUPS
+
+    @classmethod
+    def _get_new_filter(cls, filter_field, field, filter_name, lookup_expr):
+        if cls._should_use_char_filter_for_lookups(filter_field):
+            # For some cases like `MultiValueChoiceFilter(django_filters.MultipleChoiceFilter)`
+            # we want to have choices field with no lookups and standard char field for lookups filtering.
+            # Using a `choice` field for lookups blocks us from using `__re`, `__iew` or other "partial" filters.
+            resolve_field(field, lookup_expr)  # Will raise FieldLookupError if the lookup is invalid
+            return MultiValueCharFilter(
+                field_name=filter_field.field_name,
+                lookup_expr=lookup_expr,
+                label=filter_field.label,
+                exclude=filter_field.exclude,
+                distinct=filter_field.distinct,
+            )
+
+        if filter_name in cls.declared_filters and lookup_expr not in {"isnull"}:  # pylint: disable=no-member
+            # The filter field has been explicitly defined on the filterset class so we must manually
+            # create the new filter with the same type because there is no guarantee the defined type
+            # is the same as the default type for the field. This does not apply if the filter
+            # should retain the original lookup_expr type, such as `isnull` using a boolean field on a
+            # char or date object.
+            resolve_field(field, lookup_expr)  # Will raise FieldLookupError if the lookup is invalid
+            return type(filter_field)(
+                field_name=filter_field.field_name,
+                lookup_expr=lookup_expr,
+                label=filter_field.label,
+                exclude=filter_field.exclude,
+                distinct=filter_field.distinct,
+                **filter_field.extra,
+            )
+
+        # The filter field is listed in Meta.fields so we can safely rely on default behavior
+        # Will raise FieldLookupError if the lookup is invalid
+        return cls.filter_for_field(field, filter_field.field_name, lookup_expr)
+
+    @classmethod
     def add_filter(cls, new_filter_name, new_filter_field):
         """
         Allow filters to be added post-generation on import.
@@ -750,22 +777,22 @@ class BaseFilterSet(django_filters.FilterSet):
         if not isinstance(new_filter_field, django_filters.Filter):
             raise TypeError(f"Tried to add filter ({new_filter_name}) which is not an instance of Django Filter")
 
-        if new_filter_name in cls.base_filters:
+        if new_filter_name in cls.base_filters:  # pylint: disable=no-member
             raise AttributeError(
                 f"There was a conflict with filter `{new_filter_name}`, the custom filter was ignored."
             )
 
-        cls.base_filters[new_filter_name] = new_filter_field
+        cls.base_filters[new_filter_name] = new_filter_field  # pylint: disable=no-member
         # django-filters has no concept of "abstract" filtersets, so we have to fake it
-        if cls._meta.model is not None:
-            cls.base_filters.update(
+        if cls._meta.model is not None:  # pylint: disable=no-member
+            cls.base_filters.update(  # pylint: disable=no-member
                 cls._generate_lookup_expression_filters(filter_name=new_filter_name, filter_field=new_filter_field)
             )
 
     @classmethod
     def get_fields(cls):
         fields = super().get_fields()
-        if "id" not in fields and (cls._meta.exclude is None or "id" not in cls._meta.exclude):
+        if "id" not in fields and (cls._meta.exclude is None or "id" not in cls._meta.exclude):  # pylint: disable=no-member
             # Add "id" as the first key in the `fields` dict
             fields = {"id": [django_filters.conf.settings.DEFAULT_LOOKUP_EXPR], **fields}
         return fields
@@ -782,7 +809,7 @@ class BaseFilterSet(django_filters.FilterSet):
             if filter_name.startswith("_"):
                 del filters[filter_name]
 
-        if getattr(cls._meta.model, "is_contact_associable_model", False):
+        if getattr(cls._meta.model, "is_contact_associable_model", False):  # pylint: disable=no-member
             # Add "contacts" and "teams" filters
             from nautobot.extras.models import Contact, Team
 
@@ -802,13 +829,13 @@ class BaseFilterSet(django_filters.FilterSet):
                     label="Teams (name or ID)",
                 )
 
-        if "dynamic_groups" not in filters and getattr(cls._meta.model, "is_dynamic_group_associable_model", False):
-            if not hasattr(cls._meta.model, "static_group_association_set"):
+        if "dynamic_groups" not in filters and getattr(cls._meta.model, "is_dynamic_group_associable_model", False):  # pylint: disable=no-member
+            if not hasattr(cls._meta.model, "static_group_association_set"):  # pylint: disable=no-member
                 logger.warning(
                     "Model %s has 'is_dynamic_group_associable_model = True' but lacks "
                     "a 'static_group_association_set' attribute. Perhaps this is due to it inheriting from "
                     "the deprecated DynamicGroupMixin class instead of the preferred DynamicGroupsModelMixin?",
-                    cls._meta.model,
+                    cls._meta.model,  # pylint: disable=no-member
                 )
             else:
                 # Add "dynamic_groups" field as the last key
@@ -818,14 +845,14 @@ class BaseFilterSet(django_filters.FilterSet):
                     queryset=DynamicGroup.objects.all(),
                     field_name="static_group_association_set__dynamic_group",
                     to_field_name="name",
-                    query_params={"content_type": cls._meta.model._meta.label_lower},
+                    query_params={"content_type": cls._meta.model._meta.label_lower},  # pylint: disable=no-member
                     label="Dynamic groups (name or ID)",
                 )
 
         # django-filters has no concept of "abstract" filtersets, so we have to fake it
-        if cls._meta.model is not None:
+        if cls._meta.model is not None:  # pylint: disable=no-member
             if "tags" in filters and isinstance(filters["tags"], TagFilter):
-                filters["tags"].extra["query_params"] = {"content_types": [cls._meta.model._meta.label_lower]}
+                filters["tags"].extra["query_params"] = {"content_types": [cls._meta.model._meta.label_lower]}  # pylint: disable=no-member
 
             new_filters = {}
             for existing_filter_name, existing_filter in filters.items():
@@ -847,7 +874,10 @@ class BaseFilterSet(django_filters.FilterSet):
         Note: Any CharField or IntegerField with choices set is a ChoiceField.
         """
         if lookup_type == "exact" and getattr(field, "choices", None):
+            if isinstance(field, timezone_field.TimeZoneField):
+                return django_filters.MultipleChoiceFilter, {"choices": ((str(v), n) for v, n in field.choices)}
             return django_filters.MultipleChoiceFilter, {"choices": field.choices}
+
         return super().filter_for_lookup(field, lookup_type)
 
     def __init__(self, data=None, queryset=None, *, request=None, prefix=None):

@@ -1,15 +1,15 @@
-#
-<!-- markdownlint-disable no-inline-html -->
+# Nautobot
+
+<!-- pyml disable-num-lines 5 no-inline-html,proper-names -->
 <figure markdown="span">
   ![Nautobot Logo](assets/nautobot_logo.svg "Welcome"){ width="400" }
 </figure>
-<!-- markdownlint-enable no-inline-html -->
----
 
 ## What is Nautobot?
 
 Nautobot is an open source Network Source of Truth and Network Automation Platform built as a web application atop the [Django](https://www.djangoproject.com/) Python framework with a [PostgreSQL](https://www.postgresql.org/) or [MySQL](https://www.mysql.com) database.
 
+<!-- pyml disable-next-line proper-names -->
 Try out a live demo at [https://demo.nautobot.com](https://demo.nautobot.com)
 
 ## Key Use Cases
@@ -24,7 +24,7 @@ Nautobot enables three (3) key use cases.
 
 ## Getting Started
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 30 no-inline-html,proper-names -->
 <div class="grid cards" markdown>
 
 - :material-cloud-download:{ .lg .middle } **Installing Nautobot**
@@ -56,13 +56,12 @@ Nautobot enables three (3) key use cases.
     Nautobot has a [Python SDK](https://docs.nautobot.com/projects/pynautobot/en/latest/index.html) and [Ansible modules](https://galaxy.ansible.com/ui/repo/published/networktocode/nautobot/docs/) to interact with Nautobot in a programmatic way.
 
 </div>
-<!-- markdownlint-enable no-inline-html -->
 
 ## Nautobot Apps
 
 Nautobot has a thriving ecosystem of **Apps**, developed as separate projects, for which you can find links to documentation under the [Nautobot Apps](apps/index.md) section.
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 42 no-inline-html -->
 <div class="grid cards" markdown>
 
 - ![Golden Config](assets/app-icons/icon-GoldenConfiguration.png){style="height: 35px; margin-bottom: 0em" .middle } **Golden Configuration**
@@ -106,11 +105,10 @@ Nautobot has a thriving ecosystem of **Apps**, developed as separate projects, f
     [Device Onboarding](https://docs.nautobot.com/projects/device-onboarding/en/latest/) brings network data into Nautobot, helping to build out the intended state from the current state of the network.
 
 </div>
-<!-- markdownlint-enable no-inline-html -->
 
 ## Nautobot Screenshots
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 11 no-inline-html -->
 <div class="grid cards" markdown>
 
 - ![Main Page](media/ss_main_page.png){ .on-glb }
@@ -122,11 +120,10 @@ Nautobot has a thriving ecosystem of **Apps**, developed as separate projects, f
 - ![GraphQL API](media/ss_graphiql.png){ .on-glb }
 
 </div>
-<!-- markdownlint-enable no-inline-html -->
 
 ### App Screenshots
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 7 no-inline-html -->
 <div class="grid cards" markdown>
 
 - ![Golden Config App](media/ss_app_golden_config.png){ .on-glb }
@@ -134,11 +131,10 @@ Nautobot has a thriving ecosystem of **Apps**, developed as separate projects, f
 - ![ChatOps App](media/ss_app_chatops.png){ .on-glb }
 
 </div>
-<!-- markdownlint-enable no-inline-html -->
 
 ## Contributing to Nautobot
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 17 no-inline-html -->
 <div class="grid cards" markdown>
 
 - :material-pier-crane:{ .lg .middle } **Jobs Developer Guide**
@@ -157,4 +153,3 @@ Nautobot has a thriving ecosystem of **Apps**, developed as separate projects, f
     Learn how to [develop and contribute to Nautobot](development/core/getting-started.md)
 
 </div>
-<!-- markdownlint-enable no-inline-html -->

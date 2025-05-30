@@ -1,5 +1,3 @@
-from django.db.models import Q
-
 from nautobot.core.testing import FilterTestCases
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer, Platform, SoftwareVersion
@@ -23,9 +21,13 @@ from nautobot.virtualization.models import (
 )
 
 
-class ClusterTypeTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class ClusterTypeTestCase(FilterTestCases.FilterTestCase):
     queryset = ClusterType.objects.all()
     filterset = ClusterTypeFilterSet
+    generic_filter_tests = (
+        ("description",),
+        ("name",),
+    )
 
     @classmethod
     def setUpTestData(cls):
@@ -40,19 +42,19 @@ class ClusterTypeTestCase(FilterTestCases.NameOnlyFilterTestCase):
             Cluster.objects.create(name="Cluster 2", cluster_type=cluster_types[1]),
         ]
 
-    def test_description(self):
-        params = {"description": ["A", "B"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_clusters(self):
         with self.subTest("Clusters"):
             params = {"clusters": [self.clusters[0].pk, self.clusters[1].name]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
-class ClusterGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class ClusterGroupTestCase(FilterTestCases.FilterTestCase):
     queryset = ClusterGroup.objects.all()
     filterset = ClusterGroupFilterSet
+    generic_filter_tests = (
+        ("description",),
+        ("name",),
+    )
 
     @classmethod
     def setUpTestData(cls):
@@ -73,10 +75,6 @@ class ClusterGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):
             Cluster.objects.create(name="Cluster 2", cluster_type=cluster_types[1], cluster_group=cluster_groups[1]),
         )
 
-    def test_description(self):
-        params = {"description": ["A", "B"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_clusters(self):
         with self.subTest("Clusters"):
             params = {"clusters": [self.clusters[0].pk, self.clusters[1].name]}
@@ -87,6 +85,22 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
     queryset = Cluster.objects.all()
     filterset = ClusterFilterSet
     tenancy_related_name = "clusters"
+    generic_filter_tests = (
+        ("cluster_group", "cluster_group__id"),
+        ("cluster_group", "cluster_group__name"),
+        ("cluster_group_id", "cluster_group__id"),
+        ("cluster_type", "cluster_type__id"),
+        ("cluster_type", "cluster_type__name"),
+        ("cluster_type_id", "cluster_type__id"),
+        ("comments",),
+        # ("devices", "devices__id"),  # TODO: not enough distinct devices at present
+        # ("devices", "devices__name"),  # TODO: not enough distinct devices at present
+        # ("location", "location__id"),  # TODO
+        # ("location", "location__name"),  # TODO
+        ("name",),
+        # ("virtual_machines", "virtual_machines__id"),  # TODO: not enough distinct VMs at present
+        # ("virtual_machines", "virtual_machines__name"),  # TODO: not enough distinct VMs at present
+    )
 
     @classmethod
     def setUpTestData(cls):
@@ -165,14 +179,6 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         clusters[0].tags.set(Tag.objects.get_for_model(Cluster))
         clusters[1].tags.set(Tag.objects.get_for_model(Cluster)[:3])
 
-    def test_name(self):
-        params = {"name": ["Cluster 1", "Cluster 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_comments(self):
-        params = {"comments": ["This is cluster 1", "This is cluster 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_device(self):
         with self.subTest("Devices"):
             params = {"devices": [self.device.pk, self.device.name]}
@@ -193,35 +199,6 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
             self.filterset(params, self.queryset).qs, self.queryset.filter(location__name__in=params["location"])
         )
 
-    def test_cluster_group(self):
-        cluster_groups = list(ClusterGroup.objects.all()[:2])
-        filter_params = [
-            {"cluster_group_id": [cluster_groups[0].pk, cluster_groups[1].pk]},
-            {"cluster_group": [cluster_groups[0].pk, cluster_groups[1].name]},
-        ]
-        for params in filter_params:
-            self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.filter(cluster_group__in=cluster_groups).distinct(),
-            )
-
-    def test_cluster_type(self):
-        cluster_types = list(ClusterType.objects.all()[:2])
-        filter_params = [
-            {"cluster_type_id": [cluster_types[0].pk, cluster_types[1].pk]},
-            {"cluster_type": [cluster_types[0].pk, cluster_types[1].name]},
-        ]
-        for params in filter_params:
-            self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.filter(cluster_type__in=cluster_types).distinct(),
-            )
-
-    def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
-        params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
-
 
 class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = VirtualMachine.objects.all()
@@ -230,10 +207,37 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
 
     generic_filter_tests = (
         ["ip_addresses", "interfaces__ip_addresses__id"],
-        ["software_image_files", "software_image_files__id"],
-        ["software_image_files", "software_image_files__image_file_name"],
-        ["software_version", "software_version__id"],
-        ["software_version", "software_version__version"],
+        ("cluster", "cluster__id"),
+        ("cluster", "cluster__name"),
+        ("cluster_group", "cluster__cluster_group__id"),
+        ("cluster_group", "cluster__cluster_group__name"),
+        ("cluster_group_id", "cluster__cluster_group__id"),
+        ("cluster_id", "cluster__id"),
+        ("cluster_type", "cluster__cluster_type__id"),
+        ("cluster_type", "cluster__cluster_type__name"),
+        ("cluster_type_id", "cluster__cluster_type__id"),
+        ("comments",),
+        ("disk",),
+        ("interfaces", "interfaces__id"),
+        ("location", "cluster__location__id"),
+        ("location", "cluster__location__name"),
+        ("mac_address", "interfaces__mac_address"),
+        ("memory",),
+        ("name",),
+        ("platform", "platform__id"),
+        ("platform", "platform__name"),
+        ("platform_id", "platform__id"),
+        ("role", "role__id"),
+        ("role", "role__name"),
+        ("services", "services__id"),
+        ("services", "services__name"),
+        ("software_image_files", "software_image_files__id"),
+        ("software_image_files", "software_image_files__image_file_name"),
+        ("software_version", "software_version__id"),
+        ("software_version", "software_version__version"),
+        ("status", "status__id"),
+        ("status", "status__name"),
+        ("vcpus",),
     )
 
     @classmethod
@@ -475,105 +479,6 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         params = {"primary_ip6": ["fe80::8ef:3eff:fe4c:3895/24", self.ipaddresses[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-    def test_services(self):
-        params = {"services": [self.services[0].pk, self.services[1].name]}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(services__in=[self.services[0].pk, self.services[1].pk]),
-        )
-
-    def test_interfaces(self):
-        params = {"interfaces": [self.interfaces[0].pk, self.interfaces[1].pk]}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(interfaces__in=[self.interfaces[0].pk, self.interfaces[1].pk]),
-        )
-
-    def test_vcpus(self):
-        params = {"vcpus": [1, 2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_memory(self):
-        params = {"memory": [1, 2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_disk(self):
-        params = {"disk": [1, 2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_status(self):
-        params = {"status": [self.statuses[0].name, self.statuses[1].id]}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(status__in=[self.statuses[0], self.statuses[1]]),
-        )
-
-    def test_cluster_group(self):
-        groups = list(ClusterGroup.objects.all()[:2])
-        filter_params = [
-            {"cluster_group_id": [groups[0].pk, groups[1].pk]},
-            {"cluster_group": [groups[0].pk, groups[1].name]},
-        ]
-        for params in filter_params:
-            self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.filter(cluster__cluster_group__in=groups).distinct(),
-            )
-
-    def test_cluster_type(self):
-        types = list(ClusterType.objects.all()[:2])
-        filter_params = [
-            {"cluster_type_id": [types[0].pk, types[1].pk]},
-            {"cluster_type": [types[0].pk, types[1].name]},
-        ]
-        for params in filter_params:
-            self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.filter(cluster__cluster_type__in=types).distinct(),
-            )
-
-    def test_cluster(self):
-        clusters = Cluster.objects.all()[:2]
-        params = {"cluster_id": [clusters[0].pk, clusters[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        # 2.0 TODO: 'cluster' should match on name (This should be solved in FilterSet refactors)
-        # params = {'cluster': [clusters[0].name, clusters[1].name]}
-        # self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_location(self):
-        params = {"location": [self.locations[0].pk, self.locations[1].pk]}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(cluster__location__in=params["location"])
-        )
-        params = {"location": [self.locations[0].name, self.locations[1].name]}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(cluster__location__name__in=params["location"]),
-        )
-
-    def test_role(self):
-        roles = self.roles[:2]
-        params = {"role": [roles[0].pk, roles[1].name]}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(role__in=[roles[0], roles[1]])
-        )
-
-    def test_platform(self):
-        platforms = self.platforms[:2]
-        filter_params = [
-            {"platform_id": [platforms[0].pk, platforms[1].pk]},
-            {"platform": [platforms[0].pk, platforms[1].name]},
-        ]
-        for params in filter_params:
-            self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.filter(platform__in=[platforms[0], platforms[1]]).distinct(),
-            )
-
-    def test_mac_address(self):
-        params = {"mac_address": ["00-00-00-00-00-01", "00-00-00-00-00-02"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_has_primary_ip(self):
         params = {"has_primary_ip": "true"}
         self.assertQuerysetEqualAndNotEmpty(
@@ -597,11 +502,6 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(local_config_context_data__isnull=True),
         )
-
-    def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
-        params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
 class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
@@ -764,13 +664,4 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(enabled=False),
-        )
-
-    def test_search(self):
-        value = self.queryset.first().pk
-        params = {"q": value}
-        q = Q(id__iexact=str(value)) | Q(name__icontains=value)
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(q),
         )

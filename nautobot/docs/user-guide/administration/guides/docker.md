@@ -1,30 +1,23 @@
 # Nautobot Docker Images
 
-Nautobot is packaged as a Docker image for use in a production environment; developer images are also provided for those working on App development and testing. The Docker image and deployment strategies are being actively developed, check back here or join the **#nautobot** channel on [Network to Code's Slack community](https://slack.networktocode.com/) for the most up to date information.
+Nautobot is packaged as a Docker image for use in a production environment; developer images are also provided for those working on App development and testing. The Docker image and deployment strategies are being actively developed, check back here or join the `#nautobot` channel on [Network to Code's Slack community](https://slack.networktocode.com/) for the most up to date information.
 
 ## Python Versions
 
 Docker images are published for multiple supported Python versions. The default image, recommended for most users, is based on the `python:3.12-slim` image.
 
-+/- 1.6.1
-    The Python version for the image tags that do not explicitly state a Python version changed to 3.11 for Nautobot 1.6.1. From now on, these tagged images will always contain the **latest** supported Python version (e.g., when Python 3.12 support is added, these tags will change to contain Python 3.12). This is a change from Nautobot 1.6.0 and earlier, where tags that did not state a Python version would contain the **earliest** supported Python version.
+Currently images are pushed for the following Python versions:
 
-Currently images are pushed for the following python versions:
-
-* 3.8
 * 3.9
 * 3.10
 * 3.11
 * 3.12
 
-+++ 1.6.0
-    Python 3.11 was added to the set of published images.
-
---- 1.6.0
-    Python 3.7 was removed from the set of published images as Python 3.7 is now end-of-life.
-
-+++ 2.3.0
++++ 2.3.0 "Added Python 3.12"
     Python 3.12 was added to the set of published images and is now the default version.
+
+--- 2.4.0 "Removed Python 3.8"
+    Python 3.8 was removed from the set of published images as Python 3.8 is now end-of-life.
 
 ## Platforms
 
@@ -53,13 +46,13 @@ The following tags are available on both Docker Hub and the GitHub Container Reg
 | Tag                                                           | Nautobot Version      | Python Version | Example        |
 | ------------------------------------------------------------- | --------------------- | -------------- | -------------- |
 | `latest`                                                      | Latest stable release | 3.12           | `latest`       |
-| `latest-py${PYTHON_VER}`                                      | Latest stable release | As specified   | `latest-py3.8` |
+| `latest-py${PYTHON_VER}`                                      | Latest stable release | As specified   | `latest-py3.10` |
 | `${NAUTOBOT_VER}`                                             | As specified          | 3.12           | `2.3.0`        |
-| `${NAUTOBOT_VER}-py${PYTHON_VER}`                             | As specified          | As specified   | `2.3.0-py3.8`  |
+| `${NAUTOBOT_VER}-py${PYTHON_VER}`                             | As specified          | As specified   | `2.3.0-py3.10`  |
 | `${NAUTOBOT_MAJOR_VER}.${NAUTOBOT_MINOR_VER}`                 | As specified          | 3.12           | `2.3`          |
-| `${NAUTOBOT_MAJOR_VER}.${NAUTOBOT_MINOR_VER}-py${PYTHON_VER}` | As specified          | As specified   | `2.3-py3.8`    |
+| `${NAUTOBOT_MAJOR_VER}.${NAUTOBOT_MINOR_VER}-py${PYTHON_VER}` | As specified          | As specified   | `2.3-py3.10`    |
 | `stable`                                                      | Latest stable release | 3.12           | `stable`       |
-| `stable-py${PYTHON_VER}`                                      | Latest stable release | As specified   | `stable-py3.8` |
+| `stable-py${PYTHON_VER}`                                      | Latest stable release | As specified   | `stable-py3.10` |
 
 ### Developer Tags
 
@@ -164,8 +157,6 @@ The docker container uses [uWSGI](https://uwsgi-docs.readthedocs.io/) to serve N
 
 #### `NAUTOBOT_UWSGI_BUFFER_SIZE`
 
-+++ 1.3.9
-
 Default: `4096`
 
 Max: `65535`
@@ -248,7 +239,7 @@ Example output:
 
 ```no-highlight
 REPOSITORY                                       TAG                              IMAGE ID       CREATED          SIZE
-local/nautobot-dev                               local-py3.8                      0d93eec7dfea   5 minutes ago    1.31GB
+local/nautobot-dev                               local-py3.10                     0d93eec7dfea   5 minutes ago    1.31GB
 ```
 
 If you need to build or test the `final` image, you must set your `invoke.yml` to use `docker-compose.final.yml` in place of `docker-compose.dev.yml`:
@@ -283,11 +274,11 @@ Example output:
 
 ```no-highlight
 REPOSITORY                                       TAG                              IMAGE ID       CREATED          SIZE
-local/nautobot-final                             local-py3.8                      e03e752fcc6b   27 minutes ago   629MB
+local/nautobot-final                             local-py3.10                     e03e752fcc6b   27 minutes ago   629MB
 ```
 
 Similarly, you can use `docker-compose.final-dev.yml` if you wish to build and test the `final-dev` image.
 
 ## Docker Compose
 
-An [example library for using Docker Compose](https://github.com/nautobot/nautobot-docker-compose/) to build out all of the components for Nautobot can be found within the Nautobot community. Please see [https://github.com/nautobot/nautobot-docker-compose/](https://github.com/nautobot/nautobot-docker-compose/) for examples on the base application, LDAP integration, and using Apps.
+An [example library for using Docker Compose](https://github.com/nautobot/nautobot-docker-compose/) to build out all of the components for Nautobot can be found within the Nautobot community. Please refer to that library for examples on the base application, LDAP integration, and using Apps.

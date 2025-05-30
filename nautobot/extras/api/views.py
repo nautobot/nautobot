@@ -27,11 +27,13 @@ from nautobot.core.api.views import (
     NautobotAPIVersionMixin,
     ReadOnlyModelViewSet,
 )
+from nautobot.core.events import publish_event
 from nautobot.core.exceptions import CeleryWorkerNotRunningException
 from nautobot.core.graphql import execute_saved_query
 from nautobot.core.models.querysets import count_related
+from nautobot.core.models.utils import serialize_object_v2
 from nautobot.extras import filters
-from nautobot.extras.choices import JobExecutionType
+from nautobot.extras.choices import JobExecutionType, JobQueueTypeChoices
 from nautobot.extras.filters import RoleFilterSet
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
@@ -55,6 +57,8 @@ from nautobot.extras.models import (
     JobButton,
     JobHook,
     JobLogEntry,
+    JobQueue,
+    JobQueueAssignment,
     JobResult,
     MetadataChoice,
     MetadataType,
@@ -78,7 +82,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.secrets.exceptions import SecretError
-from nautobot.extras.utils import get_worker_count
+from nautobot.extras.utils import get_job_queue, get_worker_count
 
 from . import serializers
 
@@ -177,14 +181,7 @@ class ConfigContextQuerySetMixin:
 
 
 class ConfigContextViewSet(NotesViewSetMixin, ModelViewSet):
-    queryset = ConfigContext.objects.prefetch_related(
-        "locations",
-        "roles",
-        "device_types",
-        "platforms",
-        "tenant_groups",
-        "tenants",
-    )
+    queryset = ConfigContext.objects.all()
     serializer_class = serializers.ConfigContextSerializer
     filterset_class = filters.ConfigContextFilterSet
 
@@ -301,7 +298,7 @@ class DynamicGroupViewSet(NotesViewSetMixin, ModelViewSet):
     Manage Dynamic Groups through DELETE, GET, POST, PUT, and PATCH requests.
     """
 
-    queryset = DynamicGroup.objects.select_related("content_type")
+    queryset = DynamicGroup.objects.all()
     serializer_class = serializers.DynamicGroupSerializer
     filterset_class = filters.DynamicGroupFilterSet
 
@@ -326,7 +323,7 @@ class DynamicGroupMembershipViewSet(ModelViewSet):
     Manage Dynamic Group Memberships through DELETE, GET, POST, PUT, and PATCH requests.
     """
 
-    queryset = DynamicGroupMembership.objects.select_related("group", "parent_group")
+    queryset = DynamicGroupMembership.objects.all()
     serializer_class = serializers.DynamicGroupMembershipSerializer
     filterset_class = filters.DynamicGroupMembershipFilterSet
 
@@ -337,13 +334,13 @@ class DynamicGroupMembershipViewSet(ModelViewSet):
 
 
 class SavedViewViewSet(ModelViewSet):
-    queryset = SavedView.objects.select_related("owner")
+    queryset = SavedView.objects.all()
     serializer_class = serializers.SavedViewSerializer
     filterset_class = filters.SavedViewFilterSet
 
 
 class UserSavedViewAssociationViewSet(ModelViewSet):
-    queryset = UserSavedViewAssociation.objects.select_related("user", "saved_view")
+    queryset = UserSavedViewAssociation.objects.all()
     serializer_class = serializers.UserSavedViewAssociationSerializer
     filterset_class = filters.UserSavedViewAssociationFilterSet
 
@@ -353,7 +350,7 @@ class StaticGroupAssociationViewSet(NautobotModelViewSet):
     Manage Static Group Associations through DELETE, GET, POST, PUT, and PATCH requests.
     """
 
-    queryset = StaticGroupAssociation.objects.select_related("associated_object_type", "dynamic_group")
+    queryset = StaticGroupAssociation.objects.all()
     serializer_class = serializers.StaticGroupAssociationSerializer
     filterset_class = filters.StaticGroupAssociationFilterSet
 
@@ -364,7 +361,7 @@ class StaticGroupAssociationViewSet(NautobotModelViewSet):
             and "dynamic_group" in self.request.GET
             and self.action in ["list", "retrieve"]
         ):
-            self.queryset = StaticGroupAssociation.all_objects.select_related("associated_object_type", "dynamic_group")
+            self.queryset = StaticGroupAssociation.all_objects.all()
         return super().get_queryset()
 
 
@@ -385,7 +382,7 @@ class ExportTemplateViewSet(NotesViewSetMixin, ModelViewSet):
 
 
 class ExternalIntegrationViewSet(NautobotModelViewSet):
-    queryset = ExternalIntegration.objects.select_related("secrets_group")
+    queryset = ExternalIntegration.objects.all()
     serializer_class = serializers.ExternalIntegrationSerializer
     filterset_class = filters.ExternalIntegrationFilterSet
 
@@ -396,7 +393,7 @@ class ExternalIntegrationViewSet(NautobotModelViewSet):
 
 
 class FileProxyViewSet(ReadOnlyModelViewSet):
-    queryset = FileProxy.objects.select_related("job_result")
+    queryset = FileProxy.objects.all()
     serializer_class = serializers.FileProxySerializer
     filterset_class = filters.FileProxyFilterSet
 
@@ -428,7 +425,7 @@ class GitRepositoryViewSet(NautobotModelViewSet):
     serializer_class = serializers.GitRepositorySerializer
     filterset_class = filters.GitRepositoryFilterSet
 
-    @extend_schema(methods=["post"], request=serializers.GitRepositorySerializer)
+    @extend_schema(methods=["post"], responses={"200": serializers.GitRepositorySyncResponseSerializer}, request=None)
     # Since we are explicitly checking for `extras:change_gitrepository` in the API sync() method
     # We explicitly set the permission_classes to IsAuthenticated in the @action decorator
     # bypassing the default DRF permission check for `extras:add_gitrepository` and the permission check fall through to the function itself.
@@ -444,8 +441,16 @@ class GitRepositoryViewSet(NautobotModelViewSet):
             raise CeleryWorkerNotRunningException()
 
         repository = get_object_or_404(GitRepository, id=pk)
-        repository.sync(user=request.user)
-        return Response({"message": f"Repository {repository} sync job added to queue."})
+        job_result = repository.sync(user=request.user)
+
+        data = {
+            # Kept message for backward compatibility for now
+            "message": f"Repository {repository} sync job added to queue.",
+            "job_result": job_result,
+        }
+
+        serializer = serializers.GitRepositorySyncResponseSerializer(data, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 #
@@ -601,9 +606,8 @@ class JobViewSetBase(
             )
 
         valid_queues = job_model.task_queues if job_model.task_queues else [settings.CELERY_TASK_DEFAULT_QUEUE]
-        # Get a default queue from either the job model's specified task queue or
-        # the system default to fall back on if request doesn't provide one
-        default_valid_queue = valid_queues[0]
+        # default queue should be specified on the default_job_queue.
+        default_valid_queue = job_model.default_job_queue.name
 
         # We need to call request.data for both cases as this is what pulls and caches the request data
         data = request.data
@@ -624,7 +628,23 @@ class JobViewSetBase(
             input_serializer = serializers.JobMultiPartInputSerializer(data=data, context={"request": request})
             input_serializer.is_valid(raise_exception=True)
 
-            task_queue = input_serializer.validated_data.get("_task_queue", default_valid_queue)
+            # TODO remove _task_queue related code in 3.0
+            # _task_queue and _job_queue are both valid arguments in v2.4
+            task_queue = input_serializer.validated_data.get(
+                "_task_queue", None
+            ) or input_serializer.validated_data.get("_job_queue", None)
+            if not task_queue:
+                task_queue = default_valid_queue
+
+            # Log a warning if _task_queue and _job_queue fields are both specified out
+            if input_serializer.validated_data.get("_task_queue", None) and input_serializer.validated_data.get(
+                "_job_queue", None
+            ):
+                raise ValidationError(
+                    {
+                        "_task_queue": "_task_queue and _job_queue are both specified. Please specify only one or another."
+                    }
+                )
 
             # JobMultiPartInputSerializer only has keys for executing job (task_queue, etc),
             # everything else is a candidate for the job form's data.
@@ -652,7 +672,21 @@ class JobViewSetBase(
             input_serializer.is_valid(raise_exception=True)
 
             data = input_serializer.validated_data.get("data", {})
-            task_queue = input_serializer.validated_data.get("task_queue", default_valid_queue)
+            # TODO remove _task_queue related code in 3.0
+            # _task_queue and _job_queue are both valid arguments in v2.4
+            task_queue = input_serializer.validated_data.get("task_queue", None) or input_serializer.validated_data.get(
+                "job_queue", None
+            )
+            if not task_queue:
+                task_queue = default_valid_queue
+
+            # Log a warning if _task_queue and _job_queue fields are both specified out
+            if input_serializer.validated_data.get("task_queue", None) and input_serializer.validated_data.get(
+                "job_queue", None
+            ):
+                raise ValidationError(
+                    {"task_queue": "task_queue and job_queue are both specified. Please specify only one or another."}
+                )
             schedule_data = input_serializer.validated_data.get("schedule", None)
 
         if task_queue not in valid_queues:
@@ -669,7 +703,8 @@ class JobViewSetBase(
             # of errors under messages
             return Response({"errors": e.message_dict if hasattr(e, "error_dict") else e.messages}, status=400)
 
-        if not get_worker_count(queue=task_queue):
+        job_queue = get_job_queue(task_queue) or job_model.default_job_queue
+        if job_queue.queue_type == JobQueueTypeChoices.TYPE_CELERY and not get_worker_count(queue=task_queue):
             raise CeleryWorkerNotRunningException(queue=task_queue)
 
         # Default to a null JobResult.
@@ -700,7 +735,7 @@ class JobViewSetBase(
                 interval=schedule_data.get("interval"),
                 crontab=schedule_data.get("crontab", ""),
                 approval_required=approval_required,
-                task_queue=input_serializer.validated_data.get("task_queue", None),
+                job_queue=job_queue,
                 **job_class.serialize_data(cleaned_data),
             )
         else:
@@ -711,7 +746,7 @@ class JobViewSetBase(
             job_result = JobResult.enqueue_job(
                 job_model,
                 request.user,
-                task_queue=task_queue,
+                job_queue=job_queue,
                 **job_class.serialize_data(cleaned_data),
             )
 
@@ -732,13 +767,13 @@ class JobViewSet(
 ):
     lookup_value_regex = r"[-0-9a-fA-F]+"
 
-    def perform_destroy(self, obj):
-        if obj.module_name.startswith("nautobot."):
+    def perform_destroy(self, instance):
+        if instance.module_name.startswith("nautobot."):
             raise ProtectedError(
-                f"Unable to delete Job {obj}. System Job cannot be deleted",
+                f"Unable to delete Job {instance}. System Job cannot be deleted",
                 [],
             )
-        super().perform_destroy(obj)
+        super().perform_destroy(instance)
 
 
 @extend_schema_view(
@@ -785,6 +820,31 @@ class JobHooksViewSet(NautobotModelViewSet):
 
 
 #
+# Job Queues
+#
+
+
+class JobQueueViewSet(NautobotModelViewSet):
+    """
+    Manage job queues through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = JobQueue.objects.all()
+    serializer_class = serializers.JobQueueSerializer
+    filterset_class = filters.JobQueueFilterSet
+
+
+class JobQueueAssignmentViewSet(ModelViewSet):
+    """
+    Manage job queue assignments through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = JobQueueAssignment.objects.all()
+    serializer_class = serializers.JobQueueAssignmentSerializer
+    filterset_class = filters.JobQueueAssignmentFilterSet
+
+
+#
 # Job Results
 #
 
@@ -794,7 +854,7 @@ class JobLogEntryViewSet(ReadOnlyModelViewSet):
     Retrieve a list of job log entries.
     """
 
-    queryset = JobLogEntry.objects.select_related("job_result")
+    queryset = JobLogEntry.objects.all()
     serializer_class = serializers.JobLogEntrySerializer
     filterset_class = filters.JobLogEntryFilterSet
 
@@ -812,7 +872,7 @@ class JobResultViewSet(
     Retrieve a list of job results
     """
 
-    queryset = JobResult.objects.select_related("job_model", "user")
+    queryset = JobResult.objects.all()
     serializer_class = serializers.JobResultSerializer
     filterset_class = filters.JobResultFilterSet
 
@@ -849,7 +909,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
     Retrieve a list of scheduled jobs
     """
 
-    queryset = ScheduledJob.objects.select_related("user")
+    queryset = ScheduledJob.objects.all()
     serializer_class = serializers.ScheduledJobSerializer
     filterset_class = filters.ScheduledJobFilterSet
 
@@ -912,6 +972,8 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
         scheduled_job.approved_by_user = request.user
         scheduled_job.approved_at = timezone.now()
         scheduled_job.save()
+        publish_event_payload = {"data": serialize_object_v2(scheduled_job)}
+        publish_event(topic="nautobot.jobs.approval.approved", payload=publish_event_payload)
         serializer = serializers.ScheduledJobSerializer(scheduled_job, context={"request": request})
 
         return Response(serializer.data)
@@ -936,6 +998,8 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
         if not Job.objects.check_perms(request.user, instance=scheduled_job.job_model, action="approve"):
             raise PermissionDenied("You do not have permission to deny this request.")
 
+        publish_event_payload = {"data": serialize_object_v2(scheduled_job)}
+        publish_event(topic="nautobot.jobs.approval.denied", payload=publish_event_payload)
         scheduled_job.delete()
 
         return Response(None)
@@ -998,12 +1062,12 @@ class MetadataTypeViewSet(NautobotModelViewSet):
 
 
 class MetadataChoiceViewSet(ModelViewSet):
-    queryset = MetadataChoice.objects.select_related("metadata_type")
+    queryset = MetadataChoice.objects.all()
     serializer_class = serializers.MetadataChoiceSerializer
     filterset_class = filters.MetadataChoiceFilterSet
 
 
-class ObjectMetadataViewSet(NautobotModelViewSet):
+class ObjectMetadataViewSet(ModelViewSet):
     queryset = ObjectMetadata.objects.all()
     serializer_class = serializers.ObjectMetadataSerializer
     filterset_class = filters.ObjectMetadataFilterSet
@@ -1015,7 +1079,7 @@ class ObjectMetadataViewSet(NautobotModelViewSet):
 
 
 class NoteViewSet(ModelViewSet):
-    queryset = Note.objects.select_related("user")
+    queryset = Note.objects.all()
     serializer_class = serializers.NoteSerializer
     filterset_class = filters.NoteFilterSet
 
@@ -1034,7 +1098,7 @@ class ObjectChangeViewSet(ReadOnlyModelViewSet):
     Retrieve a list of recent changes.
     """
 
-    queryset = ObjectChange.objects.select_related("user")
+    queryset = ObjectChange.objects.all()
     serializer_class = serializers.ObjectChangeSerializer
     filterset_class = filters.ObjectChangeFilterSet
 

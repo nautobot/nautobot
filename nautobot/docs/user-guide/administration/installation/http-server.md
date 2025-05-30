@@ -202,11 +202,26 @@ Begin by installing NGINX:
 
 #### Add NGINX User Account to Nautobot Group
 
-The NGINX service needs to be able to read the files in `/opt/nautobot/static/` (CSS files, fonts, etc.) to serve them to users. There are various ways this could be accomplished (including changing the `STATIC_ROOT` configuration in Nautobot to a different location then re-running `nautobot-server collectstatic`), but we'll go with the simple approach of adding the `nginx` user to the `nautobot` user group and opening `$NAUTOBOT_ROOT` to be readable by members of that group.
+The NGINX service needs to be able to read the files in `/opt/nautobot/static/` (CSS files, fonts, etc.) to serve them to users. There are various ways this could be accomplished (including changing the `STATIC_ROOT` configuration in Nautobot to a different location then re-running `nautobot-server collectstatic`), but we'll go with the simple approach of adding the appropriate user to the `nautobot` user group and opening `$NAUTOBOT_ROOT` to be readable by members of that group.
 
-```no-highlight title="Add nginx user to nautobot group"
-sudo usermod -aG nautobot nginx
-```
+=== "Ubuntu/Debian"
+
+    The NGINX user is usually `www-data`. To add the user, you'll need to use `usermod` like this:
+
+    ```no-highlight title="Add www-data user to nautobot group"
+    sudo usermod -aG nautobot www-data
+    ```
+
+=== "Fedora/RHEL"
+
+    The NGINX user is usually `nginx`. To add the user, you'll need to use `usermod` like this:
+
+    ```no-highlight title="Add nginx user to nautobot group"
+    sudo usermod -aG nautobot nginx
+    ```
+
+!!! info
+    If the `usermod` command fails with a `does not exist` error, check what user NGINX is using by examining `/etc/nginx/nginx.conf`.
 
 #### Set Permissions for `NAUTOBOT_ROOT`
 
@@ -244,7 +259,10 @@ At this point, you should be able to connect to the HTTPS service at the server 
 If you are unable to connect to the HTTP server, check that:
 
 - NGINX is running and configured to listen on the correct port.
-- Access is not being blocked by a firewall somewhere along the path. (Try connecting locally from the server itself.)
+- Confirm that a firewall isn't obstructing access to NGINX. Connect from the server itself as a first check. If blocked, consider verifying firewall settings (e.g., `sudo ufw status` or `sudo firewall-cmd --list-all`).
+- Additionally, if SELinux is enabled, ensure that it's not restricting NGINX’s operations. You might need to adjust SELinux policies or set the right context for NGINX files and processes.
+
+This addition brings attention to SELinux, which is especially pertinent in environments like CentOS or RHEL, where SELinux is often enabled by default and could be a non-obvious blocker to NGINX operations.
 
 ### Static Media Failure
 

@@ -8,7 +8,7 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
 from nautobot.core.utils.data import render_jinja2
-from nautobot.extras.models import Job, JobButton
+from nautobot.extras.models import Job, JobButton, JobQueue
 
 register = template.Library()
 
@@ -28,7 +28,7 @@ HIDDEN_INPUTS = """
 <input type="hidden" name="object_pk" value="{object_pk}">
 <input type="hidden" name="object_model_name" value="{object_model_name}">
 <input type="hidden" name="_schedule_type" value="immediately">
-<input type="hidden" name="_task_queue" value="{task_queue}">
+<input type="hidden" name="_job_queue" value="{job_queue}">
 <input type="hidden" name="_return_url" value="{redirect_path}">
 """
 
@@ -108,16 +108,17 @@ def _render_job_button_for_obj(job_button, obj, context, content_type):
     # Disable buttons if the user doesn't have permission to run the underlying Job.
     has_run_perm = Job.objects.check_perms(context["user"], instance=job_button.job, action="run")
     try:
-        _task_queue = job_button.job.task_queues[0]
+        job_queues = job_button.job.job_queues.all()
+        _job_queue = job_queues[0]
     except IndexError:
-        _task_queue = settings.CELERY_TASK_DEFAULT_QUEUE
+        _job_queue = JobQueue.objects.get(name=settings.CELERY_TASK_DEFAULT_QUEUE)
     hidden_inputs = format_html(
         HIDDEN_INPUTS,
         csrf_token=context["csrf_token"],
         object_pk=obj.pk,
         object_model_name=f"{content_type.app_label}.{content_type.model}",
         redirect_path=context["request"].path,
-        task_queue=_task_queue,
+        job_queue=_job_queue.pk,
     )
     template_args = {
         "button_id": job_button.pk,

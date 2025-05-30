@@ -13,7 +13,7 @@ class TestDryRun(Job):
     dryrun = DryRunVar()
     value = IntegerVar(required=False)
 
-    def run(self, dryrun, value=None):
+    def run(self, dryrun, value=None):  # pylint:disable=arguments-differ
         """
         Job function.
         """

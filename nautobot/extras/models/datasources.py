@@ -1,7 +1,11 @@
 """Models for representing external data sources."""
 
+from contextlib import contextmanager
 from importlib.util import find_spec
+import logging
 import os
+import shutil
+import tempfile
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -12,12 +16,16 @@ from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.fields import AutoSlugField, LaxURLField, slugify_dashes_to_underscores
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.validators import EnhancedURLValidator
+from nautobot.core.utils.git import GitRepo
 from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features
+
+logger = logging.getLogger(__name__)
 
 
 @extras_features(
     "config_context_owners",
     "export_template_owners",
+    "graphql_query_owners",
     "graphql",
     "job_results",
     "webhooks",
@@ -123,16 +131,20 @@ class GitRepository(PrimaryModel):
 
     def get_latest_sync(self):
         """
-        Return a `JobResult` for the latest sync operation.
+        Return a `JobResult` for the latest sync operation if one has occurred.
 
         Returns:
-            JobResult
+            Returns a `JobResult` if the repo has been synced before, otherwise returns None.
         """
         from nautobot.extras.models import JobResult
 
         # This will match all "GitRepository" jobs (pull/refresh, dry-run, etc.)
         prefix = "nautobot.core.jobs.GitRepository"
-        return JobResult.objects.filter(task_name__startswith=prefix, task_kwargs__repository=self.pk).latest()
+
+        if JobResult.objects.filter(task_name__startswith=prefix, task_kwargs__repository=self.pk).exists():
+            return JobResult.objects.filter(task_name__startswith=prefix, task_kwargs__repository=self.pk).latest()
+        else:
+            return None
 
     def to_csv(self):
         return (
@@ -167,3 +179,83 @@ class GitRepository(PrimaryModel):
         if dry_run:
             return enqueue_git_repository_diff_origin_and_local(self, user)
         return enqueue_pull_git_repository_and_refresh_data(self, user)
+
+    @contextmanager
+    def clone_to_directory_context(self, path=None, branch=None, head=None, depth=0):
+        """
+        Context manager to perform a (shallow or full) clone of the Git repository in a temporary directory.
+
+        Args:
+            path (str, optional): The absolute directory path to clone into. If not specified, `tempfile.gettempdir()` will be used.
+            branch (str, optional): The branch to checkout. If not set, the GitRepository.branch will be used.
+            head (str, optional): Git commit hash to check out instead of pulling branch latest.
+            depth (int, optional): The depth of the clone. If set to 0, a full clone will be performed.
+
+        Returns:
+            Returns the absolute path of the cloned repo if clone was successful, otherwise returns None.
+        """
+
+        if branch and head:
+            raise ValueError("Cannot specify both branch and head")
+
+        path_name = None
+        try:
+            path_name = self.clone_to_directory(path=path, branch=branch, head=head, depth=depth)
+            yield path_name
+        finally:
+            # Cleanup the temporary directory
+            if path_name:
+                self.cleanup_cloned_directory(path_name)
+
+    def clone_to_directory(self, path=None, branch=None, head=None, depth=0):
+        """
+        Perform a (shallow or full) clone of the Git repository in a temporary directory.
+
+        Args:
+            path (str, optional): The absolute directory path to clone into. If not specified, `tempfile.gettempdir()` will be used.
+            branch (str, optional): The branch to checkout. If not set, the GitRepository.branch will be used.
+            head (str, optional): Git commit hash to check out instead of pulling branch latest.
+            depth (int, optional): The depth of the clone. If set to 0, a full clone will be performed.
+
+        Returns:
+            Returns the absolute path of the cloned repo if clone was successful, otherwise returns None.
+        """
+        from nautobot.extras.datasources import get_repo_access_url
+
+        if branch and head:
+            raise ValueError("Cannot specify both branch and head")
+
+        try:
+            path_name = tempfile.mkdtemp(dir=path, prefix=self.slug)
+        except PermissionError as e:
+            logger.error(f"Failed to create temporary directory at {path}: {e}")
+            raise e
+
+        if not branch:
+            branch = self.branch
+
+        try:
+            remote_url = get_repo_access_url(self)
+            repo_helper = GitRepo(path_name, remote_url, depth=depth, branch=branch)
+            if head:
+                repo_helper.checkout(branch, head)
+        except Exception as e:
+            logger.error(f"Failed to clone repository {self.name} to {path_name}: {e}")
+            raise e
+
+        logger.info(f"Cloned repository {self.name} to {path_name}")
+        return path_name
+
+    def cleanup_cloned_directory(self, path):
+        """
+        Cleanup the cloned directory.
+
+        Args:
+            path (str): The absolute directory path to cleanup.
+        """
+
+        try:
+            shutil.rmtree(path)
+        except OSError as os_error:
+            # log error if the cleanup fails
+            logger.error(f"Failed to cleanup temporary directory at {path}: {os_error}")

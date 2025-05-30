@@ -508,6 +508,7 @@ Nautobot no longer wraps the job `run` method in an atomic database transaction.
 With the removal of the atomic transaction, the `commit` flag has been removed. The ability to bypass job approval on dryrun can be achieved by using an optional `dryrun` argument. Job authors who wish to allow users to bypass approval when the `dryrun` flag is set should set a `dryrun` attribute with a value of `DryRunVar()` on their job class. `DryRunVar` can be imported from `nautobot.extras.jobs`.
 
 !!! example
+<!-- pyml disable-num-lines 2 proper-names -->
     ```py
     from nautobot.extras.jobs import DryRunVar, Job
 

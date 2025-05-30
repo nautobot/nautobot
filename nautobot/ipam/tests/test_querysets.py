@@ -478,6 +478,20 @@ class IPAddressQuerySet(TestCase):
             [instance for ip, instance in self.ips.items() if re.match(r"2001(.*)1", ip)],
         )
 
+    def test_get_or_create(self):
+        # https://github.com/nautobot/nautobot/issues/6676
+        ip_obj, created = IPAddress.objects.update_or_create(
+            defaults={
+                "status": self.ipaddr_status,
+            },
+            host="10.0.0.1",
+            mask_length="24",
+            namespace=self.namespace,
+        )
+        self.assertFalse(created)
+        self.assertEqual(str(ip_obj.address), "10.0.0.1/24")
+        self.assertEqual(ip_obj.parent.namespace, self.namespace)
+
 
 class PrefixQuerysetTestCase(TestCase):
     queryset = Prefix.objects.all()

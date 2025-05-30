@@ -1,4 +1,5 @@
 import contextlib
+import datetime
 import logging
 import os
 import platform
@@ -47,6 +48,7 @@ from nautobot.core.celery import app
 from nautobot.core.constants import SEARCH_MAX_RESULTS
 from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.extras.forms import GraphQLQueryForm
@@ -58,7 +60,6 @@ logger = logging.getLogger(__name__)
 
 class HomeView(AccessMixin, TemplateView):
     template_name = "home.html"
-    use_new_ui = True
 
     def render_additional_content(self, request, context, details):
         # Collect all custom data using callback functions.
@@ -500,3 +501,49 @@ def get_file_with_authorization(request, *args, **kwargs):
     get_object_or_404(queryset, file=request.GET.get("name"))
 
     return get_file(request, *args, **kwargs)
+
+
+class AboutView(AccessMixin, TemplateView):
+    """
+    Nautobot About View which displays general information about Nautobot and contact details
+    for Network to Code.
+    """
+
+    template_name = "about.html"
+
+    def get(self, request, *args, **kwargs):
+        # Redirect user to login page if not authenticated
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        # Check whether a new release is available. (Only for staff/superusers.)
+        new_release = None
+        if request.user.is_staff or request.user.is_superuser:
+            latest_release, release_url = get_latest_release()
+            if isinstance(latest_release, version.Version):
+                current_version = version.parse(settings.VERSION)
+                if latest_release > current_version:
+                    new_release = {
+                        "version": str(latest_release),
+                        "url": release_url,
+                    }
+
+        # Support contract state
+        support_expiration_date = get_settings_or_config("NTC_SUPPORT_CONTRACT_EXPIRATION_DATE")
+        support_contract_active = support_expiration_date and support_expiration_date >= datetime.date.today()
+
+        context = self.get_context_data()
+        context.update(
+            {
+                "new_release": new_release,
+                "support_contract_active": support_contract_active,
+                "support_expiration_date": support_expiration_date,
+            }
+        )
+
+        return self.render_to_response(context)
+
+
+class RenderJinjaView(LoginRequiredMixin, TemplateView):
+    """Render a Jinja template with context data."""
+
+    template_name = "utilities/render_jinja2.html"

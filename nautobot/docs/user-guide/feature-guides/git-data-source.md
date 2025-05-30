@@ -1,21 +1,25 @@
 # Git as a Data Source
 
-The "Git™ as a Data Source" feature was developed to provide the ability to populate existing data, templates, scripts, and much more into Nautobot; while leveraging the benefits that tools such as GitHub and GitLab already provide, including issue tracking, discussions, pipelines, and approvals.  For example having the ability to have users approve the YAML data that is used for Nautobot  `config context` along with running tests on that data, or having the users approve Jinja2 templates that are used for Nautobot `export templates`.  These examples and more can be accomplished by used Git as a Data Source.
+The "Git™ as a Data Source" feature was developed to provide the ability to populate existing data, templates, scripts, and much more into Nautobot from Git repositories; leveraging the benefits that tools such as GitHub and GitLab already provide, including issue tracking, discussions, pipelines, and approvals. For just a few examples, it is possible to:
 
-For more technical details on how to use this feature, please see the documentation on [Git Repositories](../platform-functionality/gitrepository.md).
+- have users approve the YAML data that is used for Nautobot `config contexts` along with running tests on that data.
+- have users approve Jinja2 templates that are used for Nautobot `export templates`.
+
+Like other Nautobot features, it is possible to create, read, update, and delete Git repository objects [via the REST API](../platform-functionality/gitrepository.md#manage-git-repositories-via-the-nautobot-rest-api) as well as via the GUI. In addition, it is also possible to trigger a resync of an existing repository in either interface. For more detail on this and other technical aspects of using this feature, please see the documentation on [Git Repositories](../platform-functionality/gitrepository.md).
 
 ## Supported Providers
 
-The feature uses the concept of a `provides` field to map a repository to a use case. A list of the supported options is provided below.
+This feature uses the concept of a `provides` field to identify the provided data types and therefore map a repository to a use case. A list of the supported options is provided below.
 
 ### Core Functionality
 
 |Name|Summary|
 |:--|:--|
-|[Export Templates](../platform-functionality/exporttemplate.md)|Nautobot allows users to define custom templates that can be used when exporting objects.|
-|[Jobs](../platform-functionality/jobs/index.md)|Jobs are a way for users to execute custom logic on demand from within the Nautobot UI. Jobs can interact directly with Nautobot data to accomplish various data creation, modification, and validation tasks.|
+|[Export Templates](../platform-functionality/exporttemplate.md)|Allows users to define custom templates that can be used when exporting objects.|
+|[Jobs](../platform-functionality/jobs/index.md)|A way for users to execute custom logic on demand from within the Nautobot UI, to accomplish various Nautobot data creation, modification, and validation tasks.|
 |[Config Contexts](../core-data-model/extras/configcontext.md)|Config contexts can be used to provide additional data that you can't natively store in Nautobot.|
 |[Config Context Schemas](../core-data-model/extras/configcontextschema.md)|Schemas enforce data validation on config contexts.|
+|[GraphQL queries](../feature-guides/graphql.md)|GraphQL reduces the complexity of performing multiple API calls|
 
 ### Examples of Apps Defining Additional Providers
 
@@ -40,6 +44,10 @@ This table defines repository parameters that are required to establish a reposi
 |Secrets Group|(Optional) Grouping containing a *HTTP token* and/or *HTTP username* as needed to access the repository.|
 |Provides|Resource type(s) provided by this Git repo.|
 
+## Token Requirements
+
+The token in the `Secrets Group` field above should be generated on the provider side, usually on their website. These links will help with some of the common platforms:
+
 - [GitHub Personal Access Token](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token)
 - [GitLab Personal Access Token](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html)
 - [Bitbucket Personal Access Token](https://confluence.atlassian.com/bitbucketserver/personal-access-tokens-939515499.html)
@@ -49,7 +57,7 @@ This table defines repository parameters that are required to establish a reposi
 
 ## Using Git Data Sources
 
-This section will focus on examples and use the `user-guide` branch on the `demo-git-datasources` repo: `https://github.com/nautobot/demo-git-datasource/tree/user-guide`.
+This section will focus on examples, and uses the `user-guide` branch on the `demo-git-datasources` repo: `https://github.com/nautobot/demo-git-datasource/tree/user-guide`.
 
 ### Export Templates
 
@@ -110,7 +118,7 @@ export_templates
 2 directories, 3 files
 ```
 
-#### Modifying a File and Sync Changes
+#### Modify a File and Sync Changes
 
 Now that the export templates have been loaded into Nautobot they can be utilized as normal.  For example navigate to **Devices -> Devices** and click on **Export** in the top right corner, the dropdown will now include the templates loaded from the Git repository.
 
@@ -163,13 +171,13 @@ Now that the Git repository is linked for export templates it can be controlled 
 
 Jobs are a way for users to execute custom logic on demand from within the Nautobot UI. Jobs can interact directly with Nautobot data to accomplish various data creation, modification, and validation tasks.
 
-For technical details on jobs, please see the [documentation on jobs](../platform-functionality/jobs/index.md#jobs).
+For technical details on jobs, please see the [documentation on jobs](../platform-functionality/jobs/index.md).
 
 Jobs allow a user to write scripts in Python.  By integrating the scripts with Git, a user can utilize Git workflows to manage source control, versioning, and pipelines.
 
 Setting up the repository can be done following the same steps from [Export Templates](#export-templates).  The only differences is the `provides` selection changes to `jobs`.
 
-Jobs need to be defined in a `/jobs/` directory or `jobs.py` at the root of a Git repository. Any job classes defined in these files that have been registered during import will be discovered by Nautobot and made available to be run as a job. See the section on [Job registration](../../development/jobs/index.md#job-registration) for more information.
+Jobs need to be defined in a `/jobs/` directory or `jobs.py` at the root of a Git repository. Any job classes defined in these files that have been registered during import will be discovered by Nautobot and made available to be run as a job. See the section on [Job registration](../../development/jobs/job-structure.md#job-registration) for more information.
 
 An example tree for `/jobs/`.
 
@@ -275,9 +283,22 @@ config_context_schemas
 ├── schema_2.json
 ```
 
+### GraphQL Queries
+
+See also the [GraphQL feature guide](../feature-guides/graphql.md).
+
+GraphQL queries can be used to reduce the complexity of performing multiple API calls while also correlating results by empowering the user to create their own query that provides the user exactly what they want and nothing that they don't, in a single API call.
+
+```no-highlight
+▶ tree graphql_queries
+graphql_queries
+├── query1.gql
+├── query2.gql
+```
+
 ## Additional Git Data Sources
 
-As seen in [Fill out Repository Details](#fill-out-repository-details), the standard installation of Nautobot will come natively with export templates, jobs, and config contexts.  Additional data sources can be incorporated using the Nautobot App system.  For example, the [nautobot-golden-config](https://github.com/nautobot/nautobot-app-golden-config) App implements four additional data sources.
+As seen in [Fill out Repository Details](#fill-out-repository-details), the standard installation of Nautobot will come natively with export templates, jobs, and config contexts.  Additional data sources can be incorporated using the Nautobot App system.  For example, the [Golden Configuration](https://github.com/nautobot/nautobot-app-golden-config) App implements four additional data sources.
 
 - Config Contexts
 - Backup Configs
@@ -288,20 +309,26 @@ For more information for the Golden Configuration specific data sources, navigat
 
 ## Common Issues and Troubleshooting
 
-1. Repository is linked, but data is not properly loaded into Nautobot.
-    - Validate the root directory is set to the proper name.
-    - Export Templates -> `export_templates`.
-    - Jobs -> `jobs`.
-    - Config Contexts -> `config_contexts`.
-2. Synchronization Status Failures.
+- Repository is linked, but data is not properly loaded into Nautobot.
+    - Validate the path in the repository is correct for each data type:
+
+|Name|Path|
+|:--|:--|
+|Export Templates|`export_templates`|
+|Jobs|`jobs`|
+|Config Contexts|`config_contexts`|
+|Config Context Schemas|`config_context_schemas`|
+|GraphQL Queries|`graphql_queries`|
+
+- Synchronization Status Failures.
     - Validate branch is correct and exists in the remote repository.
-    ![Error Branch Doesn't Exist](./images/git-as-data-source/15-git-data-source.png)
+      ![Error Branch Doesn't Exist](./images/git-as-data-source/15-git-data-source.png)
     - Validate the remote url is correct and is the `http(s)` url.  `ssh` urls are not currently supported.
-    ![Error Remote URL Incorrect](./images/git-as-data-source/16-git-data-source.png)
-3. Authentication Issues.
+      ![Error Remote URL Incorrect](./images/git-as-data-source/16-git-data-source.png)
+- Authentication Issues.
     - Check repository permissions.
     - Ensure the password is the Personal Access Token (PAT) for the username supplied.
     - Ensure the PAT permissions are setup properly.
-      - At a minimum the `repo` option should be checked or access.
+        - At a minimum the `repo` option should be checked or access.
 
     ![Error Authentication Issue](./images/git-as-data-source/17-git-data-source.png)

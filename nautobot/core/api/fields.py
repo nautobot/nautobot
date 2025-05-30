@@ -53,10 +53,10 @@ class ChoiceField(serializers.Field):
                 data = ""
         return super().validate_empty_values(data)
 
-    def to_representation(self, obj):
-        if obj == "":
+    def to_representation(self, value):
+        if value == "" and "" not in self._choices:
             return None
-        return OrderedDict([("value", obj), ("label", self._choices[obj])])
+        return OrderedDict([("value", value), ("label", self._choices[value])])
 
     def to_internal_value(self, data):
         if data == "":
@@ -123,8 +123,8 @@ class ContentTypeField(RelatedField):
             self.fail("invalid")
         return None
 
-    def to_representation(self, obj):
-        return f"{obj.app_label}.{obj.model}"
+    def to_representation(self, value):
+        return f"{value.app_label}.{value.model}"
 
 
 class LaxURLField(URLField):

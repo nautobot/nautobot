@@ -30,8 +30,8 @@ __all__ = (
     "ClusterFilterSet",
     "ClusterGroupFilterSet",
     "ClusterTypeFilterSet",
-    "VirtualMachineFilterSet",
     "VMInterfaceFilterSet",
+    "VirtualMachineFilterSet",
 )
 
 
@@ -243,7 +243,6 @@ class VirtualMachineFilterSet(
         fields = [
             "id",
             "name",
-            "cluster",
             "vcpus",
             "memory",
             "disk",

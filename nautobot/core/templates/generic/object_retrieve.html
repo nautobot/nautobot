@@ -8,6 +8,7 @@
 {% load plugins %}
 {% load static %}
 {% load tz %}
+{% load ui_framework %}
 
 {% block header %}
     <div class="row noprint">
@@ -38,13 +39,14 @@
                 </div>
             </form>
         </div>
-        {% endif%}
+        {% endif %}
         {% endwith %}
     </div>
 
     <div class="pull-right noprint">
     {% block buttons %}
         {% plugin_buttons object %}
+        {% render_detail_view_extra_buttons %}
         {% block extra_buttons %}{% endblock extra_buttons %}
         {% consolidate_detail_view_action_buttons %}
     {% endblock buttons %}
@@ -69,6 +71,9 @@
 
     <ul id="tabs" class="nav nav-tabs">
     {% block nav_tabs %}
+      {% if object_detail_content %}
+        {% render_tabs_labels object_detail_content.tabs %}
+      {% else %}
         <li role="presentation"{% if active_tab == "main" or request.GET.tab == "main" %} class="active"{% endif %}>
             <a href="{{ object.get_absolute_url }}#main" onclick="switch_tab(this.href)" aria-controls="main" role="tab" data-toggle="tab">
                 {{ verbose_name|bettertitle }}
@@ -79,20 +84,12 @@
                 Advanced
             </a>
         </li>
-        {% if object.is_contact_associable_model %}
+        {% if object.is_contact_associable_model and perms.extras.view_contactassociation %}
             <li role="presentation"{% if request.GET.tab == 'contacts' %} class="active"{% endif %}>
                 <a href="{{ object.get_absolute_url }}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">
                     Contacts
                 </a>
             </li>
-        {% endif %}
-        {% block extra_nav_tabs %}{% endblock extra_nav_tabs %}
-        {% if perms.extras.view_note %}
-            {% if active_tab != 'notes' and object.get_notes_url or active_tab == 'notes' %}
-                <li role="presentation"{% if active_tab == 'notes' %} class="active"{% endif %}>
-                    <a href="{{ object.get_notes_url }}">Notes</a>
-                </li>
-            {% endif %}
         {% endif %}
         {% if object.is_dynamic_group_associable_model and perms.extras.view_dynamicgroup %}
             {% with object.dynamic_groups.count as dg_count %}
@@ -116,6 +113,14 @@
                 {% endif %}
             {% endwith %}
         {% endif %}
+      {% endif %}
+        {% if perms.extras.view_note %}
+            {% if active_tab != 'notes' and object.get_notes_url or active_tab == 'notes' %}
+                <li role="presentation"{% if active_tab == 'notes' %} class="active"{% endif %}>
+                    <a href="{{ object.get_notes_url }}">Notes {% badge object.notes.count %}</a>
+                </li>
+            {% endif %}
+        {% endif %}
         {% if perms.extras.view_objectchange %}
             {% if active_tab != 'changelog' and object.get_changelog_url or active_tab == 'changelog' %}
                 <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
@@ -123,6 +128,7 @@
                 </li>
             {% endif %}
         {% endif %}
+        {% block extra_nav_tabs %}{% endblock extra_nav_tabs %}
     {% endblock nav_tabs %}
     {% plugin_object_detail_tabs object %}
     </ul>
@@ -130,11 +136,14 @@
 
 {% block content %}
     <div class="tab-content">
+      {% if object_detail_content %}
+        {% render_components object_detail_content.tabs %}
+      {% else %}
         <div id="main" role="tabpanel" class="tab-pane {% if active_tab == "main" or request.GET.tab == "main" %}active{% else %}fade{% endif %}">
             <div class="row">
                 <div class="col-md-6">
                     {% block content_left_page %}{% endblock content_left_page %}
-                    {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_field_groupings_basic computed_fields=object.get_computed_fields_grouping_basic computed_fields_advanced_ui=False %}
+                    {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_field_groupings_basic custom_fields_advanced_ui=False computed_fields=object.get_computed_fields_grouping_basic computed_fields_advanced_ui=False %}
                     {% include 'inc/relationships_panel.html' %}
                     {% include 'extras/inc/tags_panel.html' %}
                     {% plugin_left_page object %}
@@ -267,6 +276,8 @@
                 </div>
             </div>
         {% endif %}
+      {% endif %}
+        {% plugin_object_detail_tab_content object %}
         {% block extra_tab_content %}{% endblock extra_tab_content %}
     </div>
 {% endblock content %}
@@ -325,28 +336,28 @@
             $(`#tabs a[href="{{ object.get_absolute_url }}#${event.state.id}"]`).tab('show');
     }
     // Toggle v -. >
-    $("#accordion .accordion-toggle").click(function () {
+    $(".accordion-toggle").click(function () {
         $(this).toggleClass("mdi-chevron-down mdi-chevron-right");
     });
     // Dynamically collapse/expand all when clicking the "Collapse All" button, and then update the button text.
-    $('#accordion-toggle-all').click(function () {
+    $('.accordion-toggle-all').click(function () {
 
         if ($(this).data("lastState") === null || $(this).data("lastState") === 1) {
-            $('.collapse').collapse('show');
+            $($(this).data("target") + ' .collapse').collapse('show');
             $(this).data("lastState", 0);
 
-            $("#accordion .accordion-toggle").addClass("mdi-chevron-down").removeClass("mdi-chevron-right");
+            $($(this).data("target") + " .accordion-toggle").addClass("mdi-chevron-down").removeClass("mdi-chevron-right");
 
             $(this).text("Collapse All");
         }
         else {
-            $('[class^=collapseme]').removeData('bs.collapse').collapse({parent: false, toggle: false})
+            $($(this).data("target") + ' [class^=collapseme]').removeData('bs.collapse').collapse({parent: false, toggle: false})
             .collapse('hide')
             .removeData('bs.collapse')
-            .collapse({parent: '#accordion', toggle: false});
+            .collapse({parent: $(this).data("target"), toggle: false});
 
             $(this).data("lastState", 1);
-            $("#accordion .accordion-toggle").addClass("mdi-chevron-right").removeClass("mdi-chevron-down");
+            $($(this).data("target") + " .accordion-toggle").addClass("mdi-chevron-right").removeClass("mdi-chevron-down");
 
             $(this).text("Expand All");
         }

@@ -5,18 +5,19 @@ from typing import Optional, Sequence, Union
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.db import connections, DEFAULT_DB_ALIAS
 from django.db.models import ForeignKey, ManyToManyField, QuerySet
 from django.test import override_settings, tag
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils.text import slugify
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.relations import ManyRelatedField
 from rest_framework.test import APITransactionTestCase as _APITransactionTestCase
 
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.models import fields as core_fields
 from nautobot.core.models.tree_queries import TreeModel
-from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.testing import mixins, utils, views
 from nautobot.core.utils import lookup
 from nautobot.core.utils.data import is_uuid
@@ -95,6 +96,15 @@ class APITestCase(views.ModelTestCase):
         for verboten in self.VERBOTEN_STRINGS:
             self.assertNotIn(verboten, response_raw_content)
 
+    def get_m2m_fields(self):
+        """Get serializer field names that are many-to-many or one-to-many and thus affected by ?exclude_m2m=true."""
+        serializer_class = get_serializer_for_model(self.model)
+        m2m_fields = []
+        for field_name, field_instance in serializer_class().fields.items():
+            if isinstance(field_instance, (serializers.ManyRelatedField, serializers.ListSerializer)):
+                m2m_fields.append(field_name)
+        return m2m_fields
+
 
 @tag("unit")
 class APIViewTestCases:
@@ -169,6 +179,10 @@ class APIViewTestCases:
             if issubclass(self.model, extras_models.ChangeLoggedModel):
                 self.assertIn("created", response.data)
                 self.assertIn("last_updated", response.data)
+            if hasattr(self.model, "notes") and isinstance(instance1.notes, QuerySet):
+                self.assertIn("notes_url", response.data)
+                self.assertIn(f"{url}notes/", str(response.data["notes_url"]))
+                self.assertIn(instance1.get_notes_url(api=True), str(response.data["notes_url"]))
             # Fields that should be absent by default (opt-in fields):
             self.assertNotIn("computed_fields", response.data)
             self.assertNotIn("relationships", response.data)
@@ -218,58 +232,6 @@ class APIViewTestCases:
             response = self.client.options(url, **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
 
-            with self.subTest("Assert Detail View Config is generated well"):
-                # Namings Help
-                # 1. detail_view_config: This is the detail view config set in the serializer.Meta.detail_view_config
-                # 2. detail_view_schema: This is the retrieve schema generated from an OPTIONS request.
-                # 3. advanced_view_schema: This is the advanced tab schema generated from an OPTIONS request.
-                serializer = get_serializer_for_model(self._get_queryset().model)
-                advanced_view_schema = response.data["view_options"]["retrieve"]["tabs"]["Advanced"]
-
-                # Get default advanced tab fields
-                self.assertEqual(len(advanced_view_schema), 1)
-                self.assertIn("Object Details", advanced_view_schema[0])
-                advanced_tab_fields = advanced_view_schema[0].get("Object Details")["fields"]
-
-                if detail_view_config := getattr(serializer.Meta, "detail_view_config", None):
-                    detail_view_schema = response.data["view_options"]["retrieve"]["tabs"][
-                        bettertitle(self._get_queryset().model._meta.verbose_name)
-                    ]
-                    self.assertHttpStatus(response, status.HTTP_200_OK)
-
-                    # According to convention, fields in the advanced tab fields should not exist in
-                    # the `detail_view_schema`. Assert this is True.
-                    with self.subTest("Assert advanced tab fields should not exist in the detail_view_schema."):
-                        if detail_view_config.get("include_others"):
-                            # Handle "Other Fields" section specially as "Other Field" is dynamically added
-                            # by Nautobot and is not part of the serializer-defined detail_view_config
-                            other_fields = detail_view_schema[0]["Other Fields"]["fields"]
-                            for field in advanced_tab_fields:
-                                self.assertNotIn(field, other_fields)
-
-                        for col_idx, col in enumerate(detail_view_schema):
-                            for group_title, group in col.items():
-                                if group_title == "Other Fields":
-                                    continue
-                                group_fields = group["fields"]
-                                # Config on the serializer
-                                if (
-                                    col_idx < len(detail_view_config["layout"])
-                                    and group_title in detail_view_config["layout"][col_idx]
-                                ):
-                                    fields = detail_view_config["layout"][col_idx][group_title]["fields"]
-                                else:
-                                    fields = []
-
-                                # Fields that are in the detail_view_schema must not be in the advanced tab as well
-                                for field in group_fields:
-                                    self.assertNotIn(field, advanced_tab_fields)
-
-                                # Fields that are explicit in the detail_view_config must remain as such in the schema
-                                for field in fields:
-                                    if field not in advanced_tab_fields:
-                                        self.assertIn(field, group_fields)
-
     class ListObjectsViewTestCase(APITestCase):
         choices_fields = None
         filterset = None
@@ -280,7 +242,7 @@ class APIViewTestCases:
         def get_depth_fields(self):
             """Get a list of model fields that could be tested with the ?depth query parameter"""
             depth_fields = []
-            for field in self.model._meta.fields:
+            for field in self.model._meta.get_fields():
                 if not field.name.startswith("_"):
                     if isinstance(field, (ForeignKey, GenericForeignKey, ManyToManyField, core_fields.TagsField)) and (
                         # we represent content-types as "app_label.modelname" rather than as FKs
@@ -289,6 +251,9 @@ class APIViewTestCases:
                         and not (field.name == "user" and self.model == users_models.Token)
                     ):
                         depth_fields.append(field.name)
+            serializer_class = get_serializer_for_model(self.model)
+            serializer = serializer_class()
+            depth_fields = [field_name for field_name in depth_fields if field_name in serializer.fields]
             return depth_fields
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -318,9 +283,12 @@ class APIViewTestCases:
             GET a list of objects using the "?depth=0" parameter.
             """
             depth_fields = self.get_depth_fields()
+            m2m_fields = self.get_m2m_fields()
             self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
-            url = f"{self._get_list_url()}?depth=0"
-            response = self.client.get(url, **self.header)
+            list_url = f"{self._get_list_url()}?depth=0"
+            with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as cqc:
+                response = self.client.get(list_url, **self.header)
+            base_num_queries = len(cqc)
 
             self.assertHttpStatus(response, status.HTTP_200_OK)
             self.assertIsInstance(response.data, dict)
@@ -329,15 +297,23 @@ class APIViewTestCases:
             self.assert_no_verboten_content(response)
 
             for response_data in response.data["results"]:
+                for field in m2m_fields:
+                    self.assertIn(field, response_data)
+                    self.assertIsInstance(response_data[field], list)
                 for field in depth_fields:
                     self.assertIn(field, response_data)
                     if isinstance(response_data[field], list):
                         for entry in response_data[field]:
                             self.assertIsInstance(entry, dict)
-                            self.assertTrue(is_uuid(entry["id"]))
+                            if entry["object_type"] in ["auth.group"]:
+                                self.assertIsInstance(entry["id"], int)
+                            else:
+                                self.assertTrue(is_uuid(entry["id"]))
+                            self.assertEqual(len(entry.keys()), 3)  # just id/object_type/url
                     else:
                         if response_data[field] is not None:
                             self.assertIsInstance(response_data[field], dict)
+                            self.assertEqual(len(response_data[field].keys()), 3)  # just id/object_type/url
                             url = response_data[field]["url"]
                             pk = response_data[field]["id"]
                             object_type = response_data[field]["object_type"]
@@ -345,12 +321,54 @@ class APIViewTestCases:
                             # URL ending in the UUID of the relevant object:
                             # http://nautobot.example.com/api/circuits/providers/<uuid>/
                             #                                                    ^^^^^^
-                            self.assertTrue(is_uuid(url.split("/")[-2]))
-                            self.assertTrue(is_uuid(pk))
+                            if object_type in ["auth.group"]:
+                                self.assertIsInstance(url.split("/")[-2], int)
+                                self.assertIsInstance(pk, int)
+                            else:
+                                self.assertTrue(is_uuid(url.split("/")[-2]))
+                                self.assertTrue(is_uuid(pk))
 
                             with self.subTest(f"Assert object_type {object_type} is valid"):
                                 app_label, model_name = object_type.split(".")
                                 ContentType.objects.get(app_label=app_label, model=model_name)
+
+            list_url += "&exclude_m2m=true"
+            with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as cqc:
+                response = self.client.get(list_url, **self.header)
+
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertIsInstance(response.data, dict)
+            self.assertIn("results", response.data)
+            self.assert_no_verboten_content(response)
+
+            if m2m_fields:
+                if self.model._meta.app_label in [
+                    "circuits",
+                    "cloud",
+                    "dcim",
+                    "extras",
+                    "ipam",
+                    "tenancy",
+                    "users",
+                    "virtualization",
+                    "wireless",
+                ]:
+                    self.assertLess(
+                        len(cqc), base_num_queries, "Number of queries did not decrease with ?exclude_m2m=true"
+                    )
+                else:
+                    # Less strict check for non-core APIs
+                    self.assertLessEqual(
+                        len(cqc), base_num_queries, "Number of queries increased with ?exclude_m2m=true"
+                    )
+            else:
+                # No M2M fields to exclude
+                self.assertLessEqual(len(cqc), base_num_queries, "Number of queries increased with ?exclude_m2m=true")
+
+            for response_data in response.data["results"]:
+                for field in m2m_fields:
+                    self.assertNotIn(field, response_data)
+                # TODO: we should assert that all other fields are still present, but there's a few corner cases...
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_depth_1(self):
@@ -358,9 +376,12 @@ class APIViewTestCases:
             GET a list of objects using the "?depth=1" parameter.
             """
             depth_fields = self.get_depth_fields()
+            m2m_fields = self.get_m2m_fields()
             self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
-            url = f"{self._get_list_url()}?depth=1"
-            response = self.client.get(url, **self.header)
+            list_url = f"{self._get_list_url()}?depth=1"
+            with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as cqc:
+                response = self.client.get(list_url, **self.header)
+            base_num_queries = len(cqc)
 
             self.assertHttpStatus(response, status.HTTP_200_OK)
             self.assertIsInstance(response.data, dict)
@@ -369,16 +390,65 @@ class APIViewTestCases:
             self.assert_no_verboten_content(response)
 
             for response_data in response.data["results"]:
+                for field in m2m_fields:
+                    self.assertIn(field, response_data)
+                    self.assertIsInstance(response_data[field], list)
                 for field in depth_fields:
                     self.assertIn(field, response_data)
                     if isinstance(response_data[field], list):
                         for entry in response_data[field]:
                             self.assertIsInstance(entry, dict)
-                            self.assertTrue(is_uuid(entry["id"]))
+                            if entry["object_type"] in ["auth.group"]:
+                                self.assertIsInstance(entry["id"], int)
+                            else:
+                                self.assertTrue(is_uuid(entry["id"]))
+                            self.assertGreater(len(entry.keys()), 3, entry)  # not just id/object_type/url!
                     else:
                         if response_data[field] is not None:
                             self.assertIsInstance(response_data[field], dict)
-                            self.assertTrue(is_uuid(response_data[field]["id"]))
+                            if response_data[field]["object_type"] in ["auth.group"]:
+                                self.assertIsInstance(response_data[field]["id"], int)
+                            else:
+                                self.assertTrue(is_uuid(response_data[field]["id"]))
+                            self.assertGreater(len(response_data[field].keys()), 3, response_data[field])
+
+            list_url += "&exclude_m2m=true"
+            with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as cqc:
+                response = self.client.get(list_url, **self.header)
+
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertIsInstance(response.data, dict)
+            self.assertIn("results", response.data)
+            self.assert_no_verboten_content(response)
+
+            if m2m_fields:
+                if self.model._meta.app_label in [
+                    "circuits",
+                    "cloud",
+                    "dcim",
+                    "extras",
+                    "ipam",
+                    "tenancy",
+                    "users",
+                    "virtualization",
+                    "wireless",
+                ]:
+                    self.assertLess(
+                        len(cqc), base_num_queries, "Number of queries did not decrease with ?exclude_m2m=true"
+                    )
+                else:
+                    # Less strict check for non-core APIs
+                    self.assertLessEqual(
+                        len(cqc), base_num_queries, "Number of queries increased with ?exclude_m2m=true"
+                    )
+            else:
+                # No M2M fields to exclude
+                self.assertLessEqual(len(cqc), base_num_queries, "Number of queries increased with ?exclude_m2m=true")
+
+            for response_data in response.data["results"]:
+                for field in m2m_fields:
+                    self.assertNotIn(field, response_data)
+                # TODO: we should assert that all other fields are still present, but there's a few corner cases...
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_without_permission(self):
@@ -632,15 +702,15 @@ class APIViewTestCases:
             else:
                 self.assertEqual(obj.key, expected_slug)
 
+        # TODO: The override_settings here is a temporary workaround for not breaking any app tests
+        # long term fix should be using appropriate object permissions instead of the blanket override
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_create_object(self):
             """
             POST a single object with permission.
             """
             # Add object-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["add"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
 
             initial_count = self._get_queryset().count()
             for i, create_data in enumerate(self.create_data):
@@ -671,6 +741,9 @@ class APIViewTestCases:
                     self.assertEqual(len(objectchanges), 1)
                     self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_CREATE)
 
+        # TODO: The override_settings here is a temporary workaround for not breaking any app tests
+        # long term fix should be using appropriate object permissions instead of the blanket override
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_recreate_object_csv(self):
             """CSV export an object, delete it, and recreate it via CSV import."""
             if hasattr(self, "get_deletable_object"):
@@ -683,10 +756,10 @@ class APIViewTestCases:
                 self.fail("Couldn't find a single deletable object!")
 
             # Add object-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["add", "view"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(
+                f"{self.model._meta.app_label}.add_{self.model._meta.model_name}",
+                f"{self.model._meta.app_label}.view_{self.model._meta.model_name}",
+            )
 
             response = self.client.get(self._get_detail_url(instance) + "?format=csv", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
@@ -734,15 +807,15 @@ class APIViewTestCases:
                         f"{field_name} should have been unchanged on delete/recreate but it differs!",
                     )
 
+        # TODO: The override_settings here is a temporary workaround for not breaking any app tests
+        # long term fix should be using appropriate object permissions instead of the blanket override
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_create_objects(self):
             """
             POST a set of objects in a single request.
             """
             # Add object-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["add"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
 
             initial_count = self._get_queryset().count()
             response = self.client.post(self._get_list_url(), self.create_data, format="json", **self.header)
@@ -789,6 +862,9 @@ class APIViewTestCases:
                 response = self.client.patch(url, update_data, format="json", **self.header)
                 self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
+        # TODO: The override_settings here is a temporary workaround for not breaking any app tests
+        # long term fix should be using appropriate object permissions instead of the blanket override
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_update_object(self):
             """
             PATCH a single object identified by its ID.
@@ -796,7 +872,7 @@ class APIViewTestCases:
 
             def strip_serialized_object(this_object):
                 """
-                Only here to work around acceptable differences in PATCH response vs GET response which are known bugs.
+                Work around acceptable differences in PATCH response vs GET response which are known behaviors.
                 """
                 # Work around for https://github.com/nautobot/nautobot/issues/3321
                 this_object.pop("last_updated", None)
@@ -804,6 +880,12 @@ class APIViewTestCases:
                 this_object.pop("computed_fields", None)
                 this_object.pop("config_context", None)
                 this_object.pop("relationships", None)
+
+                serializer = get_serializer_for_model(self.model)()
+                for field_name, field_instance in serializer.fields.items():
+                    if field_instance.read_only:
+                        # Likely a derived field, might change as a consequence of other data updates
+                        this_object.pop(field_name, None)
 
                 for value in this_object.values():
                     if isinstance(value, dict):
@@ -848,7 +930,7 @@ class APIViewTestCases:
             self.assertEqual(initial_serialized_object, serialized_object)
 
             # Verify ObjectChange creation -- yes, even though nothing actually changed
-            # This may change (hah) at some point -- see https://github.com/nautobot/nautobot/issues/3321
+            # TODO: This may change (hah) at some point -- see https://github.com/nautobot/nautobot/issues/3321
             if hasattr(self.model, "to_objectchange"):
                 objectchanges = lookup.get_changes_for_model(instance)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_UPDATE)
@@ -857,10 +939,16 @@ class APIViewTestCases:
             # Verify that a PATCH with some data updates that data correctly.
             response = self.client.patch(url, update_data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
+            serialized_object = response.json()
+            strip_serialized_object(serialized_object)
             # Check for unexpected side effects on fields we DIDN'T intend to update
             for field in initial_serialized_object:
                 if field not in update_data:
-                    self.assertEqual(initial_serialized_object[field], serialized_object[field])
+                    self.assertEqual(
+                        initial_serialized_object[field],
+                        serialized_object[field],
+                        f"data changed unexpectedly for field '{field}'",
+                    )
             instance.refresh_from_db()
             self.assertInstanceEqual(instance, update_data, exclude=self.validation_excluded_fields, api=True)
 
@@ -869,14 +957,37 @@ class APIViewTestCases:
                 objectchanges = lookup.get_changes_for_model(instance)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_UPDATE)
 
+            # Verify that a PATCH with ?exclude_m2m=true correctly excludes many-to-many fields from the response
+            # This also doubles as a test for idempotence of the PATCH request.
+            response = self.client.patch(url + "?exclude_m2m=true", update_data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            m2m_fields = self.get_m2m_fields()
+            serialized_object = response.json()
+            strip_serialized_object(serialized_object)
+            for field in m2m_fields:
+                self.assertNotIn(field, serialized_object)
+            # Check for unexpected side effects on fields we DIDN'T intend to update
+            for field in initial_serialized_object:
+                if field not in update_data and field not in m2m_fields:
+                    self.assertEqual(
+                        initial_serialized_object[field],
+                        serialized_object[field],
+                        f"data changed unexpectedly for field '{field}'",
+                    )
+            instance.refresh_from_db()
+            self.assertInstanceEqual(instance, update_data, exclude=self.validation_excluded_fields, api=True)
+
+        # TODO: The override_settings here is a temporary workaround for not breaking any app tests
+        # long term fix should be using appropriate object permissions instead of the blanket override
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_get_put_round_trip(self):
             """GET and then PUT an object and verify that it's accepted and unchanged."""
             self.maxDiff = None
             # Add object-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["view", "change"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(
+                f"{self.model._meta.app_label}.view_{self.model._meta.model_name}",
+                f"{self.model._meta.app_label}.change_{self.model._meta.model_name}",
+            )
 
             instance = self._get_queryset().first()
             url = self._get_detail_url(instance)
@@ -899,6 +1010,9 @@ class APIViewTestCases:
             updated_serialized_object.pop("last_updated", None)
             self.assertEqual(initial_serialized_object, updated_serialized_object)
 
+        # TODO: The override_settings here is a temporary workaround for not breaking any app tests
+        # long term fix should be using appropriate object permissions instead of the blanket override
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_update_objects(self):
             """
             PATCH a set of objects in a single request.
@@ -907,10 +1021,7 @@ class APIViewTestCases:
                 self.skipTest("Bulk update data not set")
 
             # Add object-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["change"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
 
             id_list = list(self._get_queryset().values_list("id", flat=True)[:3])
             self.assertEqual(len(id_list), 3, "Insufficient number of objects to test bulk update")
@@ -954,24 +1065,11 @@ class APIViewTestCases:
             self.assertIn("actions", data)
 
             # Grab any field that has choices defined (fields with enums)
-            if any(
-                [
-                    "POST" in data["actions"],
-                    "PUT" in data["actions"],
-                ]
-            ):
-                schema = data["schema"]
-                props = schema["properties"]
-                fields = props.keys()
-                field_choices = set()
-                for field_name in fields:
-                    obj = props[field_name]
-                    if "enum" in obj and "enumNames" in obj:
-                        enum = obj["enum"]
-                        # Zipping to assert that the enum and the mapping have the same number of items.
-                        model_field_choices = dict(zip(obj["enumNames"], enum))
-                        self.assertEqual(len(enum), len(model_field_choices))
-                        field_choices.add(field_name)
+            field_choices = {}
+            if "POST" in data["actions"]:
+                field_choices = {k for k, v in data["actions"]["POST"].items() if "choices" in v}
+            elif "PUT" in data["actions"]:
+                field_choices = {k for k, v in data["actions"]["PUT"].items() if "choices" in v}
             else:
                 self.fail(f"Neither PUT nor POST are available actions in: {data['actions']}")
 
@@ -1026,10 +1124,7 @@ class APIViewTestCases:
             url = self._get_detail_url(instance)
 
             # Add object-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["delete"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.delete_{self.model._meta.model_name}")
 
             response = self.client.delete(url, **self.header)
             self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
@@ -1046,10 +1141,7 @@ class APIViewTestCases:
             """
             id_list = self.get_deletable_object_pks()
             # Add object-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["delete"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.delete_{self.model._meta.model_name}")
 
             data = [{"id": id} for id in id_list]
 
@@ -1060,30 +1152,6 @@ class APIViewTestCases:
 
     class NotesURLViewTestCase(APITestCase):
         """Validate Notes URL on objects that have the Note model Mixin."""
-
-        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-        def test_notes_url_on_object(self):
-            if not hasattr(self.model, "notes"):
-                self.skipTest("Model doesn't appear to support Notes")
-            instance = self._get_queryset().first()
-            if not isinstance(instance.notes, QuerySet):
-                self.skipTest("Model has a notes field but it doesn't appear to be Notes")
-
-            # Add object-level permission
-            obj_perm = users_models.ObjectPermission(
-                name="Test permission",
-                constraints={"pk": instance.pk},
-                actions=["view"],
-            )
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
-            url = self._get_detail_url(instance)
-            response = self.client.get(url, **self.header)
-            self.assertHttpStatus(response, status.HTTP_200_OK)
-            self.assertIn("notes_url", response.data)
-            self.assertIn(f"{url}notes/", str(response.data["notes_url"]))
-            self.assertIn(instance.get_notes_url(api=True), str(response.data["notes_url"]))
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_notes_url_functionality(self):

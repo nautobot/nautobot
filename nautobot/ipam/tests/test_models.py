@@ -416,10 +416,13 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
 
     def test_parent_exists_after_model_clean(self):
         prefix = Prefix(
-            prefix="101.102.0.2/26", status=self.status, namespace=self.namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+            prefix="101.102.0.128/26",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_CONTAINER,
         )
         prefix.clean()
-        self.assertEqual(prefix.parent, self.child1)
+        self.assertEqual(prefix.parent, self.root)
 
     def test_reparent_subnets_and_reparent_ips_call(self):
         """Assert reparent_subnets and reparent_ips are only called if there is an update to either of network, namespace or prefix_length"""
@@ -510,51 +513,68 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         """Test the various ways of creating a Prefix all result in correctly populated fields."""
         with self.subTest("Creation with a prefix and status"):
             prefix = Prefix(prefix="192.0.3.0/24", status=self.status)
-            prefix.save()
-            self.assertEqual(prefix.network, "192.0.3.0")
-            self.assertEqual(prefix.broadcast, "192.0.3.255")
-            self.assertEqual(prefix.prefix_length, 24)
-            self.assertEqual(prefix.type, PrefixTypeChoices.TYPE_NETWORK)  # default value
-            # parent field is tested exhaustively below
-            self.assertEqual(prefix.ip_version, 4)
-            self.assertEqual(prefix.namespace, get_default_namespace())  # default value
+            for method in [prefix.clean, prefix.save, prefix.refresh_from_db]:
+                method()
+                self.assertEqual(prefix.network, "192.0.3.0")
+                self.assertEqual(prefix.broadcast, "192.0.3.255")
+                self.assertEqual(prefix.prefix_length, 24)
+                self.assertEqual(prefix.type, PrefixTypeChoices.TYPE_NETWORK)  # default value
+                # parent field is tested exhaustively below
+                self.assertEqual(prefix.ip_version, 4)
+                self.assertEqual(prefix.namespace, get_default_namespace())  # default value
+
+        with self.subTest("Creation with a network and prefix_length"):
+            prefix = Prefix(network="192.0.4.0", prefix_length=24, status=self.status)
+            for method in [prefix.clean, prefix.save, prefix.refresh_from_db]:
+                method()
+                self.assertEqual(prefix.network, "192.0.4.0")
+                self.assertEqual(prefix.broadcast, "192.0.4.255")
+                self.assertEqual(prefix.prefix_length, 24)
+                self.assertEqual(prefix.type, PrefixTypeChoices.TYPE_NETWORK)  # default value
+                # parent field is tested exhaustively below
+                self.assertEqual(prefix.ip_version, 4)
+                self.assertEqual(prefix.namespace, get_default_namespace())  # default value
+                self.assertEqual(prefix.prefix, netaddr.IPNetwork("192.0.4.0/24"))
 
         with self.subTest("Creation with a network, broadcast, and prefix_length"):
-            prefix = Prefix(network="192.0.4.0", broadcast="192.0.4.255", prefix_length=24, status=self.status)
-            prefix.save()
-            self.assertEqual(prefix.network, "192.0.4.0")
-            self.assertEqual(prefix.broadcast, "192.0.4.255")
-            self.assertEqual(prefix.prefix_length, 24)
-            self.assertEqual(prefix.type, PrefixTypeChoices.TYPE_NETWORK)  # default value
-            # parent field is tested exhaustively below
-            self.assertEqual(prefix.ip_version, 4)
-            self.assertEqual(prefix.namespace, get_default_namespace())  # default value
-            self.assertEqual(prefix.prefix, netaddr.IPNetwork("192.0.4.0/24"))
+            prefix = Prefix(network="192.0.5.0", broadcast="192.0.5.255", prefix_length=24, status=self.status)
+            for method in [prefix.clean, prefix.save, prefix.refresh_from_db]:
+                method()
+                self.assertEqual(prefix.network, "192.0.5.0")
+                self.assertEqual(prefix.broadcast, "192.0.5.255")
+                self.assertEqual(prefix.prefix_length, 24)
+                self.assertEqual(prefix.type, PrefixTypeChoices.TYPE_NETWORK)  # default value
+                # parent field is tested exhaustively below
+                self.assertEqual(prefix.ip_version, 4)
+                self.assertEqual(prefix.namespace, get_default_namespace())  # default value
+                self.assertEqual(prefix.prefix, netaddr.IPNetwork("192.0.5.0/24"))
 
-        with self.subTest("Creation with conflicting values - prefix takes precedence"):
+        with self.subTest("With conflicting values - prefix overrules network/broadcast/prefix_length/ip_version"):
             prefix = Prefix(
-                prefix="192.0.5.0/24",
+                prefix="192.0.6.0/24",
                 status=self.status,
                 network="1.1.1.1",
                 broadcast="2.2.2.2",
                 prefix_length=27,
                 ip_version=6,
             )
-            prefix.save()
-            self.assertEqual(prefix.network, "192.0.5.0")
-            self.assertEqual(prefix.broadcast, "192.0.5.255")
-            self.assertEqual(prefix.prefix_length, 24)
-            self.assertEqual(prefix.ip_version, 4)
+            for method in [prefix.clean, prefix.save, prefix.refresh_from_db]:
+                method()
+                self.assertEqual(prefix.network, "192.0.6.0")
+                self.assertEqual(prefix.broadcast, "192.0.6.255")
+                self.assertEqual(prefix.prefix_length, 24)
+                self.assertEqual(prefix.ip_version, 4)
 
-        with self.subTest("Creation with conflicting values - network and prefix_length take precedence"):
+        with self.subTest("With conflicting values - network/prefix_length overrule broadcast/ip_version"):
             prefix = Prefix(
-                status=self.status, network="192.0.6.0", prefix_length=24, broadcast="192.0.6.127", ip_version=6
+                status=self.status, network="192.0.7.0", prefix_length=24, broadcast="192.0.7.127", ip_version=6
             )
-            prefix.save()
-            self.assertEqual(prefix.network, "192.0.6.0")
-            self.assertEqual(prefix.broadcast, "192.0.6.255")
-            self.assertEqual(prefix.prefix_length, 24)
-            self.assertEqual(prefix.ip_version, 4)
+            for method in [prefix.clean, prefix.save, prefix.refresh_from_db]:
+                method()
+                self.assertEqual(prefix.network, "192.0.7.0")
+                self.assertEqual(prefix.broadcast, "192.0.7.255")
+                self.assertEqual(prefix.prefix_length, 24)
+                self.assertEqual(prefix.ip_version, 4)
 
     def test_tree_methods(self):
         """Test the various tree methods work as expected."""
@@ -807,6 +827,24 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
 
         self.assertEqual(parent_prefix.get_first_available_ip(), "10.0.3.2/29")
 
+    def test_get_all_ips_issue_3319(self):
+        # https://github.com/nautobot/nautobot/issues/3319
+        # Confirm that IPv4 addresses aren't caught up in the IPv6 ::/96 subnet by accident, and vice versa.
+        prefix_v6 = Prefix.objects.create(
+            prefix="::/0", type=PrefixTypeChoices.TYPE_CONTAINER, status=self.status, namespace=self.namespace
+        )
+        prefix_v4 = Prefix.objects.create(
+            prefix="0.0.0.0/0", type=PrefixTypeChoices.TYPE_CONTAINER, status=self.status, namespace=self.namespace
+        )
+        IPAddress.objects.create(address="::0102:0304/128", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(address="1.2.3.4/32", status=self.status, namespace=self.namespace)
+        self.assertQuerysetEqualAndNotEmpty(
+            prefix_v6.get_all_ips(), IPAddress.objects.filter(ip_version=6, parent__namespace=self.namespace)
+        )
+        self.assertQuerysetEqualAndNotEmpty(
+            prefix_v4.get_all_ips(), IPAddress.objects.filter(ip_version=4, parent__namespace=self.namespace)
+        )
+
     def test_get_utilization(self):
         # Container Prefix
         prefix = Prefix.objects.create(
@@ -961,6 +999,12 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         # 100% utilization
         Prefix.objects.create(prefix="ab80::/9", status=self.status, namespace=self.namespace)
         self.assertEqual(large_prefix_v6.get_utilization(), (2**120, 2**120))
+
+        # https://github.com/nautobot/nautobot/issues/3319
+        v4_10dot_address_space_in_v6 = Prefix.objects.create(
+            prefix="0a00::/8", type=PrefixTypeChoices.TYPE_NETWORK, status=self.status, namespace=self.namespace
+        )
+        self.assertSequenceEqual(v4_10dot_address_space_in_v6.get_utilization(), (0, 2**120))
 
     #
     # Uniqueness enforcement tests
@@ -1256,6 +1300,22 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
                 f"{ipaddress.host}/5712 does not appear to be an IPv4 or IPv6 network.",
                 str(err.exception),
             )
+
+    def test_get_or_create_address_kwarg(self):
+        status = Status.objects.get(name="Active")
+        namespace = Namespace.objects.create(name="Test IPAddress get_or_create with address kwarg")
+        Prefix.objects.create(prefix="10.0.0.0/24", namespace=namespace, status=status)
+        ip_address, created = IPAddress.objects.get_or_create(
+            address="10.0.0.40/32", namespace=namespace, defaults={"status": status}
+        )
+        self.assertEqual(ip_address.host, "10.0.0.40")
+        self.assertEqual(ip_address.mask_length, 32)
+        self.assertTrue(created)
+        _, created = IPAddress.objects.get_or_create(
+            address="10.0.0.40/32", namespace=namespace, defaults={"status": status}
+        )
+        self.assertFalse(created)
+        self.assertTrue(IPAddress.objects.filter(address="10.0.0.40/32", parent__namespace=namespace).exists())
 
     def test_create_field_population(self):
         """Test that the various ways of creating an IPAddress result in correctly populated fields."""

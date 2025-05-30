@@ -2,6 +2,8 @@ from django_filters.rest_framework.backends import DjangoFilterBackend
 from rest_framework.filters import OrderingFilter
 from tree_queries.models import TreeNode
 
+from nautobot.core.api.constants import NON_FILTER_QUERY_PARAMS
+
 
 class NautobotFilterBackend(DjangoFilterBackend):
     """Custom filtering backend for use with django-rest-framework and django-filters."""
@@ -17,15 +19,7 @@ class NautobotFilterBackend(DjangoFilterBackend):
         # The default 'data' is a reference to request.GET, which is immutable; copies of this data are mutable
         data = kwargs["data"].copy()
 
-        for non_filter_param in (
-            "api_version",  # used to select the Nautobot API version
-            "depth",  # nested levels of the serializers default to depth=0
-            "format",  # "json" or "api", used in the interactive HTML REST API views
-            "include",  # used to include computed fields, relationships, config-contexts, etc. (excluded by default)
-            "limit",  # pagination
-            "offset",  # pagination
-            "sort",  # sorting of results
-        ):
+        for non_filter_param in NON_FILTER_QUERY_PARAMS:
             data.pop(non_filter_param, None)
 
         kwargs["data"] = data

@@ -15,10 +15,10 @@ from nautobot.tenancy.tables import TenantColumn
 from .template_code import RACKGROUP_ELEVATIONS, TREE_LINK, UTILIZATION_GRAPH
 
 __all__ = (
-    "RackTable",
     "RackDetailTable",
     "RackGroupTable",
     "RackReservationTable",
+    "RackTable",
 )
 
 

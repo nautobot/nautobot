@@ -14,13 +14,13 @@ from nautobot.tenancy.tables import TenantColumn
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
 __all__ = (
-    "ClusterTable",
     "ClusterGroupTable",
+    "ClusterTable",
     "ClusterTypeTable",
+    "VMInterfaceTable",
     "VirtualMachineDetailTable",
     "VirtualMachineTable",
     "VirtualMachineVMInterfaceTable",
-    "VMInterfaceTable",
 )
 
 VMINTERFACE_BUTTONS = """
@@ -126,6 +126,7 @@ class VirtualMachineTable(StatusTableMixin, RoleTableMixin, BaseTable):
     name = tables.LinkColumn()
     cluster = tables.Column(linkify=True)
     tenant = TenantColumn()
+    actions = ButtonsColumn(VirtualMachine)
 
     class Meta(BaseTable.Meta):
         model = VirtualMachine
@@ -139,6 +140,7 @@ class VirtualMachineTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "vcpus",
             "memory",
             "disk",
+            "actions",
         )
 
 

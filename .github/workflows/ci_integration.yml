@@ -11,9 +11,17 @@ on:  # yamllint disable
   workflow_dispatch:
 
 jobs:
+  security-tooling:
+    name: "Security Tooling"
+    runs-on: "ubuntu-24.04"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v4"
+      - name: "Security checks"
+        uses: "./.github/actions/security-checks"
   check-schema:
     name: "Run REST API schema checks"
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -36,14 +44,14 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-          poetry-version: "1.8.2"
+          poetry-version: "1.8.5"
           python-version: "3.12"
       - name: "Run check-schema"
         # REST API schema generation currently includes GraphQL schema generation, which is dependent on the DB :-(
         run: "poetry run invoke migrate check-schema"
   tests-postgres:
     name: "Unit tests (PostgreSQL and Python 3.12)"
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -69,13 +77,13 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-          poetry-version: "1.8.2"
+          poetry-version: "1.8.5"
           python-version: "3.12"
       - name: "Run unittest"
-        run: "poetry run invoke unittest --failfast --no-keepdb --no-cache-test-fixtures --parallel"
+        run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel"
   tests-mysql:
-    name: "Unit tests (MySQL and Python 3.8)"
-    runs-on: "ubuntu-22.04"
+    name: "Unit tests (MySQL and Python 3.9)"
+    runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "root"
@@ -105,13 +113,13 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: "--extras mysql"
-          poetry-version: "1.8.2"
-          python-version: "3.8"
+          poetry-version: "1.8.5"
+          python-version: "3.9"
       - name: "Run unittest"
-        run: "poetry run invoke unittest --failfast --no-keepdb --no-cache-test-fixtures --parallel"
+        run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel"
   migration-tests-mysql:
-    name: "Run migrations against test dataset (MySQL and Python 3.8)"
-    runs-on: "ubuntu-20.04"
+    name: "Run migrations against test dataset (MySQL and Python 3.9)"
+    runs-on: "ubuntu-24.04"
     env:
       MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_mysql.tar.gz"
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -139,13 +147,13 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: "--extras mysql"
-          poetry-version: "1.8.2"
-          python-version: "3.8"
+          poetry-version: "1.8.5"
+          python-version: "3.9"
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine mysql --dataset $MIGRATION_TEST_DATASET"
   migration-tests-postgres:
     name: "Run migrations against test dataset (PostgreSQL and Python 3.12)"
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-24.04"
     env:
       MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_postgres.tar.gz"
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -170,12 +178,12 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-          poetry-version: "1.8.2"
+          poetry-version: "1.8.5"
           python-version: "3.12"
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine postgres --dataset $MIGRATION_TEST_DATASET"
   integration-test:
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -196,7 +204,7 @@ jobs:
         ports:
           - "6379:6379"
       selenium:
-        image: "selenium/standalone-firefox:4.22"
+        image: "selenium/standalone-firefox:4.27"
         ports:
           - "4444:4444"
     steps:
@@ -206,14 +214,14 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-          poetry-version: "1.8.2"
+          poetry-version: "1.8.5"
           python-version: "3.12"
       - name: "Run Integration Tests"
         # If NAUTOBOT_SELENIUM_HOST is set to 'localhost' or '127.0.0.1' the connection does not work
-        run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke integration-test --keepdb"
+        run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke tests --tag integration --no-keepdb"
   container-build:
     name: "Build Container Images (amd64 on GHCR Only)"
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     if: |
       github.event_name == 'push' &&
       (github.ref_name == 'develop' || github.ref_name == 'next' || github.ref_name == 'ltm-1.6')
@@ -227,7 +235,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.8", "3.9", "3.10", "3.11", "3.12" ]
+        python-version: [ "3.9", "3.10", "3.11", "3.12" ]
     steps:
       - name: "Configuration"
         id: "config"
@@ -249,11 +257,11 @@ jobs:
       - name: "Check out repository code"
         uses: "actions/checkout@v4"
       - name: "Set up QEMU"
-        uses: "docker/setup-qemu-action@v2"
+        uses: "docker/setup-qemu-action@2b82ce82d56a2a04d2637cd93a637ae1b359c0a7" # v2
       - name: "Set up Docker Buildx"
-        uses: "docker/setup-buildx-action@v2"
+        uses: "docker/setup-buildx-action@885d1462b80bc1c1c7f0b00334ad271f09369c55" # v2
       - name: "Login to GitHub Container Registry"
-        uses: "docker/login-action@v2"
+        uses: "docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc" # v2
         with:
           registry: "ghcr.io"
           username: "${{ github.actor }}"

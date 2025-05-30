@@ -207,7 +207,7 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
             # Annotation not available, so fall back to manually querying for the config context
             config_context_data = ConfigContext.objects.get_for_object(self).values_list("data", flat=True)
         else:
-            config_context_data = self.config_context_data or []
+            config_context_data = self.config_context_data or []  # pylint: disable=no-member
             config_context_data = [
                 c["data"] for c in sorted(config_context_data, key=lambda k: (k["weight"], k["name"]))
             ]
@@ -680,6 +680,21 @@ class GraphQLQuery(
     SavedViewMixin,
     BaseModel,
 ):
+    # A Graphql Query *may* be owned by another model, such as a GitRepository, or it may be un-owned
+    owner_content_type = models.ForeignKey(
+        to=ContentType,
+        on_delete=models.CASCADE,
+        limit_choices_to=FeatureQuery("graphql_query_owners"),
+        default=None,
+        null=True,
+        blank=True,
+        related_name="graphql_queries",
+    )
+    owner_object_id = models.UUIDField(default=None, null=True, blank=True)
+    owner = GenericForeignKey(
+        ct_field="owner_content_type",
+        fk_field="owner_object_id",
+    )
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     query = models.TextField()
     variables = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
@@ -831,7 +846,7 @@ class Note(ChangeLoggedModel, BaseModel):
         unique_together = [["assigned_object_type", "assigned_object_id", "user_name", "created"]]
 
     def __str__(self):
-        return f"{self.assigned_object} - {self.created.isoformat() if self.created else None}"
+        return f"{self.assigned_object} - {self.created.isoformat() if self.created else None}"  # pylint: disable=no-member
 
     def save(self, *args, **kwargs):
         # Record the user's name as static strings
@@ -908,8 +923,6 @@ class UserSavedViewAssociation(BaseModel):
 #
 # Webhooks
 #
-
-
 @extras_features("graphql")
 class Webhook(
     ChangeLoggedModel,

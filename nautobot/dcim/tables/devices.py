@@ -1,4 +1,4 @@
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
@@ -33,6 +33,7 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
 from nautobot.dcim.utils import cable_status_color_css
 from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
@@ -63,8 +64,8 @@ from .template_code import (
 __all__ = (
     "ConsolePortTable",
     "ConsoleServerPortTable",
-    "ControllerTable",
     "ControllerManagedDeviceGroupTable",
+    "ControllerTable",
     "DeviceBayTable",
     "DeviceDeviceBayTable",
     "DeviceImportTable",
@@ -74,19 +75,19 @@ __all__ = (
     "DeviceModuleConsoleServerPortTable",
     "DeviceModuleFrontPortTable",
     "DeviceModuleInterfaceTable",
-    "DeviceModulePowerPortTable",
     "DeviceModulePowerOutletTable",
+    "DeviceModulePowerPortTable",
     "DeviceModuleRearPortTable",
     "DeviceRedundancyGroupTable",
     "DeviceTable",
     "FrontPortTable",
-    "InterfaceTable",
-    "InterfaceRedundancyGroupTable",
     "InterfaceRedundancyGroupAssociationTable",
+    "InterfaceRedundancyGroupTable",
+    "InterfaceTable",
     "InventoryItemTable",
-    "ModuleTable",
     "ModuleBayTable",
     "ModuleModuleBayTable",
+    "ModuleTable",
     "PlatformTable",
     "PowerOutletTable",
     "PowerPortTable",
@@ -94,6 +95,7 @@ __all__ = (
     "SoftwareImageFileTable",
     "SoftwareVersionTable",
     "VirtualChassisTable",
+    "VirtualDeviceContextTable",
 )
 
 
@@ -104,7 +106,8 @@ __all__ = (
 
 class PlatformTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.LinkColumn()
+    name = tables.Column(linkify=True)
+    manufacturer = tables.Column(linkify=True)
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
         url_params={"platform": "pk"},
@@ -172,10 +175,12 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     device_redundancy_group_priority = tables.TemplateColumn(
         template_code="""{% if record.device_redundancy_group %}<span class="badge badge-default">{{ record.device_redundancy_group_priority|default:'None' }}</span>{% else %}—{% endif %}"""
     )
-    controller_managed_device_group = tables.Column(linkify=True)
+    controller_managed_device_group = tables.Column(linkify=True, verbose_name="Device Group")
     software_version = tables.Column(linkify=True, verbose_name="Software Version")
     secrets_group = tables.Column(linkify=True)
+    capabilities = tables.Column(orderable=False, accessor="controller_managed_device_group.capabilities")
     tags = TagColumn(url_name="dcim:device_list")
+    actions = ButtonsColumn(Device)
 
     class Meta(BaseTable.Meta):
         model = Device
@@ -205,7 +210,9 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "software_version",
             "controller_managed_device_group",
             "secrets_group",
+            "capabilities",
             "tags",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -217,7 +224,14 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "role",
             "device_type",
             "primary_ip",
+            "actions",
         )
+
+    def render_capabilities(self, value):
+        """Render capabilities."""
+        if not value:
+            return format_html("&mdash;")
+        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
 
 
 class DeviceImportTable(StatusTableMixin, RoleTableMixin, BaseTable):
@@ -635,6 +649,11 @@ class BaseInterfaceTable(StatusTableMixin, RoleTableMixin, BaseTable):
 class InterfaceTable(ModularDeviceComponentTable, BaseInterfaceTable, PathEndpointTable):
     mgmt_only = BooleanColumn()
     tags = TagColumn(url_name="dcim:interface_list")
+    virtual_device_context_count = LinkedCountColumn(
+        viewname="dcim:virtualdevicecontext_list",
+        url_params={"interfaces": "pk"},
+        verbose_name="Virtual Device Contexts",
+    )
 
     class Meta(ModularDeviceComponentTable.Meta):
         model = Interface
@@ -660,6 +679,7 @@ class InterfaceTable(ModularDeviceComponentTable, BaseInterfaceTable, PathEndpoi
             "tags",
             "ip_addresses",
             "untagged_vlan",
+            "virtual_device_context_count",
             "tagged_vlans",
         )
         default_columns = (
@@ -716,6 +736,7 @@ class DeviceModuleInterfaceTable(InterfaceTable):
             "ip_addresses",
             "untagged_vlan",
             "tagged_vlans",
+            "virtual_device_context_count",
             "actions",
         )
         default_columns = [
@@ -734,6 +755,7 @@ class DeviceModuleInterfaceTable(InterfaceTable):
             "mode",
             "description",
             "ip_addresses",
+            "virtual_device_context_count",
             "cable",
             "connection",
             "actions",
@@ -1025,6 +1047,7 @@ class InventoryItemTable(DeviceComponentTable):
     discovered = BooleanColumn()
     tags = TagColumn(url_name="dcim:inventoryitem_list")
     cable = None  # Override DeviceComponentTable
+    actions = ButtonsColumn(InventoryItem)
 
     class Meta(DeviceComponentTable.Meta):
         model = InventoryItem
@@ -1040,6 +1063,7 @@ class InventoryItemTable(DeviceComponentTable):
             "description",
             "discovered",
             "tags",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -1050,6 +1074,7 @@ class InventoryItemTable(DeviceComponentTable):
             "part_id",
             "serial",
             "asset_tag",
+            "actions",
         )
 
 
@@ -1256,6 +1281,7 @@ class SoftwareImageFileTable(StatusTableMixin, BaseTable):
             "image_file_checksum",
             "hashing_algorithm",
             "download_url",
+            "external_integration",
             "device_type_count",
             "tags",
             "actions",
@@ -1339,6 +1365,7 @@ class ControllerTable(StatusTableMixin, RoleTableMixin, BaseTable):
     location = tables.Column(linkify=True)
     platform = tables.Column(linkify=True)
     tenant = TenantColumn()
+    capabilities = tables.Column()
     external_integration = tables.Column(linkify=True)
     controller_device = tables.Column(linkify=True)
     controller_device_redundancy_group = tables.Column(linkify=True)
@@ -1357,6 +1384,7 @@ class ControllerTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "platform",
             "role",
             "tenant",
+            "capabilities",
             "external_integration",
             "controller_device",
             "controller_device_redundancy_group",
@@ -1371,8 +1399,15 @@ class ControllerTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "platform",
             "role",
             "tenant",
+            "capabilities",
             "actions",
         )
+
+    def render_capabilities(self, value):
+        """Render capabilities."""
+        if not value:
+            return format_html("&mdash;")
+        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
 
 
 class ControllerManagedDeviceGroupTable(BaseTable):
@@ -1382,12 +1417,24 @@ class ControllerManagedDeviceGroupTable(BaseTable):
     name = tables.TemplateColumn(template_code=TREE_LINK, attrs={"td": {"class": "text-nowrap"}})
     weight = tables.Column()
     controller = tables.Column(linkify=True)
+    tenant = TenantColumn()
+    capabilities = tables.Column()
     tags = TagColumn(url_name="dcim:controllermanageddevicegroup_list")
     actions = ButtonsColumn(ControllerManagedDeviceGroup)
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
         url_params={"controller_managed_device_group": "pk"},
         verbose_name="Devices",
+    )
+    radio_profiles_count = LinkedCountColumn(
+        viewname="wireless:radioprofile_list",
+        url_params={"controller_managed_device_groups": "pk"},
+        verbose_name="Radio Profiles",
+    )
+    wireless_networks_count = LinkedCountColumn(
+        viewname="wireless:wirelessnetwork_list",
+        url_params={"controller_managed_device_groups": "pk"},
+        verbose_name="Wireless Networks",
     )
 
     class Meta(BaseTable.Meta):
@@ -1398,8 +1445,12 @@ class ControllerManagedDeviceGroupTable(BaseTable):
             "pk",
             "name",
             "device_count",
+            "radio_profiles_count",
+            "wireless_networks_count",
             "controller",
             "weight",
+            "tenant",
+            "capabilities",
             "tags",
             "actions",
         )
@@ -1407,8 +1458,61 @@ class ControllerManagedDeviceGroupTable(BaseTable):
             "pk",
             "name",
             "device_count",
+            "radio_profiles_count",
+            "wireless_networks_count",
             "controller",
             "weight",
+            "capabilities",
             "tags",
             "actions",
+        )
+
+    def render_capabilities(self, value):
+        """Render capabilities."""
+        if not value:
+            return format_html("&mdash;")
+        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
+
+
+class VirtualDeviceContextTable(StatusTableMixin, RoleTableMixin, BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    tenant = TenantColumn()
+    device = tables.Column(linkify=True)
+    primary_ip = tables.Column(linkify=True, order_by=("primary_ip6", "primary_ip4"), verbose_name="IP Address")
+    primary_ip4 = tables.Column(linkify=True, verbose_name="IPv4 Address")
+    primary_ip6 = tables.Column(linkify=True, verbose_name="IPv6 Address")
+    interface_count = LinkedCountColumn(
+        viewname="dcim:interface_list",
+        url_params={"virtual_device_contexts": "pk"},
+        verbose_name="Interfaces",
+    )
+    tags = TagColumn(url_name="dcim:device_list")
+
+    class Meta(BaseTable.Meta):
+        model = VirtualDeviceContext
+        fields = (
+            "pk",
+            "name",
+            "identifier",
+            "device",
+            "status",
+            "role",
+            "tenant",
+            "primary_ip",
+            "primary_ip4",
+            "primary_ip6",
+            "interface_count",
+            "tags",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "identifier",
+            "device",
+            "status",
+            "role",
+            "tenant",
+            "primary_ip",
+            "interface_count",
         )

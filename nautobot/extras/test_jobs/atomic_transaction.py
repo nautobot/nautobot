@@ -16,13 +16,13 @@ class TestAtomicDecorator(Job):
     Job that uses @transaction.atomic decorator to roll back changes.
     """
 
-    fail = BooleanVar()
+    should_fail = BooleanVar()
 
     @transaction.atomic
-    def run(self, fail=False):
+    def run(self, should_fail=False):  # pylint:disable=arguments-differ
         try:
             Status.objects.create(name="Test database atomic rollback 1")
-            if fail:
+            if should_fail:
                 raise SimulatedError("simulated failure")
         except Exception:
             logger.error("Job failed, all database changes have been rolled back.")
@@ -35,13 +35,13 @@ class TestAtomicContextManager(Job):
     Job that uses `with transaction.atomic()` context manager to roll back changes.
     """
 
-    fail = BooleanVar()
+    should_fail = BooleanVar()
 
-    def run(self, fail=False):
+    def run(self, should_fail=False):  # pylint:disable=arguments-differ
         try:
             with transaction.atomic():
                 Status.objects.create(name="Test database atomic rollback 2")
-                if fail:
+                if should_fail:
                     raise SimulatedError("simulated failure")
         except Exception as err:
             logger.error("Job failed, all database changes have been rolled back.")

@@ -50,8 +50,6 @@ Apps may extend this dictionary with additional data sources and/or data types b
 
 ### `homepage_layout`
 
-+++ 1.2.0
-
 A dictionary holding information about the layout of Nautobot's homepage. Each app may register homepage panels and items using objects from the generic app class. Each object has a weight attribute allowing the developer to define the position of the object.
 
 ``` python
@@ -91,7 +89,7 @@ A dictionary holding information about the layout of Nautobot's homepage. Each a
 
 +++ 2.2.3
 
-A dictionary of registered [Job classes](../jobs/index.md), indexed by their [class path](../../user-guide/platform-functionality/jobs/index.md#jobs-and-class_path). For example:
+A dictionary of registered [Job classes](../jobs/index.md), indexed by their [class path](../../user-guide/platform-functionality/jobs/models.md#understanding-job-class-paths). For example:
 
 ```python
 {
@@ -134,8 +132,6 @@ A dictionary of particular features (e.g. custom fields) mapped to the Nautobot 
 For more information visit [model-features](model-features.md).
 
 ### `nav_menu`
-
-+++ 1.1.0
 
 Navigation menu items provided by Nautobot applications. Each app may register its navbar configuration inside of the `nav_menu` dictionary using `navigation.py`. Tabs are stored in the top level moving down to groups, items and buttons. Tabs, groups and items can be modified by using the key values inside other core applications and Apps. The `nav_menu` dict should never be modified directly.
 
@@ -224,7 +220,7 @@ List of GraphQL Type objects that will be added to the GraphQL schema. GraphQL o
 ```
 
 --- 2.0.0
-    The `plugin_jobs` registry has been replaced by [`nautobot.core.celery.register_jobs`](../jobs/index.md#writing-jobs) which should be called at import time by any App that provides jobs.
+    The `plugin_jobs` registry has been replaced by [`nautobot.core.celery.register_jobs`](../jobs/index.md) which should be called at import time by any App that provides jobs.
 
 ### `plugin_template_extensions`
 

@@ -51,19 +51,10 @@
                                             {% endif %}
                                         </td>
                                     </tr>
-                                    <tr>
-                                        <td>Tenant</td>
-                                        <td>
-                                            {% if object.tenant and object.tenant.tenant_group %}
-                                                {{ object.tenant.tenant_group|hyperlinked_object }} /
-                                            {% endif %}
-                                            {{ object.tenant|hyperlinked_object }}
-                                        </td>
-                                    </tr>
+                                    {% include 'inc/tenant_table_row.html' %}
                                     <tr>
                                         <td>Device Family</td>
                                         <td>{{ object.device_type.device_family|hyperlinked_object }}</td>
-                                        </td>
                                     </tr>
                                     <tr>
                                         <td>Device Type</td>
@@ -223,8 +214,8 @@
                                         <tr>
                                             <td>Cluster</td>
                                             <td>
-                                                {% if object.cluster.group %}
-                                                    {{ object.cluster.group|hyperlinked_object }} /
+                                                {% if object.cluster.cluster_group %}
+                                                    {{ object.cluster.cluster_group|hyperlinked_object }} /
                                                 {% endif %}
                                                 {{ object.cluster|hyperlinked_object }}
                                             </td>
@@ -335,6 +326,9 @@
                             {% plugin_right_page object %}
                         </div>
                     </div>
+                    {% block content_full_width_page %}
+                        {% include 'panel_table.html' with table=vdcs_table heading="Virtual Device Contexts" add_obj_url=vdcs_table_add_url %}
+                    {% endblock content_full_width_page %}
                     <div class="row">
                         <div class="col-md-12">
                             {% plugin_full_width_page object %}

@@ -9,6 +9,7 @@ from django.urls import resolve
 from django_tables2 import RequestConfig
 from rest_framework import renderers
 
+from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
 from nautobot.core.forms import (
     restrict_form_fields,
     SearchForm,
@@ -124,7 +125,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 "paginator_class": EnhancedPaginator,
                 "per_page": get_paginate_count(request, self.saved_view),
             }
-            max_page_size = get_settings_or_config("MAX_PAGE_SIZE")
+            max_page_size = get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT)
             if max_page_size and paginate["per_page"] > max_page_size:
                 messages.warning(
                     request,
@@ -243,12 +244,11 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 restrict_form_fields(form, request.user)
             elif view.action == "bulk_destroy":
                 pk_list = getattr(view, "pk_list", [])
-                if pk_list:
-                    initial = {
-                        "pk": pk_list,
-                        "return_url": return_url,
-                    }
-                    form = form_class(initial=initial)
+                initial = {
+                    "pk": pk_list,
+                    "return_url": return_url,
+                }
+                form = form_class(initial=initial)
                 delete_all = request.POST.get("_all")
                 if not delete_all:
                     table = self.construct_table(view, pk_list=pk_list)
@@ -293,9 +293,15 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "verbose_name": queryset.model._meta.verbose_name,
             "verbose_name_plural": queryset.model._meta.verbose_name_plural,
         }
-        if view.action == "retrieve":
+        if view.detail:
+            # If we are in a retrieve related detail view (retrieve and custom actions).
+            try:
+                context["object_detail_content"] = view.object_detail_content
+            except AttributeError:
+                # If the view does not have a object_detail_content attribute, set it to None.
+                context["object_detail_content"] = None
             context.update(common_detail_view_context(request, instance))
-        elif view.action == "list":
+        if view.action == "list":
             # Construct valid actions for list view.
             valid_actions = self.validate_action_buttons(view, request)
             # Query SavedViews for dropdown button
@@ -345,6 +351,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         # Ensure the proper inheritance of context variables is applied: the view's returned data takes priority over the viewset's get_extra_context
         context.update(view.get_extra_context(request, instance))
         context.update(self.get_template_context(data, renderer_context))
+
         return context
 
     def render(self, data, accepted_media_type=None, renderer_context=None):
@@ -365,6 +372,4 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         # See form_valid() for self.action == "bulk_create".
         self.template = data.get("template", view.get_template_name())
 
-        # NautobotUIViewSets pass "use_new_ui" in context as they share the same class and are just different methods
-        self.use_new_ui = data.get("use_new_ui", False)
         return super().render(data, accepted_media_type=accepted_media_type, renderer_context=renderer_context)

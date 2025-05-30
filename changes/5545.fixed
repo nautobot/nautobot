@@ -1,1 +1,0 @@
-Fixed an issue in Dynamic Group Edit View where saving a valid choice in a Select-type CustomField triggered an error.

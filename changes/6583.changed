@@ -1,1 +1,0 @@
-`available-vlans` API endpoint now require `ipam.view_vlan` permission to view available VLANs under VLAN Group.

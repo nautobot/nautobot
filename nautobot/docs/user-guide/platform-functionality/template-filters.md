@@ -11,16 +11,13 @@ Both Django Template and Jinja2 can be extended with a library of functions, cal
 
 ## Netutils Filters
 
-+++ 1.2.0
-
 [Netutils](https://netutils.readthedocs.io/en/latest/) is an external library, maintained by Network to Code, that is focusing on providing a collection of functions for common network automation tasks. Please [check the netutils documentation](https://netutils.readthedocs.io/en/latest/) to see the list of available functions.
 
 These functions are available automatically in Jinja2 rendered by Nautobot. For example you could define a [computed field](./computedfield.md) on Circuit objects, using the Netutils `bits_to_name` function, to display the "Commit Rate" as a human-readable value by using the template code `{{ (obj.commit_rate * 1000) | bits_to_name }}`. (This particular example is contrived, as the Nautobot UI already humanizes the raw `commit_rate` value for display, but it demonstrates the kinds of things that these filters can be used for.)
 
 In general the syntax for using a netutils filter in a Jinja2 template is something like `{{ arg1 | function_name }}` for functions that take a single argument, and `{{ arg1 | function_name(arg_name2=arg2, arg_name3=arg3) }}` for functions that take multiple arguments.
 
-+++ 1.5.11
-    Netutils functions are also available in Django templates after using the `{% load netutils %}` directive in a template. The syntax to use these functions is then generally `{% function_name arg_name1=arg1 arg_name2=arg2 %}`.
+Netutils functions are also available in Django templates after using the `{% load netutils %}` directive in a template. The syntax to use these functions is then generally `{% function_name arg_name1=arg1 arg_name2=arg2 %}`.
 
 ## Nautobot Built-In Filters
 
@@ -145,8 +142,6 @@ Render a phone number string, if any, as a `tel:` hyperlink, or render a placeho
 
 ### hyperlinked_object
 
-+++ 1.4.0
-
 Render and link to a Django model instance, if any, or render a placeholder if not.
 
 Uses `object.display` if available, otherwise uses the string representation of the object.
@@ -157,16 +152,15 @@ additionally if there is an `object.description` this will be used as the title 
 {{ device|hyperlinked_object }}
 ```
 
-+++ 1.5.0
-    This filter now accepts an optional `field` parameter, which allows you to use a field other than `object.display` for the object representation if desired. For example, to display the object's `name` field instead:
+This filter also accepts an optional `field` parameter, which allows you to use a field other than `object.display` for the object representation if desired. For example, to display the object's `name` field instead:
 
-    ```django
-    # Django Template
-    {{ location|hyperlinked_object:"name" }}
+```django
+# Django Template
+{{ location|hyperlinked_object:"name" }}
 
-    # Jinja
-    {{ location|hyperlinked_object("name") }}
-    ```
+# Jinja
+{{ location|hyperlinked_object("name") }}
+```
 
 ### meta
 
@@ -204,6 +198,18 @@ Render a muted placeholder (`<span class="text-muted">&mdash;</span>`) if value 
 {{ html | placeholder }}
 ```
 
+### pre_tag
+
+Render a value within `<pre></pre>` tags to enable formatting.
+
+```django title="template.html"
+{{ some_html | pre_tag }}
+```
+
+```django title="script.py"
+pre_tag(some_html)
+```
+
 ### render_boolean
 
 Render HTML from a computed boolean value.
@@ -225,8 +231,16 @@ Render a dictionary as formatted JSON.
 +/- 2.2.0
     Unless `syntax_highlight=False` is specified, the returned string will be wrapped in a `<code class="language-json>` HTML tag to flag it for syntax highlighting by highlight.js.
 
++++ 2.3.0
+    Added option for pretty print the output: `pretty_print=False`, default is False. If True the output will be wrapped in `<pre>` tags.
+
 ```django
 {{ data | render_json }}
+{{ data | render_json:False }} <!-- without syntax highlitning ->>
+```
+
+```django
+json_pretty_printed = render_json(data, pretty_print=True)
 ```
 
 ### render_markdown

@@ -100,7 +100,7 @@ class ComponentTemplateModel(
     def get_absolute_url(self, api=False):
         # TODO: in the new UI, this should be able to link directly to the object, instead of the device-type.
         if not api:
-            return self.device_type.get_absolute_url(api=api)
+            return self.device_type.get_absolute_url(api=api)  # pylint: disable=no-member
         return super().get_absolute_url(api=api)
 
     def instantiate_model(self, model, device, **kwargs):
@@ -460,7 +460,7 @@ class DeviceBayTemplate(ComponentTemplateModel):
         return self.instantiate_model(model=DeviceBay, device=device)
 
     def clean(self):
-        if self.device_type and self.device_type.subdevice_role != SubdeviceRoleChoices.ROLE_PARENT:
+        if self.device_type and self.device_type.subdevice_role != SubdeviceRoleChoices.ROLE_PARENT:  # pylint: disable=no-member
             raise ValidationError(
                 f'Subdevice role of device type ({self.device_type}) must be set to "parent" to allow device bays.'
             )

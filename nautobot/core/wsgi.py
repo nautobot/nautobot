@@ -6,6 +6,8 @@ from django.db import connections
 
 import nautobot
 
+logger = logging.getLogger(__name__)
+
 # This is the Django default left here for visibility on how the Nautobot pattern
 # differs.
 # os.environ.setdefault("DJANGO_SETTINGS_MODULE", "nautobot.core.settings")
@@ -24,9 +26,7 @@ try:
     def fix_uwsgi():
         import uwsgi
 
-        logging.getLogger(__name__).info(
-            f"Closing existing DB and cache connections on worker {uwsgi.worker_id()} after uWSGI forked ..."
-        )
+        logger.info("Closing existing DB and cache connections on worker %s after uWSGI forked ...", uwsgi.worker_id())
         connections.close_all()
         cache.close_caches()
 

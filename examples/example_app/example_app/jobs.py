@@ -27,6 +27,7 @@ from nautobot.apps.jobs import (
 )
 from nautobot.dcim.models import Device, Location, LocationType
 from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.jobs import get_task_logger
 from nautobot.extras.models import Status
 
 name = "Example App jobs"  # The "grouping" that will contain all Jobs defined in this file.
@@ -76,6 +77,9 @@ This is a Job that demonstrates as many Job features as it can.
         time_limit = 2000  # Default: None (follow global configuration)
         # Time in seconds before Celery will automatically attempt terminate the Job by killing the
         # Celery worker process.
+        is_singleton = False  # Default: False
+        # A Boolean that if set to `True` prevents the job from running twice simultaneously.
+        # Any duplicate job instances will error out with a singleton-specific error message.
 
     # Definition of input variables requested when running this Job
     should_fail = BooleanVar(description="Check this box to force this Job to fail")
@@ -179,7 +183,7 @@ This is a Job that demonstrates as many Job features as it can.
         """
         self.logger.info("Before start! The provided kwargs are `%s`", kwargs)
 
-    def run(self, **kwargs):
+    def run(self, **kwargs):  # pylint:disable=arguments-differ
         """
         The main worker function of any Job.
 
@@ -220,12 +224,14 @@ This is a Job that demonstrates as many Job features as it can.
             "This is an info message, with an associated database object",
             extra={"object": kwargs["location_type_input"]},
         )
+        self.logger.success("You can use logger.success() to set the log level to `SUCCESS`.")
         self.logger.warning(
             "You can specify a custom grouping for messages, but do so with consideration.",
             extra={"grouping": "warning messages"},
         )
+        self.logger.failure("Note that *logging* a failure does _not_ automatically cause the job to fail.")
         self.logger.error("Note that *logging* an error does _not_ automatically cause the job to fail.")
-        self.logger.exception("Any supported Python log level can be logged but not all are automatically colorized.")
+        self.logger.critical("Any supported Python log level can be logged but not all are automatically colorized.")
 
     def on_success(self, retval, task_id, args, kwargs):
         """
@@ -244,7 +250,7 @@ This is a Job that demonstrates as many Job features as it can.
         Called if either before_start() or run() raised an unhandled exception.
 
         Args:
-            exc (Exception): The exception that was raised.
+            exc (any): Exception that was raised, if any, otherwise value returned by `run()` or `before_start()`.
             task_id (str): Present for Celery compatibility, can be ignored in most cases.
             args (list): Present for Celery compatibility, can be ignored in most cases.
             kwargs (dict): The keyword args that were (or would have been) passed into `run()`.
@@ -277,7 +283,7 @@ class ExampleDryRunJob(Job):
         has_sensitive_variables = False
         description = "Example job to remove serial number on all devices, supports dryrun mode."
 
-    def run(self, dryrun):
+    def run(self, dryrun):  # pylint:disable=arguments-differ
         try:
             with transaction.atomic():
                 devices_with_serial = Device.objects.exclude(serial="")
@@ -290,8 +296,12 @@ class ExampleDryRunJob(Job):
                         device.serial = ""
                         device.save()
         except Exception:
-            self.logger.error("%s failed. Database changes rolled back.", self.__name__)
+            self.logger.error("%s failed. Database changes rolled back.", self.__class__.__name__)
             raise
+        self.logger.success("We can use the success log level to indicate success.")
+        # Ensure get_task_logger can also use success.
+        logger = get_task_logger(__name__)
+        logger.success("We can also use the success log level in get_task_logger.")
 
 
 class ExampleJob(Job):
@@ -307,8 +317,9 @@ class ExampleJob(Job):
 
             *This is italicized*
         """
+        has_sensitive_variables = False
 
-    def run(self, some_json_data):
+    def run(self, some_json_data):  # pylint:disable=arguments-differ
         # some_json_data is passed to the run method as a Python object (e.g. dictionary)
         pass
 
@@ -341,7 +352,7 @@ class ExampleCustomFormJob(Job):
         name = "Custom form."
         has_sensitive_variables = False
 
-    def run(self, custom_job_data):
+    def run(self, custom_job_data):  # pylint:disable=arguments-differ
         """Run the job."""
         self.logger.debug("Data is %s", custom_job_data)
 
@@ -352,7 +363,7 @@ class ExampleHiddenJob(Job):
         name = "Example hidden job"
         description = "I should not show in the UI!"
 
-    def run(self):
+    def run(self):  # pylint:disable=arguments-differ
         pass
 
 
@@ -362,13 +373,14 @@ class ExampleLoggingJob(Job):
     class Meta:
         name = "Example logging job."
         description = "I log stuff to demonstrate how UI logging works."
+        has_sensitive_variables = False
         task_queues = [
             settings.CELERY_TASK_DEFAULT_QUEUE,
             "priority",
             "bulk",
         ]
 
-    def run(self, interval):
+    def run(self, interval):  # pylint:disable=arguments-differ
         self.logger.debug("Running for %s seconds.", interval)
         for step in range(1, interval + 1):
             time.sleep(1)
@@ -389,8 +401,9 @@ class ExampleFileInputOutputJob(Job):
     class Meta:
         name = "Example File Input/Output job"
         description = "Takes a file as input and reverses its line order, creating a new file as output."
+        has_sensitive_variables = False
 
-    def run(self, input_file):
+    def run(self, input_file):  # pylint:disable=arguments-differ
         # Note that input_file is always opened in binary mode, so we need to decode it to a str
         text = input_file.read().decode("utf-8")
         output = "\n".join(reversed(text.split("\n")))
@@ -468,6 +481,33 @@ class ExampleComplexJobButtonReceiver(JobButtonReceiver):
             self.logger.error("Unable to run Job Button for type %s.", type(obj).__name__, extra={"object": obj})
 
 
+class ExampleFailingJob(Job):
+    class Meta:
+        name = "Job that fails either cleanly or messily"
+        description = "Example job that can fail cleanly with `self.fail()` or messily by raising an exception."
+        has_sensitive_variables = False
+
+    fail_cleanly = BooleanVar(default=True)
+
+    def run(self, *args, fail_cleanly, **kwargs):  # pylint: disable=arguments-differ
+        self.logger.info("Job is running merrily along, when suddenly...")
+        if fail_cleanly:
+            self.fail("A failure occurs but is handled cleanly, allowing the job to continue...")
+        else:
+            raise RuntimeError("A failure occurs and is not handled cleanly, aborting the job immediately!")
+        self.logger.failure("The job runs to completion (but is a failure) and returns a result")
+        return "The job ran to completion"
+
+
+class ExampleSingletonJob(Job):
+    class Meta:
+        name = "Example job, only one can run at any given time."
+        is_singleton = True
+
+    def run(self, *args, **kwargs):
+        time.sleep(60)
+
+
 jobs = (
     ExampleEverythingJob,
     ExampleDryRunJob,
@@ -479,5 +519,7 @@ jobs = (
     ExampleJobHookReceiver,
     ExampleSimpleJobButtonReceiver,
     ExampleComplexJobButtonReceiver,
+    ExampleSingletonJob,
+    ExampleFailingJob,
 )
 register_jobs(*jobs)

@@ -1,4 +1,5 @@
 import logging
+from typing import ClassVar, Optional
 
 from django.contrib import messages
 from django.contrib.auth.mixins import AccessMixin
@@ -22,6 +23,7 @@ from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic.edit import FormView
+from django_filters import FilterSet
 from drf_spectacular.utils import extend_schema
 from rest_framework import exceptions, mixins
 from rest_framework.decorators import action as drf_action
@@ -29,6 +31,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
+from nautobot.core import exceptions as core_exceptions
 from nautobot.core.api.views import BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.core.forms import (
     BootstrapMixin,
@@ -37,7 +40,8 @@ from nautobot.core.forms import (
     CSVFileField,
     restrict_form_fields,
 )
-from nautobot.core.utils import lookup, permissions
+from nautobot.core.jobs import BulkDeleteObjects, BulkEditObjects
+from nautobot.core.utils import filtering, lookup, permissions
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params, normalize_querydict
 from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.views.utils import (
@@ -48,7 +52,7 @@ from nautobot.core.views.utils import (
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.forms import NoteForm
-from nautobot.extras.models import ExportTemplate, SavedView, UserSavedViewAssociation
+from nautobot.extras.models import ExportTemplate, Job, JobResult, SavedView, UserSavedViewAssociation
 from nautobot.extras.tables import NoteTable, ObjectChangeTable
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, get_base_template, remove_prefix_from_cf_key
 
@@ -223,7 +227,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     # filterset and filter_params will be initialized in filter_queryset() in ObjectListViewMixin
     filter_params = None
     filterset = None
-    filterset_class = None
+    filterset_class: Optional[type[FilterSet]] = None
     filterset_form_class = None
     form_class = None
     create_form_class = None
@@ -473,7 +477,11 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     def get_filter_params(self, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
         params = request.GET.copy()
-        filter_params = get_filterable_params_from_filter_params(params, self.non_filter_params, self.filterset_class())
+        filter_params = get_filterable_params_from_filter_params(
+            params,
+            self.non_filter_params,
+            self.filterset_class(),  # pylint: disable=not-callable  # only called if filterset_class is not None
+        )
         if params.get("saved_view") and not filter_params and not params.get("all_filters_removed"):
             return SavedView.objects.get(pk=params.get("saved_view")).config.get("filter_params", {})
         return filter_params
@@ -534,6 +542,18 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
                     raise TemplateDoesNotExist("")
             except TemplateDoesNotExist:
                 template_name = f"generic/object_{action}.html"
+                try:
+                    select_template([template_name])
+                except TemplateDoesNotExist:
+                    # Most likely a custom action in detail view.
+                    # Fallback to the default detail view template
+                    template_name = f"{app_label}/{model_opts.model_name}_retrieve.html"
+                    try:
+                        select_template([template_name])
+                    except TemplateDoesNotExist:
+                        # Try a different detail view template format
+                        template_name = f"{app_label}/{model_opts.model_name}.html"
+                        select_template([template_name])
         return template_name
 
     def get_form(self, *args, **kwargs):
@@ -579,11 +599,11 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
             if self.action == "bulk_destroy":
                 queryset = self.get_queryset()
                 bulk_delete_all = bool(self.request.POST.get("_all"))
-                if bulk_delete_all:
-                    return ConfirmationForm
 
                 class BulkDestroyForm(ConfirmationForm):
-                    pk = ModelMultipleChoiceField(queryset=queryset, widget=MultipleHiddenInput)
+                    pk = ModelMultipleChoiceField(
+                        queryset=queryset, widget=MultipleHiddenInput, required=not bulk_delete_all
+                    )
 
                 return BulkDestroyForm
             else:
@@ -614,12 +634,13 @@ class ObjectDetailViewMixin(NautobotViewSetMixin, mixins.RetrieveModelMixin):
     UI mixin to retrieve a model instance.
     """
 
+    object_detail_content = None
+
     def retrieve(self, request, *args, **kwargs):
         """
         Retrieve a model instance.
         """
-        context = {"use_new_ui": True}
-        return Response(context)
+        return Response({})
 
 
 class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
@@ -628,8 +649,8 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
     """
 
     action_buttons = ("add", "import", "export")
-    filterset_class = None
-    filterset_form_class = None
+    filterset_class: Optional[type[FilterSet]] = None
+    filterset_form_class: Optional[type[Form]] = None
     hide_hierarchy_ui = False
     non_filter_params = (
         "export",  # trigger for CSV/export-template/YAML export # 3.0 TODO: remove, irrelevant after #4746
@@ -705,7 +726,6 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         """
         List the model instances.
         """
-        context = {"use_new_ui": True}
         queryset = self.get_queryset()
         clear_view = request.GET.get("clear_view", False)
         if "export" in request.GET:  # 3.0 TODO: remove, irrelevant after #4746
@@ -715,8 +735,16 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             if response is not None:
                 return response
 
+        skip_user_and_global_default_saved_view = False
+        if self.filterset_class is not None:
+            skip_user_and_global_default_saved_view = get_filterable_params_from_filter_params(
+                request.GET.copy(),
+                self.non_filter_params,
+                self.filterset_class(),
+            )
+
         # If the user clicks on the clear view button, we do not check for global or user defaults
-        if not clear_view and not request.GET.get("saved_view"):
+        if not skip_user_and_global_default_saved_view and not clear_view and not request.GET.get("saved_view"):
             # Check if there is a default for this view for this specific user
             app_label, model_name = queryset.model._meta.label.split(".")
             view_name = f"{app_label}:{model_name.lower()}_list"
@@ -743,7 +771,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             except ObjectDoesNotExist:
                 pass
 
-        return Response(context)
+        return Response({})
 
 
 class ObjectDestroyViewMixin(NautobotViewSetMixin, mixins.DestroyModelMixin):
@@ -780,7 +808,8 @@ class ObjectDestroyViewMixin(NautobotViewSetMixin, mixins.DestroyModelMixin):
             return self.perform_destroy(request, **kwargs)
         return Response(context)
 
-    def perform_destroy(self, request, **kwargs):
+    # TODO: this conflicts with DRF's DestroyModelMixin.perform_destroy(self, instance) API
+    def perform_destroy(self, request, **kwargs):  # pylint:disable=arguments-renamed
         """
         Function to validate the ObjectDeleteConfirmationForm and to delete the object.
         """
@@ -912,10 +941,12 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
             return self.form_invalid(form)
 
 
-class EditAndDeleteAllModelMixin:
+class BulkEditAndBulkDeleteModelMixin:
     """
-    UI mixin to bulk destroy all and bulk edit all model instances.
+    UI mixin to bulk destroy and bulk edit all model instances.
     """
+
+    logger = logging.getLogger(__name__)
 
     def _get_bulk_edit_delete_all_queryset(self, request):
         """
@@ -934,7 +965,7 @@ class EditAndDeleteAllModelMixin:
             filterset_class = getattr(self, "filterset_class", None)
 
         if request.GET and filterset_class is not None:
-            queryset = filterset_class(request.GET, model.objects.all()).qs
+            queryset = filterset_class(request.GET, model.objects.all()).qs  # pylint: disable=not-callable
             # We take this approach because filterset.qs has already applied .distinct(),
             # and performing a .delete directly on a queryset with .distinct applied is not allowed.
             queryset = self.queryset.filter(pk__in=queryset)
@@ -942,24 +973,91 @@ class EditAndDeleteAllModelMixin:
             queryset = model.objects.all()
         return queryset
 
-    def _bulk_delete_all_context(self, request, queryset):
-        model = queryset.model
-        return {
-            "obj_type_plural": model._meta.verbose_name_plural,
-            "return_url": self.get_return_url(request),
-            "total_objs_to_delete": queryset.count(),
-            "delete_all": True,
-            "table": None,
-        }
+    def send_bulk_delete_objects_to_job(self, request, pk_list, model, delete_all):
+        """Prepare and enqueue bulk delete job."""
+        job_model = Job.objects.get_for_class_path(BulkDeleteObjects.class_path)
+
+        if filterset_class := lookup.get_filterset_for_model(model):
+            filter_query_params = normalize_querydict(request.GET, filterset=filterset_class())
+        else:
+            filter_query_params = {}
+
+        # Discarding non-filter query params
+        new_filter_query_params = {}
+
+        for key, value in filter_query_params.items():
+            try:
+                filtering.get_filterset_field(filterset_class(), key)
+                new_filter_query_params[key] = value
+            except core_exceptions.FilterSetFieldNotFound:
+                self.logger.debug(f"Query parameter `{key}` not found in `{filterset_class}`, discarding it")
+
+        filter_query_params = new_filter_query_params
+
+        job_form = BulkDeleteObjects.as_form(
+            data={
+                "pk_list": pk_list,
+                "content_type": ContentType.objects.get_for_model(model),
+                "delete_all": delete_all,
+                "filter_query_params": filter_query_params,
+            }
+        )
+        # BulkDeleteObjects job form cannot be invalid; Hence no handling of invalid case.
+        job_form.is_valid()
+        job_kwargs = BulkDeleteObjects.prepare_job_kwargs(job_form.cleaned_data)
+        job_result = JobResult.enqueue_job(
+            job_model,
+            request.user,
+            **BulkDeleteObjects.serialize_data(job_kwargs),
+        )
+        return redirect("extras:jobresult", pk=job_result.pk)
+
+    def send_bulk_edit_objects_to_job(self, request, form_data, model):
+        """Prepare and enqueue a bulk edit job."""
+        job_model = Job.objects.get_for_class_path(BulkEditObjects.class_path)
+        if filterset_class := lookup.get_filterset_for_model(model):
+            filter_query_params = normalize_querydict(request.GET, filterset=filterset_class())
+        else:
+            filter_query_params = {}
+
+        # Discarding non-filter query params
+        new_filter_query_params = {}
+
+        for key, value in filter_query_params.items():
+            try:
+                filtering.get_filterset_field(filterset_class(), key)
+                new_filter_query_params[key] = value
+            except core_exceptions.FilterSetFieldNotFound:
+                self.logger.debug(f"Query parameter `{key}` not found in `{filterset_class}`, discarding it")
+
+        filter_query_params = new_filter_query_params
+
+        job_form = BulkEditObjects.as_form(
+            data={
+                "form_data": form_data,
+                "content_type": ContentType.objects.get_for_model(model),
+                "edit_all": request.POST.get("_all") is not None,
+                "filter_query_params": filter_query_params,
+            }
+        )
+        # NOTE: BulkEditObjects cant be invalid, so there is no need for handling invalid error
+        job_form.is_valid()
+        job_kwargs = BulkEditObjects.prepare_job_kwargs(job_form.cleaned_data)
+        job_result = JobResult.enqueue_job(
+            job_model,
+            request.user,
+            **BulkEditObjects.serialize_data(job_kwargs),
+        )
+        return redirect("extras:jobresult", pk=job_result.pk)
 
 
-class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, EditAndDeleteAllModelMixin):
+class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, BulkEditAndBulkDeleteModelMixin):
     """
     UI mixin to bulk destroy model instances.
     """
 
-    bulk_destroy_form_class = None
-    filterset_class = None
+    bulk_destroy_form_class: Optional[type[Form]] = None
+    filterset_class: Optional[type[FilterSet]] = None
 
     def _process_bulk_destroy_form(self, form):
         request = self.request
@@ -992,7 +1090,8 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Ed
         """
         return self.perform_bulk_destroy(request, **kwargs)
 
-    def perform_bulk_destroy(self, request, **kwargs):
+    # TODO: this conflicts with BulkDestroyModelMixin.perform_bulk_destroy(self, objects)
+    def perform_bulk_destroy(self, request, **kwargs):  # pylint:disable=arguments-renamed
         """
         request.POST "_delete": Function to render the user selection of objects in a table form/BulkDestroyConfirmationForm via Response that is passed to NautobotHTMLRenderer.
         request.POST "_confirm": Function to validate the table form/BulkDestroyConfirmationForm and to perform the action of bulk destroy. Render the form with errors if exceptions are raised.
@@ -1002,21 +1101,23 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Ed
         data = {}
         # Are we deleting *all* objects in the queryset or just a selected subset?
         if delete_all:
+            self.pk_list = []
             queryset = self._get_bulk_edit_delete_all_queryset(self.request)
-            data = self._bulk_delete_all_context(request, queryset)
         else:
             self.pk_list = list(request.POST.getlist("pk"))
+            queryset = queryset.filter(pk__in=self.pk_list)
 
-        form_class = self.get_form_class(**kwargs)
         if "_confirm" in request.POST:
+            form_class = self.get_form_class(**kwargs)
             form = form_class(request.POST, initial=normalize_querydict(request.GET, form_class=form_class))
             if form.is_valid():
-                return self.form_valid(form)
+                return self.send_bulk_delete_objects_to_job(request, self.pk_list, queryset.model, delete_all)
             else:
                 return self.form_invalid(form)
+        table = None
         if not delete_all:
             table_class = self.get_table_class()
-            table = table_class(queryset.filter(pk__in=self.pk_list), orderable=False)
+            table = table_class(queryset, orderable=False)
             if not table.rows:
                 messages.warning(
                     request,
@@ -1024,7 +1125,13 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Ed
                 )
                 return redirect(self.get_return_url(request))
 
-            data.update({"table": table})
+        data.update(
+            {
+                "table": table,
+                "total_objs_to_delete": queryset.count(),
+                "delete_all": delete_all,
+            }
+        )
         return Response(data)
 
 
@@ -1082,14 +1189,14 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin):  # 3.0 TODO: remove, unus
             return self.form_invalid(form)
 
 
-class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, EditAndDeleteAllModelMixin):
+class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, BulkEditAndBulkDeleteModelMixin):
     """
     UI mixin to bulk update model instances.
     """
 
-    filterset_class = None
-    bulk_update_form_class = None
+    filterset_class: ClassVar[Optional[type[FilterSet]]] = None
 
+    # NOTE: Performing BulkEdit Objects has been moved to a system job, but the logic remains here to ensure backward compatibility.
     def _process_bulk_update_form(self, form):
         request = self.request
         queryset = self.get_queryset()
@@ -1104,7 +1211,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Edit
             for field in form.fields
             if field not in form_custom_fields + form_relationships + ["pk"] + ["object_note"]
         ]
-        nullified_fields = request.POST.getlist("_nullify")
+        nullified_fields = request.POST.getlist("_nullify") or []
         with deferred_change_logging_for_bulk_operation():
             updated_objects = []
             edit_all = self.request.POST.get("_all")
@@ -1123,7 +1230,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Edit
                         # This form field is used to modify a field rather than set its value directly
                         model_field = None
                     # Handle nullification
-                    if name in form.nullable_fields and name in nullified_fields:
+                    if name in form.nullable_fields and nullified_fields and name in nullified_fields:
                         if isinstance(model_field, ManyToManyField):
                             getattr(obj, name).set([])
                         else:
@@ -1137,7 +1244,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Edit
                         setattr(obj, name, form.cleaned_data[name])
                 # Update custom fields
                 for field_name in form_custom_fields:
-                    if field_name in form.nullable_fields and field_name in nullified_fields:
+                    if field_name in form.nullable_fields and nullified_fields and field_name in nullified_fields:
                         obj.cf[remove_prefix_from_cf_key(field_name)] = None
                     elif form.cleaned_data.get(field_name) not in (None, "", []):
                         obj.cf[remove_prefix_from_cf_key(field_name)] = form.cleaned_data[field_name]
@@ -1200,7 +1307,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Edit
             form = form_class(queryset.model, request.POST, edit_all=edit_all)
             restrict_form_fields(form, request.user)
             if form.is_valid():
-                return self.form_valid(form)
+                return self.send_bulk_edit_objects_to_job(self.request, form.cleaned_data, queryset.model)
             else:
                 return self.form_invalid(form)
         table = None
@@ -1224,10 +1331,14 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Edit
 
 class ObjectChangeLogViewMixin(NautobotViewSetMixin):
     """
-    UI mixin to list a model's changelog queryset
+    UI mixin to list a model's changelog queryset.
+
+    base_template: Specify to explicitly identify the base object detail template to render.
+        If not provided, "<app>/<model>.html", "<app>/<model>_retrieve.html", or "generic/object_retrieve.html"
+        will be used, as per `get_base_template()`.
     """
 
-    base_template = None
+    base_template: Optional[str] = None
 
     @drf_action(detail=True)
     def changelog(self, request, *args, **kwargs):
@@ -1242,9 +1353,13 @@ class ObjectChangeLogViewMixin(NautobotViewSetMixin):
 class ObjectNotesViewMixin(NautobotViewSetMixin):
     """
     UI Mixin for an Object's Notes.
+
+    base_template: Specify to explicitly identify the base object detail template to render.
+        If not provided, "<app>/<model>.html", "<app>/<model>_retrieve.html", or "generic/object_retrieve.html"
+        will be used, as per `get_base_template()`.
     """
 
-    base_template = None
+    base_template: Optional[str] = None
 
     @drf_action(detail=True)
     def notes(self, request, *args, **kwargs):

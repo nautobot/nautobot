@@ -364,6 +364,9 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # if "NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY" in os.environ and os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"] != "":
 #     DEVICE_NAME_AS_NATURAL_KEY = is_truthy(os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"])
 
+# Event Brokers
+# EVENT_BROKERS = {}
+
 # Exempt certain models from the enforcement of view permissions. Models listed here will be viewable by all users and
 # by anonymous users. List models in the form `<app>.<model>`. Add '*' to this list to exempt all models.
 # Defaults to [].
@@ -459,6 +462,16 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 # be provided as a dictionary.
 #
 # NAPALM_ARGS = {}
+
+# Expiration date (YYYY-MM-DD) for an active Nautobot support contract with Network to Code.
+# Displayed in the About page.
+# if (
+#     "NAUTOBOT_NTC_SUPPORT_CONTRACT_EXPIRATION_DATE" in os.environ
+#     and os.environ["NAUTOBOT_NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"] != ""
+# ):
+#     NTC_SUPPORT_CONTRACT_EXPIRATION_DATE = datetime.date.fromisoformat(
+#         os.environ["NAUTOBOT_NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"]
+#     )
 
 # Default number of objects to display per page of the UI and REST API. Default is 50
 #

@@ -2,6 +2,7 @@ from concurrent.futures.thread import ThreadPoolExecutor
 import json
 from random import shuffle
 from unittest import skip
+import uuid
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import connection
@@ -12,7 +13,15 @@ from rest_framework import status
 from nautobot.core.testing import APITestCase, APIViewTestCases, disable_warnings
 from nautobot.core.testing.api import APITransactionTestCase
 from nautobot.dcim.choices import InterfaceTypeChoices
-from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
+from nautobot.dcim.models import (
+    Device,
+    DeviceType,
+    Interface,
+    Location,
+    LocationType,
+    Manufacturer,
+    VirtualDeviceContext,
+)
 from nautobot.extras.models import CustomField, Role, Status
 from nautobot.ipam import choices
 from nautobot.ipam.models import (
@@ -117,6 +126,7 @@ class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         cls.vrfs = VRF.objects.all()
         cls.devices = Device.objects.all()
+        cls.vdcs = VirtualDeviceContext.objects.all()
         locations = Location.objects.filter(location_type__name="Campus")
         cluster_type = ClusterType.objects.create(name="Test Cluster Type")
         clusters = (
@@ -154,24 +164,31 @@ class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
             rd="65000:4",
         )
 
+        cls.update_data = {
+            "name": "VRFDeviceAssignment 2",
+            "rd": "65000:7",
+        }
+
         cls.create_data = [
             {
                 "vrf": cls.vrfs[2].pk,
                 "device": cls.devices[4].pk,
-                "virtual_machine": None,
-                "rd": "65000:4",
+                "rd": "65000:7",
             },
             {
                 "vrf": cls.vrfs[3].pk,
-                "device": None,
                 "virtual_machine": cls.test_vm.pk,
-                "rd": "65000:5",
+                "rd": "65000:8",
             },
             {
                 "vrf": cls.vrfs[4].pk,
                 "device": cls.devices[6].pk,
-                "virtual_machine": None,
-                "rd": "65000:6",
+                "name": "VRFDeviceAssignment 3",
+                "rd": "65000:9",
+            },
+            {
+                "vrf": cls.vrfs[4].pk,
+                "virtual_device_context": cls.vdcs[0].pk,
             },
         ]
         cls.bulk_update_data = {
@@ -180,39 +197,75 @@ class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
 
     def test_creating_invalid_vrf_device_assignments(self):
         # Add object-level permission
-        duplicate_device_create_data = {
-            "vrf": self.vrfs[0].pk,
-            "device": self.devices[1].pk,
-            "virtual_machine": None,
-            "rd": "65000:6",
-        }
-        duplicate_vm_create_data = {
-            "vrf": self.vrfs[1].pk,
-            "device": None,
-            "virtual_machine": self.test_vm.pk,
-            "rd": "65000:6",
-        }
-        invalid_create_data = {
-            "vrf": self.vrfs[2].pk,
-            "device": self.devices[6].pk,
-            "virtual_machine": self.test_vm.pk,
-            "rd": "65000:6",
-        }
-        self.add_permissions("ipam.add_vrfdeviceassignment")
-        response = self.client.post(self._get_list_url(), duplicate_device_create_data, format="json", **self.header)
-        self.assertContains(
-            response, "The fields device, vrf must make a unique set.", status_code=status.HTTP_400_BAD_REQUEST
+        self.add_permissions(
+            "ipam.add_vrfdeviceassignment",
+            "dcim.view_device",
+            "dcim.view_virtualdevicecontext",
+            "ipam.view_vrf",
+            "virtualization.view_virtualmachine",
         )
-        response = self.client.post(self._get_list_url(), duplicate_vm_create_data, format="json", **self.header)
-        self.assertContains(
-            response, "The fields virtual_machine, vrf must make a unique set.", status_code=status.HTTP_400_BAD_REQUEST
-        )
-        response = self.client.post(self._get_list_url(), invalid_create_data, format="json", **self.header)
-        self.assertContains(
-            response,
-            "A VRF cannot be associated with both a device and a virtual machine.",
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
+        existing_vrf_device = VRFDeviceAssignment.objects.filter(device__isnull=False).first()
+        existing_vrf_vm = VRFDeviceAssignment.objects.filter(virtual_machine__isnull=False).first()
+        existing_vrf_vdc = VRFDeviceAssignment.objects.filter(virtual_device_context__isnull=False).first()
+        duplicate_create_data = [
+            {
+                "vrf": existing_vrf_device.vrf.pk,
+                "device": existing_vrf_device.device.pk,
+                "rd": "65000:6",
+            },
+            {
+                "vrf": existing_vrf_vm.vrf.pk,
+                "virtual_machine": existing_vrf_vm.virtual_machine.pk,
+                "rd": "65000:6",
+            },
+            {
+                "vrf": existing_vrf_vdc.vrf.pk,
+                "virtual_device_context": existing_vrf_vdc.virtual_device_context.pk,
+                "rd": "65000:6",
+            },
+        ]
+        expected_responses = [
+            "The fields device, vrf must make a unique set.",
+            "The fields virtual_machine, vrf must make a unique set.",
+            "The fields virtual_device_context, vrf must make a unique set.",
+        ]
+        for i, data in enumerate(duplicate_create_data):
+            response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+            self.assertContains(response, expected_responses[i], status_code=status.HTTP_400_BAD_REQUEST)
+
+        # Test VRFDeviceAssignment model clean() code paths
+        vrf = VRF.objects.create(name="New VRF ", namespace=Namespace.objects.first())
+        invalid_create_data = [
+            {
+                "vrf": vrf.pk,
+                "device": self.devices[6].pk,
+                "virtual_machine": self.test_vm.pk,
+            },
+            {
+                "vrf": vrf.pk,
+                "device": self.devices[7].pk,
+                "virtual_device_context": self.vdcs[2].pk,
+            },
+            {
+                "vrf": vrf.pk,
+                "virtual_machine": self.test_vm.pk,
+                "virtual_device_context": self.vdcs[3].pk,
+            },
+            {
+                "vrf": vrf.pk,
+                "name": "VRFDeviceAssignment 5",
+                "rd": "65000:6",
+            },
+        ]
+        expected_responses = [
+            "A VRFDeviceAssignment entry cannot be associated with both a device and a virtual machine.",
+            "A VRFDeviceAssignment entry cannot be associated with both a device and a virtual device context.",
+            "A VRFDeviceAssignment entry cannot be associated with both a virtual machine and a virtual device context.",
+            "A VRFDeviceAssignment entry must be associated with a device, a virtual machine, or a virtual device context.",
+        ]
+        for i, data in enumerate(invalid_create_data):
+            response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+            self.assertContains(response, expected_responses[i], status_code=status.HTTP_400_BAD_REQUEST)
 
 
 class VRFPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
@@ -220,56 +273,44 @@ class VRFPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        cls.namespace = (
+            Namespace.objects.annotate(prefixes_count=Count("prefixes")).filter(prefixes_count__gte=3).first()
+        )
         cls.vrfs = (
-            VRF.objects.annotate(prefixes_count=Count("namespace__prefixes")).filter(prefixes_count__gte=2).distinct()
+            VRF.objects.create(name="TEST VRF 1", namespace=cls.namespace),
+            VRF.objects.create(name="TEST VRF 2", namespace=cls.namespace),
         )
-        cls.prefixes = Prefix.objects.all()
+        cls.prefixes = Prefix.objects.filter(namespace=cls.namespace)
 
-        VRFPrefixAssignment.objects.create(
-            vrf=cls.vrfs[0],
-            prefix=cls.prefixes.filter(namespace=cls.vrfs[0].namespace)[0],
-        )
-        VRFPrefixAssignment.objects.create(
-            vrf=cls.vrfs[0],
-            prefix=cls.prefixes.filter(namespace=cls.vrfs[0].namespace)[1],
-        )
-        VRFPrefixAssignment.objects.create(
-            vrf=cls.vrfs[1],
-            prefix=cls.prefixes.filter(namespace=cls.vrfs[1].namespace)[0],
-        )
-        VRFPrefixAssignment.objects.create(
-            vrf=cls.vrfs[1],
-            prefix=cls.prefixes.filter(namespace=cls.vrfs[1].namespace)[1],
-        )
         cls.create_data = [
             {
-                "vrf": cls.vrfs[2].pk,
-                "prefix": cls.prefixes.filter(namespace=cls.vrfs[2].namespace).exclude(vrfs=cls.vrfs[2])[0].pk,
+                "vrf": cls.vrfs[0].pk,
+                "prefix": cls.prefixes.first().pk,
             },
             {
-                "vrf": cls.vrfs[3].pk,
-                "prefix": cls.prefixes.filter(namespace=cls.vrfs[3].namespace).exclude(vrfs=cls.vrfs[3])[0].pk,
+                "vrf": cls.vrfs[0].pk,
+                "prefix": cls.prefixes.last().pk,
             },
             {
-                "vrf": cls.vrfs[4].pk,
-                "prefix": cls.prefixes.filter(namespace=cls.vrfs[4].namespace).exclude(vrfs=cls.vrfs[4])[0].pk,
+                "vrf": cls.vrfs[1].pk,
+                "prefix": cls.prefixes.first().pk,
             },
         ]
 
     def test_creating_invalid_vrf_prefix_assignments(self):
         duplicate_create_data = {
-            "vrf": self.vrfs[0].pk,
-            "prefix": self.prefixes.filter(namespace=self.vrfs[0].namespace)[0].pk,
+            "vrf": VRFPrefixAssignment.objects.first().vrf.pk,
+            "prefix": VRFPrefixAssignment.objects.first().prefix.pk,
         }
         wrong_namespace_create_data = {
             "vrf": self.vrfs[0].pk,
-            "prefix": self.prefixes.exclude(namespace=self.vrfs[0].namespace)[0].pk,
+            "prefix": Prefix.objects.exclude(namespace=self.namespace)[0].pk,
         }
         missing_field_create_data = {
             "vrf": self.vrfs[0].pk,
             "prefix": None,
         }
-        self.add_permissions("ipam.add_vrfprefixassignment")
+        self.add_permissions("ipam.add_vrfprefixassignment", "ipam.view_prefix", "ipam.view_vrf")
         response = self.client.post(self._get_list_url(), duplicate_create_data, format="json", **self.header)
         self.assertContains(
             response, "The fields vrf, prefix must make a unique set.", status_code=status.HTTP_400_BAD_REQUEST
@@ -348,6 +389,8 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         cls.create_data = [
             {
                 "prefix": "192.168.4.0/24",
+                "network": "192.168.4.0",  # not required, but possible to specify
+                "broadcast": "192.168.4.255",  # not required, but possible to specify
                 "status": cls.status.pk,
                 "rir": rir.pk,
                 "type": choices.PrefixTypeChoices.TYPE_POOL,
@@ -376,7 +419,16 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         """
         Tests for the 2.0/2.1 REST API of Prefixes.
         """
-        self.add_permissions("ipam.view_prefix", "ipam.add_prefix", "ipam.change_prefix")
+        self.add_permissions(
+            "dcim.view_location",
+            "ipam.view_prefix",
+            "ipam.add_prefix",
+            "ipam.change_prefix",
+            "ipam.view_ipaddress",
+            "ipam.view_namespace",
+            "ipam.view_rir",
+            "extras.view_status",
+        )
 
         with self.subTest("valid GET"):
             prefix = Prefix.objects.annotate(location_count=Count("locations")).filter(location_count=1).first()
@@ -472,7 +524,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         else:
             self.fail("Suitable prefix fixture not found")
         url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
-        self.add_permissions("ipam.add_prefix")
+        self.add_permissions("ipam.add_prefix", "ipam.view_namespace", "extras.view_status", "extras.add_customfield")
 
         # Create four available prefixes with individual requests
         child_prefix_length = prefix.prefix_length + 2
@@ -506,7 +558,8 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             url, {"prefix_length": "hello", "status": self.status.pk}, format="json", **self.header
         )
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("prefix_length", response.data[0])
+        self.assertIn("prefix_length", response.data)
+        self.assertEqual(response.data["prefix_length"], "This field must be an integer.")
 
     def test_create_multiple_available_prefixes(self):
         """
@@ -521,7 +574,9 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             self.fail("Suitable prefix fixture not found")
 
         url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
-        self.add_permissions("ipam.view_prefix", "ipam.add_prefix")
+        self.add_permissions(
+            "ipam.view_prefix", "ipam.add_prefix", "extras.view_status", "extras.add_customfield", "ipam.view_namespace"
+        )
 
         # Try to create five prefixes (only four are available)
         child_prefix_length = prefix.prefix_length + 2
@@ -581,7 +636,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             description="This is the Prefix created for whole network.",
         )
         url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
-        self.add_permissions("ipam.view_prefix")
+        self.add_permissions("ipam.view_prefix", "ipam.view_namespace", "extras.view_status")
         self.add_permissions(
             "ipam.add_prefix", constraints={"description__startswith": "This is the Prefix created for"}
         )
@@ -638,9 +693,10 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             description="This is the Prefix created for whole network.",
         )
         url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
-        self.add_permissions("ipam.view_prefix")
+        self.add_permissions("ipam.view_prefix", "ipam.view_namespace", "extras.view_status")
         self.add_permissions(
-            "ipam.add_prefix", constraints={"description__startswith": "This is the Prefix created for"}
+            "ipam.add_prefix",
+            constraints={"description__startswith": "This is the Prefix created for"},
         )
 
         # Test invalid request
@@ -767,7 +823,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             namespace=self.namespace,
         )
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
-        self.add_permissions("ipam.view_prefix", "ipam.add_ipaddress", "extras.view_status")
+        self.add_permissions("ipam.view_prefix", "ipam.add_ipaddress", "ipam.view_namespace", "extras.view_status")
 
         data = {
             "status": self.status.pk,
@@ -794,7 +850,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         cf = CustomField.objects.create(key="ipcf", label="IP Custom Field", type="text")
         cf.content_types.add(ContentType.objects.get_for_model(IPAddress))
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
-        self.add_permissions("ipam.view_prefix", "ipam.add_ipaddress", "extras.view_status")
+        self.add_permissions("ipam.view_prefix", "ipam.view_namespace", "ipam.add_ipaddress", "extras.view_status")
 
         # Create all six available IPs with individual requests
         for i in range(1, 7):
@@ -830,7 +886,13 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         cf = CustomField.objects.create(key="ipcf", label="IP Custom Field", type="text")
         cf.content_types.add(ContentType.objects.get_for_model(IPAddress))
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
-        self.add_permissions("ipam.view_prefix", "ipam.add_ipaddress", "extras.view_status")
+        self.add_permissions(
+            "ipam.view_prefix",
+            "ipam.add_ipaddress",
+            "ipam.view_namespace",
+            "extras.view_customfield",
+            "extras.view_status",
+        )
 
         # Try to create seven IPs (only six are available)
         data = [
@@ -861,7 +923,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             description="This is the Prefix created for whole network.",
         )
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
-        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
+        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress", "ipam.view_namespace", "extras.view_status")
         self.add_permissions(
             "ipam.add_ipaddress", constraints={"description__startswith": "This is the IP created for"}
         )
@@ -914,7 +976,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             description="This is a Prefix created for whole network.",
         )
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
-        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
+        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress", "ipam.view_namespace", "extras.view_status")
         self.add_permissions(
             "ipam.add_ipaddress", constraints={"description__startswith": "This is the IP created for"}
         )
@@ -960,6 +1022,26 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 0)
+
+    def test_prefix_type_filter(self):
+        url = reverse("ipam-api:prefix-list")
+        self.add_permissions("ipam.view_prefix")
+
+        test_cases = {
+            "ic": "WOR",
+            "isw": "NET",
+            "iew": "WORK",
+            "ie": "NETWORK",
+        }
+
+        for type_filter_lookup, type_filter_value in test_cases.items():
+            with self.subTest(render_as=type_filter_lookup):
+                response = self.client.get(f"{url}?type__{type_filter_lookup}={type_filter_value}", **self.header)
+
+                # Assert that the prefixes returned match the type filter
+                self.assertEqual(response.status_code, 200)
+                for result in response.data["results"]:
+                    self.assertEqual(result["type"]["value"], "network")
 
 
 class PrefixLocationAssignmentTest(APIViewTestCases.APIViewTestCase):
@@ -1118,7 +1200,7 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
 
     def test_create_requires_parent_or_namespace(self):
         """Test that missing parent/namespace fields result in an error."""
-        self.add_permissions("ipam.add_ipaddress")
+        self.add_permissions("ipam.add_ipaddress", "extras.view_status")
         data = {
             "address": "192.168.0.10/32",
             "status": self.statuses[0].pk,
@@ -1149,7 +1231,7 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
     def test_create_multiple_outside_nat_success(self):
         """Validate NAT inside address can tie to multiple NAT outside addresses."""
         # Create the two outside NAT IP Addresses tied back to the single inside NAT address
-        self.add_permissions("ipam.add_ipaddress", "ipam.view_ipaddress")
+        self.add_permissions("ipam.add_ipaddress", "ipam.view_ipaddress", "ipam.view_namespace", "extras.view_status")
         nat_inside = IPAddress.objects.filter(nat_outside_list__isnull=True).first()
         # Create NAT outside with above address IP as inside NAT
         ip1 = self.client.post(
@@ -1186,7 +1268,9 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.data["nat_outside_list"][1]["address"], "192.168.0.20/24")
 
     def test_creating_ipaddress_with_an_invalid_parent(self):
-        self.add_permissions("ipam.add_ipaddress")
+        self.add_permissions(
+            "ipam.add_ipaddress", "extras.view_status", "ipam.view_prefix", "ipam.view_ipaddress", "ipam.view_namespace"
+        )
         prefixes = (
             Prefix.objects.create(prefix="10.0.0.0/8", status=self.statuses[0], namespace=self.namespace),
             Prefix.objects.create(prefix="192.168.0.0/25", status=self.statuses[0], namespace=self.namespace),
@@ -1338,6 +1422,8 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
             "ipam.view_vlangroup",
             "ipam.view_vlan",
             "ipam.add_vlan",
+            "extras.view_status",
+            "extras.view_customfield",
         )
 
         # Create all nine available VLANs with individual requests
@@ -1380,6 +1466,7 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
             "ipam.view_vlangroup",
             "ipam.view_vlan",
             "ipam.add_vlan",
+            "extras.view_status",
         )
 
         # Try to create ten VLANs (only nine are available)
@@ -1427,6 +1514,7 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
             "ipam.view_vlangroup",
             "ipam.view_vlan",
             "ipam.add_vlan",
+            "extras.view_status",
         )
 
         # Try to create VLANs with specified VLAN IDs. Also, explicitly (and redundantly) specify a VLAN Group.
@@ -1482,12 +1570,22 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
             f"Invalid VLAN Group requested: {some_other_vlan_group}. Only VLAN Group {self.vlan_group} is permitted.",
             response.data["detail"],
         )
+        invalid_id = uuid.uuid4()
+        data[0]["vlan_group"] = invalid_id  # Invalid UUID
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
+        self.assertIn("detail", response.data)
+        self.assertEqual(
+            f"VLAN Group with pk {invalid_id} does not exist.",
+            response.data["detail"],
+        )
 
     def test_create_available_vlans_with_permissions_constraint(self):
         url = reverse("ipam-api:vlangroup-available-vlans", kwargs={"pk": self.vlan_group.pk})
         self.add_permissions(
             "ipam.view_vlangroup",
             "ipam.view_vlan",
+            "extras.view_status",
         )
         self.add_permissions("ipam.add_vlan", constraints={"description__startswith": "This is the VLAN created for"})
 
@@ -1535,6 +1633,7 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
         self.add_permissions(
             "ipam.view_vlangroup",
             "ipam.view_vlan",
+            "extras.view_status",
         )
         self.add_permissions("ipam.add_vlan", constraints={"description__startswith": "This is the VLAN created for"})
 
@@ -1640,9 +1739,14 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
     def test_vlan_2_1_api_version_response(self):
         """Assert location can be used in VLAN API create/retrieve."""
 
-        self.add_permissions("ipam.view_vlan")
-        self.add_permissions("ipam.add_vlan")
-        self.add_permissions("ipam.change_vlan")
+        self.add_permissions(
+            "dcim.view_location",
+            "ipam.view_vlan",
+            "ipam.add_vlan",
+            "ipam.change_vlan",
+            "ipam.view_vlangroup",
+            "extras.view_status",
+        )
         with self.subTest("Assert GET"):
             vlan = VLAN.objects.annotate(locations_count=Count("locations")).filter(locations_count=1).first()
             url = reverse("ipam-api:vlan-detail", kwargs={"pk": vlan.pk})
@@ -1703,24 +1807,24 @@ class VLANLocationAssignmentTest(APIViewTestCases.APIViewTestCase):
         # make sure there are 4 locations without vlans 1 and 2 for the create_data below
         for i in range(4):
             cls.locations[i].vlans.set([])
-        locations_without_vlans = cls.locations.exclude(vlans__in=[cls.vlans[0], cls.vlans[1]])
+        locations_without_vlans = cls.locations.filter(vlans__isnull=True)
 
         cls.create_data = [
+            {
+                "vlan": cls.vlans[0].pk,
+                "location": locations_without_vlans[0].pk,
+            },
             {
                 "vlan": cls.vlans[0].pk,
                 "location": locations_without_vlans[1].pk,
             },
             {
-                "vlan": cls.vlans[0].pk,
+                "vlan": cls.vlans[1].pk,
                 "location": locations_without_vlans[2].pk,
             },
             {
                 "vlan": cls.vlans[1].pk,
                 "location": locations_without_vlans[3].pk,
-            },
-            {
-                "vlan": cls.vlans[1].pk,
-                "location": locations_without_vlans[4].pk,
             },
         ]
 
@@ -1804,7 +1908,7 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
 
         Ref: https://github.com/nautobot/nautobot/issues/265
         """
-        self.add_permissions("ipam.add_service")
+        self.add_permissions("ipam.add_service", "dcim.view_device")
         url = reverse("ipam-api:service-list")
         device = self.devices[0]
 

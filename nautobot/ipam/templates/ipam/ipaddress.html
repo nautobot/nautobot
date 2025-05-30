@@ -1,4 +1,4 @@
-{% extends 'generic/object_detail.html' %}
+{% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
 {% load render_table from django_tables2 %}
 
@@ -83,15 +83,7 @@
                 <strong>Operational Details</strong>
             </div>
             <table class="table table-hover panel-body attr-table">
-                <tr>
-                    <td>Tenant</td>
-                    <td>
-                        {% if object.tenant and object.tenant.tenant_group %}
-                            {{ object.tenant.tenant_group|hyperlinked_object }} /
-                        {% endif %}
-                        {{ object.tenant|hyperlinked_object }}
-                    </td>
-                </tr>
+                {% include 'inc/tenant_table_row.html' %}
                 <tr>
                     <td>Assignment</td>
                     <td>

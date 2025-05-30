@@ -120,6 +120,7 @@ class DeviceTypeTable(BaseTable):
         verbose_name="Devices",
     )
     tags = TagColumn(url_name="dcim:devicetype_list")
+    actions = ButtonsColumn(DeviceType)
 
     class Meta(BaseTable.Meta):
         model = DeviceType
@@ -134,6 +135,7 @@ class DeviceTypeTable(BaseTable):
             "subdevice_role",
             "device_count",
             "tags",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -143,6 +145,7 @@ class DeviceTypeTable(BaseTable):
             "u_height",
             "is_full_depth",
             "device_count",
+            "actions",
         )
 
 
@@ -253,7 +256,7 @@ class PowerOutletTemplateTable(ComponentTemplateTable):
             "name",
             "label",
             "type",
-            "power_port",
+            "power_port_template",
             "feed_leg",
             "description",
             "actions",
@@ -290,7 +293,7 @@ class FrontPortTemplateTable(ComponentTemplateTable):
             "name",
             "label",
             "type",
-            "rear_port",
+            "rear_port_template",
             "rear_port_position",
             "description",
             "actions",

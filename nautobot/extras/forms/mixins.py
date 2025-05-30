@@ -34,7 +34,7 @@ from nautobot.extras.utils import remove_prefix_from_cf_key
 logger = logging.getLogger(__name__)
 
 
-__all__ = (
+__all__ = (  # noqa:RUF022
     "ContactTeamModelFilterFormMixin",
     "CustomFieldModelBulkEditFormMixin",
     "CustomFieldModelFilterFormMixin",
@@ -327,7 +327,7 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
                     field_name,
                     instance,
                 )
-                if field_name in self.nullable_fields and field_name in nullified_fields:
+                if field_name in self.nullable_fields and nullified_fields and field_name in nullified_fields:
                     logger.debug("Deleting existing relationship associations for %s on %s", relationship, instance)
                     relationshipassociation_queryset.delete()
                 elif field_name in self.cleaned_data:
@@ -673,7 +673,7 @@ class RelationshipModelFormMixin(forms.ModelForm):
             for peer_id in target_peer_ids:
                 relationship = self.fields[field_name].model
                 if not relationship.symmetric:
-                    association = RelationshipAssociation(
+                    association = RelationshipAssociation(  # pylint: disable=repeated-keyword
                         relationship=relationship,
                         **{
                             f"{side}_type": self.obj_type,
@@ -837,7 +837,7 @@ class StatusModelFilterFormMixin(forms.Form):
         self.order_fields(self.field_order)  # Reorder fields again
 
 
-class TagsBulkEditFormMixin(forms.Form):
+class TagsBulkEditFormMixin(BulkEditForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 

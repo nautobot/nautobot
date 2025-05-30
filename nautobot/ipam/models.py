@@ -27,18 +27,18 @@ from .querysets import IPAddressQuerySet, PrefixQuerySet, RIRQuerySet, VLANQuery
 from .validators import DNSValidator
 
 __all__ = (
+    "RIR",
+    "VLAN",
+    "VRF",
     "IPAddress",
     "IPAddressToInterface",
     "Namespace",
     "Prefix",
     "PrefixLocationAssignment",
-    "RIR",
     "RouteTarget",
     "Service",
-    "VLAN",
     "VLANGroup",
     "VLANLocationAssignment",
-    "VRF",
     "VRFDeviceAssignment",
     "VRFPrefixAssignment",
 )
@@ -134,6 +134,12 @@ class VRF(PrimaryModel):
         related_name="vrfs",
         through="ipam.VRFDeviceAssignment",
         through_fields=("vrf", "virtual_machine"),
+    )
+    virtual_device_contexts = models.ManyToManyField(
+        to="dcim.VirtualDeviceContext",
+        related_name="vrfs",
+        through="ipam.VRFDeviceAssignment",
+        through_fields=("vrf", "virtual_device_context"),
     )
     prefixes = models.ManyToManyField(
         to="ipam.Prefix",
@@ -238,6 +244,41 @@ class VRF(PrimaryModel):
         instance = self.virtual_machines.through.objects.get(vrf=self, virtual_machine=virtual_machine)
         return instance.delete()
 
+    def add_virtual_device_context(self, virtual_device_context, rd="", name=""):
+        """
+        Add a `virtual_device_context` to this VRF, optionally overloading `rd` and `name`.
+
+        If `rd` or `name` are not provided, the values from this VRF will be inherited.
+
+        Args:
+            virtual_device_context (VirtualDeviceContext): VirtualDeviceContext instance
+            rd (str): (Optional) RD of the VRF when associated with this VirtualDeviceContext
+            name (str): (Optional) Name of the VRF when associated with this VirtualDeviceContext
+
+        Returns:
+            VRFDeviceAssignment instance
+        """
+        instance = self.virtual_device_contexts.through(
+            vrf=self, virtual_device_context=virtual_device_context, rd=rd, name=name
+        )
+        instance.validated_save()
+        return instance
+
+    def remove_virtual_device_context(self, virtual_device_context):
+        """
+        Remove a `virtual_device_context` from this VRF.
+
+        Args:
+            virtual_device_context (VirtualDeviceContext): VirtualDeviceContext instance
+
+        Returns:
+            tuple (int, dict): Number of objects deleted and a dict with number of deletions.
+        """
+        instance = self.virtual_device_contexts.through.objects.get(
+            vrf=self, virtual_device_context=virtual_device_context
+        )
+        return instance.delete()
+
     def add_prefix(self, prefix):
         """
         Add a `prefix` to this VRF. Each object must be in the same Namespace.
@@ -275,6 +316,9 @@ class VRFDeviceAssignment(BaseModel):
     virtual_machine = models.ForeignKey(
         "virtualization.VirtualMachine", null=True, blank=True, on_delete=models.CASCADE, related_name="vrf_assignments"
     )
+    virtual_device_context = models.ForeignKey(
+        "dcim.VirtualDeviceContext", null=True, blank=True, on_delete=models.CASCADE, related_name="vrf_assignments"
+    )
     rd = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field -- see below
         max_length=constants.VRF_RD_MAX_LENGTH,
         blank=True,
@@ -289,14 +333,16 @@ class VRFDeviceAssignment(BaseModel):
         unique_together = [
             ["vrf", "device"],
             ["vrf", "virtual_machine"],
+            ["vrf", "virtual_device_context"],
             # TODO: desirable in the future, but too strict for 1.x-to-2.0 data migrations,
             #       as multiple "cleanup" VRFs in different cleanup namespaces might be assigned to a single device/VM.
             # ["device", "rd", "name"],
             # ["virtual_machine", "rd", "name"],
+            # ["virtual_device_context", "rd", "name"],
         ]
 
     def __str__(self):
-        obj = self.device or self.virtual_machine
+        obj = self.device or self.virtual_machine or self.virtual_device_context
         return f"{self.vrf} [{obj}] (rd: {self.rd}, name: {self.name})"
 
     def clean(self):
@@ -310,11 +356,23 @@ class VRFDeviceAssignment(BaseModel):
         if not self.name:
             self.name = self.vrf.name
 
-        # A VRF must belong to a Device *or* to a VirtualMachine.
+        # A VRF must belong to a Device *or* to a VirtualMachine *or* to a Virtual Device Context.
         if all([self.device, self.virtual_machine]):
-            raise ValidationError("A VRF cannot be associated with both a device and a virtual machine.")
-        if not any([self.device, self.virtual_machine]):
-            raise ValidationError("A VRF must be associated with either a device or a virtual machine.")
+            raise ValidationError(
+                "A VRFDeviceAssignment entry cannot be associated with both a device and a virtual machine."
+            )
+        if all([self.device, self.virtual_device_context]):
+            raise ValidationError(
+                "A VRFDeviceAssignment entry cannot be associated with both a device and a virtual device context."
+            )
+        if all([self.virtual_machine, self.virtual_device_context]):
+            raise ValidationError(
+                "A VRFDeviceAssignment entry cannot be associated with both a virtual machine and a virtual device context."
+            )
+        if not any([self.device, self.virtual_machine, self.virtual_device_context]):
+            raise ValidationError(
+                "A VRFDeviceAssignment entry must be associated with a device, a virtual machine, or a virtual device context."
+            )
 
 
 @extras_features("graphql")
@@ -648,19 +706,18 @@ class Prefix(PrimaryModel):
         return None
 
     def clean(self):
-        if self.prefix:
-            # self.parent depends on self.prefix having a value
-            self.parent = self.get_parent()
-        super().clean()
-
-    def save(self, *args, **kwargs):
-        if isinstance(self.prefix, netaddr.IPNetwork):
+        if self.prefix is not None:  # missing network/prefix_length will be caught by super().clean()
             # Clear host bits from prefix
             # This also has the subtle side effect of calling self._deconstruct_prefix(),
             # which will (re)set the broadcast and ip_version values of this instance to their correct values.
             self.prefix = self.prefix.cidr
 
-        self.parent = self.get_parent()
+            self.parent = self.get_parent()
+
+        super().clean()
+
+    def save(self, *args, **kwargs):
+        self.clean()
 
         # Validate that creation of this prefix does not create an invalid parent/child relationship
         # 3.0 TODO: uncomment this to enforce this constraint
@@ -976,7 +1033,10 @@ class Prefix(PrimaryModel):
         while `<Prefix 10.0.0.0/16>.get_all_ips()` will return *both* 10.0.0.1.24 and 10.0.1.1/24.
         """
         return IPAddress.objects.filter(
-            parent__namespace=self.namespace, host__gte=self.network, host__lte=self.broadcast
+            parent__namespace=self.namespace,
+            ip_version=self.ip_version,
+            host__gte=self.network,
+            host__lte=self.broadcast,
         )
 
     def get_first_available_prefix(self):
@@ -1017,7 +1077,10 @@ class Prefix(PrimaryModel):
         # change this when that is the case, see #3873 for historical context.
         if self.type != choices.PrefixTypeChoices.TYPE_CONTAINER:
             pool_ips = IPAddress.objects.filter(
-                parent__namespace=self.namespace, host__gte=self.network, host__lte=self.broadcast
+                parent__namespace=self.namespace,
+                ip_version=self.ip_version,
+                host__gte=self.network,
+                host__lte=self.broadcast,
             ).values_list("host", flat=True)
             child_ips = netaddr.IPSet(pool_ips)
 
@@ -1408,7 +1471,6 @@ class VLANGroup(PrimaryModel):
 
     def clean(self):
         super().clean()
-
         # Validate location
         if self.location is not None:
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():

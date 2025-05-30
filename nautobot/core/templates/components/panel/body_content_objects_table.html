@@ -1,0 +1,7 @@
+{% load render_table from django_tables2 %}
+<form {% if form_id %} id="{{ form_id }}" {% endif %} method="post">
+    {% csrf_token %}
+    {% with table=body_content_table %}
+        {% render_table table 'inc/table.html' %}
+    {% endwith %}
+</form>

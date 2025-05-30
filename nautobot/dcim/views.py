@@ -6,7 +6,7 @@ import uuid
 
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.core.paginator import EmptyPage, PageNotAnInteger
 from django.db import IntegrityError, transaction
 from django.db.models import F, Prefetch
@@ -16,6 +16,7 @@ from django.forms import (
     MultipleHiddenInput,
 )
 from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
+from django.urls import reverse
 from django.utils.encoding import iri_to_uri
 from django.utils.functional import cached_property
 from django.utils.html import format_html
@@ -27,12 +28,15 @@ from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.response import Response
 
 from nautobot.circuits.models import Circuit
-from nautobot.cloud.models import CloudAccount
 from nautobot.cloud.tables import CloudAccountTable
+from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
+from nautobot.core.templatetags import helpers
 from nautobot.core.templatetags.helpers import has_perms
+from nautobot.core.ui import object_detail
+from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
@@ -53,12 +57,22 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
-from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_driver_mapping_tool_names
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
-from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable
+from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable, VRFTable
 from nautobot.virtualization.models import VirtualMachine
+from nautobot.virtualization.tables import VirtualMachineTable
+from nautobot.wireless.forms import ControllerManagedDeviceGroupWirelessNetworkFormSet
+from nautobot.wireless.models import (
+    ControllerManagedDeviceGroupRadioProfileAssignment,
+    ControllerManagedDeviceGroupWirelessNetworkAssignment,
+)
+from nautobot.wireless.tables import (
+    ControllerManagedDeviceGroupRadioProfileAssignmentTable,
+    ControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
+    RadioProfileTable,
+)
 
 from . import filters, forms, tables
 from .api import serializers
@@ -109,6 +123,7 @@ from .models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
 
 logger = logging.getLogger(__name__)
@@ -198,60 +213,37 @@ class BaseDeviceComponentTemplatesBulkRenameView(generic.BulkRenameView):
 #
 
 
-class LocationTypeListView(generic.ObjectListView):
+class LocationTypeUIViewSet(NautobotUIViewSet):
     queryset = LocationType.objects.all()
-    filterset = filters.LocationTypeFilterSet
-    filterset_form = forms.LocationTypeFilterForm
-    table = tables.LocationTypeTable
+    filterset_class = filters.LocationTypeFilterSet
+    filterset_form_class = forms.LocationTypeFilterForm
+    table_class = tables.LocationTypeTable
+    form_class = forms.LocationTypeForm
+    bulk_update_form_class = forms.LocationTypeBulkEditForm
+    serializer_class = serializers.LocationSerializer
 
-
-class LocationTypeView(generic.ObjectView):
-    queryset = LocationType.objects.all()
-
-    def get_extra_context(self, request, instance):
-        children = LocationType.objects.restrict(request.user, "view").filter(parent=instance).select_related("parent")
-        locations = (
-            Location.objects.restrict(request.user, "view")
-            .filter(location_type=instance)
-            .select_related("parent", "location_type")
-        )
-
-        children_table = tables.LocationTypeTable(children)
-        locations_table = tables.LocationTable(locations)
-        locations_table.columns.hide("location_type")
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(children_table)
-        RequestConfig(request, paginate).configure(locations_table)
-
-        return {
-            "children_table": children_table,
-            "locations_table": locations_table,
-            **super().get_extra_context(request, instance),
-        }
-
-
-class LocationTypeEditView(generic.ObjectEditView):
-    queryset = LocationType.objects.all()
-    model_form = forms.LocationTypeForm
-
-
-class LocationTypeDeleteView(generic.ObjectDeleteView):
-    queryset = LocationType.objects.all()
-
-
-class LocationTypeBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = LocationType.objects.all()
-    table = tables.LocationTypeTable
-
-
-class LocationTypeBulkDeleteView(generic.BulkDeleteView):
-    queryset = LocationType.objects.all()
-    filterset = filters.LocationTypeFilterSet
-    table = tables.LocationTypeTable
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                table_class=tables.LocationTypeTable,
+                table_filter="parent",
+                table_title="Child Location Type(s)",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                table_class=tables.LocationTable,
+                table_title="Location(s) of this Type",
+                table_filter="location_type",
+                exclude_columns=["location_type"],
+            ),
+        ),
+    )
 
 
 #
@@ -264,7 +256,6 @@ class LocationListView(generic.ObjectListView):
     filterset = filters.LocationFilterSet
     filterset_form = forms.LocationFilterForm
     table = tables.LocationTable
-    use_new_ui = True
 
 
 class LocationView(generic.ObjectView):
@@ -273,7 +264,6 @@ class LocationView(generic.ObjectView):
     # automatically issue a second query (similar to behavior for
     # https://docs.djangoproject.com/en/3.2/ref/models/querysets/#django.db.models.query.QuerySet.only)
     queryset = Location.objects.without_tree_fields().all()
-    use_new_ui = True
 
     def get_extra_context(self, request, instance):
         related_locations = (
@@ -314,7 +304,7 @@ class LocationView(generic.ObjectView):
             .select_related("parent", "location_type")
         )
 
-        children_table = tables.LocationTable(children)
+        children_table = tables.LocationTable(children, hide_hierarchy_ui=True)
 
         paginate = {
             "paginator_class": EnhancedPaginator,
@@ -500,54 +490,57 @@ class MigrateLocationDataToContactView(generic.ObjectEditView):
 #
 
 
-class RackGroupListView(generic.ObjectListView):
+class RackGroupUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.RackGroupBulkEditForm
+    filterset_class = filters.RackGroupFilterSet
+    filterset_form_class = forms.RackGroupFilterForm
+    form_class = forms.RackGroupForm
+    serializer_class = serializers.RackGroupSerializer
+    table_class = tables.RackGroupTable
     queryset = RackGroup.objects.all()
-    filterset = filters.RackGroupFilterSet
-    filterset_form = forms.RackGroupFilterForm
-    table = tables.RackGroupTable
 
-
-class RackGroupView(generic.ObjectView):
-    queryset = RackGroup.objects.all()
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            object_detail.ObjectFieldsPanel(
+                label="Rack Group",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=["description", "parent", "location"],
+                value_transforms={
+                    "location": [helpers.render_ancestor_hierarchy],
+                },
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=200,
+                related_field_name="rack_group",
+                context_table_key="rack_table",
+            ),
+        ]
+    )
 
     def get_extra_context(self, request, instance):
-        # Racks
-        racks = (
-            Rack.objects.restrict(request.user, "view")
-            .filter(rack_group__in=instance.descendants(include_self=True))
-            .select_related("role", "location", "tenant")
-        )
+        context = super().get_extra_context(request, instance)
 
-        rack_table = tables.RackTable(racks)
-        rack_table.columns.hide("rack_group")
+        if self.action == "retrieve" and instance:
+            racks = (
+                Rack.objects.restrict(request.user, "view")
+                .filter(rack_group__in=instance.descendants(include_self=True))
+                .select_related("role", "location", "tenant")
+            )
 
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(rack_table)
+            rack_table = tables.RackTable(racks)
+            rack_table.columns.hide("rack_group")
 
-        return {"rack_table": rack_table, **super().get_extra_context(request, instance)}
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(rack_table)
 
+            context["rack_table"] = rack_table
 
-class RackGroupEditView(generic.ObjectEditView):
-    queryset = RackGroup.objects.all()
-    model_form = forms.RackGroupForm
-
-
-class RackGroupDeleteView(generic.ObjectDeleteView):
-    queryset = RackGroup.objects.all()
-
-
-class RackGroupBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = RackGroup.objects.all()
-    table = tables.RackGroupTable
-
-
-class RackGroupBulkDeleteView(generic.BulkDeleteView):
-    queryset = RackGroup.objects.all()
-    filterset = filters.RackGroupFilterSet
-    table = tables.RackGroupTable
+        return context
 
 
 #
@@ -574,6 +567,7 @@ class RackElevationListView(generic.ObjectListView):
         "reverse",  # control of ordering
     )
     filterset = filters.RackFilterSet
+    filterset_form = forms.RackFilterForm
     action_buttons = []
     template_name = "dcim/rack_elevation_list.html"
 
@@ -683,50 +677,65 @@ class RackBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class RackReservationListView(generic.ObjectListView):
+class RackReservationUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.RackReservationBulkEditForm
+    filterset_class = filters.RackReservationFilterSet
+    filterset_form_class = forms.RackReservationFilterForm
+    form_class = forms.RackReservationForm
+    serializer_class = serializers.RackReservationSerializer
+    table_class = tables.RackReservationTable
     queryset = RackReservation.objects.all()
-    filterset = filters.RackReservationFilterSet
-    filterset_form = forms.RackReservationFilterForm
-    table = tables.RackReservationTable
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.KeyValueTablePanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                label="Rack",
+                context_data_key="rack_data",
+            ),
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                label="Reservation Details",
+                fields=["unit_list", "tenant", "user", "description"],
+            ),
+            object_detail.Panel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                template_path="dcim/rack_elevation.html",
+            ),
+        ),
+    )
 
-class RackReservationView(generic.ObjectView):
-    queryset = RackReservation.objects.select_related("rack")
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            context["rack_data"] = self.get_rack_context(instance)
+        return context
 
+    def get_rack_context(self, instance):
+        rack = getattr(instance, "rack", None)
+        if not rack:
+            return {}
 
-class RackReservationEditView(generic.ObjectEditView):
-    queryset = RackReservation.objects.all()
-    model_form = forms.RackReservationForm
-    template_name = "dcim/rackreservation_edit.html"
+        return {
+            "location": rack.location,
+            "rack_group": rack.rack_group,
+            "rack": rack,
+        }
 
-    def alter_obj(self, obj, request, args, kwargs):
+    def get_object(self):
+        obj = super().get_object()
+
         if not obj.present_in_database:
-            if "rack" in request.GET:
-                obj.rack = get_object_or_404(Rack, pk=request.GET.get("rack"))
-            obj.user = request.user
+            obj.user = self.request.user
+
+            rack_id = self.request.GET.get("rack")
+            if rack_id:
+                obj.rack = get_object_or_404(Rack, pk=rack_id)
+
         return obj
-
-
-class RackReservationDeleteView(generic.ObjectDeleteView):
-    queryset = RackReservation.objects.all()
-
-
-class RackReservationImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = RackReservation.objects.all()
-    table = tables.RackReservationTable
-
-
-class RackReservationBulkEditView(generic.BulkEditView):
-    queryset = RackReservation.objects.select_related("rack", "user")
-    filterset = filters.RackReservationFilterSet
-    table = tables.RackReservationTable
-    form = forms.RackReservationBulkEditForm
-
-
-class RackReservationBulkDeleteView(generic.BulkDeleteView):
-    queryset = RackReservation.objects.select_related("rack", "user")
-    filterset = filters.RackReservationFilterSet
-    table = tables.RackReservationTable
 
 
 #
@@ -734,92 +743,57 @@ class RackReservationBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class ManufacturerListView(generic.ObjectListView):
-    queryset = Manufacturer.objects.all()
-    filterset = filters.ManufacturerFilterSet
-    filterset_form = forms.ManufacturerFilterForm
-    table = tables.ManufacturerTable
-
-
-class ManufacturerView(generic.ObjectView):
-    queryset = Manufacturer.objects.all()
-
-    def get_extra_context(self, request, instance):
-        # Devices
-        devices = (
-            Device.objects.restrict(request.user, "view")
-            .filter(device_type__manufacturer=instance)
-            .select_related("status", "location", "tenant", "role", "rack", "device_type")
-        )
-
-        device_table = tables.DeviceTable(devices)
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(device_table)
-
-        # Cloud Accounts
-        cloud_accounts = (
-            CloudAccount.objects.restrict(request.user, "view")
-            .filter(provider=instance)
-            .select_related("secrets_group")
-        )
-
-        cloud_account_table = CloudAccountTable(cloud_accounts)
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(cloud_account_table)
-
-        return {
-            "device_table": device_table,
-            "cloud_account_table": cloud_account_table,
-            **super().get_extra_context(request, instance),
-        }
-
-
-class ManufacturerEditView(generic.ObjectEditView):
-    queryset = Manufacturer.objects.all()
-    model_form = forms.ManufacturerForm
-
-
-class ManufacturerDeleteView(generic.ObjectDeleteView):
+class ManufacturerUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ManufacturerBulkEditForm
+    filterset_class = filters.ManufacturerFilterSet
+    filterset_form_class = forms.ManufacturerFilterForm
+    form_class = forms.ManufacturerForm
+    serializer_class = serializers.ManufacturerSerializer
+    table_class = tables.ManufacturerTable
     queryset = Manufacturer.objects.all()
 
-
-class ManufacturerBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Manufacturer.objects.all()
-    table = tables.ManufacturerTable
-
-
-class ManufacturerBulkDeleteView(generic.BulkDeleteView):
-    queryset = Manufacturer.objects.all()
-    table = tables.ManufacturerTable
-    filterset = filters.ManufacturerFilterSet
+    # Object detail content with devices and cloud accounts related to the manufacturer
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.DeviceTable,
+                table_filter="device_type__manufacturer",
+                related_field_name="manufacturer",
+                exclude_columns=["manufacturer"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=CloudAccountTable,
+                table_filter="provider",
+                exclude_columns=["provider"],
+            ),
+        ),
+    )
 
 
 #
 # Device types
 #
-
-
-class DeviceTypeListView(generic.ObjectListView):
-    queryset = DeviceType.objects.all()
-    filterset = filters.DeviceTypeFilterSet
-    filterset_form = forms.DeviceTypeFilterForm
-    table = tables.DeviceTypeTable
-    template_name = "dcim/devicetype_list.html"
-    use_new_ui = True
-
-
-class DeviceTypeView(generic.ObjectView):
+class DeviceTypeUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.DeviceTypeBulkEditForm
+    filterset_class = filters.DeviceTypeFilterSet
+    filterset_form_class = forms.DeviceTypeFilterForm
+    form_class = forms.DeviceTypeForm
+    serializer_class = serializers.DeviceTypeSerializer
+    table_class = tables.DeviceTypeTable
     queryset = DeviceType.objects.select_related("manufacturer").prefetch_related("software_image_files")
-    use_new_ui = True
 
     def get_extra_context(self, request, instance):
+        if self.action != "retrieve":
+            return {}
         instance_count = Device.objects.restrict(request.user).filter(device_type=instance).count()
 
         # Component tables
@@ -894,16 +868,6 @@ class DeviceTypeView(generic.ObjectView):
         }
 
 
-class DeviceTypeEditView(generic.ObjectEditView):
-    queryset = DeviceType.objects.all()
-    model_form = forms.DeviceTypeForm
-    template_name = "dcim/devicetype_edit.html"
-
-
-class DeviceTypeDeleteView(generic.ObjectDeleteView):
-    queryset = DeviceType.objects.all()
-
-
 class DeviceTypeImportView(generic.ObjectImportView):
     additional_permissions = [
         "dcim.add_devicetype",
@@ -932,19 +896,6 @@ class DeviceTypeImportView(generic.ObjectImportView):
             ("module-bays", forms.ModuleBayTemplateImportForm),
         )
     )
-
-
-class DeviceTypeBulkEditView(generic.BulkEditView):
-    queryset = DeviceType.objects.all()
-    filterset = filters.DeviceTypeFilterSet
-    table = tables.DeviceTypeTable
-    form = forms.DeviceTypeBulkEditForm
-
-
-class DeviceTypeBulkDeleteView(generic.BulkDeleteView):
-    queryset = DeviceType.objects.all()
-    filterset = filters.DeviceTypeFilterSet
-    table = tables.DeviceTypeTable
 
 
 #
@@ -1682,64 +1633,57 @@ class ModuleBayTemplateUIViewSet(
 #
 
 
-class PlatformListView(generic.ObjectListView):
-    queryset = Platform.objects.all()
-    filterset = filters.PlatformFilterSet
-    filterset_form = forms.PlatformFilterForm
-    table = tables.PlatformTable
+class PlatformCustomKeyValueTablePanel(object_detail.KeyValueTablePanel):
+    """
+    Custom panel that overrides the default key rendering logic
+    to always return the literal key without any formatting or transformation.
+
+    This bypasses the default behavior in the parent class, which might
+    format or localize the key.
+    """
+
+    def render_key(self, key, value, context):
+        # Always render the raw key as-is, ignoring any parent logic
+        return key
 
 
-class PlatformView(generic.ObjectView):
+class PlatformUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.PlatformBulkEditForm
+    filterset_class = filters.PlatformFilterSet
+    filterset_form_class = forms.PlatformFilterForm
+    form_class = forms.PlatformForm
+    serializer_class = serializers.PlatformSerializer
+    table_class = tables.PlatformTable
     queryset = Platform.objects.all()
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=["description", "manufacturer", "napalm_driver", "napalm_args", "network_driver"],
+            ),
+            PlatformCustomKeyValueTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                context_data_key="network_driver_tool_names",
+                label="Network Driver Mappings",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.DeviceTable,
+                table_filter="platform",
+                exclude_columns=["platform"],
+            ),
+        ),
+    )
 
     def get_extra_context(self, request, instance):
-        # Devices
-        devices = (
-            Device.objects.restrict(request.user, "view")
-            .filter(platform=instance)
-            .select_related("status", "location", "tenant", "rack", "device_type", "role")
-        )
-
-        device_table = tables.DeviceTable(devices)
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(device_table)
-
-        return {
-            "device_table": device_table,
-            "network_driver_tool_names": get_network_driver_mapping_tool_names(),
-            **super().get_extra_context(request, instance),
-        }
-
-
-class PlatformEditView(generic.ObjectEditView):
-    queryset = Platform.objects.all()
-    model_form = forms.PlatformForm
-    template_name = "dcim/platform_edit.html"
-
-    def get_extra_context(self, request, instance):
-        return {
-            "network_driver_names": sorted(get_all_network_driver_mappings().keys()),
-            **super().get_extra_context(request, instance),
-        }
-
-
-class PlatformDeleteView(generic.ObjectDeleteView):
-    queryset = Platform.objects.all()
-
-
-class PlatformBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Platform.objects.all()
-    table = tables.PlatformTable
-
-
-class PlatformBulkDeleteView(generic.BulkDeleteView):
-    queryset = Platform.objects.all()
-    table = tables.PlatformTable
-    filterset = filters.PlatformFilterSet
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            context["network_driver_tool_names"] = instance.fetch_network_driver_mappings()
+        return context
 
 
 #
@@ -1755,22 +1699,169 @@ class DeviceListView(generic.ObjectListView):
     filterset_form = forms.DeviceFilterForm
     table = tables.DeviceTable
     template_name = "dcim/device_list.html"
-    use_new_ui = True
 
 
 class DeviceView(generic.ObjectView):
     queryset = Device.objects.select_related(
+        "cluster__cluster_group",
+        "controller_managed_device_group__controller",
+        "device_redundancy_group",
+        "device_type__device_family",
         "location",
-        "rack__rack_group",
-        "tenant__tenant_group",
-        "role",
         "platform",
         "primary_ip4",
         "primary_ip6",
+        "rack__rack_group",
+        "role",
+        "secrets_group",
         "software_version",
         "status",
+        "tenant__tenant_group",
+    ).prefetch_related("images", "software_image_files")
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        extra_buttons=(
+            object_detail.DropdownButton(
+                weight=100,
+                color=ButtonColorChoices.BLUE,
+                label="Add Components",
+                attributes={"id": "device-add-components-button"},
+                icon="mdi-plus-thick",
+                required_permissions=["dcim.change_device"],
+                children=(
+                    object_detail.Button(
+                        weight=100,
+                        link_name="dcim:device_consoleports_add",
+                        label="Console Ports",
+                        icon="mdi-console",
+                        required_permissions=["dcim.add_consoleport"],
+                    ),
+                    object_detail.Button(
+                        weight=200,
+                        link_name="dcim:device_consoleserverports_add",
+                        label="Console Server Ports",
+                        icon="mdi-console-network-outline",
+                        required_permissions=["dcim.add_consoleserverport"],
+                    ),
+                    object_detail.Button(
+                        weight=300,
+                        link_name="dcim:device_powerports_add",
+                        label="Power Ports",
+                        icon="mdi-power-plug-outline",
+                        required_permissions=["dcim.add_powerport"],
+                    ),
+                    object_detail.Button(
+                        weight=400,
+                        link_name="dcim:device_poweroutlets_add",
+                        label="Power Outlets",
+                        icon="mdi-power-socket",
+                        required_permissions=["dcim.add_poweroutlet"],
+                    ),
+                    object_detail.Button(
+                        weight=500,
+                        link_name="dcim:device_interfaces_add",
+                        label="Interfaces",
+                        icon="mdi-ethernet",
+                        required_permissions=["dcim.add_interface"],
+                    ),
+                    object_detail.Button(
+                        weight=600,
+                        link_name="dcim:device_frontports_add",
+                        label="Front Ports",
+                        icon="mdi-square-rounded-outline",
+                        required_permissions=["dcim.add_frontport"],
+                    ),
+                    object_detail.Button(
+                        weight=700,
+                        link_name="dcim:device_rearports_add",
+                        label="Rear Ports",
+                        icon="mdi-square-rounded-outline",
+                        required_permissions=["dcim.add_rearport"],
+                    ),
+                    object_detail.Button(
+                        weight=800,
+                        link_name="dcim:device_devicebays_add",
+                        label="Device Bays",
+                        icon="mdi-circle-outline",
+                        required_permissions=["dcim.add_devicebay"],
+                    ),
+                    object_detail.Button(
+                        weight=900,
+                        link_name="dcim:device_modulebays_add",
+                        label="Module Bays",
+                        icon="mdi-tray",
+                        required_permissions=["dcim.add_modulebay"],
+                    ),
+                    object_detail.Button(
+                        weight=1000,
+                        link_name="dcim:device_inventoryitems_add",
+                        label="Inventory Items",
+                        icon="mdi-invoice-list-outline",
+                        required_permissions=["dcim.add_inventoryitem"],
+                    ),
+                ),
+            ),
+        ),
+        panels=(),  # not yet ported over due to complexity of this template
+        # TODO
+        #     ObjectFieldsPanel(
+        #         weight=100,
+        #         section=SectionChoices.LEFT_HALF,
+        #         fields=["location", "rack", "position", "face", "tenant", "device_type", "serial", "asset_tag"],
+        #         # TODO add device_type.device_family, device_type.u_height,
+        #     ),
+        #     TODO: Virtual Chassis panel
+        #     ObjectFieldsPanel(
+        #         weight=110,
+        #         section=SectionChoices.LEFT_HALF,
+        #         label="Virtual Chassis",
+        #     ),
+        #     ObjectFieldsPanel(
+        #         weight=120,
+        #         section=SectionChoices.LEFT_HALF,
+        #         label="Management",
+        #         fields=["role", "platform", "status", "primary_ip4", "primary_ip6", "secrets_group", "device_redundancy_group", "controller_managed_device_group", "software_version"],
+        #     ),
+        #     TODO: power utilization panel
+        #     ObjectsTablePanel(
+        #       weight=100,
+        #       section=SectionChoices.RIGHT_HALF,
+        #       table_title="Power Utilization",
+        #       table_class=???,
+        #       table_filter="device",
+        #     ),
+        #     ObjectsTablePanel(
+        #         weight=100,
+        #         section=SectionChoices.RIGHT_HALF,
+        #         table_title="Assigned VRFs",
+        #         table_class=VRFDeviceAssignmentTable,
+        #         table_filter="device",
+        #         exclude_columns=["virtual_machine", "device"],
+        #     ),
+        #     TODO: services panel
+        #     ObjectsTablePanel(
+        #         weight=200,
+        #         section=SectionChoices.RIGHT_HALF,
+        #         table_class=???,
+        #         table_filter="device",
+        #     ),
+        #     TODO: images panel
+        #     ObjectsTablePanel(
+        #         weight=300,
+        #         section=SectionChoices.RIGHT_HALF,
+        #         table_class=???,
+        #         table_filter="device",
+        #     ),
+        #     ObjectsTablePanel(
+        #         weight=100,
+        #         section=SectionChoices.FULL_WIDTH,
+        #         table_class=tables.VirtualDeviceContextTable,
+        #         table_filter="device",
+        #         select_related_fields=["tenant", "primary_ip4", "primary_ip6"],
+        #         exclude_columns=["device"],
+        #     ),
+        # ),
     )
-    use_new_ui = True
 
     def get_extra_context(self, request, instance):
         # VirtualChassis members
@@ -1788,7 +1879,7 @@ class DeviceView(generic.ObjectView):
 
         # VRF assignments
         vrf_assignments = instance.vrf_assignments.restrict(request.user, "view")
-        vrf_table = VRFDeviceAssignmentTable(vrf_assignments, exclude=("virtual_machine", "device"))
+        vrf_table = VRFDeviceAssignmentTable(vrf_assignments)
 
         # Software images
         if instance.software_version is not None:
@@ -1805,7 +1896,22 @@ class DeviceView(generic.ObjectView):
         modulebay_count = instance.module_bays.count()
         module_count = instance.module_bays.filter(installed_module__isnull=False).count()
 
+        vdcs = instance.virtual_device_contexts.restrict(request.user).select_related(
+            "tenant", "primary_ip4", "primary_ip6"
+        )
+        vdcs_table = tables.VirtualDeviceContextTable(vdcs, orderable=False, exclude=("device",))
+        vdc_url = reverse("dcim:virtualdevicecontext_add")
+        return_url = instance.get_absolute_url()
+        vdcs_table_add_url = f"{vdc_url}?device={instance.id}&return_url={return_url}"
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(vdcs_table)
+
         return {
+            **super().get_extra_context(request, instance),
             "services": services,
             "software_version_images": software_version_images,
             "vc_members": vc_members,
@@ -1813,6 +1919,8 @@ class DeviceView(generic.ObjectView):
             "active_tab": "device",
             "modulebay_count": modulebay_count,
             "module_count": f"{module_count}/{modulebay_count}",
+            "vdcs_table": vdcs_table,
+            "vdcs_table_add_url": vdcs_table_add_url,
         }
 
 
@@ -2137,6 +2245,42 @@ class DeviceBulkDeleteView(generic.BulkDeleteView):
     queryset = Device.objects.select_related("tenant", "location", "rack", "role", "device_type__manufacturer")
     filterset = filters.DeviceFilterSet
     table = tables.DeviceTable
+
+
+class DeviceWirelessView(generic.ObjectView):
+    queryset = Device.objects.all()
+    template_name = "dcim/device/wireless.html"
+
+    def get_extra_context(self, request, instance):
+        controller_managed_device_group = instance.controller_managed_device_group
+        wireless_networks = ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
+            controller_managed_device_group=controller_managed_device_group
+        ).select_related("wireless_network", "controller_managed_device_group", "vlan")
+        wireless_networks_table = ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
+            data=wireless_networks, user=request.user, orderable=False
+        )
+        wireless_networks_table.columns.hide("controller_managed_device_group")
+        wireless_networks_table.columns.hide("controller")
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(wireless_networks_table)
+
+        radio_profiles = ControllerManagedDeviceGroupRadioProfileAssignment.objects.filter(
+            controller_managed_device_group=controller_managed_device_group
+        ).select_related("radio_profile", "controller_managed_device_group")
+        radio_profiles_table = ControllerManagedDeviceGroupRadioProfileAssignmentTable(
+            data=radio_profiles, user=request.user, orderable=False
+        )
+        radio_profiles_table.columns.hide("controller_managed_device_group")
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(radio_profiles_table)
+
+        return {
+            "wireless_networks_table": wireless_networks_table,
+            "radio_profiles_table": radio_profiles_table,
+            "active_tab": "wireless",
+        }
 
 
 #
@@ -2873,6 +3017,13 @@ class InterfaceView(generic.ObjectView):
         vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
 
         redundancy_table = self._get_interface_redundancy_groups_table(request, instance)
+        virtual_device_contexts_table = tables.VirtualDeviceContextTable(
+            instance.virtual_device_contexts.restrict(request.user, "view").select_related(
+                "device", "tenant", "primary_ip4", "primary_ip6"
+            ),
+            orderable=False,
+            exclude=("device",),
+        )
 
         return {
             "ipaddress_table": ipaddress_table,
@@ -2881,6 +3032,7 @@ class InterfaceView(generic.ObjectView):
             "module_breadcrumb_url": "dcim:module_interfaces",
             "child_interfaces_table": child_interfaces_tables,
             "redundancy_table": redundancy_table,
+            "virtual_device_contexts_table": virtual_device_contexts_table,
             **super().get_extra_context(request, instance),
         }
 
@@ -3241,15 +3393,44 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
     model_form_class = forms.ModuleBayForm
     serializer_class = serializers.ModuleBaySerializer
     table_class = tables.ModuleBayTable
-    create_template_name = "dcim/modulebay_create.html"
+    create_template_name = "dcim/device_component_add.html"
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                hide_if_unset=("parent_device", "parent_module"),
+            ),
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                context_object_key="installed_module_data",
+                label="Installed Module",
+            ),
+        )
+    )
 
     def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+
         if instance:
-            return {
-                "device_breadcrumb_url": "dcim:device_modulebays",
-                "module_breadcrumb_url": "dcim:module_modulebays",
-            }
-        return {}
+            # Set breadcrumbs always
+            context.update(
+                {
+                    "device_breadcrumb_url": "dcim:device_modulebays",
+                    "module_breadcrumb_url": "dcim:module_modulebays",
+                }
+            )
+
+            # Add installed module context
+            context["installed_module_data"] = self._get_installed_module_context(instance)
+
+        return context
+
+    def _get_installed_module_context(self, instance):
+        return getattr(instance, "installed_module", None)
 
     def get_selected_objects_parents_name(self, selected_objects):
         selected_object = selected_objects.first()
@@ -3942,94 +4123,50 @@ class VirtualChassisBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class PowerPanelListView(generic.ObjectListView):
-    queryset = PowerPanel.objects.all()
-    filterset = filters.PowerPanelFilterSet
-    filterset_form = forms.PowerPanelFilterForm
-    table = tables.PowerPanelTable
-
-
-class PowerPanelView(generic.ObjectView):
-    queryset = PowerPanel.objects.prefetch_related("location", "rack_group")
-
-    def get_extra_context(self, request, instance):
-        power_feeds = PowerFeed.objects.restrict(request.user).filter(power_panel=instance).select_related("rack")
-        powerfeed_table = tables.PowerFeedTable(data=power_feeds, orderable=False)
-        powerfeed_table.exclude = ["power_panel"]
-
-        return {"powerfeed_table": powerfeed_table, **super().get_extra_context(request, instance)}
-
-
-class PowerPanelEditView(generic.ObjectEditView):
-    queryset = PowerPanel.objects.all()
-    model_form = forms.PowerPanelForm
-    template_name = "dcim/powerpanel_edit.html"
-
-
-class PowerPanelDeleteView(generic.ObjectDeleteView):
+class PowerPanelUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.PowerPanelBulkEditForm
+    filterset_class = filters.PowerPanelFilterSet
+    filterset_form_class = forms.PowerPanelFilterForm
+    form_class = forms.PowerPanelForm
+    serializer_class = serializers.PowerPanelSerializer
+    table_class = tables.PowerPanelTable
     queryset = PowerPanel.objects.all()
 
-
-class PowerPanelBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = PowerPanel.objects.all()
-    table = tables.PowerPanelTable
-
-
-class PowerPanelBulkEditView(generic.BulkEditView):
-    queryset = PowerPanel.objects.select_related("location", "rack_group")
-    filterset = filters.PowerPanelFilterSet
-    table = tables.PowerPanelTable
-    form = forms.PowerPanelBulkEditForm
-
-
-class PowerPanelBulkDeleteView(generic.BulkDeleteView):
-    queryset = PowerPanel.objects.all()
-    filterset = filters.PowerPanelFilterSet
-    table = tables.PowerPanelTable
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=[
+                    "name",
+                    "location",
+                    "rack_group",
+                ],
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=100,
+                table_class=tables.PowerFeedTable,
+                table_filter="power_panel",
+                table_title="Connected Feeds",
+                exclude_columns=["power_panel"],
+                add_button_route=None,
+            ),
+        )
+    )
 
 
 #
 # Power feeds
 #
-
-
-class PowerFeedListView(generic.ObjectListView):
+class PowerFeedUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.PowerFeedBulkEditForm
+    filterset_class = filters.PowerFeedFilterSet
+    form_class = forms.PowerFeedForm
+    filterset_form_class = forms.PowerFeedFilterForm
     queryset = PowerFeed.objects.all()
-    filterset = filters.PowerFeedFilterSet
-    filterset_form = forms.PowerFeedFilterForm
-    table = tables.PowerFeedTable
-
-
-class PowerFeedView(generic.ObjectView):
-    queryset = PowerFeed.objects.select_related("power_panel", "rack")
-
-
-class PowerFeedEditView(generic.ObjectEditView):
-    queryset = PowerFeed.objects.all()
-    model_form = forms.PowerFeedForm
-    template_name = "dcim/powerfeed_edit.html"
-
-
-class PowerFeedDeleteView(generic.ObjectDeleteView):
-    queryset = PowerFeed.objects.all()
-
-
-class PowerFeedBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = PowerFeed.objects.all()
-    table = tables.PowerFeedTable
-
-
-class PowerFeedBulkEditView(generic.BulkEditView):
-    queryset = PowerFeed.objects.select_related("power_panel", "rack")
-    filterset = filters.PowerFeedFilterSet
-    table = tables.PowerFeedTable
-    form = forms.PowerFeedBulkEditForm
-
-
-class PowerFeedBulkDeleteView(generic.BulkDeleteView):
-    queryset = PowerFeed.objects.select_related("power_panel", "rack")
-    filterset = filters.PowerFeedFilterSet
-    table = tables.PowerFeedTable
+    serializer_class = serializers.PowerFeedSerializer
+    table_class = tables.PowerFeedTable
 
 
 class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
@@ -4041,18 +4178,32 @@ class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.DeviceRedundancyGroupSerializer
     table_class = tables.DeviceRedundancyGroupTable
 
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-
-        if self.action == "retrieve" and instance:
-            devices = instance.devices_sorted.restrict(request.user)
-            devices_table = tables.DeviceTable(devices)
-            devices_table.columns.show("device_redundancy_group_priority")
-            context["devices_table"] = devices_table
-            controllers = instance.controllers_sorted.restrict(request.user)
-            controllers_table = tables.ControllerTable(controllers)
-            context["controllers_table"] = controllers_table
-        return context
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=100,
+                table_class=tables.ControllerTable,
+                table_attribute="controllers_sorted",
+                related_field_name="controller_device_redundancy_group",
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=200,
+                table_class=tables.DeviceTable,
+                table_attribute="devices_sorted",
+                related_field_name="device_redundancy_group",
+                include_columns=[
+                    "device_redundancy_group_priority",
+                ],
+            ),
+        )
+    )
 
 
 class InterfaceRedundancyGroupUIViewSet(NautobotUIViewSet):
@@ -4117,36 +4268,31 @@ class DeviceFamilyUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.DeviceFamilySerializer
     table_class = tables.DeviceFamilyTable
     lookup_field = "pk"
-
-    def get_extra_context(self, request, instance):
-        # Related device types table
-        context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            device_types = (
-                DeviceType.objects.restrict(request.user, "view")
-                .filter(device_family=instance)
-                .select_related("manufacturer")
-                .annotate(device_count=count_related(Device, "device_type"))
-            )
-            device_type_table = tables.DeviceTypeTable(device_types, orderable=False)
-
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(device_type_table)
-
-            context["device_type_table"] = device_type_table
-
-            total_devices = 0
-            device_type_count = 0
-            for device_type in device_types:
-                total_devices += device_type.device_count
-                device_type_count += 1
-            context["total_devices"] = total_devices
-            context["device_type_count"] = device_type_count
-
-        return context
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.DeviceTypeTable,
+                table_filter="device_family",
+                select_related_fields=["manufacturer"],
+                exclude_columns=["device_family"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.DeviceTable,
+                table_filter="device_type__device_family",
+                related_field_name="device_family",
+                exclude_columns=["device_family"],
+            ),
+        )
+    )
 
 
 #
@@ -4163,6 +4309,105 @@ class SoftwareImageFileUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.SoftwareImageFileSerializer
     table_class = tables.SoftwareImageFileTable
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+        ),
+        extra_tabs=(
+            object_detail.DistinctViewTab(
+                weight=700,
+                tab_id="device_types",
+                url_name="dcim:softwareimagefile_device_types",
+                label="Device Types",
+                related_object_attribute="device_types",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_class=tables.DeviceTypeTable,
+                        table_filter="software_image_files",
+                        tab_id="device_types",
+                        add_button_route=None,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=800,
+                tab_id="devices",
+                url_name="dcim:softwareimagefile_devices",
+                label="Devices",
+                related_object_attribute="devices",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_class=tables.DeviceTable,
+                        table_filter="software_image_files",
+                        tab_id="devices",
+                        table_title="Devices overridden to use this file",
+                        add_button_route=None,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=900,
+                tab_id="inventory_items",
+                url_name="dcim:softwareimagefile_inventory_items",
+                label="Inventory Items",
+                related_object_attribute="inventory_items",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_class=tables.InventoryItemTable,
+                        table_filter="software_image_files",
+                        tab_id="inventory_items",
+                        table_title="Inventory items overridden to use this file",
+                        add_button_route=None,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=1000,
+                tab_id="virtual_machines",
+                url_name="dcim:softwareimagefile_virtual_machines",
+                label="Virtual Machines",
+                related_object_attribute="virtual_machines",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_class=VirtualMachineTable,
+                        table_filter="software_image_files",
+                        tab_id="virtual_machines",
+                        table_title="Virtual machines overridden to use this file",
+                        add_button_route=None,
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    @action(detail=True, url_path="device-types", url_name="device_types")
+    def device_types(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(detail=True, url_path="devices")
+    def devices(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(detail=True, url_path="inventory-items", url_name="inventory_items")
+    def inventory_items(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(detail=True, url_path="virtual-machines", url_name="virtual_machines")
+    def virtual_machines(self, request, *args, **kwargs):
+        return Response({})
+
 
 class SoftwareVersionUIViewSet(NautobotUIViewSet):
     filterset_class = filters.SoftwareVersionFilterSet
@@ -4172,6 +4417,22 @@ class SoftwareVersionUIViewSet(NautobotUIViewSet):
     queryset = SoftwareVersion.objects.all()
     serializer_class = serializers.SoftwareVersionSerializer
     table_class = tables.SoftwareVersionTable
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            object_detail.StatsPanel(
+                weight=100,
+                label="Stats",
+                section=SectionChoices.RIGHT_HALF,
+                filter_name="software_version",
+                related_models=[SoftwareImageFile, Device, InventoryItem, VirtualMachine],
+            ),
+        )
+    )
 
 
 #
@@ -4195,6 +4456,9 @@ class ControllerUIViewSet(NautobotUIViewSet):
         if self.action == "retrieve" and instance:
             devices = Device.objects.restrict(request.user).filter(controller_managed_device_group__controller=instance)
             devices_table = tables.DeviceTable(devices)
+            devices_table.columns.show("controller_managed_device_group")
+            devices_table.columns.show("capabilities")
+            devices_table.sequence = ("name", "controller_managed_device_group", "capabilities", "...")
 
             paginate = {
                 "paginator_class": EnhancedPaginator,
@@ -4205,6 +4469,35 @@ class ControllerUIViewSet(NautobotUIViewSet):
             context["devices_table"] = devices_table
 
         return context
+
+    @action(detail=True, url_path="wireless-networks", url_name="wirelessnetworks", methods=["get"])
+    def wirelessnetworks(self, request, *args, **kwargs):
+        instance = self.get_object()
+        controller_managed_device_groups = instance.controller_managed_device_groups.restrict(
+            request.user, "view"
+        ).values_list("pk", flat=True)
+        wireless_networks = ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
+            controller_managed_device_group__in=list(controller_managed_device_groups)
+        ).select_related("wireless_network")
+        wireless_networks_table = ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
+            data=wireless_networks, user=request.user, orderable=False
+        )
+        wireless_networks_table.columns.hide("controller")
+
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(wireless_networks_table)
+
+        return Response(
+            {
+                "wireless_networks_table": wireless_networks_table,
+                "active_tab": "wireless-networks",
+            }
+        )
+
+    def get_action(self):
+        "Treat Wireless Networks as the same detail view for permission purposes."
+        return "view" if self.action == "wirelessnetworks" else super().get_action()
 
 
 class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
@@ -4232,4 +4525,81 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
 
             context["devices_table"] = devices_table
 
+            # Wireless Networks
+            wireless_networks = instance.wireless_network_assignments.restrict(request.user, "view")
+            wireless_networks_table = ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(wireless_networks)
+            wireless_networks_table.columns.hide("controller_managed_device_group")
+            wireless_networks_table.columns.hide("controller")
+            RequestConfig(
+                request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+            ).configure(wireless_networks_table)
+            context["wireless_networks_table"] = wireless_networks_table
+            context["wireless_networks_count"] = wireless_networks.count()
+
+            # Radio Profiles
+            radio_profiles = instance.radio_profiles.restrict(request.user, "view")
+            radio_profiles_table = RadioProfileTable(radio_profiles)
+            RequestConfig(
+                request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+            ).configure(radio_profiles_table)
+            context["radio_profiles_table"] = radio_profiles_table
+            context["radio_profiles_count"] = radio_profiles.count()
+
+        if self.action in ["create", "update"]:
+            context["wireless_networks"] = ControllerManagedDeviceGroupWirelessNetworkFormSet(
+                instance=instance,
+                data=request.POST if request.method == "POST" else None,
+            )
+
         return context
+
+    def form_save(self, form, **kwargs):
+        obj = super().form_save(form, **kwargs)
+
+        ctx = self.get_extra_context(self.request, obj)
+        wireless_networks = ctx.get("wireless_networks")
+        if wireless_networks.is_valid():
+            wireless_networks.save()
+        else:
+            raise ValidationError(wireless_networks.errors)
+
+        return obj
+
+
+#
+# Virtual Device Context
+#
+
+
+class VirtualDeviceContextUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.VirtualDeviceContextFilterSet
+    filterset_form_class = forms.VirtualDeviceContextFilterForm
+    form_class = forms.VirtualDeviceContextForm
+    bulk_update_form_class = forms.VirtualDeviceContextBulkEditForm
+    queryset = VirtualDeviceContext.objects.all()
+    serializer_class = serializers.VirtualDeviceContextSerializer
+    table_class = tables.VirtualDeviceContextTable
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                table_class=tables.InterfaceTable,
+                table_attribute="interfaces",
+                related_field_name="virtual_device_contexts",
+                section=SectionChoices.FULL_WIDTH,
+                exclude_columns=["device"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=300,
+                table_class=VRFTable,
+                table_attribute="vrfs",
+                related_field_name="virtual_device_contexts",
+                section=SectionChoices.FULL_WIDTH,
+            ),
+        ),
+    )

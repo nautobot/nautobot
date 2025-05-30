@@ -30,6 +30,7 @@ from nautobot.extras.models import (
     ConfigContextSchema,
     ExportTemplate,
     GitRepository,
+    GraphQLQuery,
     Job,
     JobButton,
     JobHook,
@@ -197,6 +198,15 @@ class GitTest(TransactionTestCase):
         )
         self.assertIsNotNone(export_template_vlan)
 
+    def assert_graphql_query_exists(self, name="device_names.gql"):
+        """Helper function to assert Graphql query exists."""
+        graphql_query = GraphQLQuery.objects.get(
+            name=name,
+            owner_object_id=self.repo.pk,
+            owner_content_type=ContentType.objects.get_for_model(GitRepository),
+        )
+        self.assertIsNotNone(graphql_query)
+
     def assert_job_exists(self, name="MyJob", installed=True):
         """Helper function to assert JobModel and registered Job exist."""
         # Is it registered correctly in the database?
@@ -228,11 +238,7 @@ class GitTest(TransactionTestCase):
                     repository=self.repo.pk,
                 )
 
-                self.assertEqual(
-                    job_result.status,
-                    JobResultStatusChoices.STATUS_FAILURE,
-                    (job_result.result, list(job_result.job_log_entries.values_list("message", "log_object"))),
-                )
+                self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
                 self.repo.refresh_from_db()
 
                 log_entries = JobLogEntry.objects.filter(job_result=job_result)
@@ -285,7 +291,8 @@ class GitTest(TransactionTestCase):
 
                 self.repo.secrets_group = secrets_group
                 self.repo.remote_url = "http://localhost/git.git"
-                self.repo.provided_contents.remove("extras.job")  # avoid failing due to lack of jobs module
+                # avoid failing due to lack of jobs module
+                self.repo.provided_contents.remove("extras.job")  # pylint: disable=no-member
                 self.repo.save()
 
                 self.mock_request.id = uuid.uuid4()
@@ -297,11 +304,7 @@ class GitTest(TransactionTestCase):
                     repository=self.repo.pk,
                 )
 
-                self.assertEqual(
-                    job_result.status,
-                    JobResultStatusChoices.STATUS_SUCCESS,
-                    (job_result.traceback, list(job_result.job_log_entries.values_list("message", flat=True))),
-                )
+                self.assertJobResultStatus(job_result)
                 self.repo.refresh_from_db()
                 MockGitRepo.assert_called_with(
                     os.path.join(tempdir, self.repo.slug),
@@ -320,11 +323,7 @@ class GitTest(TransactionTestCase):
                 job_model = GitRepositorySync().job_model
                 job_result = run_job_for_testing(job=job_model, repository=self.repo.pk)
                 job_result.refresh_from_db()
-                self.assertEqual(
-                    job_result.status,
-                    JobResultStatusChoices.STATUS_SUCCESS,
-                    (job_result.traceback, list(job_result.job_log_entries.values_list("message", flat=True))),
-                )
+                self.assertJobResultStatus(job_result)
 
                 # Make sure explicit ConfigContext was successfully loaded from file
                 self.assert_explicit_config_context_exists("Frobozz 1000 NTP servers")
@@ -347,6 +346,10 @@ class GitTest(TransactionTestCase):
                 # Case when ContentType.model != ContentType.name, template was added and deleted during sync (#570)
                 self.assert_export_template_vlan_exists("template.j2")
 
+                # Make sure Graphgl queries were loaded
+                self.assert_graphql_query_exists("device_names")
+                self.assert_graphql_query_exists("device_interfaces")
+
                 # Make sure Jobs were successfully loaded from file and registered as JobModels
                 self.assert_job_exists(name="MyJob")
                 self.assert_job_exists(name="MyJobButtonReceiver")
@@ -368,11 +371,7 @@ class GitTest(TransactionTestCase):
                 # Run the Git operation and refresh the object from the DB
                 job_result = run_job_for_testing(job=job_model, repository=self.repo.pk)
                 job_result.refresh_from_db()
-                self.assertEqual(
-                    job_result.status,
-                    JobResultStatusChoices.STATUS_SUCCESS,
-                    (job_result.traceback, list(job_result.job_log_entries.values_list("message", flat=True))),
-                )
+                self.assertJobResultStatus(job_result)
 
                 # Verify that objects have been removed from the database
                 self.assertEqual(
@@ -427,17 +426,14 @@ class GitTest(TransactionTestCase):
                 )
                 job_result.refresh_from_db()
 
-                self.assertEqual(
-                    job_result.status,
-                    JobResultStatusChoices.STATUS_FAILURE,
-                    job_result.result,
-                )
+                self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
 
                 # Due to transaction rollback on failure, the database should still/again match the pre-sync state, of
                 # no records owned by the repository.
                 self.assertFalse(ConfigContextSchema.objects.filter(owner_object_id=self.repo.id).exists())
                 self.assertFalse(ConfigContext.objects.filter(owner_object_id=self.repo.id).exists())
                 self.assertFalse(ExportTemplate.objects.filter(owner_object_id=self.repo.id).exists())
+                self.assertFalse(GraphQLQuery.objects.filter(owner_object_id=self.repo.id).exists())
                 self.assertFalse(Job.objects.filter(module_name__startswith=f"{self.repo.slug}.").exists())
                 device = Device.objects.get(name=self.device.name)
                 self.assertIsNone(device.local_config_context_data)
@@ -504,6 +500,11 @@ class GitTest(TransactionTestCase):
                         grouping="jobs",
                         message__contains="Error in loading Jobs from Git repository: ",
                     )
+                    failure_logs.get(
+                        grouping="graphql queries",
+                        message__contains="Error processing GraphQL query file 'bad_device_names.gql': Syntax Error GraphQL (4:5) Expected Name, found }",
+                    )
+
                 except (AssertionError, JobLogEntry.DoesNotExist):
                     for log in log_entries:
                         print(log.message)
@@ -526,11 +527,7 @@ class GitTest(TransactionTestCase):
                 )
                 job_result.refresh_from_db()
 
-                self.assertEqual(
-                    job_result.status,
-                    JobResultStatusChoices.STATUS_SUCCESS,
-                    (job_result.traceback, list(job_result.job_log_entries.values_list("message", flat=True))),
-                )
+                self.assertJobResultStatus(job_result)
 
                 # Make sure ConfigContext was successfully loaded from file
                 config_context = ConfigContext.objects.get(
@@ -570,15 +567,7 @@ class GitTest(TransactionTestCase):
                     delete_job_result = JobResult.objects.filter(name=repo_name).first()
                     # Make sure we didn't get the wrong JobResult
                     self.assertNotEqual(job_result, delete_job_result)
-                    self.assertEqual(
-                        delete_job_result.status,
-                        JobResultStatusChoices.STATUS_SUCCESS,
-                        (
-                            delete_job_result,
-                            delete_job_result.traceback,
-                            list(delete_job_result.job_log_entries.values_list("message", flat=True)),
-                        ),
-                    )
+                    self.assertJobResultStatus(delete_job_result)
 
                 with self.assertRaises(ConfigContext.DoesNotExist):
                     ConfigContext.objects.get(
@@ -616,11 +605,7 @@ class GitTest(TransactionTestCase):
                 job_model = GitRepositorySync().job_model
                 job_result = run_job_for_testing(job=job_model, repository=self.repo.pk)
                 job_result.refresh_from_db()
-                self.assertEqual(
-                    job_result.status,
-                    JobResultStatusChoices.STATUS_SUCCESS,
-                    (job_result.traceback, list(job_result.job_log_entries.values_list("message", flat=True))),
-                )
+                self.assertJobResultStatus(job_result)
 
                 self.assert_explicit_config_context_exists("Frobozz 1000 NTP servers")
                 self.assert_implicit_config_context_exists("Location context")
@@ -629,6 +614,8 @@ class GitTest(TransactionTestCase):
                 self.assert_export_template_device("template.j2")
                 self.assert_export_template_html_exist("template2.html")
                 self.assert_export_template_vlan_exists("template.j2")
+                self.assert_graphql_query_exists(name="device_names")
+                self.assert_graphql_query_exists(name="device_interfaces")
                 self.assert_job_exists(name="MyJob")
                 self.assert_job_exists(name="MyJobButtonReceiver")
                 self.assert_job_exists(name="MyJobHookReceiver")
@@ -650,11 +637,7 @@ class GitTest(TransactionTestCase):
                 # Resync, attempting and failing to update to the new commit
                 job_result = run_job_for_testing(job=job_model, repository=self.repo.pk)
                 job_result.refresh_from_db()
-                self.assertEqual(
-                    job_result.status,
-                    JobResultStatusChoices.STATUS_FAILURE,
-                    job_result.result,
-                )
+                self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
                 log_entries = JobLogEntry.objects.filter(job_result=job_result)
 
                 # Assert database changes were rolled back
@@ -668,6 +651,8 @@ class GitTest(TransactionTestCase):
                     self.assert_export_template_device("template.j2")
                     self.assert_export_template_html_exist("template2.html")
                     self.assert_export_template_vlan_exists("template.j2")
+                    self.assert_graphql_query_exists("device_names")
+                    self.assert_graphql_query_exists("device_interfaces")
                     self.assert_job_exists(name="MyJob")
                     self.assert_job_exists(name="MyJobButtonReceiver")
                     self.assert_job_exists(name="MyJobHookReceiver")
@@ -693,11 +678,7 @@ class GitTest(TransactionTestCase):
                 )
                 job_result.refresh_from_db()
 
-                self.assertEqual(
-                    job_result.status,
-                    JobResultStatusChoices.STATUS_SUCCESS,
-                    (job_result.traceback, list(job_result.job_log_entries.values_list("message", flat=True))),
-                )
+                self.assertJobResultStatus(job_result)
 
                 log_entries = JobLogEntry.objects.filter(job_result=job_result)
 
@@ -710,6 +691,8 @@ class GitTest(TransactionTestCase):
                     log_entries.get(message__contains="Addition - `export_templates/dcim/device/template.j2`")
                     log_entries.get(message__contains="Addition - `export_templates/dcim/device/template2.html`")
                     log_entries.get(message__contains="Addition - `export_templates/ipam/vlan/template.j2`")
+                    log_entries.get(message__contains="Addition - `graphql_queries/device_interfaces.gql`")
+                    log_entries.get(message__contains="Addition - `graphql_queries/device_names.gql`")
                     log_entries.get(message__contains="Addition - `jobs/__init__.py`")
                     log_entries.get(message__contains="Addition - `jobs/my_job.py`")
                 except JobLogEntry.DoesNotExist:
@@ -720,6 +703,7 @@ class GitTest(TransactionTestCase):
                 self.assertFalse(ConfigContextSchema.objects.filter(owner_object_id=self.repo.pk).exists())
                 self.assertFalse(ConfigContext.objects.filter(owner_object_id=self.repo.pk).exists())
                 self.assertFalse(ExportTemplate.objects.filter(owner_object_id=self.repo.pk).exists())
+                self.assertFalse(GraphQLQuery.objects.filter(owner_object_id=self.repo.pk).exists())
                 self.assertFalse(Job.objects.filter(module_name__startswith=self.repo.slug).exists())
 
     # TODO: test dry-run against a branch name
@@ -770,3 +754,57 @@ class GitTest(TransactionTestCase):
             "provides contents overlapping with this repository.",
             str(cm.exception),
         )
+
+    @mock.patch("nautobot.extras.models.datasources.GitRepo")
+    def test_clone_to_directory_with_secrets(self, MockGitRepo):
+        """
+        The clone_to_directory method should correctly make use of secrets.
+        """
+        with tempfile.TemporaryDirectory() as tempdir:
+            # Prepare secrets values
+            with open(os.path.join(tempdir, "username.txt"), "wt") as handle:
+                handle.write("núñez")
+
+            with open(os.path.join(tempdir, "token.txt"), "wt") as handle:
+                handle.write("1:3@/?=ab@")
+
+            # Create secrets and assign
+            username_secret = Secret.objects.create(
+                name="Git Username",
+                provider="text-file",
+                parameters={"path": os.path.join(tempdir, "username.txt")},
+            )
+            token_secret = Secret.objects.create(
+                name="Git Token",
+                provider="text-file",
+                parameters={"path": os.path.join(tempdir, "token.txt")},
+            )
+            secrets_group = SecretsGroup.objects.create(name="Git Credentials")
+            SecretsGroupAssociation.objects.create(
+                secret=username_secret,
+                secrets_group=secrets_group,
+                access_type=SecretsGroupAccessTypeChoices.TYPE_HTTP,
+                secret_type=SecretsGroupSecretTypeChoices.TYPE_USERNAME,
+            )
+            SecretsGroupAssociation.objects.create(
+                secret=token_secret,
+                secrets_group=secrets_group,
+                access_type=SecretsGroupAccessTypeChoices.TYPE_HTTP,
+                secret_type=SecretsGroupSecretTypeChoices.TYPE_TOKEN,
+            )
+
+            # Configure GitRepository model
+            self.repo.secrets_group = secrets_group
+            self.repo.remote_url = "http://localhost/git.git"
+            self.repo.save()
+
+            # Try to clone it
+            self.repo.clone_to_directory(tempdir, "main")
+
+            # Assert that GitRepo was called with proper args
+            args, kwargs = MockGitRepo.call_args
+            path, from_url = args
+            self.assertTrue(path.startswith(os.path.join(tempdir, self.repo.slug)))
+            self.assertEqual(from_url, "http://n%C3%BA%C3%B1ez:1%3A3%40%2F%3F%3Dab%40@localhost/git.git")
+            self.assertEqual(kwargs["depth"], 0)
+            self.assertEqual(kwargs["branch"], "main")

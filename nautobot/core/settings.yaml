@@ -6,6 +6,8 @@ definitions:
     type: "string"
   callable:
     type: "string"
+  date:
+    type: "string"
   regex:
     type: "string"
   relative_path:
@@ -766,6 +768,57 @@ properties:
     is_constance_config: true
     type: "boolean"
     version_added: "2.0.0"
+  EVENT_BROKERS:
+    default: {}
+    description: >-
+      A dictionary defining event brokers that handle event publishing in Nautobot.
+      Each broker specifies its import path, along with topics to include or exclude
+      when publishing events.
+    details: |-
+      Each broker consists of a name, the class it uses for publishing events, and the topics
+      it filters. Topics are the categories of events that a broker will publish or exclude
+      based on the provided filters.
+
+      Example:
+
+      ```python
+      EVENT_BROKERS = {
+          "SyslogEventBroker": {
+              "CLASS": "nautobot.core.events.SyslogEventBroker",
+              "TOPICS": {
+                  "INCLUDE": ["nautobot.test.*"],
+                  "EXCLUDE": ["*.no-publish*"],
+              },
+          },
+      }
+      ```
+
+      In this example:
+      - **SyslogEventBroker** is the broker name.
+      - **CLASS** specifies the path to the event broker's Python class.
+      - **INCLUDE** filters the events the broker will publish, such as all topics starting with "nautobot.test."
+      - **EXCLUDE** filters out specific topics like those with "no-publish" in the name.
+
+      !!! note
+          If **INCLUDE** is set to ["*"], all topics will be published unless excluded by **EXCLUDE**.
+    properties:
+      CLASS:
+        type: "string"
+      TOPICS:
+        type: "object"
+        properties:
+          INCLUDE:
+            type: "array"
+            description: >-
+              List of topics that the broker should publish events for.
+              If empty or set to ["*"], all topics will be included.
+          EXCLUDE:
+            type: "array"
+            description: >-
+              List of topics that the broker should exclude from publishing.
+              If empty, no topics are excluded.
+    type: "object"
+    version_added: "2.4.0"
   EXEMPT_VIEW_PERMISSIONS:
     default: []
     description: "A list of Nautobot models to exempt from the enforcement of view permissions."
@@ -1007,6 +1060,41 @@ properties:
       +/- 2.0.0
           This directory no longer requires an `__init__.py` file.
     environment_variable: "NAUTOBOT_JOBS_ROOT"
+  KUBERNETES_DEFAULT_SERVICE_ADDRESS:
+    default: ""
+    description: "HTTP address of the Kubernetes cluster. e.g. https://kubernetes.default.svc"
+    environment_variable: "NAUTOBOT_KUBERNETES_DEFAULT_SERVICE_ADDRESS"
+    type: "string"
+    version_added: "2.4.0"
+  KUBERNETES_JOB_MANIFEST:
+    default: {}
+    description: "A dictionary that contains the pod manifest used to create a job pod in the kubernetes cluster."
+    type: "object"
+    version_added: "2.4.0"
+  KUBERNETES_JOB_POD_NAME:
+    default: ""
+    description: "Name of the Kubernetes pod."
+    environment_variable: "NAUTOBOT_KUBERNETES_JOB_POD_NAME"
+    type: "string"
+    version_added: "2.4.0"
+  KUBERNETES_JOB_POD_NAMESPACE:
+    default: ""
+    description: "Name of the namespace that the Kubernetes pod is created in."
+    environment_variable: "NAUTOBOT_KUBERNETES_JOB_POD_NAMESPACE"
+    type: "string"
+    version_added: "2.4.0"
+  KUBERNETES_SSL_CA_CERT_PATH:
+    default: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+    description: "File path to the SSL CA CERT used for authentication to create the job and job pod."
+    environment_variable: "NAUTOBOT_KUBERNETES_SSL_CA_CERT_PATH"
+    type: "string"
+    version_added: "2.4.0"
+  KUBERNETES_TOKEN_PATH:
+    default: "/var/run/secrets/kubernetes.io/serviceaccount/token"
+    description: "File path to the Bearer token used for authentication to create the job and job pod."
+    environment_variable: "NAUTOBOT_KUBERNETES_TOKEN_PATH"
+    type: "string"
+    version_added: "2.4.0"
   LOCATION_NAME_AS_NATURAL_KEY:
     default: false
     description: >-
@@ -1405,6 +1493,17 @@ properties:
     is_constance_config: true
     type: "object"
     version_added: "1.6.0"
+  NTC_SUPPORT_CONTRACT_EXPIRATION_DATE:
+    "$ref": "#/definitions/date"
+    default: ""
+    description: >-
+      Expiration date for an active Nautobot support contract with Network to Code.
+      This value is displayed in the "About" page to provide additional support information.
+    details: >-
+      If specified as an environment variable, use ISO 8601 (`YYYY-MM-DD`) format.
+    environment_variable: "NAUTOBOT_NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"
+    is_constance_config: true
+    version_added: "2.4.0"
   PAGINATE_COUNT:
     default: 50
     description: >-
@@ -1827,34 +1926,6 @@ properties:
     version_added: "1.5.0"
     see_also:
       "`TEST_USE_FACTORIES`": "#test_use_factories"
-  TEST_PERFORMANCE_BASELINE_FILE:
-    default: "nautobot/core/tests/performance_baselines.yml"
-    description: "File path of a YAML file providing baseline times for all performance-related tests."
-    details: |-
-      The YAML file should conform to the following format:
-
-      ```yaml
-      tests:
-          - name: >-
-                test_run_job_with_sensitive_variables_and_requires_approval
-                (nautobot.extras.tests.test_views.JobTestCase)
-            execution_time: 4.799533
-          - name: test_run_missing_schedule (nautobot.extras.tests.test_views.JobTestCase)
-            execution_time: 4.367563
-          - name: test_run_now_missing_args (nautobot.extras.tests.test_views.JobTestCase)
-            execution_time: 4.363194
-          - name: >-
-                test_create_object_with_constrained_permission
-                (nautobot.extras.tests.test_views.GraphQLQueriesTestCase)
-            execution_time: 3.474244
-          - name: >-
-                test_run_now_constrained_permissions
-                (nautobot.extras.tests.test_views.JobTestCase)
-            execution_time: 2.727531
-      ```
-    environment_variable: "NAUTOBOT_TEST_PERFORMANCE_BASELINE_FILE"
-    type: "string"
-    version_added: "1.5.0"
   TEST_USE_FACTORIES:
     default: false
     description: >-

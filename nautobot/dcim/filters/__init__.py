@@ -21,6 +21,7 @@ from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.choices import (
     CableTypeChoices,
     ConsolePortTypeChoices,
+    ControllerCapabilitiesChoices,
     InterfaceTypeChoices,
     PowerOutletTypeChoices,
     PowerPortTypeChoices,
@@ -65,6 +66,7 @@ from nautobot.dcim.models import (
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
+    InterfaceVDCAssignment,
     InventoryItem,
     Location,
     LocationType,
@@ -88,6 +90,7 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
 from nautobot.extras.filters import (
     LocalContextModelFilterSetMixin,
@@ -98,9 +101,10 @@ from nautobot.extras.filters import (
 from nautobot.extras.models import ExternalIntegration, SecretsGroup
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import IPAddress, VLAN, VLANGroup
-from nautobot.tenancy.filters import TenancyModelFilterSetMixin
+from nautobot.tenancy.filters.mixins import TenancyModelFilterSetMixin
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, VirtualMachine
+from nautobot.wireless.models import RadioProfile, WirelessNetwork
 
 __all__ = (
     "CableFilterSet",
@@ -124,8 +128,8 @@ __all__ = (
     "FrontPortTemplateFilterSet",
     "InterfaceConnectionFilterSet",
     "InterfaceFilterSet",
-    "InterfaceRedundancyGroupFilterSet",
     "InterfaceRedundancyGroupAssociationFilterSet",
+    "InterfaceRedundancyGroupFilterSet",
     "InterfaceTemplateFilterSet",
     "InventoryItemFilterSet",
     "LocationFilterSet",
@@ -358,6 +362,12 @@ class RackGroupFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet, NameSe
         to_field_name="name",
         label="Parent (name or ID)",
     )
+    ancestors = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        to_field_name="name",
+        label="Location(s) and ancestors thereof (name or ID)",
+        method="_ancestors",
+    )
     children = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         to_field_name="name",
@@ -387,6 +397,26 @@ class RackGroupFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet, NameSe
     class Meta:
         model = RackGroup
         fields = ["id", "name", "description", "racks"]
+
+    def generate_query__ancestors(self, value):
+        """Helper method used by _ancestors() method."""
+        if value:
+            locations = Location.objects.filter(pk__in=[v.pk for v in value])
+            pk_list = []
+            for location in locations:
+                parent_locations = location.ancestors(include_self=True)
+                pk_list.extend([v.pk for v in parent_locations])
+            params = Q(location__pk__in=pk_list)
+            return params
+        return Q()
+
+    @extend_schema_field({"type": "string"})
+    def _ancestors(self, queryset, name, value):
+        """FilterSet method for, given a location, getting RackGroups that exist with in the parent Location(s) and the location itself."""
+        if value:
+            params = self.generate_query__ancestors(value)
+            return queryset.filter(params)
+        return queryset
 
 
 class RackFilterSet(
@@ -909,6 +939,26 @@ class DeviceFilterSet(
         distinct=True,
     )
     has_ip_addresses = RelatedMembershipBooleanFilter(field_name="interfaces__ip_addresses", label="Has IP addresses")
+    radio_profiles = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="controller_managed_device_group__radio_profiles",
+        queryset=RadioProfile.objects.all(),
+        to_field_name="name",
+        label="Radio Profiles (name or ID)",
+    )
+    has_radio_profiles = RelatedMembershipBooleanFilter(
+        field_name="controller_managed_device_group__radio_profiles",
+        label="Has radio profiles",
+    )
+    wireless_networks = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="controller_managed_device_group__wireless_networks",
+        queryset=WirelessNetwork.objects.all(),
+        to_field_name="name",
+        label="Wireless Networks (name or ID)",
+    )
+    has_wireless_networks = RelatedMembershipBooleanFilter(
+        field_name="controller_managed_device_group__wireless_networks",
+        label="Has wireless networks",
+    )
 
     def filter_ip_addresses(self, queryset, name, value):
         pk_values = set(item for item in value if is_uuid(item))
@@ -1149,6 +1199,15 @@ class InterfaceFilterSet(
         distinct=True,
     )
     has_ip_addresses = RelatedMembershipBooleanFilter(field_name="ip_addresses", label="Has IP addresses")
+    virtual_device_contexts = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VirtualDeviceContext.objects.all(),
+        to_field_name="name",
+        label="Virtual Device Context (name or ID)",
+    )
+    has_virtual_device_contexts = RelatedMembershipBooleanFilter(
+        field_name="virtual_device_contexts",
+        label="Has Virtual Device Context",
+    )
 
     def filter_ip_addresses(self, queryset, name, value):
         pk_values = set(item for item in value if is_uuid(item))
@@ -1170,6 +1229,8 @@ class InterfaceFilterSet(
             "description",
             "label",
             "tags",
+            "virtual_device_contexts",
+            "interface_redundancy_groups",
         ]
 
     def generate_query_filter_device(self, value):
@@ -1730,6 +1791,11 @@ class SoftwareImageFileFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     default_image = django_filters.BooleanFilter(
         label="Is default image for associated software version",
     )
+    external_integration = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ExternalIntegration.objects.all(),
+        to_field_name="name",
+        label="External integration (name or ID)",
+    )
 
     class Meta:
         model = SoftwareImageFile
@@ -1847,6 +1913,12 @@ class ControllerFilterSet(
         to_field_name="name",
         label="External integration (name or ID)",
     )
+    capabilities = django_filters.MultipleChoiceFilter(
+        choices=ControllerCapabilitiesChoices,
+        null_value=None,
+        lookup_expr="icontains",
+        label="Capabilities",
+    )
     controller_device = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Device.objects.all(),
         to_field_name="name",
@@ -1857,19 +1929,34 @@ class ControllerFilterSet(
         to_field_name="name",
         label="Controller device redundancy group (name or ID)",
     )
+    wireless_networks = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="controller_managed_device_groups__wireless_networks",
+        queryset=WirelessNetwork.objects.all(),
+        to_field_name="name",
+        label="Wireless Networks (name or ID)",
+    )
 
     class Meta:
         model = Controller
         fields = "__all__"
 
 
-class ControllerManagedDeviceGroupFilterSet(NautobotFilterSet):
+class ControllerManagedDeviceGroupFilterSet(
+    NautobotFilterSet,
+    TenancyModelFilterSetMixin,
+):
     """Filters for ControllerManagedDeviceGroup model."""
 
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
         }
+    )
+    capabilities = django_filters.MultipleChoiceFilter(
+        choices=ControllerCapabilitiesChoices,
+        null_value=None,
+        lookup_expr="icontains",
+        label="Capabilities",
     )
     controller = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Controller.objects.all(),
@@ -1886,6 +1973,22 @@ class ControllerManagedDeviceGroupFilterSet(NautobotFilterSet):
         to_field_name="name",
         label="Controlled device groups and descendants thereof (name or ID)",
         method="_subtree",
+    )
+    radio_profiles = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=RadioProfile.objects.all(),
+        label="Radio Profiles (name or ID)",
+    )
+    has_radio_profiles = RelatedMembershipBooleanFilter(
+        field_name="radio_profiles",
+        label="Has radio profiles",
+    )
+    wireless_networks = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=WirelessNetwork.objects.all(),
+        label="Wireless Networks (name or ID)",
+    )
+    has_wireless_networks = RelatedMembershipBooleanFilter(
+        field_name="wireless_networks",
+        label="Has wireless networks",
     )
 
     class Meta:
@@ -2129,3 +2232,133 @@ class ModuleBayFilterSet(NautobotFilterSet):
     class Meta:
         model = ModuleBay
         fields = "__all__"
+
+
+class VirtualDeviceContextFilterSet(
+    NautobotFilterSet, TenancyModelFilterSetMixin, RoleModelFilterSetMixin, StatusModelFilterSetMixin
+):
+    q = SearchFilter(
+        filter_predicates={
+            "device__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "tenant__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+        }
+    )
+    primary_ip4 = MultiValueCharFilter(
+        method="filter_primary_ip4",
+        label="Primary IPv4 Address (address or ID)",
+    )
+    primary_ip6 = MultiValueCharFilter(
+        method="filter_primary_ip6",
+        label="Primary IPv6 Address (address or ID)",
+    )
+    has_primary_ip = django_filters.BooleanFilter(
+        method="_has_primary_ip",
+        label="Has a primary IP",
+    )
+    device = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        to_field_name="name",
+        label="Device (name or ID)",
+    )
+    interfaces = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
+        queryset=Interface.objects.all(),
+        to_field_name="name",
+        label="Interface (name or ID)",
+    )
+    has_interfaces = RelatedMembershipBooleanFilter(
+        field_name="interfaces",
+        label="Has Interfaces",
+    )
+
+    class Meta:
+        model = VirtualDeviceContext
+        fields = [
+            "identifier",
+            "name",
+            "device",
+            "tenant",
+            "interfaces",
+            "has_interfaces",
+            "has_primary_ip",
+            "primary_ip4",
+            "primary_ip6",
+            "role",
+            "status",
+            "tags",
+            "description",
+        ]
+
+    # TODO(timizuo): Make a mixin for ip filterset fields to reduce code duplication
+    # VirtualMachineFilterSet,
+    def generate_query__has_primary_ip(self, value):
+        query = Q(primary_ip4__isnull=False) | Q(primary_ip6__isnull=False)
+        return ~query if not value else query
+
+    def _has_primary_ip(self, queryset, name, value):
+        params = self.generate_query__has_primary_ip(value)
+        return queryset.filter(params)
+
+    def get_ip_queryset(self, value):
+        pk_values = {item for item in value if is_uuid(item)}
+        addresses = {item for item in value if item not in pk_values}
+
+        return IPAddress.objects.filter_address_or_pk_in(addresses, pk_values)
+
+    def filter_primary_ip4(self, queryset, name, value):
+        ip_queryset = self.get_ip_queryset(value)
+        return queryset.filter(primary_ip4__in=ip_queryset)
+
+    def filter_primary_ip6(self, queryset, name, value):
+        ip_queryset = self.get_ip_queryset(value)
+        return queryset.filter(primary_ip6__in=ip_queryset)
+
+
+class InterfaceVDCAssignmentFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "interface__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "virtual_device_context__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+        }
+    )
+    device = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="interface__device",
+        queryset=Device.objects.all(),
+        to_field_name="name",
+        label="Device (name or ID)",
+    )
+    virtual_device_context = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VirtualDeviceContext.objects.all(),
+        to_field_name="name",
+        label="Virtual Device Context (name or ID)",
+    )
+    interface = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
+        queryset=Interface.objects.all(),
+        to_field_name="name",
+        label="Interface (name or ID)",
+    )
+
+    class Meta:
+        model = InterfaceVDCAssignment
+        fields = [
+            "device",
+            "interface",
+            "virtual_device_context",
+        ]

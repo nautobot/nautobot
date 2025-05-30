@@ -19,7 +19,6 @@ from nautobot.core.api import (
     ValidatedModelSerializer,
 )
 from nautobot.core.api.exceptions import SerializerNotFound
-from nautobot.core.api.fields import NautobotHyperlinkedRelatedField
 from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import (
     get_nested_serializer_depth,
@@ -66,6 +65,8 @@ from nautobot.extras.models import (
     JobButton,
     JobHook,
     JobLogEntry,
+    JobQueue,
+    JobQueueAssignment,
     JobResult,
     MetadataChoice,
     MetadataType,
@@ -134,12 +135,12 @@ class ConfigContextSerializer(ValidatedModelSerializer, TaggedModelSerializerMix
     owner = serializers.SerializerMethodField(read_only=True)
 
     # Conditional enablement of dynamic groups filtering
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
+    @property
+    def fields(self):
+        fields = super().fields
         if not settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
-            # In the case of a nested serializer, we won't have a `dynamic_groups` field at all.
-            self.fields.pop("dynamic_groups", None)
+            fields.pop("dynamic_groups", None)
+        return fields
 
     class Meta:
         model = ConfigContext
@@ -198,10 +199,7 @@ class ConfigContextSchemaSerializer(NautobotModelSerializer):
 #
 
 
-class ContactSerializer(NautobotModelSerializer):
-    # needed since this is the reverse side of the M2M field.
-    teams = NautobotHyperlinkedRelatedField(queryset=Team.objects.all(), many=True, required=False)
-
+class ContactSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     class Meta:
         model = Contact
         fields = "__all__"
@@ -210,15 +208,22 @@ class ContactSerializer(NautobotModelSerializer):
         extra_kwargs = {
             "email": {"default": ""},
             "phone": {"default": ""},
+            "teams": {"required": False},
         }
 
-    def validate(self, data):
-        attrs = data.copy()
-        attrs.pop("teams", None)
+    def get_field_names(self, declared_fields, info):
+        """Add reverse M2M for teams to the fields for this serializer."""
+        field_names = list(super().get_field_names(declared_fields, info))
+        self.extend_field_names(field_names, "teams")
+        return field_names
+
+    def validate(self, attrs):
+        local_attrs = attrs.copy()
+        local_attrs.pop("teams", None)
         validator = UniqueTogetherValidator(queryset=Contact.objects.all(), fields=("name", "phone", "email"))
-        validator(attrs, self)
-        super().validate(attrs)
-        return data
+        validator(local_attrs, self)
+        super().validate(local_attrs)
+        return attrs
 
 
 class ContactAssociationSerializer(NautobotModelSerializer):
@@ -233,18 +238,18 @@ class ContactAssociationSerializer(NautobotModelSerializer):
             "team": {"required": False},
         }
 
-    def validate(self, data):
+    def validate(self, attrs):
         # Validate uniqueness of (associated object, associated object type, contact/team, role)
         unique_together_fields = None
 
-        if data.get("contact") and data.get("role"):
+        if attrs.get("contact") and attrs.get("role"):
             unique_together_fields = (
                 "associated_object_type",
                 "associated_object_id",
                 "contact",
                 "role",
             )
-        elif data.get("team") and data.get("role"):
+        elif attrs.get("team") and attrs.get("role"):
             unique_together_fields = (
                 "associated_object_type",
                 "associated_object_id",
@@ -257,11 +262,11 @@ class ContactAssociationSerializer(NautobotModelSerializer):
                 queryset=ContactAssociation.objects.all(),
                 fields=unique_together_fields,
             )
-            validator(data, self)
+            validator(attrs, self)
 
-        super().validate(data)
+        super().validate(attrs)
 
-        return data
+        return attrs
 
 
 #
@@ -279,8 +284,8 @@ class ContentTypeSerializer(BaseModelSerializer):
         fields = "__all__"
 
     @extend_schema_field(serializers.CharField)
-    def get_display(self, obj):
-        return obj.app_labeled_name
+    def get_display(self, instance):
+        return instance.app_labeled_name
 
 
 #
@@ -432,7 +437,7 @@ class ExportTemplateSerializer(RelationshipModelSerializerMixin, ValidatedModelS
 #
 
 
-class ExternalIntegrationSerializer(NautobotModelSerializer):
+class ExternalIntegrationSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     class Meta:
         model = ExternalIntegration
         fields = "__all__"
@@ -454,7 +459,7 @@ class FileProxySerializer(BaseModelSerializer):
 #
 
 
-class GitRepositorySerializer(NautobotModelSerializer):
+class GitRepositorySerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     """Git repositories defined as a data source."""
 
     provided_contents = MultipleChoiceJSONField(
@@ -475,10 +480,31 @@ class GitRepositorySerializer(NautobotModelSerializer):
 
 class GraphQLQuerySerializer(ValidatedModelSerializer, NotesSerializerMixin):
     variables = serializers.DictField(read_only=True)
+    owner_content_type = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("graphql_query_owners").get_query()),
+        required=False,
+        allow_null=True,
+        default=None,
+    )
+    owner = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = GraphQLQuery
         fields = "__all__"
+
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="GraphQLQueryOwner",
+            resource_type_field_name="object_type",
+            serializers=lambda: nested_serializers_for_models(FeatureQuery("graphql_query_owners").list_subclasses()),
+            allow_null=True,
+        )
+    )
+    def get_owner(self, obj):
+        if obj.owner is None:
+            return None
+        depth = get_nested_serializer_depth(self)
+        return return_nested_serializer_data_based_on_depth(self, depth, obj, obj.owner, "owner")
 
 
 class GraphQLQueryInputSerializer(serializers.Serializer):
@@ -501,17 +527,17 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
         model = ImageAttachment
         fields = "__all__"
 
-    def validate(self, data):
+    def validate(self, attrs):
         # Validate that the parent object exists
         try:
-            data["content_type"].get_object_for_this_type(id=data["object_id"])
+            attrs["content_type"].get_object_for_this_type(id=attrs["object_id"])
         except ObjectDoesNotExist:
-            raise serializers.ValidationError(f"Invalid parent object: {data['content_type']} ID {data['object_id']}")
+            raise serializers.ValidationError(f"Invalid parent object: {attrs['content_type']} ID {attrs['object_id']}")
 
         # Enforce model validation
-        super().validate(data)
+        super().validate(attrs)
 
-        return data
+        return attrs
 
     @extend_schema_field(
         PolymorphicProxySerializer(
@@ -535,28 +561,44 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 
 
 class JobSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+    # task_queues and task_queues_override are added to maintain backward compatibility with versions pre v2.4.
+    task_queues = serializers.JSONField(read_only=True, required=False)
+    task_queues_override = serializers.BooleanField(read_only=True, required=False)
+
     class Meta:
         model = Job
         fields = "__all__"
 
-    def validate(self, data):
+    def validate(self, attrs):
         # note no validation for on creation of jobs because we do not support user creation of Job records via API
         if self.instance:
-            has_sensitive_variables = data.get("has_sensitive_variables", self.instance.has_sensitive_variables)
-            approval_required = data.get("approval_required", self.instance.approval_required)
+            has_sensitive_variables = attrs.get("has_sensitive_variables", self.instance.has_sensitive_variables)
+            approval_required = attrs.get("approval_required", self.instance.approval_required)
 
             if approval_required and has_sensitive_variables:
                 error_message = "A job with sensitive variables cannot also be marked as requiring approval"
                 errors = {}
 
-                if "approval_required" in data:
+                if "approval_required" in attrs:
                     errors["approval_required"] = [error_message]
-                if "has_sensitive_variables" in data:
+                if "has_sensitive_variables" in attrs:
                     errors["has_sensitive_variables"] = [error_message]
 
                 raise serializers.ValidationError(errors)
 
-        return super().validate(data)
+        return super().validate(attrs)
+
+
+class JobQueueSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+    class Meta:
+        model = JobQueue
+        fields = "__all__"
+
+
+class JobQueueAssignmentSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = JobQueueAssignment
+        fields = "__all__"
 
 
 class JobVariableSerializer(serializers.Serializer):
@@ -583,6 +625,8 @@ class JobVariableSerializer(serializers.Serializer):
 
 class ScheduledJobSerializer(BaseModelSerializer):
     # start_time = serializers.DateTimeField(format=None, required=False)
+    # queue is added to maintain backward compatibility with versions pre v2.4.
+    queue = serializers.CharField(read_only=True, required=False)
     time_zone = TimeZoneSerializerField(required=False)
 
     class Meta:
@@ -668,22 +712,22 @@ class JobHookSerializer(NautobotModelSerializer):
         model = JobHook
         fields = "__all__"
 
-    def validate(self, data):
-        validated_data = super().validate(data)
+    def validate(self, attrs):
+        validated_attrs = super().validate(attrs)
 
         conflicts = JobHook.check_for_conflicts(
             instance=self.instance,
-            content_types=data.get("content_types"),
-            job=data.get("job"),
-            type_create=data.get("type_create"),
-            type_update=data.get("type_update"),
-            type_delete=data.get("type_delete"),
+            content_types=attrs.get("content_types"),
+            job=attrs.get("job"),
+            type_create=attrs.get("type_create"),
+            type_update=attrs.get("type_update"),
+            type_delete=attrs.get("type_delete"),
         )
 
         if conflicts:
             raise serializers.ValidationError(conflicts)
 
-        return validated_data
+        return validated_attrs
 
 
 class JobCreationSerializer(BaseModelSerializer):
@@ -702,15 +746,15 @@ class JobCreationSerializer(BaseModelSerializer):
         model = ScheduledJob
         fields = ["url", "name", "start_time", "interval", "crontab"]
 
-    def validate(self, data):
-        data = super().validate(data)
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
 
-        if data["interval"] in choices.JobExecutionType.SCHEDULE_CHOICES:
-            if "name" not in data:
+        if attrs["interval"] in choices.JobExecutionType.SCHEDULE_CHOICES:
+            if "name" not in attrs:
                 raise serializers.ValidationError({"name": "Please provide a name for the job schedule."})
 
-            if ("start_time" not in data and data["interval"] != choices.JobExecutionType.TYPE_CUSTOM) or (
-                "start_time" in data and data["start_time"] < models.ScheduledJob.earliest_possible_time()
+            if ("start_time" not in attrs and attrs["interval"] != choices.JobExecutionType.TYPE_CUSTOM) or (
+                "start_time" in attrs and attrs["start_time"] < models.ScheduledJob.earliest_possible_time()
             ):
                 raise serializers.ValidationError(
                     {
@@ -718,21 +762,22 @@ class JobCreationSerializer(BaseModelSerializer):
                     }
                 )
 
-            if data["interval"] == choices.JobExecutionType.TYPE_CUSTOM:
-                if data.get("crontab") is None:
+            if attrs["interval"] == choices.JobExecutionType.TYPE_CUSTOM:
+                if attrs.get("crontab") is None:
                     raise serializers.ValidationError({"crontab": "Please enter a valid crontab."})
                 try:
-                    models.ScheduledJob.get_crontab(data["crontab"])
+                    models.ScheduledJob.get_crontab(attrs["crontab"])
                 except Exception as e:
                     raise serializers.ValidationError({"crontab": e})
 
-        return data
+        return attrs
 
 
 class JobInputSerializer(serializers.Serializer):
     data = serializers.JSONField(required=False, default=dict)
     schedule = JobCreationSerializer(required=False)
     task_queue = serializers.CharField(required=False, allow_blank=True)
+    job_queue = serializers.CharField(required=False, allow_blank=True)
 
 
 class JobMultiPartInputSerializer(serializers.Serializer):
@@ -743,16 +788,20 @@ class JobMultiPartInputSerializer(serializers.Serializer):
     _schedule_interval = ChoiceField(choices=JobExecutionType, required=False)
     _schedule_crontab = serializers.CharField(required=False, allow_blank=True)
     _task_queue = serializers.CharField(required=False, allow_blank=True)
+    _job_queue = serializers.CharField(required=False, allow_blank=True)
 
-    def validate(self, data):
-        data = super().validate(data)
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
 
-        if "_schedule_interval" in data and data["_schedule_interval"] != JobExecutionType.TYPE_IMMEDIATELY:
-            if "_schedule_name" not in data:
+        if "_schedule_interval" in attrs and attrs["_schedule_interval"] != JobExecutionType.TYPE_IMMEDIATELY:
+            if "_schedule_name" not in attrs:
                 raise serializers.ValidationError({"_schedule_name": "Please provide a name for the job schedule."})
 
-            if ("_schedule_start_time" not in data and data["_schedule_interval"] != JobExecutionType.TYPE_CUSTOM) or (
-                "_schedule_start_time" in data and data["_schedule_start_time"] < ScheduledJob.earliest_possible_time()
+            if (
+                "_schedule_start_time" not in attrs and attrs["_schedule_interval"] != JobExecutionType.TYPE_CUSTOM
+            ) or (
+                "_schedule_start_time" in attrs
+                and attrs["_schedule_start_time"] < ScheduledJob.earliest_possible_time()
             ):
                 raise serializers.ValidationError(
                     {
@@ -760,15 +809,15 @@ class JobMultiPartInputSerializer(serializers.Serializer):
                     }
                 )
 
-            if data["_schedule_interval"] == JobExecutionType.TYPE_CUSTOM:
-                if data.get("_schedule_crontab") is None:
+            if attrs["_schedule_interval"] == JobExecutionType.TYPE_CUSTOM:
+                if attrs.get("_schedule_crontab") is None:
                     raise serializers.ValidationError({"_schedule_crontab": "Please enter a valid crontab."})
                 try:
-                    ScheduledJob.get_crontab(data["_schedule_crontab"])
+                    ScheduledJob.get_crontab(attrs["_schedule_crontab"])
                 except Exception as e:
                     raise serializers.ValidationError({"_schedule_crontab": e})
 
-        return data
+        return attrs
 
 
 class JobLogEntrySerializer(BaseModelSerializer):
@@ -795,7 +844,7 @@ class JobButtonSerializer(ValidatedModelSerializer, NotesSerializerMixin):
 #
 
 
-class MetadataTypeSerializer(NautobotModelSerializer):
+class MetadataTypeSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     content_types = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("metadata").get_query()),
         many=True,
@@ -859,7 +908,6 @@ class NoteSerializer(BaseModelSerializer):
     class Meta:
         model = Note
         fields = "__all__"
-        list_display_fields = ["note", "assigned_object_type", "assigned_object_id", "user"]
 
     @extend_schema_field(
         PolymorphicProxySerializer(
@@ -899,7 +947,6 @@ class ObjectChangeSerializer(BaseModelSerializer):
     class Meta:
         model = ObjectChange
         fields = "__all__"
-        list_display_fields = ["changed_object_id", "related_object_id", "related_object_type", "user"]
 
     @extend_schema_field(
         PolymorphicProxySerializer(
@@ -1054,18 +1101,18 @@ class TagSerializer(NautobotModelSerializer):
             "color": {"help_text": "RGB color in hexadecimal (e.g. 00ff00)"},
         }
 
-    def validate(self, data):
-        data = super().validate(data)
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
 
         # check if tag is assigned to any of the removed content_types
-        if self.instance is not None and self.instance.present_in_database and "content_types" in data:
-            content_types_id = [content_type.id for content_type in data["content_types"]]
+        if self.instance is not None and self.instance.present_in_database and "content_types" in attrs:
+            content_types_id = [content_type.id for content_type in attrs["content_types"]]
             errors = self.instance.validate_content_types_removal(content_types_id)
 
             if errors:
                 raise serializers.ValidationError(errors)
 
-        return data
+        return attrs
 
 
 #
@@ -1073,9 +1120,7 @@ class TagSerializer(NautobotModelSerializer):
 #
 
 
-class TeamSerializer(NautobotModelSerializer):
-    contacts = NautobotHyperlinkedRelatedField(queryset=Contact.objects.all(), many=True, required=False)
-
+class TeamSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     class Meta:
         model = Team
         fields = "__all__"
@@ -1087,10 +1132,10 @@ class TeamSerializer(NautobotModelSerializer):
         # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
         validators = []
 
-    def validate(self, data):
+    def validate(self, attrs):
         validator = UniqueTogetherValidator(queryset=Team.objects.all(), fields=("name", "phone", "email"))
-        validator(data, self)
-        return super().validate(data)
+        validator(attrs, self)
+        return super().validate(attrs)
 
 
 #
@@ -1108,19 +1153,31 @@ class WebhookSerializer(ValidatedModelSerializer, NotesSerializerMixin):
         model = Webhook
         fields = "__all__"
 
-    def validate(self, data):
-        validated_data = super().validate(data)
+    def validate(self, attrs):
+        validated_attrs = super().validate(attrs)
 
         conflicts = Webhook.check_for_conflicts(
             instance=self.instance,
-            content_types=data.get("content_types"),
-            payload_url=data.get("payload_url"),
-            type_create=data.get("type_create"),
-            type_update=data.get("type_update"),
-            type_delete=data.get("type_delete"),
+            content_types=attrs.get("content_types"),
+            payload_url=attrs.get("payload_url"),
+            type_create=attrs.get("type_create"),
+            type_update=attrs.get("type_update"),
+            type_delete=attrs.get("type_delete"),
         )
 
         if conflicts:
             raise serializers.ValidationError(conflicts)
 
-        return validated_data
+        return validated_attrs
+
+
+#
+# More Git repositories
+#
+
+
+class GitRepositorySyncResponseSerializer(serializers.Serializer):
+    """Serializer representing responses from the GitRepository.sync() POST endpoint."""
+
+    message = serializers.CharField(read_only=True)
+    job_result = JobResultSerializer(read_only=True)

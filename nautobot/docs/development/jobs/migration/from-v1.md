@@ -6,10 +6,10 @@
 * [`self.test_*` and `self.post_run()` methods were removed](#test_-and-post_run-methods)
 * [`read_only` no longer changes the behavior of Nautobot core](#read-only-meta-attribute)
 * [`self.job_result` should no longer be modified or saved from within a Job](#tracking-job-state)
-* [Jobs must be registered in the celery task registry](#job-registration)
+* [Jobs must be registered in the Celery task registry](#job-registration)
 * [`self.failed` removed](#tracking-job-state)
 * [The job logging methods have been renamed and their signature changed](#job-logging)
-* [The `request` property has been changed to a celery request instead of a Django request](#request-property)
+* [The `request` property has been changed to a Celery request instead of a Django request](#request-property)
 
 ## Overview
 
@@ -39,7 +39,7 @@ The package name for Jobs provided by [Git Repositories](../../../user-guide/pla
 
 ### Run Method Signature
 
-The signature of the `run()` method for Jobs must now accept keyword arguments for every [Job variable](../index.md#variables) defined on the Job class. The `run()` method no longer uses the `data` and `commit` arguments used in v1.X.
+The signature of the `run()` method for Jobs must now accept keyword arguments for every [Job variable](../job-structure.md#variables) defined on the Job class. The `run()` method no longer uses the `data` and `commit` arguments used in v1.X.
 
 !!! example
     ```py title="v1.X Job"
@@ -80,6 +80,7 @@ The `test_*` and `post_run` methods, previously provided for backwards compatibi
 
 Jobs no longer run in a single atomic [database transaction](https://docs.djangoproject.com/en/stable/topics/db/transactions/) by default. If a Job needs to run in a database transaction, you can use the `@transaction.atomic` decorator on the `run()` method or wrap parts of your Job code in the `with transaction.atomic()` context manager.
 
+<!-- pyml disable-num-lines 10 proper-names -->
 !!! example
     ```py
     from django.db import transaction
@@ -145,15 +146,15 @@ All of the custom `log` methods have been removed from the Job class. Instead, u
 
 The following table describes the mapping of the old log methods to the new methods:
 
-| Old Method         | New Method             |
-| ------------------ | ---------------------- |
-| `self.log_debug`   | `self.logger.debug`    |
-| `self.log_info`    | `self.logger.info`     |
-| `self.log_success` | `self.logger.info`     |
-| `self.log_warning` | `self.logger.warning`  |
-| `self.log_failure` | `self.logger.error`    |
-| `self.log`         | `self.logger.info`     |
-| No equivalent      | `self.logger.critical` |
+| Old Method         | New Method                                                                   |
+| ------------------ | ---------------------------------------------------------------------------- |
+| `self.log_debug`   | `self.logger.debug`                                                          |
+| `self.log_info`    | `self.logger.info`                                                           |
+| `self.log_success` | `self.logger.info` (or, in Nautobot 2.4.0 and later, `self.logger.success`)  |
+| `self.log_warning` | `self.logger.warning`                                                        |
+| `self.log_failure` | `self.logger.error` (or, in Nautobot 2.4.5 and later, `self.logger.failure`) |
+| `self.log`         | `self.logger.info`                                                           |
+| No equivalent      | `self.logger.critical`                                                       |
 
 Some logging features from v1.X are accessible when passing a `dict` to the `extra` kwarg in any logger method:
 
@@ -161,7 +162,7 @@ Some logging features from v1.X are accessible when passing a `dict` to the `ext
 * `logger.debug("message", extra={"object": obj})` - Replaces the `obj` kwarg in Nautobot v1.X Job logging methods
 * `logger.debug("message", extra={"grouping": "string"})` - Replaces the `active_test` Job property in Nautobot v1.X
 
-For more detailed documentation on Job logging see the [Job Logging](../index.md#logging) section of the Jobs feature documentation.
+For more detailed documentation on Job logging see the [Job Logging](../job-logging.md#logging-patterns) section of the Jobs feature documentation.
 
 ### Tracking Job State
 

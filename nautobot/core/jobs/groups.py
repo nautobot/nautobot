@@ -24,7 +24,7 @@ class RefreshDynamicGroupCaches(Job):
         description = "Re-calculate and re-cache the membership lists of Dynamic Groups."
         has_sensitive_variables = False
 
-    def run(self, single_group=None):
+    def run(self, single_group=None):  # pylint: disable=arguments-differ
         groups = DynamicGroup.objects.restrict(self.user, "view").exclude(
             group_type=DynamicGroupTypeChoices.TYPE_STATIC
         )

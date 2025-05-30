@@ -3,75 +3,46 @@ from django.urls import path
 from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras import views
 from nautobot.extras.models import (
-    ComputedField,
     ConfigContext,
     ConfigContextSchema,
     CustomField,
-    CustomLink,
     DynamicGroup,
-    ExportTemplate,
     GitRepository,
     GraphQLQuery,
     Job,
-    JobHook,
     Note,
     Relationship,
-    Secret,
     SecretsGroup,
-    Status,
     Tag,
-    Webhook,
 )
 
 app_name = "extras"
 
 router = NautobotUIViewSetRouter()
+router.register("computed-fields", views.ComputedFieldUIViewSet)
 router.register("contacts", views.ContactUIViewSet)
 router.register("contact-associations", views.ContactAssociationUIViewSet)
+router.register("custom-links", views.CustomLinkUIViewSet)
+router.register("export-templates", views.ExportTemplateUIViewSet)
 router.register("external-integrations", views.ExternalIntegrationUIViewSet)
 router.register("job-buttons", views.JobButtonUIViewSet)
+router.register("job-hooks", views.JobHookUIViewSet)
+router.register("job-queues", views.JobQueueUIViewSet)
 router.register("metadata-types", views.MetadataTypeUIViewSet)
 router.register("object-metadata", views.ObjectMetadataUIViewSet)
+router.register("relationships", views.RelationshipUIViewSet)
 router.register("roles", views.RoleUIViewSet)
 router.register("saved-views", views.SavedViewUIViewSet)
+router.register("secrets", views.SecretUIViewSet)
 router.register("static-group-associations", views.StaticGroupAssociationUIViewSet)
+router.register("statuses", views.StatusUIViewSet)
 router.register("teams", views.TeamUIViewSet)
+router.register("webhooks", views.WebhookUIViewSet)
 
 urlpatterns = [
     # Change logging
     path("object-changes/", views.ObjectChangeListView.as_view(), name="objectchange_list"),
     path("object-changes/<uuid:pk>/", views.ObjectChangeView.as_view(), name="objectchange"),
-    # Computed Fields
-    path("computed-fields/", views.ComputedFieldListView.as_view(), name="computedfield_list"),
-    path("computed-fields/add/", views.ComputedFieldEditView.as_view(), name="computedfield_add"),
-    path(
-        "computed-fields/delete/",
-        views.ComputedFieldBulkDeleteView.as_view(),
-        name="computedfield_bulk_delete",
-    ),
-    path("computed-fields/<uuid:pk>/", views.ComputedFieldView.as_view(), name="computedfield"),
-    path(
-        "computed-fields/<uuid:pk>/edit/",
-        views.ComputedFieldEditView.as_view(),
-        name="computedfield_edit",
-    ),
-    path(
-        "computed-fields/<uuid:pk>/delete/",
-        views.ComputedFieldDeleteView.as_view(),
-        name="computedfield_delete",
-    ),
-    path(
-        "computed-fields/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="computedfield_changelog",
-        kwargs={"model": ComputedField},
-    ),
-    path(
-        "computed-fields/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="computedfield_notes",
-        kwargs={"model": ComputedField},
-    ),
     # Config contexts
     path(
         "config-contexts/",
@@ -212,37 +183,6 @@ urlpatterns = [
         name="customfield_notes",
         kwargs={"model": CustomField},
     ),
-    # Custom links
-    path("custom-links/", views.CustomLinkListView.as_view(), name="customlink_list"),
-    path("custom-links/add/", views.CustomLinkEditView.as_view(), name="customlink_add"),
-    path(
-        "custom-links/delete/",
-        views.CustomLinkBulkDeleteView.as_view(),
-        name="customlink_bulk_delete",
-    ),
-    path("custom-links/<uuid:pk>/", views.CustomLinkView.as_view(), name="customlink"),
-    path(
-        "custom-links/<uuid:pk>/edit/",
-        views.CustomLinkEditView.as_view(),
-        name="customlink_edit",
-    ),
-    path(
-        "custom-links/<uuid:pk>/delete/",
-        views.CustomLinkDeleteView.as_view(),
-        name="customlink_delete",
-    ),
-    path(
-        "custom-links/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="customlink_changelog",
-        kwargs={"model": CustomLink},
-    ),
-    path(
-        "custom-links/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="customlink_notes",
-        kwargs={"model": CustomLink},
-    ),
     # Dynamic Groups
     path("dynamic-groups/", views.DynamicGroupListView.as_view(), name="dynamicgroup_list"),
     path("dynamic-groups/add/", views.DynamicGroupEditView.as_view(), name="dynamicgroup_add"),
@@ -266,49 +206,6 @@ urlpatterns = [
         views.ObjectNotesView.as_view(),
         name="dynamicgroup_notes",
         kwargs={"model": DynamicGroup},
-    ),
-    # Export Templates
-    path(
-        "export-templates/",
-        views.ExportTemplateListView.as_view(),
-        name="exporttemplate_list",
-    ),
-    path(
-        "export-templates/add/",
-        views.ExportTemplateEditView.as_view(),
-        name="exporttemplate_add",
-    ),
-    path(
-        "export-templates/delete/",
-        views.ExportTemplateBulkDeleteView.as_view(),
-        name="exporttemplate_bulk_delete",
-    ),
-    path(
-        "export-templates/<uuid:pk>/",
-        views.ExportTemplateView.as_view(),
-        name="exporttemplate",
-    ),
-    path(
-        "export-templates/<uuid:pk>/edit/",
-        views.ExportTemplateEditView.as_view(),
-        name="exporttemplate_edit",
-    ),
-    path(
-        "export-templates/<uuid:pk>/delete/",
-        views.ExportTemplateDeleteView.as_view(),
-        name="exporttemplate_delete",
-    ),
-    path(
-        "export-templates/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="exporttemplate_changelog",
-        kwargs={"model": ExportTemplate},
-    ),
-    path(
-        "export-templates/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="exporttemplate_notes",
-        kwargs={"model": ExportTemplate},
     ),
     # Git repositories
     path(
@@ -463,27 +360,6 @@ urlpatterns = [
     path("jobs/<str:class_path>/run/", views.JobRunView.as_view(), name="job_run_by_class_path"),
     path("jobs/edit/", views.JobBulkEditView.as_view(), name="job_bulk_edit"),
     path("jobs/delete/", views.JobBulkDeleteView.as_view(), name="job_bulk_delete"),
-    # Job hooks
-    path("job-hooks/", views.JobHookListView.as_view(), name="jobhook_list"),
-    path("job-hooks/add/", views.JobHookEditView.as_view(), name="jobhook_add"),
-    path(
-        "job-hooks/delete/",
-        views.JobHookBulkDeleteView.as_view(),
-        name="jobhook_bulk_delete",
-    ),
-    path("job-hooks/<uuid:pk>/", views.JobHookView.as_view(), name="jobhook"),
-    path("job-hooks/<uuid:pk>/edit/", views.JobHookEditView.as_view(), name="jobhook_edit"),
-    path(
-        "job-hooks/<uuid:pk>/delete/",
-        views.JobHookDeleteView.as_view(),
-        name="jobhook_delete",
-    ),
-    path(
-        "job-hooks/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="jobhook_changelog",
-        kwargs={"model": JobHook},
-    ),
     # Generic job results
     path("job-results/", views.JobResultListView.as_view(), name="jobresult_list"),
     path("job-results/<uuid:pk>/", views.JobResultView.as_view(), name="jobresult"),
@@ -511,32 +387,6 @@ urlpatterns = [
     path("notes/<uuid:pk>/edit/", views.NoteEditView.as_view(), name="note_edit"),
     path("notes/<uuid:pk>/delete/", views.NoteDeleteView.as_view(), name="note_delete"),
     # Custom relationships
-    path("relationships/", views.RelationshipListView.as_view(), name="relationship_list"),
-    path(
-        "relationships/add/",
-        views.RelationshipEditView.as_view(),
-        name="relationship_add",
-    ),
-    path(
-        "relationships/delete/",
-        views.RelationshipBulkDeleteView.as_view(),
-        name="relationship_bulk_delete",
-    ),
-    path(
-        "relationships/<uuid:pk>/",
-        views.RelationshipView.as_view(),
-        name="relationship",
-    ),
-    path(
-        "relationships/<uuid:pk>/edit/",
-        views.RelationshipEditView.as_view(),
-        name="relationship_edit",
-    ),
-    path(
-        "relationships/<uuid:pk>/delete/",
-        views.RelationshipDeleteView.as_view(),
-        name="relationship_delete",
-    ),
     path(
         "relationships/<uuid:pk>/changelog/",
         views.ObjectChangeLogView.as_view(),
@@ -565,29 +415,10 @@ urlpatterns = [
         name="relationshipassociation_delete",
     ),
     # Secrets
-    path("secrets/", views.SecretListView.as_view(), name="secret_list"),
-    path("secrets/add/", views.SecretEditView.as_view(), name="secret_add"),
-    path("secrets/delete/", views.SecretBulkDeleteView.as_view(), name="secret_bulk_delete"),
-    path("secrets/import/", views.SecretBulkImportView.as_view(), name="secret_import"),  # 3.0 TODO: remove, unused
     path(
         "secrets/provider/<str:provider_slug>/form/",
         views.SecretProviderParametersFormView.as_view(),
         name="secret_provider_parameters_form",
-    ),
-    path("secrets/<uuid:pk>/", views.SecretView.as_view(), name="secret"),
-    path("secrets/<uuid:pk>/edit/", views.SecretEditView.as_view(), name="secret_edit"),
-    path("secrets/<uuid:pk>/delete/", views.SecretDeleteView.as_view(), name="secret_delete"),
-    path(
-        "secrets/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="secret_changelog",
-        kwargs={"model": Secret},
-    ),
-    path(
-        "secrets/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="secret_notes",
-        kwargs={"model": Secret},
     ),
     path("secrets-groups/", views.SecretsGroupListView.as_view(), name="secretsgroup_list"),
     path("secrets-groups/add/", views.SecretsGroupEditView.as_view(), name="secretsgroup_add"),
@@ -606,35 +437,6 @@ urlpatterns = [
         views.ObjectNotesView.as_view(),
         name="secretsgroup_notes",
         kwargs={"model": SecretsGroup},
-    ),
-    # Custom statuses
-    path("statuses/", views.StatusListView.as_view(), name="status_list"),
-    path("statuses/add/", views.StatusEditView.as_view(), name="status_add"),
-    path("statuses/edit/", views.StatusBulkEditView.as_view(), name="status_bulk_edit"),
-    path(
-        "statuses/delete/",
-        views.StatusBulkDeleteView.as_view(),
-        name="status_bulk_delete",
-    ),
-    path("statuses/import/", views.StatusBulkImportView.as_view(), name="status_import"),  # 3.0 TODO: remove, unused
-    path("statuses/<uuid:pk>/", views.StatusView.as_view(), name="status"),
-    path("statuses/<uuid:pk>/edit/", views.StatusEditView.as_view(), name="status_edit"),
-    path(
-        "statuses/<uuid:pk>/delete/",
-        views.StatusDeleteView.as_view(),
-        name="status_delete",
-    ),
-    path(
-        "statuses/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="status_changelog",
-        kwargs={"model": Status},
-    ),
-    path(
-        "statuses/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="status_notes",
-        kwargs={"model": Status},
     ),
     # Tags
     path("tags/", views.TagListView.as_view(), name="tag_list"),
@@ -656,33 +458,6 @@ urlpatterns = [
         views.ObjectNotesView.as_view(),
         name="tag_notes",
         kwargs={"model": Tag},
-    ),
-    # Webhook
-    path("webhooks/", views.WebhookListView.as_view(), name="webhook_list"),
-    path("webhooks/add/", views.WebhookEditView.as_view(), name="webhook_add"),
-    path(
-        "webhooks/delete/",
-        views.WebhookBulkDeleteView.as_view(),
-        name="webhook_bulk_delete",
-    ),
-    path("webhooks/<uuid:pk>/", views.WebhookView.as_view(), name="webhook"),
-    path("webhooks/<uuid:pk>/edit/", views.WebhookEditView.as_view(), name="webhook_edit"),
-    path(
-        "webhooks/<uuid:pk>/delete/",
-        views.WebhookDeleteView.as_view(),
-        name="webhook_delete",
-    ),
-    path(
-        "webhooks/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="webhook_changelog",
-        kwargs={"model": Webhook},
-    ),
-    path(
-        "webhooks/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="webhook_notes",
-        kwargs={"model": Webhook},
     ),
 ]
 

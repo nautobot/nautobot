@@ -1,6 +1,7 @@
 """Dynamic Groups Models."""
 
 import logging
+from typing import Optional
 
 from django import forms
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -116,7 +117,7 @@ class DynamicGroup(PrimaryModel):
         return self._model
 
     @property
-    def filterset_class(self):
+    def filterset_class(self) -> Optional[type[django_filters.FilterSet]]:
         if getattr(self, "_filterset_class", None) is None:
             try:
                 self._filterset_class = get_filterset_for_model(self.model)
@@ -125,7 +126,7 @@ class DynamicGroup(PrimaryModel):
         return self._filterset_class
 
     @property
-    def filterform_class(self):
+    def filterform_class(self) -> Optional[type[forms.Form]]:
         if getattr(self, "_filterform_class", None) is None:
             try:
                 self._filterform_class = get_form_for_model(self.model, form_prefix="Filter")
@@ -134,7 +135,7 @@ class DynamicGroup(PrimaryModel):
         return self._filterform_class
 
     @property
-    def form_class(self):
+    def form_class(self) -> Optional[type[forms.Form]]:
         if getattr(self, "_form_class", None) is None:
             try:
                 self._form_class = get_form_for_model(self.model)
@@ -147,19 +148,19 @@ class DynamicGroup(PrimaryModel):
         """Return all FilterForm fields in a dictionary."""
 
         # Fail gracefully with an empty dict if nothing is working yet.
-        if not self.form_class:
+        if self.form_class is None or self.filterform_class is None or self.filterset_class is None:
             return {}
 
         # Get model form and fields
-        modelform = self.form_class()
+        modelform = self.form_class()  # pylint: disable=not-callable
         modelform_fields = modelform.fields
 
         # Get filter form and fields
-        filterform = self.filterform_class()
+        filterform = self.filterform_class()  # pylint: disable=not-callable
         filterform_fields = filterform.fields
 
         # Get filterset and fields
-        filterset = self.filterset_class()
+        filterset = self.filterset_class()  # pylint: disable=not-callable
         filterset_fields = filterset.filters
 
         # Get dynamic group filter field mappings (if any)
@@ -303,6 +304,7 @@ class DynamicGroup(PrimaryModel):
         # Since associated_object is a GenericForeignKey, we can't just do:
         #     return self.static_group_associations.values_list("associated_object", flat=True)
         return self.model.objects.filter(
+            # pylint: disable=no-member  # false positive about self.static_group_associations
             pk__in=self.static_group_associations(manager="all_objects").values_list("associated_object_id", flat=True)
         )
 
@@ -611,7 +613,7 @@ class DynamicGroup(PrimaryModel):
                 raise ValidationError({"filter": "Filter can only be set for groups of type `dynamic-filter`."})
         else:
             # Validate against the filterset's internal form validation.
-            filterset = self.filterset_class(self.filter)
+            filterset = self.filterset_class(self.filter)  # pylint: disable=not-callable
             if not filterset.is_valid():
                 raise ValidationError(filterset.errors)
 
@@ -725,7 +727,7 @@ class DynamicGroup(PrimaryModel):
         if self.group_type != DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
             raise RuntimeError(f"{self} is not a dynamic-filter group")
 
-        filterset = self.filterset_class(self.filter, self.model.objects.all())
+        filterset = self.filterset_class(self.filter, self.model.objects.all())  # pylint: disable=not-callable
         query = models.Q()
 
         # In this case we want all filters for a group's filter dict in a set intersection (boolean

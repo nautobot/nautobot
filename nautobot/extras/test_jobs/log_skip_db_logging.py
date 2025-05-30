@@ -8,7 +8,7 @@ class TestLogSkipDBLogging(Job):
     class Meta:
         description = "Test logs not being saved to the database"
 
-    def run(self):
+    def run(self):  # pylint: disable=arguments-differ
         logger.debug("I should NOT be logged to the database", extra={"skip_db_logging": True})
         logger.info("I should be logged to the database")
 

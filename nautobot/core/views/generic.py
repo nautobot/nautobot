@@ -1,6 +1,7 @@
 from copy import deepcopy
 import logging
 import re
+from typing import ClassVar, Optional
 
 from django.conf import settings
 from django.contrib import messages
@@ -8,12 +9,11 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
-    FieldDoesNotExist,
     ObjectDoesNotExist,
     ValidationError,
 )
 from django.db import IntegrityError, transaction
-from django.db.models import ManyToManyField, ProtectedError, Q
+from django.db.models import Model, ProtectedError, Q, QuerySet
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -22,9 +22,11 @@ from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import View
-from django_tables2 import RequestConfig
+from django_filters import FilterSet
+from django_tables2 import RequestConfig, Table
 
 from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import (
     BootstrapMixin,
@@ -46,7 +48,7 @@ from nautobot.core.utils.requests import (
     get_filterable_params_from_filter_params,
     normalize_querydict,
 )
-from nautobot.core.views.mixins import EditAndDeleteAllModelMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin
+from nautobot.core.views.mixins import BulkEditAndBulkDeleteModelMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import (
     check_filter_for_display,
@@ -57,9 +59,7 @@ from nautobot.core.views.utils import (
     prepare_cloned_fields,
     view_changes_not_saved,
 )
-from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.models import ExportTemplate, SavedView, UserSavedViewAssociation
-from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, remove_prefix_from_cf_key
 
 
 class GenericView(LoginRequiredMixin, View):
@@ -78,8 +78,9 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
     template_name: Name of the template to use
     """
 
-    queryset = None
-    template_name = None
+    queryset: ClassVar[Optional[QuerySet]] = None  # TODO: required, declared Optional only to avoid breaking change
+    template_name: ClassVar[Optional[str]] = None
+    object_detail_content = None
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
@@ -119,6 +120,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
             "content_type": content_type,
             "verbose_name": self.queryset.model._meta.verbose_name,
             "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
+            "object_detail_content": self.object_detail_content,
             **common_detail_view_context(request, instance),
             **self.get_extra_context(request, instance),
         }
@@ -139,10 +141,10 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
     non_filter_params: List of query parameters that are **not** used for queryset filtering
     """
 
-    queryset = None
-    filterset = None
-    filterset_form = None
-    table = None
+    queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
+    filterset: Optional[type[FilterSet]] = None
+    filterset_form: Optional[type[Form]] = None
+    table: Optional[type[Table]] = None
     template_name = "generic/object_list.html"
     action_buttons = ("add", "import", "export")
     non_filter_params = (
@@ -159,7 +161,11 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
     def get_filter_params(self, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
         params = request.GET.copy()
-        filter_params = get_filterable_params_from_filter_params(params, self.non_filter_params, self.filterset())
+        filter_params = get_filterable_params_from_filter_params(
+            params,
+            self.non_filter_params,
+            self.filterset(),  # pylint: disable=not-callable  # this fn is only called if filterset is not None
+        )
         if params.get("saved_view") and not filter_params and not params.get("all_filters_removed"):
             return SavedView.objects.get(pk=params.get("saved_view")).config.get("filter_params", {})
         return filter_params
@@ -208,8 +214,16 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         resolved_path = resolve(request.path)
         list_url = f"{resolved_path.app_name}:{resolved_path.url_name}"
 
+        skip_user_and_global_default_saved_view = False
+        if self.filterset is not None:
+            skip_user_and_global_default_saved_view = get_filterable_params_from_filter_params(
+                request.GET.copy(),
+                self.non_filter_params,
+                self.filterset(),
+            )
+
         # If the user clicks on the clear view button, we do not check for global or user defaults
-        if not clear_view and not request.GET.get("saved_view"):
+        if not skip_user_and_global_default_saved_view and not clear_view and not request.GET.get("saved_view"):
             # Check if there is a default for this view for this specific user
             if not isinstance(user, AnonymousUser):
                 try:
@@ -233,9 +247,9 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             except ObjectDoesNotExist:
                 pass
 
-        if self.filterset:
+        if self.filterset is not None:
             filter_params = self.get_filter_params(request)
-            filterset = self.filterset(filter_params, self.queryset)
+            filterset = self.filterset(filter_params, self.queryset)  # pylint:disable=not-callable  # only if not None
             self.queryset = filterset.qs
             if not filterset.is_valid():
                 messages.error(
@@ -263,7 +277,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             else:
                 dynamic_filter_form = DynamicFilterFormSet(filterset=filterset)
 
-            if self.filterset_form:
+            if self.filterset_form is not None:
                 filter_form = self.filterset_form(filter_params, label_suffix="")
 
         # Check for export template rendering
@@ -323,14 +337,14 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 messages.error(request, f"Saved view {current_saved_view_pk} not found")
 
         # Construct the objects table
-        if self.table:
+        if self.table is not None:
             if self.request.GET.getlist("sort") or (
                 current_saved_view is not None and current_saved_view.config.get("sort_order")
             ):
                 hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
             table_changes_pending = self.request.GET.get("table_changes_pending", False)
 
-            table = self.table(
+            table = self.table(  # pylint: disable=not-callable  # we confirmed that self.table is not None
                 self.queryset,
                 table_changes_pending=table_changes_pending,
                 saved_view=current_saved_view,
@@ -347,7 +361,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             }
             RequestConfig(request, paginate).configure(table)
             table_config_form = TableConfigForm(table=table)
-            max_page_size = get_settings_or_config("MAX_PAGE_SIZE")
+            max_page_size = get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT)
             if max_page_size and paginate["per_page"] > max_page_size:
                 messages.warning(
                     request,
@@ -407,8 +421,8 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     template_name: The name of the template
     """
 
-    queryset = None
-    model_form = None
+    queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
+    model_form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
     template_name = "generic/object_create.html"
 
     def get_required_permission(self):
@@ -452,7 +466,9 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
 
         initial_data = normalize_querydict(request.GET, form_class=self.model_form)
-        form = self.model_form(instance=obj, initial=initial_data)
+        if self.model_form is None:
+            raise RuntimeError("self.model_form must not be None")
+        form = self.model_form(instance=obj, initial=initial_data)  # pylint: disable=not-callable
         restrict_form_fields(form, request.user)
 
         return render(
@@ -482,7 +498,9 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     def post(self, request, *args, **kwargs):
         logger = logging.getLogger(__name__ + ".ObjectEditView")
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
-        form = self.model_form(
+        if self.model_form is None:
+            raise RuntimeError("self.model_form must not be None")
+        form = self.model_form(  # pylint: disable=not-callable
             data=request.POST,
             files=request.FILES,
             initial=normalize_querydict(request.GET, form_class=self.model_form),
@@ -550,7 +568,7 @@ class ObjectDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     template_name: The name of the template
     """
 
-    queryset = None
+    queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
     template_name = "generic/object_delete.html"
 
     def get_required_permission(self):
@@ -630,9 +648,9 @@ class BulkCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     template_name: The name of the template
     """
 
-    queryset = None
-    form = None
-    model_form = None
+    queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
+    form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
+    model_form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
     pattern_target = ""
     template_name = None
 
@@ -642,12 +660,14 @@ class BulkCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     def get(self, request):
         # Set initial values for visible form fields from query args
         initial = {}
+        if self.form is None or self.model_form is None:
+            raise RuntimeError("self.form and self.model_form must not be None")
         for field in getattr(self.model_form._meta, "fields", []):
             if request.GET.get(field):
                 initial[field] = request.GET[field]
 
-        form = self.form()
-        model_form = self.model_form(initial=initial)
+        form = self.form()  # pylint: disable=not-callable
+        model_form = self.model_form(initial=initial)  # pylint: disable=not-callable
 
         return render(
             request,
@@ -662,9 +682,11 @@ class BulkCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
     def post(self, request):
         logger = logging.getLogger(__name__ + ".BulkCreateView")
+        if self.queryset is None or self.form is None or self.model_form is None:
+            raise RuntimeError("self.queryset, self.form, and self.model_form must not be None")
         model = self.queryset.model
-        form = self.form(request.POST)
-        model_form = self.model_form(request.POST)
+        form = self.form(request.POST)  # pylint: disable=not-callable
+        model_form = self.model_form(request.POST)  # pylint: disable=not-callable
 
         if form.is_valid():
             logger.debug("Form validation was successful")
@@ -677,7 +699,7 @@ class BulkCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                     for value in pattern:
                         # Reinstantiate the model form each time to avoid overwriting the same instance. Use a mutable
                         # copy of the POST QueryDict so that we can update the target field value.
-                        model_form = self.model_form(request.POST.copy())
+                        model_form = self.model_form(request.POST.copy())  # pylint: disable=not-callable
                         model_form.data[self.pattern_target] = value
 
                         # Validate each new object independently.
@@ -739,8 +761,8 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     template_name: The name of the template
     """
 
-    queryset = None
-    model_form = None
+    queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
+    model_form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
     related_object_forms = {}
     template_name = "generic/object_import.html"
 
@@ -764,12 +786,15 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         logger = logging.getLogger(__name__ + ".ObjectImportView")
         form = ImportForm(request.POST)
 
+        if self.model_form is None or self.queryset is None:
+            raise RuntimeError("self.model_form and self.queryset must not be None")
+
         if form.is_valid():
             logger.debug("Import form validation was successful")
 
             # Initialize model form
             data = form.cleaned_data["data"]
-            model_form = self.model_form(data)
+            model_form = self.model_form(data)  # pylint: disable=not-callable
             restrict_form_fields(model_form, request.user)
 
             # Assign default values for any fields which were not specified. We have to do this manually because passing
@@ -884,8 +909,8 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):  #
     template_name: The name of the template
     """
 
-    queryset = None
-    table = None
+    queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
+    table: Optional[type[Table]] = None  # TODO: required, declared Optional only to avoid a breaking change
     template_name = "generic/object_bulk_import.html"
 
     def __init__(self, *args, **kwargs):
@@ -929,6 +954,9 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):  #
         if form.is_valid():
             logger.debug("Form validation was successful")
 
+            if self.queryset is None or self.table is None:
+                raise RuntimeError("self.queryset and self.table must not be None")
+
             try:
                 # Iterate through CSV data and bind each row to a new model form instance.
                 with transaction.atomic():
@@ -939,7 +967,7 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):  #
                         raise ObjectDoesNotExist
 
                 # Compile a table containing the imported objects
-                obj_table = self.table(new_objs)
+                obj_table = self.table(new_objs)  # pylint: disable=not-callable
 
                 if new_objs:
                     msg = f"Imported {len(new_objs)} {new_objs[0]._meta.verbose_name_plural}"
@@ -979,7 +1007,7 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):  #
         )
 
 
-class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDeleteAllModelMixin, View):
+class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditAndBulkDeleteModelMixin, View):
     """
     Edit objects in bulk.
 
@@ -990,10 +1018,10 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDele
     template_name: The name of the template
     """
 
-    queryset = None
-    filterset = None
-    table = None
-    form = None
+    queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
+    filterset: Optional[type[FilterSet]] = None
+    table: Optional[type[Table]] = None  # TODO: required, declared Optional only to avoid a breaking change
+    form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
     template_name = "generic/object_bulk_edit.html"
 
     def get_required_permission(self):
@@ -1012,6 +1040,8 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDele
 
     def post(self, request, **kwargs):
         logger = logging.getLogger(__name__ + ".BulkEditView")
+        if self.queryset is None or self.form is None or self.table is None:
+            raise RuntimeError("self.queryset, self.form, and self.table must not be None")
         model = self.queryset.model
         edit_all = request.POST.get("_all")
 
@@ -1024,98 +1054,12 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDele
             queryset = self.queryset.filter(pk__in=pk_list)
 
         if "_apply" in request.POST:
-            form = self.form(model, request.POST, edit_all=edit_all)
+            form = self.form(model, request.POST, edit_all=edit_all)  # pylint: disable=not-callable
             restrict_form_fields(form, request.user)
 
             if form.is_valid():
                 logger.debug("Form validation was successful")
-                form_custom_fields = getattr(form, "custom_fields", [])
-                form_relationships = getattr(form, "relationships", [])
-                standard_fields = [
-                    field
-                    for field in form.fields
-                    if field not in form_custom_fields + form_relationships + ["pk"] + ["object_note"]
-                ]
-                nullified_fields = request.POST.getlist("_nullify")
-
-                try:
-                    with deferred_change_logging_for_bulk_operation():
-                        updated_objects = []
-                        queryset = queryset if edit_all else queryset.filter(pk__in=form.cleaned_data["pk"])
-                        for obj in queryset:
-                            obj = self.alter_obj(obj, request, [], kwargs)
-
-                            # Update standard fields. If a field is listed in _nullify, delete its value.
-                            for name in standard_fields:
-                                try:
-                                    model_field = model._meta.get_field(name)
-                                except FieldDoesNotExist:
-                                    # This form field is used to modify a field rather than set its value directly
-                                    model_field = None
-
-                                # Handle nullification
-                                if name in form.nullable_fields and name in nullified_fields:
-                                    if isinstance(model_field, ManyToManyField):
-                                        getattr(obj, name).set([])
-                                    else:
-                                        setattr(obj, name, None if model_field is not None and model_field.null else "")
-
-                                # ManyToManyFields
-                                elif isinstance(model_field, ManyToManyField):
-                                    if form.cleaned_data[name]:
-                                        getattr(obj, name).set(form.cleaned_data[name])
-                                # Normal fields
-                                elif form.cleaned_data[name] not in (None, ""):
-                                    setattr(obj, name, form.cleaned_data[name])
-
-                            # Update custom fields
-                            for field_name in form_custom_fields:
-                                if field_name in form.nullable_fields and field_name in nullified_fields:
-                                    obj.cf[remove_prefix_from_cf_key(field_name)] = None
-                                elif form.cleaned_data.get(field_name) not in (None, "", []):
-                                    obj.cf[remove_prefix_from_cf_key(field_name)] = form.cleaned_data[field_name]
-
-                            obj.full_clean()
-                            obj.save()
-                            updated_objects.append(obj)
-                            logger.debug(f"Saved {obj} (PK: {obj.pk})")
-
-                            # Add/remove tags
-                            if form.cleaned_data.get("add_tags", None):
-                                obj.tags.add(*form.cleaned_data["add_tags"])
-                            if form.cleaned_data.get("remove_tags", None):
-                                obj.tags.remove(*form.cleaned_data["remove_tags"])
-
-                            if hasattr(form, "save_relationships") and callable(form.save_relationships):
-                                # Add/remove relationship associations
-                                form.save_relationships(instance=obj, nullified_fields=nullified_fields)
-
-                            if hasattr(form, "save_note") and callable(form.save_note):
-                                form.save_note(instance=obj, user=request.user)
-
-                            self.extra_post_save_action(obj, form)
-
-                        # Enforce object-level permissions
-                        if self.queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(
-                            updated_objects
-                        ):
-                            raise ObjectDoesNotExist
-
-                    if updated_objects:
-                        msg = f"Updated {len(updated_objects)} {model._meta.verbose_name_plural}"
-                        logger.info(msg)
-                        messages.success(self.request, msg)
-
-                    return redirect(self.get_return_url(request))
-
-                except ValidationError as e:
-                    messages.error(self.request, f"{obj} failed validation: {e}")
-
-                except ObjectDoesNotExist:
-                    msg = "Object update failed due to object-level permissions violation"
-                    logger.debug(msg)
-                    form.add_error(None, msg)
-
+                return self.send_bulk_edit_objects_to_job(request, form.cleaned_data, model)
             else:
                 logger.debug("Form validation failed")
 
@@ -1131,13 +1075,13 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDele
             elif "device_type" in request.GET:
                 initial_data["device_type"] = request.GET.get("device_type")
 
-            form = self.form(model, initial=initial_data, edit_all=edit_all)
+            form = self.form(model, initial=initial_data, edit_all=edit_all)  # pylint: disable=not-callable
             restrict_form_fields(form, request.user)
 
         # Retrieve objects being edited
         table = None
         if not edit_all:
-            table = self.table(queryset, orderable=False)
+            table = self.table(queryset, orderable=False)  # pylint: disable=not-callable
             if not table.rows:
                 messages.warning(request, f"No {model._meta.verbose_name_plural} were selected.")
                 return redirect(self.get_return_url(request))
@@ -1164,7 +1108,7 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     An extendable view for renaming objects in bulk.
     """
 
-    queryset = None
+    queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
     template_name = "generic/object_bulk_rename.html"
 
     def __init__(self, *args, **kwargs):
@@ -1259,7 +1203,7 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         return ""
 
 
-class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDeleteAllModelMixin, View):
+class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditAndBulkDeleteModelMixin, View):
     """
     Delete objects in bulk.
 
@@ -1270,10 +1214,10 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDe
     template_name: The name of the template
     """
 
-    queryset = None
-    filterset = None
-    table = None
-    form = None
+    queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
+    filterset: Optional[type[FilterSet]] = None
+    table: Optional[type[Table]] = None  # TODO: required, declared Optional only to avoid a breaking change
+    form: Optional[type[Form]] = None
     template_name = "generic/object_bulk_delete.html"
 
     def get_required_permission(self):
@@ -1282,48 +1226,32 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDe
     def get(self, request):
         return redirect(self.get_return_url(request))
 
-    def _perform_delete_operation(self, request, queryset, model):
-        logger = logging.getLogger(__name__ + ".BulkDeleteView")
-        self.perform_pre_delete(request, queryset)
-        try:
-            _, deleted_info = bulk_delete_with_bulk_change_logging(queryset)
-            deleted_count = deleted_info[model._meta.label]
-        except ProtectedError as e:
-            logger.info("Caught ProtectedError while attempting to delete objects")
-            handle_protectederror(queryset, request, e)
-            return redirect(self.get_return_url(request))
-        msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
-        logger.info(msg)
-        messages.success(request, msg)
-        return redirect(self.get_return_url(request))
-
     def post(self, request, **kwargs):
         logger = logging.getLogger(f"{__name__}.BulkDeleteView")
+        if self.queryset is None or self.table is None:
+            raise RuntimeError("self.queryset and self.table must not be None")
         model = self.queryset.model
+        delete_all = request.POST.get("_all")
 
         # Are we deleting *all* objects in the queryset or just a selected subset?
-        if request.POST.get("_all"):
+        if delete_all:
             queryset = self._get_bulk_edit_delete_all_queryset(request)
-
-            if "_confirm" in request.POST:
-                return self._perform_delete_operation(request, queryset, model)
-
-            context = self._bulk_delete_all_context(request, queryset)
-            context.update(self.extra_context())
-            return render(request, self.template_name, context)
-
-        pk_list = request.POST.getlist("pk")
+            pk_list = []
+        else:
+            pk_list = request.POST.getlist("pk")
+            queryset = self.queryset.filter(pk__in=pk_list)
 
         form_cls = self.get_form()
 
         if "_confirm" in request.POST:
             form = form_cls(request.POST)
+            # Set pk field requirement here instead of BulkDeleteForm since get_form() may return a different form class
+            if delete_all:
+                form.fields["pk"].required = False
+
             if form.is_valid():
                 logger.debug("Form validation was successful")
-
-                # Delete objects
-                queryset = self.queryset.filter(pk__in=pk_list)
-                return self._perform_delete_operation(request, queryset, model)
+                return self.send_bulk_delete_objects_to_job(request, pk_list, model, delete_all)
             else:
                 logger.debug("Form validation failed")
 
@@ -1336,23 +1264,26 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDe
             )
 
         # Retrieve objects being deleted
-        table = self.table(self.queryset.filter(pk__in=pk_list), orderable=False)
-        if not table.rows:
-            messages.warning(
-                request,
-                f"No {model._meta.verbose_name_plural} were selected for deletion.",
-            )
-            return redirect(self.get_return_url(request))
-        # Hide actions column if present
-        if "actions" in table.columns:
-            table.columns.hide("actions")
+        table = None
+        if not delete_all:
+            table = self.table(queryset, orderable=False)  # pylint: disable=not-callable
+            if not table.rows:
+                messages.warning(
+                    request,
+                    f"No {model._meta.verbose_name_plural} were selected for deletion.",
+                )
+                return redirect(self.get_return_url(request))
+            # Hide actions column if present
+            if "actions" in table.columns:
+                table.columns.hide("actions")
 
         context = {
             "form": form,
             "obj_type_plural": model._meta.verbose_name_plural,
             "table": table,
             "return_url": self.get_return_url(request),
-            "total_objs_to_delete": len(table.rows),
+            "total_objs_to_delete": queryset.count(),
+            "delete_all": delete_all,
         }
         context.update(self.extra_context())
         return render(request, self.template_name, context)
@@ -1388,17 +1319,19 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
     Add one or more components (e.g. interfaces, console ports, etc.) to a Device or VirtualMachine.
     """
 
-    queryset = None
-    form = None
-    model_form = None
+    queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
+    form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
+    model_form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
     template_name = "dcim/device_component_add.html"
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "add")
 
     def get(self, request):
-        form = self.form(initial=normalize_querydict(request.GET, form_class=self.form))
-        model_form = self.model_form(request.GET)
+        if self.form is None or self.model_form is None:
+            raise RuntimeError("self.form and self.model_form must not be None")
+        form = self.form(initial=normalize_querydict(request.GET, form_class=self.form))  # pylint: disable=not-callable
+        model_form = self.model_form(request.GET)  # pylint: disable=not-callable
 
         return render(
             request,
@@ -1413,8 +1346,10 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
 
     def post(self, request):
         logger = logging.getLogger(__name__ + ".ComponentCreateView")
-        form = self.form(request.POST, initial=normalize_querydict(request.GET, form_class=self.form))
-        model_form = self.model_form(request.POST, initial=normalize_querydict(request.GET, form_class=self.model_form))
+        if self.form is None or self.model_form is None or self.queryset is None:
+            raise RuntimeError("self.form, self.model_form, and self.queryset must not be None")
+        form = self.form(request.POST, initial=normalize_querydict(request.GET, form_class=self.form))  # pylint: disable=not-callable
+        model_form = self.model_form(request.POST, initial=normalize_querydict(request.GET, form_class=self.model_form))  # pylint: disable=not-callable
 
         if form.is_valid():
             new_components = []
@@ -1429,7 +1364,7 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
                 data["label"] = label
                 if hasattr(form, "get_iterative_data"):
                     data.update(form.get_iterative_data(i))
-                component_form = self.model_form(
+                component_form = self.model_form(  # pylint: disable=not-callable
                     data, initial=normalize_querydict(request.GET, form_class=self.model_form)
                 )
 
@@ -1490,13 +1425,13 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
     Add one or more components (e.g. interfaces, console ports, etc.) to a set of Devices or VirtualMachines.
     """
 
-    parent_model = None
+    parent_model: Optional[type[Model]] = None  # TODO: required, declared Optional only to avoid a breaking change
     parent_field = None
-    form = None
-    queryset = None
-    model_form = None
-    filterset = None
-    table = None
+    form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
+    queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
+    model_form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
+    filterset: Optional[type[FilterSet]] = None
+    table: Optional[type[Table]] = None  # TODO: required, declared Optional only to avoid a breaking change
     template_name = "generic/object_bulk_add_component.html"
 
     def get_required_permission(self):
@@ -1504,13 +1439,23 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
 
     def post(self, request):
         logger = logging.getLogger(__name__ + ".BulkComponentCreateView")
+        if (
+            self.form is None
+            or self.model_form is None
+            or self.parent_model is None
+            or self.queryset is None
+            or self.table is None
+        ):
+            raise RuntimeError(
+                "self.form, self.model_form, self.parent_model, self.queryset, and self.table must not be None"
+            )
         parent_model_name = self.parent_model._meta.verbose_name_plural
         model_name = self.queryset.model._meta.verbose_name_plural
         model = self.queryset.model
 
         # Are we editing *all* objects in the queryset or just a selected subset?
         if request.POST.get("_all") and self.filterset is not None:
-            pk_list = [obj.pk for obj in self.filterset(request.GET, self.parent_model.objects.only("pk")).qs]
+            pk_list = [obj.pk for obj in self.filterset(request.GET, self.parent_model.objects.only("pk")).qs]  # pylint: disable=not-callable
         else:
             pk_list = request.POST.getlist("pk")
 
@@ -1521,10 +1466,10 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
                 f"No {self.parent_model._meta.verbose_name_plural} were selected.",
             )
             return redirect(self.get_return_url(request))
-        table = self.table(selected_objects)
+        table = self.table(selected_objects)  # pylint: disable=not-callable
 
         if "_create" in request.POST:
-            form = self.form(model, request.POST)
+            form = self.form(model, request.POST)  # pylint: disable=not-callable
 
             if form.is_valid():
                 logger.debug("Form validation was successful")
@@ -1546,7 +1491,7 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
                                     "label": label,
                                 }
                                 component_data.update(data)
-                                component_form = self.model_form(component_data)
+                                component_form = self.model_form(component_data)  # pylint: disable=not-callable
                                 if component_form.is_valid():
                                     instance = component_form.save()
                                     logger.debug(f"Created {instance} on {instance.parent}")
@@ -1588,7 +1533,7 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
                 logger.debug("Form validation failed")
 
         else:
-            form = self.form(model, initial={"pk": pk_list})
+            form = self.form(model, initial={"pk": pk_list})  # pylint: disable=not-callable
 
         return render(
             request,

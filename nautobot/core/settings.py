@@ -1,3 +1,4 @@
+import datetime
 import os
 import os.path
 import platform
@@ -10,7 +11,11 @@ import django.forms
 from django.utils.safestring import mark_safe
 
 from nautobot import __version__
-from nautobot.core.constants import CONFIG_SETTING_SEPARATOR as _CONFIG_SETTING_SEPARATOR
+from nautobot.core.constants import (
+    CONFIG_SETTING_SEPARATOR as _CONFIG_SETTING_SEPARATOR,
+    MAX_PAGE_SIZE_DEFAULT as _MAX_PAGE_SIZE_DEFAULT,
+    PAGINATE_COUNT_DEFAULT as _PAGINATE_COUNT_DEFAULT,
+)
 from nautobot.core.settings_funcs import ConstanceConfigItem, is_truthy, parse_redis_connection
 
 #
@@ -96,6 +101,9 @@ if "NAUTOBOT_DEPLOYMENT_ID" in os.environ and os.environ["NAUTOBOT_DEPLOYMENT_ID
 if "NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY" in os.environ and os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"] != "":
     DEVICE_NAME_AS_NATURAL_KEY = is_truthy(os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"])
 
+# Event Brokers
+EVENT_BROKERS = {}
+
 # Exclude potentially sensitive models from wildcard view exemption. These may still be exempted
 # by specifying the model individually in the EXEMPT_VIEW_PERMISSIONS configuration parameter.
 EXEMPT_EXCLUDE_MODELS = (
@@ -155,6 +163,16 @@ NAPALM_ARGS = {}
 NAPALM_PASSWORD = os.getenv("NAUTOBOT_NAPALM_PASSWORD", "")
 NAPALM_TIMEOUT = int(os.getenv("NAUTOBOT_NAPALM_TIMEOUT", "30"))
 NAPALM_USERNAME = os.getenv("NAUTOBOT_NAPALM_USERNAME", "")
+
+# Expiration date (YYYY-MM-DD) for an active Nautobot support contract with Network to Code.
+# Displayed in the About page.
+if (
+    "NAUTOBOT_NTC_SUPPORT_CONTRACT_EXPIRATION_DATE" in os.environ
+    and os.environ["NAUTOBOT_NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"] != ""
+):
+    NTC_SUPPORT_CONTRACT_EXPIRATION_DATE = datetime.date.fromisoformat(
+        os.environ["NAUTOBOT_NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"]
+    )
 
 # Default number of objects to display per page of the UI and REST API. Default is 50
 if "NAUTOBOT_PAGINATE_COUNT" in os.environ and os.environ["NAUTOBOT_PAGINATE_COUNT"] != "":
@@ -268,20 +286,6 @@ TEST_RUNNER = "nautobot.core.tests.runner.NautobotTestRunner"
 TEST_USE_FACTORIES = is_truthy(os.getenv("NAUTOBOT_TEST_USE_FACTORIES", "False"))
 # Pseudo-random number generator seed, for reproducibility of test results.
 TEST_FACTORY_SEED = os.getenv("NAUTOBOT_TEST_FACTORY_SEED", None)
-
-#
-# django-slowtests
-#
-
-# Performance test uses `NautobotPerformanceTestRunner` to run, which is only available once you have `django-slowtests` installed in your dev environment.
-# `invoke performance-test` and adding `--performance-report` or `--performance-snapshot` at the end of the `invoke` command
-# will automatically opt to NautobotPerformanceTestRunner to run the tests.
-
-# The baseline file that the performance test is running against
-# TODO we need to replace the baselines in this file with more consistent results at least for CI
-TEST_PERFORMANCE_BASELINE_FILE = os.getenv(
-    "NAUTOBOT_TEST_PERFORMANCE_BASELINE_FILE", "nautobot/core/tests/performance_baselines.yml"
-)
 
 #
 # Django Prometheus
@@ -404,6 +408,11 @@ SPECTACULAR_SETTINGS = {
         #    enum naming encountered a non-optimally resolvable collision for fields named "protocol".
         "InterfaceRedundancyGroupProtocolChoices": "nautobot.dcim.choices.InterfaceRedundancyGroupProtocolChoices",
         "ServiceProtocolChoices": "nautobot.ipam.choices.ServiceProtocolChoices",
+        # These choice enums need to be overridden because they get assigned to the `mode` field and
+        # result in this error:
+        #    enum naming encountered a non-optimally resolvable collision for fields named "mode".
+        "InterfaceModeChoices": "nautobot.dcim.choices.InterfaceModeChoices",
+        "WirelessNetworkModeChoices": "nautobot.wireless.choices.WirelessNetworkModeChoices",
     },
     # Create separate schema components for PATCH requests (fields generally are not `required` on PATCH)
     "COMPONENT_SPLIT_PATCH": True,
@@ -553,6 +562,7 @@ INSTALLED_APPS = [
     "nautobot.tenancy",
     "nautobot.users",
     "nautobot.virtualization",
+    "nautobot.wireless",
     "drf_spectacular",
     "drf_spectacular_sidecar",
     "graphene_django",
@@ -583,6 +593,7 @@ MIDDLEWARE = [
     "nautobot.core.middleware.RemoteUserMiddleware",
     "nautobot.core.middleware.ExternalAuthMiddleware",
     "nautobot.core.middleware.ObjectChangeMiddleware",
+    "nautobot.core.middleware.UserDefinedTimeZoneMiddleware",
     "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
 
@@ -707,6 +718,13 @@ CONSTANCE_ADDITIONAL_FIELDS = {
             "required": False,
         },
     ],
+    "optional_date_field": [
+        "django.forms.DateField",
+        {
+            "widget": "nautobot.core.forms.widgets.DatePicker",
+            "required": False,
+        },
+    ],
 }
 
 CONSTANCE_CONFIG = {
@@ -761,13 +779,13 @@ CONSTANCE_CONFIG = {
         field_type=bool,
     ),
     "MAX_PAGE_SIZE": ConstanceConfigItem(
-        default=1000,
+        default=_MAX_PAGE_SIZE_DEFAULT,
         help_text="Maximum number of objects that a user can list in one UI page or one API call.\n"
         "If set to 0, a user can retrieve an unlimited number of objects.",
         field_type=int,
     ),
     "PAGINATE_COUNT": ConstanceConfigItem(
-        default=50,
+        default=_PAGINATE_COUNT_DEFAULT,
         help_text="Default number of objects to display per page when listing objects in the UI and/or REST API.",
         field_type=int,
     ),
@@ -791,6 +809,12 @@ CONSTANCE_CONFIG = {
         ),
         # Use custom field type defined above
         field_type="optional_json_field",
+    ),
+    "NTC_SUPPORT_CONTRACT_EXPIRATION_DATE": ConstanceConfigItem(
+        default="",
+        help_text="Expiration date for an active Nautobot support contract with Network to Code. "
+        "This value is displayed in the About page to provide additional support information.",
+        field_type="optional_date_field",
     ),
     "PREFER_IPV4": ConstanceConfigItem(
         default=False,
@@ -845,7 +869,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
         "RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT",
     ],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
-    "User Interface": ["SUPPORT_MESSAGE"],
+    "User Interface": ["SUPPORT_MESSAGE", "NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"],
     "Debugging": ["ALLOW_REQUEST_PROFILING"],
 }
 
@@ -1113,3 +1137,29 @@ def silk_request_logging_intercept_logic(request):
 
 
 SILKY_INTERCEPT_FUNC = silk_request_logging_intercept_logic
+
+#
+# Kubernetes settings variables
+#
+
+# Host of the kubernetes pod created in the kubernetes cluster
+KUBERNETES_DEFAULT_SERVICE_ADDRESS = os.getenv("NAUTOBOT_KUBERNETES_DEFAULT_SERVICE_ADDRESS", "")
+
+# A dictionary that stores the kubernetes pod manifest used to create a job pod in the kubernetes cluster
+KUBERNETES_JOB_MANIFEST = {}
+
+# Name of the kubernetes pod created in the kubernetes cluster
+KUBERNETES_JOB_POD_NAME = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_NAME", "")
+
+# Namespace of the kubernetes pod created in the kubernetes cluster
+KUBERNETES_JOB_POD_NAMESPACE = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_NAMESPACE", "")
+
+# File path to the SSL CA CERT used for authentication to create the job and job pod
+KUBERNETES_SSL_CA_CERT_PATH = os.getenv(
+    "NAUTOBOT_KUBERNETES_SSL_CA_CERT_PATH", "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+)
+
+# File path to the Bearer token used for authentication to create the job and job pod
+KUBERNETES_TOKEN_PATH = os.getenv(
+    "NAUTOBOT_KUBERNETES_TOKEN_PATH", "/var/run/secrets/kubernetes.io/serviceaccount/token"
+)

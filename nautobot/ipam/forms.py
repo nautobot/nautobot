@@ -23,7 +23,7 @@ from nautobot.dcim.form_mixins import (
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
 )
-from nautobot.dcim.models import Device, Location, Rack
+from nautobot.dcim.models import Device, Location, Rack, VirtualDeviceContext
 from nautobot.extras.forms import (
     NautobotBulkEditForm,
     NautobotFilterForm,
@@ -111,6 +111,9 @@ class VRFForm(NautobotModelForm, TenancyForm):
     namespace = DynamicModelChoiceField(queryset=Namespace.objects.all())
     devices = DynamicModelMultipleChoiceField(queryset=Device.objects.all(), required=False)
     virtual_machines = DynamicModelMultipleChoiceField(queryset=VirtualMachine.objects.all(), required=False)
+    virtual_device_contexts = DynamicModelMultipleChoiceField(
+        queryset=VirtualDeviceContext.objects.all(), required=False
+    )
     prefixes = DynamicModelMultipleChoiceField(
         queryset=Prefix.objects.all(),
         required=False,
@@ -134,6 +137,7 @@ class VRFForm(NautobotModelForm, TenancyForm):
             "tags",
             "devices",
             "virtual_machines",
+            "virtual_device_contexts",
             "prefixes",
         ]
         labels = {
@@ -155,6 +159,14 @@ class VRFBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, Nauto
     )
     remove_prefixes = DynamicModelMultipleChoiceField(
         queryset=Prefix.objects.all(), required=False, query_params={"namespace": "$namespace"}
+    )
+    add_virtual_device_contexts = DynamicModelMultipleChoiceField(
+        queryset=VirtualDeviceContext.objects.all(),
+        required=False,
+    )
+    remove_virtual_device_contexts = DynamicModelMultipleChoiceField(
+        queryset=VirtualDeviceContext.objects.all(),
+        required=False,
     )
 
     class Meta:
@@ -248,6 +260,21 @@ class RIRFilterForm(NautobotFilterForm):
         label="Private",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
+
+
+class RIRBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=RIR.objects.all(), widget=forms.MultipleHiddenInput())
+    is_private = forms.NullBooleanField(
+        required=False,
+        label="Private",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    class Meta:
+        nullable_fields = [
+            "description",
+        ]
 
 
 #
@@ -674,13 +701,9 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         "has_nat_inside",
     ]
     q = forms.CharField(required=False, label="Search")
-    parent = forms.CharField(
+    parent = DynamicModelMultipleChoiceField(
+        queryset=Prefix.objects.all(),
         required=False,
-        widget=forms.TextInput(
-            attrs={
-                "placeholder": "Prefix",
-            }
-        ),
         label="Parent Prefix",
     )
     ip_version = forms.ChoiceField(
@@ -719,6 +742,18 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
 #
 # VLAN groups
 #
+
+
+class VLANGroupBulkEditForm(LocatableModelBulkEditFormMixin, NautobotBulkEditForm):
+    """Bulk edit form for VLANGroup objects."""
+
+    pk = forms.ModelMultipleChoiceField(queryset=VLANGroup.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    range = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    class Meta:
+        model = VLANGroup
+        nullable_fields = ["location", "description"]
 
 
 class VLANGroupForm(LocatableModelFormMixin, NautobotModelForm):

@@ -1,6 +1,7 @@
 import datetime
 from decimal import Decimal
 import unittest
+import zoneinfo
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -9,11 +10,6 @@ from django.test import override_settings
 from django.urls import reverse
 from netaddr import EUI
 import yaml
-
-try:
-    import zoneinfo
-except ImportError:  # python 3.8
-    from backports import zoneinfo
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
@@ -58,6 +54,7 @@ from nautobot.dcim.filters import (
     PowerConnectionFilterSet,
     SoftwareImageFileFilterSet,
     SoftwareVersionFilterSet,
+    VirtualDeviceContextFilterSet,
 )
 from nautobot.dcim.models import (
     Cable,
@@ -104,6 +101,7 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
 from nautobot.dcim.views import (
     ConsoleConnectionsListView,
@@ -118,6 +116,7 @@ from nautobot.extras.models import (
     CustomField,
     CustomFieldChoice,
     ExternalIntegration,
+    JobResult,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -162,7 +161,7 @@ def create_test_device(name):
     return device
 
 
-class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = LocationType
     sort_on_field = "nestable"
 
@@ -193,6 +192,13 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
                 ContentType.objects.get_for_model(Device).pk,
             ],
             "nestable": True,
+        }
+
+        cls.bulk_edit_data = {
+            "description": "A generic description",
+            "add_content_types": [
+                ContentType.objects.get_for_model(CircuitTermination).pk,
+            ],
         }
 
     def _get_queryset(self):
@@ -423,7 +429,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(location.contact_email, "")
 
 
-class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = RackGroup
     sort_on_field = "name"
 
@@ -444,6 +450,10 @@ class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "name": "Rack Group X",
             "location": location.pk,
             "description": "A new rack group",
+        }
+        cls.bulk_edit_data = {
+            "description": "Updated description",
+            "location": location.pk,
         }
 
 
@@ -744,6 +754,7 @@ class DeviceFamilyTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.form_data = {
             "name": "New Device Family",
             "description": "A new device family",
+            "tags": [t.pk for t in Tag.objects.get_for_model(DeviceFamily)],
         }
         cls.bulk_edit_data = {
             "description": "A new device family",
@@ -753,7 +764,7 @@ class DeviceFamilyTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         DeviceFamily.objects.create(name="Deletable Device Family 3")
 
 
-class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = Manufacturer
 
     @classmethod
@@ -761,6 +772,9 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         cls.form_data = {
             "name": "Manufacturer X",
             "description": "A new manufacturer",
+        }
+        cls.bulk_edit_data = {
+            "description": "Updated manufacturer description",
         }
 
     def get_deletable_object(self):
@@ -1153,9 +1167,15 @@ module-bays:
         }
 
         response = self.client.post(url, data)
+        job_result = JobResult.objects.filter(name="Bulk Edit Objects").first()
+        # Assert successfull redirect to Job Results; whcih means no form validation error was raised
+        self.assertRedirects(
+            response,
+            reverse("extras:jobresult", args=[job_result.pk]),
+            status_code=302,
+            target_status_code=200,
+        )
         self.assertHttpStatus(response, 302)
-        for instance in self._get_queryset().filter(pk__in=pk_list):
-            self.assertEqual(instance.u_height, data["u_height"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_rack_height_bulk_edit_invalid(self):
@@ -1171,7 +1191,12 @@ module-bays:
         }
 
         response = self.client.post(url, data)
-        self.assertBodyContains(response, "failed validation")
+        response_content = response.content.decode(response.charset)
+        self.assertHttpStatus(response, 200)
+        self.assertInHTML(
+            '<strong class="panel-title">U height</strong>: <ul class="errorlist"><li>Ensure this value is greater than or equal to 0.</li></ul>',
+            response_content,
+        )
 
 
 class ModuleTypeTestCase(
@@ -2015,7 +2040,7 @@ class ModuleBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
         }
 
 
-class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = Platform
 
     @classmethod
@@ -2034,6 +2059,13 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "napalm_args": None,
             "network_driver": "juniper_junos",
             "description": "A new platform",
+        }
+        cls.bulk_edit_data = {
+            "manufacturer": manufacturer.pk,
+            "napalm_driver": "iosxr",
+            "napalm_args": '{"timeout": 30, "retries": 3}',
+            "network_driver": "cisco_ios",
+            "description": "Updated platform description",
         }
 
 
@@ -2230,6 +2262,24 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "software_version": software_versions[1].pk,
             "controller_managed_device_group": ControllerManagedDeviceGroup.objects.first().pk,
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_vdc_panel_includes_add_vdc_btn(self):
+        """Assert Add Virtual device Contexts button is in Device detail view: Issue from #6348"""
+        device = Device.objects.first()
+        url = reverse("dcim:device", kwargs={"pk": device.pk})
+        response = self.client.get(url)
+        response_body = extract_page_body(response.content.decode(response.charset))
+
+        add_vdc_url = reverse("dcim:virtualdevicecontext_add")
+        return_url = device.get_absolute_url()
+        expected_add_vdc_button_html = f"""
+        <a href="{add_vdc_url}?device={device.id}&amp;return_url={return_url}" class="btn btn-primary btn-xs">
+            <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add virtual device context
+        </a>
+        """
+        self.assertInHTML(expected_add_vdc_button_html, response_body)
+        self.assertIn("Add virtual device context", response_body)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_consoleports(self):
@@ -3086,6 +3136,15 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
                 vlan_group=vlan_group,
             ),
         )
+        vdcs = [
+            VirtualDeviceContext.objects.create(
+                name=f"Interface VirtualDeviceContext {i}",
+                device=device,
+                status=Status.objects.get_for_model(VirtualDeviceContext).first(),
+                identifier=100 + i,
+            )
+            for i in range(2)
+        ]
 
         cls.form_data = {
             "device": device.pk,
@@ -3102,6 +3161,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
+            "virtual_device_contexts": [v.pk for v in vdcs],
             "tags": [t.pk for t in Tag.objects.get_for_model(Interface)],
         }
 
@@ -3124,6 +3184,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "status": status_active.pk,
             "role": role.pk,
             "vrf": vrfs[0].pk,
+            "virtual_device_contexts": [v.pk for v in vdcs],
         }
 
         cls.bulk_add_data = {
@@ -4532,6 +4593,7 @@ class SoftwareImageFileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         device_types = DeviceType.objects.all()[:2]
         statuses = Status.objects.get_for_model(SoftwareImageFile)
         software_versions = SoftwareVersion.objects.all()
+        external_integration = ExternalIntegration.objects.first()
 
         cls.form_data = {
             "software_version": software_versions[0].pk,
@@ -4541,6 +4603,7 @@ class SoftwareImageFileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "image_file_size": 1234567890,
             "hashing_algorithm": SoftwareImageFileHashingAlgorithmChoices.SHA512,
             "download_url": "https://example.com/software_image_file_test_case.bin",
+            "external_integration": external_integration.pk,
             "device_types": [device_types[0].pk, device_types[1].pk],
         }
 
@@ -4551,47 +4614,8 @@ class SoftwareImageFileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "hashing_algorithm": SoftwareImageFileHashingAlgorithmChoices.SHA512,
             "image_file_size": 1234567890,
             "download_url": "https://example.com/software_image_file_test_case.bin",
+            "external_integration": external_integration.pk,
         }
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_correct_handling_for_model_protected_error(self):
-        platform = Platform.objects.first()
-        software_version_status = Status.objects.get_for_model(SoftwareVersion).first()
-        software_image_file_status = Status.objects.get_for_model(SoftwareImageFile).first()
-        software_version = SoftwareVersion.objects.create(
-            platform=platform, version="Test version 1.0.0", status=software_version_status
-        )
-        software_image_file = SoftwareImageFile.objects.create(
-            software_version=software_version,
-            image_file_name="software_image_file_qs_test_1.bin",
-            status=software_image_file_status,
-        )
-        device_type = DeviceType.objects.first()
-        device_role = Role.objects.get_for_model(Device).first()
-        device_status = Status.objects.get_for_model(Device).first()
-        location = Location.objects.filter(location_type__name="Campus").first()
-        Device.objects.create(
-            device_type=device_type,
-            role=device_role,
-            name="Device 1",
-            location=location,
-            status=device_status,
-            software_version=software_version,
-        )
-        device_type_to_software_image_file = DeviceTypeToSoftwareImageFile.objects.create(
-            device_type=device_type, software_image_file=software_image_file
-        )
-
-        self.add_permissions("dcim.delete_softwareimagefile")
-        pk_list = [software_image_file.pk]
-        data = {
-            "pk": pk_list,
-            "confirm": True,
-            "_confirm": True,  # Form button
-        }
-        response = self.client.post(self._get_url("bulk_delete"), data, follow=True)
-        # Assert protected error message included in the response body
-        self.assertBodyContains(response, f"<span>{device_type_to_software_image_file}</span>", html=True)
 
 
 class SoftwareVersionTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -4630,46 +4654,6 @@ class SoftwareVersionTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "long_term_support": False,
             "pre_release": True,
         }
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_correct_handling_for_model_protected_error(self):
-        platform = Platform.objects.first()
-        software_version_status = Status.objects.get_for_model(SoftwareVersion).first()
-        software_image_file_status = Status.objects.get_for_model(SoftwareImageFile).first()
-        software_version = SoftwareVersion.objects.create(
-            platform=platform, version="Test version 1.0.0", status=software_version_status
-        )
-        software_image_file = SoftwareImageFile.objects.create(
-            software_version=software_version,
-            image_file_name="software_image_file_qs_test_1.bin",
-            status=software_image_file_status,
-        )
-        device_type = DeviceType.objects.first()
-        device_role = Role.objects.get_for_model(Device).first()
-        device_status = Status.objects.get_for_model(Device).first()
-        location = Location.objects.filter(location_type__name="Campus").first()
-        Device.objects.create(
-            device_type=device_type,
-            role=device_role,
-            name="Device 1",
-            location=location,
-            status=device_status,
-            software_version=software_version,
-        )
-        device_type_to_software_image_file = DeviceTypeToSoftwareImageFile.objects.create(
-            device_type=device_type, software_image_file=software_image_file
-        )
-
-        self.add_permissions("dcim.delete_softwareversion")
-        pk_list = [software_version.pk]
-        data = {
-            "pk": pk_list,
-            "confirm": True,
-            "_confirm": True,  # Form button
-        }
-        response = self.client.post(self._get_url("bulk_delete"), data, follow=True)
-        # Assert protected error message included in the response body
-        self.assertBodyContains(response, f"<span>{device_type_to_software_image_file}</span>", html=True)
 
 
 class ControllerTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -4721,8 +4705,79 @@ class ControllerManagedDeviceGroupTestCase(ViewTestCases.PrimaryObjectViewTestCa
             "controller": controllers[0].pk,
             "weight": 100,
             "devices": [item.pk for item in Device.objects.all()[:2]],
+            # Management form fields required for the dynamic Wireless Network formset
+            "wireless_network_assignments-TOTAL_FORMS": "0",
+            "wireless_network_assignments-INITIAL_FORMS": "1",
+            "wireless_network_assignments-MIN_NUM_FORMS": "0",
+            "wireless_network_assignments-MAX_NUM_FORMS": "1000",
         }
 
         cls.bulk_edit_data = {
             "weight": 300,
         }
+
+
+class VirtualDeviceContextTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = VirtualDeviceContext
+    filterset = VirtualDeviceContextFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        devices = Device.objects.filter(interfaces__isnull=False)
+        vdc_status = Status.objects.get_for_model(VirtualDeviceContext)[0]
+        tenants = Tenant.objects.all()
+
+        cls.form_data = {
+            "name": "Virtual Device Context 1",
+            "device": devices[0].pk,
+            "identifier": 100,
+            "status": vdc_status.pk,
+            "tenant": tenants[0].pk,
+            "interfaces": [interface.pk for interface in devices[0].all_interfaces[:3]],
+            "description": "Sample Description",
+        }
+
+        cls.update_data = {
+            "name": "Virtual Device Context 3",
+            "tenant": tenants[3].pk,
+            "status": vdc_status.pk,
+        }
+
+        cls.bulk_edit_data = {
+            "tenant": tenants[1].pk,
+        }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_update_vdc_primary_ips(self):
+        """Test assigning a primary IP to a virtual device context."""
+        self.add_permissions("dcim.change_virtualdevicecontext")
+        vdc = VirtualDeviceContext.objects.first()
+        device = vdc.device
+        intf_status = Status.objects.get_for_model(Interface).first()
+        intf_role = Role.objects.get_for_model(Interface).first()
+        interface = Interface.objects.create(
+            name="Int1",
+            device=device,
+            status=intf_status,
+            role=intf_role,
+            type=InterfaceTypeChoices.TYPE_100GE_CFP,
+        )
+        ip_v4 = IPAddress.objects.filter(ip_version=4).first()
+        ip_v6 = IPAddress.objects.filter(ip_version=6).first()
+        interface.virtual_device_contexts.add(vdc)
+        interface.add_ip_addresses([ip_v4, ip_v6])
+
+        form_data = self.form_data.copy()
+        form_data["device"] = vdc.device
+        form_data["interfaces"] = [interface.pk]
+        form_data["primary_ip4"] = ip_v4.pk
+        form_data["primary_ip6"] = ip_v6.pk
+        # Assert that update succeeds.
+        request = {
+            "path": self._get_url("edit", vdc),
+            "data": post_data(form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        vdc.refresh_from_db()
+        self.assertEqual(vdc.primary_ip6, ip_v6)
+        self.assertEqual(vdc.primary_ip4, ip_v4)

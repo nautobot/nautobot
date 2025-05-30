@@ -35,6 +35,8 @@ from nautobot.dcim.graphql.types import (
     FrontPortType,
     InterfaceType,
     LocationType,
+    ModuleBayType,
+    ModuleType,
     PlatformType,
     PowerFeedType,
     PowerOutletType,
@@ -43,7 +45,7 @@ from nautobot.dcim.graphql.types import (
     RearPortType,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
-from nautobot.extras.graphql.types import ContactAssociationType, DynamicGroupType, TagType
+from nautobot.extras.graphql.types import ContactAssociationType, DynamicGroupType, JobType, ScheduledJobType, TagType
 from nautobot.extras.models import ComputedField, CustomField, Relationship
 from nautobot.extras.registry import registry
 from nautobot.extras.utils import check_if_key_is_graphql_safe
@@ -62,6 +64,8 @@ registry["graphql_types"]["dcim.consoleserverport"] = ConsoleServerPortType
 registry["graphql_types"]["dcim.device"] = DeviceType
 registry["graphql_types"]["dcim.frontport"] = FrontPortType
 registry["graphql_types"]["dcim.interface"] = InterfaceType
+registry["graphql_types"]["dcim.modulebay"] = ModuleBayType
+registry["graphql_types"]["dcim.module"] = ModuleType
 registry["graphql_types"]["dcim.platform"] = PlatformType
 registry["graphql_types"]["dcim.powerfeed"] = PowerFeedType
 registry["graphql_types"]["dcim.poweroutlet"] = PowerOutletType
@@ -71,6 +75,8 @@ registry["graphql_types"]["dcim.rearport"] = RearPortType
 registry["graphql_types"]["dcim.location"] = LocationType
 registry["graphql_types"]["extras.contactassociation"] = ContactAssociationType
 registry["graphql_types"]["extras.dynamicgroup"] = DynamicGroupType
+registry["graphql_types"]["extras.job"] = JobType
+registry["graphql_types"]["extras.scheduledjob"] = ScheduledJobType
 registry["graphql_types"]["extras.tag"] = TagType
 registry["graphql_types"]["ipam.ipaddress"] = IPAddressType
 registry["graphql_types"]["ipam.prefix"] = PrefixType
@@ -89,6 +95,7 @@ CUSTOM_FIELD_MAPPING = {
     CustomFieldTypeChoices.TYPE_URL: graphene.String(),
     CustomFieldTypeChoices.TYPE_SELECT: graphene.String(),
     CustomFieldTypeChoices.TYPE_JSON: JSON(),
+    CustomFieldTypeChoices.TYPE_MULTISELECT: graphene.List(graphene.String),
 }
 
 

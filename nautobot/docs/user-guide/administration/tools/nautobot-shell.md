@@ -6,7 +6,7 @@ Nautobot includes a Python management shell within which objects can be directly
 nautobot-server nbshell
 ```
 
-This will launch a lightly customized version of [the django-extensions `shell_plus` shell](https://django-extensions.readthedocs.io/en/latest/shell_plus.html), which is an extension of [the built-in Django shell](https://docs.djangoproject.com/en/stable/ref/django-admin/#shell) with all relevant Nautobot models pre-loaded.
+This will launch a lightly customized version of [the `django-extensions` `shell_plus` shell](https://django-extensions.readthedocs.io/en/latest/shell_plus.html), which is an extension of [the built-in Django shell](https://docs.djangoproject.com/en/stable/ref/django-admin/#shell) with all relevant Nautobot models pre-loaded.
 
 ```no-highlight
 nautobot-server nbshell
@@ -16,52 +16,19 @@ Example output:
 
 ```no-highlight
 # Shell Plus Model Imports
-from constance.backends.database.models import Constance
+from constance.models import Constance
 from django.contrib.admin.models import LogEntry
 from django.contrib.auth.models import Group, Permission
-from django.contrib.contenttypes.models import ContentType
-from django.contrib.sessions.models import Session
-from django_celery_beat.models import ClockedSchedule, CrontabSchedule, IntervalSchedule, PeriodicTask, PeriodicTasks, SolarSchedule
-from django_celery_results.models import ChordCounter, GroupResult, TaskResult
-from example_app.models import AnotherExampleModel, ExampleModel
-from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
-from nautobot.dcim.models.cables import Cable, CablePath
-from nautobot.dcim.models.device_component_templates import ConsolePortTemplate, ConsoleServerPortTemplate, DeviceBayTemplate, FrontPortTemplate, InterfaceTemplate, PowerOutletTemplate, PowerPortTemplate, RearPortTemplate
-from nautobot.dcim.models.device_components import ConsolePort, ConsoleServerPort, DeviceBay, FrontPort, Interface, InventoryItem, PowerOutlet, PowerPort, RearPort
-from nautobot.dcim.models.devices import Device, DeviceRedundancyGroup, DeviceType, Manufacturer, Platform, VirtualChassis
-from nautobot.dcim.models.locations import Location, LocationType
-from nautobot.dcim.models.power import PowerFeed, PowerPanel
-from nautobot.dcim.models.racks import Rack, RackGroup, RackReservation
-from nautobot.extras.models.change_logging import ObjectChange
-from nautobot.extras.models.customfields import ComputedField, CustomField, CustomFieldChoice
-from nautobot.extras.models.datasources import GitRepository
-from nautobot.extras.models.groups import DynamicGroup, DynamicGroupMembership
-from nautobot.extras.models.jobs import Job, JobHook, JobLogEntry, JobResult, ScheduledJob, ScheduledJobs
-from nautobot.extras.models.models import ConfigContext, ConfigContextSchema, CustomLink, ExportTemplate, FileAttachment, FileProxy, GraphQLQuery, HealthCheckTestModel, ImageAttachment, Note, Webhook
-from nautobot.extras.models.relationships import Relationship, RelationshipAssociation
-from nautobot.extras.models.roles import Role
-from nautobot.extras.models.secrets import Secret, SecretsGroup, SecretsGroupAssociation
-from nautobot.extras.models.statuses import Status
-from nautobot.extras.models.tags import Tag, TaggedItem
-from nautobot.ipam.models import IPAddress, Prefix, RIR, RouteTarget, Service, VLAN, VLANGroup, VRF
-from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.users.models import AdminGroup, ObjectPermission, Token, User
-from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType, VMInterface, VirtualMachine
-from social_django.models import Association, Code, Nonce, Partial, UserSocialAuth
+...
 # Shell Plus Django Imports
 from django.core.cache import cache
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.db import transaction
-from django.db.models import Avg, Case, Count, F, Max, Min, Prefetch, Q, Sum, When
-from django.utils import timezone
-from django.urls import reverse
-from django.db.models import Exists, OuterRef, Subquery
-# Django version 3.2.18
-# Nautobot version 2.0.0a2
-# Example Nautobot App version 1.0.0
-Python 3.8.16 (default, Mar 23 2023, 04:48:11)
-[GCC 10.2.1 20210110] on linux
+...
+# Django version 4.2.15
+# Nautobot version 2.3.3b1
+...
+Python 3.12.6 (main, Sep 12 2024, 21:12:08) [GCC 12.2.0] on linux
 Type "help", "copyright", "credits" or "license" for more information.
 (InteractiveConsole)
 >>>

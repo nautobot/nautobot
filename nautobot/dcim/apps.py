@@ -20,6 +20,7 @@ class DCIMConfig(NautobotConfig):
         "rackgroup",
         "softwareversion",
         "virtualchassis",
+        "virtualdevicecontext",
     ]
 
     def ready(self):

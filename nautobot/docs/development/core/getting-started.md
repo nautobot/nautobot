@@ -65,8 +65,6 @@ Remote repos are managed using the `git remote` command.
 
 Upon cloning Nautobot for the first time, you will have only a single remote:
 
-<!-- markdownlint-disable MD010 -->
-
 ```no-highlight
 git remote -v
 ```
@@ -74,11 +72,9 @@ git remote -v
 Example output:
 
 ```no-highlight
-origin	git@github.com:yourusername/nautobot.git (fetch)
-origin	git@github.com:yourusername/nautobot.git (push)
+origin      git@github.com:yourusername/nautobot.git (fetch)
+origin      git@github.com:yourusername/nautobot.git (push)
 ```
-
-<!-- markdownlint-enable MD010 -->
 
 Add the official Nautobot repo as a the `upstream` remote:
 
@@ -88,8 +84,6 @@ git remote add upstream git@github.com:nautobot/nautobot.git
 
 View your remotes again to confirm you've got both `origin` pointing to your fork and `upstream` pointing to the official repo:
 
-<!-- markdownlint-disable MD010 -->
-
 ```no-highlight
 git remote -v
 ```
@@ -97,13 +91,11 @@ git remote -v
 Example output:
 
 ```no-highlight
-origin	git@github.com:yourusername/nautobot.git (fetch)
-origin	git@github.com:yourusername/nautobot.git (push)
-upstream	git@github.com:nautobot/nautobot.git (fetch)
-upstream	git@github.com:nautobot/nautobot.git (push)
+origin      git@github.com:yourusername/nautobot.git (fetch)
+origin      git@github.com:yourusername/nautobot.git (push)
+upstream    git@github.com:nautobot/nautobot.git (fetch)
+upstream    git@github.com:nautobot/nautobot.git (push)
 ```
-
-<!-- markdownlint-enable MD010 -->
 
 You're now ready to proceed to the next steps.
 
@@ -195,7 +187,7 @@ Available tasks:
   docker-push            Tags and pushes docker images to the appropriate repos, intended for release use only.
   dumpdata               Dump data from database to db_output file.
   hadolint               Check Dockerfile for hadolint compliance and other style issues.
-  integration-test       Run Nautobot integration tests.
+  lint                   Run all linters.
   loaddata               Load data from file.
   logs                   View the logs of a docker compose service.
   makemigrations         Perform makemigrations operation in Django.
@@ -203,7 +195,9 @@ Available tasks:
   migrate                Perform migrate operation in Django.
   migration-test         Test database migration from a given dataset to latest Nautobot schema.
   nbshell                Launch an interactive Nautobot shell.
-  performance-test       Run Nautobot performance tests.
+  open-docs-web          Navigate to the mkdocs interface in your web browser.
+  open-nautobot-web      Navigate to the Nautobot interface in your web browser.
+  open-selenium-vnc      Navigate to the selenium VNC browser view.
   post-upgrade           Performs Nautobot common post-upgrade operations using a single entrypoint.
   pylint                 Perform static analysis of Nautobot code.
   restart                Gracefully restart containers.
@@ -212,9 +206,7 @@ Available tasks:
   showmigrations         Perform showmigrations operation in Django.
   start                  Start Nautobot and its dependencies in detached mode.
   stop                   Stop Nautobot and its dependencies.
-  tests                  Run all linters and unit tests.
-  unittest               Run Nautobot unit tests.
-  unittest-coverage      Report on code test coverage as measured by 'invoke unittest'.
+  tests                  Run Nautobot automated tests.
   version                Show the version of Nautobot Python package or bump it when a valid bump rule is provided.
   vscode                 Launch Visual Studio Code with the appropriate Environment variables to run in a container.
   yamllint               Run yamllint to validate formatting applies to YAML standards.
@@ -274,9 +266,6 @@ You may install Poetry in your user environment by running:
 curl -sSL https://install.python-poetry.org | python3 -
 ```
 
-+/- 1.5.6
-    Poetry 1.3+ is required to be able to install packages against the latest lockfile.
-
 !!! danger
     Always utilize this documented method to install Poetry for use when developing Nautobot.
 
@@ -292,14 +281,6 @@ For detailed installation instructions, please see the [official Poetry installa
 
 ```no-highlight
 brew install hadolint
-```
-
-#### Install markdownlint-cli
-
-[markdownlint-cli](https://github.com/igorshubovych/markdownlint-cli) is a tool used to validate and lint Markdown files, such as Nautobot's documentation, to ensure that they are correctly constructed. On macOS with [Homebrew](https://brew.sh/) you can install markdownlint-cli by running:
-
-```no-highlight
-brew install markdownlint-cli
 ```
 
 #### Creating a Python Virtual Environment
@@ -328,10 +309,10 @@ poetry shell
 Example output:
 
 ```no-highlight
-Spawning shell within /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.8
+Spawning shell within /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.12
 
-. /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.8/bin/activate
-(nautobot-Ams_xyDt-py3.8) $
+. /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.12/bin/activate
+(nautobot-Ams_xyDt-py3.12) $
 ```
 
 Notice that the console prompt changes to indicate the active environment. This updates the necessary system environment variables to ensure that any Python scripts are run within the virtual environment.
@@ -345,7 +326,7 @@ which python
 Example output:
 
 ```no-highlight
-(nautobot-Ams_xyDt-py3.8) $ /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.8/bin/python
+(nautobot-Ams_xyDt-py3.12) $ /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.12/bin/python
 ```
 
 To exit the virtual shell, use `exit`:
@@ -356,6 +337,7 @@ exit
 
 Example output:
 
+<!-- pyml disable-num-lines 3 commands-show-output -->
 ```no-highlight
 $
 ```
@@ -529,20 +511,20 @@ Quit the server with CONTROL-C.
 
 Please see the [official Django documentation on `runserver`](https://docs.djangoproject.com/en/stable/ref/django-admin/#runserver) for more information.
 
-You can connect to the development server at `localhost:8080`.
+You can connect to the development server in your local web browser at `http://localhost:8080`. If you are using the ephemeral ports feature (disabled by default), you can make use of the command, `invoke open-nautobot-web`. This will open up the default web-browser on your system pointing to the correct Nautobot admin port. Note that this command can be used regardless of ephemeral port mode.
 
 ### Starting the Worker Server
 
 In order to run Nautobot Jobs or anything that requires a worker you must start a Celery worker.
 
-The worker is started in Docker Workflow with [watchdog](https://pythonhosted.org/watchdog/) and can be setup to be started with watchdog in the Virtual Environment Workflow. Watchdog provides a similar experience to the Django lightweight HTTP/WSGI for restarting your application automatically. Watchdog can watch for changes on your filesystem, this is helpful when adjusting existing Python files to not have to restart the celery worker when testing jobs.
+The worker is started in Docker Workflow with [watchdog](https://pythonhosted.org/watchdog/) and can be setup to be started with watchdog in the Virtual Environment Workflow. Watchdog provides a similar experience to the Django lightweight HTTP/WSGI for restarting your application automatically. Watchdog can watch for changes on your filesystem, this is helpful when adjusting existing Python files to not have to restart the Celery worker when testing jobs.
 
 | Docker Compose Workflow | Virtual Environment Workflow    |
 | ----------------------- | ------------------------------- |
 | `invoke start`          | `nautobot-server celery worker` |
 
 !!! tip
-    You can leverage watchdog for your celery worker as described above, with the following watchmedo command in your development environment `watchmedo auto-restart --directory './' --pattern '*.py' --recursive -- nautobot-server celery worker -l INFO --events`.
+    You can leverage watchdog for your Celery worker as described above, with the following watchmedo command in your development environment `watchmedo auto-restart --directory './' --pattern '*.py' --recursive -- nautobot-server celery worker -l INFO --events`.
 
 ### Starting the Interactive Shell
 
@@ -567,11 +549,10 @@ Example output:
 ...
 # Shell Plus Django Imports
 ...
-# Django version 3.2.16
-# Nautobot version 2.0.0a0
+# Django version 4.2.15
+# Nautobot version 2.3.3b1
 # Example Nautobot App version 1.0.0
-Python 3.8.16 (default, Mar 23 2023, 04:48:11)
-[GCC 10.2.1 20210110] on linux
+Python 3.12.6 (main, Sep 12 2024, 21:12:08) [GCC 12.2.0] on linux
 Type "help", "copyright", "credits" or "license" for more information.
 (InteractiveConsole)
 >>>
@@ -628,78 +609,69 @@ Installing the current project: nautobot (1.0.0-beta.2)
 
 ### Running Tests
 
-Throughout the course of development, it's a good idea to occasionally run Nautobot's test suite to catch any potential errors. Tests come in two primary flavors: Unit tests and integration tests.
+Throughout the course of development, it's a good idea to occasionally run Nautobot's test suite to catch any potential errors. Tests in Nautobot come in three primary flavors: Unit tests, integration tests, and migration tests. Most commonly you'll run unit tests, integration tests less frequently, and migration tests more rarely still.
 
 For information about **writing** tests, refer to the [testing documentation](testing.md).
+
+All three types of tests are executable via the `invoke tests` (or, if using the virtual environment workflow, `nautobot-server test`) command with appropriate parameters. These commands also support many optional parameters to influence the testing behavior. Careful use of these parameters can greatly reduce the time it takes to run and re-run tests during development. Some specific examples are provided below, but for an up-to-date summary of parameters, you can always run `invoke tests --help`.
+
+#### Test Execution Examples
+
+The simplest command **runs all unit tests** (not including integration and migration tests). This includes by default a number of performance optimizations such as [caching test factory data to disk](./testing.md#factory-caching), keeping and reusing the database schema between successive reruns, and executing tests in parallel across available CPU cores:
+
+```no-highlight
+invoke tests
+# functionally equivalent to explicitly setting the below flags:
+invoke tests --cache-test-fixtures --keepdb --buffer --parallel
+```
+
+To limit the test to a specific **subset of test cases** by pattern or label, you can use the `--label` or `--pattern` options. You can also instruct the test execution to **stop after the first failure** (if any) occurs, rather than running to completion:
+
+```no-highlight
+invoke tests --pattern Controller
+invoke tests --label nautobot.core.tests.dcim.test_views.DeviceTestCase
+invoke tests --failfast
+```
+
+Once the Nautobot static documentation has been generated once (a prerequisite for certain tests), you can **skip the documentation build** if you haven't made any changes to the documentation:
+
+```no-highlight
+invoke tests --skip-docs-build
+```
+
+To limit the CPU consumption on your system, you can **restrict the number of parallel workers** and/or **run tests serially**:
+
+```no-highlight
+invoke tests --parallel-workers 4
+invoke tests --no-parallel
+```
+
+When actively updating models or migrations, you may need to **not reuse the database from the previous test run**, but instead recreate it, and may also need to force **regeneration of the test factory data**:
+
+```no-highlight
+invoke tests --no-reusedb
+invoke tests --no-cache-test-fixtures
+```
+
+By default, to keep the test output concise, stdout and stderr for tests are not displayed to your terminal, and while executing, only a single character (`.` for successful tests, `F` for failures, and `E` for errors) is printed per executed test case. If you're **debugging code with `breakpoint()`** you need to use `--no-buffer` to allow output to the terminal when a breakpoint is reached, and when troubleshooting tests in general, it may be useful to **enable more verbose output from the test runner**:
+
+```no-highlight
+invoke tests --no-buffer
+invoke tests --verbose
+```
 
 #### Unit Tests
 
 Unit tests are automated tests written and run to ensure that a section of the Nautobot application (known as the "unit") meets its design and behaves as intended and expected. Most commonly as a developer of or contributor to Nautobot you will be writing unit tests to exercise the code you have written. Unit tests are not meant to test how the application behaves, only the individual blocks of code, therefore use of mock data and phony connections is common in unit test code. As a guiding principle, unit tests should be fast, because they will be executed quite often.
 
-Unit tests are run using the `invoke unittest` command (if using the Docker development environment) or the `nautobot-server test` command:
+Unit tests are run using the `invoke tests` command (if using the Docker development environment) or the `nautobot-server test` command:
 
 | Docker Compose Workflow | Virtual Environment Workflow                                                    |
 | ----------------------- | ------------------------------------------------------------------------------- |
-| `invoke unittest`       | `nautobot-server --config=nautobot/core/tests/nautobot_config.py test nautobot` |
+| `invoke tests`          | `nautobot-server --config=nautobot/core/tests/nautobot_config.py test nautobot` |
 
 !!! info
-    By default `invoke unittest` will start and run the unit tests inside the Docker development container; this ensures that PostgreSQL and Redis servers are available during the test. However, if you have your environment configured such that `nautobot-server` can run locally, outside of the Docker environment, you may wish to set the environment variable `INVOKE_NAUTOBOT_LOCAL=True` to execute these tests in your local environment instead.
-
-##### Useful Unit Test Parameters
-
-The `invoke unittest` command supports a number of optional parameters to influence its behavior. Careful use of these parameters can greatly reduce the time it takes to run and re-run tests during development.
-
-* `--failfast` - Fail as soon as any test failure or error condition is encountered, instead of running to completion.
-* `--label <module.path>` - Only run the specific subset of tests. Can be broad (`--label nautobot.core.tests`) or specific (`--label nautobot.core.tests.test_graphql.GraphQLQueryTestCase`).
-* `--no-buffer` - Allow stdout/stderr output from the test to be seen in your terminal, instead of being hidden. **If you're debugging code with `breakpoint()`, you should use this option, as otherwise you'll never see the breakpoint happen.**
-* `--no-cache-test-fixtures` - Prevent caching [test factory data](./testing.md#factory-caching) to disk, or if a cache is already present, prevent loading from that cache when initializing the test environment. **The `--no-cache-test-fixtures` option is mandatory if you're actively making changes to factories or model migrations.**
-* `--no-keepdb` - Prevent saving the initialized test database after a test run for later reuse in a test re-run.
-* `--no-parallel` - By default, Nautobot splits test execution across multiple parallel subprocesses to reduce the runtime of the test suite. When troubleshooting obscure test exceptions, it may be desirable to disable that behavior temporarily using this parameter.
-* `--parallel-workers` - Explicitly specify the number of workers to use when running tests in parallel.
-* `--pattern` - Only run tests which match the given substring. Can be used multiple times.
-* `--no-reusedb` - Prevent reusing the initialized test database from a previous test run; instead, create a new database. **The `--no-reusedb` option is mandatory if you're actively making changes to model migrations, or when switching between branches that differ in their included migrations.**
-* `--skip-docs-build` - Skip building/rebuilding the static Nautobot documentation before running the test. Saves some time on reruns when you haven't changed the documentation source files.
-* `--verbose` - Run tests more verbosely, including describing each test case as it is run.
-
-##### Unit Test Invocation Examples
-
-In general, when you first run the Nautobot tests in your local copy of the repository, we'd recommend:
-
-```no-highlight
-invoke unittest
-```
-
-When there are too many cores on the testing machine, you can limit the number of parallel workers:
-
-```no-highlight
-invoke unittest --parallel-workers 4
-```
-
-On subsequent reruns, you can add the other performance-related options:
-
-```no-highlight
-invoke unittest --skip-docs-build
-invoke unittest --skip-docs-build --label nautobot.core.tests
-```
-
-When switching between significantly different branches of the code base (e.g. `main` vs `develop` vs `next`), you'll need to for once include the `--no-keepdb` option so that the test database can be destroyed and recreated appropriately:
-
-```no-highlight
-invoke unittest --no-keepdb
-```
-
-To not use the cached test fixture, you will need to include the `--no-cache-test-fixtures` flag
-
-```no-highlight
-invoke unittest --no-cache-test-fixtures
-```
-
-To limit the test to a specific pattern or label, you can use the `--label` and `--pattern` options:
-
-```no-highlight
-invoke unittest --verbose --skip-docs-build --label nautobot.core.tests.dcim.test_views.DeviceTestCase
-invoke unittest --verbose --skip-docs-build --pattern Controller
-```
+    By default `invoke tests` will start and run the unit tests inside the Docker development container; this ensures that PostgreSQL and Redis servers are available during the test. However, if you have your environment configured such that `nautobot-server` can run locally, outside of the Docker environment, you may wish to set the environment variable `INVOKE_NAUTOBOT_LOCAL=True` to execute these tests in your local environment instead.
 
 #### Integration Tests
 
@@ -715,23 +687,14 @@ Before running integration tests, the `selenium` container must be running. If y
 | ----------------------- | --------------------------------- |
 | (automatic)             | `invoke start --service selenium` |
 
-Integration tests are run using the `invoke integration-test` command. All integration tests must inherit from `nautobot.core.testing.integration.SeleniumTestCase`, which itself is tagged with `integration`. A custom test runner has been implemented to automatically skip any test case tagged with `integration` by default, so normal unit tests run without any concern. To run the integration tests the `--tag integration` argument must be passed to `nautobot-server test`.
+Integration tests are run by passing `--tag integration` to the `invoke tests` command. All other optional parameters to this command can be used the same as with unit tests.
 
-+/- 2.0.0
-    `SeleniumTestCase` was moved from the `nautobot.utilities.testing.integration` module to `nautobot.core.testing.integration`.
-
-| Docker Compose Workflow   | Virtual Environment Workflow                                                                      |
-| ------------------------- | ------------------------------------------------------------------------------------------------- |
-| `invoke integration-test` | `nautobot-server --config=nautobot/core/tests/nautobot_config.py test --tag integration nautobot` |
-
-!!! info
-    The same arguments supported by `invoke unittest` are supported by `invoke integration-test`, with the exception of `--parallel` at this time. The key difference being the dependency upon the Selenium container, and inclusion of the `integration` tag.
+| Docker Compose Workflow          | Virtual Environment Workflow                                                                      |
+| -------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `invoke tests --tag integration` | `nautobot-server --config=nautobot/core/tests/nautobot_config.py test --tag integration nautobot` |
 
 !!! tip
-    You may also use `invoke integration-test` in the Virtual Environment workflow given that the `selenium` container is running, and that the `INVOKE_NAUTOBOT_LOCAL=True` environment variable has been set.
-
-+/- 1.5.11
-    The `--cache-test-fixtures` argument was added to the `invoke integration-test` and `nautobot-server test` commands to allow for caching of test factory data between test runs. See the [factories documentation](./testing.md#factory-caching) for more information.
+    You may also use `invoke tests --tag integration` in the Virtual Environment workflow given that the `selenium` container is running, and that the `INVOKE_NAUTOBOT_LOCAL=True` environment variable has been set.
 
 ##### Customizing Integration Test Executions
 
@@ -739,6 +702,14 @@ The following environment variables can be provided when running tests to custom
 
 * `NAUTOBOT_SELENIUM_URL` - The URL used by the Nautobot test runner to remotely control the headless Selenium Firefox node. You can provide your own, but it must be a [`Remote` WebDriver](https://selenium-python.readthedocs.io/getting-started.html#using-selenium-with-remote-webdriver). (Default: `http://localhost:4444/wd/hub`; for Docker: `http://selenium:4444/wd/hub`)
 * `NAUTOBOT_SELENIUM_HOST` - The hostname used by the Selenium WebDriver to access Nautobot using Firefox. (Default: `host.docker.internal`; for Docker: `nautobot`)
+
+#### Migration Tests
+
+Migration tests are automated tests of Nautobot database migrations, used to validate software upgrade (and rarely downgrade) scenarios. Because of their relatively slow performance, and because data migrations are rarely changed once initially written and validated, _migration tests do not run by default_, even in Nautobot's continuous integration (CI) environment, and **must be run manually when relevant**.
+
+Migration tests are run by passing `--tag migration_test` to the `invoke tests` command. All other optional parameters to this command can be used the same as with unit tests.
+
+See [below](#handling-migrations) for more best practices when developing and testing migrations.
 
 ### Verifying the REST API Schema
 
@@ -752,12 +723,11 @@ If you make changes to the REST API, you should verify that the REST API OpenAPI
 
 To enforce best practices around consistent [coding style](style-guide.md), Nautobot uses [Ruff](https://docs.astral.sh/ruff). Additionally, [static analysis](https://en.wikipedia.org/wiki/Static_program_analysis) of Nautobot code is performed by Ruff and [Pylint](https://pylint.pycqa.org/en/latest/). You should run all of these commands and ensure that they pass fully with regard to your code changes before opening a pull request upstream.
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 4 no-inline-html -->
 | Docker Compose Workflow | Virtual Environment Workflow                                                                                                     |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | `invoke ruff`           | `ruff format --check nautobot/ development/ examples/ tasks.py`<br>and<br>`ruff check nautobot/ development/ examples/ tasks.py` |
 | `invoke pylint`         | `nautobot-server pylint nautobot tasks.py`<br>and<br>`nautobot-server pylint --recursive development/ examples/`                 |
-<!-- markdownlint-enable no-inline-html -->
 
 ### Handling Migrations
 
@@ -788,7 +758,7 @@ When modifying model field attributes, modify the test data in the tests too to 
 
 #### Testing Migrations
 
-Nautobot includes a number of data sets under the `development/datasets/` directory that represent various snapshots of historical database contents. You should validate whether your migrations correctly and successfully handle these datasets by running the `invoke migration-test --db-engine [postgres|mysql] --dataset development/datasets/<filename>` command (which handles both the Docker Compose workflow as well as the Virtual Environment workflow).
+In addition to the automated [migration tests](#migration-tests) described above, Nautobot includes a number of data sets under the `development/datasets/` directory that represent various snapshots of historical database contents. You should validate whether your migrations correctly and successfully handle these datasets by running the `invoke migration-test --db-engine [postgres|mysql] --dataset development/datasets/<filename>` command (which handles both the Docker Compose workflow as well as the Virtual Environment workflow).
 
 ## Working on Documentation
 
@@ -796,24 +766,24 @@ Some features require documentation updates or new documentation to be written. 
 
 For substantial changes to the code (including new features, removal of existing features, or significant changes in behavior) you should always make corresponding documentation updates. Nautobot's documentation pipeline includes a custom plugin for `mkdocs` that adds a few useful macros for annotating such changes:
 
-* `+++ 1.4.3`, on a line by itself, is a shorthand for `!!! version-added "Added in version 1.4.3"`
-* `+/- 1.4.3`, on a line by itself, is a shorthand for `!!! version-changed "Changed in version 1.4.3"`
-* `--- 1.4.3`, on a line by itself, is a shorthand for `!!! version-removed "Removed in version 1.4.3"`
+* `+++ 2.4.3`, on a line by itself, is a shorthand for `!!! version-added "Added in version 2.4.3"`
+* `+/- 2.4.3`, on a line by itself, is a shorthand for `!!! version-changed "Changed in version 2.4.3"`
+* `--- 2.4.3`, on a line by itself, is a shorthand for `!!! version-removed "Removed in version 2.4.3"`
 
 These admonitions in turn appear in the rendered documentation as follows:
 
-+++ 1.4.3
-+/- 1.4.3
---- 1.4.3
++++ 2.4.3
++/- 2.4.3
+--- 2.4.3
 
 You can also add text to any of these admonitions for further clarity, for example:
 
-    +++ 1.4.3
+    +++ 2.4.3
         The custom `mkdocs` plugin was added.
 
 will render as:
 
-+++ 1.4.3
++++ 2.4.3
     The custom `mkdocs` plugin was added.
 
 !!! caution
@@ -831,11 +801,11 @@ Documentation is written in Markdown. If you need to add additional pages or sec
 
 ### Verifying Documentation
 
-Nautobot uses [`markdownlint-cli`](https://github.com/igorshubovych/markdownlint-cli) to verify correctness of the documentation. You should run this command and ensure that it passes fully with regard to your documentation changes before opening a pull request upstream.
+Nautobot uses [`pymarkdownlnt`](https://github.com/jackdewinter/pymarkdown) to verify correctness of the documentation. You should run this command and ensure that it passes fully with regard to your documentation changes before opening a pull request upstream.
 
-| Docker Compose Workflow | Virtual Environment Workflow                                                                      |
-| ----------------------- | ------------------------------------------------------------------------------------------------- |
-| `invoke markdownlint`   | `markdownlint --ignore nautobot/project-static --config .markdownlint.yml nautobot examples *.md` |
+| Docker Compose Workflow | Virtual Environment Workflow                       |
+| ----------------------- | -------------------------------------------------- |
+| `invoke markdownlint`   | `pymarkdown scan --recurse nautobot examples *.md` |
 
 ## Submitting Pull Requests
 

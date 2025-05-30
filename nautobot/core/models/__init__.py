@@ -248,6 +248,8 @@ class BaseModel(models.Model):
         Unlike `get_natural_key_def()`, this doesn't auto-exclude all AutoField and BigAutoField fields,
         but instead explicitly discounts the `id` field (only) as a candidate.
         """
+        if cls != cls._meta.concrete_model:
+            return cls._meta.concrete_model.natural_key_field_lookups
         # First, figure out which local fields comprise the natural key:
         natural_key_field_names = []
         if hasattr(cls, "natural_key_field_names"):
@@ -270,7 +272,7 @@ class BaseModel(models.Model):
 
         if not natural_key_field_names:
             raise AttributeError(
-                f"Unable to identify an intrinsic natural-key definition for {cls.__name__}. "
+                f"Unable to identify an intrinsic natural-key definition for {cls.__name__}. "  # pylint: disable=no-member
                 "If there isn't at least one UniqueConstraint, unique_together, or field with unique=True, "
                 "you probably need to explicitly declare the 'natural_key_field_names' for this model, "
                 "or potentially override the default 'natural_key_field_lookups' implementation for this model."

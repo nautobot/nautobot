@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% load form_helpers %}
+{% load helpers %}
+{% load static %}
+
+{% block extra_styles %}
+<style type="text/css">
+    .button-container {
+        margin-bottom: 24px;
+    }
+    #render_jinja_template_form textarea {
+        resize: vertical;
+        white-space: pre;
+    }
+
+</style>
+{% endblock extra_styles %}
+
+{% block header %}
+<h1>{% block title %}Jinja Template Renderer{% endblock %}</h1>
+<hr>
+{% endblock %}
+
+
+
+{% block content %}
+<form class="form form-horizontal" onsubmit="handleFormSubmit(event)" id="render_jinja_template_form">
+    <div class="row">
+        <div class="col-lg-6 col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading"><strong>Template</strong></div>
+                <div class="panel-body">
+                    <div class="form-group">
+                        <label class="col-md-3 control-label required" for="id_template_code">Jinja Template</label>
+                        <div class="col-md-9">
+                            <textarea cols="40" rows="10" class="form-control" id="id_template_code" required=""></textarea>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-md-3 control-label" for="id_context">Data</label>
+                        <div class="col-md-9">
+                            <textarea cols="40" rows="10" class="form-control" placeholder="{}" id="id_context">{}</textarea>
+                            <span class="help-block">Enter data in <a href="https://json.org/">JSON</a> format.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="button-container text-right">
+                <button type="submit" class="btn btn-primary">Render</button>
+            </div>
+        </div>
+        <div class="col-lg-6 col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Rendered Template</strong>
+                    <button type="button" class="btn btn-inline btn-default copy-rendered-template" data-clipboard-target="#rendered_template">
+                        <span class="mdi mdi-content-copy"></span>
+                    </button>
+                </div>
+                <div class="panel-body">
+                    <textarea readonly="readonly" cols="40" rows="23" class="form-control" placeholder="Rendered Template" id="rendered_template"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock content %}
+
+{% block javascript %}
+    {{ block.super }}
+    <script>
+        new ClipboardJS('.copy-rendered-template');
+        const sanitize = function(string) {
+            return string.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        };
+        async function handleFormSubmit(event) {
+            event.preventDefault(); // Prevent default form submission
+
+            // Check that the context is valid JSON
+            const context = document.getElementById("id_context");
+            var parsed_context;
+            try {
+                parsed_context = JSON.parse(context.value);
+            } catch (error) {
+                context.setCustomValidity("Invalid JSON");
+                context.reportValidity();
+                context.setCustomValidity("");
+                return error;
+            }
+
+            try {
+                const rendered_template = document.getElementById("rendered_template");
+                rendered_template.innerHTML = "Loading...";
+                const template_code = document.getElementById("id_template_code").value;
+                const url = "{% url 'core-api:render_jinja_template' %}";
+                const data = {
+                    template_code: template_code,
+                    context: parsed_context
+                }
+                const response = await fetch(url, {
+                    method: "POST",
+                    body: JSON.stringify(data),
+                    headers: {"Content-Type": "application/json", "X-CSRFTOKEN": "{{ csrf_token }}"}
+                });
+                const responseData = await response.json();
+                if (!response.ok) {
+                    const msg = responseData.detail ? responseData.detail : response.statusText;
+                    rendered_template.innerHTML = sanitize(`An error occurred:\n\n${msg}`);
+                } else {
+                    rendered_template.innerHTML = sanitize(responseData.rendered_template);
+                }
+            } catch (error) {
+                rendered_template.innerHTML = sanitize(`An error occurred:\n\n${error.message}`);
+            }
+        }
+    </script>
+{% endblock javascript %}

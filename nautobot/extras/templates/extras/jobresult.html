@@ -1,4 +1,4 @@
-{% extends 'generic/object_detail.html' %}
+{% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
 {% load custom_links %}
 {% load form_helpers %}
@@ -115,7 +115,7 @@
                     <td>{{ result.worker }}</td>
                 </tr>
                 <tr>
-                    <td>Queue</td>
+                    <td>Queue Name</td>
                     <td>{{ result.celery_kwargs.queue}}</td>
                 </tr>
                 <tr>

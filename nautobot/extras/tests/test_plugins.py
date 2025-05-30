@@ -1,5 +1,6 @@
-from unittest import mock, skip, skipIf
+from unittest import mock, skip
 
+from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -16,11 +17,13 @@ from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Man
 from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.extras import plugins
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
+from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import CustomField, Relationship, RelationshipAssociation, Role, Secret, Status
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
-from nautobot.extras.plugins.validators import wrap_model_clean_methods
+from nautobot.extras.plugins.validators import CustomValidator, wrap_model_clean_methods
+from nautobot.extras.plugins.views import extract_app_data
 from nautobot.extras.registry import DatasourceContent, registry
 from nautobot.ipam.models import IPAddress, Namespace, Prefix
 from nautobot.tenancy.filters import TenantFilterSet
@@ -315,6 +318,61 @@ class AppListViewTest(TestCase):
         response_body = extract_page_body(response.content.decode(response.charset)).lower()
         self.assertIn("example app", response_body, msg=response_body)
 
+    def test_extract_app_data(self):
+        app_config = apps.get_app_config("example_app")
+        # Without a corresponding entry in marketplace_data
+        self.assertEqual(
+            extract_app_data(app_config, {"apps": []}),
+            {
+                "name": "Example Nautobot App",
+                "package": "example_app",
+                "app_label": "example_app",
+                "author": "Nautobot development team",
+                "author_email": "nautobot@example.com",
+                "headline": "For testing purposes only",
+                "description": "For testing purposes only",
+                "version": "1.0.0",
+                "home_url": "plugins:example_app:home",
+                "config_url": "plugins:example_app:config",
+                "docs_url": "plugins:example_app:docs",
+            },
+        )
+
+        # With a corresponding entry in marketplace_data
+        mock_marketplace_data = {
+            "apps": [
+                {
+                    "name": "Nautobot Example App",
+                    "use_cases": ["Example", "Development"],
+                    "requires": [],
+                    "docs": "https://example.com/docs/example_app/",
+                    "headline": "Demonstrate and test various parts of Nautobot App APIs and functionality.",
+                    "description": "An example of the kinds of things a Nautobot App can do, including ...",
+                    "package_name": "example_app",
+                    "author": "Network to Code (NTC)",
+                    "availability": "Open Source",
+                    "icon": "...",
+                },
+            ],
+        }
+        self.assertEqual(
+            extract_app_data(app_config, mock_marketplace_data),
+            {
+                "name": "Nautobot Example App",
+                "package": "example_app",
+                "app_label": "example_app",
+                "author": "Network to Code (NTC)",
+                "author_email": "nautobot@example.com",
+                "availability": "Open Source",
+                "headline": "Demonstrate and test various parts of Nautobot App APIs and functionality.",
+                "description": "An example of the kinds of things a Nautobot App can do, including ...",
+                "version": "1.0.0",
+                "home_url": "plugins:example_app:home",
+                "config_url": "plugins:example_app:config",
+                "docs_url": "plugins:example_app:docs",
+            },
+        )
+
 
 class PluginDetailViewTest(TestCase):
     def test_view_detail_anonymous(self):
@@ -421,6 +479,16 @@ class AppAPITest(APIViewTestCases.APIViewTestCase):
         pass
 
 
+class TestUserContextCustomValidator(CustomValidator):
+    model = "dcim.locationtype"
+
+    def clean(self):
+        """
+        Used to validate that the correct user context is available in the custom validator.
+        """
+        self.validation_error(f"TestUserContextCustomValidator: user is {self.context['user']}")
+
+
 class AppCustomValidationTest(TestCase):
     def setUp(self):
         # When creating a fresh test DB, wrapping model clean methods fails, which is normal.
@@ -428,6 +496,7 @@ class AppCustomValidationTest(TestCase):
         # must manually call the method again to actually perform the action, now that the
         # ContentType table has been created.
         wrap_model_clean_methods()
+        super().setUp()
 
     def test_custom_validator_raises_exception(self):
         location_type = LocationType.objects.get(name="Campus")
@@ -455,6 +524,31 @@ class AppCustomValidationTest(TestCase):
         relationship_assoc = RelationshipAssociation(relationship=relationship, source=prefix, destination=ipaddress)
         with self.assertRaises(ValidationError):
             relationship_assoc.clean()
+
+    def test_custom_validator_non_web_request_uses_anonymous_user(self):
+        location_type = LocationType.objects.get(name="Campus")
+        before = registry["plugin_custom_validators"]["dcim.locationtype"]
+        try:
+            registry["plugin_custom_validators"]["dcim.locationtype"] = [TestUserContextCustomValidator]
+
+            with self.assertRaises(ValidationError) as context:
+                location_type.clean()
+            self.assertEqual(context.exception.message, "TestUserContextCustomValidator: user is AnonymousUser")
+        finally:
+            registry["plugin_custom_validators"]["dcim.locationtype"] = before
+
+    def test_custom_validator_web_request_uses_real_user(self):
+        location_type = LocationType.objects.get(name="Campus")
+        before = registry["plugin_custom_validators"]["dcim.locationtype"]
+        try:
+            registry["plugin_custom_validators"]["dcim.locationtype"] = [TestUserContextCustomValidator]
+
+            with self.assertRaises(ValidationError) as context:
+                with web_request_context(user=self.user):
+                    location_type.clean()
+            self.assertEqual(context.exception.message, f"TestUserContextCustomValidator: user is {self.user}")
+        finally:
+            registry["plugin_custom_validators"]["dcim.locationtype"] = before
 
 
 class ExampleModelCustomActionViewTest(TestCase):
@@ -800,10 +894,6 @@ class TestAppCoreViewOverrides(TestCase):
         )
 
 
-@skipIf(
-    "example_plugin" not in settings.PLUGINS,
-    "example_plugin not in settings.PLUGINS",
-)
 class PluginTemplateExtensionsTest(TestCase):
     """
     Test that registered TemplateExtensions inject content as expected
@@ -823,19 +913,19 @@ class PluginTemplateExtensionsTest(TestCase):
     def test_detail_view_buttons(self):
         response = self.client.get(reverse("dcim:location", kwargs={"pk": self.location.pk}))
         response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("LOCATION CONTENT - BUTTONS", response_body, msg=response_body)
+        self.assertIn("APP INJECTED LOCATION CONTENT - BUTTONS", response_body, msg=response_body)
 
     def test_detail_view_left_page(self):
         response = self.client.get(reverse("dcim:location", kwargs={"pk": self.location.pk}))
         response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("LOCATION CONTENT - LEFT PAGE", response_body, msg=response_body)
+        self.assertIn("App Injected Content - Left", response_body, msg=response_body)
 
     def test_detail_view_right_page(self):
         response = self.client.get(reverse("dcim:location", kwargs={"pk": self.location.pk}))
         response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("LOCATION CONTENT - RIGHT PAGE", response_body, msg=response_body)
+        self.assertIn("App Injected Content - Right", response_body, msg=response_body)
 
     def test_detail_view_full_width_page(self):
         response = self.client.get(reverse("dcim:location", kwargs={"pk": self.location.pk}))
         response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("LOCATION CONTENT - FULL WIDTH PAGE", response_body, msg=response_body)
+        self.assertIn("App Injected Content - Full Width", response_body, msg=response_body)

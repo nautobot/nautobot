@@ -1,5 +1,15 @@
 # Release Notes
 
+## [2.4 - January 2025](version-2.4.md)
+
+- Virtual Device Context Data Models
+- Wireless Data Models
+- Apps Marketplace Page
+- Event Publication Framework
+- Jinja2 Template Rendering REST API
+- Kubernetes Job Execution and Job Queue Data Model
+- UI Component Framework
+
 ## [2.3 - August 2024](version-2.3.md)
 
 - Cloud Models

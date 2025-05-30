@@ -1,7 +1,6 @@
 from django.conf.urls import include
 from django.urls import path
 from drf_spectacular.views import (
-    SpectacularAPIView,
     SpectacularJSONAPIView,
     SpectacularYAMLAPIView,
 )
@@ -11,11 +10,11 @@ from nautobot.core.api.views import (
     CSVImportFieldsForContentTypeAPIView,
     GetFilterSetFieldDOMElementAPIView,
     GetFilterSetFieldLookupExpressionChoicesAPIView,
-    GetMenuAPIView,
-    GetObjectCountsView,
     GraphQLDRFAPIView,
+    NautobotSpectacularAPIView,
     NautobotSpectacularRedocView,
     NautobotSpectacularSwaggerView,
+    RenderJinjaView,
     SettingsJSONSchemaView,
     StatusView,
 )
@@ -33,12 +32,11 @@ core_api_patterns = [
         GetFilterSetFieldDOMElementAPIView.as_view(),
         name="filtersetfield-retrieve-lookupvaluedomelement",
     ),
+    path("render-jinja-template/", RenderJinjaView.as_view(), name="render_jinja_template"),
 ]
 ui_api_patterns = [
     # Lookup Expr
     path("core/", include((core_api_patterns, "core-api"))),
-    path("get-menu/", GetMenuAPIView.as_view(), name="get-menu"),
-    path("get-object-counts/", GetObjectCountsView.as_view(), name="get-object-counts"),
 ]
 
 urlpatterns = [
@@ -52,11 +50,12 @@ urlpatterns = [
     path("tenancy/", include("nautobot.tenancy.api.urls")),
     path("users/", include("nautobot.users.api.urls")),
     path("virtualization/", include("nautobot.virtualization.api.urls")),
+    path("wireless/", include("nautobot.wireless.api.urls")),
     path("status/", StatusView.as_view(), name="api-status"),
     path("docs/", NautobotSpectacularSwaggerView.as_view(url_name="schema"), name="api_docs"),
     path("redoc/", NautobotSpectacularRedocView.as_view(url_name="schema"), name="api_redocs"),
     path("settings-schema/", SettingsJSONSchemaView.as_view(), name="setting_schema_json"),
-    path("swagger/", SpectacularAPIView.as_view(), name="schema"),
+    path("swagger/", NautobotSpectacularAPIView.as_view(), name="schema"),
     path("swagger.json", SpectacularJSONAPIView.as_view(), name="schema_json"),
     path("swagger.yaml", SpectacularYAMLAPIView.as_view(), name="schema_yaml"),
     # GraphQL

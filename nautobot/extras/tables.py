@@ -12,6 +12,7 @@ from nautobot.core.tables import (
     ColorColumn,
     ColoredLabelColumn,
     ContentTypesColumn,
+    LinkedCountColumn,
     TagColumn,
     ToggleColumn,
 )
@@ -37,7 +38,9 @@ from .models import (
     JobButton,
     JobHook,
     JobLogEntry,
+    JobQueue,
     JobResult,
+    MetadataChoice,
     MetadataType,
     Note,
     ObjectChange,
@@ -108,6 +111,27 @@ GITREPOSITORY_BUTTONS = """
 JOB_BUTTONS = """
 <a href="{% url 'extras:job' pk=record.pk %}" class="btn btn-default btn-xs" title="Details"><i class="mdi mdi-information-outline" aria-hidden="true"></i></a>
 <a href="{% url 'extras:jobresult_list' %}?job_model={{ record.name | urlencode }}" class="btn btn-default btn-xs" title="Job Results"><i class="mdi mdi-format-list-bulleted" aria-hidden="true"></i></a>
+"""
+
+JOB_RESULT_BUTTONS = """
+{% load helpers %}
+{% if perms.extras.run_job %}
+    {% if record.job_model and record.task_kwargs %}
+        <a href="{% url 'extras:job_run' pk=record.job_model.pk %}?kwargs_from_job_result={{ record.pk }}"
+           class="btn btn-xs btn-success" title="Re-run job with same arguments.">
+            <i class="mdi mdi-repeat"></i>
+        </a>
+    {% elif record.job_model is not None %}
+        <a href="{% url 'extras:job_run' pk=record.job_model.pk %}" class="btn btn-primary btn-xs"
+           title="Run job">
+            <i class="mdi mdi-play"></i>
+        </a>
+    {% else %}
+        <a href="#" class="btn btn-xs btn-default disabled" title="Job is not available, cannot be re-run">
+            <i class="mdi mdi-repeat-off"></i>
+        </a>
+    {% endif %}
+{% endif %}
 """
 
 SCHEDULED_JOB_BUTTONS = """
@@ -242,7 +266,7 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
         self.validator = validator
         self.data_field = data_field
 
-    def render(self, record):
+    def render(self, *, record):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
         data = getattr(record, self.data_field)
         try:
             self.validator.validate(data)
@@ -626,13 +650,13 @@ class GitRepositoryTable(BaseTable):
         )
 
     def render_last_sync_time(self, record):
-        if record.name in self.context["job_results"]:
-            return self.context["job_results"][record.name].date_done
+        if record.name in self.context["job_results"]:  # pylint: disable=no-member
+            return self.context["job_results"][record.name].date_done  # pylint: disable=no-member
         return self.default
 
     def render_last_sync_user(self, record):
-        if record.name in self.context["job_results"]:
-            user = self.context["job_results"][record.name].user
+        if record.name in self.context["job_results"]:  # pylint: disable=no-member
+            user = self.context["job_results"][record.name].user  # pylint: disable=no-member
             return user
         return self.default
 
@@ -673,7 +697,7 @@ def log_object_link(value, record):
 
 
 def log_entry_color_css(record):
-    if record.log_level.lower() in ("error", "critical"):
+    if record.log_level.lower() in ("failure", "error", "critical"):
         return "danger"
     return record.log_level.lower()
 
@@ -699,12 +723,15 @@ class JobTable(BaseTable):
     supports_dryrun = BooleanColumn()
     soft_time_limit = tables.Column()
     time_limit = tables.Column()
-    actions = ButtonsColumn(JobModel, prepend_template=JOB_BUTTONS)
+    default_job_queue = tables.Column(linkify=True)
+    job_queues_count = LinkedCountColumn(
+        viewname="extras:jobqueue_list", url_params={"jobs": "pk"}, verbose_name="Job Queues"
+    )
     last_run = tables.TemplateColumn(
         accessor="latest_result",
         template_code="""
             {% if value %}
-                {{ value.created }} by {{ value.user }}
+                {{ value.date_created|date:settings.SHORT_DATETIME_FORMAT }} by {{ value.user }}
             {% else %}
                 <span class="text-muted">Never</span>
             {% endif %}
@@ -715,6 +742,7 @@ class JobTable(BaseTable):
         template_code="{% include 'extras/inc/job_label.html' with result=record.latest_result %}",
     )
     tags = TagColumn(url_name="extras:job_list")
+    actions = ButtonsColumn(JobModel, prepend_template=JOB_BUTTONS)
 
     def render_description(self, value):
         return render_markdown(value)
@@ -745,6 +773,8 @@ class JobTable(BaseTable):
             "supports_dryrun",
             "soft_time_limit",
             "time_limit",
+            "default_job_queue",
+            "job_queues_count",
             "last_run",
             "last_status",
             "tags",
@@ -803,7 +833,7 @@ class JobLogEntryTable(BaseTable):
     def render_log_level(self, value):
         log_level = value.lower()
         # The css is label-danger for failure items.
-        if log_level in ["error", "critical"]:
+        if log_level in ["failure", "error", "critical"]:
             log_level = "danger"
         elif log_level == "debug":
             log_level = "default"
@@ -826,6 +856,32 @@ class JobLogEntryTable(BaseTable):
         }
 
 
+class JobQueueTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    tenant = TenantColumn()
+    jobs_count = LinkedCountColumn(viewname="extras:job_list", url_params={"job_queues": "pk"}, verbose_name="Jobs")
+
+    class Meta(BaseTable.Meta):
+        model = JobQueue
+        fields = (
+            "pk",
+            "name",
+            "queue_type",
+            "tenant",
+            "jobs_count",
+            "description",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "queue_type",
+            "tenant",
+            "jobs_count",
+            "description",
+        )
+
+
 class JobResultTable(BaseTable):
     pk = ToggleColumn()
     job_model = tables.Column(linkify=True)
@@ -843,32 +899,7 @@ class JobResultTable(BaseTable):
         linkify=True,
         verbose_name="Scheduled Job",
     )
-    actions = tables.TemplateColumn(
-        template_code="""
-            {% load helpers %}
-            {% if perms.extras.run_job %}
-                {% if record.job_model and record.task_kwargs %}
-                    <a href="{% url 'extras:job_run' pk=record.job_model.pk %}?kwargs_from_job_result={{ record.pk }}"
-                       class="btn btn-xs btn-success" title="Re-run job with same arguments.">
-                        <i class="mdi mdi-repeat"></i>
-                    </a>
-                {% elif record.job_model is not None %}
-                    <a href="{% url 'extras:job_run' pk=record.job_model.pk %}" class="btn btn-primary btn-xs"
-                       title="Run job">
-                        <i class="mdi mdi-play"></i>
-                    </a>
-                {% else %}
-                    <a href="#" class="btn btn-xs btn-default disabled" title="Job is not available, cannot be re-run">
-                        <i class="mdi mdi-repeat-off"></i>
-                    </a>
-                {% endif %}
-            {% endif %}
-            <a href="{% url 'extras:jobresult_delete' pk=record.pk %}" class="btn btn-xs btn-danger"
-               title="Delete this job result.">
-                <i class="mdi mdi-trash-can-outline"></i>
-            </a>
-        """
-    )
+    actions = ButtonsColumn(JobResult, buttons=("delete",), prepend_template=JOB_RESULT_BUTTONS)
 
     def render_summary(self, record):
         """
@@ -876,10 +907,12 @@ class JobResultTable(BaseTable):
         """
         return format_html(
             """<label class="label label-default">{}</label>
+            <label class="label label-success">{}</label>
             <label class="label label-info">{}</label>
             <label class="label label-warning">{}</label>
             <label class="label label-danger">{}</label>""",
             record.debug_log_count,
+            record.success_log_count,
             record.info_log_count,
             record.warning_log_count,
             record.error_log_count,
@@ -976,6 +1009,15 @@ class MetadataTypeTable(BaseTable):
         )
 
 
+class MetadataChoiceTable(BaseTable):
+    value = tables.Column()
+    weight = tables.Column()
+
+    class Meta(BaseTable.Meta):
+        model = MetadataChoice
+        fields = ("value", "weight")
+
+
 class ObjectMetadataTable(BaseTable):
     pk = ToggleColumn()
     # NOTE: there is no identity column in this table; this is intentional as we have no detail view for ObjectMetadata
@@ -1031,14 +1073,13 @@ class ObjectMetadataTable(BaseTable):
 
 class NoteTable(BaseTable):
     actions = ButtonsColumn(Note)
-    created = tables.LinkColumn()
-    note = tables.Column(
-        attrs={"td": {"class": "rendered-markdown"}},
-    )
+    created = tables.DateTimeColumn(linkify=True)
+    last_updated = tables.DateTimeColumn()
+    note = tables.Column()
 
     class Meta(BaseTable.Meta):
         model = Note
-        fields = ("created", "note", "user_name")
+        fields = ("created", "last_updated", "note", "user_name")
 
     def render_note(self, value):
         return render_markdown(value)
@@ -1058,7 +1099,7 @@ class ScheduledJobTable(BaseTable):
     last_run_at = tables.DateTimeColumn(verbose_name="Most Recent Run", format=settings.SHORT_DATETIME_FORMAT)
     crontab = tables.Column()
     total_run_count = tables.Column(verbose_name="Total Run Count")
-    actions = ButtonsColumn(ScheduledJob, buttons=("delete"), prepend_template=SCHEDULED_JOB_BUTTONS)
+    actions = ButtonsColumn(ScheduledJob, buttons=("delete",), prepend_template=SCHEDULED_JOB_BUTTONS)
 
     class Meta(BaseTable.Meta):
         model = ScheduledJob

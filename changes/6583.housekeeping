@@ -1,1 +1,0 @@
-Added `NautobotTestCaseMixin.add_permission` method for easier creating a constraint permissions.

@@ -13,12 +13,13 @@ from typing import final
 import warnings
 
 from billiard.einfo import ExceptionInfo
+from celery.exceptions import Ignore, Reject
 from celery.utils.log import get_task_logger
 from db_file_storage.form_widgets import DBClearableFileInput
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.cache import cache
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import UploadedFile
 from django.core.validators import RegexValidator
@@ -30,25 +31,33 @@ import netaddr
 import yaml
 
 from nautobot.core.celery import import_jobs, nautobot_task
+from nautobot.core.events import publish_event
 from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     JSONField,
 )
+from nautobot.core.forms.widgets import ClearableFileInput
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.logging import sanitize
 from nautobot.core.utils.lookup import get_model_from_name
-from nautobot.extras.choices import JobResultStatusChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
+from nautobot.extras.choices import (
+    JobResultStatusChoices,
+    ObjectChangeActionChoices,
+    ObjectChangeEventContextChoices,
+)
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.forms import JobForm
 from nautobot.extras.models import (
     FileProxy,
     Job as JobModel,
     JobHook,
+    JobQueue,
     JobResult,
     ObjectChange,
 )
 from nautobot.extras.registry import registry
-from nautobot.extras.utils import change_logged_models_queryset, task_queues_as_choices
+from nautobot.extras.utils import change_logged_models_queryset
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import (
     MaxPrefixLengthValidator,
@@ -60,15 +69,15 @@ User = get_user_model()
 
 
 __all__ = [
-    "Job",
     "BooleanVar",
     "ChoiceVar",
     "FileVar",
-    "IntegerVar",
     "IPAddressVar",
     "IPAddressWithMaskVar",
     "IPNetworkVar",
+    "IntegerVar",
     "JSONVar",
+    "Job",
     "MultiChoiceVar",
     "MultiObjectVar",
     "ObjectVar",
@@ -107,10 +116,12 @@ class BaseJob:
         - task_queues (list)
         - template_name (str)
         - time_limit (int)
+        - is_singleton (bool)
         """
 
     def __init__(self):
         self.logger = get_task_logger(self.__module__)
+        self._failed = False
 
     def __call__(self, *args, **kwargs):
         # Attempt to resolve serialized data back into original form by creating querysets or model instances
@@ -120,8 +131,9 @@ class BaseJob:
         try:
             deserialized_kwargs = self.deserialize_data(kwargs)
         except Exception as err:
-            self.logger.error("%s", err)
+            self.logger.exception("Error deserializing kwargs")
             raise RunJobTaskFailed("Error initializing job") from err
+
         if isinstance(self, JobHookReceiver):
             change_context = ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK
         else:
@@ -153,7 +165,11 @@ class BaseJob:
     def __str__(self):
         return str(self.name)
 
-    # See https://github.com/PyCQA/pylint-django/issues/240 for why we have a pylint disable on each classproperty below
+    def fail(self, msg, *args, **kwargs):
+        """Mark this job as failed without immediately raising an exception and aborting."""
+        # Instead of failing in "fail" grouping, fail in the parent function's grouping by default
+        self.logger.failure(msg, *args, stacklevel=2, **kwargs)
+        self._failed = True
 
     def before_start(self, task_id, args, kwargs):
         """Handler called before the task starts.
@@ -164,40 +180,10 @@ class BaseJob:
             kwargs (Dict): Original keyword arguments for the task to execute.
 
         Returns:
-            (None): The return value of this handler is ignored.
+            (Any): The return value of this handler is ignored normally, **except** if `self.fail()` is called herein,
+                in which case the return value will be used as the overall JobResult return value
+                since `self.run()` will **not** be called in such a case.
         """
-        try:
-            self.job_result
-        except ObjectDoesNotExist as err:
-            raise RunJobTaskFailed(f"Unable to find associated job result for job {task_id}") from err
-
-        try:
-            self.job_model
-        except ObjectDoesNotExist as err:
-            raise RunJobTaskFailed(f"Unable to find associated job model for job {task_id}") from err
-
-        if not self.job_model.enabled:
-            self.logger.error(
-                "Job %s is not enabled to be run!",
-                self.job_model,
-                extra={"object": self.job_model, "grouping": "initialization"},
-            )
-            raise RunJobTaskFailed(f"Job {self.job_model} is not enabled to be run!")
-
-        soft_time_limit = self.job_model.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
-        time_limit = self.job_model.time_limit or settings.CELERY_TASK_TIME_LIMIT
-        if time_limit <= soft_time_limit:
-            self.logger.warning(
-                "The hard time limit of %s seconds is less than "
-                "or equal to the soft time limit of %s seconds. "
-                "This job will fail silently after %s seconds.",
-                time_limit,
-                soft_time_limit,
-                time_limit,
-                extra={"grouping": "initialization"},
-            )
-
-        self.logger.info("Running job", extra={"grouping": "initialization", "object": self.job_model})
 
     def run(self, *args, **kwargs):
         """
@@ -242,11 +228,12 @@ class BaseJob:
         This is run by the worker when the task fails.
 
         Arguments:
-            exc (Exception): The exception raised by the task.
+            exc (Any): Exception raised by the task (if any) **or** return value from the task, if it failed cleanly,
+                such as if the Job called `self.fail()` rather than raising an exception.
             task_id (str): Unique id of the failed task.
             args (Tuple): Original arguments for the task that failed.
             kwargs (Dict): Original keyword arguments for the task that failed.
-            einfo (~billiard.einfo.ExceptionInfo): Exception information.
+            einfo (~billiard.einfo.ExceptionInfo): Exception information, or None.
 
         Returns:
             (None): The return value of this handler is ignored.
@@ -268,14 +255,13 @@ class BaseJob:
             (None): The return value of this handler is ignored.
         """
 
-        # Cleanup FileProxy objects
-        file_fields = list(self._get_file_vars())
-        file_ids = [kwargs[f] for f in file_fields if f in kwargs]
-        if file_ids:
-            self._delete_file_proxies(*file_ids)
+    # See https://github.com/PyCQA/pylint-django/issues/240 for why we have a pylint disable on each classproperty below
 
-        if status == JobResultStatusChoices.STATUS_SUCCESS:
-            self.logger.info("Job completed", extra={"grouping": "post_run"})
+    @final
+    @classproperty
+    def singleton_cache_key(cls) -> str:  # pylint: disable=no-self-argument
+        """Cache key for singleton jobs."""
+        return f"nautobot.extras.jobs.running.{cls.class_path}"
 
     @final
     @classproperty
@@ -295,7 +281,7 @@ class BaseJob:
         - my_plugin.jobs.MyPluginJob - App-provided Job
         - git_repository.jobs.myjob.MyJob - GitRepository Job
         """
-        return f"{cls.__module__}.{cls.__name__}"
+        return f"{cls.__module__}.{cls.__name__}"  # pylint: disable=no-member
 
     @final
     @classproperty
@@ -332,7 +318,7 @@ class BaseJob:
     @final
     @classproperty
     def name(cls) -> str:  # pylint: disable=no-self-argument
-        return cls._get_meta_attr_and_assert_type("name", cls.__name__, expected_type=str)
+        return cls._get_meta_attr_and_assert_type("name", cls.__name__, expected_type=str)  # pylint: disable=no-member
 
     @final
     @classproperty
@@ -398,6 +384,11 @@ class BaseJob:
 
     @final
     @classproperty
+    def is_singleton(cls) -> bool:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("is_singleton", False, expected_type=bool)
+
+    @final
+    @classproperty
     def properties_dict(cls) -> dict:  # pylint: disable=no-self-argument
         """
         Return all relevant classproperties as a dict.
@@ -414,13 +405,14 @@ class BaseJob:
             "time_limit": cls.time_limit,
             "has_sensitive_variables": cls.has_sensitive_variables,
             "task_queues": cls.task_queues,
+            "is_singleton": cls.is_singleton,
         }
 
     @final
     @classproperty
     def registered_name(cls) -> str:  # pylint: disable=no-self-argument
         """Deprecated - use class_path classproperty instead."""
-        return f"{cls.__module__}.{cls.__name__}"
+        return f"{cls.__module__}.{cls.__name__}"  # pylint: disable=no-member
 
     @classmethod
     def _get_vars(cls):
@@ -475,18 +467,50 @@ class BaseJob:
         """
 
         form = cls.as_form_class()(data, files, initial=initial)
-
+        form.fields["_profile"] = forms.BooleanField(
+            required=False,
+            initial=False,
+            label="Profile job execution",
+            help_text="Profiles the job execution using cProfile and outputs a report to /tmp/",
+        )
+        # If the class already exists there may be overrides, so we have to check this.
         try:
-            job_model = JobModel.objects.get_for_class_path(cls.class_path)
-            dryrun_default = job_model.dryrun_default if job_model.dryrun_default_override else cls.dryrun_default
-            task_queues = job_model.task_queues if job_model.task_queues_override else cls.task_queues
+            job_model = JobModel.objects.get(module_name=cls.__module__, job_class_name=cls.__name__)
+            is_singleton = job_model.is_singleton
         except JobModel.DoesNotExist:
-            logger.error("No Job instance found in the database corresponding to %s", cls.class_path)
-            dryrun_default = cls.dryrun_default
-            task_queues = cls.task_queues
+            logger.warning("No Job instance found in the database corresponding to %s", cls.class_path)
+            job_model = None
+            is_singleton = cls.is_singleton
 
-        # Update task queue choices
-        form.fields["_task_queue"].choices = task_queues_as_choices(task_queues)
+        if is_singleton:
+            form.fields["_ignore_singleton_lock"] = forms.BooleanField(
+                required=False,
+                initial=False,
+                label="Ignore singleton lock",
+                help_text="Allow this singleton job to run even when another instance is already running",
+            )
+
+        if job_model is not None:
+            job_queue_queryset = JobQueue.objects.filter(jobs=job_model)
+            job_queue_params = {"jobs": [job_model.pk]}
+        else:
+            job_queue_queryset = JobQueue.objects.all()
+            job_queue_params = {}
+
+        # Initialize job_queue choices
+        form.fields["_job_queue"] = DynamicModelChoiceField(
+            queryset=job_queue_queryset,
+            query_params=job_queue_params,
+            required=False,
+            help_text="The job queue to route this job to",
+            label="Job queue",
+        )
+
+        dryrun_default = cls.dryrun_default
+        if job_model is not None:
+            form.fields["_job_queue"].initial = job_model.default_job_queue.pk
+            if job_model.dryrun_default_override:
+                dryrun_default = job_model.dryrun_default
 
         if cls.supports_dryrun and (not initial or "dryrun" not in initial):
             # Set initial "dryrun" checkbox state based on the Meta parameter
@@ -502,6 +526,13 @@ class BaseJob:
             # Set `disabled=True` on all fields
             for _, field in form.fields.items():
                 field.disabled = True
+
+        # Ensure non-Job-specific fields are still last after applying field_order
+        for field in ["_job_queue", "_profile", "_ignore_singleton_lock"]:
+            if field not in form.fields:
+                continue
+            value = form.fields.pop(field)
+            form.fields[field] = value
 
         return form
 
@@ -721,7 +752,7 @@ class BaseJob:
         """
         if isinstance(content, str):
             content = content.encode("utf-8")
-        max_size = get_settings_or_config("JOB_CREATE_FILE_MAX_SIZE")
+        max_size = get_settings_or_config("JOB_CREATE_FILE_MAX_SIZE", fallback=10 << 20)
         actual_size = len(content)
         if actual_size > max_size:
             raise ValueError(f"Provided {actual_size} bytes of content, but JOB_CREATE_FILE_MAX_SIZE is {max_size}")
@@ -953,12 +984,18 @@ class DatabaseFileField(forms.FileField):
     widget = DBClearableFileInput
 
 
+class BootstrapStyleFileField(forms.FileField):
+    """File picker with UX bootstrap style and clearable checkbox."""
+
+    widget = ClearableFileInput
+
+
 class FileVar(ScriptVariable):
     """
     An uploaded file.
     """
 
-    form_field = DatabaseFileField
+    form_field = BootstrapStyleFileField
 
 
 class IPAddressVar(ScriptVariable):
@@ -1011,7 +1048,7 @@ class JobHookReceiver(Job):
 
     object_change = ObjectVar(model=ObjectChange)
 
-    def run(self, object_change):
+    def run(self, object_change):  # pylint: disable=arguments-differ
         """JobHookReceiver subclasses generally shouldn't need to override this method."""
         self.receive_job_hook(
             change=object_change,
@@ -1040,7 +1077,7 @@ class JobButtonReceiver(Job):
     object_pk = StringVar()
     object_model_name = StringVar()
 
-    def run(self, object_pk, object_model_name):
+    def run(self, object_pk, object_model_name):  # pylint: disable=arguments-differ
         """JobButtonReceiver subclasses generally shouldn't need to override this method."""
         model = get_model_from_name(object_model_name)
         obj = model.objects.get(pk=object_pk)
@@ -1111,6 +1148,114 @@ def get_job(class_path, reload=False):
     return jobs.get(class_path, None)
 
 
+def _prepare_job(job_class_path, request, kwargs) -> tuple[Job, dict]:
+    """Helper method to run_job task, handling initial data setup and initialization before running a Job."""
+    logger.debug("Preparing to run job %s for task %s", job_class_path, request.id)
+
+    # Get the job code
+    job_class = get_job(job_class_path, reload=True)
+    if job_class is None:
+        raise KeyError(f"Job class not found for class path {job_class_path}")
+    job = job_class()
+    job.request = request
+
+    # Get the JobResult record to record results to
+    try:
+        job_result = JobResult.objects.get(id=request.id)
+    except JobResult.DoesNotExist:
+        job.logger.exception("Unable to find JobResult %s", request.id, extra={"grouping": "initialization"})
+        raise
+
+    # Get the JobModel record associated with this job
+    try:
+        job.job_model
+    except JobModel.DoesNotExist:
+        job.logger.exception(
+            "Unable to find Job database record %s", job_class_path, extra={"grouping": "initialization"}
+        )
+        raise
+
+    # Make sure it's valid to run this job - 1) is it enabled?
+    if not job.job_model.enabled:
+        job.logger.error(
+            "Job %s is not enabled to be run!",
+            job.job_model,
+            extra={"object": job.job_model, "grouping": "initialization"},
+        )
+        raise RunJobTaskFailed(f"Job {job.job_model} is not enabled to be run!")
+    # 2) if it's a singleton, is there any existing lock to be aware of?
+    if job.job_model.is_singleton:
+        is_running = cache.get(job.singleton_cache_key)
+        if is_running:
+            ignore_singleton_lock = job.celery_kwargs.get("nautobot_job_ignore_singleton_lock", False)
+            if ignore_singleton_lock:
+                job.logger.warning(
+                    "Job %s is a singleton and already running, but singleton will be ignored because"
+                    " `ignore_singleton_lock` is set.",
+                    job.job_model,
+                    extra={"object": job.job_model, "grouping": "initialization"},
+                )
+            else:
+                # TODO 3.0: maybe change to logger.failure() and return cleanly, as this is an "acceptable" failure?
+                job.logger.error(
+                    "Job %s is a singleton and already running.",
+                    job.job_model,
+                    extra={"object": job.job_model, "grouping": "initialization"},
+                )
+                raise RunJobTaskFailed(f"Job '{job.job_model}' is a singleton and already running.")
+        cache_parameters = {
+            "key": job.singleton_cache_key,
+            "value": 1,
+            "timeout": job.job_model.time_limit or settings.CELERY_TASK_TIME_LIMIT,
+        }
+        cache.set(**cache_parameters)
+
+    # Check for validity of the soft/hard time limits for the job.
+    # TODO: this is a bit out of place?
+    soft_time_limit = job.job_model.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
+    time_limit = job.job_model.time_limit or settings.CELERY_TASK_TIME_LIMIT
+    if time_limit <= soft_time_limit:
+        job.logger.warning(
+            "The hard time limit of %s seconds is less than "
+            "or equal to the soft time limit of %s seconds. "
+            "This job will fail silently after %s seconds.",
+            time_limit,
+            soft_time_limit,
+            time_limit,
+            extra={"grouping": "initialization", "object": job.job_model},
+        )
+
+    # Send notice that the job is running
+    event_payload = {
+        "job_result_id": request.id,
+        "job_name": job.name,  # TODO: should this be job.job_model.name instead? Possible breaking change
+        "user_name": job_result.user.username,
+    }
+    if not job.job_model.has_sensitive_variables:
+        event_payload["job_kwargs"] = kwargs
+    publish_event(topic="nautobot.jobs.job.started", payload=event_payload)
+    job.logger.info("Running job", extra={"grouping": "initialization", "object": job.job_model})
+
+    # Return the job, ready to run
+    return job, event_payload
+
+
+def _cleanup_job(job, event_payload, status, kwargs):
+    """Helper method to run_job task, handling cleanup after running a Job."""
+    # Cleanup FileProxy objects
+    file_fields = list(job._get_file_vars())
+    file_ids = [kwargs[f] for f in file_fields if f in kwargs]
+    if file_ids:
+        job._delete_file_proxies(*file_ids)
+
+    if status == JobResultStatusChoices.STATUS_SUCCESS:
+        job.logger.success("Job completed", extra={"grouping": "post_run"})
+
+    publish_event(topic="nautobot.jobs.job.completed", payload=event_payload)
+
+    cache.delete(job.singleton_cache_key)
+
+
 @nautobot_task(bind=True)
 def run_job(self, job_class_path, *args, **kwargs):
     """
@@ -1118,32 +1263,75 @@ def run_job(self, job_class_path, *args, **kwargs):
 
     This calls the following Job APIs in the following order:
 
-    - `__init__()`
-    - `before_start()`
-    - `__call__()` (which calls `run()`)
-    - If no exceptions have been raised, `on_success()`, else `on_failure()`
-    - `after_return()`
+    - `Job.__init__()`
+    - `Job.before_start(self.request.id, args, kwargs)`
+    - `Job.__call__(*args, **kwargs)` (which calls `run(*args, **kwargs)`)
+    - If no exceptions have been raised (and `Job.fail()` was not called):
+        - `Job.on_success(result, self.request.id, args, kwargs)`
+    - Else:
+        - `Job.on_failure(result_or_exception, self.request.id, args, kwargs, einfo)`
+    - `Job.after_return(status, result_or_exception, self.request.id, args, kwargs, einfo)`
 
-    Finally, it either returns the data returned from `run()` or re-raises any exception encountered.
+    Finally, it either returns any data returned from `Job.run()` or re-raises any exception encountered.
     """
-    logger.debug("Running job %s", job_class_path)
 
-    job_class = get_job(job_class_path, reload=True)
-    if job_class is None:
-        raise KeyError(f"Job class not found for class path {job_class_path}")
-    job = job_class()
-    job.request = self.request
+    job, event_payload = _prepare_job(job_class_path, self.request, kwargs)
+
+    result = None
+    status = None
     try:
-        job.before_start(self.request.id, args, kwargs)
-        result = job(*args, **kwargs)
-        job.on_success(result, self.request.id, args, kwargs)
-        job.after_return(JobResultStatusChoices.STATUS_SUCCESS, result, self.request.id, args, kwargs, None)
-        return result
+        before_start_result = job.before_start(self.request.id, args, kwargs)
+        if not job._failed:
+            # Call job(), which automatically calls job.run():
+            result = job(*args, **kwargs)
+        else:
+            # don't run the job if before_start() reported a failure, and report the before_start() return value
+            result = before_start_result
+
+        event_payload["job_output"] = result
+        status = JobResultStatusChoices.STATUS_SUCCESS if not job._failed else JobResultStatusChoices.STATUS_FAILURE
+
+        if status == JobResultStatusChoices.STATUS_SUCCESS:
+            job.on_success(result, self.request.id, args, kwargs)
+        else:
+            job.on_failure(result, self.request.id, args, kwargs, None)
+
+        job.after_return(status, result, self.request.id, args, kwargs, None)
+
+        if status == JobResultStatusChoices.STATUS_SUCCESS:
+            return result
+
+        # Report a failure, but with a result rather than an exception and einfo:
+        self.update_state(
+            state=status,
+            meta=result,
+        )
+        # If we return a result, Celery automatically applies STATUS_SUCCESS.
+        # If we raise an exception *other than* `Ignore` or `Reject`, Celery automatically applies STATUS_FAILURE.
+        # We don't want to overwrite the manual state update that we did above, so:
+        raise Ignore()
+
+    except Reject:
+        status = status or JobResultStatusChoices.STATUS_REJECTED
+        raise
+
+    except Ignore:
+        status = status or JobResultStatusChoices.STATUS_IGNORED
+        raise
+
     except Exception as exc:
+        status = JobResultStatusChoices.STATUS_FAILURE
         einfo = ExceptionInfo(sys.exc_info())
         job.on_failure(exc, self.request.id, args, kwargs, einfo)
         job.after_return(JobResultStatusChoices.STATUS_FAILURE, exc, self.request.id, args, kwargs, einfo)
+        event_payload["einfo"] = {
+            "exc_type": type(exc).__name__,
+            "exc_message": sanitize(str(exc)),
+        }
         raise
+
+    finally:
+        _cleanup_job(job, event_payload, status, kwargs)
 
 
 def enqueue_job_hooks(object_change, may_reload_jobs=True, jobhook_queryset=None):

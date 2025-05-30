@@ -46,6 +46,7 @@ from nautobot.dcim.models import (
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
+    InterfaceVDCAssignment,
     InventoryItem,
     Location,
     LocationType,
@@ -69,14 +70,16 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
 from nautobot.extras.api.views import (
     ConfigContextQuerySetMixin,
+    CustomFieldModelViewSet,
     NautobotModelViewSet,
 )
 from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
 from nautobot.extras.secrets.exceptions import SecretError
-from nautobot.ipam.models import Prefix, VLAN
+from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.virtualization.models import VirtualMachine
 
 from . import serializers
@@ -140,7 +143,7 @@ class PassThroughPortMixin:
 
 
 class LocationTypeViewSet(NautobotModelViewSet):
-    queryset = LocationType.objects.select_related("parent").prefetch_related("content_types")
+    queryset = LocationType.objects.all()
     serializer_class = serializers.LocationTypeSerializer
     filterset_class = filters.LocationTypeFilterSet
 
@@ -151,17 +154,13 @@ class LocationTypeViewSet(NautobotModelViewSet):
 
 
 class LocationViewSet(NautobotModelViewSet):
-    queryset = (
-        Location.objects.select_related("location_type", "parent", "status", "tenant")
-        .prefetch_related("tags")
-        .annotate(
-            device_count=count_related(Device, "location"),
-            rack_count=count_related(Rack, "location"),
-            prefix_count=count_related(Prefix, "locations"),
-            vlan_count=count_related(VLAN, "locations"),
-            circuit_count=count_related(Circuit, "circuit_terminations__location"),
-            virtual_machine_count=count_related(VirtualMachine, "cluster__location"),
-        )
+    queryset = Location.objects.annotate(
+        device_count=count_related(Device, "location"),
+        rack_count=count_related(Rack, "location"),
+        prefix_count=count_related(Prefix, "locations"),
+        vlan_count=count_related(VLAN, "locations"),
+        circuit_count=count_related(Circuit, "circuit_terminations__location"),
+        virtual_machine_count=count_related(VirtualMachine, "cluster__location"),
     )
     serializer_class = serializers.LocationSerializer
     filterset_class = filters.LocationFilterSet
@@ -173,7 +172,7 @@ class LocationViewSet(NautobotModelViewSet):
 
 
 class RackGroupViewSet(NautobotModelViewSet):
-    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group")).select_related("location")
+    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group"))
     serializer_class = serializers.RackGroupSerializer
     filterset_class = filters.RackGroupFilterSet
 
@@ -184,13 +183,9 @@ class RackGroupViewSet(NautobotModelViewSet):
 
 
 class RackViewSet(NautobotModelViewSet):
-    queryset = (
-        Rack.objects.select_related("location", "rack_group__location", "status", "role", "tenant")
-        .prefetch_related("tags")
-        .annotate(
-            device_count=count_related(Device, "rack"),
-            power_feed_count=count_related(PowerFeed, "rack"),
-        )
+    queryset = Rack.objects.select_related("role", "status", "rack_group__location").annotate(
+        device_count=count_related(Device, "rack"),
+        power_feed_count=count_related(PowerFeed, "rack"),
     )
     serializer_class = serializers.RackSerializer
     filterset_class = filters.RackFilterSet
@@ -255,7 +250,7 @@ class RackViewSet(NautobotModelViewSet):
 
 
 class RackReservationViewSet(NautobotModelViewSet):
-    queryset = RackReservation.objects.select_related("rack", "user", "tenant")
+    queryset = RackReservation.objects.all()
     serializer_class = serializers.RackReservationSerializer
     filterset_class = filters.RackReservationFilterSet
 
@@ -295,11 +290,7 @@ class DeviceFamilyViewSet(NautobotModelViewSet):
 
 
 class DeviceTypeViewSet(NautobotModelViewSet):
-    queryset = (
-        DeviceType.objects.select_related("manufacturer")
-        .prefetch_related("software_image_files", "tags")
-        .annotate(device_count=count_related(Device, "device_type"))
-    )
+    queryset = DeviceType.objects.annotate(device_count=count_related(Device, "device_type"))
     serializer_class = serializers.DeviceTypeSerializer
     filterset_class = filters.DeviceTypeFilterSet
     parser_classes = [JSONParser, NautobotCSVParser, MultiPartParser]
@@ -310,13 +301,13 @@ class DeviceTypeViewSet(NautobotModelViewSet):
 #
 
 
-class ConsolePortTemplateViewSet(NautobotModelViewSet):
+class ConsolePortTemplateViewSet(CustomFieldModelViewSet):
     queryset = ConsolePortTemplate.objects.select_related("device_type__manufacturer", "module_type__manufacturer")
     serializer_class = serializers.ConsolePortTemplateSerializer
     filterset_class = filters.ConsolePortTemplateFilterSet
 
 
-class ConsoleServerPortTemplateViewSet(NautobotModelViewSet):
+class ConsoleServerPortTemplateViewSet(CustomFieldModelViewSet):
     queryset = ConsoleServerPortTemplate.objects.select_related(
         "device_type__manufacturer", "module_type__manufacturer"
     )
@@ -324,43 +315,43 @@ class ConsoleServerPortTemplateViewSet(NautobotModelViewSet):
     filterset_class = filters.ConsoleServerPortTemplateFilterSet
 
 
-class PowerPortTemplateViewSet(NautobotModelViewSet):
+class PowerPortTemplateViewSet(CustomFieldModelViewSet):
     queryset = PowerPortTemplate.objects.select_related("device_type__manufacturer", "module_type__manufacturer")
     serializer_class = serializers.PowerPortTemplateSerializer
     filterset_class = filters.PowerPortTemplateFilterSet
 
 
-class PowerOutletTemplateViewSet(NautobotModelViewSet):
+class PowerOutletTemplateViewSet(CustomFieldModelViewSet):
     queryset = PowerOutletTemplate.objects.select_related("device_type__manufacturer", "module_type__manufacturer")
     serializer_class = serializers.PowerOutletTemplateSerializer
     filterset_class = filters.PowerOutletTemplateFilterSet
 
 
-class InterfaceTemplateViewSet(NautobotModelViewSet):
+class InterfaceTemplateViewSet(CustomFieldModelViewSet):
     queryset = InterfaceTemplate.objects.select_related("device_type__manufacturer", "module_type__manufacturer")
     serializer_class = serializers.InterfaceTemplateSerializer
     filterset_class = filters.InterfaceTemplateFilterSet
 
 
-class FrontPortTemplateViewSet(NautobotModelViewSet):
+class FrontPortTemplateViewSet(CustomFieldModelViewSet):
     queryset = FrontPortTemplate.objects.select_related("device_type__manufacturer", "module_type__manufacturer")
     serializer_class = serializers.FrontPortTemplateSerializer
     filterset_class = filters.FrontPortTemplateFilterSet
 
 
-class RearPortTemplateViewSet(NautobotModelViewSet):
+class RearPortTemplateViewSet(CustomFieldModelViewSet):
     queryset = RearPortTemplate.objects.select_related("device_type__manufacturer", "module_type__manufacturer")
     serializer_class = serializers.RearPortTemplateSerializer
     filterset_class = filters.RearPortTemplateFilterSet
 
 
-class DeviceBayTemplateViewSet(NautobotModelViewSet):
+class DeviceBayTemplateViewSet(CustomFieldModelViewSet):
     queryset = DeviceBayTemplate.objects.select_related("device_type__manufacturer")
     serializer_class = serializers.DeviceBayTemplateSerializer
     filterset_class = filters.DeviceBayTemplateFilterSet
 
 
-class ModuleBayTemplateViewSet(NautobotModelViewSet):
+class ModuleBayTemplateViewSet(CustomFieldModelViewSet):
     queryset = ModuleBayTemplate.objects.select_related("device_type__manufacturer", "module_type__manufacturer")
     serializer_class = serializers.ModuleBayTemplateSerializer
     filterset_class = filters.ModuleBayTemplateFilterSet
@@ -388,21 +379,8 @@ class PlatformViewSet(NautobotModelViewSet):
 class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
     queryset = Device.objects.select_related(
         "device_type__manufacturer",
-        "role",
-        "tenant",
-        "platform",
-        "rack",
-        "location",
-        "parent_bay",
-        "primary_ip4",
-        "primary_ip6",
-        "software_version",
         "virtual_chassis__master",
-        "device_redundancy_group",
-        "controller_managed_device_group",
-        "secrets_group",
-        "status",
-    ).prefetch_related("tags", "primary_ip4__nat_outside_list", "primary_ip6__nat_outside_list", "software_image_files")
+    ).prefetch_related("primary_ip4__nat_outside_list", "primary_ip6__nat_outside_list")
     serializer_class = serializers.DeviceSerializer
     filterset_class = filters.DeviceFilterSet
 
@@ -565,83 +543,65 @@ class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
 
 
 class ConsolePortViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = ConsolePort.objects.select_related("device", "cable").prefetch_related(
-        "_path__destination", "_cable_peer", "tags"
-    )
+    queryset = ConsolePort.objects.prefetch_related("_path__destination", "_cable_peer")
     serializer_class = serializers.ConsolePortSerializer
     filterset_class = filters.ConsolePortFilterSet
 
 
 class ConsoleServerPortViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = ConsoleServerPort.objects.select_related("device", "cable").prefetch_related(
-        "_path__destination", "_cable_peer", "tags"
-    )
+    queryset = ConsoleServerPort.objects.prefetch_related("_path__destination", "_cable_peer")
     serializer_class = serializers.ConsoleServerPortSerializer
     filterset_class = filters.ConsoleServerPortFilterSet
 
 
 class PowerPortViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = PowerPort.objects.select_related("device", "cable").prefetch_related(
-        "_path__destination", "_cable_peer", "tags"
-    )
+    queryset = PowerPort.objects.prefetch_related("_path__destination", "_cable_peer")
     serializer_class = serializers.PowerPortSerializer
     filterset_class = filters.PowerPortFilterSet
 
 
 class PowerOutletViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = PowerOutlet.objects.select_related("device", "cable").prefetch_related(
-        "_path__destination", "_cable_peer", "tags"
-    )
+    queryset = PowerOutlet.objects.prefetch_related("_path__destination", "_cable_peer")
     serializer_class = serializers.PowerOutletSerializer
     filterset_class = filters.PowerOutletFilterSet
 
 
 class InterfaceViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = Interface.objects.select_related(
-        "device",
-        "parent_interface",
-        "bridge",
-        "lag",
-        "status",
-        "cable",
-        "untagged_vlan",
-    ).prefetch_related("tags", "_path__destination", "_cable_peer", "ip_addresses", "tagged_vlans")
+    queryset = Interface.objects.prefetch_related("_path__destination", "_cable_peer").annotate(
+        _ip_address_count=count_related(IPAddress, "interfaces")  # avoid conflict with Interface.ip_address_count()
+    )
     serializer_class = serializers.InterfaceSerializer
     filterset_class = filters.InterfaceFilterSet
 
 
 class FrontPortViewSet(PassThroughPortMixin, NautobotModelViewSet):
-    queryset = FrontPort.objects.select_related(
-        "device__device_type__manufacturer", "rear_port", "cable"
-    ).prefetch_related("tags")
+    queryset = FrontPort.objects.select_related("device__device_type__manufacturer")
     serializer_class = serializers.FrontPortSerializer
     filterset_class = filters.FrontPortFilterSet
 
 
 class RearPortViewSet(PassThroughPortMixin, NautobotModelViewSet):
-    queryset = RearPort.objects.select_related("device__device_type__manufacturer", "cable").prefetch_related("tags")
+    queryset = RearPort.objects.select_related("device__device_type__manufacturer")
     serializer_class = serializers.RearPortSerializer
     filterset_class = filters.RearPortFilterSet
 
 
 class DeviceBayViewSet(NautobotModelViewSet):
-    queryset = DeviceBay.objects.select_related("installed_device").prefetch_related("tags")
+    queryset = DeviceBay.objects.all()
     serializer_class = serializers.DeviceBaySerializer
     filterset_class = filters.DeviceBayFilterSet
 
 
 class InventoryItemViewSet(NautobotModelViewSet):
-    queryset = InventoryItem.objects.select_related("device", "manufacturer", "software_version").prefetch_related(
-        "tags"
-    )
+    queryset = InventoryItem.objects.all()
     serializer_class = serializers.InventoryItemSerializer
     filterset_class = filters.InventoryItemFilterSet
 
 
 class ModuleBayViewSet(NautobotModelViewSet):
-    queryset = ModuleBay.objects.select_related(
-        "parent_device__tenant", "parent_device__location", "parent_module"
-    ).prefetch_related("installed_module", "tags")
+    queryset = ModuleBay.objects.select_related("parent_device__tenant", "parent_device__location").prefetch_related(
+        "installed_module"
+    )
     serializer_class = serializers.ModuleBaySerializer
     filterset_class = filters.ModuleBayFilterSet
 
@@ -680,7 +640,7 @@ class InterfaceConnectionViewSet(ListModelMixin, GenericViewSet):
 
 
 class CableViewSet(NautobotModelViewSet):
-    queryset = Cable.objects.select_related("status").prefetch_related("termination_a", "termination_b")
+    queryset = Cable.objects.prefetch_related("termination_a", "termination_b")
     serializer_class = serializers.CableSerializer
     filterset_class = filters.CableFilterSet
 
@@ -691,9 +651,7 @@ class CableViewSet(NautobotModelViewSet):
 
 
 class VirtualChassisViewSet(NautobotModelViewSet):
-    queryset = VirtualChassis.objects.prefetch_related("tags").annotate(
-        member_count=count_related(Device, "virtual_chassis")
-    )
+    queryset = VirtualChassis.objects.annotate(member_count=count_related(Device, "virtual_chassis"))
     serializer_class = serializers.VirtualChassisSerializer
     filterset_class = filters.VirtualChassisFilterSet
 
@@ -704,9 +662,7 @@ class VirtualChassisViewSet(NautobotModelViewSet):
 
 
 class PowerPanelViewSet(NautobotModelViewSet):
-    queryset = PowerPanel.objects.select_related("location", "rack_group").annotate(
-        power_feed_count=count_related(PowerFeed, "power_panel")
-    )
+    queryset = PowerPanel.objects.annotate(power_feed_count=count_related(PowerFeed, "power_panel"))
     serializer_class = serializers.PowerPanelSerializer
     filterset_class = filters.PowerPanelFilterSet
 
@@ -717,12 +673,7 @@ class PowerPanelViewSet(NautobotModelViewSet):
 
 
 class PowerFeedViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = PowerFeed.objects.select_related(
-        "power_panel",
-        "rack",
-        "cable",
-        "status",
-    ).prefetch_related("tags", "_cable_peer", "_path__destination")
+    queryset = PowerFeed.objects.prefetch_related("_cable_peer", "_path__destination")
     serializer_class = serializers.PowerFeedSerializer
     filterset_class = filters.PowerFeedFilterSet
 
@@ -733,7 +684,7 @@ class PowerFeedViewSet(PathEndpointMixin, NautobotModelViewSet):
 
 
 class DeviceRedundancyGroupViewSet(NautobotModelViewSet):
-    queryset = DeviceRedundancyGroup.objects.select_related("status").prefetch_related("devices")
+    queryset = DeviceRedundancyGroup.objects.all()
     serializer_class = serializers.DeviceRedundancyGroupSerializer
     filterset_class = filters.DeviceRedundancyGroupFilterSet
 
@@ -744,7 +695,7 @@ class DeviceRedundancyGroupViewSet(NautobotModelViewSet):
 
 
 class InterfaceRedundancyGroupViewSet(NautobotModelViewSet):
-    queryset = InterfaceRedundancyGroup.objects.select_related("status").prefetch_related("interfaces")
+    queryset = InterfaceRedundancyGroup.objects.all()
     serializer_class = serializers.InterfaceRedundancyGroupSerializer
     filterset_class = filters.InterfaceRedundancyGroupFilterSet
 
@@ -820,21 +771,19 @@ class ConnectedDeviceViewSet(ViewSet):
 
 
 class SoftwareImageFileViewSet(NautobotModelViewSet):
-    queryset = SoftwareImageFile.objects.select_related("software_version").prefetch_related("device_types")
+    queryset = SoftwareImageFile.objects.all()
     serializer_class = serializers.SoftwareImageFileSerializer
     filterset_class = filters.SoftwareImageFileFilterSet
 
 
 class SoftwareVersionViewSet(NautobotModelViewSet):
-    queryset = SoftwareVersion.objects.select_related("platform").prefetch_related(
-        "devices", "software_image_files", "inventory_items", "virtual_machines"
-    )
+    queryset = SoftwareVersion.objects.all()
     serializer_class = serializers.SoftwareVersionSerializer
     filterset_class = filters.SoftwareVersionFilterSet
 
 
 class DeviceTypeToSoftwareImageFileViewSet(ModelViewSet):
-    queryset = DeviceTypeToSoftwareImageFile.objects.select_related("device_type", "software_image_file")
+    queryset = DeviceTypeToSoftwareImageFile.objects.all()
     serializer_class = serializers.DeviceTypeToSoftwareImageFileSerializer
     filterset_class = filters.DeviceTypeToSoftwareImageFileFilterSet
 
@@ -845,23 +794,13 @@ class DeviceTypeToSoftwareImageFileViewSet(ModelViewSet):
 
 
 class ControllerViewSet(NautobotModelViewSet):
-    queryset = Controller.objects.select_related(
-        "location",
-        "platform",
-        "role",
-        "tenant",
-        "status",
-    ).prefetch_related("tags")
+    queryset = Controller.objects.all()
     serializer_class = serializers.ControllerSerializer
     filterset_class = filters.ControllerFilterSet
 
 
 class ControllerManagedDeviceGroupViewSet(NautobotModelViewSet):
-    queryset = ControllerManagedDeviceGroup.objects.select_related(
-        "controller",
-        "parent",
-    ).prefetch_related("tags")
-
+    queryset = ControllerManagedDeviceGroup.objects.all()
     serializer_class = serializers.ControllerManagedDeviceGroupSerializer
     filterset_class = filters.ControllerManagedDeviceGroupFilterSet
 
@@ -876,15 +815,24 @@ class ModuleViewSet(NautobotModelViewSet):
         "parent_module_bay__parent_device__location",
         "parent_module_bay__parent_device__tenant",
         "module_type__manufacturer",
-        "tenant",
-        "role",
-        "location",
-    ).prefetch_related("module_bays", "tags")
+    )
     serializer_class = serializers.ModuleSerializer
     filterset_class = filters.ModuleFilterSet
 
 
 class ModuleTypeViewSet(NautobotModelViewSet):
-    queryset = ModuleType.objects.select_related("manufacturer").prefetch_related("tags", "modules")
+    queryset = ModuleType.objects.all()
     serializer_class = serializers.ModuleTypeSerializer
     filterset_class = filters.ModuleTypeFilterSet
+
+
+class VirtualDeviceContextViewSet(NautobotModelViewSet):
+    queryset = VirtualDeviceContext.objects.all()
+    serializer_class = serializers.VirtualDeviceContextSerializer
+    filterset_class = filters.VirtualDeviceContextFilterSet
+
+
+class InterfaceVDCAssignmentViewSet(ModelViewSet):
+    queryset = InterfaceVDCAssignment.objects.all()
+    serializer_class = serializers.InterfaceVDCAssignmentSerializer
+    filterset_class = filters.InterfaceVDCAssignmentFilterSet

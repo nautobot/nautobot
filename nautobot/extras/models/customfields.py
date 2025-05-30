@@ -370,11 +370,11 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
 
     def get_for_model(self, model, exclude_filter_disabled=False):
         """
-        Return all CustomFields assigned to the given model.
+        Return (and cache) all CustomFields assigned to the given model.
 
         Args:
-            model: The django model to which custom fields are registered
-            exclude_filter_disabled: Exclude any custom fields which have filter logic disabled
+            model (Model): The django model to which custom fields are registered
+            exclude_filter_disabled (bool): Exclude any custom fields which have filter logic disabled
         """
         concrete_model = model._meta.concrete_model
         cache_key = (
@@ -520,6 +520,26 @@ class CustomField(
 
     def __str__(self):
         return self.label
+
+    @property
+    def choices_cache_key(self):
+        return f"nautobot.extras.customfield.choices.{self.pk}"
+
+    @property
+    def choices(self) -> list[str]:
+        """
+        Cacheable shorthand for retrieving custom_field_choices values associated with this model.
+
+        Returns:
+            list[str]: List of choice values, ordered by weight.
+        """
+        if self.type not in [CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT]:
+            return []
+        choices = cache.get(self.choices_cache_key)
+        if choices is None:
+            choices = list(self.custom_field_choices.order_by("weight", "value").values_list("value", flat=True))
+            cache.set(self.choices_cache_key, choices)
+        return choices
 
     def save(self, *args, **kwargs):
         self.clean()
@@ -679,12 +699,11 @@ class CustomField(
 
         # Select or Multi-select
         else:
-            choices = [(cfc.value, cfc.value) for cfc in self.custom_field_choices.all()]
-            default_choice = self.custom_field_choices.filter(value=self.default).first()
+            choices = [(value, value) for value in self.choices]
 
             # Set the initial value to the first available choice (if any)
             if self.type == CustomFieldTypeChoices.TYPE_SELECT and not for_filter_form:
-                if not required or default_choice is None:
+                if not required or self.default not in self.choices:
                     choices = add_blank_choice(choices)
                 field_class = CSVChoiceField if for_csv_import else forms.ChoiceField
                 field = field_class(
@@ -779,17 +798,15 @@ class CustomField(
 
             # Validate selected choice
             elif self.type == CustomFieldTypeChoices.TYPE_SELECT:
-                if value not in self.custom_field_choices.values_list("value", flat=True):
-                    raise ValidationError(
-                        f"Invalid choice ({value}). Available choices are: {', '.join(self.custom_field_choices.values_list('value', flat=True))}"
-                    )
+                if value not in self.choices:
+                    raise ValidationError(f"Invalid choice ({value}). Available choices are: {', '.join(self.choices)}")
 
             elif self.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
                 if isinstance(value, str):
                     value = value.split(",")
-                if not set(value).issubset(self.custom_field_choices.values_list("value", flat=True)):
+                if not set(value).issubset(self.choices):
                     raise ValidationError(
-                        f"Invalid choice(s) ({value}). Available choices are: {', '.join(self.custom_field_choices.values_list('value', flat=True))}"
+                        f"Invalid choice(s) ({value}). Available choices are: {', '.join(self.choices)}"
                     )
 
         elif self.required:
@@ -805,16 +822,17 @@ class CustomField(
 
         super().delete(*args, **kwargs)
 
-        # Circular Import
-        from nautobot.extras.signals import change_context_state
+        if content_types:
+            # Circular Import
+            from nautobot.extras.signals import change_context_state
 
-        change_context = change_context_state.get()
-        if change_context is None:
-            context = None
-        else:
-            context = change_context.as_dict(instance=self)
-            context["context_detail"] = "delete custom field data"
-        delete_custom_field_data.delay(self.key, content_types, context)
+            change_context = change_context_state.get()
+            if change_context is None:
+                context = None
+            else:
+                context = change_context.as_dict(instance=self)
+                context["context_detail"] = "delete custom field data"
+            delete_custom_field_data.delay(self.key, content_types, context)
 
     def add_prefix_to_cf_key(self):
         return "cf_" + str(self.key)

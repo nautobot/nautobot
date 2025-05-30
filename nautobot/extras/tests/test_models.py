@@ -1,9 +1,11 @@
 from datetime import datetime, timedelta, timezone
 import os
+import shutil
 import tempfile
 from unittest import expectedFailure, mock
 import uuid
 import warnings
+from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -16,13 +18,9 @@ from django.test import override_settings
 from django.test.utils import isolate_apps
 from django.utils.timezone import get_default_timezone, now
 from django_celery_beat.tzcrontab import TzAwareCrontab
+from git import GitCommandError
 from jinja2.exceptions import TemplateAssertionError, TemplateSyntaxError
 import time_machine
-
-try:
-    from zoneinfo import ZoneInfo
-except ImportError:  # python 3.8
-    from backports.zoneinfo import ZoneInfo
 
 from nautobot.circuits.models import CircuitType
 from nautobot.core.choices import ColorChoices
@@ -52,6 +50,7 @@ from nautobot.extras.constants import (
     JOB_LOG_MAX_LOG_OBJECT_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
+from nautobot.extras.datasources.registry import get_datasource_contents
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
     ComputedField,
@@ -66,6 +65,7 @@ from nautobot.extras.models import (
     GitRepository,
     Job as JobModel,
     JobLogEntry,
+    JobQueue,
     JobResult,
     MetadataChoice,
     MetadataType,
@@ -86,6 +86,7 @@ from nautobot.extras.models import (
 from nautobot.extras.models.statuses import StatusModel
 from nautobot.extras.registry import registry
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
+from nautobot.extras.tests.git_helper import create_and_populate_git_repository
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import (
@@ -1075,6 +1076,285 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
         self.repo.remote_url = "http://some-private-host/example.git"
         self.repo.validated_save()
 
+    def test_clone_to_directory_context_manager(self):
+        """Confirm that the clone_to_directory_context() context manager method works as expected."""
+        try:
+            specified_path = tempfile.mkdtemp()
+            self.tempdir = tempfile.TemporaryDirectory()  # pylint: disable=consider-using-with
+            create_and_populate_git_repository(self.tempdir.name, divergent_branch="divergent-branch")
+            self.repo_slug = "new_git_repo"
+            self.repo = GitRepository(
+                name="New Git Repository",
+                slug=self.repo_slug,
+                remote_url="file://"
+                + self.tempdir.name,  # file:// URLs aren't permitted normally, but very useful here!
+                branch="main",
+                # Provide everything we know we can provide
+                provided_contents=[
+                    entry.content_identifier for entry in get_datasource_contents("extras.gitrepository")
+                ],
+            )
+            self.repo.save()
+            with self.subTest("Clone a repository with no path argument provided"):
+                with self.repo.clone_to_directory_context() as path:
+                    # assert that the temporary directory was created in the expected location i.e. /tmp/
+                    self.assertTrue(path.startswith(tempfile.gettempdir()))
+                    self.assertTrue(os.path.exists(path))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema2.json"))
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a repository with a path argument provided"):
+                with self.repo.clone_to_directory_context(path=specified_path) as path:
+                    # assert that the temporary directory was created in the expected location i.e. /tmp/
+                    self.assertTrue(path.startswith(specified_path))
+                    self.assertTrue(os.path.exists(path))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema2.json"))
+                # Temp directory is cleaned up after the context manager exits
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a repository with the branch argument provided"):
+                with self.repo.clone_to_directory_context(path=specified_path, branch="main") as path:
+                    # assert that the temporary directory was created in the expected location i.e. /tmp/
+                    self.assertTrue(path.startswith(specified_path))
+                    self.assertTrue(os.path.exists(path))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema2.json"))
+                # Temp directory is cleaned up after the context manager exits
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a repository with non-default branch provided"):
+                with self.repo.clone_to_directory_context(path=specified_path, branch="empty-repo") as path:
+                    # assert that the temporary directory was created in the expected location i.e. /tmp/
+                    self.assertTrue(path.startswith(specified_path))
+                    self.assertTrue(os.path.exists(path))
+                    # empty-repo should contain no files
+                    self.assertFalse(os.path.exists(path + "/config_context_schemas"))
+                    self.assertFalse(os.path.exists(path + "/config_contexts"))
+                # Temp directory is cleaned up after the context manager exits
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a repository with divergent branch provided"):
+                with self.repo.clone_to_directory_context(path=specified_path, branch="divergent-branch") as path:
+                    # assert that the temporary directory was created in the expected location i.e. /tmp/
+                    self.assertTrue(path.startswith(specified_path))
+                    self.assertTrue(os.path.exists(path))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema2.json"))
+                # Temp directory is cleaned up after the context manager exits
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a repository with the head argument provided"):
+                with self.repo.clone_to_directory_context(path=specified_path, head="valid-files") as path:
+                    # assert that the temporary directory was created in the expected location i.e. /tmp/
+                    self.assertTrue(path.startswith(specified_path))
+                    self.assertTrue(os.path.exists(path))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/schema-1.yaml"))
+                    self.assertTrue(os.path.exists(path + "/config_contexts/context.yaml"))
+                # Temp directory is cleaned up after the context manager exits
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a repository with depth argument provided"):
+                with self.repo.clone_to_directory_context(path=specified_path, depth=1) as path:
+                    # assert that the temporary directory was created in the expected location i.e. /tmp/
+                    self.assertTrue(path.startswith(specified_path))
+                    self.assertTrue(os.path.exists(path))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                    self.assertTrue(os.path.exists(path + "/config_contexts/badcontext2.json"))
+                # Temp directory is cleaned up after the context manager exits
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a shallow repository with depth and valid head arguments provided"):
+                with self.repo.clone_to_directory_context(
+                    path=specified_path, depth=1, head="divergent-branch-tag"
+                ) as path:
+                    # assert that the temporary directory was created in the expected location i.e. /tmp/
+                    self.assertTrue(path.startswith(specified_path))
+                    self.assertTrue(os.path.exists(path))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                    self.assertTrue(os.path.exists(path + "/config_contexts/badcontext2.json"))
+                # Temp directory is cleaned up after the context manager exits
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a shallow repository with depth and invalid head arguments provided"):
+                with self.assertRaisesRegex(GitCommandError, "malformed object name valid-files"):
+                    # Shallow copy a repo should only have the latest commit
+                    with self.repo.clone_to_directory_context(path=specified_path, depth=1, head="valid-files") as path:
+                        pass
+
+            with self.subTest("Clone a shallow repository with depth and valid branch arguments provided"):
+                with self.repo.clone_to_directory_context(path=specified_path, depth=1, branch="main") as path:
+                    # assert that the temporary directory was created in the expected location i.e. /tmp/
+                    self.assertTrue(path.startswith(specified_path))
+                    self.assertTrue(os.path.exists(path))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                    self.assertTrue(os.path.exists(path + "/config_contexts/badcontext2.json"))
+                # Temp directory is cleaned up after the context manager exits
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a shallow repository with depth and divergent branch arguments provided"):
+                with self.repo.clone_to_directory_context(
+                    path=specified_path, depth=1, branch="divergent-branch"
+                ) as path:
+                    # assert that the temporary directory was created in the expected location i.e. /tmp/
+                    self.assertTrue(path.startswith(specified_path))
+                    self.assertTrue(os.path.exists(path))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                    self.assertTrue(os.path.exists(path + "/config_contexts/badcontext2.json"))
+                # Temp directory is cleaned up after the context manager exits
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Assert a GitCommandError is raised when an invalid commit hash is provided"):
+                with self.assertRaisesRegex(GitCommandError, "malformed object name non-existent"):
+                    with self.repo.clone_to_directory_context(path=specified_path, head="non-existent") as path:
+                        pass
+
+            with self.subTest("Assert a value error is raised when branch and head are both provided"):
+                with self.assertRaisesRegex(ValueError, "Cannot specify both branch and head"):
+                    with self.repo.clone_to_directory_context(branch="main", head="valid-files") as path:
+                        pass
+        finally:
+            shutil.rmtree(specified_path, ignore_errors=True)
+            shutil.rmtree(self.tempdir.name, ignore_errors=True)
+
+    def test_clone_to_directory_helper_methods(self):
+        """Confirm that the clone_to_directory()/cleanup_cloned_directory() methods work as expected."""
+        try:
+            specified_path = tempfile.mkdtemp()
+            self.tempdir = tempfile.TemporaryDirectory()  # pylint: disable=consider-using-with
+            create_and_populate_git_repository(self.tempdir.name, divergent_branch="divergent-branch")
+            self.repo_slug = "new_git_repo"
+            self.repo = GitRepository(
+                name="New Git Repository",
+                slug=self.repo_slug,
+                remote_url="file://"
+                + self.tempdir.name,  # file:// URLs aren't permitted normally, but very useful here!
+                branch="main",
+                # Provide everything we know we can provide
+                provided_contents=[
+                    entry.content_identifier for entry in get_datasource_contents("extras.gitrepository")
+                ],
+            )
+            self.repo.save()
+            with self.subTest("Clone a repository with no path argument provided"):
+                path = self.repo.clone_to_directory()
+                # assert that the temporary directory was created in the expected location i.e. /tmp/
+                self.assertTrue(path.startswith(tempfile.gettempdir()))
+                self.assertTrue(os.path.exists(path))
+                self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema2.json"))
+                self.repo.cleanup_cloned_directory(path)
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a repository with a path argument provided"):
+                path = self.repo.clone_to_directory(path=specified_path)
+                # assert that the temporary directory was created in the expected location i.e. /tmp/
+                self.assertTrue(path.startswith(specified_path))
+                self.assertTrue(os.path.exists(path))
+                self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema2.json"))
+                self.repo.cleanup_cloned_directory(path)
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a repository with the branch argument provided"):
+                path = self.repo.clone_to_directory(path=specified_path, branch="main")
+                # assert that the temporary directory was created in the expected location i.e. /tmp/
+                self.assertTrue(path.startswith(specified_path))
+                self.assertTrue(os.path.exists(path))
+                self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema2.json"))
+                self.repo.cleanup_cloned_directory(path)
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a repository with non-default branch provided"):
+                path = self.repo.clone_to_directory(path=specified_path, branch="empty-repo")
+                # assert that the temporary directory was created in the expected location i.e. /tmp/
+                self.assertTrue(path.startswith(specified_path))
+                self.assertTrue(os.path.exists(path))
+                self.assertFalse(os.path.exists(path + "/config_context_schemas"))
+                self.assertFalse(os.path.exists(path + "/config_contexts"))
+                self.repo.cleanup_cloned_directory(path)
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a repository with divergent branch provided"):
+                path = self.repo.clone_to_directory(path=specified_path, branch="divergent-branch")
+                # assert that the temporary directory was created in the expected location i.e. /tmp/
+                self.assertTrue(path.startswith(specified_path))
+                self.assertTrue(os.path.exists(path))
+                self.assertTrue(os.path.exists(path + "/config_context_schemas"))
+                self.assertTrue(os.path.exists(path + "/config_contexts"))
+                self.repo.cleanup_cloned_directory(path)
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a repository with the head argument provided"):
+                path = self.repo.clone_to_directory(path=specified_path, head="valid-files")
+                # assert that the temporary directory was created in the expected location i.e. /tmp/
+                self.assertTrue(path.startswith(specified_path))
+                self.assertTrue(os.path.exists(path))
+                self.assertTrue(os.path.exists(path + "/config_context_schemas/schema-1.yaml"))
+                self.assertTrue(os.path.exists(path + "/config_contexts/context.yaml"))
+                self.repo.cleanup_cloned_directory(path)
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a repository with depth argument provided"):
+                path = self.repo.clone_to_directory(path=specified_path, depth=1)
+                # assert that the temporary directory was created in the expected location i.e. /tmp/
+                self.assertTrue(path.startswith(specified_path))
+                self.assertTrue(os.path.exists(path))
+                self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                self.assertTrue(os.path.exists(path + "/config_contexts/badcontext2.json"))
+                self.repo.cleanup_cloned_directory(path)
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a shallow repository with depth and valid head arguments provided"):
+                path = self.repo.clone_to_directory(path=specified_path, depth=1, head="divergent-branch-tag")
+                # assert that the temporary directory was created in the expected location i.e. /tmp/
+                self.assertTrue(path.startswith(specified_path))
+                self.assertTrue(os.path.exists(path))
+                self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                self.assertTrue(os.path.exists(path + "/config_contexts/badcontext2.json"))
+                self.repo.cleanup_cloned_directory(path)
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a shallow repository with depth and invalid head arguments provided"):
+                with self.assertRaisesRegex(GitCommandError, "malformed object name valid-files"):
+                    # Shallow copy a repo should only have the latest commit
+                    path = self.repo.clone_to_directory(path=specified_path, depth=1, head="valid-files")
+                    self.repo.cleanup_cloned_directory(path)
+                    self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a shallow repository with depth and valid branch arguments provided"):
+                path = self.repo.clone_to_directory(path=specified_path, depth=1, branch="main")
+                # assert that the temporary directory was created in the expected location i.e. /tmp/
+                self.assertTrue(path.startswith(specified_path))
+                self.assertTrue(os.path.exists(path))
+                self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                self.assertTrue(os.path.exists(path + "/config_contexts/badcontext2.json"))
+                self.repo.cleanup_cloned_directory(path)
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a shallow repository with depth and divergent branch arguments provided"):
+                path = self.repo.clone_to_directory(path=specified_path, depth=1, branch="divergent-branch")
+                # assert that the temporary directory was created in the expected location i.e. /tmp/
+                self.assertTrue(path.startswith(specified_path))
+                self.assertTrue(os.path.exists(path))
+                self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                self.assertTrue(os.path.exists(path + "/config_contexts/badcontext2.json"))
+                self.repo.cleanup_cloned_directory(path)
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Assert a GitCommandError is raised when an invalid commit hash is provided"):
+                with self.assertRaisesRegex(GitCommandError, "malformed object name non-existent"):
+                    path = self.repo.clone_to_directory(path=specified_path, head="non-existent")
+
+            with self.subTest("Assert a ValuError is raised when branch and head are both provided"):
+                with self.assertRaisesRegex(ValueError, "Cannot specify both branch and head"):
+                    path = self.repo.clone_to_directory(branch="main", head="valid-files")
+        finally:
+            shutil.rmtree(specified_path, ignore_errors=True)
+            shutil.rmtree(self.tempdir.name, ignore_errors=True)
+
 
 class JobModelTest(ModelTestCases.BaseModelTestCase):
     """
@@ -1086,8 +1366,8 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
     @classmethod
     def setUpTestData(cls):
         # JobModel instances are automatically instantiated at startup, so we just need to look them up.
-        cls.local_job = JobModel.objects.get(job_class_name="TestPass")
-        cls.job_containing_sensitive_variables = JobModel.objects.get(job_class_name="ExampleLoggingJob")
+        cls.local_job = JobModel.objects.get(job_class_name="TestPassJob")
+        cls.job_containing_sensitive_variables = JobModel.objects.get(job_class_name="TestHasSensitiveVariables")
         cls.app_job = JobModel.objects.get(job_class_name="ExampleJob")
 
     def test_job_class(self):
@@ -1098,7 +1378,7 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.app_job.job_class, ExampleJob)
 
     def test_class_path(self):
-        self.assertEqual(self.local_job.class_path, "pass.TestPass")
+        self.assertEqual(self.local_job.class_path, "pass.TestPassJob")
         self.assertIsNotNone(self.local_job.job_class)
         self.assertEqual(self.local_job.class_path, self.local_job.job_class.class_path)
 
@@ -1135,6 +1415,11 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
                                 getattr(job_model.job_class, field_name),
                                 field_name,
                             )
+                    if not job_model.job_queues_override:
+                        self.assertEqual(
+                            sorted(job_model.task_queues),
+                            sorted(job_model.job_class.task_queues) or [settings.CELERY_TASK_DEFAULT_QUEUE],
+                        )
                 except AssertionError:
                     print(list(JobModel.objects.all()))
                     print(registry["jobs"])
@@ -1159,7 +1444,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
             "has_sensitive_variables": not self.job_containing_sensitive_variables.has_sensitive_variables,
             "soft_time_limit": 350,
             "time_limit": 650,
-            "task_queues": ["overridden", "worker", "queues"],
         }
 
         # Override values to non-defaults and ensure they are preserved
@@ -1236,6 +1520,25 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
             handler.exception.message_dict["approval_required"][0],
             "A job that may have sensitive variables cannot be marked as requiring approval",
         )
+
+    def test_default_job_queue_always_included_in_job_queues(self):
+        default_job_queue = JobQueue.objects.first()
+        job_queues = list(JobQueue.objects.exclude(pk=default_job_queue.pk))[:3]
+
+        job = JobModel.objects.first()
+        job.default_job_queue = default_job_queue
+        job.save()
+        job.job_queues.set(job_queues)
+
+        self.assertTrue(job.job_queues.filter(pk=default_job_queue.pk).exists())
+
+
+class JobQueueTest(ModelTestCases.BaseModelTestCase):
+    """
+    Tests for the `JobQueue` model class.
+    """
+
+    model = JobQueue
 
 
 class MetadataChoiceTest(ModelTestCases.BaseModelTestCase):
@@ -1812,11 +2115,11 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(username="scheduledjobuser")
-        self.job_model = JobModel.objects.get(name="TestPass")
+        self.job_model = JobModel.objects.get(name="TestPassJob")
 
         self.daily_utc_job = ScheduledJob.objects.create(
             name="Daily UTC Job",
-            task="pass.TestPass",
+            task="pass.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_DAILY,
             start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
@@ -1824,7 +2127,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         )
         self.daily_est_job = ScheduledJob.objects.create(
             name="Daily EST Job",
-            task="pass.TestPass",
+            task="pass.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_DAILY,
             start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=ZoneInfo("America/New_York")),
@@ -1839,7 +2142,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         )
         self.crontab_est_job = ScheduledJob.objects.create(
             name="Crontab EST Job",
-            task="pass.TestPass",
+            task="pass.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_CUSTOM,
             start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=ZoneInfo("America/New_York")),
@@ -1848,7 +2151,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         )
         self.one_off_utc_job = ScheduledJob.objects.create(
             name="One-off UTC Job",
-            task="pass.TestPass",
+            task="pass.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,
             start_time=datetime(year=2050, month=1, day=22, hour=0, minute=0, tzinfo=ZoneInfo("UTC")),
@@ -1861,6 +2164,14 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
             interval=JobExecutionType.TYPE_FUTURE,
             start_time=datetime(year=2050, month=1, day=22, hour=0, minute=0, tzinfo=ZoneInfo("America/New_York")),
         )
+
+    def test_scheduled_job_queue_setter(self):
+        """Test the queue property setter on ScheduledJob."""
+        invalid_queue = "Invalid job Queue"
+        with self.assertRaises(ValidationError) as cm:
+            self.daily_utc_job.queue = invalid_queue
+            self.daily_utc_job.validated_save()
+        self.assertIn(f"Job Queue {invalid_queue} does not exist in the database.", str(cm.exception))
 
     def test_schedule(self):
         """Test the schedule property."""
@@ -1987,7 +2298,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         """Test that TYPE_CUSTOM behavior around DST is as expected."""
         cronjob = ScheduledJob.objects.create(
             name="DST Aware Cronjob",
-            task="pass.TestPass",
+            task="pass.TestPassJob",
             job_model=self.job_model,
             enabled=False,
             interval=JobExecutionType.TYPE_CUSTOM,
@@ -2042,7 +2353,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         """Test the interaction of TYPE_DAILY around DST."""
         daily = ScheduledJob.objects.create(
             name="Daily Job",
-            task="pass.TestPass",
+            task="pass.TestPassJob",
             job_model=self.job_model,
             enabled=False,
             interval=JobExecutionType.TYPE_DAILY,
@@ -2091,6 +2402,39 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
             with time_machine.travel("2024-03-10 17:00 -0400"):
                 is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 9, 17, 0, tzinfo=ZoneInfo("America/New_York")))
                 self.assertTrue(is_due)
+
+    # TODO uncomment when we have a way to setup the NautobotDatabaseScheduler correctly
+    # @mock.patch("nautobot.extras.utils.run_kubernetes_job_and_return_job_result")
+    # def test_nautobot_database_scheduler_apply_async_method(self, mock_run_kubernetes_job_and_return_job_result):
+    #     jq = JobQueue.objects.create(name="kubernetes", queue_type=JobQueueTypeChoices.TYPE_KUBERNETES)
+    #     sj = ScheduledJob.objects.create(
+    #         name="Export Object List Hourly",
+    #         task="nautobot.core.jobs.ExportObjectList",
+    #         job_model=JobModel.objects.get(name="Export Object List"),
+    #         interval=JobExecutionType.TYPE_HOURLY,
+    #         user=User.objects.first(),
+    #         approval_required=False,
+    #         start_time=datetime.now(ZoneInfo("America/New_York")),
+    #         time_zone=ZoneInfo("America/New_York"),
+    #         job_queue=jq,
+    #         kwargs='{"content_type": 1}',
+    #     )
+    #     jr = JobResult.objects.create(
+    #         name=sj.job_model.name,
+    #         job_model=sj.job_model,
+    #         scheduled_job=sj,
+    #         user=sj.user,
+    #     )
+    #     mock_run_kubernetes_job_and_return_job_result.return_value = jr
+    #     entry = NautobotScheduleEntry(model=sj)
+    #     scheduler = NautobotDatabaseScheduler(app=entry.app)
+    #     scheduler.apply_async(entry=entry, producer=None, advance=False)
+    #     Check scheduled job runs correctly with no job queue
+    #     sj.job_queue = None
+    #     sj.save()
+    #     entry = NautobotScheduleEntry(model=sj)
+    #     scheduler = NautobotDatabaseScheduler(app=entry.app)
+    #     scheduler.apply_async(entry=entry, producer=None, advance=False)
 
 
 class SecretTest(ModelTestCases.BaseModelTestCase):
@@ -2583,7 +2927,7 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
 
     def setUp(self):
         module = "pass"
-        name = "TestPass"
+        name = "TestPassJob"
         job_class = get_job(f"{module}.{name}")
 
         self.job_result = JobResult.objects.create(name=job_class.class_path, user=None)

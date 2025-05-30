@@ -1,5 +1,3 @@
-<!-- markdownlint-disable MD024 -->
-
 # Nautobot v2.2
 
 This document describes all new features and changes in Nautobot 2.2.
@@ -65,17 +63,16 @@ The CSV import functionality for all models has been changed from a synchronous 
 
 Model CharFields' `max_length` attributes have been standardized globally to have at least 255 characters except where a shorter `max_length` is explicitly justified.
 
-<!-- towncrier release notes start -->
 ## v2.2.9 (2024-08-05)
 
-### Added
+### Added in v2.2.9
 
 - [#5965](https://github.com/nautobot/nautobot/issues/5965) - Added missing controller references for DeviceRedundancyGroup in the UI.
 - [#5980](https://github.com/nautobot/nautobot/issues/5980) - Added caching to `FeatureQuery().get_choices()` and `FeatureQuery().list_subclasses()`.
 - [#6029](https://github.com/nautobot/nautobot/issues/6029) - Added environment variable support for setting `CELERY_WORKER_PREFETCH_MULTIPLIER`.
 - [#6030](https://github.com/nautobot/nautobot/issues/6030) - Added links from the Job list and detail views to quickly filter the list of Job Results to the corresponding Job.
 
-### Fixed
+### Fixed in v2.2.9
 
 - [#5775](https://github.com/nautobot/nautobot/issues/5775) - Reintroduced `Add IP Address` button to VirtualMachine Interface table.
 - [#5785](https://github.com/nautobot/nautobot/issues/5785) - Fixed Scheduled Jobs not respecting Job Soft / Hard Time Limit.
@@ -90,11 +87,11 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 - [#5992](https://github.com/nautobot/nautobot/issues/5992) - Added signal to clear relevant content-type caches after running migrations.
 - [#6022](https://github.com/nautobot/nautobot/issues/6022) - Fixed incorrect labels for derived filters (`tenant__n`, `tenant__isw`, etc.) when the base filter (`tenant`, etc.) has a custom label.
 
-### Dependencies
+### Dependencies in v2.2.9
 
 - [#6010](https://github.com/nautobot/nautobot/issues/6010) - Pinned `django-storages` temporarily to 1.14.3 due to an [incompatibility](https://github.com/revsys/django-health-check/issues/434) between `django-health-check` and version 1.14.4 of `django-storages`.
 
-### Documentation
+### Documentation in v2.2.9
 
 - [#5949](https://github.com/nautobot/nautobot/issues/5949) - Fixed NewBranch job code in documentation.
 - [#5958](https://github.com/nautobot/nautobot/issues/5958) - Added an example job that uses a custom template to render the job form.
@@ -104,38 +101,38 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 
 ## v2.2.8 (2024-07-22)
 
-### Security
+### Security in v2.2.8
 
 - [#5911](https://github.com/nautobot/nautobot/issues/5911) - Updated `zipp` to `3.19.1` to address `CVE-2024-5569`. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
 
-### Fixed
+### Fixed in v2.2.8
 
 - [#5569](https://github.com/nautobot/nautobot/issues/5569) - Fixed relationship required to ignore objects that do not match the related filter.
 - [#5613](https://github.com/nautobot/nautobot/issues/5613) - Fixed intermittent failure in integration test for dynamic groups.
 - [#5906](https://github.com/nautobot/nautobot/issues/5906) - Added support for filtering in GraphQL of objects identified by a many-to-many relation (`Location.prefixes`, `Prefix.locations`, etc.)
 - [#5935](https://github.com/nautobot/nautobot/issues/5935) - Fixed issue in which a save() could be called unnecessarily on child devices.
 
-### Dependencies
+### Dependencies in v2.2.8
 
 - [#5833](https://github.com/nautobot/nautobot/issues/5833) - Updated dependency `social-auth-app-django` to `~5.4.2`.
 - [#5833](https://github.com/nautobot/nautobot/issues/5833) - Updated optional dependency `django-storages` to `~1.14.4`.
 
-### Documentation
+### Documentation in v2.2.8
 
 - [#5833](https://github.com/nautobot/nautobot/issues/5833) - Updated documentation dependency `mkdocs-material` to `~9.5.29`.
 - [#5874](https://github.com/nautobot/nautobot/issues/5874) - Updated documentation regarding Nautobot on Ubuntu 24.04.
 
-### Housekeeping
+### Housekeeping in v2.2.8
 
 - [#5610](https://github.com/nautobot/nautobot/issues/5610) - Added integration test to do basic checking for static media failures caused by typos in template files.
 
 ## v2.2.7 (2024-07-08)
 
-### Security
+### Security in v2.2.7
 
 - [#5891](https://github.com/nautobot/nautobot/issues/5891) - Updated `certifi` to `2024.7.4` to address `CVE-2024-39689`. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
 
-### Fixed
+### Fixed in v2.2.7
 
 - [#4237](https://github.com/nautobot/nautobot/issues/4237) - Fixed display issue with multiple tags filter on dynamic groups. Multiple Tags are now correctly displayed with an AND.
 - [#5093](https://github.com/nautobot/nautobot/issues/5093) - Fixed blank page redirect when syncing or running a dry run on a GIT Repo with no workers available; now redirects to the GIT Repo Detail page with an error message.
@@ -143,34 +140,34 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 - [#5832](https://github.com/nautobot/nautobot/issues/5832) - Fixed lack of API versioning of responses to a POST to `/api/ipam/prefixes/<id>/available-prefixes/` to allocate child prefixes of a prefix.
 - [#5832](https://github.com/nautobot/nautobot/issues/5832) - Fixed incorrect OpenAPI schema for `/api/ipam/prefixes/<id>/available-prefixes/` and `/api/ipam/prefixes/<id>/available-ips/`.
 
-### Dependencies
+### Dependencies in v2.2.7
 
 - [#5518](https://github.com/nautobot/nautobot/issues/5518) - Updated `drf-spectacular` to version `0.27.2`.
 - [#5896](https://github.com/nautobot/nautobot/pull/5896) - Pinned dev dependency `faker` to `>=0.7.0,<26.0.0` to work around breaking change in v26.0.0 ([faker/#2070](https://github.com/joke2k/faker/issues/2070)).
 
-### Housekeeping
+### Housekeeping in v2.2.7
 
 - [#5847](https://github.com/nautobot/nautobot/issues/5847) - Updated the term plugin to app within the GitHub templates.
 - [#5858](https://github.com/nautobot/nautobot/issues/5858) - Enhanced the test runner to include a hash of applied database migrations as part of the factory dump filename, reducing the likelihood of using the wrong cached data for a given branch.
 
 ## v2.2.6 (2024-06-24)
 
-### Security
+### Security in v2.2.6
 
 - [#5821](https://github.com/nautobot/nautobot/issues/5821) - Updated `urllib3` to 2.2.2 due to CVE-2024-37891. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
 
-### Added
+### Added in v2.2.6
 
 - [#5550](https://github.com/nautobot/nautobot/issues/5550) - Added support for specifying a tag or a commit hash as the GitRepository `branch` value.
 - [#5550](https://github.com/nautobot/nautobot/issues/5550) - Added an `enabled` flag to the JobButton class; disabled JobButtons will not appear in the UI.
 - [#5793](https://github.com/nautobot/nautobot/issues/5793) - Added `--print-hashes` option to `nautobot-server generate_test_data` command.
 - [#5807](https://github.com/nautobot/nautobot/issues/5807) - Added the ability to sort and filter the `IPAddress` list view by the `nat_inside` field.
 
-### Changed
+### Changed in v2.2.6
 
 - [#5550](https://github.com/nautobot/nautobot/issues/5550) - Changed the behavior on removal of a previously-installed Job class to additionally auto-disable any JobButtons, JobHooks, and ScheduledJobs referencing this class.
 
-### Fixed
+### Fixed in v2.2.6
 
 - [#5550](https://github.com/nautobot/nautobot/issues/5550) - Fixed an issue where config-contexts and export-templates sourced from a Git repository might not be automatically deleted from Nautobot after removing them from the repository and resyncing it.
 - [#5550](https://github.com/nautobot/nautobot/issues/5550) - Fixed an exception that might be raised when performing a Git repository "dry-run" sync if certain types of diffs are present.
@@ -178,13 +175,13 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 - [#5809](https://github.com/nautobot/nautobot/issues/5809) - Fixed missing support for the GitRepository model in GraphQL.
 - [#5819](https://github.com/nautobot/nautobot/issues/5819) - Fixed inability to use bare (local-DNS) hostnames when specifying a GitRepository remote URL.
 
-### Documentation
+### Documentation in v2.2.6
 
 - [#5726](https://github.com/nautobot/nautobot/issues/5726) - Updated, cleaned up, and separated out the main landing page for Nautobot docs.
 - [#5752](https://github.com/nautobot/nautobot/issues/5752) - Corrected incorrect entry for `nautobot.utilities.ordering` in `v2-code-location-changes` table.
 - [#5754](https://github.com/nautobot/nautobot/issues/5754) - Updated `mkdocs-material` to 9.5.25.
 
-### Housekeeping
+### Housekeeping in v2.2.6
 
 - [#5754](https://github.com/nautobot/nautobot/issues/5754) - Updated development dependencies `requests` to `~2.32.2` and `watchdog` to `~4.0.1`.
 - [#5793](https://github.com/nautobot/nautobot/issues/5793) - Refactored `generate_test_data` implementation for improved debuggability.
@@ -192,12 +189,12 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 
 ## v2.2.5 (2024-05-28)
 
-### Security
+### Security in v2.2.5
 
 - [#5740](https://github.com/nautobot/nautobot/issues/5740) - Updated `requests` to `2.32.1` to address [GHSA-9wx4-h78v-vm56](https://github.com/psf/requests/security/advisories/GHSA-9wx4-h78v-vm56). This is not a direct dependency so it will not auto-update when upgrading Nautobot. Please be sure to update your local environment.
 - [#5757](https://github.com/nautobot/nautobot/issues/5757) - Fixed missing member object permission enforcement (e.g., enforce Device permissions for a Dynamic Group containing Devices) when viewing Dynamic Group member objects in the UI or REST API ([GHSA-qmjf-wc2h-6x3q](https://github.com/nautobot/nautobot/security/advisories/GHSA-qmjf-wc2h-6x3q)).
 
-### Added
+### Added in v2.2.5
 
 - [#5588](https://github.com/nautobot/nautobot/issues/5588) - Added "Add VRFs" and "Remove VRFs" fields to `PrefixBulkEditForm`.
 - [#5588](https://github.com/nautobot/nautobot/issues/5588) - Added "Add Prefixes" and "Remove Prefixes" fields to `VRFBulkEditForm`.
@@ -205,11 +202,11 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 - [#5690](https://github.com/nautobot/nautobot/issues/5690) - Added a generic test case that asserts that all list views provide an appropriate FilterForm class.
 - [#5747](https://github.com/nautobot/nautobot/issues/5747) - Added "Circuit Terminations" navigation menu item.
 
-### Removed
+### Removed in v2.2.5
 
 - [#5690](https://github.com/nautobot/nautobot/issues/5690) - Removed deprecated `CustomFieldFilterForm` alias of `CustomFieldModelFilterFormMixin` as this would have caused confusion with the newly added `CustomFieldFilterForm` class providing filtering support for the Custom Fields list view.
 
-### Fixed
+### Fixed in v2.2.5
 
 - [#5564](https://github.com/nautobot/nautobot/issues/5564) - Fixed `ContactAssociationFilterSet.associated_object_type` not using the right filter field.
 - [#5669](https://github.com/nautobot/nautobot/issues/5669) - Fixed `AttributeError` thrown when deleting software versions or images from list views.
@@ -222,40 +219,40 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 - [#5738](https://github.com/nautobot/nautobot/issues/5738) - Fixed incorrect API query parameters when selecting VLANs to apply to a VM Interface.
 - [#5738](https://github.com/nautobot/nautobot/issues/5738) - Fixed incorrect query parameters when accessing or creating Clusters from a Cluster Type detail view.
 
-### Documentation
+### Documentation in v2.2.5
 
 - [#5699](https://github.com/nautobot/nautobot/issues/5699) - Updated to `mkdocs~1.6.0` and `mkdocs-material~9.5.23`.
 - [#5699](https://github.com/nautobot/nautobot/issues/5699) - Fixed a number of broken links within the documentation.
 
-### Housekeeping
+### Housekeeping in v2.2.5
 
 - [#5699](https://github.com/nautobot/nautobot/issues/5699) - Updated `pylint` to `~3.1.1`.
 - [#5740](https://github.com/nautobot/nautobot/issues/5740) - Updated test dependency `requests` to `~2.32.1`.
 
 ## v2.2.4 (2024-05-13)
 
-### Security
+### Security in v2.2.4
 
 - [#1858](https://github.com/nautobot/nautobot/issues/1858) - Added sanitization of HTML tags in the content of `BANNER_TOP`, `BANNER_BOTTOM`, and `BANNER_LOGIN` configuration to prevent against potential injection of malicious scripts (stored XSS) via these features ([GHSA-r2hr-4v48-fjv3](https://github.com/nautobot/nautobot/security/advisories/GHSA-r2hr-4v48-fjv3)).
 - [#5672](https://github.com/nautobot/nautobot/issues/5672) - Updated `Jinja2` dependency to `3.1.4` to address `CVE-2024-34064`.
 
-### Added
+### Added in v2.2.4
 
 - [#1858](https://github.com/nautobot/nautobot/issues/1858) - Added support in `BRANDING_FILEPATHS` configuration to specify a custom `css` and/or `javascript` file to be added to Nautobot page content.
 - [#1858](https://github.com/nautobot/nautobot/issues/1858) - Added Markdown support to the `BANNER_TOP`, `BANNER_BOTTOM`, and `BANNER_LOGIN` configuration settings.
 
-### Fixed
+### Fixed in v2.2.4
 
 - [#4986](https://github.com/nautobot/nautobot/issues/4986) - Fixed inconsistent use of super causing `active_tab` context to be missing from several views.
 - [#5644](https://github.com/nautobot/nautobot/issues/5644) - Made the uniqueness constraints between the ContactAssociation model and the related API serializer consistent.
 - [#5684](https://github.com/nautobot/nautobot/issues/5684) - Fixed standard CSV export when using export templates.
 - [#5689](https://github.com/nautobot/nautobot/issues/5689) - Fixed change logging for bulk delete operations so that user is included in the log.
 
-### Documentation
+### Documentation in v2.2.4
 
 - [#5661](https://github.com/nautobot/nautobot/issues/5661) - Updated documentation to organize installation instructions and provide easier to use functions from mkdocs.
 
-### Housekeeping
+### Housekeeping in v2.2.4
 
 - [#5263](https://github.com/nautobot/nautobot/issues/5263) - Updated `nh3` to `0.2.17` in `poetry.lock`.
 - [#5637](https://github.com/nautobot/nautobot/issues/5637) - Removed `"version"` from development `docker-compose.yml` files as newer versions of Docker complain about it being obsolete.
@@ -263,12 +260,12 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 
 ## v2.2.3 (2024-04-30)
 
-### Security
+### Security in v2.2.3
 
 - [#5624](https://github.com/nautobot/nautobot/issues/5624) - Updated `social-auth-app-django` dependency to `~5.4.1` to address `CVE-2024-32879`.
 - [#5646](https://github.com/nautobot/nautobot/issues/5646) - Fixed a reflected-XSS vulnerability ([GHSA-jxgr-gcj5-cqqg](https://github.com/nautobot/nautobot/security/advisories/GHSA-jxgr-gcj5-cqqg)) in object-list view rendering of user-provided query parameters.
 
-### Added
+### Added in v2.2.3
 
 - [#2946](https://github.com/nautobot/nautobot/issues/2946) - Added custom link support for interfaces, console ports, console server ports, power ports, power outlets, front ports, rear ports, device bays, and inventory items.
 - [#5034](https://github.com/nautobot/nautobot/issues/5034) - Added a view to convert location contact information to contacts or teams.
@@ -276,11 +273,11 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 - [#5560](https://github.com/nautobot/nautobot/issues/5560) - Added a template tag which creates a hyperlink that opens in a new tab.
 - [#5586](https://github.com/nautobot/nautobot/issues/5586) - Added `nautobot.apps.jobs.get_jobs()` API.
 
-### Changed
+### Changed in v2.2.3
 
 - [#5498](https://github.com/nautobot/nautobot/issues/5498) - Changed the `nautobot.extras.jobs.Job` class to no longer be a subclass of `celery.tasks.Task`.
 
-### Fixed
+### Fixed in v2.2.3
 
 - [#5513](https://github.com/nautobot/nautobot/issues/5513) - Fixed missing `location` field in `Prefix` and `VLAN` GraphQL schema.
 - [#5513](https://github.com/nautobot/nautobot/issues/5513) - Restored ability to filter Prefix and VLAN objects at the ORM level by `location`.
@@ -293,14 +290,14 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 - [#5642](https://github.com/nautobot/nautobot/issues/5642) - Fixed some cases where stale Job code might be present when Jobs are sourced from `JOBS_ROOT` or a Git repository.
 - [#5642](https://github.com/nautobot/nautobot/issues/5642) - Fixed incorrect handling of Job `kwargs` when dry-running a job approval request via the REST API.
 
-### Documentation
+### Documentation in v2.2.3
 
 - [#5094](https://github.com/nautobot/nautobot/issues/5094) - Added "Reserved Attribute Names" section to the Jobs developer documentation.
 - [#5608](https://github.com/nautobot/nautobot/issues/5608) - Updated VLAN documentation with a recommendation for modeling of VLANs with respect to Locations.
 - [#5626](https://github.com/nautobot/nautobot/issues/5626) - Added extras features docs to core developer new model checklist.
 - [#5635](https://github.com/nautobot/nautobot/issues/5635) - Added borders to tabbed sections of mkdocs.
 
-### Housekeeping
+### Housekeeping in v2.2.3
 
 - [#4498](https://github.com/nautobot/nautobot/issues/4498) - Removed redundant `nautobot.extras.plugins.register_jobs` function.
 - [#5586](https://github.com/nautobot/nautobot/issues/5586) - Fixed an intermittent ImportError when running tests with certain options.
@@ -308,54 +305,54 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 
 ## v2.2.2 (2024-04-18)
 
-### Security
+### Security in v2.2.2
 
 - [#5579](https://github.com/nautobot/nautobot/issues/5579) - Updated `sqlparse` to `0.5.0` to fix [GHSA-2m57-hf25-phgg](https://github.com/advisories/GHSA-2m57-hf25-phgg). This is not a direct dependency so it will not auto-update when upgrading Nautobot. Please be sure to update your local environment.
 
-### Added
+### Added in v2.2.2
 
 - [#2459](https://github.com/nautobot/nautobot/issues/2459) - Added `nautobot.extras.utils.bulk_delete_with_bulk_change_logging` helper function for improving performance on bulk delete.
 - [#2459](https://github.com/nautobot/nautobot/issues/2459) - Added `nautobot.extras.context_managers.deferred_change_logging_for_bulk_operation` context manager for improving performance on bulk update.
 
-### Changed
+### Changed in v2.2.2
 
 - [#2459](https://github.com/nautobot/nautobot/issues/2459) - Improved performance of bulk-edit and bulk-delete UI operations by refactoring change logging logic.
 - [#5568](https://github.com/nautobot/nautobot/issues/5568) - Added hyperlink to the total device count number under device family.
 - [#5589](https://github.com/nautobot/nautobot/issues/5589) - Fixed an invalid Javascript operator in the LLDP neighbor view.
 
-### Fixed
+### Fixed in v2.2.2
 
 - [#5580](https://github.com/nautobot/nautobot/issues/5580) - Fixed bugs when assigning a VLAN to an Interface related to the recently introduced many-to-many relationship between VLANs and Locations.
 - [#5592](https://github.com/nautobot/nautobot/issues/5592) - Fixed plugins not loading when using Gunicorn.
 
-### Documentation
+### Documentation in v2.2.2
 
 - [#5583](https://github.com/nautobot/nautobot/issues/5583) - Re-added release note content for v1.6.16 through v1.6.18.
 
-### Housekeeping
+### Housekeeping in v2.2.2
 
 - [#5590](https://github.com/nautobot/nautobot/issues/5590) - Fixed upstream testing workflows showing successful when one of the steps fail.
 
 ## v2.2.1 (2024-04-15)
 
-### Security
+### Security in v2.2.1
 
 - [#5521](https://github.com/nautobot/nautobot/issues/5521) - Updated `Pillow` dependency to `~10.3.0` to address `CVE-2024-28219`.
 - [#5543](https://github.com/nautobot/nautobot/issues/5543) - Updated `jquery-ui` to version `1.13.2` due to `CVE-2022-31160`.
 - [#5561](https://github.com/nautobot/nautobot/issues/5561) - Updated `idna` to 3.7 due to CVE-2024-3651. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
 
-### Added
+### Added in v2.2.1
 
 - [#1631](https://github.com/nautobot/nautobot/issues/1631) - Added change logging for custom field background tasks.
 - [#5009](https://github.com/nautobot/nautobot/issues/5009) - Added the option to filter objects with select/multi-select custom fields based on the UUID of the defined custom field choice(s), for example `/api/dcim/locations/?cf_multiselect=1ea9237c-3ba7-4985-ba7e-6fd9e9bff813` as an alternative to `/api/dcim/locations/?cf_multiselect=some-choice-value`.
 - [#5493](https://github.com/nautobot/nautobot/issues/5493) - Added a configuration setting `METRICS_DISABLED_APPS` to disable app metrics for specific apps.
 - [#5540](https://github.com/nautobot/nautobot/issues/5540) - Added total devices count to device family detail page.
 
-### Changed
+### Changed in v2.2.1
 
 - [#5274](https://github.com/nautobot/nautobot/issues/5274) - Added a setting that changes all rack unit numbers to display a minimum of two digits in rack elevations.
 
-### Fixed
+### Fixed in v2.2.1
 
 - [#5469](https://github.com/nautobot/nautobot/issues/5469) - Fixed contacts and teams not being included in the global search.
 - [#5489](https://github.com/nautobot/nautobot/issues/5489) - Fixed REST API for Contact and Team incorrectly marking the `phone` and `email` fields as mandatory.
@@ -365,22 +362,22 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 - [#5527](https://github.com/nautobot/nautobot/issues/5527) - Fixed incorrect "members" links in Virtual Chassis list view.
 - [#5531](https://github.com/nautobot/nautobot/issues/5531) - Re-added `nautobot.setup()` function mistakenly removed in 2.2.0.
 
-### Dependencies
+### Dependencies in v2.2.1
 
 - [#5495](https://github.com/nautobot/nautobot/issues/5495) - Changed jsonschema version constraint from `>=4.7.0,<4.19.0` to `^4.7.0`.
 - [#5517](https://github.com/nautobot/nautobot/issues/5517) - Updated `djangorestframework` to `~3.15.1`.
 - [#5521](https://github.com/nautobot/nautobot/issues/5521) - Updated most dependencies to the latest versions available as of 2024-04-01.
 - [#5543](https://github.com/nautobot/nautobot/issues/5543) - Updated `jquery` to version `3.7.1`.
 
-### Documentation
+### Documentation in v2.2.1
 
 - [#5189](https://github.com/nautobot/nautobot/issues/5189) - Added "Model Development Checklist" to the core developer documentation.
 - [#5189](https://github.com/nautobot/nautobot/issues/5189) - Merged "Extending Models" documentation into the "Model Development Checklist" documentation.
 - [#5526](https://github.com/nautobot/nautobot/issues/5526) - Fixed doc reference to job cprofile file location.
 
-### Housekeeping
+### Housekeeping in v2.2.1
 
-- [#5531](https://github.com/nautobot/nautobot/issues/5531) - Removed `nautobot-server pylint` management command from the `example_app`, as pylint can be invoked directly with an appropriate `--init-hook` instead.
+- [#5531](https://github.com/nautobot/nautobot/issues/5531) - Removed `nautobot-server pylint` management command from the `example_app`, as Pylint can be invoked directly with an appropriate `--init-hook` instead.
 - [#5547](https://github.com/nautobot/nautobot/issues/5547) - Fixed TransactionTestCase inheritance order so that `test.client` works in test cases using this class.
 
 ## v2.2.0 (2024-03-29)
@@ -388,12 +385,12 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 !!! warning
     Upgrading from beta releases to final releases is never recommended for Nautobot; in the case of 2.2.0b1 to 2.2.0 several data models and database migrations have been modified (see [#5454](https://github.com/nautobot/nautobot/issues/5454)) between the two releases, and so upgrading in place from 2.2.0b1 to 2.2.0 **will not work**.
 
-### Added
+### Added in v2.2.0
 
 - [#4811](https://github.com/nautobot/nautobot/issues/4811) - Added a new generic test case (`test_table_with_indentation_is_removed_on_filter_or_sort`) to `ListObjectsViewTestCase` to test that the tree hierarchy is correctly removed on TreeModel list views when sorting or filtering is applied. This test will also run in these subclasses of the `ListObjectsViewTestCase`: `PrimaryObjectViewTestCase`, `OrganizationalObjectViewTestCase`, and `DeviceComponentViewTestCase`.
 - [#5034](https://github.com/nautobot/nautobot/issues/5034) - Added a management command (`nautobot-server migrate_location_contacts`) to help migrate the Location `contact_name`, `contact_email` and `contact_phone` fields to Contact and Teams models.
 
-### Changed
+### Changed in v2.2.0
 
 - [#5452](https://github.com/nautobot/nautobot/issues/5452) - Changed the behavior of Prefix table: now they are sortable, and after sorting is applied, all hierarchy indentations are removed.
 - [#5454](https://github.com/nautobot/nautobot/issues/5454) - Changed one-to-many links from Controller to `PROTECT` against deleting.
@@ -406,25 +403,25 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 - [#5475](https://github.com/nautobot/nautobot/issues/5475) - Changed the behavior of Prefix table and other Tree Model tables: now after filtering is applied, all hierarchy indentations are removed.
 - [#5487](https://github.com/nautobot/nautobot/issues/5487) - Moved some nav menu items around to make better logical sense and to allow quicker access to more commonly accessed features.
 
-### Fixed
+### Fixed in v2.2.0
 
 - [#5415](https://github.com/nautobot/nautobot/issues/5415) - Fixed Team(s) field not pre-populating when editing a Contact.
 - [#5431](https://github.com/nautobot/nautobot/issues/5431) - Fixed Roles API response containing duplicate entries when filtering on more than one `content_types` value.
 - [#5431](https://github.com/nautobot/nautobot/issues/5431) - Fixed Providers API response containing duplicate entries when filtering on more than one `location` value.
 - [#5440](https://github.com/nautobot/nautobot/issues/5440) - Fixed `Cannot resolve keyword 'task_id' into field` error when calling `nautobot-server celery result <task_id>`.
 
-### Dependencies
+### Dependencies in v2.2.0
 
 - [#4583](https://github.com/nautobot/nautobot/issues/4583) - Updated pinned version of `social-auth-core` to remove dependency on `python-jose` & it's dependency on `ecdsa`.
 
-### Housekeeping
+### Housekeeping in v2.2.0
 
 - [#5435](https://github.com/nautobot/nautobot/issues/5435) - Added `--pattern` argument to `invoke unittest`.
 - [#5435](https://github.com/nautobot/nautobot/issues/5435) - Added `--parallel-workers` argument to `invoke unittest`.
 
 ## v2.2.0-beta.1 (2024-03-19)
 
-### Added
+### Added in v2.2.0-beta.1
 
 - [#1](https://github.com/nautobot/nautobot/issues/1) - Added new models for software versions and software image files.
 - [#1](https://github.com/nautobot/nautobot/issues/1) - Added a many-to-many relationship from `Device` to `SoftwareImageFile`.
@@ -453,7 +450,7 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 - [#5098](https://github.com/nautobot/nautobot/issues/5098) - Added client-side GraphQL, JSON, XML, and YAML syntax highlighting with the `highlight.js` library.
 - [#5101](https://github.com/nautobot/nautobot/issues/5101) - Added a utility to help when writing migrations that replace database models.
 - [#5107](https://github.com/nautobot/nautobot/issues/5107) - Added `hyperlinked_email` and `hyperlinked_phone_number` template tags/filters.
-- [#5127](https://github.com/nautobot/nautobot/issues/5127) - Added bulk-edit and bulk-delete capabilities for Jobs.
+- [#5127](https://github.com/nautobot/nautobot/issues/5127) - Added Bulk Edit and Bulk Delete functionalities for Jobs.
 - [#5129](https://github.com/nautobot/nautobot/issues/5129) - Implemented jobs tile view.
 - [#5188](https://github.com/nautobot/nautobot/issues/5188) - Added table of related Device Families to the DeviceType detail view.
 - [#5278](https://github.com/nautobot/nautobot/issues/5278) - Added permission constraint for User Token.
@@ -463,7 +460,7 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 - [#5347](https://github.com/nautobot/nautobot/issues/5347) - Added an option to the Job-based CSV import to make atomic transactions optional.
 - [#5349](https://github.com/nautobot/nautobot/issues/5349) - Added REST API for vlan-to-location and prefix-to-location M2M.
 
-### Changed
+### Changed in v2.2.0-beta.1
 
 - [#2906](https://github.com/nautobot/nautobot/issues/2906) - Increased `max_length` on all CharFields to at least 255 characters except where a shorter `max_length` is explicitly justified.
 - [#4334](https://github.com/nautobot/nautobot/issues/4334) - Changed `Prefix.location` to `Prefix.locations` allowing multiple Locations to be associated with a given Prefix.
@@ -482,18 +479,18 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 - [#5412](https://github.com/nautobot/nautobot/issues/5412) - Changed DeviceType YAML/JSON import to now map unrecognized port template `type` values to `"other"` instead of failing the import.
 - [#5414](https://github.com/nautobot/nautobot/issues/5414) - Changed `ImportObjects.roll_back_if_error` form field help text and label.
 
-### Deprecated
+### Deprecated in v2.2.0-beta.1
 
 - [#5064](https://github.com/nautobot/nautobot/issues/5064) - Deprecated the `import_button` button template-tag.
 - [#5116](https://github.com/nautobot/nautobot/issues/5116) - Deprecated the `nautobot.apps.exceptions.ConfigurationError` class as it is no longer used in Nautobot core and is trivially reimplementable by any App if desired.
 - [#5341](https://github.com/nautobot/nautobot/issues/5341) - Deprecated the `plugins` key under the `/api/status/` REST API endpoint. Refer to `nautobot-apps` instead.
 
-### Removed
+### Removed in v2.2.0-beta.1
 
 - [#5064](https://github.com/nautobot/nautobot/issues/5064) - Removed the requirement for `ViewTestCases` subclasses to define `csv_data` for testing bulk-import views, as this functionality is now covered by a generic system Job.
 - [#5116](https://github.com/nautobot/nautobot/issues/5116) - Removed `logan`-derived application startup logic, simplifying the Nautobot startup code flow.
 
-### Fixed
+### Fixed in v2.2.0-beta.1
 
 - [#4334](https://github.com/nautobot/nautobot/issues/4334) - Fixed ordering of VLANs in the UI list view.
 - [#5064](https://github.com/nautobot/nautobot/issues/5064) - Fixed an exception in `Job.after_return()` if a Job with an optional `FileVar` was executed without supplying a value for that variable.
@@ -506,18 +503,18 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 - [#5298](https://github.com/nautobot/nautobot/issues/5298) - Fixed a `ValidationError` that was being thrown when a user logged out.
 - [#5298](https://github.com/nautobot/nautobot/issues/5298) - Fixed a case where viewing a completed JobResult that was missing a `date_done` value would cause the JobResult view to repeatedly refresh.
 
-### Dependencies
+### Dependencies in v2.2.0-beta.1
 
 - [#5248](https://github.com/nautobot/nautobot/issues/5248) - Broadened `Markdown` dependency to permit versions up to 3.5.x.
 
-### Documentation
+### Documentation in v2.2.0-beta.1
 
 - [#5179](https://github.com/nautobot/nautobot/issues/5179) - Updated all documentation referencing the `example_plugin` to refer to the (renamed) `example_app`.
 - [#5179](https://github.com/nautobot/nautobot/issues/5179) - Replaced some "plugin" references in the documentation with "App" or "Nautobot App" as appropriate.
 - [#5248](https://github.com/nautobot/nautobot/issues/5248) - Removed source code excerpts from the "App Developer Guide > Code Reference" section of the documentation.
 - [#5341](https://github.com/nautobot/nautobot/issues/5341) - Replaced references to "plugins" in the documentation with "Apps".
 
-### Housekeeping
+### Housekeeping in v2.2.0-beta.1
 
 - [#5099](https://github.com/nautobot/nautobot/issues/5099) - Added `mkdocs-macros-plugin` as a development/documentation-rendering dependency.
 - [#5099](https://github.com/nautobot/nautobot/issues/5099) - Refactored documentation in `optional-settings` and `required-settings` to be generated automatically from `settings.yaml` schema.

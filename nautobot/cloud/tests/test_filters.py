@@ -5,12 +5,13 @@ from nautobot.core.testing import FilterTestCases
 from nautobot.extras.models import SecretsGroup
 
 
-class CloudAccountTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class CloudAccountTestCase(FilterTestCases.FilterTestCase):
     queryset = models.CloudAccount.objects.all()
     filterset = filters.CloudAccountFilterSet
     generic_filter_tests = [
         ("account_number",),
         ("description",),
+        ("name",),
         ("provider", "provider__id"),
         ("provider", "provider__name"),
         ("secrets_group", "secrets_group__id"),
@@ -31,7 +32,7 @@ class CloudAccountTestCase(FilterTestCases.NameOnlyFilterTestCase):
             cls.cloud_accounts[i].validated_save()
 
 
-class CloudResourceTypeTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class CloudResourceTypeTestCase(FilterTestCases.FilterTestCase):
     queryset = models.CloudResourceType.objects.all()
     filterset = filters.CloudResourceTypeFilterSet
     generic_filter_tests = [
@@ -50,7 +51,7 @@ class CloudResourceTypeTestCase(FilterTestCases.NameOnlyFilterTestCase):
         )
 
 
-class CloudNetworkTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class CloudNetworkTestCase(FilterTestCases.FilterTestCase):
     queryset = models.CloudNetwork.objects.all()
     filterset = filters.CloudNetworkFilterSet
     generic_filter_tests = [
@@ -64,6 +65,7 @@ class CloudNetworkTestCase(FilterTestCases.NameOnlyFilterTestCase):
         ("name",),
         ("parent", "parent__id"),
         ("parent", "parent__name"),
+        ("prefixes", "prefixes__id"),
     ]
     exclude_q_filter_predicates = [
         "parent__name",
@@ -78,6 +80,16 @@ class CloudNetworkTestCase(FilterTestCases.NameOnlyFilterTestCase):
             queryset = queryset.filter(children__isnull=True)
         return queryset
 
+    def test_prefixes_filter_by_string(self):
+        """Test filtering by prefix strings as an alternative to pk."""
+        prefix = self.queryset.filter(prefixes__isnull=False).first().prefixes.first()
+        params = {"prefixes": [prefix.prefix]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(prefixes__network=prefix.network, prefixes__prefix_length=prefix.prefix_length),
+            ordered=False,
+        )
+
 
 class CloudNetworkPrefixAssignmentTestCase(FilterTestCases.FilterTestCase):
     queryset = models.CloudNetworkPrefixAssignment.objects.all()
@@ -87,6 +99,16 @@ class CloudNetworkPrefixAssignmentTestCase(FilterTestCases.FilterTestCase):
         ("cloud_network", "cloud_network__name"),
         ("prefix", "prefix__id"),
     ]
+
+    def test_prefix_filter_by_string(self):
+        """Test filtering by prefix strings as an alternative to pk."""
+        prefix = self.queryset.first().prefix
+        params = {"prefix": [prefix.prefix]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(prefix__network=prefix.network, prefix__prefix_length=prefix.prefix_length),
+            ordered=False,
+        )
 
 
 class CloudServiceNetworkAssignmentTestCase(FilterTestCases.FilterTestCase):
@@ -110,7 +132,7 @@ class CloudServiceNetworkAssignmentTestCase(FilterTestCases.FilterTestCase):
     ]
 
 
-class CloudServiceTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class CloudServiceTestCase(FilterTestCases.FilterTestCase):
     queryset = models.CloudService.objects.all()
     filterset = filters.CloudServiceFilterSet
     generic_filter_tests = [

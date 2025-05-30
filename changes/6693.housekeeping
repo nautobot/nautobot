@@ -1,1 +1,0 @@
-Changed `poetry install` in prerelease and release workflows from parallel mode to serial mode.

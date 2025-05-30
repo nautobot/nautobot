@@ -1,12 +1,12 @@
-<!-- this is a view demonstrating the capabilities of generic/object_detail.thml -->
+<!-- this is a view demonstrating the capabilities of generic/object_retrieve.html -->
 {% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
 
-{% block extra_breadcrumb %}
+{% block extra_breadcrumbs %}
         <li>
             <a href="{% url 'plugins:example_app:examplemodel_list' %}?number={{ object.number }}">{{ object.number }} (Breadcrumbs)</a>
         </li>
-{% endblock extra_breadcrumb %}
+{% endblock extra_breadcrumbs %}
 
 {% block extra_buttons %}
         <a onClick="alert('I am from the detail view template.')" class="btn btn-success">
@@ -23,73 +23,4 @@
         </a>
 {% endblock panel_buttons %}
 
-{% block content_left_page %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <strong>ExampleModel (Left Page Content)</strong>
-            </div>
-
-            <table class="table table-hover panel-body attr-table">
-                <tr>
-                    <td>Name</td>
-                    <td><span>{{ object.name }}</span></td>
-                </tr>
-                <tr>
-                    <td>Number</td>
-                    <td><span>{{ object.number }}</span></td>
-                </tr>
-                <tr>
-                    <td>Sample Variable</td>
-                    <td><span>{{ "SAMPLE_VARIABLE" | settings_or_config:"example_app" }}</span></td>
-                </tr>
-                <tr>
-                    <td>Lowercase Example Variable</td>
-                    <td><span>{{ "lowercase_example" | settings_or_config:"example_app" }}</span></td>
-                </tr>
-            </table>
-        </div>
-{% endblock content_left_page %}
-
-{% block content_right_page %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <strong>View Template Right Page Content</strong>
-            </div>
-
-            <table class="table table-hover panel-body attr-table">
-                <tr>
-                    <th>Things</th>
-                    <th>Stuff</th>
-                </tr>
-                <tr>
-                    <td><span>Shoe, Horse, Dog</span></td>
-                    <td><span>Widgets, Cogs, Sprockets</span></td>
-                </tr>
-            </table>
-        </div>
-{% endblock content_right_page %}
-
-{% block content_full_width_page %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <strong>View Template Full Width Page Content</strong>
-            </div>
-
-            <table class="table table-hover panel-body attr-table">
-                <tr>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Number</th>
-                    <th>Salt</th>
-                    <th>Pepper</th>
-                </tr>
-                <tr>
-                    <td>1</td>
-                    <td>Bob</td>
-                    <td>-42</td>
-                    <td>Yes</td>
-                    <td>No</td>
-                </tr>
-            </table>
-        </div>
-{% endblock content_full_width_page %}
+<!-- additional content is defined in ExampleModelUIViewSet.object_detail_content -->

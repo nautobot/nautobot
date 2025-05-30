@@ -1,32 +1,12 @@
+<!--
+3.0 TODO: This template file is no longer used in Nautobot core, but is kept for now in 2.x in case an App is using it.
+In a future release, we should delete this file.
+-->
 {% load helpers %}
 
 <div class="panel panel-default">
     <div class="panel-heading">
-        <div class="pull-right">
-            {% if not termination and perms.circuits.add_circuittermination %}
-                <a href="{% url 'circuits:circuittermination_add' circuit=object.pk %}?term_side={{ side }}" class="btn btn-xs btn-success">
-                    <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add
-                </a>
-            {% endif %}
-            {% if termination and perms.circuits.change_circuittermination %}
-                <a href="{% url 'circuits:circuittermination_edit' pk=termination.pk %}" class="btn btn-xs btn-warning">
-                    <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
-                </a>
-                <a href="{% url 'circuits:circuit_terminations_swap' pk=object.pk %}" class="btn btn-xs btn-primary">
-                    <span class="mdi mdi-swap-vertical" aria-hidden="true"></span> Swap
-                </a>
-            {% endif %}
-            {% if termination and perms.circuits.delete_circuittermination %}
-                <a href="{% url 'circuits:circuittermination_delete' pk=termination.pk %}?return_url={{ object.get_absolute_url }}" class="btn btn-xs btn-danger">
-                    <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete
-                </a>
-            {% endif %}
-            {% if termination %}
-            <a href="{% url 'circuits:circuittermination' pk=termination.pk %}" class="btn btn-xs btn-default">
-                <span class="mdi mdi-information-outline" aria-hidden="true"></span> Detail
-            </a>
-            {% endif %}
-        </div>
+        {% include 'circuits/inc/circuit_termination_header_extra_content.html' with termination=termination side=side %}
         <strong>Termination - {{ side }} Side</strong>
     </div>
     {% if termination %}
@@ -41,45 +21,7 @@
             <tr>
                 <td>Cable</td>
                 <td>
-                    {% if termination.cable %}
-                        {% if perms.dcim.delete_cable %}
-                            <div class="pull-right">
-                                <a href="{% url 'dcim:cable_delete' pk=termination.cable.pk %}?return_url={{ termination.circuit.get_absolute_url }}" title="Remove cable" class="btn btn-danger btn-xs">
-                                    <i class="mdi mdi-ethernet-cable-off" aria-hidden="true"></i> Disconnect
-                                </a>
-                            </div>
-                        {% endif %}
-                        {{ termination.cable|hyperlinked_object }}
-                        <a href="{% url 'circuits:circuittermination_trace' pk=termination.pk %}" class="btn btn-primary btn-xs" title="Trace">
-                            <i class="mdi mdi-transit-connection-variant" aria-hidden="true"></i>
-                        </a>
-                        {% with peer=termination.get_cable_peer %}
-                            to
-                            {% if peer.device %}
-                                {{ peer.device|hyperlinked_object }}
-                            {% elif peer.circuit %}
-                                {{ peer.circuit|hyperlinked_object }}
-                            {% endif %}
-                            ({{ peer }})
-                        {% endwith %}
-                    {% else %}
-                        {% if perms.dcim.add_cable %}
-                            <div class="pull-right">
-                                <span class="dropdown">
-                                    <button type="button" class="btn btn-success btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                        <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-right">
-                                        <li><a href="{% url 'circuits:circuittermination_connect' termination_a_id=termination.pk termination_b_type='interface' %}?termination_b_location={{ termination.location.pk }}&return_url={{ object.get_absolute_url }}">Interface</a></li>
-                                        <li><a href="{% url 'circuits:circuittermination_connect' termination_a_id=termination.pk termination_b_type='front-port' %}?termination_b_location={{ termination.location.pk }}&return_url={{ object.get_absolute_url }}">Front Port</a></li>
-                                        <li><a href="{% url 'circuits:circuittermination_connect' termination_a_id=termination.pk termination_b_type='rear-port' %}?termination_b_location={{ termination.location.pk }}&return_url={{ object.get_absolute_url }}">Rear Port</a></li>
-                                        <li><a href="{% url 'circuits:circuittermination_connect' termination_a_id=termination.pk termination_b_type='circuit-termination' %}?termination_b_location={{ termination.location.pk }}&return_url={{ object.get_absolute_url }}">Circuit Termination</a></li>
-                                    </ul>
-                                </span>
-                            </div>
-                        {% endif %}
-                        <span class="text-muted">Not defined</span>
-                    {% endif %}
+                    {% include 'circuits/inc/circuit_termination_cable_fragment.html' %}
                 </td>
             </tr>
             {% elif termination.provider_network %}

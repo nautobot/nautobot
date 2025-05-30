@@ -42,6 +42,7 @@ from nautobot.dcim.models import (
     Interface,
     InterfaceRedundancyGroup,
     InterfaceTemplate,
+    InterfaceVDCAssignment,
     InventoryItem,
     Location,
     LocationType,
@@ -65,8 +66,9 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
-from nautobot.extras.models import ConfigContextSchema, Role, SecretsGroup, Status
+from nautobot.extras.models import ConfigContextSchema, ExternalIntegration, Role, SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType
@@ -185,7 +187,12 @@ class Mixins:
         def test_module_device_validation(self):
             """Assert that a modular component can have a module or a device but not both."""
 
-            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+            self.add_permissions(
+                f"{self.model._meta.app_label}.add_{self.model._meta.model_name}",
+                "dcim.view_device",
+                "dcim.view_module",
+                "extras.view_status",
+            )
             data = {
                 self.module_field: self.module.pk,
                 self.device_field: self.device.pk,
@@ -218,7 +225,12 @@ class Mixins:
         def test_module_device_name_unique_validation(self):
             """Assert uniqueness constraint is enforced for (device,name) and (module,name) fields."""
 
-            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+            self.add_permissions(
+                f"{self.model._meta.app_label}.add_{self.model._meta.model_name}",
+                "dcim.view_device",
+                "dcim.view_module",
+                "extras.view_status",
+            )
             modules = Module.objects.all()[:2]
             data = {
                 self.module_field: modules[0].pk,
@@ -264,7 +276,11 @@ class Mixins:
         def test_module_type_device_type_validation(self):
             """Assert that a modular component template can have a module_type or a device_type but not both."""
 
-            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+            self.add_permissions(
+                f"{self.model._meta.app_label}.add_{self.model._meta.model_name}",
+                "dcim.view_devicetype",
+                "dcim.view_moduletype",
+            )
             data = {
                 "module_type": self.module_type.pk,
                 "device_type": self.device_type.pk,
@@ -297,7 +313,11 @@ class Mixins:
         def test_module_type_device_type_name_unique_validation(self):
             """Assert uniqueness constraint is enforced for (device_type,name) and (module_type,name) fields."""
 
-            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+            self.add_permissions(
+                f"{self.model._meta.app_label}.add_{self.model._meta.model_name}",
+                "dcim.view_devicetype",
+                "dcim.view_moduletype",
+            )
             module_types = ModuleType.objects.all()[:2]
             data = {
                 "module_type": module_types[0].pk,
@@ -440,7 +460,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelA
         Test allow_null to time_zone field on locaton.
         """
 
-        self.add_permissions("dcim.add_location")
+        self.add_permissions("dcim.add_location", "dcim.view_locationtype", "extras.view_status")
         url = reverse("dcim-api:location-list")
         location = {
             "name": "foo",
@@ -459,7 +479,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelA
         Test disallowed blank time_zone field on location.
         """
 
-        self.add_permissions("dcim.add_location")
+        self.add_permissions("dcim.add_location", "dcim.view_locationtype", "extras.view_status")
         url = reverse("dcim-api:location-list")
         location = {
             "name": "foo",
@@ -478,7 +498,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelA
         Test valid time_zone field on location.
         """
 
-        self.add_permissions("dcim.add_location")
+        self.add_permissions("dcim.add_location", "dcim.view_locationtype", "extras.view_status")
         url = reverse("dcim-api:location-list")
         time_zone = "UTC"
         location = {
@@ -498,7 +518,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelA
         Test invalid time_zone field on location.
         """
 
-        self.add_permissions("dcim.add_location")
+        self.add_permissions("dcim.add_location", "dcim.view_locationtype", "extras.view_status")
         url = reverse("dcim-api:location-list")
         time_zone = "IDONOTEXIST"
         location = {
@@ -591,7 +611,7 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModel
 
     def test_child_group_location_valid(self):
         """A child group with a location may fall within the parent group's location."""
-        self.add_permissions("dcim.add_rackgroup")
+        self.add_permissions("dcim.add_rackgroup", "dcim.view_rackgroup", "dcim.view_location")
         url = reverse("dcim-api:rackgroup-list")
 
         parent_group = RackGroup.objects.filter(location=self.locations[0]).first()
@@ -613,7 +633,7 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModel
 
     def test_child_group_location_invalid(self):
         """A child group with a location must not fall outside its parent group's location."""
-        self.add_permissions("dcim.add_rackgroup")
+        self.add_permissions("dcim.add_rackgroup", "dcim.view_location", "dcim.view_rackgroup")
         url = reverse("dcim-api:rackgroup-list")
 
         parent_group = RackGroup.objects.filter(location=self.locations[0]).first()
@@ -686,9 +706,10 @@ class RackTest(APIViewTestCases.APIViewTestCase):
             status=statuses[0],
         )
         # Place a device in Rack 4
-        device = Device.objects.filter(
-            location=populated_rack.location, rack__isnull=True, device_type__u_height__gt=0
-        ).first()
+        device = Device.objects.filter(location=populated_rack.location, rack__isnull=True).first()
+        # Ensure the device height is non-zero, choosing 1 for simplicity
+        device.device_type.u_height = 1
+        device.device_type.save()
         device.rack = populated_rack
         device.face = "front"
         device.position = 10
@@ -879,61 +900,6 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.get("Content-Type"), "image/svg+xml")
         self.assertIn(b'<text class="unit" x="15.0" y="915.0">01</text>', response.content)
-
-    def test_detail_view_schema(self):
-        url = self._get_detail_url(self._get_queryset().first())
-        response = self.client.options(url, **self.header)
-        detail_view_schema = response.data["view_options"]["retrieve"]
-
-        expected_schema = {
-            "tabs": {
-                "Rack": [
-                    {
-                        "Rack": {"fields": ["name", "location", "rack_group"]},
-                        "Other Fields": {
-                            "fields": [
-                                "asset_tag",
-                                "desc_units",
-                                "device_count",
-                                "facility_id",
-                                "outer_depth",
-                                "outer_unit",
-                                "outer_width",
-                                "power_feed_count",
-                                "role",
-                                "serial",
-                                "tenant",
-                                "type",
-                                "u_height",
-                                "width",
-                            ]
-                        },
-                    },
-                    {
-                        "Comments": {"fields": ["comments"]},
-                        "Tags": {"fields": ["tags"]},
-                    },
-                ],
-                "Advanced": [
-                    {
-                        "Object Details": {
-                            "fields": [
-                                "id",
-                                "url",
-                                "object_type",
-                                "created",
-                                "last_updated",
-                                "natural_slug",
-                            ]
-                        }
-                    },
-                ],
-            }
-        }
-
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.maxDiff = None
-        self.assertEqual(expected_schema, detail_view_schema)
 
 
 class RackReservationTest(APIViewTestCases.APIViewTestCase):
@@ -1277,7 +1243,9 @@ class FrontPortTemplateTest(Mixins.BasePortTemplateTestMixin):
     def test_module_type_device_type_validation(self):
         """Assert that a modular component template can have a module_type or a device_type but not both."""
 
-        self.add_permissions("dcim.add_frontporttemplate")
+        self.add_permissions(
+            "dcim.add_frontporttemplate", "dcim.view_rearporttemplate", "dcim.view_devicetype", "dcim.view_moduletype"
+        )
         data = {
             "module_type": self.module_type.pk,
             "device_type": self.device_type.pk,
@@ -1305,7 +1273,9 @@ class FrontPortTemplateTest(Mixins.BasePortTemplateTestMixin):
     def test_module_type_device_type_name_unique_validation(self):
         """Assert uniqueness constraint is enforced for (device_type,name) and (module_type,name) fields."""
 
-        self.add_permissions("dcim.add_frontporttemplate")
+        self.add_permissions(
+            "dcim.add_frontporttemplate", "dcim.view_rearporttemplate", "dcim.view_moduletype", "dcim.view_devicetype"
+        )
         data = {
             "module_type": self.module_type.pk,
             "name": "test modular device_type component parent validation",
@@ -1521,11 +1491,24 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             SecretsGroup.objects.create(name="Secrets Group 2"),
         )
 
-        device_type = DeviceType.objects.filter(software_image_files__isnull=False).first()
+        device_type = DeviceType.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
 
-        software_version = SoftwareVersion.objects.filter(software_image_files__device_types=device_type).first()
-        software_image_files = SoftwareImageFile.objects.exclude(software_version=software_version)[:2]
+        software_version = SoftwareVersion.objects.first()
+        software_image_files = (
+            SoftwareImageFile.objects.create(
+                status=Status.objects.get_for_model(SoftwareImageFile).first(),
+                software_version=software_version,
+                image_file_name="test_software_image_file_1.bin",
+            ),
+            SoftwareImageFile.objects.create(
+                status=Status.objects.get_for_model(SoftwareImageFile).last(),
+                software_version=software_version,
+                image_file_name="test_software_image_file_2.bin",
+            ),
+        )
+        for software_image_file in software_image_files:
+            software_image_file.device_types.add(device_type)
 
         Device.objects.create(
             device_type=device_type,
@@ -1656,7 +1639,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         schema = ConfigContextSchema.objects.create(
             name="Schema 1", data_schema={"type": "object", "properties": {"A": {"type": "integer"}}}
         )
-        self.add_permissions("dcim.change_device")
+        self.add_permissions("dcim.change_device", "extras.view_configcontextschema")
 
         patch_data = {"local_config_context_schema": str(schema.pk)}
 
@@ -1690,7 +1673,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         Validate we can set primary_ip4 on a device using a PATCH.
         """
         # Add object-level permission
-        self.add_permissions("dcim.change_device")
+        self.add_permissions("dcim.change_device", "ipam.view_ipaddress")
 
         dev = Device.objects.get(name="Device 3")
         intf_status = Status.objects.get_for_model(Interface).first()
@@ -1716,7 +1699,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         Validate we can set device redundancy group on a device using a PATCH.
         """
         # Add object-level permission
-        self.add_permissions("dcim.change_device")
+        self.add_permissions("dcim.change_device", "dcim.view_deviceredundancygroup")
 
         device_redundancy_group = DeviceRedundancyGroup.objects.first()
 
@@ -1754,6 +1737,190 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             self._get_detail_url(Device.objects.get(name="Device 2")), patch_data, format="json", **self.header
         )
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    def _parent_device_test_data(self):
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        device_role = Role.objects.get_for_model(Device).first()
+        device_type = DeviceType.objects.first()
+
+        device_type_parent = DeviceType.objects.create(
+            manufacturer=device_type.manufacturer,
+            model=f"{device_type.model} Parent",
+            u_height=device_type.u_height,
+            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT,
+        )
+        device_type_child = DeviceType.objects.create(
+            manufacturer=device_type.manufacturer,
+            model=f"{device_type.model} Child",
+            u_height=device_type.u_height,
+            subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
+        )
+
+        parent_device = Device.objects.create(
+            device_type=device_type_parent,
+            role=device_role,
+            status=device_status,
+            name="Device Parent",
+            location=location,
+        )
+        device_bay_1 = DeviceBay.objects.create(name="db1", device_id=parent_device.pk)
+        device_bay_2 = DeviceBay.objects.create(name="db2", device_id=parent_device.pk)
+
+        return parent_device, device_bay_1, device_bay_2, device_type_child
+
+    def test_creating_device_with_parent_bay(self):
+        # Create test data
+        parent_device, device_bay_1, device_bay_2, device_type_child = self._parent_device_test_data()
+
+        self.add_permissions(
+            "dcim.add_device",
+            "dcim.view_device",
+            "dcim.view_devicetype",
+            "extras.view_role",
+            "extras.view_status",
+            "dcim.view_location",
+            "dcim.view_devicebay",
+        )
+        url = reverse("dcim-api:device-list")
+
+        # Test creating device with parent bay by device bay data
+        data = {
+            "device_type": device_type_child.pk,
+            "role": parent_device.role.pk,
+            "location": parent_device.location.pk,
+            "name": "Device parent bay test #1",
+            "status": parent_device.status.pk,
+            "parent_bay": {"device": {"name": parent_device.name}, "name": device_bay_1.name},
+        }
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+
+        created_device = Device.objects.get(name="Device parent bay test #1")
+        self.assertEqual(created_device.parent_bay.pk, device_bay_1.pk)
+
+        # Test creating device with parent bay by device_bay.pk
+        data = {
+            "device_type": device_type_child.pk,
+            "role": parent_device.role.pk,
+            "location": parent_device.location.pk,
+            "name": "Device parent bay test #2",
+            "status": parent_device.status.pk,
+            "parent_bay": device_bay_2.pk,
+        }
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+
+        created_device = Device.objects.get(name="Device parent bay test #2")
+        self.assertEqual(created_device.parent_bay.pk, device_bay_2.pk)
+
+        # Test creating device with parent bay already taken
+        data = {
+            "device_type": device_type_child.pk,
+            "role": parent_device.role.pk,
+            "location": parent_device.location.pk,
+            "name": "Device parent bay test #3",
+            "status": parent_device.status.pk,
+            "parent_bay": device_bay_1.pk,
+        }
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Cannot install device; parent bay is already taken", response.content.decode(response.charset))
+
+        # Assert that on the #1 device, parent bay stayed the same
+        old_device = Device.objects.get(name="Device parent bay test #1")
+        self.assertEqual(old_device.parent_bay.pk, device_bay_1.pk)
+
+    def test_update_device_with_parent_bay(self):
+        # Create test data
+        parent_device, device_bay_1, device_bay_2, device_type_child = self._parent_device_test_data()
+
+        self.add_permissions("dcim.change_device", "dcim.view_devicebay")
+
+        child_device = Device.objects.create(
+            device_type=device_type_child,
+            role=parent_device.role,
+            location=parent_device.location,
+            name="Device parent bay test #4",
+            status=parent_device.status,
+        )
+        # Test setting parent bay during the update
+        patch_data = {"parent_bay": device_bay_1.pk}
+        response = self.client.patch(self._get_detail_url(child_device), patch_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        updated_device = Device.objects.get(name="Device parent bay test #4")
+        self.assertEqual(updated_device.parent_bay.pk, device_bay_1.pk)
+
+        # Changing the parent bay is not allowed without removing it first
+        patch_data = {"parent_bay": device_bay_2.pk}
+        response = self.client.patch(self._get_detail_url(child_device), patch_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(
+            f"Cannot install the specified device; device is already installed in {device_bay_1.name}",
+            response.content.decode(response.charset),
+        )
+
+        # Assert that parent bay stayed the same
+        updated_device = Device.objects.get(name="Device parent bay test #4")
+        self.assertEqual(updated_device.parent_bay.pk, device_bay_1.pk)
+
+    def test_reassign_device_to_parent_bay(self):
+        # Create test data
+        parent_device, device_bay_1, device_bay_2, device_type_child = self._parent_device_test_data()
+        device_name = "Device parent bay test #5"
+        child_device = Device.objects.create(
+            device_type=device_type_child,
+            role=parent_device.role,
+            location=parent_device.location,
+            name=device_name,
+            status=parent_device.status,
+        )
+        device_bay_1.installed_device = child_device
+        device_bay_1.save()
+
+        self.add_permissions("dcim.change_device", "dcim.view_device", "dcim.change_devicebay", "dcim.view_devicebay")
+        child_device_detail_url = self._get_detail_url(child_device)
+
+        response = self.client.get(child_device_detail_url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.json()["parent_bay"]["id"], str(device_bay_1.pk))
+
+        # Test unassigning parent bay
+        patch_data = {"parent_bay": None}
+        response = self.client.patch(child_device_detail_url, patch_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        child_device.refresh_from_db()
+        with self.assertRaises(DeviceBay.DoesNotExist):
+            child_device.parent_bay
+
+        # And assign it again
+        patch_data = {"parent_bay": device_bay_2.pk}
+        response = self.client.patch(child_device_detail_url, patch_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        child_device.refresh_from_db()
+        self.assertEqual(child_device.parent_bay.pk, device_bay_2.pk)
+
+        # Unassign it through device bay
+        patch_data = {"installed_device": None}
+        response = self.client.patch(self._get_detail_url(device_bay_2), patch_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        child_device.refresh_from_db()
+        self.assertFalse(hasattr(child_device, "parent_bay"))
+
+        # And assign through device bay
+        patch_data = {"installed_device": child_device.pk}
+        response = self.client.patch(self._get_detail_url(device_bay_1), patch_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        child_device.refresh_from_db()
+        self.assertEqual(child_device.parent_bay.pk, device_bay_1.pk)
 
 
 class ModuleTestCase(APIViewTestCases.APIViewTestCase):
@@ -1813,7 +1980,9 @@ class ModuleTestCase(APIViewTestCases.APIViewTestCase):
     def test_parent_module_bay_location_validation(self):
         """Assert that a module can have a parent_module_bay or a location but not both."""
 
-        self.add_permissions("dcim.add_module")
+        self.add_permissions(
+            "dcim.add_module", "dcim.view_moduletype", "dcim.view_location", "dcim.view_modulebay", "extras.view_status"
+        )
         data = {
             "module_type": self.module_type.pk,
             "location": self.location.pk,
@@ -1844,7 +2013,7 @@ class ModuleTestCase(APIViewTestCases.APIViewTestCase):
         )
 
     def test_serial_module_type_unique_validation(self):
-        self.add_permissions("dcim.add_module")
+        self.add_permissions("dcim.add_module", "dcim.view_location", "dcim.view_moduletype", "extras.view_status")
         data = {
             "module_type": self.module_type.pk,
             "location": self.location.pk,
@@ -1869,7 +2038,7 @@ class ModuleTestCase(APIViewTestCases.APIViewTestCase):
         )
 
     def test_asset_tag_unique_validation(self):
-        self.add_permissions("dcim.add_module")
+        self.add_permissions("dcim.add_module", "dcim.view_location", "dcim.view_moduletype", "extras.view_status")
         data = {
             "module_type": self.module_type.pk,
             "location": self.location.pk,
@@ -2088,7 +2257,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
         cls.create_data = [
             {
                 "device": cls.devices[0].pk,
-                "name": "Interface 8",
+                "name": "Test Interface 8",
                 "type": "1000base-t",
                 "status": interface_status.pk,
                 "role": intf_role.pk,
@@ -2099,7 +2268,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
             },
             {
                 "device": cls.devices[0].pk,
-                "name": "Interface 9",
+                "name": "Test Interface 9",
                 "type": "1000base-t",
                 "status": interface_status.pk,
                 "role": intf_role.pk,
@@ -2111,7 +2280,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
             },
             {
                 "device": cls.devices[0].pk,
-                "name": "Interface 10",
+                "name": "Test Interface 10",
                 "type": "virtual",
                 "status": interface_status.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
@@ -2184,7 +2353,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
 
     def test_untagged_vlan_requires_mode(self):
         """Test that when an `untagged_vlan` is specified, `mode` is also required."""
-        self.add_permissions("dcim.add_interface")
+        self.add_permissions("dcim.add_interface", "dcim.view_device", "extras.view_status", "ipam.view_vlan")
 
         # This will fail.
         url = self._get_list_url()
@@ -2199,7 +2368,9 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
         )
 
     def test_tagged_vlan_must_be_in_the_location_or_parent_locations_of_the_parent_device(self):
-        self.add_permissions("dcim.add_interface")
+        self.add_permissions(
+            "dcim.add_interface", "dcim.view_interface", "dcim.view_device", "extras.view_status", "ipam.view_vlan"
+        )
 
         interface_status = Status.objects.get_for_model(Interface).first()
         location = self.devices[0].location
@@ -2228,7 +2399,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
 
     def test_interface_belonging_to_common_device_or_vc_allowed(self):
         """Test parent, bridge, and LAG interfaces belonging to common device or VC is valid"""
-        self.add_permissions("dcim.add_interface")
+        self.add_permissions("dcim.add_interface", "dcim.view_device", "dcim.view_interface", "extras.view_status")
 
         response = self.client.post(
             self._get_list_url(), data=self.common_device_or_vc_data[0], format="json", **self.header
@@ -2251,7 +2422,9 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
     def test_interface_not_belonging_to_common_device_or_vc_not_allowed(self):
         """Test parent, bridge, and LAG interfaces not belonging to common device or VC is invalid"""
 
-        self.add_permissions("dcim.add_interface")
+        self.add_permissions(
+            "dcim.add_interface", "dcim.view_device", "dcim.view_interface", "extras.view_status", "extras.view_role"
+        )
 
         for name, payload in self.interfaces_not_belonging_to_same_device_data:
             response = self.client.post(self._get_list_url(), data=payload, format="json", **self.header)
@@ -2268,7 +2441,9 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
             )
 
     def test_tagged_vlan_raise_error_if_mode_not_set_to_tagged(self):
-        self.add_permissions("dcim.add_interface", "dcim.change_interface")
+        self.add_permissions(
+            "dcim.add_interface", "dcim.change_interface", "dcim.view_device", "extras.view_status", "ipam.view_vlan"
+        )
         with self.subTest("On create, assert 400 status."):
             payload = {
                 "device": self.devices[0].pk,
@@ -2372,7 +2547,7 @@ class FrontPortTest(Mixins.BasePortTestMixin):
     def test_module_device_validation(self):
         """Assert that a modular component can have a module or a device but not both."""
 
-        self.add_permissions("dcim.add_frontport")
+        self.add_permissions("dcim.add_frontport", "dcim.view_device", "dcim.view_module", "dcim.view_rearport")
         data = {
             "module": self.module.pk,
             "device": self.device.pk,
@@ -2409,7 +2584,7 @@ class FrontPortTest(Mixins.BasePortTestMixin):
     def test_module_device_name_unique_validation(self):
         """Assert uniqueness constraint is enforced for (device,name) and (module,name) fields."""
 
-        self.add_permissions("dcim.add_frontport")
+        self.add_permissions("dcim.add_frontport", "dcim.view_module", "dcim.view_rearport", "dcim.view_device")
         data = {
             "module": self.module.pk,
             "name": "test modular device component parent validation",
@@ -3273,22 +3448,26 @@ class SoftwareImageFileTestCase(Mixins.SoftwareImageFileRelatedModelMixin, APIVi
     def setUpTestData(cls):
         statuses = Status.objects.get_for_model(SoftwareImageFile)
         software_versions = SoftwareVersion.objects.all()
+        external_integrations = ExternalIntegration.objects.all()
 
         cls.create_data = [
             {
                 "software_version": software_versions[0].pk,
                 "status": statuses[0].pk,
                 "image_file_name": "software_image_file_test_case_1.bin",
+                "external_integration": external_integrations[0].pk,
             },
             {
                 "software_version": software_versions[1].pk,
                 "status": statuses[1].pk,
                 "image_file_name": "software_image_file_test_case_2.bin",
+                "external_integration": external_integrations[1].pk,
             },
             {
                 "software_version": software_versions[2].pk,
                 "status": statuses[2].pk,
                 "image_file_name": "software_image_file_test_case_3.bin",
+                "external_integration": None,
             },
         ]
         cls.bulk_update_data = {
@@ -3298,6 +3477,7 @@ class SoftwareImageFileTestCase(Mixins.SoftwareImageFileRelatedModelMixin, APIVi
             "hashing_algorithm": SoftwareImageFileHashingAlgorithmChoices.SHA512,
             "image_file_size": 1234567890,
             "download_url": "https://example.com/software_image_file_test_case.bin",
+            "external_integration": external_integrations[0].pk,
         }
 
 
@@ -3397,6 +3577,7 @@ class ControllerTestCase(APIViewTestCases.APIViewTestCase):
                 "status": statuses[0].pk,
                 "role": roles[0].pk,
                 "location": locations[0].pk,
+                "capabilities": [],
             },
             {
                 "name": "Controller 2",
@@ -3411,6 +3592,7 @@ class ControllerTestCase(APIViewTestCases.APIViewTestCase):
                 "status": statuses[2].pk,
                 "role": roles[2].pk,
                 "location": locations[2].pk,
+                "capabilities": ["wireless"],
             },
         ]
         cls.bulk_update_data = {
@@ -3432,6 +3614,7 @@ class ControllerManagedDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
                 "name": "ControllerManagedDeviceGroup 1",
                 "controller": controllers[0].pk,
                 "weight": 100,
+                "capabilities": [],
             },
             {
                 "name": "ControllerManagedDeviceGroup 2",
@@ -3442,6 +3625,7 @@ class ControllerManagedDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
                 "name": "ControllerManagedDeviceGroup 3",
                 "controller": controllers[2].pk,
                 "weight": 200,
+                "capabilities": ["wireless"],
             },
         ]
         # changing controller is error-prone since a child group must have the same controller as its parent
@@ -3451,3 +3635,160 @@ class ControllerManagedDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
         cls.bulk_update_data = {
             "weight": 300,
         }
+
+
+class VirtualDeviceContextTestCase(APIViewTestCases.APIViewTestCase):
+    model = VirtualDeviceContext
+
+    @classmethod
+    def setUpTestData(cls):
+        devices = Device.objects.all()
+        vdc_status = Status.objects.get_for_model(VirtualDeviceContext)[0]
+        vdc_role = Role.objects.first()
+        vdc_role.content_types.add(ContentType.objects.get_for_model(VirtualDeviceContext))
+        tenants = Tenant.objects.all()
+
+        cls.create_data = [
+            {
+                "name": "Virtual Device Context 1",
+                "device": devices[0].pk,
+                "identifier": 100,
+                "status": vdc_status.pk,
+                "role": vdc_role.pk,
+            },
+            {
+                "name": "Virtual Device Context 2",
+                "device": devices[1].pk,
+                "identifier": 200,
+                "status": vdc_status.pk,
+                "tenant": tenants[1].pk,
+            },
+            {
+                "name": "Virtual Device Context 3",
+                "identifier": 300,
+                "device": devices[2].pk,
+                "status": vdc_status.pk,
+                "tenant": tenants[2].pk,
+                "role": vdc_role.pk,
+            },
+        ]
+        cls.update_data = {
+            "tenant": tenants[3].pk,
+            "role": vdc_role.pk,
+        }
+        cls.bulk_update_data = {
+            "tenant": tenants[4].pk,
+        }
+
+    def test_patching_primary_ip_success(self):
+        """
+        Validate we can set primary_ip on a Virtual Device Context using a PATCH.
+        """
+        # Add object-level permission
+        self.add_permissions("dcim.change_virtualdevicecontext", "ipam.view_ipaddress")
+        vdc = VirtualDeviceContext.objects.first()
+        device = vdc.device
+        intf_status = Status.objects.get_for_model(Interface).first()
+        intf_role = Role.objects.get_for_model(Interface).first()
+        interface = Interface.objects.create(
+            name="Int1",
+            device=device,
+            status=intf_status,
+            role=intf_role,
+            type=InterfaceTypeChoices.TYPE_100GE_CFP,
+        )
+        ip_v4 = IPAddress.objects.filter(ip_version=4).first()
+        ip_v6 = IPAddress.objects.filter(ip_version=6).first()
+        interface.virtual_device_contexts.add(vdc)
+        interface.add_ip_addresses([ip_v4, ip_v6])
+
+        with self.subTest("Patch Primary ip4"):
+            patch_data = {"primary_ip4": ip_v4.pk}
+
+            response = self.client.patch(self._get_detail_url(vdc), patch_data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            vdc.refresh_from_db()
+            self.assertEqual(vdc.primary_ip4, ip_v4)
+
+        with self.subTest("Patch Primary ip6"):
+            patch_data = {"primary_ip6": ip_v6.pk}
+
+            response = self.client.patch(self._get_detail_url(vdc), patch_data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            vdc.refresh_from_db()
+            self.assertEqual(vdc.primary_ip6, ip_v6)
+
+    def test_changing_device_on_vdc_raise_validation_error(self):
+        """
+        Validate that changing device on the virutal device context is not allowed.
+        """
+        self.add_permissions("dcim.change_virtualdevicecontext", "dcim.view_device")
+        vdc = VirtualDeviceContext.objects.first()
+        old_device = vdc.device
+        new_device = Device.objects.exclude(pk=old_device.pk).first()
+        patch_data = {"device": new_device.pk}
+        response = self.client.patch(self._get_detail_url(vdc), patch_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(
+            "Changing the device of a VirtualDeviceContext is not allowed.", response.data["non_field_errors"][0]
+        )
+
+
+class InterfaceVDCAssignmentTestCase(APIViewTestCases.APIViewTestCase):
+    model = InterfaceVDCAssignment
+
+    @classmethod
+    def setUpTestData(cls):
+        device = Device.objects.first()
+        vdc_status = Status.objects.get_for_model(VirtualDeviceContext)[0]
+        interface_status = Status.objects.get_for_model(Interface)[0]
+        interfaces = [
+            Interface.objects.create(
+                device=device,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                name=f"Interface 00{idx}",
+                status=interface_status,
+            )
+            for idx in range(3)
+        ]
+        vdcs = [
+            VirtualDeviceContext.objects.create(
+                device=device,
+                status=vdc_status,
+                identifier=200 + idx,
+                name=f"Test VDC {idx}",
+            )
+            for idx in range(3)
+        ]
+        # Create some deletable objects
+        InterfaceVDCAssignment.objects.create(
+            virtual_device_context=vdcs[0],
+            interface=interfaces[1],
+        )
+        InterfaceVDCAssignment.objects.create(
+            virtual_device_context=vdcs[0],
+            interface=interfaces[2],
+        )
+        InterfaceVDCAssignment.objects.create(
+            virtual_device_context=vdcs[1],
+            interface=interfaces[2],
+        )
+
+        cls.create_data = [
+            {
+                "virtual_device_context": vdcs[0].pk,
+                "interface": interfaces[0].pk,
+            },
+            {
+                "virtual_device_context": vdcs[1].pk,
+                "interface": interfaces[1].pk,
+            },
+            {
+                "virtual_device_context": vdcs[2].pk,
+                "interface": interfaces[2].pk,
+            },
+        ]
+
+    def test_docs(self):
+        """Skip: InterfaceVDCAssignment has no docs yet"""
+        # TODO(timizuo): Add docs for Interface VDC Assignment

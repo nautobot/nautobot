@@ -1,5 +1,3 @@
-<!-- markdownlint-disable MD024 -->
-
 # Nautobot v2.3
 
 This document describes all new features and changes in Nautobot 2.3.
@@ -123,20 +121,70 @@ Various button groups in the "object list" and "object detail" views have been c
 
 As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the next long-term-support (LTS) version of Django. There are a number of changes in Django itself as a result of this upgrade; Nautobot App maintainers are urged to review the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
 
+<!-- pyml disable-num-lines 2 blanks-around-headers -->
 <!-- towncrier release notes start -->
+## v2.3.16 (2025-01-06)
+
+### Fixed in v2.3.16
+
+- [#5805](https://github.com/nautobot/nautobot/issues/5805) - Enabled extended filter lookup expressions of the `serial` filter for Device, Rack, and InventoryItem.
+- [#5831](https://github.com/nautobot/nautobot/issues/5831) - Fixed an issue where the error message for missing custom job templates incorrectly reported "extras/job.html" instead of the actual missing template name.
+- [#5882](https://github.com/nautobot/nautobot/issues/5882) - Fixed `PowerOutletTemplateTable` to use `power_port_template` instead of the incorrect field `power_port`.
+- [#5882](https://github.com/nautobot/nautobot/issues/5882) - Fixed `FrontPortTemplateTable` to use `rear_port_template` instead of the incorrect field `rear_port`.
+- [#6527](https://github.com/nautobot/nautobot/issues/6527) - Disabled (unsupported) sorting by the `Device` column in Console Connections, Power Connections, and Interface Connections list views.
+- [#6669](https://github.com/nautobot/nautobot/issues/6669) - Removed the need for `available-prefixes`, `available-ips`, and `available-vlans` API endpoints to run validation multiple times.
+- [#6676](https://github.com/nautobot/nautobot/issues/6676) - Resolved issue with IPAddressQuerySet `get_or_create` method signature not matching the base method signature.
+
+### Housekeeping in v2.3.16
+
+- [#6714](https://github.com/nautobot/nautobot/issues/6714) - Enabled and addressed Pylint checkers `arguments-differ`, `arguments-renamed`, `exec-used`, `hard-coded-auth-user`, `super-init-not-called`.
+- [#6722](https://github.com/nautobot/nautobot/issues/6722) - Enabled Pylint `not-callable` and `no-member` checkers and addressed issues reported thereby.
+
+## v2.3.15 (2025-01-02)
+
+### Security in v2.3.15
+
+- [#6695](https://github.com/nautobot/nautobot/issues/6695) - Updated dependency `Jinja2` to `~3.1.5` to address `CVE-2024-56201` and `CVE-2024-56326`.
+
+### Added in v2.3.15
+
+- [#6410](https://github.com/nautobot/nautobot/issues/6410) - Added `settings.PUBLISH_ROBOTS_TXT` configuration option, defaulting to `True`.
+
+### Changed in v2.3.15
+
+- [#6583](https://github.com/nautobot/nautobot/issues/6583) - Changed `available-vlans` API endpoint to additionally require `ipam.view_vlan` permission to view available VLANs under VLAN Group.
+
+### Fixed in v2.3.15
+
+- [#5545](https://github.com/nautobot/nautobot/issues/5545) - Fixed an issue in Dynamic Group Edit View where saving a valid choice in a Select-type CustomField triggered an error.
+- [#6583](https://github.com/nautobot/nautobot/issues/6583) - Fixed `available-vlans`, `available-ips`, `available-prefixes` API endpoints to check object-level constrained permissions.
+- [#6702](https://github.com/nautobot/nautobot/issues/6702) - Resolved issue with TagsBulkEditFormMixin missing self.model.
+
+### Dependencies in v2.3.15
+
+- [#6689](https://github.com/nautobot/nautobot/issues/6689) - Updated `nh3` dependency to `~0.2.20`.
+- [#6689](https://github.com/nautobot/nautobot/issues/6689) - Updated `django-tables2` dependency to `~2.7.4` in Python 3.9 and later, and pinned it to `==2.7.0` under Python 3.8.
+
+### Housekeeping in v2.3.15
+
+- [#6688](https://github.com/nautobot/nautobot/issues/6688) - Cleaned-up documentation, misc fixes for VSCode DevContainer workflow.
+- [#6689](https://github.com/nautobot/nautobot/issues/6689) - Updated documentation dependency `mkdocs-material` to `~9.5.49`.
+- [#6693](https://github.com/nautobot/nautobot/issues/6693) - Changed `poetry install` in prerelease and release workflows from parallel mode to serial mode.
+- [#6706](https://github.com/nautobot/nautobot/issues/6706) - Removed unnecessary `user-data.json` integration-test fixture file.
+
 ## v2.3.14 (2024-12-19)
 
-### Added
+### Added in v2.3.14
 
 - [#6548](https://github.com/nautobot/nautobot/issues/6548) - Added logic to set the `parent` in the `clean()` method of the Prefix model, ensuring correct assignment during validation.
 
-### Changed
+### Changed in v2.3.14
 
 - [#6518](https://github.com/nautobot/nautobot/issues/6518) - Added VRFs column to Prefixes and Child Prefixes tables.
 - [#6531](https://github.com/nautobot/nautobot/issues/6531) - Restrict the `id` filter field to use to only the `__n` (negation) lookup filter.
 - [#6548](https://github.com/nautobot/nautobot/issues/6548) - Changed the save method of the `Prefix` model to reparent subnets and IPs only when the `network`, `namespace`, or `prefix_length` fields are updated.
 
-### Fixed
+### Fixed in v2.3.14
 
 - [#4056](https://github.com/nautobot/nautobot/issues/4056) - Fixed filter of add_tags and remove_tags of bulkedit based on content type
 - [#6204](https://github.com/nautobot/nautobot/issues/6204) - Fixed out-of-memory errors when `LogsCleanup` system job resulted in cascade deletion of many related objects (such as `JobLogEntry` or `nautobot_ssot.SyncLogEntry` records).
@@ -146,11 +194,11 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#6664](https://github.com/nautobot/nautobot/issues/6664) - Fixed `circuit_type` column not included correctly in CircuitTable default columns.
 - [#6678](https://github.com/nautobot/nautobot/issues/6678) - Fixed incorrect copy button behavior on global search page.
 
-### Documentation
+### Documentation in v2.3.14
 
 - [#6590](https://github.com/nautobot/nautobot/issues/6590) - Added an `ExampleEverythingJob` to the Example App and updated Job developer documentation to reference it as an example.
 
-### Housekeeping
+### Housekeeping in v2.3.14
 
 - [#6657](https://github.com/nautobot/nautobot/issues/6657) - Updated documentation dependency `mkdocs-material` to `~9.5.48`.
 - [#6659](https://github.com/nautobot/nautobot/issues/6659) - Enhanced development environment and associated `invoke` tasks to be Nautobot major/minor version aware, such that a different Docker compose `project-name` (and different local Docker image label) will be used for containers in a `develop`-based branch versus a `next`-based branch.
@@ -158,11 +206,11 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 
 ## v2.3.13 (2024-12-10)
 
-### Security
+### Security in v2.3.13
 
 - [#6615](https://github.com/nautobot/nautobot/issues/6615) - Updated `Django` to `~4.2.17` due to `CVE-2024-53907` and `CVE-2024-53908`.
 
-### Added
+### Added in v2.3.13
 
 - [#4817](https://github.com/nautobot/nautobot/issues/4817) - Added `Cluster` field on DeviceBulkEditForm.
 - [#5333](https://github.com/nautobot/nautobot/issues/5333) - Added `Comments` field on DeviceBulkEditForm.
@@ -174,44 +222,44 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#6613](https://github.com/nautobot/nautobot/issues/6613) - Enhanced Prefix detail view "Child Prefixes" table to render associated Locations more intelligently.
 - [#6614](https://github.com/nautobot/nautobot/issues/6614) - Enhanced IP Address tables to show the name of the associated Interface or VM Interface if only a single such association is present for a given IP Address.
 
-### Changed
+### Changed in v2.3.13
 
 - [#6166](https://github.com/nautobot/nautobot/issues/6166) - Enhanced the REST API to generally make it possible to create objects with known ids on request.
 
-### Fixed
+### Fixed in v2.3.13
 
 - [#3124](https://github.com/nautobot/nautobot/issues/3124) - Fixed inability of ImageAttachment and DeviceType API endpoints to accept `multipart/form-data` file uploads.
 - [#5166](https://github.com/nautobot/nautobot/issues/5166) - Fixed a `ProgrammingError` when applying permissions containing network-address-based constraints.
 - [#6466](https://github.com/nautobot/nautobot/issues/6466) - Fixed `table_config` field not showing up correctly in the Saved View modal.
-- [#6498](https://github.com/nautobot/nautobot/issues/6498) - Fixed error when using TableExtension when the table is missing Meta.default_columns.
+- [#6498](https://github.com/nautobot/nautobot/issues/6498) - Fixed error when using TableExtension when the table is missing `Meta.default_columns`.
 - [#6605](https://github.com/nautobot/nautobot/issues/6605) - Improved rendering performance of the IPAddress list view in cases where the `Interfaces`, `Devices`, `VM Interfaces`, `Virtual Machines`, and/or `Assigned` columns are not shown.
 - [#6605](https://github.com/nautobot/nautobot/issues/6605) - Improved performance of `TreeModel.display` calculation by making better use of the cache.
 - [#6609](https://github.com/nautobot/nautobot/issues/6609) - Fixed unnecessary call to the database when logging from a Job with the parameter `extra={"skip_db_logging": True}`.
 - [#6624](https://github.com/nautobot/nautobot/issues/6624) - Fixed issue with `group_sync.py` where it was accessing the settings using environment variable name vs the actual settings name.
 - [#6624](https://github.com/nautobot/nautobot/issues/6624) - Fixed the `SOCIAL_AUTH_PIPELINE` settings to include the entire path of the `group_sync` function.
 
-### Dependencies
+### Dependencies in v2.3.13
 
 - [#6615](https://github.com/nautobot/nautobot/issues/6615) - Updated `nh3` to `~0.2.19`.
 
-### Documentation
+### Documentation in v2.3.13
 
 - [#6622](https://github.com/nautobot/nautobot/issues/6622) - Fixed AzureAD documentation for custom_module logging example.
-- [#6636](https://github.com/nautobot/nautobot/issues/6636) - Fixed group_sync path in the SSO documentation.
+- [#6636](https://github.com/nautobot/nautobot/issues/6636) - Fixed `group_sync` path in the SSO documentation.
 
-### Housekeeping
+### Housekeeping in v2.3.13
 
 - [#6615](https://github.com/nautobot/nautobot/issues/6615) - Updated documentation dependency `mkdocs-material` to `~9.5.47`.
 
 ## v2.3.12 (2024-11-25)
 
-### Added
+### Added in v2.3.12
 
 - [#6532](https://github.com/nautobot/nautobot/issues/6532) - Added a keyboard shortcut (⌘+enter or ctrl+enter) to submit forms when typing in a textarea.
 - [#6543](https://github.com/nautobot/nautobot/issues/6543) - Defined a generic SSO group authentication module that can be shared by any OAuth2/OIDC backend.
 - [#6550](https://github.com/nautobot/nautobot/issues/6550) - Added OSFP-XD (800GE and 1600GE) and OSFP1600 interface types.
 
-### Fixed
+### Fixed in v2.3.12
 
 - [#6242](https://github.com/nautobot/nautobot/issues/6242) - Fixed "copy" button on Device tabbed views to now only copy the device name.
 - [#6478](https://github.com/nautobot/nautobot/issues/6478) - Fixed inconsistent rendering of the Role field.
@@ -223,35 +271,35 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#6547](https://github.com/nautobot/nautobot/issues/6547) - Fixed incorrect VRF filter specified on VRF column on Prefix Table.
 - [#6564](https://github.com/nautobot/nautobot/issues/6564) - Fixed an `AttributeError` raised when an App overrides a NautobotUIViewSet view.
 
-### Dependencies
+### Dependencies in v2.3.12
 
 - [#6459](https://github.com/nautobot/nautobot/issues/6459) - Updated `mysqlclient` dependency to `~2.2.6`.
 
-### Documentation
+### Documentation in v2.3.12
 
 - [#6516](https://github.com/nautobot/nautobot/issues/6516) - Updated release notes to make it clearer which are model changes.
 - [#6524](https://github.com/nautobot/nautobot/issues/6524) - Updated AzureAD authentication documentation.
 - [#6567](https://github.com/nautobot/nautobot/issues/6567) - Fixed incorrect example in documentation on using test factories.
 
-### Housekeeping
+### Housekeeping in v2.3.12
 
 - [#6459](https://github.com/nautobot/nautobot/issues/6459) - Updated documentation dependencies `mkdocs-redirects` to `1.2.2` and `mkdocs-material` to `9.5.46`.
 - [#6500](https://github.com/nautobot/nautobot/issues/6500) - Added support for `invoke showmigrations` command.
 
 ## v2.3.11 (2024-11-12)
 
-### Added
+### Added in v2.3.11
 
 - [#6231](https://github.com/nautobot/nautobot/issues/6231) - Added `nautobot.apps.utils.get_related_field_for_models()` helper function.
 - [#6231](https://github.com/nautobot/nautobot/issues/6231) - Added optional `lookup` parameter to `LinkedCountColumn`.
 
-### Changed
+### Changed in v2.3.11
 
 - [#5321](https://github.com/nautobot/nautobot/issues/5321) - For bulk delete all objects view, only show the confirmation dialog without the table that shows the objects that would be deleted.
 - [#6231](https://github.com/nautobot/nautobot/issues/6231) - Changed most related-object-count table columns (e.g. the "Locations" column in a Prefix table) to, if only a single related record is present (e.g. a single Location is associated with a given Prefix), display that related record directly instead of just displaying `1`.
 - [#6465](https://github.com/nautobot/nautobot/issues/6465) - For bulk edit all objects view, skip rendering the table of related objects in the confirmation page.
 
-### Fixed
+### Fixed in v2.3.11
 
 - [#6414](https://github.com/nautobot/nautobot/issues/6414) - Fixed layout bug in browsable REST API.
 - [#6442](https://github.com/nautobot/nautobot/issues/6442) - Fixed an issue where GitLab CI pipelines fail using all versions of official Docker images.
@@ -262,11 +310,11 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#6491](https://github.com/nautobot/nautobot/issues/6491) - Added missing `vrf` field to `VMInterfaceForm` and `VMInterfaceCreateForm`.
 - [#6492](https://github.com/nautobot/nautobot/issues/6492) - Fixed `vlan_group` field is not filtered by `locations` field input on VLANForm.
 
-### Documentation
+### Documentation in v2.3.11
 
 - [#6485](https://github.com/nautobot/nautobot/issues/6485) - Added additional clarification for enabling request profiling via user profile.
 
-### Housekeeping
+### Housekeeping in v2.3.11
 
 - [#6449](https://github.com/nautobot/nautobot/issues/6449) - Added an integration test to create a Manufacturer, DeviceType, LocationType, Location, Role and Device to test the create forms and select2 api form fields are working correctly.
 - [#6449](https://github.com/nautobot/nautobot/issues/6449) - Fixed incorrect assertion in core navbar integration tests.
@@ -276,64 +324,64 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 
 ## v2.3.10 (2024-10-29)
 
-### Added
+### Added in v2.3.10
 
 - [#6421](https://github.com/nautobot/nautobot/issues/6421) - Added cacheable `CustomField.objects.keys_for_model(model)` API.
 - [#6421](https://github.com/nautobot/nautobot/issues/6421) - Added queryset caching in `web_request_context` for more efficient JobHook and Webhook dispatching on bulk requests.
 - [#6421](https://github.com/nautobot/nautobot/issues/6421) - Added logging to JobResults for CustomField provisioning background tasks.
 - [#6421](https://github.com/nautobot/nautobot/issues/6421) - Added more efficient database calls for most cases of bulk-provisioning CustomField data on model objects.
 
-### Changed
+### Changed in v2.3.10
 
 - [#6421](https://github.com/nautobot/nautobot/issues/6421) - Increased soft/hard time limits on CustomField provisioning background tasks to 1800 and 2000 seconds respectively.
 
-### Fixed
+### Fixed in v2.3.10
 
 - [#6421](https://github.com/nautobot/nautobot/issues/6421) - Fixed long-running-at-scale transaction lock on records while adding/removing a CustomField definition.
 - [#6441](https://github.com/nautobot/nautobot/issues/6441) - Fixed a regression in 2.3.9 that broke the rendering of the Device create/edit form.
 
-### Dependencies
+### Dependencies in v2.3.10
 
 - [#6423](https://github.com/nautobot/nautobot/issues/6423) - Updated `mysqlclient` to `~2.2.5`.
 
-### Housekeeping
+### Housekeeping in v2.3.10
 
 - [#6423](https://github.com/nautobot/nautobot/issues/6423) - Updated documentation dependency `mkdocs-material` to `~9.5.42`.
 
 ## v2.3.9 (2024-10-28)
 
-### Added
+### Added in v2.3.9
 
 - [#4899](https://github.com/nautobot/nautobot/issues/4899) - Added TableExtension class to allow app developers to add columns to core tables.
 - [#6336](https://github.com/nautobot/nautobot/issues/6336) - Added logic to ModuleBay model to ensure that if the `position` field is empty, its value will be automatically populated from the `name` of the Module Bay instance.
 - [#6372](https://github.com/nautobot/nautobot/issues/6372) - Added environment variable support for setting `CSRF_TRUSTED_ORIGINS`.
 
-### Changed
+### Changed in v2.3.9
 
 - [#6336](https://github.com/nautobot/nautobot/issues/6336) - Enhanced `position` fields on ModuleBayCreate/UpdateForms to auto-populate their values from `name` fields.
 - [#6386](https://github.com/nautobot/nautobot/issues/6386) - Changed `GitRepositorySync` system Job to run atomically (all-or-nothing), such that any failure in the resync will cause all associated database updates to be reverted.
 - [#6386](https://github.com/nautobot/nautobot/issues/6386) - Changed behavior of change logging `web_request_context()` to only reload Job code when a relevant JobHook is found to apply to the change in question.
 
-### Fixed
+### Fixed in v2.3.9
 
 - [#6297](https://github.com/nautobot/nautobot/issues/6297) - Fixed overly broad scope of the TreeModel `invalidate_max_depth_cache` signal so that it now correctly only fires for TreeModel instances rather than all models.
 - [#6297](https://github.com/nautobot/nautobot/issues/6297) - Improved performance of DynamicGroup membership updates/recalculations when dealing with large numbers of member objects.
 - [#6386](https://github.com/nautobot/nautobot/issues/6386) - Fixed reversed chronological ordering of JobHooks and Webhooks sent from a single `web_request_context` session.
 - [#6400](https://github.com/nautobot/nautobot/issues/6400) - Removed misleading help text from ModularComponentForm, as the `{module}` auto-substitution in names only applies through component _templates_ at present.
 - [#6415](https://github.com/nautobot/nautobot/issues/6415) - Added missing column `software_version` to the Device Table in Device List View.
-- [#6425](https://github.com/nautobot/nautobot/issues/6425) - Fixed bug in which ColoredLabelColumn() wasn't being applied to the `role' column on Device/VM interfaces.
+- [#6425](https://github.com/nautobot/nautobot/issues/6425) - Fixed bug in which ColoredLabelColumn() wasn't being applied to the `role` column on Device/VM interfaces.
 
-### Dependencies
+### Dependencies in v2.3.9
 
 - [#6362](https://github.com/nautobot/nautobot/issues/6362) - Updated `psycopg2-binary` dependency to `~2.9.10`.
 
-### Housekeeping
+### Housekeeping in v2.3.9
 
 - [#6362](https://github.com/nautobot/nautobot/issues/6362) - Updated documentation dependency `mkdocs-material` to `~9.5.41`.
 
 ## v2.3.8 (2024-10-18)
 
-### Fixed
+### Fixed in v2.3.8
 
 - [#5050](https://github.com/nautobot/nautobot/issues/5050) - Changed logic to permit VLANs assigned to a device's location's parent locations (including parents of parents, etc.) to be assigned to that device's interfaces.
 - [#6297](https://github.com/nautobot/nautobot/issues/6297) - Fixed paginator widget to display the current selected `per_page` value even if it's not one of the `PER_PAGE_DEFAULTS` options.
@@ -343,27 +391,27 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 
 ## v2.3.7 (2024-10-15)
 
-### Added
+### Added in v2.3.7
 
 - [#2784](https://github.com/nautobot/nautobot/issues/2784) - Added `assertBodyContains()` test helper API to `NautobotTestCaseMixin`.
 
-### Changed
+### Changed in v2.3.7
 
 - [#6205](https://github.com/nautobot/nautobot/issues/6205) - Changed initial `Nautobot initialized!` message logged on startup to include the Nautobot version number.
 - [#6350](https://github.com/nautobot/nautobot/issues/6350) - Changed the way that `ensure_git_repository` logs hashes to include the name of the repository.
 
-### Fixed
+### Fixed in v2.3.7
 
 - [#6158](https://github.com/nautobot/nautobot/issues/6158) - Fixed a UI overflow issue with the Tenant Stats panel.
 - [#6299](https://github.com/nautobot/nautobot/issues/6299) - Added retry logic and error handling for several cases where an intermittent Redis connection error could cause Celery to throw an exception.
 - [#6318](https://github.com/nautobot/nautobot/issues/6318) - Fixed duplicate loading of `nautobot_config.py` during Nautobot startup.
 - [#6329](https://github.com/nautobot/nautobot/issues/6329) - Added a data migration to fix DynamicGroup `group_type` values set incorrectly in upgrading to Nautobot 2.3.x.
 
-### Dependencies
+### Dependencies in v2.3.7
 
 - [#6299](https://github.com/nautobot/nautobot/issues/6299) - Added a direct dependency on `kombu` to guarantee the presence of some essential fixes for this Celery dependency.
 
-### Housekeeping
+### Housekeeping in v2.3.7
 
 - [#2784](https://github.com/nautobot/nautobot/issues/2784) - Added usage of `extract_page_body()` to many view-related test cases in order to make their failure output more readable.
 - [#2784](https://github.com/nautobot/nautobot/issues/2784) - Modified many view-related test cases to use new `assertBodyContains()` test helper method for brevity.
@@ -375,37 +423,37 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 
 ## v2.3.6 (2024-10-02)
 
-### Added
+### Added in v2.3.6
 
 - [#5903](https://github.com/nautobot/nautobot/issues/5903) - Added range field on `VLANGroup` model.
 - [#5903](https://github.com/nautobot/nautobot/issues/5903) - Added tags on `VLANGroup` model.
 
-### Fixed
+### Fixed in v2.3.6
 
 - [#6304](https://github.com/nautobot/nautobot/issues/6304) - Fixed an error during startup when an App included a REST API serializer inheriting from an unexpected base class.
 - [#6304](https://github.com/nautobot/nautobot/issues/6304) - Fixed a warning during startup about the `extras.FileAttachment` model.
 
-### Documentation
+### Documentation in v2.3.6
 
 - [#6304](https://github.com/nautobot/nautobot/issues/6304) - Added a note to the release overview section for app developers regarding opt-in/opt-out of model features.
 - [#6304](https://github.com/nautobot/nautobot/issues/6304) - Updated app model developer documentation with more details about feature opt-out.
 
-### Housekeeping
+### Housekeeping in v2.3.6
 
 - [#6308](https://github.com/nautobot/nautobot/issues/6308) - Increase the minimum number of content-types to three and capped the maximum to five for MetadataType instances created by MetadataTypeFactory.
 
 ## v2.3.5 (2024-09-30)
 
-### Added
+### Added in v2.3.5
 
 - [#6257](https://github.com/nautobot/nautobot/issues/6257) - Added `is_occupied` boolean filter to the Rack elevation API endpoint to allow filtering by occupied or unoccupied units.
 - [#6289](https://github.com/nautobot/nautobot/issues/6289) - Added the add button to IPAM Services.
 
-### Changed
+### Changed in v2.3.5
 
 - [#6057](https://github.com/nautobot/nautobot/issues/6057) - Enhanced job delete functions to prevent users from deleting system jobs from the UI and the API.
 
-### Fixed
+### Fixed in v2.3.5
 
 - [#5802](https://github.com/nautobot/nautobot/issues/5802) - Override `get_required_permission()` in SavedViewUIViewSet to achieve the intended behavior.
 - [#5924](https://github.com/nautobot/nautobot/issues/5924) - Fixed the redirect URL for the Device Bay Populate/Depopulate view to take the user back to the Device Bays tab on the Device page.
@@ -416,16 +464,16 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#6257](https://github.com/nautobot/nautobot/issues/6257) - Fixed the selection options for `position` on the device add/edit form to disable RUs that are currently occupied.
 - [#6289](https://github.com/nautobot/nautobot/issues/6289) - Fixed lookup of IP Addresses in the Service form.
 
-### Dependencies
+### Dependencies in v2.3.5
 
 - [#6247](https://github.com/nautobot/nautobot/issues/6247) - Updated documentation dependency `mkdocs-material` to `~9.5.35`.
 - [#6287](https://github.com/nautobot/nautobot/issues/6287) - Replaced incorrect `django-structlog[all]` dependency with `django-structlog[celery]`.
 
-### Documentation
+### Documentation in v2.3.5
 
 - [#6264](https://github.com/nautobot/nautobot/issues/6264) - Added to the core developer documentation a warning against the use of data factories within test case code.
 
-### Housekeeping
+### Housekeeping in v2.3.5
 
 - [#5802](https://github.com/nautobot/nautobot/issues/5802) - Override `get_required_permission()` in SavedViewUIViewSet to achieve the intended behavior.
 - [#6264](https://github.com/nautobot/nautobot/issues/6264) - Changed `invoke unittest` to default to `--parallel` even when a `--label` value is specified.
@@ -435,22 +483,22 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 
 ## v2.3.4 (2024-09-18)
 
-### Added
+### Added in v2.3.4
 
 - [#5795](https://github.com/nautobot/nautobot/issues/5795) - Added support for `NAUTOBOT_CACHES_TIMEOUT` environment variable.
 - [#6207](https://github.com/nautobot/nautobot/issues/6207) - Added the ability to filter virtual machines by their `cluster` names or IDs.
 
-### Changed
+### Changed in v2.3.4
 
 - [#5795](https://github.com/nautobot/nautobot/issues/5795) - Changed default cache timeout for Constance configuration from 1 day to 300 seconds to match other caches.
 
-### Fixed
+### Fixed in v2.3.4
 
 - [#6207](https://github.com/nautobot/nautobot/issues/6207) - Fixed incorrect link in ClusterTable for device count column.
 - [#6207](https://github.com/nautobot/nautobot/issues/6207) - Fixed incorrect link in PowerPanelTable for power feed count column.
 - [#6230](https://github.com/nautobot/nautobot/issues/6230) - Fixed an issue with Celery Scheduler around datetime imports.
 
-### Documentation
+### Documentation in v2.3.4
 
 - [#5795](https://github.com/nautobot/nautobot/issues/5795) - Consolidated "Required Settings" and "Optional Settings" docs into a single unified "Settings" document.
 - [#5795](https://github.com/nautobot/nautobot/issues/5795) - Consolidated "Administration: Installation Extras" docs section into the "Administration: Guides" section.
@@ -458,7 +506,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#5795](https://github.com/nautobot/nautobot/issues/5795) - Added `environment_variables` keys to `settings.yaml` to more accurately document settings that are influenced by multiple environment variables together.
 - [#5795](https://github.com/nautobot/nautobot/issues/5795) - Removed `is_required_setting` keys from `settings.yaml` as no longer relevant.
 
-### Housekeeping
+### Housekeeping in v2.3.4
 
 - [#5859](https://github.com/nautobot/nautobot/issues/5859) - Changed `--cache-test-fixtures` and `--keepdb` flags from opt-in to opt-out for `invoke unittest` and `invoke integration-test` commands.
 - [#5859](https://github.com/nautobot/nautobot/issues/5859) - Changed `invoke unittest` to automatically include `--parallel` flag when running the entire unit test suite.
@@ -467,22 +515,22 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 
 ## v2.3.3 (2024-09-16)
 
-### Security
+### Security in v2.3.3
 
 - [#6212](https://github.com/nautobot/nautobot/issues/6212) - Updated `Django` to `~4.2.16` to address `CVE-2024-45230` and `CVE-2024-45231`.
 
-### Fixed
+### Fixed in v2.3.3
 
 - [#6184](https://github.com/nautobot/nautobot/issues/6184) - Fixed an exception in `extras.models.groups._map_filter_fields` method when certain App `filter_extensions` were present.
 - [#6190](https://github.com/nautobot/nautobot/issues/6190) - Added `display` property to Prefix to display its namespace along with the prefix to allow differentiation between prefixes in the UI.
 - [#6197](https://github.com/nautobot/nautobot/issues/6197) - Fixed an exception in `core.utils.lookup.get_model_for_view_name` function when rendering certain App object list views.
 - [#6203](https://github.com/nautobot/nautobot/issues/6203) - Fixed a performance regression observed when change logging resulted in a large number of ObjectChange records (such as in an SSOT Job).
 
-### Dependencies
+### Dependencies in v2.3.3
 
 - [#6084](https://github.com/nautobot/nautobot/issues/6084) - Updated `pyuwsgi` to `~2.0.26` and `PyYAML` to `~6.0.2`.
 
-### Housekeeping
+### Housekeeping in v2.3.3
 
 - [#5376](https://github.com/nautobot/nautobot/issues/5376) - Disabled `coverage` during initial test database setup to improve test performance.
 - [#6084](https://github.com/nautobot/nautobot/issues/6084) - Updated development dependencies `factory-boy` to `~3.3.1`, `ruff` to `~0.5.7`, and `watchdog` to `~4.0.2`.
@@ -493,18 +541,18 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 
 ## v2.3.2 (2024-09-03)
 
-### Security
+### Security in v2.3.2
 
 - [#6182](https://github.com/nautobot/nautobot/issues/6182) - Updated `cryptography` to `43.0.1` to address `GHSA-h4gh-qq45-vh27`. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
 
-### Added
+### Added in v2.3.2
 
 - [#5180](https://github.com/nautobot/nautobot/issues/5180) - Add filtering Job Results by Scheduled Job.
 - [#5591](https://github.com/nautobot/nautobot/issues/5591) - Added `time_zone` field to `ScheduledJob` model.
 - [#6120](https://github.com/nautobot/nautobot/issues/6120) - Added Status Field to VRF model.
 - [#6129](https://github.com/nautobot/nautobot/issues/6129) - Added collapsible icon rotation to homepage panels.
 
-### Fixed
+### Fixed in v2.3.2
 
 - [#5591](https://github.com/nautobot/nautobot/issues/5591) - Corrected several bugs around handling of `ScheduledJob` execution when `settings.TIME_ZONE` is other than "UTC".
 - [#5591](https://github.com/nautobot/nautobot/issues/5591) - Added missing `Meta.ordering` definition to `ScheduledJob` model.
@@ -513,7 +561,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#6146](https://github.com/nautobot/nautobot/issues/6146) - Added missing DynamicGroup content to Device Detail View and Software Image File Detail View.
 - [#6175](https://github.com/nautobot/nautobot/issues/6175) - Prevented some `AttributeError` exceptions from being raised when an App contains a model that doesn't inherit from `BaseModel`.
 
-### Housekeeping
+### Housekeeping in v2.3.2
 
 - [#5591](https://github.com/nautobot/nautobot/issues/5591) - Added `watchmedo` to `celery_beat` development container.
 - [#5591](https://github.com/nautobot/nautobot/issues/5591) - Added `time-machine` as a development environment (test execution) dependency.
@@ -522,34 +570,34 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 
 ## v2.3.1 (2024-08-19)
 
-### Added
+### Added in v2.3.1
 
 - [#5232](https://github.com/nautobot/nautobot/issues/5232) - Added support for groupings to computed fields.
 - [#5494](https://github.com/nautobot/nautobot/issues/5494) - Added validation logic to `DeviceForm` `clean()` method to raise a validation error if there is any invalid software image file specified.
 - [#5915](https://github.com/nautobot/nautobot/issues/5915) - Enhanced `IPAddress.objects.get_or_create` method to permit specifying a namespace as an alternative to a parent prefix.
 
-### Changed
+### Changed in v2.3.1
 
 - [#5970](https://github.com/nautobot/nautobot/issues/5970) - Removed indentations for PrefixTable in various locations in the UI.
 
-### Fixed
+### Fixed in v2.3.1
 
 - [#5494](https://github.com/nautobot/nautobot/issues/5494) - Fixed `Device` model `clean()` validation logic to allow user to specify a software version on a device without specifying any software image files.
 - [#6096](https://github.com/nautobot/nautobot/issues/6096) - Updated CloudAccount UI: Set the `secrets_group` form field to be optional.
 - [#6097](https://github.com/nautobot/nautobot/issues/6097) - Updated ContactAssociation API: Set the role field to be required.
 - [#6116](https://github.com/nautobot/nautobot/issues/6116) - Added handling for an `OperationalError` that might be raised when running `pylint-nautobot` or similar linters that depend on successfully running `nautobot.setup()`.
 
-### Housekeeping
+### Housekeeping in v2.3.1
 
 - [#6107](https://github.com/nautobot/nautobot/issues/6107) - Updated documentation dependency `mkdocstrings-python` to `~1.10.8`.
 
 ## v2.3.0 (2024-08-08)
 
-### Security
+### Security in v2.3.0
 
 - [#6073](https://github.com/nautobot/nautobot/issues/6073) - Updated `Django` to `~4.2.15` due to `CVE-2024-41989`, `CVE-2024-41990`, `CVE-2024-41991`, and `CVE-2024-42005`.
 
-### Added
+### Added in v2.3.0
 
 - [#5996](https://github.com/nautobot/nautobot/issues/5996) - Added missing `comments` field to DeviceType bulk edit.
 - [#5996](https://github.com/nautobot/nautobot/issues/5996) - Added `comments` field to ModuleType.
@@ -559,7 +607,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#6039](https://github.com/nautobot/nautobot/issues/6039) - Added support for querying `GenericRelation` relationships (reverse of `GenericForeignKey`) in GraphQL.
 - [#6039](https://github.com/nautobot/nautobot/issues/6039) - Added support for filtering an object's `associated_contacts` in GraphQL.
 
-### Changed
+### Changed in v2.3.0
 
 - [#6003](https://github.com/nautobot/nautobot/issues/6003) - Changed rendering of `scoped_fields` column in `ObjectMetadataTable`.
 - [#6003](https://github.com/nautobot/nautobot/issues/6003) - Changed default ordering of `ObjectMetadata` list views.
@@ -568,12 +616,12 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#6039](https://github.com/nautobot/nautobot/issues/6039) - Changed `CloudNetwork.parent` foreign-key `on_delete` behavior to `PROTECT`.
 - [#6070](https://github.com/nautobot/nautobot/issues/6070) - Marked the `Note` model as `is_metadata_associable_model = False`.
 
-### Removed
+### Removed in v2.3.0
 
 - [#6005](https://github.com/nautobot/nautobot/issues/6005) - Removed "delete" and "bulk-delete" functionalities from the ObjectMetadata views.
 - [#6039](https://github.com/nautobot/nautobot/issues/6039) - Removed unneeded `CloudNetworkPrefixAssignmentTable`.
 
-### Fixed
+### Fixed in v2.3.0
 
 - [#5967](https://github.com/nautobot/nautobot/issues/5967) - Fixed a regression in the display of custom fields in object-edit forms.
 - [#5996](https://github.com/nautobot/nautobot/issues/5996) - Fixed URL typo in module and module type list views.
@@ -589,7 +637,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#6064](https://github.com/nautobot/nautobot/issues/6064) - Reverted an undesired change to `IPAddressFilterSet.device` filter.
 - [#6064](https://github.com/nautobot/nautobot/issues/6064) - Reverted an undesired change to `ServiceForm.ip_addresses` valid addresses.
 
-### Documentation
+### Documentation in v2.3.0
 
 - [#5920](https://github.com/nautobot/nautobot/issues/5920) - Updated documentation for installation under Ubuntu 24.04 LTS, Fedora 40, AlmaLinux 9, and similar distros.
 - [#6019](https://github.com/nautobot/nautobot/issues/6019) - Updated the installation documentation to recommend a more secure set of filesystem permissions.
@@ -597,7 +645,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#6050](https://github.com/nautobot/nautobot/issues/6050) - Added some crosslinks within the DCIM model documentation.
 - [#6062](https://github.com/nautobot/nautobot/issues/6062) - Updated Configuration Context docs with additional examples for dictionary of dictionaries.
 
-### Housekeeping
+### Housekeeping in v2.3.0
 
 - [#5962](https://github.com/nautobot/nautobot/issues/5962) - Updated development dependency `ruff` to `~0.5.6`.
 - [#5962](https://github.com/nautobot/nautobot/issues/5962) - Updated documentation dependencies: `mkdocs-material` to `~9.5.31`, `mkdocstrings` to `~0.25.2`, and `mkdocstrings-python` to `~1.10.7`.
@@ -609,11 +657,11 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 
 ## v2.3.0-beta.1 (2024-07-25)
 
-### Security
+### Security in v2.3.0-beta.1
 
 - [#5889](https://github.com/nautobot/nautobot/issues/5889) - Updated `Django` to `~4.2.14` due to `CVE-2024-38875`, `CVE-2024-39329`, `CVE-2024-39330`, and `CVE-2024-39614`.
 
-### Added
+### Added in v2.3.0-beta.1
 
 - [#1758](https://github.com/nautobot/nautobot/issues/1758) - Implemented SavedView model.
 - [#2101](https://github.com/nautobot/nautobot/issues/2101) - Added ModuleBay, Module, ModuleType and ModuleBayTemplate models to support modeling line cards and other modular components of a device.
@@ -660,7 +708,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#5933](https://github.com/nautobot/nautobot/issues/5933) - Added tables of related `CloudService` and/or `CloudNetwork` instances to the `CloudResourceType` detail view.
 - [#5933](https://github.com/nautobot/nautobot/issues/5933) - Added `description` field to `CloudService` model.
 
-### Changed
+### Changed in v2.3.0-beta.1
 
 - [#2101](https://github.com/nautobot/nautobot/issues/2101) - Updated device interfaces filter to support filtering by interface name as well as by ID.
 - [#3749](https://github.com/nautobot/nautobot/issues/3749) - Changed behavior of the `CHANGELOG_RETENTION` setting; it no longer applies automatically to force cleanup of ObjectChange records over a certain age cutoff, but instead serves as the default cutoff age whenever running the new "Logs Cleanup" system Job.
@@ -692,19 +740,19 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#5977](https://github.com/nautobot/nautobot/issues/5977) - Changed the provider field help text of CloudAccount and CloudResourceType model classes and forms.
 - [#5978](https://github.com/nautobot/nautobot/issues/5978) - Changed CloudService `cloud_network` field from a ForeignKey to a ManyToMany called `cloud_networks`.
 
-### Deprecated
+### Deprecated in v2.3.0-beta.1
 
 - [#5473](https://github.com/nautobot/nautobot/issues/5473) - Deprecated the properties `DynamicGroup.members_cached`, `DynamicGroup.members_cache_key`, `DynamicGroupMixin.dynamic_groups_cached`, `DynamicGroupMixin.dynamic_groups_list`, and `DynamicGroupMixin.dynamic_groups_list_cached`.
 - [#5786](https://github.com/nautobot/nautobot/issues/5786) - Deprecated the `DynamicGroupMixin` model mixin class. Models supporting Dynamic Groups should use `DynamicGroupsModelMixin` instead.
 - [#5870](https://github.com/nautobot/nautobot/issues/5870) - Deprecated the blocks `block export_button` and `block import_button` in `generic/object_list.html`. Apps and templates should migrate to using `block export_list_element` and `block import_list_element` respectively.
 
-### Removed
+### Removed in v2.3.0-beta.1
 
 - [#3749](https://github.com/nautobot/nautobot/issues/3749) - Removed automatic random cleanup of ObjectChange records when processing requests and signals.
 - [#5473](https://github.com/nautobot/nautobot/issues/5473) - Removed `DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT` setting as it is no longer relevant after refactoring the Dynamic Group membership caching implementation.
 - [#5786](https://github.com/nautobot/nautobot/issues/5786) - Removed the `StaticGroup` model added in #5472, replacing it with a subtype of the `DynamicGroup` model.
 
-### Fixed
+### Fixed in v2.3.0-beta.1
 
 - [#2352](https://github.com/nautobot/nautobot/issues/2352) - Fixed random deadlocks in long-running Jobs resulting from the ObjectChange automatic cleanup signal.
 - [#5123](https://github.com/nautobot/nautobot/issues/5123) - Fixed an unhandled `ValueError` when filtering on `vlans` by their UUID rather than their VLAN ID.
@@ -714,7 +762,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#5774](https://github.com/nautobot/nautobot/issues/5774) - Fixed the bug that required users and administrators to manage additional permission to be able to use saved views.
 - [#5814](https://github.com/nautobot/nautobot/issues/5814) - Fixed style issues with Saved Views and other language code blocks.
 - [#5818](https://github.com/nautobot/nautobot/issues/5818) - Fixed broken table configure buttons in device and module component tabs.
-- [#5842](https://github.com/nautobot/nautobot/issues/5842) - Fixed missing classes when importing `*` from nautobot.ipam.models.
+- [#5842](https://github.com/nautobot/nautobot/issues/5842) - Fixed missing classes when importing `*` from `nautobot.ipam.models`.
 - [#5877](https://github.com/nautobot/nautobot/issues/5877) - Resolved issue with tags not saving on Dynamic Groups.
 - [#5880](https://github.com/nautobot/nautobot/issues/5880) - Fixed overflowing device component tables in device and module component tabs.
 - [#5880](https://github.com/nautobot/nautobot/issues/5880) - Fixed an exception when trying to edit an IPAddress that had a NAT Inside IPAddress that was related to a component attached to a module.
@@ -728,7 +776,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#5951](https://github.com/nautobot/nautobot/issues/5951) - Removed unused consolidated action button on job list view.
 - [#5952](https://github.com/nautobot/nautobot/issues/5952) - Changed generic "Bulk Actions" dropup button styling to match generic "Actions" dropdown button.
 
-### Dependencies
+### Dependencies in v2.3.0-beta.1
 
 - [#1758](https://github.com/nautobot/nautobot/issues/1758) - Updated `materialdesignicons` to version 7.4.47.
 - [#4616](https://github.com/nautobot/nautobot/issues/4616) - Updated `django-taggit` to `~5.0.0`.
@@ -739,7 +787,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#5429](https://github.com/nautobot/nautobot/issues/5429) - Updated Docker build and CI to use `poetry` `1.8.2`.
 - [#5429](https://github.com/nautobot/nautobot/issues/5429) - Removed development dependency on `mkdocs-include-markdown-plugin` as it's no longer used in Nautobot's documentation.
 - [#5518](https://github.com/nautobot/nautobot/issues/5518) - Updated `drf-spectacular` to version `0.27.2`.
-- [#5687](https://github.com/nautobot/nautobot/issues/5687) - Added [django-structlog](https://django-structlog.readthedocs.io/en/latest/) dependency.
+- [#5687](https://github.com/nautobot/nautobot/issues/5687) - Added [`django-structlog`](https://django-structlog.readthedocs.io/en/latest/) dependency.
 - [#5734](https://github.com/nautobot/nautobot/issues/5734) - Updated `django-auth-ldap` dependency to `~4.8`.
 - [#5734](https://github.com/nautobot/nautobot/issues/5734) - Updated `django-tree-queries` dependency to `~0.19`.
 - [#5734](https://github.com/nautobot/nautobot/issues/5734) - Updated `Markdown` dependency to `~3.6`.
@@ -754,13 +802,13 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#5889](https://github.com/nautobot/nautobot/issues/5889) - Updated `django-filter` to version `~24.2`.
 - [#5889](https://github.com/nautobot/nautobot/issues/5889) - Updated `django-timezone-field` to version `~7.0`.
 
-### Documentation
+### Documentation in v2.3.0-beta.1
 
 - [#5699](https://github.com/nautobot/nautobot/issues/5699) - Fixed a number of broken links within the documentation.
 - [#5895](https://github.com/nautobot/nautobot/issues/5895) - Added missing model documentation for `CloudNetwork`, `CloudNetworkPrefixAssignment`, `CloudService` and ~~`CloudType`~~ `CloudResourceType`.
 - [#5934](https://github.com/nautobot/nautobot/issues/5934) - Add Cloud Model Example and Entity Diagram.
 
-### Housekeeping
+### Housekeeping in v2.3.0-beta.1
 
 - [#5160](https://github.com/nautobot/nautobot/issues/5160) - Replaced references to `pytz` with `zoneinfo` in keeping with Django 4.
 - [#5212](https://github.com/nautobot/nautobot/issues/5212) - Enhanced `nautobot.core.testing.filters.FilterTestCases.BaseFilterTestCase.test_filters_generic()` test case to test for the presence and proper functioning of the `contacts` and `teams` filters on any appropriate model FilterSet.

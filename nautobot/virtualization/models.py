@@ -22,8 +22,8 @@ __all__ = (
     "Cluster",
     "ClusterGroup",
     "ClusterType",
-    "VirtualMachine",
     "VMInterface",
+    "VirtualMachine",
 )
 
 

@@ -19,6 +19,7 @@ from nautobot.core.factory import (
 )
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
+    ControllerCapabilitiesChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
@@ -40,6 +41,7 @@ from nautobot.dcim.models import (
     DeviceRedundancyGroup,
     DeviceType,
     FrontPortTemplate,
+    Interface,
     InterfaceTemplate,
     Location,
     LocationType,
@@ -58,10 +60,11 @@ from nautobot.dcim.models import (
     RearPortTemplate,
     SoftwareImageFile,
     SoftwareVersion,
+    VirtualDeviceContext,
 )
 from nautobot.extras.models import ExternalIntegration, Role, Status
 from nautobot.extras.utils import FeatureQuery
-from nautobot.ipam.models import Prefix, VLAN, VLANGroup
+from nautobot.ipam.models import Prefix, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster
 
@@ -198,7 +201,12 @@ class DeviceFactory(PrimaryModelFactory):
         if extracted:
             self.software_image_files.set(extracted)
         else:
-            self.software_image_files.set(get_random_instances(SoftwareImageFile))
+            self.software_image_files.set(
+                get_random_instances(
+                    SoftwareImageFile.objects.filter(default_image=True)
+                    | SoftwareImageFile.objects.filter(device_types=self.device_type)
+                )
+            )
 
     # TODO to be done after these model factories are done.
     # has_cluster = NautobotBoolIterator()
@@ -672,6 +680,7 @@ class SoftwareImageFileFactory(PrimaryModelFactory):
         has_hashing_algorithm = NautobotBoolIterator()
         has_image_file_size = NautobotBoolIterator()
         has_download_url = NautobotBoolIterator()
+        has_external_integration = NautobotBoolIterator()
 
     status = random_instance(
         lambda: Status.objects.get_for_model(SoftwareImageFile),
@@ -690,6 +699,7 @@ class SoftwareImageFileFactory(PrimaryModelFactory):
     default_image = factory.LazyAttribute(
         lambda o: not o.software_version.software_image_files.filter(default_image=True).exists()
     )
+    external_integration = factory.Maybe("has_external_integration", random_instance(ExternalIntegration))
 
 
 class SoftwareVersionFactory(PrimaryModelFactory):
@@ -719,6 +729,7 @@ class SoftwareVersionFactory(PrimaryModelFactory):
 class ControllerFactory(PrimaryModelFactory):
     class Meta:
         model = Controller
+        exclude = ("has_capabilities",)
 
     class Params:
         has_device = NautobotBoolIterator()
@@ -727,6 +738,12 @@ class ControllerFactory(PrimaryModelFactory):
     description = factory.Faker("sentence")
     status = random_instance(lambda: Status.objects.get_for_model(Controller), allow_null=False)
     role = random_instance(lambda: Role.objects.get_for_model(Controller))
+    has_capabilities = NautobotBoolIterator()
+    capabilities = factory.Maybe(
+        "has_capabilities",
+        factory.Faker("random_elements", elements=ControllerCapabilitiesChoices.values(), unique=True),
+        [],
+    )
     platform = random_instance(Platform)
     location = random_instance(lambda: Location.objects.get_for_model(Controller), allow_null=False)
     tenant = random_instance(Tenant)
@@ -738,6 +755,7 @@ class ControllerFactory(PrimaryModelFactory):
 class ControllerManagedDeviceGroupFactory(PrimaryModelFactory):
     class Meta:
         model = ControllerManagedDeviceGroup
+        exclude = ("has_capabilities",)
 
     class Params:
         has_parent = NautobotBoolIterator()
@@ -746,6 +764,12 @@ class ControllerManagedDeviceGroupFactory(PrimaryModelFactory):
     parent = factory.Maybe("has_parent", random_instance(ControllerManagedDeviceGroup), None)
     controller = factory.LazyAttribute(
         lambda o: o.parent.controller if o.parent else factory.random.randgen.choice(Controller.objects.all())
+    )
+    has_capabilities = NautobotBoolIterator()
+    capabilities = factory.Maybe(
+        "has_capabilities",
+        factory.Faker("random_elements", elements=ControllerCapabilitiesChoices.values(), unique=True),
+        [],
     )
     weight = factory.Faker("pyint", min_value=1, max_value=1000)
 
@@ -945,3 +969,52 @@ class ModuleBayTemplateFactory(ModularDeviceComponentTemplateFactory):
         factory.LazyAttribute(lambda o: o.device_type.module_bay_templates.count() + 1),
         factory.LazyAttribute(lambda o: o.module_type.module_bay_templates.count() + 1),
     )
+
+
+class VirtualDeviceContextFactory(PrimaryModelFactory):
+    class Meta:
+        model = VirtualDeviceContext
+        exclude = ("has_role", "has_tenant", "has_description")
+
+    status = random_instance(
+        lambda: Status.objects.get_for_model(VirtualDeviceContext),
+        allow_null=False,
+    )
+    has_role = NautobotBoolIterator()
+    role = factory.Maybe(
+        "has_role",
+        random_instance(
+            lambda: Role.objects.get_for_model(VirtualDeviceContext),
+            allow_null=False,
+        ),
+        None,
+    )
+    identifier = factory.Sequence(
+        lambda n: n + 101
+    )  # Start at 101 to avoid conflicts VirtualDeviceContexts API test cases.
+    name = factory.Sequence(lambda n: f"VirtualDeviceContext {n}")
+    device = random_instance(Device, allow_null=False)
+    has_tenant = NautobotBoolIterator()
+    tenant = factory.Maybe(
+        "has_tenant",
+        random_instance(Tenant, allow_null=False),
+        None,
+    )
+    has_description = NautobotBoolIterator()
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+
+    @factory.post_generation
+    def interfaces(self, create, extracted, **kwargs):
+        if create:
+            if extracted:
+                self.interfaces.set(extracted)
+            else:
+                self.interfaces.set(get_random_instances(Interface.objects.filter(device=self.device)))
+
+    @factory.post_generation
+    def vrfs(self, create, extracted, **kwargs):
+        if create:
+            if extracted:
+                self.vrfs.set(extracted)
+            else:
+                self.vrfs.set(get_random_instances(VRF.objects.all()))

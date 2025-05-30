@@ -1,7 +1,4 @@
 from nautobot.core.apps import (
-    NavContext,
-    NavGrouping,
-    NavItem,
     NavMenuAddButton,
     NavMenuGroup,
     NavMenuItem,
@@ -199,93 +196,6 @@ menu_items = (
                                 ],
                             ),
                         ),
-                    ),
-                ),
-            ),
-        ),
-    ),
-)
-
-
-navigation = (
-    NavContext(
-        name="Networks",
-        groups=(
-            NavGrouping(
-                name="IP Management",
-                weight=100,
-                items=(
-                    NavItem(
-                        name="IP Addresses",
-                        weight=100,
-                        link="ipam:ipaddress_list",
-                        permissions=["ipam.view_ipaddress"],
-                    ),
-                    NavItem(
-                        name="Prefixes",
-                        weight=200,
-                        link="ipam:prefix_list",
-                        permissions=["ipam.view_prefix"],
-                    ),
-                    NavItem(
-                        name="RIRs",
-                        weight=300,
-                        link="ipam:rir_list",
-                        permissions=["ipam.view_rir"],
-                    ),
-                ),
-            ),
-            NavGrouping(
-                name="Layer 2 / Switching",
-                weight=200,
-                items=(
-                    NavItem(
-                        name="VLANs",
-                        weight=100,
-                        link="ipam:vlan_list",
-                        permissions=["ipam.view_vlan"],
-                    ),
-                    NavItem(
-                        name="VLAN Groups",
-                        weight=200,
-                        link="ipam:vlangroup_list",
-                        permissions=["ipam.view_vlangroup"],
-                    ),
-                ),
-            ),
-            NavGrouping(
-                name="Layer 3 / Routing",
-                weight=300,
-                items=(
-                    NavItem(
-                        name="Namespaces",
-                        weight=100,
-                        link="ipam:namespace_list",
-                        permissions=["ipam.view_namespace"],
-                    ),
-                    NavItem(
-                        name="VRFs",
-                        weight=200,
-                        link="ipam:vrf_list",
-                        permissions=["ipam.view_vrf"],
-                    ),
-                    NavItem(
-                        name="Route Targets",
-                        weight=300,
-                        link="ipam:routetarget_list",
-                        permissions=["ipam.view_routetarget"],
-                    ),
-                ),
-            ),
-            NavGrouping(
-                name="Services",
-                weight=400,
-                items=(
-                    NavItem(
-                        name="Services",
-                        weight=100,
-                        link="ipam:service_list",
-                        permissions=["ipam.view_service"],
                     ),
                 ),
             ),

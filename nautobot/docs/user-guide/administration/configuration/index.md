@@ -120,11 +120,10 @@ Output:
 ..
 from django.conf import settings
 ...
-# Django version 3.2.18
-# Nautobot version 2.0.0a2
+# Django version 4.2.15
+# Nautobot version 2.3.3b1
 ...
-Python 3.8.16 (default, Mar 23 2023, 04:48:11)
-[GCC 10.2.1 20210110] on linux
+Python 3.12.6 (main, Sep 12 2024, 21:12:08) [GCC 12.2.0] on linux
 Type "help", "copyright", "credits" or "license" for more information.
 (InteractiveConsole)
 >>>
@@ -158,17 +157,17 @@ If you attempt to modify `INSTALLED_APPS` yourself, you might see an error such 
 Traceback (most recent call last):
   File "/usr/local/bin/nautobot-server", line 8, in <module>
     sys.exit(main())
-  File "/usr/local/lib/python3.8/site-packages/nautobot/core/cli.py", line 53, in main
+  File "/usr/local/lib/python3.12/site-packages/nautobot/core/cli.py", line 53, in main
     initializer=_configure_settings,  # Called after defaults
-  File "/usr/local/lib/python3.8/site-packages/nautobot/core/runner/runner.py", line 193, in run_app
+  File "/usr/local/lib/python3.12/site-packages/nautobot/core/runner/runner.py", line 193, in run_app
     management.execute_from_command_line([runner_name, command] + command_args)
-  File "/usr/local/lib/python3.8/site-packages/django/core/management/__init__.py", line 401, in execute_from_command_line
+  File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 401, in execute_from_command_line
     utility.execute()
-  File "/usr/local/lib/python3.8/site-packages/django/core/management/__init__.py", line 377, in execute
+  File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 377, in execute
     django.setup()
-  File "/usr/local/lib/python3.8/site-packages/django/__init__.py", line 24, in setup
+  File "/usr/local/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
     apps.populate(settings.INSTALLED_APPS)
-  File "/usr/local/lib/python3.8/site-packages/django/apps/registry.py", line 95, in populate
+  File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 95, in populate
     "duplicates: %s" % app_config.label)
 django.core.exceptions.ImproperlyConfigured: Application labels aren't unique, duplicates: health_check
 ```

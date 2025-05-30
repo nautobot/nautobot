@@ -1,5 +1,4 @@
 from collections import OrderedDict
-import itertools
 import logging
 import os
 import platform
@@ -8,16 +7,20 @@ from django import __version__ as DJANGO_VERSION, forms
 from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.cache import cache
+from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist, ValidationError
 from django.db import transaction
 from django.db.models import ProtectedError
+from django.db.models.fields.related import ForeignKey, ManyToManyField, RelatedField
+from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.http.response import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import NoReverseMatch, reverse as django_reverse
+from django.utils.decorators import method_decorator
+from django.views.decorators.gzip import gzip_page
 from drf_spectacular.plumbing import get_relative_url, set_query_parameters
 from drf_spectacular.renderers import OpenApiJsonRenderer
 from drf_spectacular.utils import extend_schema
-from drf_spectacular.views import SpectacularRedocView, SpectacularSwaggerView
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from graphene_django.settings import graphene_settings
 from graphene_django.views import GraphQLView, HttpError, instantiate_middleware
 from graphql import get_default_backend
@@ -25,8 +28,9 @@ from graphql.execution import ExecutionResult
 from graphql.execution.middleware import MiddlewareManager
 from graphql.type.schema import GraphQLSchema
 import redis.exceptions
-from rest_framework import routers, status
-from rest_framework.exceptions import ParseError, PermissionDenied
+from rest_framework import routers, serializers as drf_serializers, status
+from rest_framework.exceptions import APIException, ParseError, PermissionDenied
+from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -39,13 +43,13 @@ from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app as celery_app
 from nautobot.core.exceptions import FilterSetFieldNotFound
-from nautobot.core.utils.data import is_uuid
+from nautobot.core.models.fields import TagsField
+from nautobot.core.utils.data import is_uuid, render_jinja2
 from nautobot.core.utils.filtering import get_all_lookup_expr_for_field, get_filterset_parameter_form_field
-from nautobot.core.utils.lookup import get_form_for_model, get_route_for_model
-from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.core.utils.lookup import get_form_for_model
+from nautobot.core.utils.querysets import maybe_prefetch_related, maybe_select_related
 from nautobot.core.utils.requests import ensure_content_type_and_field_name_in_query_params
 from nautobot.core.views.utils import get_csv_form_fields_from_serializer_class
-from nautobot.extras.registry import registry
 
 from . import serializers
 
@@ -235,6 +239,53 @@ class ModelViewSetMixin:
 
         return context
 
+    def get_queryset(self):
+        """
+        Attempt to optimize the queryset based on the fields present in the associated serializer.
+
+        See similar logic in nautobot.core.tables.BaseTable.
+        """
+        queryset = super().get_queryset()
+        model = queryset.model
+        serializer = self.get_serializer()
+
+        select_fields = []
+        prefetch_fields = []
+
+        for field_instance in serializer.fields.values():
+            if field_instance.write_only:
+                continue
+            if field_instance.source == "*":
+                continue
+            if "." in field_instance.source:
+                # DRF uses `field.nested_field` instead of `field__nested_field`
+                # TODO: We don't currently attempt to optimize nested lookups.
+                continue
+            if isinstance(field_instance, (drf_serializers.ManyRelatedField, drf_serializers.ListSerializer)):
+                # ListSerializer with depth > 0, ManyRelatedField with depth 0
+                try:
+                    model_field = model._meta.get_field(field_instance.source)
+                except FieldDoesNotExist:
+                    continue
+                if isinstance(model_field, (ManyToManyField, ManyToManyRel, RelatedField, ManyToOneRel, TagsField)):
+                    prefetch_fields.append(field_instance.source)
+            elif isinstance(field_instance, (drf_serializers.RelatedField, drf_serializers.Serializer)):
+                # Serializer with depth > 0, RelatedField with depth 0
+                try:
+                    model_field = model._meta.get_field(field_instance.source)
+                except FieldDoesNotExist:
+                    continue
+                if isinstance(model_field, ForeignKey):
+                    select_fields.append(field_instance.source)
+
+        if select_fields:
+            queryset = maybe_select_related(queryset, select_fields)
+
+        if prefetch_fields:
+            queryset = maybe_prefetch_related(queryset, prefetch_fields)
+
+        return queryset
+
     def restrict_queryset(self, request, *args, **kwargs):
         """
         Restrict the view's queryset to allow only the permitted objects for the given request.
@@ -373,7 +424,7 @@ class APIRootView(AuthenticatedAPIRootView):
     name = "API Root"
 
     @extend_schema(exclude=True)
-    def get(self, request, format=None):  # pylint: disable=redefined-builtin
+    def get(self, request, *args, format=None, **kwargs):  # pylint: disable=redefined-builtin
         return Response(
             OrderedDict(
                 (
@@ -419,6 +470,14 @@ class APIRootView(AuthenticatedAPIRootView):
                         "virtualization",
                         reverse(
                             "virtualization-api:api-root",
+                            request=request,
+                            format=format,
+                        ),
+                    ),
+                    (
+                        "wireless",
+                        reverse(
+                            "wireless-api:api-root",
                             request=request,
                             format=format,
                         ),
@@ -552,6 +611,41 @@ class NautobotSpectacularRedocView(APIVersioningGetSchemaURLMixin, SpectacularRe
     """Extend SpectacularRedocView to support Nautobot's ?api_version=<version> query parameter."""
 
 
+@method_decorator(gzip_page, name="dispatch")
+class NautobotSpectacularAPIView(SpectacularAPIView):
+    def _get_schema_response(self, request):
+        # version specified as parameter to the view always takes precedence. after
+        # that we try to source version through the schema view's own versioning_class.
+        version = self.api_version or request.version or self._get_version_parameter(request)
+        cache_key = f"openapi_schema_cache_{version}_{settings.VERSION}"  # Invalidate cache on Nautobot release
+        etag = f'W/"{hash(cache_key)}"'
+
+        # With combined browser cache and backend cache, we have three options:
+        # - cache expired on browser, but Etag is the same (no changes in nautobot) -> 70-100ms response
+        # - cache expired on browser, Etag is different, cache present on backend -> 400-600ms response
+        # - cache expired on browser, Etag is different, no cache on backend -> 3-4s response
+
+        if_none_match = request.META.get("HTTP_IF_NONE_MATCH", "")
+        if if_none_match == etag:
+            return Response(status=304)
+
+        schema = cache.get(cache_key)
+        if not schema:
+            generator = self.generator_class(urlconf=self.urlconf, api_version=version, patterns=self.patterns)
+            schema = generator.get_schema(request=request, public=self.serve_public)
+            cache.set(cache_key, schema, 60 * 60 * 24 * 7)
+
+        return Response(
+            data=schema,
+            headers={
+                "Content-Disposition": f'inline; filename="{self._get_filename(request, version)}"',
+                "Cache-Control": f"max-age={3 * 24 * 60 * 60}, public",
+                "ETag": etag,
+                "Vary": "Accept, Accept-Encoding",
+            },
+        )
+
+
 #
 # GraphQL
 #
@@ -572,12 +666,13 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
     middleware = None
     root_value = None
 
-    def __init__(self, schema=None, executor=None, middleware=None, root_value=None, backend=None):
+    def __init__(self, schema=None, executor=None, middleware=None, root_value=None, backend=None, **kwargs):
         self.schema = schema
         self.executor = executor
         self.middleware = middleware
         self.root_value = root_value
         self.backend = backend
+        super().__init__(**kwargs)
 
     def get_root_value(self, request):
         return self.root_value
@@ -751,154 +846,6 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
 #
 
 
-class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
-    """API View that returns the nav-menu content applicable to the requesting user."""
-
-    permission_classes = [IsAuthenticated]
-
-    def format_and_remove_hidden_menu(self, request, data):
-        """
-        Formats the menu data and removes hidden menu items based on user permissions.
-
-        Args:
-            request (HttpRequest): The request object.
-            data (dict): The menu data to format and filter.
-
-        Returns:
-            (dict): The formatted menu data without hidden items.
-
-        Example:
-            Input:
-            {
-                "Devices": {
-                    "permission": [...],
-                    "weight": "",
-                    "data": "data value"
-                },
-            }
-
-            Output:
-            {"Devices": "data value"}
-        """
-        return_value = {}
-        for name, value in data.items():
-            if "permissions" in value:
-                permissions = value["permissions"]
-                user_has_permission = (
-                    any(request.user.has_perm(permission) for permission in permissions) or not permissions
-                )
-                if user_has_permission:
-                    return_value[name] = value["data"]
-            else:
-                return_data = self.format_and_remove_hidden_menu(request, value["data"])
-                if return_data:
-                    return_value[name] = return_data
-        return return_value
-
-    @extend_schema(exclude=True)
-    def get(self, request):
-        """Get the menu data for the requesting user.
-
-        Returns the following data-structure (as not all context in registry["nav_menu"] is relevant to the UI):
-
-        {
-            "Inventory": {
-                "Devices": {
-                    "Devices": "/dcim/devices/",
-                    "Device Types": "/dcim/device-types/",
-                    ...
-                    "Connections": {
-                        "Cables": "/dcim/cables/",
-                        "Console Connections": "/dcim/console-connections/",
-                        ...
-                    },
-                    ...
-                },
-                "Organization": {
-                    ...
-                },
-                ...
-            },
-            "Networks": {
-                ...
-            },
-            "Security": {
-                ...
-            },
-            "Automation": {
-                ...
-            },
-            "Platform": {
-                ...
-            },
-        }
-        """
-        base_menu = registry["new_ui_nav_menu"]
-        formatted_data = self.format_and_remove_hidden_menu(request, base_menu)
-        return Response(formatted_data)
-
-
-class GetObjectCountsView(NautobotAPIVersionMixin, APIView):
-    """
-    Enumerate the models listed on the Nautobot home page and return data structure
-    containing verbose_name_plural, url and count.
-    """
-
-    permission_classes = [IsAuthenticated]
-
-    @extend_schema(exclude=True)
-    def get(self, request):
-        object_counts = {
-            "Inventory": [
-                {"model": "dcim.rack"},
-                {"model": "dcim.devicetype"},
-                {"model": "dcim.device"},
-                {"model": "dcim.virtualchassis"},
-                {"model": "dcim.deviceredundancygroup"},
-                {"model": "dcim.cable"},
-            ],
-            "Networks": [
-                {"model": "ipam.vrf"},
-                {"model": "ipam.prefix"},
-                {"model": "ipam.ipaddress"},
-                {"model": "ipam.vlan"},
-            ],
-            "Security": [{"model": "extras.secret"}],
-            "Platform": [
-                {"model": "extras.gitrepository"},
-                {"model": "extras.relationship"},
-                {"model": "extras.computedfield"},
-                {"model": "extras.customfield"},
-                {"model": "extras.customlink"},
-                {"model": "extras.tag"},
-                {"model": "extras.status"},
-                {"model": "extras.role"},
-            ],
-        }
-
-        for entry in itertools.chain(*object_counts.values()):
-            app_label, model_name = entry["model"].split(".")
-            model = apps.get_model(app_label, model_name)
-            permission = get_permission_for_model(model, "view")
-            if not request.user.has_perm(permission):
-                continue
-            data = {"name": model._meta.verbose_name_plural}
-            try:
-                data["url"] = django_reverse(get_route_for_model(model, "list"))
-            except NoReverseMatch:
-                route = get_route_for_model(model, "list")
-                logger.warning(f"Handled expected exception when generating filter field: {route}")
-            manager = model.objects
-            if request.user.has_perm(permission):
-                if hasattr(manager, "restrict"):
-                    data["count"] = model.objects.restrict(request.user).count()
-                else:
-                    data["count"] = model.objects.count()
-            entry.update(data)
-
-        return Response(object_counts)
-
-
 class CSVImportFieldsForContentTypeAPIView(NautobotAPIVersionMixin, APIView):
     """Get information about CSV import fields for a given ContentType."""
 
@@ -1023,3 +970,37 @@ class SettingsJSONSchemaView(NautobotAPIVersionMixin, APIView):
         with open(file_path, "r") as yamlfile:
             schema_data = yaml.safe_load(yamlfile)
         return Response(schema_data)
+
+
+class RenderJinjaError(APIException):
+    status_code = status.HTTP_400_BAD_REQUEST
+    default_detail = "Failed to render Jinja template."
+    default_code = "render_jinja_error"
+
+
+class RenderJinjaView(NautobotAPIVersionMixin, GenericAPIView):
+    """
+    View to render a Jinja template.
+    """
+
+    name = "Render Jinja2 Template"
+    permission_classes = [IsAuthenticated]
+    serializer_class = serializers.RenderJinjaSerializer
+
+    def post(self, request, *args, **kwargs):
+        data = serializers.RenderJinjaSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        template_code = data.validated_data["template_code"]
+        context = data.validated_data["context"]
+        try:
+            rendered_template = render_jinja2(template_code, context)
+        except Exception as exc:
+            raise RenderJinjaError(f"Failed to render Jinja template: {exc}") from exc
+        return Response(
+            {
+                "rendered_template": rendered_template,
+                "rendered_template_lines": rendered_template.split("\n"),
+                "template_code": template_code,
+                "context": context,
+            }
+        )

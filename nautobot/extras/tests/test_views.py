@@ -1,9 +1,9 @@
 from datetime import timedelta
+import json
 from unittest import mock
 import urllib.parse
 import uuid
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -14,15 +14,17 @@ from django.utils import timezone
 from django.utils.html import escape, format_html
 
 from nautobot.circuits.models import Circuit
+from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
+from nautobot.core.models.utils import serialize_object_v2
 from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.testing import extract_form_failures, extract_page_body, ModelViewTestCase, TestCase, ViewTestCases
+from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.core.testing.utils import disable_warnings, get_deletable_objects, post_data
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.models import (
     ConsolePort,
-    Controller,
     Device,
     DeviceType,
     Interface,
@@ -30,11 +32,11 @@ from nautobot.dcim.models import (
     LocationType,
     Manufacturer,
 )
-from nautobot.dcim.tests import test_views
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
     DynamicGroupTypeChoices,
     JobExecutionType,
+    JobQueueTypeChoices,
     LogLevelChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
@@ -58,7 +60,9 @@ from nautobot.extras.models import (
     GraphQLQuery,
     Job,
     JobButton,
+    JobHook,
     JobLogEntry,
+    JobQueue,
     JobResult,
     MetadataType,
     Note,
@@ -81,9 +85,10 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
+from nautobot.extras.tests.test_jobs import get_job_class_and_model
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import RoleModelsQuery, TaggableClassesQuery
-from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
+from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
 
@@ -99,6 +104,7 @@ class ComputedFieldTestCase(
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = ComputedField
     slug_source = "label"
@@ -107,6 +113,7 @@ class ComputedFieldTestCase(
     @classmethod
     def setUpTestData(cls):
         obj_type = ContentType.objects.get_for_model(Location)
+        obj_type_1 = ContentType.objects.get_for_model(Interface)
 
         computed_fields = (
             ComputedField(
@@ -155,6 +162,15 @@ class ComputedFieldTestCase(
             "template": "{{ obj.name }} is the best Location!",
             "fallback_value": ":skull_emoji:",
             "weight": 100,
+        }
+        cls.bulk_edit_data = {
+            "content_type": obj_type_1.pk,
+            "label": "Updated Label",
+            "description": "Bulk updated description",
+            "grouping": "General Info",
+            "fallback_value": "Fallback from bulk edit",
+            "weight": 50,
+            "advanced_ui": True,
         }
 
         cls.slug_test_object = "Computed Field Five"
@@ -552,12 +568,14 @@ class CustomLinkTestCase(
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = CustomLink
 
     @classmethod
     def setUpTestData(cls):
         obj_type = ContentType.objects.get_for_model(Location)
+        obj_type1 = ContentType.objects.get_for_model(Interface)
 
         customlinks = (
             CustomLink(
@@ -600,6 +618,14 @@ class CustomLinkTestCase(
             "weight": 100,
             "button_class": "default",
             "new_window": False,
+        }
+        cls.bulk_edit_data = {
+            "content_type": obj_type1.pk,
+            "weight": 200,
+            "button_class": "success",
+            "new_window": True,
+            "text": "Updated customlink text",
+            "target_url": "http://bulk-edit-link.com",
         }
 
 
@@ -817,15 +843,31 @@ class DynamicGroupTestCase(
         return super()._get_queryset().filter(group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER)  # TODO
 
     def test_get_object_with_permission(self):
-        instance = self._get_queryset().first()
+        location_ct = ContentType.objects.get_for_model(Location)
+        instance = self._get_queryset().exclude(content_type=location_ct).first()
         # Add view permissions for the group's members:
-        self.add_permissions(get_permission_for_model(instance.content_type.model_class(), "view"))
+        self.add_permissions(
+            get_permission_for_model(instance.content_type.model_class(), "view"), "extras.view_dynamicgroup"
+        )
 
-        response = super().test_get_object_with_permission()
+        response = self.client.get(instance.get_absolute_url())
+        self.assertHttpStatus(response, 200)
 
         response_body = extract_page_body(response.content.decode(response.charset))
         # Check that the "members" table in the detail view includes all appropriate member objects
         for member in instance.members:
+            self.assertIn(str(member.pk), response_body)
+
+        # Test accessing DynamicGroup detail view with a different content type, more specifically, TreeModel
+        # https://github.com/nautobot/nautobot/issues/6806
+        tree_model_dg = DynamicGroup.objects.create(name="DG 4", content_type=location_ct)
+        # Add view permissions for the group's members:
+        self.add_permissions(get_permission_for_model(tree_model_dg.content_type.model_class(), "view"))
+        response = self.client.get(tree_model_dg.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        # Check that the "members" table in the detail view includes all appropriate member objects
+        for member in tree_model_dg.members:
             self.assertIn(str(member.pk), response_body)
 
     def test_get_object_with_constrained_permission(self):
@@ -907,6 +949,30 @@ class DynamicGroupTestCase(
         instance = self._get_queryset().first()
         self.form_data["content_type"] = instance.content_type.pk  # Content-type is not editable after creation
         super().test_edit_object_with_constrained_permission()
+
+    def test_edit_object_with_content_type_ipam_prefix(self):
+        """Assert bug fix #6526: `Error when defining Dynamic Group of Prefixes using `present_in_vrf_id` filter`"""
+        content_type = ContentType.objects.get_for_model(Prefix)
+        instance = DynamicGroup.objects.create(name="DG Ipam|Prefix", content_type=content_type)
+        vrf_instance = VRF.objects.first()
+        data = self.form_data.copy()
+        data.update(
+            {
+                "name": "DG Ipam|Prefix",
+                "content_type": content_type.pk,
+                "filter-present_in_vrf_id": vrf_instance.id,
+                "tenant": None,
+                "tags": [],
+            }
+        )
+        self.add_permissions("extras.change_dynamicgroup")
+        request = {
+            "path": self._get_url("edit", instance),
+            "data": post_data(data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        instance.refresh_from_db()
+        self.assertEqual(instance.filter["present_in_vrf_id"], str(vrf_instance.id))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_edit_saved_filter(self):
@@ -1026,12 +1092,14 @@ class ExportTemplateTestCase(
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = ExportTemplate
 
     @classmethod
     def setUpTestData(cls):
         obj_type = ContentType.objects.get_for_model(Location)
+        obj_type_1 = ContentType.objects.get_for_model(Interface)
 
         templates = (
             ExportTemplate(
@@ -1058,6 +1126,12 @@ class ExportTemplateTestCase(
             "name": "template-4",
             "content_type": obj_type.pk,
             "template_code": "template-4 test4",
+        }
+        cls.bulk_edit_data = {
+            "content_type": obj_type_1.pk,
+            "description": "Updated template description",
+            "mime_type": "application/json",
+            "file_extension": "json",
         }
 
 
@@ -1088,6 +1162,15 @@ class GitRepositoryTestCase(
 ):
     model = GitRepository
     slugify_function = staticmethod(slugify_dashes_to_underscores)
+    expected_edit_form_buttons = [
+        '<button type="submit" name="_dryrun_update" class="btn btn-warning">Update & Dry Run</button>',
+        '<button type="submit" name="_update" class="btn btn-primary">Update & Sync</button>',
+    ]
+    expected_create_form_buttons = [
+        '<button type="submit" name="_dryrun_create" class="btn btn-info">Create & Dry Run</button>',
+        '<button type="submit" name="_create" class="btn btn-primary">Create & Sync</button>',
+        '<button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>',
+    ]
 
     @classmethod
     def setUpTestData(cls):
@@ -1136,6 +1219,13 @@ class GitRepositoryTestCase(
         form_data["slug"] = instance.slug  # Slug is not editable
         self.form_data = form_data
         super().test_edit_object_with_constrained_permission()
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_view_when_no_sync_job_result_exists(self):
+        instance = self._get_queryset().first()
+        response = self.client.get(reverse("extras:gitrepository_result", kwargs={"pk": instance.pk}))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["result"], {})
 
     def test_post_sync_repo_anonymous(self):
         self.client.logout()
@@ -1279,19 +1369,18 @@ class SavedViewTest(ModelViewTestCase):
 
     model = SavedView
 
-    def get_view_url_for_saved_view(self, saved_view, action="detail"):
+    def get_view_url_for_saved_view(self, saved_view=None, action="detail"):
         """
         Since saved view detail url redirects, we need to manually construct its detail url
         to test the content of its response.
         """
-        view = saved_view.view
-        pk = saved_view.pk
+        url = ""
 
-        if action == "detail":
-            url = reverse(view) + f"?saved_view={pk}"
-        elif action == "edit":
+        if action == "detail" and saved_view:
+            url = reverse(saved_view.view) + f"?saved_view={saved_view.pk}"
+        elif action == "edit" and saved_view:
             url = saved_view.get_absolute_url() + "update-config/"
-        else:
+        elif action == "create":
             url = reverse("extras:savedview_add")
 
         return url
@@ -1384,7 +1473,14 @@ class SavedViewTest(ModelViewTestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_update_saved_view_as_owner(self):
-        instance = self._get_queryset().first()
+        view_name = "dcim:location_list"
+        instance = SavedView.objects.create(
+            name="Location Saved View",
+            owner=self.user,
+            view=view_name,
+            is_global_default=True,
+        )
+
         update_query_strings = ["per_page=12", "&status=active", "&name=new_name_filter", "&sort=name"]
         update_url = self.get_view_url_for_saved_view(instance, "edit") + "?" + "".join(update_query_strings)
         # Try update the saved view with the same user as the owner of the saved view
@@ -1516,6 +1612,62 @@ class SavedViewTest(ModelViewTestCase):
         # Assert that Location List View got redirected to Saved View set as user default
         self.assertBodyContains(response, "<strong>User Location Default View</strong>", html=True)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_filtered_view_precedes_global_default(self):
+        view_name = "dcim:location_list"
+        # Global saved view that will show Floor type locations only.
+        SavedView.objects.create(
+            name="Global Location Default View",
+            owner=self.user,
+            view=view_name,
+            is_global_default=True,
+            config={
+                "filter_params": {
+                    "location_type": ["Floor"],
+                }
+            },
+        )
+        response = self.client.get(reverse(view_name) + "?location_type=Campus", follow=True)
+        # Assert that the user is not redirected to the global default view
+        # But instead redirected to the filtered view
+        self.assertNotIn(
+            "<strong>Global Location Default View</strong>",
+            extract_page_body(response.content.decode(response.charset)),
+        )
+
+        # Floor type locations (Floor-<number>) should not be visible in the response
+        self.assertNotIn(
+            "Floor-",
+            extract_page_body(response.content.decode(response.charset)),
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_filtered_view_precedes_user_default(self):
+        view_name = "dcim:location_list"
+        # User saved view that will show Floor type locations only.
+        sv = SavedView.objects.create(
+            name="User Location Default View",
+            owner=self.user,
+            view=view_name,
+            config={
+                "filter_params": {
+                    "location_type": ["Floor"],
+                }
+            },
+        )
+        UserSavedViewAssociation.objects.create(user=self.user, saved_view=sv, view_name=sv.view)
+        response = self.client.get(reverse(view_name) + "?location_type=Campus", follow=True)
+        # Assert that the user is not redirected to the user default view
+        # But instead redirected to the filtered view
+        self.assertNotIn(
+            "<strong>User Location Default View</strong>", extract_page_body(response.content.decode(response.charset))
+        )
+        # Floor type locations (Floor-<number>) should not be visible in the response
+        self.assertNotIn(
+            "Floor-",
+            extract_page_body(response.content.decode(response.charset)),
+        )
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_is_shared(self):
         view_name = "dcim:location_list"
@@ -1540,6 +1692,119 @@ class SavedViewTest(ModelViewTestCase):
         response_body = extract_page_body(response.content.decode(response.charset))
         self.assertIn(str(sv_shared.pk), response_body, msg=response_body)
         self.assertNotIn(str(sv_not_shared.pk), response_body, msg=response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_saved_views_contain_boolean_filter_params(self):
+        """
+        Test the entire Save View workflow from creating a Saved View to rendering the View with boolean filter parameters.
+        """
+        with self.subTest("Create job Saved View with boolean filter parameters"):
+            view_name = "extras:job_list"
+            app_label = view_name.split(":")[0]
+            model_name = view_name.split(":")[1].split("_")[0]
+            self.add_permissions(f"{app_label}.view_{model_name}")
+            create_query_strings = [
+                "&hidden=True",
+            ]
+            create_url = self.get_view_url_for_saved_view(action="create")
+            sv_name = "Hidden Jobs"
+            request = {
+                "path": create_url,
+                "data": post_data({"name": sv_name, "view": f"{view_name}", "params": "".join(create_query_strings)}),
+            }
+            self.assertHttpStatus(self.client.post(**request), 302)
+            instance = SavedView.objects.get(name=sv_name)
+            hidden_job = Job.objects.get(name="Example hidden job")
+            hidden_job.description = "I should not show in the UI!"
+            hidden_job.save()
+            self.assertEqual(instance.config["filter_params"]["hidden"], "True")
+            response = self.client.get(reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True)
+            # Assert that Job List View rendered with the boolean filter parameter without error
+            self.assertHttpStatus(response, 200)
+            response_body = extract_page_body(response.content.decode(response.charset))
+            self.assertIn(str(instance.pk), response_body, msg=response_body)
+            self.assertBodyContains(response, f"<strong>{sv_name}</strong>", html=True)
+            # This is the description
+            self.assertBodyContains(response, "I should not show in the UI!", html=True)
+
+        with self.subTest("Create device Saved View with boolean filter parameters"):
+            view_name = "dcim:device_list"
+            app_label = view_name.split(":")[0]
+            model_name = view_name.split(":")[1].split("_")[0]
+            self.add_permissions(f"{app_label}.view_{model_name}")
+            create_query_strings = [
+                "&per_page=12",
+                "&has_primary_ip=True",
+                "&sort=name",
+            ]
+            create_url = self.get_view_url_for_saved_view(action="create")
+            sv_name = "Devices with primary ips"
+            request = {
+                "path": create_url,
+                "data": post_data({"name": sv_name, "view": f"{view_name}", "params": "".join(create_query_strings)}),
+            }
+            self.assertHttpStatus(self.client.post(**request), 302)
+            instance = SavedView.objects.get(name=sv_name)
+            self.assertEqual(instance.config["pagination_count"], 12)
+            self.assertEqual(instance.config["filter_params"]["has_primary_ip"], "True")
+            self.assertEqual(instance.config["sort_order"], ["name"])
+            response = self.client.get(reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True)
+            # Assert that Job List View rendered with the boolean filter parameter without error
+            self.assertHttpStatus(response, 200)
+            response_body = extract_page_body(response.content.decode(response.charset))
+            self.assertIn(str(instance.pk), response_body, msg=response_body)
+            self.assertBodyContains(response, f"<strong>{sv_name}</strong>", html=True)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_update_saved_view_contain_boolean_filter_params(self):
+        with self.subTest("Update job Saved View with boolean filter parameters"):
+            view_name = "extras:job_list"
+            sv_name = "Non-hidden jobs"
+            instance = SavedView.objects.create(
+                name=sv_name,
+                owner=self.user,
+                view=view_name,
+            )
+            update_query_strings = ["hidden=False"]
+            update_url = self.get_view_url_for_saved_view(instance, "edit") + "?" + "".join(update_query_strings)
+            # Try update the saved view with the same user as the owner of the saved view
+            instance.owner.is_active = True
+            instance.owner.save()
+            self.client.force_login(instance.owner)
+            response = self.client.get(update_url)
+            self.assertHttpStatus(response, 302)
+            instance.refresh_from_db()
+            self.assertEqual(instance.config["filter_params"]["hidden"], "False")
+            response = self.client.get(reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True)
+            # Assert that Job List View rendered with the boolean filter parameter without error
+            self.assertHttpStatus(response, 200)
+            response_body = extract_page_body(response.content.decode(response.charset))
+            self.assertNotIn("Example hidden job", response_body, msg=response_body)
+            self.assertBodyContains(response, f"<strong>{sv_name}</strong>", html=True)
+
+        with self.subTest("Update device Saved View with boolean filter parameters"):
+            view_name = "dcim:device_list"
+            sv_name = "Devices with no primary ips"
+            instance = SavedView.objects.create(
+                name=sv_name,
+                owner=self.user,
+                view=view_name,
+            )
+            update_query_strings = ["has_primary_ip=False"]
+            update_url = self.get_view_url_for_saved_view(instance, "edit") + "?" + "".join(update_query_strings)
+            # Try update the saved view with the same user as the owner of the saved view
+            instance.owner.is_active = True
+            instance.owner.save()
+            self.client.force_login(instance.owner)
+            response = self.client.get(update_url)
+            self.assertHttpStatus(response, 302)
+            instance.refresh_from_db()
+            self.assertEqual(instance.config["filter_params"]["has_primary_ip"], "False")
+            response = self.client.get(reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True)
+            # Assert that Job List View rendered with the boolean filter parameter without error
+            self.assertHttpStatus(response, 200)
+            response_body = extract_page_body(response.content.decode(response.charset))
+            self.assertBodyContains(response, f"<strong>{sv_name}</strong>", html=True)
 
 
 # Not a full-fledged PrimaryObjectViewTestCase as there's no BulkEditView for Secrets
@@ -1691,21 +1956,21 @@ class ScheduledJobTestCase(
         user = User.objects.create(username="user1", is_active=True)
         ScheduledJob.objects.create(
             name="test1",
-            task="pass.TestPass",
+            task="pass.TestPassJob",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test2",
-            task="pass.TestPass",
+            task="pass.TestPassJob",
             interval=JobExecutionType.TYPE_DAILY,
             user=user,
             start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test3",
-            task="pass.TestPass",
+            task="pass.TestPassJob",
             interval=JobExecutionType.TYPE_CUSTOM,
             user=user,
             start_time=timezone.now(),
@@ -1719,7 +1984,7 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             enabled=False,
             name="test4",
-            task="pass.TestPass",
+            task="pass.TestPassJob",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             start_time=timezone.now(),
@@ -1736,7 +2001,7 @@ class ScheduledJobTestCase(
             ScheduledJob.objects.create(
                 enabled=True,
                 name=name,
-                task="pass.TestPass",
+                task="pass.TestPassJob",
                 interval=JobExecutionType.TYPE_CUSTOM,
                 user=self.user,
                 start_time=timezone.now(),
@@ -1767,7 +2032,7 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             enabled=True,
             name="test11",
-            task="pass.TestPass",
+            task="pass.TestPassJob",
             interval=JobExecutionType.TYPE_CUSTOM,
             user=self.user,
             start_time=timezone.now(),
@@ -1801,7 +2066,7 @@ class ApprovalQueueTestCase(
     def setUp(self):
         super().setUp()
         self.job_model = Job.objects.get_for_class_path("dry_run.TestDryRun")
-        self.job_model_2 = Job.objects.get_for_class_path("fail.TestFail")
+        self.job_model_2 = Job.objects.get_for_class_path("fail.TestFailJob")
 
         ScheduledJob.objects.create(
             name="test1",
@@ -1814,7 +2079,7 @@ class ApprovalQueueTestCase(
         )
         ScheduledJob.objects.create(
             name="test2",
-            task="fail.TestFail",
+            task="fail.TestFailJob",
             job_model=self.job_model_2,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
@@ -1827,7 +2092,7 @@ class ApprovalQueueTestCase(
 
         ScheduledJob.objects.create(
             name="test4",
-            task="pass.TestPass",
+            task="pass.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
@@ -2033,6 +2298,16 @@ class ApprovalQueueTestCase(
             self.assertEqual(1, len(ScheduledJob.objects.filter(pk=instance.pk)), msg=str(user))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @load_event_broker_override_settings(
+        EVENT_BROKERS={
+            "SyslogEventBroker": {
+                "CLASS": "nautobot.core.events.SyslogEventBroker",
+                "TOPICS": {
+                    "INCLUDE": ["*"],
+                },
+            }
+        }
+    )
     def test_post_deny_different_user_permitted(self):
         """A user with appropriate permissions can deny a job request."""
         user = User.objects.create_user(username="testuser1")
@@ -2053,10 +2328,19 @@ class ApprovalQueueTestCase(
         data = {"_deny": True}
 
         self.client.force_login(user)
-        response = self.client.post(self._get_url("view", instance), data)
+        with self.assertLogs("nautobot.events") as cm:
+            response = self.client.post(self._get_url("view", instance), data)
         self.assertRedirects(response, reverse("extras:scheduledjob_approval_queue_list"))
         # Request was deleted
         self.assertEqual(0, len(ScheduledJob.objects.filter(pk=instance.pk)))
+        # Event was published
+        expected_payload = {"data": serialize_object_v2(instance)}
+        self.assertEqual(
+            cm.output,
+            [
+                f"INFO:nautobot.events.nautobot.jobs.approval.denied:{json.dumps(expected_payload, cls=NautobotKombuJSONEncoder, indent=4)}"
+            ],
+        )
 
         # Check object-based permissions are enforced for a different instance
         instance = self._get_queryset().first()
@@ -2114,6 +2398,16 @@ class ApprovalQueueTestCase(
             self.assertIsNone(instance.approved_by_user)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @load_event_broker_override_settings(
+        EVENT_BROKERS={
+            "SyslogEventBroker": {
+                "CLASS": "nautobot.core.events.SyslogEventBroker",
+                "TOPICS": {
+                    "INCLUDE": ["*"],
+                },
+            }
+        }
+    )
     def test_post_approve_different_user_permitted(self):
         """A user with appropriate permissions can approve a job request."""
         user = User.objects.create_user(username="testuser1")
@@ -2134,11 +2428,21 @@ class ApprovalQueueTestCase(
         data = {"_approve": True}
 
         self.client.force_login(user)
-        response = self.client.post(self._get_url("view", instance), data)
+        with self.assertLogs("nautobot.events") as cm:
+            response = self.client.post(self._get_url("view", instance), data)
+
         self.assertRedirects(response, reverse("extras:scheduledjob_approval_queue_list"))
         # Job was scheduled
         instance.refresh_from_db()
         self.assertEqual(instance.approved_by_user, user)
+        # Event was published
+        expected_payload = {"data": serialize_object_v2(instance)}
+        self.assertEqual(
+            cm.output,
+            [
+                f"INFO:nautobot.events.nautobot.jobs.approval.approved:{json.dumps(expected_payload, cls=NautobotKombuJSONEncoder, indent=4)}"
+            ],
+        )
 
         # Check object-based permissions are enforced for a different instance
         instance = self._get_queryset().last()
@@ -2147,6 +2451,26 @@ class ApprovalQueueTestCase(
         # Job was not scheduled
         instance.refresh_from_db()
         self.assertIsNone(instance.approved_by_user)
+
+
+class JobQueueTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = JobQueue
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.form_data = {
+            "name": "Test Job Queue",
+            "queue_type": JobQueueTypeChoices.TYPE_CELERY,
+            "description": "This is a very detailed description",
+            "tenant": Tenant.objects.first().pk,
+            "tags": [t.pk for t in Tag.objects.get_for_model(JobQueue)],
+        }
+        cls.bulk_edit_data = {
+            "queue_type": JobQueueTypeChoices.TYPE_KUBERNETES,
+            "description": "This is a very detailed new description",
+            "tenant": Tenant.objects.last().pk,
+            # TODO add tests for add_tags/remove_tags fields in TagsBulkEditFormMixin
+        }
 
 
 class JobResultTestCase(
@@ -2159,8 +2483,8 @@ class JobResultTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        JobResult.objects.create(name="pass.TestPass")
-        JobResult.objects.create(name="fail.TestFail")
+        JobResult.objects.create(name="pass.TestPassJob")
+        JobResult.objects.create(name="fail.TestFailJob")
         JobLogEntry.objects.create(
             log_level=LogLevelChoices.LOG_INFO,
             job_result=JobResult.objects.first(),
@@ -2214,7 +2538,9 @@ class JobTestCase(
         # Job model objects are automatically created during database migrations
 
         # But we do need to make sure the ones we're testing are flagged appropriately
-        cls.test_pass = Job.objects.get(job_class_name="TestPass")
+        cls.test_pass = Job.objects.get(job_class_name="TestPassJob")
+        default_job_queue = JobQueue.objects.get(name="default", queue_type=JobQueueTypeChoices.TYPE_CELERY)
+        cls.test_pass.default_job_queue = default_job_queue
         cls.test_pass.enabled = True
         cls.test_pass.save()
 
@@ -2227,6 +2553,7 @@ class JobTestCase(
 
         cls.test_required_args = Job.objects.get(job_class_name="TestRequired")
         cls.test_required_args.enabled = True
+        cls.test_pass.default_job_queue = default_job_queue
         cls.test_required_args.save()
 
         cls.extra_run_urls = (
@@ -2245,12 +2572,16 @@ class JobTestCase(
             enabled=True,
             installed=False,
         )
+        cls.test_not_installed.default_job_queue = default_job_queue
         cls.test_not_installed.validated_save()
 
         cls.data_run_immediately = {
             "_schedule_type": "immediately",
         }
-
+        job_queues = JobQueue.objects.all()[:3]
+        pk_list = [queue.pk for queue in job_queues]
+        pk_list += [default_job_queue.pk]
+        job_queues = JobQueue.objects.filter(pk__in=pk_list)
         cls.form_data = {
             "enabled": True,
             "grouping_override": True,
@@ -2271,8 +2602,9 @@ class JobTestCase(
             "time_limit": 650,
             "has_sensitive_variables": False,
             "has_sensitive_variables_override": True,
-            "task_queues": "overridden,priority",
-            "task_queues_override": True,
+            "job_queues": [queue.pk for queue in job_queues],
+            "job_queues_override": True,
+            "default_job_queue": default_job_queue.pk,
         }
         # This form is emulating the non-conventional JobBulkEditForm
         cls.bulk_edit_data = {
@@ -2293,8 +2625,10 @@ class JobTestCase(
             "time_limit": "",
             "has_sensitive_variables": False,
             "clear_has_sensitive_variables_override": False,
-            "task_queues": "overridden,priority",
-            "clear_task_queues_override": False,
+            "job_queues": [queue.pk for queue in job_queues],
+            "clear_job_queues_override": False,
+            "clear_default_job_queue_override": False,
+            "default_job_queue": default_job_queue.pk,
         }
 
     def get_deletable_object(self):
@@ -2340,35 +2674,6 @@ class JobTestCase(
         # assert Job still exists
         self.assertTrue(self._get_queryset().filter(name=job_name).exists())
 
-    def test_bulk_delete_system_jobs_fail(self):
-        system_job_queryset = self.model.objects.filter(module_name__startswith="nautobot.")
-        pk_list = system_job_queryset.values_list("pk", flat=True)[:3]
-        initial_count = self._get_queryset().count()
-        data = {
-            "pk": pk_list,
-            "confirm": True,
-            "_confirm": True,  # Form button
-        }
-        # Try bulk delete with delete job permission
-        self.add_permissions("extras.delete_job")
-        response = self.client.post(self._get_url("bulk_delete"), data, follow=True)
-        self.assertBodyContains(
-            response,
-            f"Unable to delete Job {system_job_queryset.first()}. System Job cannot be deleted",
-            status_code=403,
-        )
-        self.assertEqual(self._get_queryset().count(), initial_count)
-
-        # Try bulk delete as a superuser
-        self.user.is_superuser = True
-        response = self.client.post(self._get_url("bulk_delete"), data, follow=True)
-        self.assertBodyContains(
-            response,
-            f"Unable to delete Job {system_job_queryset.first()}. System Job cannot be deleted",
-            status_code=403,
-        )
-        self.assertEqual(self._get_queryset().count(), initial_count)
-
     def validate_job_data_after_bulk_edit(self, pk_list, old_data):
         # Name is bulk-editable
         overridable_fields = [field for field in JOB_OVERRIDABLE_FIELDS if field != "name"]
@@ -2400,6 +2705,10 @@ class JobTestCase(
                     else:
                         self.assertEqual(getattr(instance, overridable_field), old_data[instance.pk][overridable_field])
                         self.assertEqual(getattr(instance, override_field), old_data[instance.pk][overridable_field])
+                # Special case for task queues/job queues
+                override_value = self.bulk_edit_data.get("job_queues")
+                self.assertEqual(list(instance.job_queues.values_list("pk", flat=True)), override_value)
+                self.assertEqual(instance.job_queues_override, True)
 
     def validate_object_data_after_bulk_edit(self, pk_list):
         instances = self._get_queryset().filter(pk__in=pk_list)
@@ -2433,7 +2742,7 @@ class JobTestCase(
         self.add_permissions("extras.run_job")
         for run_url in self.run_urls:
             response = self.client.get(run_url)
-            self.assertBodyContains(response, "TestPass")
+            self.assertBodyContains(response, "TestPassJob")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_get_run_with_constrained_permission(self):
@@ -2473,10 +2782,14 @@ class JobTestCase(
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=0)
     def test_run_now_no_worker(self, _):
         self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
 
         for run_url in self.run_urls:
-            response = self.client.post(run_url, self.data_run_immediately)
-            self.assertBodyContains(response, "Celery worker process not running.")
+            response = self.client.post(run_url, self.data_run_immediately, follow=True)
+
+            result = JobResult.objects.latest()
+            self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
+            self.assertBodyContains(response, "No celery workers found")
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_now(self, _):
@@ -2532,12 +2845,12 @@ class JobTestCase(
         self.add_permissions("extras.run_job")
 
         for run_url in (
-            reverse("extras:job_run_by_class_path", kwargs={"class_path": "fail.TestFail"}),
-            reverse("extras:job_run", kwargs={"pk": Job.objects.get(job_class_name="TestFail").pk}),
+            reverse("extras:job_run_by_class_path", kwargs={"class_path": "fail.TestFailJob"}),
+            reverse("extras:job_run", kwargs={"pk": Job.objects.get(job_class_name="TestFailJob").pk}),
         ):
             response = self.client.post(run_url, self.data_run_immediately)
             self.assertBodyContains(response, "Job is not enabled to be run")
-            self.assertFalse(JobResult.objects.filter(name="fail.TestFail").exists())
+            self.assertFalse(JobResult.objects.filter(name="fail.TestFailJob").exists())
 
     def test_run_now_missing_args(self):
         self.add_permissions("extras.run_job")
@@ -2565,19 +2878,24 @@ class JobTestCase(
             result = JobResult.objects.latest()
             self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
 
-    @mock.patch("nautobot.extras.jobs.task_queues_as_choices")
-    def test_rerun_job(self, mock_task_queues_as_choices):
+    def test_rerun_job(self):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_jobresult")
 
-        mock_task_queues_as_choices.return_value = [("default", ""), ("queue1", ""), ("uniquequeue", "")]
+        job_queue = JobQueue.objects.create(name="uniquequeue", queue_type=JobQueueTypeChoices.TYPE_CELERY)
         job_celery_kwargs = {
             "nautobot_job_job_model_id": self.test_required_args.id,
             "nautobot_job_profile": True,
+            "nautobot_job_ignore_singleton_lock": True,
             "nautobot_job_user_id": self.user.id,
-            "queue": "uniquequeue",
+            "queue": job_queue.name,
         }
-
+        self.test_required_args.job_queues.set([job_queue])
+        self.test_required_args.is_singleton_override = True
+        self.test_required_args.has_sensitive_variables_override = True
+        self.test_required_args.is_singleton = True
+        self.test_required_args.has_sensitive_variables = False
+        self.test_required_args.validated_save()
         previous_result = JobResult.objects.create(
             job_model=self.test_required_args,
             user=self.user,
@@ -2588,13 +2906,15 @@ class JobTestCase(
         run_url = reverse("extras:job_run", kwargs={"pk": self.test_required_args.pk})
         response = self.client.get(f"{run_url}?kwargs_from_job_result={previous_result.pk!s}")
         content = extract_page_body(response.content.decode(response.charset))
-
-        self.assertInHTML('<option value="uniquequeue" selected>', content)
+        self.assertInHTML(f'<option value="{job_queue.pk}" selected>{job_queue}</option>', content)
         self.assertInHTML(
             '<input type="text" name="var" value="456" class="form-control" required placeholder="None" id="id_var">',
             content,
         )
         self.assertInHTML('<input type="hidden" name="_profile" value="True" id="id__profile">', content)
+        self.assertInHTML(
+            '<input type="checkbox" name="_ignore_singleton_lock" id="id__ignore_singleton_lock" checked>', content
+        )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_later_missing_name(self, _):
@@ -2702,12 +3022,12 @@ class JobTestCase(
         self.add_permissions("extras.view_jobresult")
 
         self.test_pass.task_queues = []
-        self.test_pass.task_queues_override = True
+        self.test_pass.job_queues_override = True
         self.test_pass.validated_save()
-
+        job_queue = JobQueue.objects.create(name="invalid", queue_type=JobQueueTypeChoices.TYPE_CELERY)
         data = {
             "_schedule_type": "immediately",
-            "_task_queue": "invalid",
+            "_job_queue": job_queue.pk,
         }
 
         for run_url in self.run_urls:
@@ -2717,7 +3037,7 @@ class JobTestCase(
             errors = extract_form_failures(response.content.decode(response.charset))
             self.assertEqual(
                 errors,
-                ["_task_queue: Select a valid choice. invalid is not one of the available choices."],
+                ["_job_queue: Select a valid choice. That choice is not one of the available choices."],
             )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
@@ -2866,18 +3186,29 @@ class JobButtonRenderingTestCase(TestCase):
 
     def test_task_queue_hidden_input_is_present(self):
         """
-        Ensure that the job button respects the job class' task_queues and the job class task_queues[0]/default is passed as a hidden form input.
+        Ensure that the job button respects the job class' task_queues and the job class default job queue is passed as a hidden form input.
         """
-        self.job.task_queues_override = True
+        self.job.job_queues_override = True
+        task_queues = ["overriden_queue", "default", "priority"]
+        for queue in task_queues:
+            JobQueue.objects.get_or_create(name=queue, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY})
         self.job.task_queues = ["overriden_queue", "default", "priority"]
         self.job.save()
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
-        self.assertBodyContains(response, f'<input type="hidden" name="_task_queue" value="{self.job.task_queues[0]}">')
-        self.job.task_queues_override = False
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        job_queues = self.job.job_queues.all()
+        _job_queue = job_queues[0]
+        self.assertIn(f'<input type="hidden" name="_job_queue" value="{_job_queue.pk}">', content, content)
+
+        self.job.job_queues_override = False
         self.job.save()
+        self.job.job_queues.set([])
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
-        self.assertBodyContains(
-            response, f'<input type="hidden" name="_task_queue" value="{settings.CELERY_TASK_DEFAULT_QUEUE}">'
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(
+            f'<input type="hidden" name="_job_queue" value="{self.job.default_job_queue.pk}">', content, content
         )
 
     def test_view_object_with_unsafe_text(self):
@@ -2998,6 +3329,70 @@ class JobCustomTemplateTestCase(TestCase):
             self.client.get(self.run_url)
 
 
+class JobHookTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
+    model = JobHook
+
+    @classmethod
+    def setUpTestData(cls):
+        # Get valid job from registered job modules
+        module = "job_hook_receiver"
+        name = "TestJobHookReceiverLog"
+        _job_class, job = get_job_class_and_model(module, name)
+
+        # Create content type for Job Hooks
+        obj_type = ContentType.objects.get_for_model(ConsolePort)
+        device_ct = ContentType.objects.get_for_model(Device)
+        ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
+        prefix_ct = ContentType.objects.get_for_model(Prefix)
+
+        # Create JobHook instances
+        cls.job_hooks = (
+            JobHook(
+                name="jobhook-1",
+                enabled=True,
+                job=job,
+                type_create=True,
+            ),
+            JobHook(
+                name="jobhook-2",
+                enabled=True,
+                job=job,
+                type_update=True,
+            ),
+            JobHook(
+                name="jobhook-3",
+                enabled=True,
+                job=job,
+                type_delete=True,
+            ),
+        )
+
+        for job_hook in cls.job_hooks:
+            job_hook.save()
+            job_hook.content_types.set([obj_type])  # Set after save
+
+        # Form data for create test
+        cls.form_data = {
+            "name": "jobhook-4",
+            "content_types": [device_ct.pk],  # Use int PK
+            "enabled": True,
+            "type_create": True,
+            "type_update": False,
+            "type_delete": False,
+            "job": job.pk,
+        }
+
+        # Bulk edit data
+        cls.bulk_edit_data = {
+            "enabled": False,
+            "type_create": True,  # Make sure these change values
+            "type_update": True,
+            "type_delete": True,
+            "add_content_types": [ipaddress_ct.pk, prefix_ct.pk],
+            "remove_content_types": [device_ct.pk],
+        }
+
+
 # TODO: Convert to StandardTestCases.Views
 class ObjectChangeTestCase(TestCase):
     user_permissions = ("extras.view_objectchange",)
@@ -3089,6 +3484,7 @@ class RelationshipTestCase(
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
     RequiredRelationshipTestMixin,
+    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = Relationship
     slug_source = "label"
@@ -3135,95 +3531,21 @@ class RelationshipTestCase(
             "destination_hidden": True,
             "destination_filter": None,
         }
+        cls.bulk_edit_data = {
+            "description": "This is a relationship between VLANs and Interfaces.",
+            "type": "many-to-many",
+            "source_type": vlan_type.pk,
+            "source_label": "Interfaces",
+            "source_hidden": False,
+            "source_filter": '{"status": ["' + status.name + '"]}',
+            "destination_type": interface_type.pk,
+            "destination_label": "VLANs",
+            "destination_hidden": True,
+            "destination_filter": None,
+            "advanced_ui": True,
+        }
 
         cls.slug_test_object = "Primary Interface"
-
-    def test_required_relationships(self):
-        """
-        1. Try creating an object when no required target object exists
-        2. Try creating an object without specifying required target object(s)
-        3. Try creating an object when all required data is present
-        4. Test bulk edit
-        """
-
-        # Delete existing factory generated objects that may interfere with this test
-        IPAddress.objects.all().delete()
-        Prefix.objects.update(parent=None)
-        Prefix.objects.all().delete()
-        VLAN.objects.all().delete()
-
-        # Parameterized tests (for creating and updating single objects):
-        self.required_relationships_test(interact_with="ui")
-
-        # 4. Bulk create/edit tests:
-
-        vlan_status = Status.objects.get_for_model(VLAN).first()
-        vlans = (
-            VLAN.objects.create(name="test_required_relationships1", vid=1, status=vlan_status),
-            VLAN.objects.create(name="test_required_relationships2", vid=2, status=vlan_status),
-            VLAN.objects.create(name="test_required_relationships3", vid=3, status=vlan_status),
-            VLAN.objects.create(name="test_required_relationships4", vid=4, status=vlan_status),
-            VLAN.objects.create(name="test_required_relationships5", vid=5, status=vlan_status),
-            VLAN.objects.create(name="test_required_relationships6", vid=6, status=vlan_status),
-        )
-
-        # Try deleting all devices and then editing the 6 VLANs (fails):
-        Controller.objects.filter(controller_device__isnull=False).delete()
-        Device.objects.all().delete()
-        response = self.client.post(
-            reverse("ipam:vlan_bulk_edit"), data={"pk": [str(vlan.id) for vlan in vlans], "_apply": [""]}
-        )
-        self.assertContains(response, "VLANs require at least one device, but no devices exist yet.")
-
-        # Create test device for association
-        device_for_association = test_views.create_test_device("VLAN Required Device")
-
-        # Try editing all 6 VLANs without adding the required device(fails):
-        response = self.client.post(
-            reverse("ipam:vlan_bulk_edit"), data={"pk": [str(vlan.id) for vlan in vlans], "_apply": [""]}
-        )
-        self.assertContains(
-            response,
-            "6 VLANs require a device for the required relationship &quot;VLANs require at least one Device&quot;",
-        )
-
-        # Try editing 3 VLANs without adding the required device(fails):
-        response = self.client.post(
-            reverse("ipam:vlan_bulk_edit"), data={"pk": [str(vlan.id) for vlan in vlans[:3]], "_apply": [""]}
-        )
-        self.assertContains(
-            response,
-            "These VLANs require a device for the required "
-            "relationship &quot;VLANs require at least one Device&quot;",
-        )
-        for vlan in vlans[:3]:
-            self.assertContains(response, str(vlan))
-
-        # Try editing 6 VLANs and adding the required device (succeeds):
-        response = self.client.post(
-            reverse("ipam:vlan_bulk_edit"),
-            data={
-                "pk": [str(vlan.id) for vlan in vlans],
-                "add_cr_vlans_devices_m2m__source": [str(device_for_association.id)],
-                "_apply": [""],
-            },
-            follow=True,
-        )
-        self.assertContains(response, "Updated 6 VLANs")
-
-        # Try editing 6 VLANs and removing the required device (fails):
-        response = self.client.post(
-            reverse("ipam:vlan_bulk_edit"),
-            data={
-                "pk": [str(vlan.id) for vlan in vlans],
-                "remove_cr_vlans_devices_m2m__source": [str(device_for_association.id)],
-                "_apply": [""],
-            },
-        )
-        self.assertContains(
-            response,
-            "6 VLANs require a device for the required relationship &quot;VLANs require at least one Device&quot;",
-        )
 
 
 class RelationshipAssociationTestCase(
@@ -3384,23 +3706,28 @@ class StatusTestCase(
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = Status
 
     @classmethod
     def setUpTestData(cls):
         # Status objects to test.
-        content_type = ContentType.objects.get_for_model(Device)
+        device_ct = ContentType.objects.get_for_model(Device)
+        circuit_ct = ContentType.objects.get_for_model(Circuit)
+        interface_ct = ContentType.objects.get_for_model(Interface)
 
         cls.form_data = {
             "name": "new_status",
             "description": "I am a new status object.",
             "color": "ffcc00",
-            "content_types": [content_type.pk],
+            "content_types": [device_ct.pk],
         }
 
         cls.bulk_edit_data = {
             "color": "000000",
+            "add_content_types": [interface_ct.pk, circuit_ct.pk],
+            "remove_content_types": [device_ct.pk],
         }
 
 
@@ -3544,6 +3871,7 @@ class WebhookTestCase(
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = Webhook
 
@@ -3574,6 +3902,9 @@ class WebhookTestCase(
         )
 
         obj_type = ContentType.objects.get_for_model(ConsolePort)
+        device_ct = ContentType.objects.get_for_model(Device)
+        ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
+        prefix_ct = ContentType.objects.get_for_model(Prefix)
 
         for webhook in webhooks:
             webhook.save()
@@ -3588,27 +3919,48 @@ class WebhookTestCase(
             "http_method": "POST",
             "http_content_type": "application/json",
         }
+        cls.bulk_edit_data = {
+            "name": "webhook-4",
+            "enabled": True,
+            "type_create": True,
+            "type_update": True,
+            "type_delete": False,
+            "payload_url": "http://test-url.com/test-4",
+            "http_method": "POST",
+            "http_content_type": "application/json",
+            "additional_headers": "Authorization: Token abc123\nX-Custom-Header: ExampleValue",
+            "body_template": '{"event": "{{ event }}", "data": {{ data | tojson }}}',
+            "secret": "my-secret-key",
+            "ssl_verification": True,
+            "ca_file_path": "/etc/ssl/certs/ca-certificates.crt",
+            "add_content_types": [ipaddress_ct.pk, prefix_ct.pk],
+            "remove_content_types": [device_ct.pk],
+        }
 
 
-class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = Role
 
     @classmethod
     def setUpTestData(cls):
-        # Status objects to test.
-        content_type = ContentType.objects.get_for_model(Device)
+        # Role objects to test.
+        device_ct = ContentType.objects.get_for_model(Device)
+        ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
+        prefix_ct = ContentType.objects.get_for_model(Prefix)
 
         cls.form_data = {
             "name": "New Role",
             "description": "I am a new role object.",
             "color": ColorChoices.COLOR_GREY,
-            "content_types": [content_type.pk],
+            "content_types": [device_ct.pk],
         }
 
         cls.bulk_edit_data = {
             "color": "000000",
             "description": "I used to be a new role object.",
             "weight": 255,
+            "add_content_types": [ipaddress_ct.pk, prefix_ct.pk],
+            "remove_content_types": [device_ct.pk],
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])

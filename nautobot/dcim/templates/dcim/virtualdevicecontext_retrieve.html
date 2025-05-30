@@ -1,0 +1,6 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block extra_breadcrumbs %}
+    <li><a href="{% url 'dcim:device' pk=object.device.pk %}">{{ object.device }}</a></li>
+{% endblock extra_breadcrumbs %}

@@ -17,6 +17,7 @@ theme:
     admonition:
       example: "fontawesome/solid/flask"
   features:
+    - "content.code.annotate"
     - "content.code.copy"
     - "content.tabs.link"
     - "navigation.footer"
@@ -58,12 +59,6 @@ validation:
 
 extra_css:
   - "assets/extra.css"
-
-# needed for RTD version flyout menu
-# jquery is not (yet) injected by RTD automatically and it might be dropped
-# as a dependency in the future
-extra_javascript:
-  - "https://code.jquery.com/jquery-3.7.1.min.js"
 
 extra:
   generator: false
@@ -242,6 +237,7 @@ plugins:
         "models/dcim/softwareimagefile.md": "user-guide/core-data-model/dcim/softwareimagefile.md"
         "models/dcim/softwareversion.md": "user-guide/core-data-model/dcim/softwareversion.md"
         "models/dcim/virtualchassis.md": "user-guide/core-data-model/dcim/virtualchassis.md"
+        "models/dcim/virtualdevicecontext.md": "user-guide/core-data-model/dcim/virtualdevicecontext.md"
         "models/extras/computedfield.md": "user-guide/platform-functionality/computedfield.md"
         "models/extras/configcontext.md": "user-guide/core-data-model/extras/configcontext.md"
         "models/extras/configcontextschema.md": "user-guide/core-data-model/extras/configcontextschema.md"
@@ -308,11 +304,15 @@ plugins:
         "models/dcim/modulebay.md": "user-guide/core-data-model/dcim/modulebay.md"
         "models/dcim/modulebaytemplate.md": "user-guide/core-data-model/dcim/modulebaytemplate.md"
         "models/dcim/moduletype.md": "user-guide/core-data-model/dcim/moduletype.md"
+        "models/extras/jobqueue.md": "user-guide/platform-functionality/jobs/jobqueue.md"
         "models/extras/metadatachoice.md": "user-guide/platform-functionality/objectmetadata.md"
         "models/extras/metadatatype.md": "user-guide/platform-functionality/objectmetadata.md"
         "models/extras/objectmetadata.md": "user-guide/platform-functionality/objectmetadata.md"
         "models/extras/savedview.md": "user-guide/platform-functionality/savedview.md"
         "models/extras/staticgroupassociation.md": "user-guide/platform-functionality/staticgroupassociation.md"
+        "models/wireless/supporteddatarate.md": "user-guide/core-data-model/wireless/supporteddatarate.md"
+        "models/wireless/radioprofile.md": "user-guide/core-data-model/wireless/radioprofile.md"
+        "models/wireless/wirelessnetwork.md": "user-guide/core-data-model/wireless/wirelessnetwork.md"
         "user-guide/administration/configuration/optional-settings.md": "user-guide/administration/configuration/settings.md"
         "user-guide/administration/configuration/required-settings.md": "user-guide/administration/configuration/settings.md"
         "user-guide/administration/guides/caching.md": "user-guide/administration/configuration/redis.md"
@@ -377,6 +377,9 @@ nav:
               - Request Profiling: "user-guide/administration/guides/request-profiling.md"
               - Django Storages with S3: "user-guide/administration/guides/s3-django-storage.md"
               - Task Queues: "user-guide/administration/guides/celery-queues.md"
+          - Security:
+              - "user-guide/administration/security/index.md"
+              - Notices: "user-guide/administration/security/notices.md"
       - Feature Guides:
           - Getting Started:
               - "user-guide/feature-guides/getting-started/index.md"
@@ -395,6 +398,7 @@ nav:
           - IP Address Merge Tool: "user-guide/feature-guides/ip-address-merge-tool.md"
           - Relationships: "user-guide/feature-guides/relationships.md"
           - Software Image Files and Versions: "user-guide/feature-guides/software-image-files-and-versions.md"
+          - Wireless Networks and Controllers: "user-guide/feature-guides/wireless-networks-and-controllers.md"
       - Core Data Model:
           - Overview:
               - Introduction: "user-guide/core-data-model/overview/introduction.md"
@@ -475,6 +479,7 @@ nav:
               - Virtual Chassis: "user-guide/core-data-model/dcim/virtualchassis.md"
               - Controller: "user-guide/core-data-model/dcim/controller.md"
               - Controller Managed Device Group: "user-guide/core-data-model/dcim/controllermanageddevicegroup.md"
+              - Virtual Device Context: "user-guide/core-data-model/dcim/virtualdevicecontext.md"
           - Extras:
               - Config Context: "user-guide/core-data-model/extras/configcontext.md"
               - Config Context Schema: "user-guide/core-data-model/extras/configcontextschema.md"
@@ -499,6 +504,11 @@ nav:
               - Cluster Type: "user-guide/core-data-model/virtualization/clustertype.md"
               - Virtual Machine: "user-guide/core-data-model/virtualization/virtualmachine.md"
               - VM Interface: "user-guide/core-data-model/virtualization/vminterface.md"
+          - Wireless:
+              - "user-guide/core-data-model/wireless/index.md"
+              - Supported Data Rate: "user-guide/core-data-model/wireless/supporteddatarate.md"
+              - Radio Profile: "user-guide/core-data-model/wireless/radioprofile.md"
+              - Wireless Network: "user-guide/core-data-model/wireless/wirelessnetwork.md"
       - Platform Functionality:
           - Change Logging: "user-guide/platform-functionality/change-logging.md"
           - Computed Fields: "user-guide/platform-functionality/computedfield.md"
@@ -507,6 +517,7 @@ nav:
           - Dynamic Groups:
               - "user-guide/platform-functionality/dynamicgroup.md"
               - Static Group Associations: "user-guide/platform-functionality/staticgroupassociation.md"
+          - Event Notifications: "user-guide/platform-functionality/events.md"
           - Export Templates: "user-guide/platform-functionality/exporttemplate.md"
           - External Integrations: "user-guide/platform-functionality/externalintegration.md"
           - Git Repositories: "user-guide/platform-functionality/gitrepository.md"
@@ -516,14 +527,18 @@ nav:
           - Image Attachments: "user-guide/platform-functionality/imageattachment.md"
           - Jobs:
               - "user-guide/platform-functionality/jobs/index.md"
+              - Managing Jobs: "user-guide/platform-functionality/jobs/managing-jobs.md"
+              - Job Scheduling and Approvals: "user-guide/platform-functionality/jobs/job-scheduling-and-approvals.md"
+              - Job Queues: "user-guide/platform-functionality/jobs/jobqueue.md"
               - Job Buttons: "user-guide/platform-functionality/jobs/jobbutton.md"
               - Job Hooks: "user-guide/platform-functionality/jobs/jobhook.md"
+              - Kubernetes Job Support: "user-guide/platform-functionality/jobs/kubernetes-job-support.md"
               - Job Models: "user-guide/platform-functionality/jobs/models.md"
-              - Job Scheduling and Approvals: "user-guide/platform-functionality/jobs/job-scheduling-and-approvals.md"
           - NAPALM: "user-guide/platform-functionality/napalm.md"
           - Notes: "user-guide/platform-functionality/note.md"
           - Object Metadata: "user-guide/platform-functionality/objectmetadata.md"
           - Relationships: "user-guide/platform-functionality/relationship.md"
+          - Rendering Jinja Templates: "user-guide/platform-functionality/rendering-jinja-templates.md"
           - REST API:
               - "user-guide/platform-functionality/rest-api/overview.md"
               - Filtering: "user-guide/platform-functionality/rest-api/filtering.md"
@@ -543,8 +558,15 @@ nav:
       - "development/index.md"
       - Jobs Developer Guide:
           - "development/jobs/index.md"
+          - Getting Started: "development/jobs/getting-started.md"
+          - Installing Jobs: "development/jobs/installation.md"
+          - Job Structure: "development/jobs/job-structure.md"
+          - Job Logging: "development/jobs/job-logging.md"
+          - Common Job Patterns: "development/jobs/job-patterns.md"
+          - Testing Jobs: "development/jobs/testing.md"
+          - Job Extensions: "development/jobs/job-extensions.md"
           - Migration Guides:
-              - "development/jobs/migration/from-v1.md"
+              -  Migrating from v1: "development/jobs/migration/from-v1.md"
       - App Developer Guide:
           - "development/apps/index.md"
           - Setup: "development/apps/api/setup.md"
@@ -597,6 +619,7 @@ nav:
               - nautobot.apps.config: "code-reference/nautobot/apps/config.md"
               - nautobot.apps.constants: "code-reference/nautobot/apps/constants.md"
               - nautobot.apps.datasources: "code-reference/nautobot/apps/datasources.md"
+              - nautobot.apps.events: "code-reference/nautobot/apps/events.md"
               - nautobot.apps.exceptions: "code-reference/nautobot/apps/exceptions.md"
               - nautobot.apps.factory: "code-reference/nautobot/apps/factory.md"
               - nautobot.apps.filters: "code-reference/nautobot/apps/filters.md"
@@ -621,6 +644,11 @@ nav:
                   - DCIM: "development/apps/migration/model-updates/dcim.md"
                   - Extras: "development/apps/migration/model-updates/extras.md"
                   - IPAM: "development/apps/migration/model-updates/ipam.md"
+              - UI Component Framework:
+                  - "development/apps/migration/ui-component-framework/index.md"
+                  - Migration steps: "development/apps/migration/ui-component-framework/migration-steps.md"
+                  - Custom content: "development/apps/migration/ui-component-framework/custom-content.md"
+                  - Best practices: "development/apps/migration/ui-component-framework/best-practices.md"
           - Advanced:
               - Porting NetBox Plugins to Nautobot: "development/apps/porting-from-netbox.md"
       - Core Developer Guide:
@@ -635,6 +663,7 @@ nav:
           - Controllers: "development/core/controllers.md"
           - Generic Views: "development/core/generic-views.md"
           - Home Page Panels: "development/core/homepage.md"
+          - Minikube Dev Environment for K8s Jobs: "development/core/minikube-dev-environment-for-k8s-jobs.md"
           - Model Development Checklist: "development/core/model-checklist.md"
           - Model Features: "development/core/model-features.md"
           - Natural Keys: "development/core/natural-keys.md"
@@ -644,9 +673,11 @@ nav:
           - Style Guide: "development/core/style-guide.md"
           - Testing: "development/core/testing.md"
           - User Preferences: "development/core/user-preferences.md"
+          - UI Component Framework: "development/core/ui-component-framework.md"
           - Release Checklist: "development/core/release-checklist.md"
   - Release Notes:
       - "release-notes/index.md"
+      - Version 2.4: "release-notes/version-2.4.md"
       - Version 2.3: "release-notes/version-2.3.md"
       - Version 2.2: "release-notes/version-2.2.md"
       - Version 2.1: "release-notes/version-2.1.md"

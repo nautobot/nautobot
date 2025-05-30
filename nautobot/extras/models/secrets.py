@@ -46,6 +46,11 @@ class Secret(PrimaryModel):
     def __str__(self):
         return self.name
 
+    def get_provider_display(self):
+        if provider := registry["secrets_providers"].get(self.provider):
+            return provider.name
+        return self.provider
+
     def rendered_parameters(self, obj=None):
         """Render self.parameters as a Jinja2 template with the given object as context."""
         try:

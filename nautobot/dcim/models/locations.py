@@ -220,6 +220,15 @@ class Location(TreeModel, PrimaryModel):
     def __str__(self):
         return self.name
 
+    @property
+    def display(self):
+        """
+        Honor LOCATION_NAME_AS_NATURAL_KEY for display value rendering, else fallback to TreeModel.display().
+        """
+        if get_settings_or_config("LOCATION_NAME_AS_NATURAL_KEY"):
+            return self.name
+        return super().display
+
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def natural_key_field_lookups(cls):  # pylint: disable=no-self-argument
         """
@@ -283,7 +292,7 @@ class Location(TreeModel, PrimaryModel):
             # We shouldn't have a parent, *unless* our own location type is permitted to be nested.
             if self.parent is not None:
                 if self.location_type.nestable:
-                    if self.parent.location_type != self.location_type:
+                    if self.parent.location_type != self.location_type:  # pylint: disable=no-member
                         raise ValidationError(
                             {
                                 "parent": f"A Location of type {self.location_type} may only have "
@@ -304,7 +313,7 @@ class Location(TreeModel, PrimaryModel):
 
             # Is the parent location of a correct type?
             if self.location_type.nestable:
-                if self.parent.location_type not in (self.location_type, self.location_type.parent):
+                if self.parent.location_type not in (self.location_type, self.location_type.parent):  # pylint: disable=no-member
                     raise ValidationError(
                         {
                             "parent": f"A Location of type {self.location_type} can only have a Location "
@@ -312,7 +321,7 @@ class Location(TreeModel, PrimaryModel):
                         }
                     )
             else:
-                if self.parent.location_type != self.location_type.parent:
+                if self.parent.location_type != self.location_type.parent:  # pylint: disable=no-member
                     raise ValidationError(
                         {
                             "parent": f"A Location of type {self.location_type} can only have a Location "

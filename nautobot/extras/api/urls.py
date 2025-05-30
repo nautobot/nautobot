@@ -69,6 +69,10 @@ router.register("job-hooks", views.JobHooksViewSet)
 # Job Log Entries
 router.register("job-logs", views.JobLogEntryViewSet)
 
+# Job Queues
+router.register("job-queues", views.JobQueueViewSet)
+router.register("job-queue-assignments", views.JobQueueAssignmentViewSet)
+
 # Job Results
 router.register("job-results", views.JobResultViewSet)
 

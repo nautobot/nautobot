@@ -10,6 +10,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Model
 from django.urls import get_resolver, resolve, reverse, URLPattern, URLResolver
 from django.utils.module_loading import import_string
+from django.views.generic.base import RedirectView
 
 
 def get_changes_for_model(model):
@@ -249,6 +250,11 @@ def get_model_for_view_name(view_name):
     Return the model class associated with the given view_name e.g. "circuits:circuit_detail", "dcim:device_list" and etc.
     If the app_label or model_name contained by the given view_name is invalid, this will return `None`.
     """
+    if view_name == "users-api:group-detail":
+        return Group
+    if view_name == "extras-api:contenttype-detail":
+        return ContentType
+
     split_view_name = view_name.split(":")
     if len(split_view_name) == 2:
         app_label, model_name = split_view_name  # dcim, device_list
@@ -256,7 +262,13 @@ def get_model_for_view_name(view_name):
         _, app_label, model_name = split_view_name  # plugins, app_name, model_list
     else:
         raise ValueError(f"Unexpected View Name: {view_name}")
-    model_name = model_name.split("_")[0]  # device
+
+    delimiter = "_"
+    if app_label.endswith("-api"):
+        app_label = app_label.replace("-api", "")
+        delimiter = "-"
+
+    model_name = model_name.split(delimiter)[0]  # device
 
     try:
         model = apps.get_model(app_label=app_label, model_name=model_name)
@@ -279,9 +291,9 @@ def get_table_class_string_from_view_name(view_name):
 
     view_func = resolve(reverse(view_name)).func
     view_class = getattr(view_func, "cls", getattr(view_func, "view_class", None))
-    if hasattr(view_class, "table_class"):
+    if hasattr(view_class, "table_class") and view_class.table_class:
         return view_class.table_class.__name__
-    if hasattr(view_class, "table"):
+    if hasattr(view_class, "table") and view_class.table:
         return view_class.table.__name__
     return None
 
@@ -315,7 +327,7 @@ def get_created_and_last_updated_usernames_for_model(instance):
     return created_by, last_updated_by
 
 
-def get_url_patterns(urlconf=None, patterns_list=None, base_path="/"):
+def get_url_patterns(urlconf=None, patterns_list=None, base_path="/", ignore_redirects=False):
     """
     Recursively yield a list of registered URL patterns.
 
@@ -326,6 +338,7 @@ def get_url_patterns(urlconf=None, patterns_list=None, base_path="/"):
             Default if unspecified is the `url_patterns` attribute of the given `urlconf` module.
         base_path (str): String to prepend to all URL patterns yielded.
             Default if unspecified is the string `"/"`.
+        ignore_redirects (bool): If True, skip URL patterns that correspond to RedirectViews.
 
     Yields:
         (str): Each URL pattern defined in the given urlconf and its descendants
@@ -384,10 +397,18 @@ def get_url_patterns(urlconf=None, patterns_list=None, base_path="/"):
 
     for item in patterns_list:
         if isinstance(item, URLPattern):
+            if (
+                ignore_redirects
+                and hasattr(item.callback, "view_class")
+                and issubclass(item.callback.view_class, RedirectView)
+            ):
+                continue
             yield base_path + str(item.pattern)
         elif isinstance(item, URLResolver):
             # Recurse!
-            yield from get_url_patterns(urlconf, item.url_patterns, base_path + str(item.pattern))
+            yield from get_url_patterns(
+                urlconf, item.url_patterns, base_path + str(item.pattern), ignore_redirects=ignore_redirects
+            )
 
 
 def get_url_for_url_pattern(url_pattern):

@@ -261,7 +261,7 @@ The final migration file might look like this:
 from django.db import migrations
 
 class Migration(migrations.Migration):
-    
+
     # Ensure this migration is run before the migration that removes Region and Site Models
     run_before = [
         ("dcim", "0040_remove_region_and_site"),

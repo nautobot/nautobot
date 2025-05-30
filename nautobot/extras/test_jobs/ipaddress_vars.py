@@ -39,7 +39,9 @@ class TestIPAddresses(Job):
             if kwargs[expected_kwarg] is None:
                 raise RuntimeError(f"kwargs[{expected_kwarg}] is unexpectedly None!")
 
-    def run(self, *, ipv4_address, ipv4_with_mask, ipv4_network, ipv6_address, ipv6_with_mask, ipv6_network):
+    def run(  # pylint:disable=arguments-differ
+        self, *, ipv4_address, ipv4_with_mask, ipv4_network, ipv6_address, ipv6_with_mask, ipv6_network
+    ):
         if not isinstance(ipv4_address, netaddr.IPAddress):
             raise RuntimeError(f"Expected ipv4_address to be a netaddr.IPAddress, but it was {ipv4_address!r}")
         if not isinstance(ipv4_with_mask, netaddr.IPNetwork):

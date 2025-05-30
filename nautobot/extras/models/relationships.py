@@ -105,7 +105,7 @@ class RelationshipModel(models.Model):
 
                 # Determine if the relationship is applicable to this object based on the filter
                 # To resolve the filter we are using the FilterSet for the given model
-                # If there is no match when we query the primary key of the device along with the filter
+                # If there is no match when we query our id along with the filter
                 # Then the relationship is not applicable to this object
                 if getattr(relationship, f"{side}_filter"):
                     filterset = get_filterset_for_model(self._meta.model)
@@ -221,6 +221,86 @@ class RelationshipModel(models.Model):
         where advanced_ui==True for displaying in the 'Advanced' tab on the object's page
         """
         return self.get_relationships_data(advanced_ui=True)
+
+    def get_relationships_with_related_objects(self, include_hidden=False, advanced_ui=None):
+        """Alternative version of get_relationships()."""
+        src_relationships, dst_relationships = Relationship.objects.get_for_model(self)
+
+        if advanced_ui is not None:
+            src_relationships = src_relationships.filter(advanced_ui=advanced_ui)
+            dst_relationships = dst_relationships.filter(advanced_ui=advanced_ui)
+
+        resp = {
+            RelationshipSideChoices.SIDE_SOURCE: {},
+            RelationshipSideChoices.SIDE_DESTINATION: {},
+            RelationshipSideChoices.SIDE_PEER: {},
+        }
+
+        for side, relationships in (
+            (RelationshipSideChoices.SIDE_SOURCE, src_relationships),
+            (RelationshipSideChoices.SIDE_DESTINATION, dst_relationships),
+        ):
+            peer_side = RelationshipSideChoices.OPPOSITE[side]
+            for relationship in relationships:
+                if getattr(relationship, f"{side}_hidden") and not include_hidden:
+                    continue
+
+                # Determine if the relationship is applicable to this object based on the filter
+                # To resolve the filter we are using the FilterSet for the given model
+                # If there is no match when we query our id along with the filter
+                # Then the relationship is not applicable to this object
+                if getattr(relationship, f"{side}_filter"):
+                    filterset = get_filterset_for_model(self._meta.model)
+                    if filterset:
+                        filter_params = getattr(relationship, f"{side}_filter")
+                        if not filterset(filter_params, self._meta.model.objects.filter(id=self.id)).qs.exists():
+                            continue
+
+                # Construct the queryset for related objects for this relationship
+                remote_ct = getattr(relationship, f"{peer_side}_type")
+                remote_model = remote_ct.model_class()
+                if remote_model is not None:
+                    if not relationship.symmetric:
+                        query_params = {
+                            f"{peer_side}_for_associations__relationship": relationship,
+                            f"{peer_side}_for_associations__{side}_id": self.pk,
+                        }
+                        # Get the related objects for this relationship on the opposite side.
+                        resp[side][relationship] = remote_model.objects.filter(**query_params).distinct()
+                        if not relationship.has_many(peer_side):
+                            resp[side][relationship] = resp[side][relationship].first()
+                    else:
+                        side_query_params = {
+                            f"{peer_side}_for_associations__relationship": relationship,
+                            f"{peer_side}_for_associations__{side}_id": self.pk,
+                        }
+                        peer_side_query_params = {
+                            f"{side}_for_associations__relationship": relationship,
+                            f"{side}_for_associations__{peer_side}_id": self.pk,
+                        }
+                        # Get the related objects based on the pks we gathered.
+                        resp[RelationshipSideChoices.SIDE_PEER][relationship] = remote_model.objects.filter(
+                            Q(**side_query_params) | Q(**peer_side_query_params)
+                        ).distinct()
+                        if not relationship.has_many(peer_side):
+                            resp[side][relationship] = resp[side][relationship].first()
+                else:
+                    # Maybe an uninstalled App?
+                    # We can't provide a relevant queryset, but we can provide a descriptive string
+                    if not relationship.symmetric:
+                        count = RelationshipAssociation.objects.filter(
+                            relationship=relationship, **{f"{side}_id": self.pk}
+                        ).count()
+                        resp[side][relationship] = f"{count} {remote_ct} object(s)"
+                    else:
+                        count = (
+                            RelationshipAssociation.objects.filter(relationship=relationship)
+                            .filter(Q(source_id=self.pk) | Q(destination_id=self.pk))
+                            .count()
+                        )
+                        resp[RelationshipSideChoices.SIDE_PEER][relationship] = f"{count} {remote_ct} object(s)"
+
+        return resp
 
     @classmethod
     def required_related_objects_errors(

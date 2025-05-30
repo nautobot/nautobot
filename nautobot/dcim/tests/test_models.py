@@ -4,10 +4,12 @@ from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
+from django.db.models import Model
 from django.test import TestCase
 from django.test.utils import override_settings
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
+from nautobot.core import settings
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.choices import (
     CableStatusChoices,
@@ -61,6 +63,7 @@ from nautobot.dcim.models import (
     RearPortTemplate,
     SoftwareImageFile,
     SoftwareVersion,
+    VirtualDeviceContext,
 )
 from nautobot.extras import context_managers
 from nautobot.extras.choices import CustomFieldTypeChoices
@@ -76,7 +79,7 @@ class ModularDeviceComponentTestCaseMixin:
 
     # fields required to create instances of the model, with the exception of name, device_field and module_field
     modular_component_create_data = {}
-    model = None
+    model: type[Model]
     device_field = "device"  # field name for the parent device
     module_field = "module"  # field name for the parent module
 
@@ -1164,6 +1167,19 @@ class LocationTypeTestCase(TestCase):
         child_loc.delete()
         child.validated_save()
 
+    def test_removing_content_type(self):
+        """Validation check to prevent removing an in-use content type from a LocationType."""
+
+        location_type = LocationType.objects.get(name="Campus")
+        device_ct = ContentType.objects.get_for_model(Device)
+
+        with self.assertRaises(ValidationError) as cm:
+            location_type.content_types.remove(device_ct)
+        self.assertIn(
+            f"Cannot remove the content type {device_ct} as currently at least one device is associated to a location",
+            str(cm.exception),
+        )
+
 
 class LocationTestCase(ModelTestCases.BaseModelTestCase):
     model = Location
@@ -1321,6 +1337,19 @@ class LocationTestCase(ModelTestCases.BaseModelTestCase):
             f"only have a Location of the same type or of type {self.root_nestable_type} as its parent",
             str(cm.exception),
         )
+
+    def test_default_treemodel_display(self):
+        location_1 = Location(name="Building 1", location_type=self.root_type, status=self.status)
+        location_1.validated_save()
+        location_2 = Location(name="Room 1", location_type=self.leaf_type, parent=location_1, status=self.status)
+        self.assertEqual(location_2.display, "Building 1 → Room 1")
+
+    @override_settings(LOCATION_NAME_AS_NATURAL_KEY=True)
+    def test_location_name_as_natural_key_display(self):
+        location_1 = Location(name="Building 1", location_type=self.root_type, status=self.status)
+        location_1.validated_save()
+        location_2 = Location(name="Room 1", location_type=self.leaf_type, parent=location_1, status=self.status)
+        self.assertEqual(location_2.display, "Room 1")
 
 
 class PlatformTestCase(TestCase):
@@ -1893,6 +1922,33 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         parent_device.rack = rack
         parent_device.save()
 
+        # Test assigning a rack in the child location of the parent device location
+        location_status = Status.objects.get_for_model(Location).first()
+        child_location = Location.objects.create(
+            name="Child Location 1",
+            location_type=self.location_type_3,
+            status=location_status,
+            parent=parent_device.location,
+        )
+        child_rack = Rack.objects.create(name="Rack 2", location=child_location, status=self.device_status)
+        parent_device.rack = child_rack
+        parent_device.validated_save()
+
+        # Test assigning a rack outside the child locations of the parent device location
+        new_location = Location.objects.create(
+            name="New Location 1",
+            status=location_status,
+            location_type=self.location_type_3,
+        )
+        invalid_rack = Rack.objects.create(name="Rack 3", location=new_location, status=self.device_status)
+        parent_device.rack = invalid_rack
+        with self.assertRaises(ValidationError) as cm:
+            parent_device.validated_save()
+        self.assertIn(
+            f'Rack "{invalid_rack}" does not belong to location "{parent_device.location}" and its descendants.',
+            str(cm.exception),
+        )
+
         child_mtime_after_parent_rack_update_save = str(Device.objects.get(name="Child Device 1").last_updated)
 
         self.assertNotEqual(child_mtime_after_parent_noop_save, child_mtime_after_parent_rack_update_save)
@@ -1953,6 +2009,8 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        cls.interface_choices = {section[0]: dict(section[1]) for section in InterfaceTypeChoices.CHOICES}
+
         location = Location.objects.first()
         manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(
@@ -2181,19 +2239,59 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         """
         A cable cannot terminate to a virtual interface
         """
-        virtual_interface = Interface(device=self.device1, name="V1", type=InterfaceTypeChoices.TYPE_VIRTUAL)
-        cable = Cable(termination_a=self.interface2, termination_b=virtual_interface)
-        with self.assertRaises(ValidationError):
-            cable.clean()
+        virtual_interface_choices = self.interface_choices["Virtual interfaces"]
+
+        self.cable.delete()
+        interface_status = Status.objects.get_for_model(Interface).first()
+
+        for virtual_interface_type in virtual_interface_choices:
+            virtual_interface = Interface.objects.create(
+                device=self.device1,
+                name=f"V-{virtual_interface_type}",
+                type=virtual_interface_type,
+                status=interface_status,
+            )
+            with self.assertRaises(
+                ValidationError,
+                msg=f"Virtual interface type '{virtual_interface_choices[virtual_interface_type]}' should not accept a cable.",
+            ) as cm:
+                Cable(
+                    termination_a=self.interface2,
+                    termination_b=virtual_interface,
+                ).clean()
+
+            self.assertIn(
+                f"Cables cannot be terminated to {virtual_interface_choices[virtual_interface_type]} interfaces",
+                str(cm.exception),
+            )
 
     def test_cable_cannot_terminate_to_a_wireless_interface(self):
         """
         A cable cannot terminate to a wireless interface
         """
-        wireless_interface = Interface(device=self.device1, name="W1", type=InterfaceTypeChoices.TYPE_80211A)
-        cable = Cable(termination_a=self.interface2, termination_b=wireless_interface)
-        with self.assertRaises(ValidationError):
-            cable.clean()
+        wireless_interface_choices = self.interface_choices["Wireless"]
+
+        self.cable.delete()
+        interface_status = Status.objects.get_for_model(Interface).first()
+
+        for wireless_interface_type in wireless_interface_choices:
+            wireless_interface = Interface.objects.create(
+                device=self.device1,
+                name=f"W-{wireless_interface_type}",
+                type=wireless_interface_type,
+                status=interface_status,
+            )
+
+            with self.assertRaises(
+                ValidationError,
+                msg=f"Wireless interface type '{wireless_interface_choices[wireless_interface_type]}' should not accept a cable.",
+            ) as cm:
+                Cable(termination_a=self.interface2, termination_b=wireless_interface).clean()
+
+            self.assertIn(
+                f"Cables cannot be terminated to {wireless_interface_choices[wireless_interface_type]} interfaces",
+                str(cm.exception),
+            )
 
     def test_create_cable_with_missing_status_connected(self):
         """Test for https://github.com/nautobot/nautobot/issues/2081"""
@@ -2361,6 +2459,30 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
                 address=f"1.1.1.{last_octet}/32", status=ip_address_status, namespace=cls.namespace
             )
 
+    def test_vdcs_validation_logic(self):
+        """Assert Interface raises error when adding virtual_device_contexts that do not belong to same device as the Interface device."""
+        interface = Interface.objects.create(
+            name="Int1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=self.device,
+            status=Status.objects.get_for_model(Interface).first(),
+            role=Role.objects.get_for_model(Interface).first(),
+        )
+        vdc = VirtualDeviceContext.objects.create(
+            name="Sample VDC",
+            device=Device.objects.exclude(pk=self.device.pk).first(),
+            identifier=100,
+            status=Status.objects.get_for_model(VirtualDeviceContext).first(),
+        )
+
+        with self.assertRaises(ValidationError) as err:
+            interface.virtual_device_contexts.add(vdc)
+        self.assertEqual(
+            err.exception.message_dict["virtual_device_contexts"][0],
+            f"Virtual Device Context with names {[vdc.name]} must all belong to the "
+            f"same device as the interface's device.",
+        )
+
     def test_tagged_vlan_raise_error_if_mode_not_set_to_tagged(self):
         interface = Interface.objects.create(
             name="Int1",
@@ -2501,6 +2623,70 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
 
 class SoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
     model = SoftwareImageFile
+
+    def test_download_url_validation_behaviour(self):
+        """
+        Test that the `download_url` property behaves as expected in relation to laxURLField validation and
+        the ALLOWED_URL_SCHEMES setting.
+        """
+        # Prepare prerequisite objects
+        platform = Platform.objects.first()
+        software_version_status = Status.objects.get_for_model(SoftwareVersion).first()
+        software_image_file_status = Status.objects.get_for_model(SoftwareImageFile).first()
+        software_version = SoftwareVersion.objects.create(
+            platform=platform, version="Test version 1.0.0", status=software_version_status
+        )
+
+        # Test that the download_url field is correctly validated with the default ALLOWED_URL_SCHEMES setting
+        for scheme in settings.ALLOWED_URL_SCHEMES:
+            software_image = SoftwareImageFile(
+                software_version=software_version,
+                image_file_name=f"software_image_file_qs_test_{scheme}.bin",
+                status=software_image_file_status,
+                download_url=f"{scheme}://example.com/software_image_file_qs_test_1.bin",
+            )
+            try:
+                software_image.validated_save()
+            except ValidationError as e:
+                self.fail(f"download_url Scheme {scheme} ValidationError: {e}")
+
+        INVALID_SCHEMES = ["httpx", "rdp", "cryptoboi"]
+        OVERRIDE_VALID_SCHEMES = ["sftp", "tftp", "https", "http", "newfs", "customfs"]
+        # Invalid schemes should raise a ValidationError
+        for scheme in INVALID_SCHEMES:
+            software_image = SoftwareImageFile(
+                software_version=software_version,
+                image_file_name=f"software_image_file_qs_test_{scheme}2.bin",
+                status=software_image_file_status,
+                download_url=f"{scheme}://example.com/software_image_file_qs_test_2.bin",
+            )
+            with self.assertRaises(ValidationError) as err:
+                software_image.validated_save()
+            self.assertEqual(err.exception.message_dict["download_url"][0], "Enter a valid URL.")
+
+        with override_settings(ALLOWED_URL_SCHEMES=OVERRIDE_VALID_SCHEMES):
+            for scheme in OVERRIDE_VALID_SCHEMES:
+                software_image = SoftwareImageFile(
+                    software_version=software_version,
+                    image_file_name=f"software_image_file_qs_test_{scheme}3.bin",
+                    status=software_image_file_status,
+                    download_url=f"{scheme}://example.com/software_image_file_qs_test_3.bin",
+                )
+                try:
+                    software_image.validated_save()
+                except ValidationError as e:
+                    self.fail(f"download_url Scheme {scheme} ValidationError: {e}")
+
+            for scheme in INVALID_SCHEMES:
+                software_image = SoftwareImageFile(
+                    software_version=software_version,
+                    image_file_name=f"software_image_file_qs_test_{scheme}4.bin",
+                    status=software_image_file_status,
+                    download_url=f"{scheme}://example.com/software_image_file_qs_test_4.bin",
+                )
+                with self.assertRaises(ValidationError) as err:
+                    software_image.validated_save()
+                self.assertEqual(err.exception.message_dict["download_url"][0], "Enter a valid URL.")
 
     def test_queryset_get_for_object(self):
         """
@@ -2722,7 +2908,7 @@ class ControllerTestCase(ModelTestCases.BaseModelTestCase):
             controller.validated_save()
         self.assertEqual(
             error.exception.message_dict["location"][0],
-            f'Devices may not associate to locations of type "{location_type}".',
+            f'Controllers may not associate to locations of type "{location_type}".',
         )
 
 
@@ -3221,3 +3407,103 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
 
 class ModuleTypeTestCase(ModelTestCases.BaseModelTestCase):
     model = ModuleType
+
+
+class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):
+    model = VirtualDeviceContext
+
+    def test_assigning_primary_ip(self):
+        device = Device.objects.first()
+        vdc_status = Status.objects.get_for_model(VirtualDeviceContext).first()
+        vdc = VirtualDeviceContext(
+            device=device,
+            status=vdc_status,
+            identifier=100,
+            name="Test VDC 1",
+        )
+        vdc.validated_save()
+
+        ip_v4 = IPAddress.objects.filter(ip_version=4).first()
+        ip_v6 = IPAddress.objects.filter(ip_version=6).first()
+
+        vdc.primary_ip4 = ip_v6
+        with self.assertRaises(ValidationError) as err:
+            vdc.validated_save()
+        self.assertIn(
+            f"{ip_v6} is not an IPv4 address",
+            str(err.exception),
+        )
+
+        vdc.primary_ip4 = None
+        vdc.primary_ip6 = ip_v4
+        with self.assertRaises(ValidationError) as err:
+            vdc.validated_save()
+        self.assertIn(
+            f"{ip_v4} is not an IPv6 address",
+            str(err.exception),
+        )
+
+        namespace = Namespace.objects.create(name="test_name_space")
+        Prefix.objects.create(
+            prefix="10.1.1.0/24", namespace=namespace, status=Status.objects.get_for_model(Prefix).first()
+        )
+        vdc.primary_ip4 = IPAddress.objects.create(
+            address="10.1.1.1/24", namespace=namespace, status=Status.objects.get_for_model(IPAddress).first()
+        )
+        with self.assertRaises(ValidationError) as err:
+            vdc.validated_save()
+        self.assertIn(
+            f"{vdc.primary_ip4} is not part of an interface that belongs to this VDC's device.",
+            str(err.exception),
+        )
+
+        # TODO: Uncomment test case when VDC primary_ip interface validation is active
+        # interface = Interface.objects.create(
+        #     name="Int1", device=device, status=intf_status, role=intf_role, type=InterfaceTypeChoices.TYPE_100GE_CFP
+        # )
+        # intf_status = Status.objects.get_for_model(Interface).first()
+        # intf_role = Role.objects.get_for_model(Interface).first()
+        # vdc.primary_ip6 = ip_v6
+        # with self.assertRaises(ValidationError) as err:
+        #     vdc.validated_save()
+        # self.assertIn(
+        #     f"The specified IP address ({ip_v6}) is not assigned to this Virtual Device Context.",
+        #     str(err.exception),
+        # )
+        # interface.virtual_device_contexts.add(vdc)
+        # interface.add_ip_addresses([ip_v4, ip_v6])
+
+    def test_interfaces_validation_logic(self):
+        """Assert Virtual Device COntext raises error when adding interfaces that do not belong to same device as the VDC's device."""
+        device = Device.objects.first()
+        interface = Interface.objects.create(
+            name="Int1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=device,
+            status=Status.objects.get_for_model(Interface).first(),
+            role=Role.objects.get_for_model(Interface).first(),
+        )
+        vdc = VirtualDeviceContext.objects.create(
+            name="Sample VDC",
+            device=Device.objects.exclude(pk=device.pk).first(),
+            identifier=99,  # factory creates identifiers starting from 100
+            status=Status.objects.get_for_model(VirtualDeviceContext).first(),
+        )
+
+        with self.assertRaises(ValidationError) as err:
+            vdc.interfaces.add(interface)
+        self.assertEqual(
+            err.exception.message_dict["interfaces"][0],
+            f"Interfaces with names {[interface.name]} must all belong to the "
+            f"same device as the Virtual Device Context's device.",
+        )
+
+    def test_modifying_vdc_device_not_allowed(self):
+        vdc = VirtualDeviceContext.objects.first()
+        old_device = vdc.device
+        new_device = Device.objects.exclude(pk=old_device.pk).first()
+        with self.assertRaises(ValidationError) as err:
+            vdc.device = new_device
+            vdc.validated_save()
+
+        self.assertIn("Virtual Device Context's device cannot be changed once created", str(err.exception))

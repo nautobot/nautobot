@@ -587,7 +587,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         """
         pfx_content_type = ContentType.objects.get_for_model(Prefix)
         group = DynamicGroup(name="pfx", content_type=pfx_content_type)
-        filterset = group.filterset_class()
+        filterset = group.filterset_class()  # pylint: disable=not-callable  # should not be None here!
         fields = group._map_filter_fields
 
         # We know that `within_include` does not have a `generate_query_{filter_method}` method.
@@ -666,6 +666,20 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
 
         # Cleanup because we're using class-based fixtures in `setUpTestData()`
         group.refresh_from_db()
+
+    def test_set_filter_on_ipaddress_dynamic_group(self):
+        """
+        Test `DynamicGroup.set_filter()` for an IPAddress Dynamic Group.
+        https://github.com/nautobot/nautobot/issues/6805
+        """
+        ipaddress_dg = DynamicGroup.objects.create(
+            name="IP Address Dynamic Group",
+            content_type=ContentType.objects.get_for_model(IPAddress),
+            description="IP Address Dynamic Group",
+        )
+        # Test the fact that set_filter correctly discard an empty PrefixQuerySet
+        ipaddress_dg.set_filter({"parent": Prefix.objects.none()})
+        self.assertEqual(ipaddress_dg.filter, {})
 
     def test_add_child(self):
         """Test `DynamicGroup.add_child()`."""

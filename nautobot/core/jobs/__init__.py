@@ -4,7 +4,9 @@ from io import BytesIO
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import (
+    PermissionDenied,
+)
 from django.db import transaction
 from django.http import QueryDict
 from rest_framework import exceptions as drf_exceptions
@@ -15,6 +17,7 @@ from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app, register_jobs
 from nautobot.core.exceptions import AbortTransaction
+from nautobot.core.jobs.bulk_actions import BulkDeleteObjects, BulkEditObjects
 from nautobot.core.jobs.cleanup import LogsCleanup
 from nautobot.core.jobs.groups import RefreshDynamicGroupCaches
 from nautobot.core.utils.lookup import get_filterset_for_model
@@ -25,8 +28,17 @@ from nautobot.extras.datasources import (
     refresh_datasource_content,
     refresh_job_code_from_repository,
 )
-from nautobot.extras.jobs import BooleanVar, ChoiceVar, FileVar, Job, ObjectVar, RunJobTaskFailed, StringVar, TextVar
-from nautobot.extras.models import ExportTemplate, GitRepository
+from nautobot.extras.jobs import (
+    BooleanVar,
+    ChoiceVar,
+    FileVar,
+    Job,
+    ObjectVar,
+    RunJobTaskFailed,
+    StringVar,
+    TextVar,
+)
+from nautobot.extras.models import ExportTemplate, GitRepository, SavedView
 
 name = "System Jobs"
 
@@ -47,7 +59,7 @@ class GitRepositorySync(Job):
         description = "Clone and/or pull a Git repository, then refresh data sourced from this repository."
         has_sensitive_variables = False
 
-    def run(self, repository):
+    def run(self, repository):  # pylint:disable=arguments-differ
         job_result = self.job_result
         user = job_result.user
 
@@ -88,7 +100,7 @@ class GitRepositoryDryRun(Job):
         description = "Dry run of Git repository sync - will not update data sourced from this repository."
         has_sensitive_variables = False
 
-    def run(self, repository):
+    def run(self, repository):  # pylint:disable=arguments-differ
         job_result = self.job_result
         self.logger.info(f'Performing a Dry Run on Git repository "{repository.name}"...')
 
@@ -138,7 +150,17 @@ class ExportObjectList(Job):
         soft_time_limit = 1800
         time_limit = 2000
 
-    def run(self, *, content_type, query_string="", export_format="csv", export_template=None):
+    def _get_saved_view_filter_params(self, query_params):
+        """Extract filter params from saved view if applicable."""
+        if "saved_view" in query_params and "all_filters_removed" not in query_params:
+            saved_view_filters = SavedView.objects.get(pk=query_params["saved_view"]).config.get("filter_params", {})
+            if len(query_params) > 1:
+                # Retain only filters also present in query_params
+                saved_view_filters = {key: value for key, value in saved_view_filters.items() if key in query_params}
+            return saved_view_filters
+        return {}
+
+    def run(self, *, content_type, query_string="", export_format="csv", export_template=None):  # pylint:disable=arguments-differ
         if not self.user.has_perm(f"{content_type.app_label}.view_{content_type.model}"):
             self.logger.error('User "%s" does not have permission to view %s objects', self.user, content_type.model)
             raise PermissionDenied("User does not have view permissions on the requested content-type")
@@ -166,8 +188,9 @@ class ExportObjectList(Job):
             "sort",
             "table_changes_pending",
         )
-        filter_params = get_filterable_params_from_filter_params(
-            query_params, default_non_filter_params, filterset_class()
+        filter_params = self._get_saved_view_filter_params(query_params)
+        filter_params.update(
+            get_filterable_params_from_filter_params(query_params, default_non_filter_params, filterset_class())
         )
         self.logger.debug("Filterset params: `%s`", filter_params)
         filterset = filterset_class(filter_params, queryset)
@@ -217,7 +240,8 @@ class ExportObjectList(Job):
             # The force_csv=True attribute is a hack, but much easier than trying to construct a valid HttpRequest
             # object from scratch that passes all implicit and explicit assumptions in Django and DRF.
             serializer = serializer_class(queryset, many=True, context={"request": None}, force_csv=True)
-            csv_data = renderer.render(serializer.data)
+            # Explicitly add UTF-8 BOM to the data so that Excel will understand non-ASCII characters correctly...
+            csv_data = codecs.BOM_UTF8 + renderer.render(serializer.data).encode("utf-8")
             self.create_file(filename + ".csv", csv_data)
 
 
@@ -282,11 +306,12 @@ class ImportObjects(Job):
                     validation_failed = True
             else:
                 validation_failed = True
-                for field, err in serializer.errors.items():
-                    self.logger.error("Row %d: `%s`: `%s`", row, field, err[0])
+                for field, errs in serializer.errors.items():
+                    for err in errs:
+                        self.logger.error("Row %d: `%s`: `%s`", row, field, err)
         return new_objs, validation_failed
 
-    def run(self, *, content_type, csv_data=None, csv_file=None, roll_back_if_error=False):
+    def run(self, *, content_type, csv_data=None, csv_file=None, roll_back_if_error=False):  # pylint:disable=arguments-differ
         if not self.user.has_perm(f"{content_type.app_label}.add_{content_type.model}"):
             self.logger.error('User "%s" does not have permission to create %s objects', self.user, content_type.model)
             raise PermissionDenied("User does not have create permissions on the requested content-type")
@@ -347,5 +372,14 @@ class ImportObjects(Job):
             raise RunJobTaskFailed("CSV import not fully successful, see logs")
 
 
-jobs = [ExportObjectList, GitRepositorySync, GitRepositoryDryRun, ImportObjects, LogsCleanup, RefreshDynamicGroupCaches]
+jobs = [
+    BulkDeleteObjects,
+    BulkEditObjects,
+    ExportObjectList,
+    GitRepositorySync,
+    GitRepositoryDryRun,
+    ImportObjects,
+    LogsCleanup,
+    RefreshDynamicGroupCaches,
+]
 register_jobs(*jobs)

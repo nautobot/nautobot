@@ -13,8 +13,8 @@
                     {% for near_end, cable, far_end in traced_path %}
 
                         {# Near end #}
-                        {% if near_end.device %}
-                            {% include 'dcim/trace/device.html' with device=near_end.device %}
+                        {% if near_end.device or near_end.module %}
+                            {% include 'dcim/trace/device.html' with device=near_end.parent %}
                             {% include 'dcim/trace/termination.html' with termination=near_end %}
                         {% elif near_end.power_panel %}
                             {% include 'dcim/trace/powerpanel.html' with powerpanel=near_end.power_panel %}
@@ -30,10 +30,10 @@
                         {% endif %}
 
                         {# Far end #}
-                        {% if far_end.device %}
+                        {% if far_end.device or far_end.module %}
                             {% include 'dcim/trace/termination.html' with termination=far_end %}
                             {% if forloop.last %}
-                                {% include 'dcim/trace/device.html' with device=far_end.device %}
+                                {% include 'dcim/trace/device.html' with device=far_end.parent %}
                             {% endif %}
                         {% elif far_end.power_panel %}
                             {% include 'dcim/trace/termination.html' with termination=far_end %}

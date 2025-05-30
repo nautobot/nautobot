@@ -30,7 +30,9 @@ from nautobot.extras.models import (
     DynamicGroup,
     ExportTemplate,
     GitRepository,
+    GraphQLQuery,
     Job,
+    JobQueue,
     JobResult,
     Role,
     Tag,
@@ -763,7 +765,9 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
                 if not job_class_path.startswith(f"{repository_record.slug}.jobs."):
                     continue
                 found_jobs = True
-                job_model, created = refresh_job_model_from_job_class(Job, job_class)
+                job_model, created = refresh_job_model_from_job_class(
+                    job_model_class=Job, job_class=job_class, job_queue_class=JobQueue
+                )
 
                 if job_model is None:
                     msg = "Failed to create Job record; check Nautobot logs for details"
@@ -932,6 +936,120 @@ def delete_git_export_templates(repository_record, job_result, preserve=None):
             job_result.log(msg, level_choice=LogLevelChoices.LOG_WARNING, grouping="export templates")
 
 
+#
+# GraphQL handling
+#
+
+
+def refresh_git_graphql_queries(repository_record, job_result, delete=False):
+    """Callback function for GitRepository updates - refresh all GraphQLQuery managed by this repository."""
+    if "extras.graphqlquery" in repository_record.provided_contents and not delete:
+        update_git_graphql_queries(repository_record, job_result)
+    else:
+        delete_git_graphql_queries(repository_record, job_result)
+
+
+logger = logging.getLogger(__name__)
+
+
+def update_git_graphql_queries(repository_record, job_result):
+    """Refresh any GraphQL queries provided by this Git repository."""
+    graphql_query_path = os.path.join(repository_record.filesystem_path, "graphql_queries")
+    git_repository_content_type = ContentType.objects.get_for_model(GitRepository)
+    graphql_queries = []
+
+    if os.path.isdir(graphql_query_path):
+        for file in os.listdir(graphql_query_path):
+            file_path = os.path.join(graphql_query_path, file)
+            if not os.path.isfile(file_path):
+                continue
+
+            # Remove `.gql` extension from the name if it exists
+            query_name = file.rsplit(".gql", 1)[0] if file.endswith(".gql") else file
+
+            try:
+                with open(file_path, "r") as fd:
+                    query_content = fd.read().strip()
+
+                graphql_query, created = GraphQLQuery.objects.get_or_create(
+                    name=query_name,
+                    owner_content_type=git_repository_content_type,
+                    owner_object_id=repository_record.pk,
+                    defaults={"query": query_content},
+                )
+                modified = graphql_query.query != query_content
+                graphql_queries.append(query_name)
+                # Only attempt to update if the content has changed
+                if modified:
+                    try:
+                        graphql_query.query = query_content
+                        graphql_query.validated_save()
+                        msg = (
+                            f"Successfully created GraphQL query: {query_name}"
+                            if created
+                            else f"Successfully updated GraphQL query: {query_name}"
+                        )
+                        logger.info(msg)
+                        job_result.log(
+                            msg, obj=graphql_query, level_choice=LogLevelChoices.LOG_INFO, grouping="graphql queries"
+                        )
+                    except Exception as exc:
+                        # Log validation error and retain the existing query
+                        error_msg = (
+                            f"Invalid GraphQL syntax for query '{query_name}'. "
+                            f"Retaining the existing query. Error: {exc}"
+                        )
+                        logger.error(error_msg)
+                        job_result.log(error_msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="graphql queries")
+                        continue
+                else:
+                    msg = f"No changes to GraphQL query: {query_name}"
+                    logger.info(msg)
+                    job_result.log(
+                        msg, obj=graphql_query, level_choice=LogLevelChoices.LOG_INFO, grouping="graphql queries"
+                    )
+
+            except Exception as exc:
+                # Check if a query with the same name already exists
+                existing_query = GraphQLQuery.objects.filter(name=query_name).first()
+                if existing_query and existing_query.owner_object_id != repository_record.pk:
+                    error_msg = (
+                        f"GraphQL query '{query_name}' already exists "
+                        f"Please rename the query in the repository and try again."
+                    )
+                else:
+                    error_msg = f"Error processing GraphQL query file '{file}': {exc}"
+
+                # Log the error
+                logger.error(error_msg)
+                job_result.log(error_msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="graphql queries")
+
+    # Delete any queries not in the preserved list
+    delete_git_graphql_queries(repository_record, job_result, preserve=graphql_queries)
+
+
+def delete_git_graphql_queries(repository_record, job_result, preserve=None):
+    """Delete GraphQL queries owned by the given Git repository that are not in the preserve list."""
+    git_repository_content_type = ContentType.objects.get_for_model(GitRepository)
+    if preserve is None:
+        preserve = []
+
+    for graphql_query in GraphQLQuery.objects.filter(
+        owner_content_type=git_repository_content_type,
+        owner_object_id=repository_record.pk,
+    ):
+        if graphql_query.name not in preserve:
+            try:
+                graphql_query.delete()
+                msg = f"Deleted GraphQL query: {graphql_query.name}"
+                logger.warning(msg)
+                job_result.log(msg, level_choice=LogLevelChoices.LOG_WARNING, grouping="graphql queries")
+            except Exception as exc:
+                error_msg = f"Unable to delete '{graphql_query.name}': {exc}"
+                logger.error(error_msg)
+                job_result.log(error_msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="graphql queries")
+
+
 # Register built-in callbacks for data types potentially provided by a GitRepository
 register_datasource_contents(
     [
@@ -973,6 +1091,16 @@ register_datasource_contents(
                 icon="mdi-database-export",
                 weight=400,
                 callback=refresh_git_export_templates,
+            ),
+        ),
+        (
+            "extras.gitrepository",
+            DatasourceContent(
+                name="graphql queries",
+                content_identifier="extras.graphqlquery",
+                icon="mdi-graphql",
+                weight=400,
+                callback=refresh_git_graphql_queries,
             ),
         ),
     ]
