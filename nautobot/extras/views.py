@@ -559,6 +559,12 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
         return ctx
 
     def perform_create(self, request, *args, **kwargs):
+        return self._perform_create_or_update_with_choices(request)
+
+    def perform_update(self, request, *args, **kwargs):
+        return self._perform_create_or_update_with_choices(request)
+
+    def _perform_create_or_update_with_choices(self, request):
         self.obj = self.get_object()
         form_class = self.get_form_class()
         form = form_class(
@@ -568,6 +574,7 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
             instance=self.obj,
         )
         restrict_form_fields(form, request.user)
+
         if "content_types" in request.POST:
             raw_cts = request.POST.getlist("content_types")
             try:
@@ -579,17 +586,42 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
 
         if form.is_valid():
             try:
-                response = self.form_valid(form)
-                choices = self.get_extra_context(request, form.instance).get("choices")
-                if choices and choices.is_valid():
-                    choices.save()
-                elif choices:
-                    msg = "Errors encountered when saving custom field choices. See below."
-                    logger.debug("%s: %s", msg, choices.errors)
-                    form.add_error(None, msg)
-                    return self.form_invalid(form)
+                with transaction.atomic():
+                    object_created = not form.instance.present_in_database
+                    self._process_create_or_update_form(form)
 
-                return response
+                    # Handle choices formset
+                    choices = self.get_extra_context(request, form.instance).get("choices")
+                    if choices and choices.is_valid():
+                        choices.save()
+                    elif choices:
+                        msg = "Errors encountered when saving custom field choices. See below."
+                        logger.debug("%s: %s", msg, choices.errors)
+                        form.add_error(None, msg)
+                        raise RuntimeError("Choice formset is invalid")
+
+                verb = "Created" if object_created else "Modified"
+                msg = f"{verb} {self.queryset.model._meta.verbose_name}"
+                self.logger.info(f"{msg} {form.instance} (PK: {form.instance.pk})")
+
+                try:
+                    msg = format_html(
+                        '{} <a href="{}">{}</a>',
+                        msg,
+                        form.instance.get_absolute_url(),
+                        form.instance,
+                    )
+                except AttributeError:
+                    msg = format_html("{} {}", msg, form.instance)
+                messages.success(request, msg)
+
+                if "_addanother" in request.POST:
+                    if hasattr(form.instance, "clone_fields"):
+                        url = f"{request.path}?{prepare_cloned_fields(form.instance)}"
+                        return redirect(url)
+                    return redirect(request.get_full_path())
+
+                return redirect(self.success_url)
 
             except ObjectDoesNotExist:
                 msg = "Object save failed due to object-level permissions violation"
@@ -613,9 +645,6 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
         else:
             logger.warning("Form invalid: %s", form.errors.as_json())
             return self.form_invalid(form)
-
-    def perform_update(self, request, *args, **kwargs):
-        return self.perform_create(request, *args, **kwargs)
 
 
 #
