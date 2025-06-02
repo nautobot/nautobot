@@ -184,9 +184,9 @@ def consolidate_bulk_action_buttons(context):
         </button>
     """
 
-    edit_button_classes = "btn btn-sm btn-warning btn-bulk-action"
-    delete_button_classes = "btn btn-sm btn-danger btn-bulk-action"
-    static_group_button_classes = "btn btn-sm btn-primary btn-bulk-action"
+    edit_button_classes = "btn btn-sm btn-warning btn-bulk-modify"
+    delete_button_classes = "btn btn-sm btn-danger btn-bulk-modify"
+    static_group_button_classes = "btn btn-sm btn-primary btn-bulk-modify"
     static_group_icon = "mdi mdi-group"
 
     if bulk_action_button_count > 1:

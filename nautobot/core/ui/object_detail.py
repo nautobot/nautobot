@@ -18,7 +18,7 @@ from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, format_html_join
 from django_tables2 import RequestConfig
 
-from nautobot.core.choices import ButtonColorChoices
+from nautobot.core.choices import ButtonActionColorChoices, ButtonColorChoices
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags.helpers import (
     badge,
@@ -311,6 +311,65 @@ class FormButton(Button):
             **super().get_extra_context(context),
             "form_id": self.form_id,
         }
+
+
+class BulkActionButton(FormButton):
+    LABEL_VERB = "Edit"
+
+    def __init__(self, *args, form_id, link_name, model, **kwargs):
+        self.model = model
+        size = kwargs.pop("size", "xs")
+        verb = kwargs.pop("verb", self.LABEL_VERB)
+        attributes = kwargs.pop("attributes", {})
+        attributes.update(
+            {
+                "data-form-id": form_id,
+                "data-label-verb": verb,
+                "data-label-object-singular": self.model._meta.verbose_name,
+                "data-label-object-plural": self.model._meta.verbose_name_plural,
+                "class": "btn-bulk-modify",
+            }
+        )
+        label = f"{verb} {self.model._meta.verbose_name_plural}"
+        super().__init__(
+            *args, form_id=form_id, link_name=link_name, label=label, size=size, attributes=attributes, **kwargs
+        )
+
+
+class BulkDeleteButton(BulkActionButton):
+    LABEL_VERB = "Delete"
+
+    def __init__(self, *args, **kwargs):
+        color = kwargs.pop("color", ButtonActionColorChoices.DELETE)
+        icon = kwargs.pop("icon", "mdi-trash-can-outline")
+        super().__init__(*args, icon=icon, color=color, **kwargs)
+
+
+class BulkEditButton(BulkActionButton):
+    LABEL_VERB = "Edit"
+
+    def __init__(self, *args, **kwargs):
+        color = kwargs.pop("color", ButtonActionColorChoices.EDIT)
+        icon = kwargs.pop("icon", "mdi-pencil")
+        super().__init__(*args, icon=icon, color=color, **kwargs)
+
+
+class BulkRenameButton(BulkActionButton):
+    LABEL_VERB = "Rename"
+
+    def __init__(self, *args, **kwargs):
+        color = kwargs.pop("color", ButtonActionColorChoices.EDIT)
+        icon = kwargs.pop("icon", "mdi-pencil")
+        super().__init__(*args, icon=icon, color=color, **kwargs)
+
+
+class BulkDisconnectButton(BulkActionButton):
+    LABEL_VERB = "Disconnect"
+
+    def __init__(self, *args, **kwargs):
+        color = kwargs.pop("color", ButtonActionColorChoices.DISCONNECT)
+        icon = kwargs.pop("icon", "mdi-ethernet-cable-off")
+        super().__init__(*args, icon=icon, color=color, **kwargs)
 
 
 class Tab(Component):

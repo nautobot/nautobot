@@ -91,9 +91,28 @@ function initializeBulkActionButtons(context){
     
     function setupBulkActionButton(button, form) {
         function updateButtonState() {
-            var checkedBoxes = form.find('input:checkbox[name=pk]:checked');
-            button.prop('disabled', !checkedBoxes.length);
+            const checked = form.find('input:checkbox[name=pk]:checked').length;
+            button.prop('disabled', !checked);
+            const iconHTML = button.find('span.mdi').prop('outerHTML');
+            const verb = button.data('label-verb');
+            const singular = button.data('label-object-singular');
+            const plural = button.data('label-object-plural');
+            let tooltip = 'Select items first';
+            
+            if (verb && singular && plural) {
+                const object = checked === 1 ? singular : plural;
+                const countText = checked > 0 ? ` ${checked}` : '';
+                button.html(`${iconHTML} ${verb}${countText} ${object}`);
+                tooltip = `Select ${plural} to ${verb.toLowerCase()}`;
+            }
+            if (!checked) {
+                button.prop('title', tooltip);
+                button.tooltip();
+            } else {
+                button.tooltip('destroy');
+            }
         }
+        
         updateButtonState();
         form.find('input:checkbox[name=pk]').on('change', updateButtonState);
         form.find('input:checkbox.toggle, #select_all').on('change', updateButtonState);
@@ -102,13 +121,13 @@ function initializeBulkActionButtons(context){
     // Handle regular bulk action buttons within forms
     this_context.find('form').each(function() {
         var form = $(this);
-        form.find('.btn-bulk-action').each(function() {
+        form.find('.btn-bulk-modify').each(function() {
             setupBulkActionButton($(this), form);
         });
     });
     
     // Handle buttons that reference forms via data-form-id
-    this_context.find('button[data-form-id].btn-bulk-action').each(function() {
+    this_context.find('button[data-form-id].btn-bulk-modify').each(function() {
         setupBulkActionButton($(this), $('#' + $(this).data('form-id')));
     });
 }

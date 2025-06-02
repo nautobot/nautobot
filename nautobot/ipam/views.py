@@ -20,7 +20,6 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from nautobot.cloud.tables import CloudNetworkTable
-from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
 from nautobot.core.models.querysets import count_related
 from nautobot.core.ui import object_detail
@@ -1132,27 +1131,19 @@ class VLANGroupUIViewSet(NautobotUIViewSet):
                 add_button_route=None,
                 form_id="vlan_form",
                 footer_buttons=[
-                    object_detail.FormButton(
+                    object_detail.BulkEditButton(
                         link_name="ipam:vlan_bulk_edit",
                         link_includes_pk=False,
-                        label="Edit Selected",
-                        color=ButtonActionColorChoices.EDIT,
-                        icon="mdi-pencil",
-                        size="xs",
+                        model=VLAN,
                         form_id="vlan_form",
                         weight=200,
-                        attributes={"class": "btn-bulk-action"},
                     ),
-                    object_detail.FormButton(
+                    object_detail.BulkDeleteButton(
                         link_name="ipam:vlan_bulk_delete",
                         link_includes_pk=False,
-                        label="Delete Selected",
-                        color=ButtonActionColorChoices.DELETE,
-                        icon="mdi-trash-can-outline",
-                        size="xs",
+                        model=VLAN,
                         form_id="vlan_form",
                         weight=100,
-                        attributes={"class": "btn-bulk-action"},
                     ),
                 ],
             ),
