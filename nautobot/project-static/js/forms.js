@@ -102,22 +102,14 @@ function initializeBulkActionButtons(context){
     // Handle regular bulk action buttons within forms
     this_context.find('form').each(function() {
         var form = $(this);
-        var bulkActionButtons = form.find('.btn-bulk-action');
-        
-        bulkActionButtons.each(function() {
+        form.find('.btn-bulk-action').each(function() {
             setupBulkActionButton($(this), form);
         });
     });
     
     // Handle buttons that reference forms via data-form-id
     this_context.find('button[data-form-id].btn-bulk-action').each(function() {
-        var button = $(this);
-        var formId = button.data('form-id');
-        var form = $('#' + formId);
-        
-        if (form.length) {
-            setupBulkActionButton(button, form);
-        }
+        setupBulkActionButton($(this), $('#' + $(this).data('form-id')));
     });
 }
 
