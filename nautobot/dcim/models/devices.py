@@ -571,9 +571,9 @@ class Device(PrimaryModel, ConfigContextModel):
     def cluster(self):
         """
         Returns the first cluster assigned to this device.
+        Deprecated. Use `clusters` instead.
 
-        This property is maintained for backward compatibility only.
-        New code should use the `clusters` relationship instead.
+        TODO: Remove this property in v3.0.0
         """
         # Ensures that the first cluster assigned to the device is returned for maximum
         # backward compatibility.
@@ -583,9 +583,9 @@ class Device(PrimaryModel, ConfigContextModel):
     def cluster(self, value):
         """
         Sets the clusters field to a single value, replacing any existing values.
+        Deprecated. Use `clusters` instead.
 
-        This property is maintained for backward compatibility only.
-        New code should use the `clusters` relationship instead.
+        TODO: Remove this property in v3.0.0
         """
         if value is None:
             self.clusters.clear()
