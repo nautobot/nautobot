@@ -97,7 +97,7 @@ function initializeBulkActionButtons(context){
             const verb = button.data('label-verb');
             const singular = button.data('label-object-singular');
             const plural = button.data('label-object-plural');
-            let tooltip = 'Select items first';
+            let tooltip = 'Select items to modify';
             
             if (verb && singular && plural) {
                 const object = checked === 1 ? singular : plural;
