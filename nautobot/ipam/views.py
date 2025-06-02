@@ -1141,6 +1141,7 @@ class VLANGroupUIViewSet(NautobotUIViewSet):
                         size="xs",
                         form_id="vlan_form",
                         weight=200,
+                        attributes={"class": "btn-bulk-action"},
                     ),
                     object_detail.FormButton(
                         link_name="ipam:vlan_bulk_delete",
@@ -1151,6 +1152,7 @@ class VLANGroupUIViewSet(NautobotUIViewSet):
                         size="xs",
                         form_id="vlan_form",
                         weight=100,
+                        attributes={"class": "btn-bulk-action"},
                     ),
                 ],
             ),
