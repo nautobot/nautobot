@@ -51,6 +51,7 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     power_panel = tables.Column(linkify=True)
+    destination_panel = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
     type = ChoiceFieldColumn()
     max_utilization = tables.TemplateColumn(template_code="{{ value }}%")
@@ -63,6 +64,7 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
             "pk",
             "name",
             "power_panel",
+            "destination_panel",
             "rack",
             "status",
             "type",

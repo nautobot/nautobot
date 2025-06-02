@@ -19,6 +19,12 @@
                     <td>Power Panel</td>
                     <td>{{ object.power_panel|hyperlinked_object }}</td>
                 </tr>
+                {% if object.destination_panel %}
+                <tr>
+                    <td>Destination Panel</td>
+                    <td>{{ object.destination_panel|hyperlinked_object }}</td>
+                </tr>
+                {% endif %}
                 <tr>
                     <td>Rack</td>
                     <td>{{ object.rack|hyperlinked_object }}</td>

@@ -4496,10 +4496,13 @@ class PowerFeedForm(NautobotModelForm):
         initial_params={"power_panels": "$power_panel"},
     )
     power_panel = DynamicModelChoiceField(queryset=PowerPanel.objects.all(), query_params={"location": "$location"})
+    destination_panel = DynamicModelChoiceField(
+        queryset=PowerPanel.objects.all(),
+        required=False,
+    )
     rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         required=False,
-        query_params={"location": "$location"},
     )
     comments = CommentField()
 
@@ -4508,6 +4511,7 @@ class PowerFeedForm(NautobotModelForm):
         fields = [
             "location",
             "power_panel",
+            "destination_panel",
             "rack",
             "name",
             "status",
@@ -4530,6 +4534,7 @@ class PowerFeedForm(NautobotModelForm):
 class PowerFeedBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=PowerFeed.objects.all(), widget=forms.MultipleHiddenInput)
     power_panel = DynamicModelChoiceField(queryset=PowerPanel.objects.all(), required=False)
+    destination_panel = DynamicModelChoiceField(queryset=PowerPanel.objects.all(), required=False)
     rack = DynamicModelChoiceField(queryset=Rack.objects.all(), required=False)
     type = forms.ChoiceField(
         choices=add_blank_choice(PowerFeedTypeChoices),
@@ -4571,12 +4576,17 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
         null_option="None",
         query_params={"location": "$location"},
     )
+    destination_panel = DynamicModelMultipleChoiceField(
+        queryset=PowerPanel.objects.all(),
+        required=False,
+        label="Destination panel",
+        null_option="None",
+    )
     rack = DynamicModelMultipleChoiceField(
         queryset=Rack.objects.all(),
         required=False,
         label="Rack",
         null_option="None",
-        query_params={"location": "$location"},
     )
     type = forms.ChoiceField(
         choices=add_blank_choice(PowerFeedTypeChoices),

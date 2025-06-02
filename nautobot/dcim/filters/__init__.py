@@ -1659,6 +1659,12 @@ class PowerFeedFilterSet(
         to_field_name="name",
         label="Power panel (name or ID)",
     )
+    destination_panel = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
+        queryset=PowerPanel.objects.all(),
+        to_field_name="name",
+        label="Destination panel (name or ID)",
+    )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     rack = NaturalKeyOrPKMultipleChoiceFilter(
         prefers_id=True,

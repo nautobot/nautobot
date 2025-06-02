@@ -98,7 +98,20 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
     An electrical circuit delivered from a PowerPanel.
     """
 
-    power_panel = models.ForeignKey(to="PowerPanel", on_delete=models.PROTECT, related_name="power_feeds")
+    power_panel = models.ForeignKey(
+        to="PowerPanel",
+        on_delete=models.PROTECT,
+        related_name="power_feeds",
+        help_text="Source panel that originates this power feed"
+    )
+    destination_panel = models.ForeignKey(
+        to="PowerPanel",
+        on_delete=models.PROTECT,
+        blank=True,
+        null=True,
+        related_name="feeders",
+        help_text="Destination panel for panel-to-panel power distribution"
+    )
     rack = models.ForeignKey(to="Rack", on_delete=models.PROTECT, blank=True, null=True, related_name="power_feeds")
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     status = StatusField(blank=False, null=False)
@@ -129,6 +142,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
 
     clone_fields = [
         "power_panel",
+        "destination_panel",
         "rack",
         "status",
         "type",
@@ -150,16 +164,15 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
     def clean(self):
         super().clean()
 
-        # Rack must belong to same Location as PowerPanel
-        if self.rack and self.rack.location != self.power_panel.location:  # pylint: disable=no-member
-            raise ValidationError(
-                f"Rack {self.rack} ({self.rack.location}) and "  # pylint: disable=no-member
-                f"power panel {self.power_panel} ({self.power_panel.location}) are in different locations"
-            )
-
         # AC voltage cannot be negative
         if self.voltage < 0 and self.supply == PowerFeedSupplyChoices.SUPPLY_AC:
             raise ValidationError({"voltage": "Voltage cannot be negative for AC supply"})
+
+        # Destination panel validation
+        if self.destination_panel:
+            # Cannot feed into the same panel
+            if self.destination_panel == self.power_panel:
+                raise ValidationError({"destination_panel": "A power feed cannot connect a panel to itself"})
 
     def save(self, *args, **kwargs):
         # Cache the available_power property on the instance

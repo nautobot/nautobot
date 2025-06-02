@@ -4152,6 +4152,15 @@ class PowerPanelUIViewSet(NautobotUIViewSet):
                 exclude_columns=["power_panel"],
                 add_button_route=None,
             ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=200,
+                table_class=tables.PowerFeedTable,
+                table_filter="destination_panel",
+                table_title="Incoming Feeds",
+                exclude_columns=["destination_panel"],
+                add_button_route=None,
+            ),
         )
     )
 
