@@ -68,6 +68,7 @@ class ApprovableModelMixin(models.Model):
             object_under_review_content_type=ContentType.objects.get_for_model(self),
             object_under_review_object_id=self.pk,
             current_state=ApprovalWorkflowStateChoices.PENDING,
+            user=self.user,
         )
 
         # Create workflow stages if the definition has any
