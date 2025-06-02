@@ -221,6 +221,25 @@
                     </table>
                 </div>
             {% endif %}
+            {% if object.vpn_tunnel_endpoints_src_int %}
+                <div class="panel panel-default">
+                    <div class="panel-heading"><strong>VPN EndPoint</strong></div>
+                    <table class="table table-hover table-headings panel-body">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Role</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>{{ object.vpn_tunnel_endpoints_src_int|hyperlinked_object }}</td>
+                                <td>{{ object.vpn_tunnel_endpoints_src_int.role|placeholder }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
 {% endblock content_right_page %}
 
 {% block content_full_width_page %}
