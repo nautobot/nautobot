@@ -1725,7 +1725,7 @@ class DeviceView(generic.ObjectView):
                 weight=100,
                 color=ButtonColorChoices.BLUE,
                 label="Add Components",
-                attributes={"id": "device-add-components-button"},
+                attributes={"id": "device-add-components-button", "class": "btn-bulk-action"},
                 icon="mdi-plus-thick",
                 required_permissions=["dcim.change_device"],
                 children=(

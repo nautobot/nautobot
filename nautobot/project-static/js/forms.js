@@ -86,6 +86,25 @@ function initializeCheckboxes(context){
     });
 }
 
+function initializeBulkActionButtons(context){
+    this_context = $(context);
+    
+    this_context.find('form').each(function() {
+        var form = $(this);
+        var bulkActionButtons = form.find('.btn-bulk-action');
+        
+        function updateBulkActionButtons() {
+            var checkedBoxes = form.find('input:checkbox[name=pk]:checked');
+            bulkActionButtons.prop('disabled', !checkedBoxes.length);
+        }
+        
+        updateBulkActionButtons();
+        
+        form.find('input:checkbox[name=pk]').on('change', updateBulkActionButtons);
+        form.find('input:checkbox.toggle, #select_all').on('change', updateBulkActionButtons);
+    });
+}
+
 function repopulateAutoField(context, targetField, sourceFields, maxLength, transformValue = null){
    const newValues = sourceFields.map(function(sourceFieldName){
         const sourceFieldId = `id_${sourceFieldName}`;
@@ -940,6 +959,7 @@ function initializeInputs(context) {
     const this_context = $(context);
     initializeStaticChoiceSelection(this_context)
     initializeCheckboxes(this_context)
+    initializeBulkActionButtons(this_context)
     initializeSlugField(this_context)
     initializeAutoPopulateField(this_context)
     initializeFormActionClick(this_context)
