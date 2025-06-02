@@ -2,17 +2,17 @@
 ---
 services:
   nautobot:
-    ports:
+    ports: !override
       - "8080"
       - "6899"
   celery_worker:
-    ports:
+    ports: !override
       - "8080"
       - "6898"
   mkdocs:
-    ports:
+    ports: !override
       - "8001"
   selenium:
-    ports:
+    ports: !override
         - "4444"
         - "5900"
