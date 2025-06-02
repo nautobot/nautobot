@@ -93,13 +93,6 @@ function initializeBulkActionButtons(context){
         function updateButtonState() {
             var checkedBoxes = form.find('input:checkbox[name=pk]:checked');
             button.prop('disabled', !checkedBoxes.length);
-            if (!checkedBoxes.length) {
-                button.prop('title', 'Select an item');
-                button.tooltip();
-            } else {
-                button.prop('title', '');
-                button.tooltip('destroy')
-            }
         }
         updateButtonState();
         form.find('input:checkbox[name=pk]').on('change', updateButtonState);
