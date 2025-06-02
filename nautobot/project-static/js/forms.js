@@ -112,7 +112,7 @@ function initializeBulkActionButtons(context){
     // Handle buttons that reference forms via data-form-id
     this_context.find('button[data-form-id].btn-bulk-action').each(function() {
         var button = $(this);
-        var formId = button.attr('data-form-id');
+        var formId = button.data('form-id');
         var form = $('#' + formId);
         
         if (form.length) {
