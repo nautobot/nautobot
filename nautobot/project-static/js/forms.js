@@ -89,19 +89,42 @@ function initializeCheckboxes(context){
 function initializeBulkActionButtons(context){
     this_context = $(context);
     
+    function setupBulkActionButton(button, form) {
+        function updateButtonState() {
+            var checkedBoxes = form.find('input:checkbox[name=pk]:checked');
+            button.prop('disabled', !checkedBoxes.length);
+            if (!checkedBoxes.length) {
+                button.prop('title', 'Select an item');
+                button.tooltip();
+            } else {
+                button.prop('title', '');
+                button.tooltip('destroy')
+            }
+        }
+        updateButtonState();
+        form.find('input:checkbox[name=pk]').on('change', updateButtonState);
+        form.find('input:checkbox.toggle, #select_all').on('change', updateButtonState);
+    }
+    
+    // Handle regular bulk action buttons within forms
     this_context.find('form').each(function() {
         var form = $(this);
         var bulkActionButtons = form.find('.btn-bulk-action');
         
-        function updateBulkActionButtons() {
-            var checkedBoxes = form.find('input:checkbox[name=pk]:checked');
-            bulkActionButtons.prop('disabled', !checkedBoxes.length);
+        bulkActionButtons.each(function() {
+            setupBulkActionButton($(this), form);
+        });
+    });
+    
+    // Handle buttons that reference forms via data-form-id
+    this_context.find('button[data-form-id].btn-bulk-action').each(function() {
+        var button = $(this);
+        var formId = button.attr('data-form-id');
+        var form = $('#' + formId);
+        
+        if (form.length) {
+            setupBulkActionButton(button, form);
         }
-        
-        updateBulkActionButtons();
-        
-        form.find('input:checkbox[name=pk]').on('change', updateBulkActionButtons);
-        form.find('input:checkbox.toggle, #select_all').on('change', updateBulkActionButtons);
     });
 }
 

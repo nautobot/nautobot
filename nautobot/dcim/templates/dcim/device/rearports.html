@@ -17,18 +17,18 @@
             {% include 'responsive_table.html' with table=rearport_table %}
             <div class="panel-footer noprint">
                 {% if perms.dcim.change_rearport %}
-                    <button type="submit" name="_rename" formaction="{% url 'dcim:rearport_bulk_rename' %}?return_url={% url 'dcim:device_rearports' pk=object.pk %}" class="btn btn-warning btn-xs">
+                    <button type="submit" name="_rename" formaction="{% url 'dcim:rearport_bulk_rename' %}?return_url={% url 'dcim:device_rearports' pk=object.pk %}" class="btn btn-warning btn-xs btn-bulk-action">
                         <span class="mdi mdi-pencil" aria-hidden="true"></span> Rename
                     </button>
-                    <button type="submit" name="_edit" formaction="{% url 'dcim:rearport_bulk_edit' %}?device={{ object.pk }}&return_url={% url 'dcim:device_rearports' pk=object.pk %}" class="btn btn-warning btn-xs">
+                    <button type="submit" name="_edit" formaction="{% url 'dcim:rearport_bulk_edit' %}?device={{ object.pk }}&return_url={% url 'dcim:device_rearports' pk=object.pk %}" class="btn btn-warning btn-xs btn-bulk-action">
                         <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
                     </button>
-                    <button type="submit" name="_disconnect" formaction="{% url 'dcim:rearport_bulk_disconnect' %}?return_url={% url 'dcim:device_rearports' pk=object.pk %}" class="btn btn-danger btn-xs">
+                    <button type="submit" name="_disconnect" formaction="{% url 'dcim:rearport_bulk_disconnect' %}?return_url={% url 'dcim:device_rearports' pk=object.pk %}" class="btn btn-danger btn-xs btn-bulk-action">
                         <span class="mdi mdi-ethernet-cable-off" aria-hidden="true"></span> Disconnect
                     </button>
                 {% endif %}
                 {% if perms.dcim.delete_rearport %}
-                    <button type="submit" formaction="{% url 'dcim:rearport_bulk_delete' %}?return_url={% url 'dcim:device_rearports' pk=object.pk %}" class="btn btn-danger btn-xs">
+                    <button type="submit" formaction="{% url 'dcim:rearport_bulk_delete' %}?return_url={% url 'dcim:device_rearports' pk=object.pk %}" class="btn btn-danger btn-xs btn-bulk-action">
                         <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete
                     </button>
                 {% endif %}

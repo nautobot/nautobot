@@ -124,6 +124,7 @@ class ClusterUIViewSet(NautobotUIViewSet):
                         color=ButtonActionColorChoices.DELETE,
                         icon="mdi-trash-can-outline",
                         size="xs",
+                        attributes={"class": "btn-bulk-action"},
                     ),
                     object_detail.Button(
                         link_name="virtualization:cluster_add_devices",
