@@ -579,6 +579,8 @@ class ApprovalWorkflowTriggerAPITest(APITestCase):
 
         scheduled_job.refresh_from_db()
         self.assertTrue(scheduled_job.enabled)
+        self.assertEqual(scheduled_job.approved_by_user, approval_workflow.user)
+        self.assertEqual(scheduled_job.approved_at, approval_workflow.decision_date)
 
     def test_approval_workflow_denied_for_scheduled_job(self):
         """
@@ -607,9 +609,7 @@ class ApprovalWorkflowTriggerAPITest(APITestCase):
         active_stage.save()
         approval_workflow.save()
         self.assertEqual(approval_workflow.current_state, choices.ApprovalWorkflowStateChoices.DENIED)
-
-        scheduled_job.refresh_from_db()
-        self.assertFalse(scheduled_job.enabled)
+        self.assertEqual(models.ScheduledJob.objects.count(), 0)
 
 
 class ApprovalWorkflowStageAPITest(ApprovalWorkflowTestMixin, APIViewTestCases.APIViewTestCase):

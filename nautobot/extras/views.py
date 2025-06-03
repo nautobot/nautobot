@@ -1881,33 +1881,6 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 
         return job_model
 
-    def _build_schedule_job_params(
-        self,
-        job_model,
-        request,
-        schedule_form,
-        job_form,
-        job_class,
-        schedule_type,
-        job_queue,
-        profile,
-        ignore_singleton_lock,
-    ):
-        """Build common parameters for job creation."""
-        return {
-            "job_model": job_model,
-            "user": request.user,
-            "name": schedule_form.cleaned_data.get("_schedule_name"),
-            "start_time": schedule_form.cleaned_data.get("_schedule_start_time"),
-            "interval": schedule_type,
-            "crontab": schedule_form.cleaned_data.get("_recurrence_custom_time"),
-            "approval_required": job_model.approval_required,
-            "job_queue": job_queue,
-            "profile": profile,
-            "ignore_singleton_lock": ignore_singleton_lock,
-            **job_class.serialize_data(job_form.cleaned_data),
-        }
-
     def _handle_approval_workflow_response(self, request, scheduled_job, return_url):
         """Handle response for jobs requiring approval workflow."""
         messages.success(request, f"Job '{scheduled_job.name}' successfully submitted for approval")
@@ -2062,43 +2035,44 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             ignore_singleton_lock = job_form.cleaned_data.pop("_ignore_singleton_lock", False)
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
-            # if (not dryrun and job_model.approval_required) or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
-            print(dryrun)  # TBD: how dryrun should affect for this process ?
-            # Create scheduled job with approval
-            schedule_job_params = self._build_schedule_job_params(
-                job_model,
-                request,
-                schedule_form,
-                job_form,
-                job_class,
-                schedule_type,
-                job_queue,
-                profile,
-                ignore_singleton_lock,
-            )
-            # Step 1: Check if approval is required
-            if job_model.approval_required:
-                # Step 2: Check if approval workflow is defined
-                if not ApprovalWorkflowDefinition.objects.find_for_model(ScheduledJob):
-                    messages.error(
-                        request,
-                        "Job was not successfully submitted for approval. No approval workflow definition is defined for it.",
-                    )
-                    return redirect(return_url or request.path)
-                scheduled_job = ScheduledJob.create_schedule(**schedule_job_params)
-                return self._handle_approval_workflow_response(request, scheduled_job, return_url)
-
-            # Step 3: If approval is not required
-            elif schedule_type in JobExecutionType.SCHEDULE_CHOICES:
-                scheduled_job = ScheduledJob.create_schedule(**schedule_job_params)
-                return self._handle_scheduled_job_response(request, scheduled_job, return_url)
-
-            # Step 4: Immediate execution (no schedule, no approval)
-            else:
-                # Enqueue job for immediate execution
-                return self._handle_immediate_execution(
-                    request, job_model, job_class, job_form, profile, ignore_singleton_lock, job_queue, return_url
+            if not dryrun:
+                scheduled_job = ScheduledJob.create_schedule(
+                    job_model,
+                    request.user,
+                    name=schedule_form.cleaned_data.get("_schedule_name"),
+                    start_time=schedule_form.cleaned_data.get("_schedule_start_time"),
+                    interval=schedule_type,
+                    crontab=schedule_form.cleaned_data.get("_recurrence_custom_time"),
+                    approval_required=job_model.approval_required,
+                    job_queue=job_queue,
+                    profile=profile,
+                    ignore_singleton_lock=ignore_singleton_lock,
+                    validated_save=False,
+                    **job_class.serialize_data(job_form.cleaned_data),
                 )
+                # Step 1: Check if approval is required
+                if job_model.approval_required:
+                    # Step 2: Check if approval workflow is defined
+                    if not ApprovalWorkflowDefinition.objects.find_for_model(scheduled_job):
+                        messages.error(
+                            request,
+                            "Job was not successfully submitted for approval. No approval workflow definition is defined for it.",
+                        )
+                        return redirect(return_url or request.path)
+                    scheduled_job.validated_save()
+                    return self._handle_approval_workflow_response(request, scheduled_job, return_url)
+
+                # Step 3: If approval is not required
+                elif schedule_type in JobExecutionType.SCHEDULE_CHOICES:
+                    scheduled_job.validated_save()
+                    return self._handle_scheduled_job_response(request, scheduled_job, return_url)
+
+                # Step 4: Immediate execution (no schedule, no approval)
+                else:
+                    # Enqueue job for immediate execution
+                    return self._handle_immediate_execution(
+                        request, job_model, job_class, job_form, profile, ignore_singleton_lock, job_queue, return_url
+                    )
 
         if return_url:
             return redirect(return_url)

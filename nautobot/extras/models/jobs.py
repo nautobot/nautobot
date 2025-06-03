@@ -29,8 +29,10 @@ from nautobot.core.celery import (
     setup_nautobot_job_logging,
 )
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.events import publish_event
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models.utils import serialize_object_v2
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import (
     ButtonClassChoices,
@@ -1257,15 +1259,19 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         self.approval_required = True
         self.save()
 
-    def on_workflow_approved(self):
+    def on_workflow_approved(self, approval_workflow):
         """When approved, set enabled to True."""
+        self.approved_by_user = approval_workflow.user
+        self.approved_at = approval_workflow.decision_date
         self.enabled = True
         self.save()
 
+        publish_event_payload = {"data": serialize_object_v2(self)}
+        publish_event(topic="nautobot.jobs.approval.approved", payload=publish_event_payload)
+
     def on_workflow_denied(self):
         """When denied, set enabled to False."""
-        self.enabled = False
-        self.save()
+        self.delete()
 
     @property
     def schedule(self):
@@ -1333,6 +1339,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         job_queue: Optional[JobQueue] = None,
         task_queue: Optional[str] = None,  # deprecated!
         ignore_singleton_lock: bool = False,
+        validated_save: bool = True,
         **job_kwargs,
     ):
         """
@@ -1419,7 +1426,8 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
             crontab=crontab,
             job_queue=job_queue,
         )
-        scheduled_job.validated_save()
+        if validated_save:
+            scheduled_job.validated_save()
         return scheduled_job
 
     def to_cron(self):
