@@ -1,5 +1,6 @@
 from django.conf import settings as django_settings
 
+from nautobot.core.forms.search import search_model_choices as search_model_choices_func
 from nautobot.core.settings_funcs import sso_auth_enabled
 
 
@@ -37,6 +38,15 @@ def settings(request):
     return {
         "settings": django_settings,
         "root_template": root_template,
+    }
+
+
+def search_model_choices(request):
+    """
+    Expose data returned by `search_model_choices()` function for global search.
+    """
+    return {
+        "search_model_choices": search_model_choices_func(),
     }
 
 

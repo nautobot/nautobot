@@ -1,12 +1,27 @@
 {% load helpers %}
 
 {% if request.user.is_authenticated %}
-    <form action="{% url 'search' %}" class="col text-center" method="get" id="header_search" role="search">
+    <form action="{% url 'search' %}" class="col text-center" id="header_search" method="get" role="search">
         <label class="position-relative w-100">
-            <input class="form-control" />
-            <span class="align-items-center pe-none position-absolute d-flex gap-6 mx-12 my-6 top-0">
-                <i class="mdi mdi-magnify text-secondary"></i>
-                <span class="align-items-center d-inline-flex gap-4 text-secondary">
+            <input class="form-control nb-color-transparent" name="q" style="padding-inline-start: calc(0.75rem + 1.25rem + 0.375rem);" type="search" value="{{ request.GET.q }}" />
+            <span class="align-items-center d-inline-flex gap-6 overflow-hidden px-12 py-6 pe-none position-absolute start-0 top-0 user-select-none w-100">
+                <span class="mdi mdi-magnify text-secondary d-inline-flex"></span>
+                {% if request.GET.obj_type or content_type %}
+                    {% for app_config, model_tuples in search_model_choices %}
+                        {% if app_config and model_tuples %}
+                            {% for modelname, verbose_name_plural in model_tuples %}
+                                {% if modelname == request.GET.obj_type or modelname == content_type.model %}
+                                    <span class="badge border" data-nb-modelname="{{ modelname }}">
+                                        in: {{verbose_name_plural|bettertitle}}
+                                        <input name="obj_type" type="hidden" value="{{ modelname }}" />
+                                        <button><span class="mdi mdi-close"></span></button>
+                                    </span>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                <span class="align-items-center d-inline-flex gap-4 text-nowrap text-secondary{% if request.GET.q %} invisible{% else %}{% endif %}">
                     Press <kbd>⌘K</kbd> to search
                 </span>
             </span>

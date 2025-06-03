@@ -46,7 +46,7 @@ from nautobot.core.forms.forms import (
     ReturnURLForm,
     TableConfigForm,
 )
-from nautobot.core.forms.search import SearchForm
+from nautobot.core.forms.search import search_model_choices, SearchForm
 from nautobot.core.forms.utils import (
     add_blank_choice,
     add_field_to_filter_form_class,
@@ -144,4 +144,5 @@ __all__ = (
     "parse_alphanumeric_range",
     "parse_numeric_range",
     "restrict_form_fields",
+    "search_model_choices",
 )

@@ -39,3 +39,27 @@ export const removeElementClasses = (element, ...ignore) =>
   [...element.classList.entries()]
     .filter(([, className]) => !ignore.includes(className))
     .forEach(([, className]) => element.classList.remove(className));
+
+/**
+ * JavaScript re-implementation of Nautobot `bettertitle` helper function.
+ * Alternative to the Django builtin `title()`; capitalizes words without replacing letters that are already uppercase.
+ * @xample:
+ * // Convert `'IP address'` to Title Case, return `'IP Address'`.
+ * bettertitle('IP address');
+ * @param {string} value - String to convert to Title Case.
+ * @returns {string} String in Title Case format.
+ */
+export const bettertitle = (value) => value.replace(/(^|\s)\w/g, (match) => match.toUpperCase());
+
+/**
+ * Convert `px` pixel value to `rem` units.
+ * @example
+ * // Convert `20` (`px`) to `rem`, return `1.25` (`rem`).
+ * rem(20);
+ * @param {number} px - Pixel value.
+ * @returns {number} Given pixel value converted to `rem` units.
+ */
+export const rem = (px) => {
+  const rootFontSize = window.getComputedStyle(document.documentElement).fontSize;
+  return px / parseInt(rootFontSize, 10);
+};
