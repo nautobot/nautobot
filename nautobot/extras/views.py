@@ -180,16 +180,14 @@ class ComputedFieldUIViewSet(NautobotUIViewSet):
 # have an associated owner, such as a Git repository
 
 
-class ConfigContextListView(generic.ObjectListView):
+class ConfigContextUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ConfigContextBulkEditForm
+    filterset_class = filters.ConfigContextFilterSet
+    filterset_form_class = forms.ConfigContextFilterForm
+    form_class = forms.ConfigContextForm
     queryset = ConfigContext.objects.all()
-    filterset = filters.ConfigContextFilterSet
-    filterset_form = forms.ConfigContextFilterForm
-    table = tables.ConfigContextTable
-    action_buttons = ("add",)
-
-
-class ConfigContextView(generic.ObjectView):
-    queryset = ConfigContext.objects.all()
+    serializer_class = serializers.ConfigContextSerializer
+    table_class = tables.ConfigContextTable
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -204,29 +202,6 @@ class ConfigContextView(generic.ObjectView):
             context["format"] = "json"
 
         return context
-
-
-class ConfigContextEditView(generic.ObjectEditView):
-    queryset = ConfigContext.objects.all()
-    model_form = forms.ConfigContextForm
-    template_name = "extras/configcontext_edit.html"
-
-
-class ConfigContextBulkEditView(generic.BulkEditView):
-    queryset = ConfigContext.objects.all()
-    filterset = filters.ConfigContextFilterSet
-    table = tables.ConfigContextTable
-    form = forms.ConfigContextBulkEditForm
-
-
-class ConfigContextDeleteView(generic.ObjectDeleteView):
-    queryset = ConfigContext.objects.all()
-
-
-class ConfigContextBulkDeleteView(generic.BulkDeleteView):
-    queryset = ConfigContext.objects.all()
-    table = tables.ConfigContextTable
-    filterset = filters.ConfigContextFilterSet
 
 
 class ObjectConfigContextView(generic.ObjectView):
