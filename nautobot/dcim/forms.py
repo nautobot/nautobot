@@ -62,6 +62,7 @@ from nautobot.utilities.forms import (
     StaticSelect2,
     StaticSelect2Multiple,
     TagFilterField,
+    BOOLEAN_CHOICES,
 )
 from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.virtualization.models import Cluster, ClusterGroup
@@ -631,6 +632,12 @@ class RackRoleForm(NautobotModelForm):
         ]
 
 
+class RackRoleFilterForm(NautobotFilterForm):
+    model = RackRole
+    q = forms.CharField(required=False, label="Search")
+    color = forms.CharField(max_length=6, required=False, widget=ColorSelect())  # RGB color code
+
+
 class RackRoleCSVForm(CustomFieldModelCSVForm):
     class Meta:
         model = RackRole
@@ -1012,6 +1019,15 @@ class ManufacturerForm(NautobotModelForm):
             "slug",
             "description",
         ]
+
+
+class ManufacturerFilterForm(NautobotFilterForm):
+    model = Manufacturer
+    q = forms.CharField(required=False, label="Search")
+    device_types = DynamicModelMultipleChoiceField(
+        queryset=DeviceType.objects.all(), to_field_name="model", required=False
+    )
+    platforms = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), to_field_name="name", required=False)
 
 
 class ManufacturerCSVForm(CustomFieldModelCSVForm):
@@ -1763,6 +1779,12 @@ class DeviceRoleForm(NautobotModelForm):
         ]
 
 
+class DeviceRoleFilterForm(NautobotFilterForm):
+    model = DeviceRole
+    q = forms.CharField(required=False, label="Search")
+    vm_role = forms.ChoiceField(choices=BOOLEAN_CHOICES, required=False, label="VM Role")
+
+
 class DeviceRoleCSVForm(CustomFieldModelCSVForm):
     class Meta:
         model = DeviceRole
@@ -1795,6 +1817,13 @@ class PlatformForm(NautobotModelForm):
         widgets = {
             "napalm_args": SmallTextarea(),
         }
+
+
+class PlatformFilterForm(NautobotFilterForm):
+    model = Platform
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(required=False)
+    network_driver = forms.CharField(required=False)
 
 
 class PlatformCSVForm(CustomFieldModelCSVForm):
