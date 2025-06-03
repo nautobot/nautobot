@@ -6,6 +6,7 @@ import os
 
 from django import forms
 from django.core.exceptions import ValidationError
+from jinja2.sandbox import unsafe
 
 from nautobot.extras.secrets import SecretsProvider
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretValueNotFoundError
@@ -22,6 +23,7 @@ class EnvironmentVariableSecretsProvider(SecretsProvider):
         variable = forms.CharField(required=True, help_text="Environment variable name")
 
     @classmethod
+    @unsafe
     def get_value_for_secret(cls, secret, obj=None, **kwargs):
         """Retrieve the appropriate environment variable's value."""
         rendered_parameters = secret.rendered_parameters(obj=obj)
@@ -57,6 +59,7 @@ class TextFileSecretsProvider(SecretsProvider):
             return self.cleaned_data
 
     @classmethod
+    @unsafe
     def get_value_for_secret(cls, secret, obj=None, **kwargs):
         """
         Retrieve the appropriate text file's contents.

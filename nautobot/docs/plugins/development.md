@@ -673,6 +673,7 @@ For a simple (insecure!) example, we could define a "constant-value" provider th
 ```python
 # secrets.py
 from django import forms
+from jinja2.sandbox import unsafe
 from nautobot.apps.secrets import SecretsProvider
 from nautobot.utilities.forms import BootstrapMixin
 
@@ -697,6 +698,7 @@ class ConstantValueSecretsProvider(SecretsProvider):
         )
 
     @classmethod
+    @unsafe  # prevent this function from being called by a Jinja2 template
     def get_value_for_secret(cls, secret, obj=None, **kwargs):
         """
         Return the value defined in the Secret.parameters "constant" key.

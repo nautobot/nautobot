@@ -130,6 +130,8 @@ class GitRepository(PrimaryModel):
         """
         self._dryrun = True
 
+    set_dryrun.alters_data = True
+
     def save(self, *args, trigger_resync=True, **kwargs):
         if self.__initial_token and self._token == self.TOKEN_PLACEHOLDER:
             # User edited the repo but did NOT specify a new token value. Make sure we keep the existing value.

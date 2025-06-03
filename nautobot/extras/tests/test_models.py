@@ -86,6 +86,13 @@ class ComputedFieldTest(TestCase):
             fallback_value="An error occurred while rendering this template.",
             weight=50,
         )
+        self.evil_computed_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Secret),
+            key="evil_computed_field",
+            label="Evil Computed Field",
+            template="{{ obj.get_value() }}",
+            weight=666,
+        )
         self.blank_fallback_value = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Site),
             slug="blank_fallback_value",
@@ -94,6 +101,18 @@ class ComputedFieldTest(TestCase):
             weight=50,
         )
         self.site1 = Site.objects.first()
+        self.secret = Secret.objects.create(
+            name="Environment Variable Secret",
+            provider="environment-variable",
+            parameters={"variable": "NAUTOBOT_ROOT"},
+        )
+        self.secrets_group = SecretsGroup.objects.create(name="Group of Secrets")
+        SecretsGroupAssociation.objects.create(
+            secrets_group=self.secrets_group,
+            secret=self.secret,
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+        )
 
     def test_render_method(self):
         rendered_value = self.good_computed_field.render(context={"obj": self.site1})
@@ -106,6 +125,13 @@ class ComputedFieldTest(TestCase):
     def test_render_method_bad_template(self):
         rendered_value = self.bad_computed_field.render(context={"obj": self.site1})
         self.assertEqual(rendered_value, self.bad_computed_field.fallback_value)
+
+    def test_render_method_evil_template(self):
+        rendered_value = self.evil_computed_field.render(context={"obj": self.secret})
+        self.assertEqual(rendered_value, "")
+        self.evil_computed_field.template = "{{ obj.secrets_groups.first().get_secret_value('Generic', 'secret') }}"
+        rendered_value = self.evil_computed_field.render(context={"obj": self.secret})
+        self.assertEqual(rendered_value, "")
 
 
 class ConfigContextTest(TestCase):

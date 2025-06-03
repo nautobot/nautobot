@@ -78,3 +78,5 @@ class BaseModel(models.Model):
         """
         self.full_clean()
         self.save(*args, **kwargs)
+
+    validated_save.alters_data = True
