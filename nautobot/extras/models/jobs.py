@@ -1271,7 +1271,8 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
 
     def on_workflow_denied(self):
         """When denied, set enabled to False."""
-        self.delete()
+        self.enabled = False
+        self.save()
 
     @property
     def schedule(self):
