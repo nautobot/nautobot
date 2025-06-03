@@ -1189,7 +1189,7 @@ class VLANGroupUIViewSet(NautobotUIViewSet):
 #
 
 
-class VLANUIViewSet(NautobotUIViewSet): # 3.0 TODO: remove, unused BulkImportView
+class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportView
     bulk_update_form_class = forms.VLANBulkEditForm
     filterset_class = filters.VLANFilterSet
     filterset_form_class = forms.VLANFilterForm
