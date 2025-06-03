@@ -40,7 +40,7 @@ export const initializeSearch = () => {
   // Toggle between placeholder and value in global header search input.
   const shouldShowValue = headerSearchInput.value !== '';
   headerSearchInput.classList.toggle('nb-color-transparent', !shouldShowValue);
-  headerSearchInput.style.paddingInlineStart = `calc(${FORM_CONTROL_PADDING_X}rem + ${headerSearchPlaceholder.offsetLeft}px)`;
+  headerSearchInput.style.paddingInlineStart = `${headerSearchPlaceholder.offsetLeft}px`;
   headerSearchPlaceholder.classList.toggle('invisible', shouldShowValue);
 
   const closeSearchPopup = () => {
