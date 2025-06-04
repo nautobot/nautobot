@@ -693,6 +693,20 @@ def get_table_for_model(model):
     return get_related_class_for_model(model, module_name="tables", object_suffix="Table")
 
 
+def get_view_for_model(model, view_type=""):
+    """Return the `UIViewSet` or `<view_type>View` class associated with a given `model`.
+
+    The view class is expected to be in the `views` module within the app associated with the model,
+    and its name is expected to be either `{ModelName}UIViewSet` or `{ModelName}{view_type}View`.
+
+    If neither view class is found, this will return `None`.
+    """
+    result = get_related_class_for_model(model, module_name="views", object_suffix="UIViewSet")
+    if result is None:
+        result = get_related_class_for_model(model, module_name="views", object_suffix=f"{view_type}View")
+    return result
+
+
 def get_url_patterns(urlconf=None, patterns_list=None, base_path="/"):
     """
     Recursively yield a list of registered URL patterns.

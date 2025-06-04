@@ -173,6 +173,12 @@ class CircuitTypeForm(NautobotModelForm):
         ]
 
 
+class CircuitTypeFilterForm(NautobotFilterForm):
+    model = CircuitType
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(required=False)
+
+
 class CircuitTypeCSVForm(CustomFieldModelCSVForm):
     class Meta:
         model = CircuitType

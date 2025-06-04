@@ -181,7 +181,7 @@ class AggregateFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyModelFilt
 class RoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     class Meta:
         model = Role
-        fields = ["id", "name", "slug"]
+        fields = ["id", "name", "slug", "weight"]
 
 
 class PrefixFilterSet(

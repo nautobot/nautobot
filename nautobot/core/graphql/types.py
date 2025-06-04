@@ -56,3 +56,13 @@ class DateType(graphene.Date):
             return date
         else:
             raise GraphQLError(f'Received not compatible date "{date!r}"')
+
+
+class JSON(graphene.Scalar):
+    @staticmethod
+    def serialize_data(dt):
+        return dt
+
+    serialize = serialize_data
+    parse_value = serialize_data
+    parse_literal = serialize_data
