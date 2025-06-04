@@ -3,7 +3,7 @@
 
 {% block extra_nav_tabs %}
         <li role="presentation"{% if request.GET.tab == 'members' %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}#members" onclick="switch_tab(this.href, reload=false)" aria-controls="members" role="tab" data-toggle="tab">
+            <a href="{{ object.get_absolute_url }}#members" onclick="switch_tab(this.href)" aria-controls="members" role="tab" data-toggle="tab">
                 Members {% badge object.count %}
             </a>
         </li>
