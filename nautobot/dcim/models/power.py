@@ -6,7 +6,15 @@ from django.db import models
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.validators import ExclusionValidator
-from nautobot.dcim.choices import PowerFeedPhaseChoices, PowerFeedSupplyChoices, PowerFeedTypeChoices
+from nautobot.dcim.choices import (
+    BreakerPoleChoices,
+    PanelTypeChoices,
+    PanelVoltageChoices,
+    PhaseAssignmentChoices,
+    PowerFeedPhaseChoices,
+    PowerFeedSupplyChoices,
+    PowerFeedTypeChoices,
+)
 from nautobot.dcim.constants import (
     POWERFEED_AMPERAGE_DEFAULT,
     POWERFEED_MAX_UTILIZATION_DEFAULT,
@@ -46,6 +54,28 @@ class PowerPanel(PrimaryModel):
         to="RackGroup", on_delete=models.PROTECT, blank=True, null=True, related_name="power_panels"
     )
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
+    panel_type = models.CharField(
+        max_length=30,
+        choices=PanelTypeChoices,
+        blank=True,
+        help_text="Panel configuration type"
+    )
+    voltage_configuration = models.CharField(
+        max_length=20,
+        choices=PanelVoltageChoices,
+        blank=True,
+        help_text="Panel voltage configuration (e.g., 208/120V-3Φ-4W)"
+    )
+    main_amperage = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Panel main breaker amperage rating (e.g., 400)"
+    )
+    circuit_positions = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Total number of circuit positions in the panel (e.g., 42)"
+    )
 
     natural_key_field_names = ["name", "location"]
 
@@ -137,6 +167,23 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
         default=POWERFEED_MAX_UTILIZATION_DEFAULT,
         help_text="Maximum permissible draw (percentage)",
     )
+    circuit_position = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Circuit position in panel (1, 2, 3, etc.)"
+    )
+    breaker_poles = models.CharField(
+        max_length=3,
+        choices=BreakerPoleChoices,
+        blank=True,
+        help_text="Breaker poles (1P, 2P, 3P)"
+    )
+    phase_assignment = models.CharField(
+        max_length=5,
+        choices=PhaseAssignmentChoices,
+        blank=True,
+        help_text="Phase assignment (A, B, C, A-B, etc.)"
+    )
     available_power = models.PositiveIntegerField(default=0, editable=False)
     comments = models.TextField(blank=True)
 
@@ -151,6 +198,9 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
         "voltage",
         "amperage",
         "max_utilization",
+        "circuit_position",
+        "breaker_poles",
+        "phase_assignment",
         "available_power",
     ]
 
