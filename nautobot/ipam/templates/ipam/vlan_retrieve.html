@@ -1,0 +1,84 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block extra_breadcrumbs %}
+    {% if object.vlan_group %}
+        <li><a href="{% url 'ipam:vlan_list' %}?vlan_group={{ object.vlan_group.name }}">{{ object.vlan_group }}</a></li>
+    {% endif %}
+{% endblock extra_breadcrumbs %}
+
+{% block extra_nav_tabs %}
+        <li role="presentation"{% if active_tab == 'interfaces' %} class="active"{% endif %}>
+            <a href="{% url 'ipam:vlan_interfaces' pk=object.pk %}">Device Interfaces <span class="badge">{{ object.get_interfaces.count }}</span></a>
+        </li>
+        <li role="presentation"{% if active_tab == 'vminterfaces' %} class="active"{% endif %}>
+            <a href="{% url 'ipam:vlan_vminterfaces' pk=object.pk %}">VM Interfaces <span class="badge">{{ object.get_vminterfaces.count }}</span></a>
+        </li>
+{% endblock extra_nav_tabs %}
+
+{% block content_left_page %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>VLAN</strong>
+                </div>
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Locations</td>
+                        <td>
+                            {% for location in object.locations.all %}
+                                {{ location|hyperlinked_object }}<br>
+                            {% empty %}
+                                <span class="text-muted">None</span>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>VLAN Group</td>
+                        <td>{{ object.vlan_group|hyperlinked_object }}</td>
+                    </tr>
+                    <tr>
+                        <td>VLAN ID</td>
+                        <td>{{ object.vid }}</td>
+                    </tr>
+                    <tr>
+                        <td>Name</td>
+                        <td>{{ object.name }}</td>
+                    </tr>
+                    {% include 'inc/tenant_table_row.html' %}
+                    <tr>
+                        <td>Status</td>
+                        <td>
+                            {{ object.status| hyperlinked_object_with_color }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Role</td>
+                        <td>{{ object.role | hyperlinked_object_with_color }}</td>
+                    </tr>
+                    <tr>
+                        <td>Description</td>
+                        <td>{{ object.description|placeholder }}</td>
+                    </tr>
+                </table>
+            </div>
+{% endblock content_left_page %}
+
+{% block content_full_width_page %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Prefixes</strong>
+                </div>
+                {% include 'responsive_table.html' with table=prefix_table %}
+                {% if perms.ipam.add_prefix %}
+                    <div class="panel-footer text-right noprint">
+                        <a href="{% url 'ipam:prefix_add' %}?{% if object.tenant %}tenant={{ object.tenant.pk }}{% endif %}&vlan={{ object.pk }}{% for loc in object.locations.all %}&locations={{ loc.pk }}{% endfor %}" class="btn btn-primary btn-xs">
+                            <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
+                            Add a prefix
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+            {% if prefix_table.paginator.num_pages > 1 %}
+                {% include "inc/paginator.html" with paginator=prefix_table.paginator page=prefix_table.page %}
+            {% endif %}
+{% endblock content_full_width_page %}

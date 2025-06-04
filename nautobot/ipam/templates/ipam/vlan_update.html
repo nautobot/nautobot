@@ -1,0 +1,24 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>VLAN</strong></div>
+        <div class="panel-body">
+            {% render_field form.vid %}
+            {% render_field form.name %}
+            {% render_field form.status %}
+            {% render_field form.role %}
+            {% render_field form.description %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Assignment</strong></div>
+        <div class="panel-body">
+            {% render_field form.locations %}
+            {% render_field form.vlan_group %}
+        </div>
+    </div>
+    {% include 'inc/tenancy_form_panel.html' %}
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+{% endblock %}
