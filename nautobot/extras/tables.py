@@ -16,7 +16,11 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
-from nautobot.core.templatetags.helpers import render_boolean, render_json, render_markdown
+from nautobot.core.templatetags.helpers import (
+    render_boolean,
+    render_json,
+    render_markdown,
+)
 from nautobot.tenancy.tables import TenantColumn
 
 from .choices import MetadataTypeDataTypeChoices
