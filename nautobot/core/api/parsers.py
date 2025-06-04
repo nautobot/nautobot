@@ -140,36 +140,27 @@ class NautobotCSVParser(BaseParser):
         """
         Converts a nested dictionary into list of flat dictionaries for M2M serializer.
 
-        Example:
-            Input:
-                {
-                    'manufacturer': {
-                        'name': 'Cisco,Cisco,Aruba',
-                    },
-                    'model': 'C9300,C9500,CX 6300'
-                }
+        Args:
+            data (dict): Nested dictionary with comma-separated string values.
+            field (str): Field name used in error messages.
 
-            Output:
-                [
-                    {
-                        'manufacturer': {
-                            'name': 'Cisco',
-                        },
-                        'model': 'C9300'
-                    },
-                    {
-                        'manufacturer': {
-                            'name': 'Cisco',
-                        },
-                        'model': 'C9500'
-                    },
-                    {
-                        'manufacturer': {
-                            'name': 'Aruba',
-                        },
-                        'model': 'CX 6300'
-                    }
-                ]
+        Returns:
+            list: List of dictionaries, each containing one set of related values.
+
+        Raises:
+            ParseError: If the number of comma-separated values is inconsistent
+                       across different keys.
+
+        Examples:
+            >>> data = {'manufacturer': {'name': 'Cisco,Cisco,Aruba'}, 'model': 'C9300,C9500,CX 6300'}
+            >>> field = "device_type"
+            >>> value = self.convert_m2m_dict_to_list_of_dicts(data, field)
+            >>> value
+            [
+                {'manufacturer': {'name': 'Cisco'},'model': 'C9300'},
+                {'manufacturer': {'name': 'Cisco'},'model': 'C9500'},
+                {'manufacturer': {'name': 'Aruba'},'model': 'CX 6300'}
+            ]
         """
 
         def flatten_dict(d, parent_key=""):
