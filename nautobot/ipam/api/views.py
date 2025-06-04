@@ -1,7 +1,10 @@
+from collections import Counter
+
 from django.conf import settings
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, extend_schema_view
+import netaddr
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException
@@ -251,6 +254,11 @@ class PrefixViewSet(NautobotModelViewSet):
         """
         prefix = get_object_or_404(Prefix.objects.restrict(request.user), pk=pk)
 
+        try:
+            offset = int(request.query_params.get("offset", 0))
+        except ValueError:
+            offset = 0
+
         # Create the next available IP within the prefix
         if request.method == "POST":
             with cache.lock(
@@ -261,24 +269,48 @@ class PrefixViewSet(NautobotModelViewSet):
 
                 # Determine if the requested number of IPs is available
                 available_ips = prefix.get_available_ips()
-                if available_ips.size < len(requested_ips):
+                if prefix.get_all_usable_host_ips().size - offset < len(requested_ips):
                     return Response(
                         {
                             "detail": (
-                                f"An insufficient number of IP addresses are available within the prefix {prefix} "
-                                f"({len(requested_ips)} requested, {len(available_ips)} available)"
+                                f"Requested offset {offset} is greater than the count of "
+                                f"{prefix.get_all_usable_host_ips().size} usable host IPs within prefix {prefix}."
+                            )
+                        },
+                        status=status.HTTP_204_NO_CONTENT,
+                    )
+                if (
+                    available_ips_after_offset_n := Counter(
+                        map(
+                            lambda i: (i >= netaddr.IPAddress((prefix.get_first_usable_host_ip() or 0) + offset)),
+                            available_ips,
+                        )
+                    )[True]
+                ) < len(requested_ips):
+                    return Response(
+                        {
+                            "detail": (
+                                f"Requested creation of {len(requested_ips)} IPs but only "
+                                f"{available_ips_after_offset_n} IPs are available within prefix {prefix} after "
+                                f"host offset {offset}."
                             )
                         },
                         status=status.HTTP_204_NO_CONTENT,
                     )
 
                 # Assign addresses from the list of available IPs and copy Namespace assignment from the parent Prefix
-                available_ips = iter(available_ips)
+                requested_ips_iter = iter(requested_ips)
                 prefix_length = prefix.prefix.prefixlen
-                for requested_ip in requested_ips:
-                    requested_ip["address"] = f"{next(available_ips)}/{prefix_length}"
-                    requested_ip["namespace"] = prefix.namespace
-
+                offset_ip = netaddr.IPAddress((prefix.get_first_usable_host_ip() or 0) + offset)
+                ips_count = 0
+                for available_ip in iter(available_ips):
+                    if offset_ip <= available_ip and ips_count < len(requested_ips):
+                        requested_ip = next(requested_ips_iter)
+                        requested_ip["address"] = f"{available_ip}/{prefix_length}"
+                        requested_ip["namespace"] = prefix.namespace
+                        ips_count += 1
+                    elif ips_count >= len(requested_ips):
+                        break
                 # Initialize the serializer with a list or a single object depending on what was requested
                 context = {"request": request, "depth": 0}
                 if isinstance(request.data, list):
@@ -305,11 +337,26 @@ class PrefixViewSet(NautobotModelViewSet):
             if get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT):
                 limit = min(limit, get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT))
 
+            available_ips = prefix.get_available_ips()
+            if offset > prefix.get_all_usable_host_ips().size:
+                return Response(
+                    {
+                        "detail": (
+                            f"Offset {offset} is greater than the count of the prefix's usable IP "
+                            f"space length ({prefix.get_all_usable_host_ips().size}), cannot proceed with the request."
+                        )
+                    },
+                    status=status.HTTP_204_NO_CONTENT,
+                )
+            offset_ip = netaddr.IPAddress((prefix.get_first_usable_host_ip() or 0) + offset)
             # Calculate available IPs within the prefix
             ip_list = []
-            for index, ip in enumerate(prefix.get_available_ips(), start=1):
-                ip_list.append(ip)
-                if index == limit:
+            ip_list_count = 0
+            for ip in iter(available_ips):
+                if offset_ip <= ip and ip_list_count < limit:
+                    ip_list.append(ip)
+                    ip_list_count += 1
+                if ip_list_count >= limit:
                     break
             serializer = serializers.AvailableIPSerializer(
                 ip_list,

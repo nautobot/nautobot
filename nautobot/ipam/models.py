@@ -978,14 +978,7 @@ class Prefix(PrimaryModel):
         child_ips = netaddr.IPSet([ip.address.ip for ip in self.get_all_ips()])
         available_ips = prefix - child_ips
 
-        # IPv6, pool, or IPv4 /31-32 sets are fully usable
-        if any(
-            [
-                self.ip_version == 6,
-                self.type == choices.PrefixTypeChoices.TYPE_POOL,
-                self.ip_version == 4 and self.prefix_length >= 31,
-            ]
-        ):
+        if self.fully_usable():
             return available_ips
 
         # Omit first and last IP address from the available set
@@ -997,6 +990,31 @@ class Prefix(PrimaryModel):
             ]
         )
         return available_ips
+
+    def fully_usable(self):
+        # IPv6, pool, or IPv4 /31-32 sets are fully usable
+        return any(
+            [
+                self.ip_version == 6,
+                self.type == choices.PrefixTypeChoices.TYPE_POOL,
+                self.ip_version == 4 and self.prefix_length >= 31,
+            ]
+        )
+
+    def get_all_usable_host_ips(self):
+        """
+        Return the IPSet representation of all host IP addresses within a prefix.
+        """
+        prefix = netaddr.IPSet(self.prefix)
+        if self.fully_usable():
+            return prefix
+        else:
+            return prefix - netaddr.IPSet(
+                [
+                    netaddr.IPAddress(self.prefix.first),
+                    netaddr.IPAddress(self.prefix.last),
+                ]
+            )
 
     def get_child_ips(self):
         """
@@ -1056,6 +1074,15 @@ class Prefix(PrimaryModel):
         if not available_ips:
             return None
         return f"{next(available_ips.__iter__())}/{self.prefix_length}"
+
+    def get_first_usable_host_ip(self):
+        """
+        Return the first usable IP within the prefix or None.
+        """
+        usable_host_ips = self.get_all_usable_host_ips()
+        if not usable_host_ips:
+            return None
+        return next(usable_host_ips.__iter__())
 
     def get_utilization(self):
         """Return the utilization of this prefix as a UtilizationData object.
