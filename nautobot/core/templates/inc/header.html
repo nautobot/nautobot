@@ -3,26 +3,42 @@
 {% if request.user.is_authenticated %}
     <form action="{% url 'search' %}" class="col text-center" id="header_search" method="get" role="search">
         <label class="position-relative w-100">
-            <input class="form-control nb-color-transparent" name="q" style="padding-inline-start: calc(0.75rem + 1.25rem + 0.375rem);" type="search" value="{{ request.GET.q }}" />
+            <input
+                aria-placeholder="Press ⌘K to search"
+                class="form-control nb-color-transparent"
+                name="q"
+                type="search"
+                value="{{ request.GET.q }}"
+            />
             <span class="align-items-center d-inline-flex gap-6 overflow-hidden px-12 py-6 pe-none position-absolute start-0 top-0 user-select-none w-100">
-                <span class="mdi mdi-magnify text-secondary d-inline-flex"></span>
-                {% if request.GET.obj_type or content_type %}
-                    {% for app_config, model_tuples in search_model_choices %}
-                        {% if app_config and model_tuples %}
-                            {% for modelname, verbose_name_plural in model_tuples %}
-                                {% if modelname == request.GET.obj_type or modelname == content_type.model %}
-                                    <span class="badge border" data-nb-modelname="{{ modelname }}">
-                                        in: {{verbose_name_plural|bettertitle}}
-                                        <input name="obj_type" type="hidden" value="{{ modelname }}" />
-                                        <button><span class="mdi mdi-close"></span></button>
+                <span aria-hidden="true" class="mdi mdi-magnify text-secondary d-inline-flex"></span>
+                {% if content_type %}
+                    {% for tab_name, tab_details in nav_menu.tabs.items %}
+                        {% for group_name, group_details in tab_details.groups.items %}
+                            {% for item_link, item_details in group_details.items.items %}
+                                {% comment %}TODO(norbert-mieczkowski-codilime): Figure out more reliable way of mapping active nav_menu link to browser URL.{% endcomment %}
+                                {% if item_link in request.path %}
+                                    <span class="badge border" data-nb-link="{{ item_link }}"><!--
+                                        -->in: {{ item_details.name }}<!--
+                                        --><button tabindex="-1" type="button">
+                                            <span aria-hidden="true" class="mdi mdi-close"></span>
+                                            <span class="visually-hidden">Remove</span>
+                                        </button>
                                     </span>
                                 {% endif %}
                             {% endfor %}
-                        {% endif %}
+                        {% endfor %}
                     {% endfor %}
                 {% endif %}
-                <span class="align-items-center d-inline-flex gap-4 text-nowrap text-secondary{% if request.GET.q %} invisible{% else %}{% endif %}">
-                    Press <kbd>⌘K</kbd> to search
+                <span
+                    aria-hidden="true"
+                    class="align-items-center d-inline-flex gap-4 text-nowrap{% if not request.GET.q %} text-secondary{% endif %}"
+                >
+                    {% if not request.GET.q %}
+                        Press <kbd>⌘K</kbd> to search
+                    {% else %}
+                        {{ request.GET.q }}
+                    {% endif %}
                 </span>
             </span>
         </label>

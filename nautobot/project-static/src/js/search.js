@@ -1,4 +1,4 @@
-import { bettertitle, createElement, rem } from './utils.js';
+import { createElement, rem } from './utils.js';
 
 const FORM_CONTROL_PADDING_X = rem(12);
 const GAP = rem(6);
@@ -16,32 +16,32 @@ export const initializeSearch = () => {
     return () => {};
   }
 
-  const SEARCH_MODEL_CHOICES = (() => {
+  const NAV_MENU = (() => {
     try {
-      const searchModelChoices = document.getElementById('search_model_choices');
-      return searchModelChoices ? JSON.parse(searchModelChoices.textContent) : [];
+      const navMenu = document.getElementById('nav_menu');
+      return navMenu ? JSON.parse(navMenu.textContent) : {};
     } catch (exception) {
-      return [];
+      return {};
     }
   })();
 
-  const SEARCHABLE_MODELS = SEARCH_MODEL_CHOICES.flatMap(([app_config, model_tuples]) =>
-    Array.isArray(model_tuples) ? model_tuples : [],
+  const SEARCHABLE_MODELS = Object.fromEntries(
+    Object.entries(NAV_MENU.tabs).flatMap(([, tab_details]) =>
+      Object.entries(tab_details.groups).flatMap(([, group_details]) =>
+        Object.entries(group_details.items).map(([item_link, item_details]) => [item_link, item_details]),
+      ),
+    ),
   );
 
   const BADGE_REG_EXP = new RegExp(
-    `^\\s*in\\s*:\\s*(${SEARCHABLE_MODELS.flatMap((searchableModel) => searchableModel).join('|')})\\s+`,
+    `^\\s*in\\s*:\\s*(${Object.entries(SEARCHABLE_MODELS)
+      // Extend simple vanilla model name match with more word delimiter variants (or no word delimiters at all).
+      .flatMap(([, { name }]) => [name, ...['', '_', '\\-'].map((delimiter) => name.replace(/\s+/g, delimiter))])
+      .join('|')})\\s+`,
     'i',
   );
 
   const headerSearchInput = headerSearch.querySelector('input');
-  const headerSearchPlaceholder = headerSearch.querySelector('input + span > span:last-child');
-
-  // Toggle between placeholder and value in global header search input.
-  const shouldShowValue = headerSearchInput.value !== '';
-  headerSearchInput.classList.toggle('nb-color-transparent', !shouldShowValue);
-  headerSearchInput.style.paddingInlineStart = `${headerSearchPlaceholder.offsetLeft}px`;
-  headerSearchPlaceholder.classList.toggle('invisible', shouldShowValue);
 
   const closeSearchPopup = () => {
     const searchPopup = document.getElementById('search_popup');
@@ -68,13 +68,25 @@ export const initializeSearch = () => {
   document.addEventListener('keydown', onKeyDown);
 
   const openSearchPopup = () => {
+    const searchPopup = document.getElementById('search_popup');
+
+    // Just focus an existing search popup `input` and `return` early if `#searchPopup` is already open.
+    if (searchPopup) {
+      const input = searchPopup.querySelector('input');
+      input?.focus();
+      input?.setSelectionRange(-1, -1);
+      return;
+    }
+
     document.body.classList.toggle('overflow-y-hidden', true);
 
     const { left: mainLeft = 0, right: mainRight = 0 } = document.querySelector('main')?.getBoundingClientRect() ?? {};
-    const { top: inputTop } = headerSearchInput.getBoundingClientRect();
+    const { top: headerSearchInputTop } = headerSearchInput.getBoundingClientRect();
 
-    const searchIcon = createElement('span', {
-      className: 'mdi mdi-magnify d-inline-flex ms-12 mt-6 position-absolute start-0 text-secondary top-0',
+    const icon = createElement('span', {
+      ['aria-hidden']: 'true',
+      className:
+        'mdi mdi-magnify d-inline-flex ms-12 mt-6 pe-none position-absolute start-0 text-secondary top-0 user-select-none',
       style: `height: ${ICON_SIZE}rem; width: ${ICON_SIZE}rem;`,
     });
 
@@ -92,11 +104,15 @@ export const initializeSearch = () => {
       value: headerSearchInput.value,
     });
 
-    const clear = createElement('button', {
-      className: `btn mdi mdi-close bg-transparent border-0 end-0 hstack justify-content-center me-12 mt-6 p-0 position-absolute text-secondary top-0 nb-transition-base${input.value === '' ? ' invisible opacity-0' : ''}`,
-      style: `height: ${ICON_SIZE}rem; width: ${ICON_SIZE}rem;`,
-      type: 'button',
-    });
+    const clear = createElement(
+      'button',
+      {
+        className: `btn mdi mdi-close bg-transparent border-0 end-0 hstack justify-content-center me-12 mt-6 p-0 position-absolute text-secondary top-0 nb-transition-base${input.value === '' ? ' invisible opacity-0' : ''}`,
+        style: `height: ${ICON_SIZE}rem; width: ${ICON_SIZE}rem;`,
+        type: 'button',
+      },
+      createElement('span', { className: 'visually-hidden' }, 'Clear'),
+    );
 
     clear.addEventListener('click', () => {
       input.value = '';
@@ -115,12 +131,28 @@ export const initializeSearch = () => {
     const form = createElement(
       'form',
       { action: headerSearch.getAttribute('action'), className: 'position-relative w-100', role: 'search' },
-      searchIcon,
+      icon,
       badges,
       input,
       clear,
       submit,
     );
+
+    /* In case there is no badge, use global search. Otherwise, navigate to badge specific model list view. */
+    form.addEventListener('submit', (event) => {
+      const badge = form.querySelector('[data-nb-link]:last-child');
+
+      if (badge) {
+        event.preventDefault();
+
+        const tempSubmit = createElement('input', { name: 'q', type: 'submit', value: input.value });
+        const tempForm = createElement('form', { action: badge.dataset.nbLink, className: 'd-none' }, tempSubmit);
+
+        document.body.appendChild(tempForm);
+        tempSubmit.click();
+        document.body.removeChild(tempForm);
+      }
+    });
 
     const results = createElement('div');
 
@@ -137,12 +169,10 @@ export const initializeSearch = () => {
         className: 'overflow-auto pb-20 position-fixed top-0 end-0 bottom-0 start-0 nb-z-modal-backdrop',
         id: 'search_popup',
         role: 'dialog',
-        style: `background-color: rgba(0, 0, 0, .5); padding-block-start: ${inputTop}px; padding-inline-start: calc(${mainLeft}px + ${rem(20)}rem); padding-inline-end: calc(100% - ${mainRight}px + ${rem(20)}rem);`,
+        style: `background-color: rgba(0, 0, 0, .5); padding-block-start: ${headerSearchInputTop}px; padding-inline-start: calc(${mainLeft}px + ${rem(20)}rem); padding-inline-end: calc(100% - ${mainRight}px + ${rem(20)}rem);`,
       },
       popup,
     );
-
-    document.body.appendChild(overlay);
 
     // Close search popup on direct overlay click.
     overlay.addEventListener('click', (event) => {
@@ -151,16 +181,16 @@ export const initializeSearch = () => {
       }
     });
 
-    const addBadge = (modelname) => {
-      const verbose_name_plural =
-        SEARCHABLE_MODELS.find((searchableModel) => searchableModel[0] === modelname)?.[1] ?? modelname;
+    document.body.appendChild(overlay);
 
-      const inputHidden = createElement('input', { name: 'obj_type', type: 'hidden', value: modelname });
+    const addBadge = (link) => {
+      const name = Object.entries(SEARCHABLE_MODELS).find(([item_link]) => item_link === link)?.[1]?.name ?? link;
 
       const removeButton = createElement(
         'button',
         { type: 'button' },
-        createElement('span', { class: 'mdi mdi-close' }),
+        createElement('span', { ['aria-hidden']: 'true', class: 'mdi mdi-close' }),
+        createElement('span', { class: 'visually-hidden' }, 'Remove'),
       );
 
       removeButton.addEventListener('click', () => {
@@ -170,14 +200,13 @@ export const initializeSearch = () => {
 
       const badge = createElement(
         'span',
-        { className: 'badge border', ['data-nb-modelname']: modelname },
-        `in: ${bettertitle(verbose_name_plural)}`,
-        inputHidden,
+        { className: 'badge border', ['data-nb-link']: link },
+        `in: ${name}`,
         removeButton,
       );
 
-      // Before adding a new badge, remove existing badges with the same `modelname` to prevent duplicates.
-      [...badges.querySelectorAll(`[data-nb-modelname="${modelname}"]`)].forEach((badge) => badge.remove());
+      // Before adding a new badge, remove existing badges with the same `link` to prevent duplicates.
+      [...badges.querySelectorAll(`[data-nb-link="${link}"]`)].forEach((badge) => badge.remove());
 
       badges.appendChild(badge);
 
@@ -201,15 +230,20 @@ export const initializeSearch = () => {
       if (match) {
         const [phrase, model] = match;
 
-        // Match entered `model` to either an existing `modelname` or `verbose_name_plural` from `search_model_choices`.
-        const normalize = (text) => text.trim().toLowerCase();
-        const modelname = SEARCHABLE_MODELS.find((names) => names.map(normalize).includes(normalize(model)))?.[0];
+        const normalize = (text) =>
+          text
+            .trim()
+            .toLowerCase()
+            .replace(/\s|_|-/g, '');
+        const link = Object.entries(SEARCHABLE_MODELS).find(
+          ([, { name }]) => normalize(name) === normalize(model),
+        )?.[0];
 
-        if (modelname) {
+        if (link) {
           // Remove phrase that matched the badge-specific regular expression and replace it with a corresponding badge.
           input.value = input.value.replace(phrase, '');
           input.dispatchEvent(new InputEvent('input'));
-          addBadge(modelname);
+          addBadge(link);
         }
       }
     });
@@ -224,8 +258,8 @@ export const initializeSearch = () => {
       }
     });
 
-    // When search popup is open, move existing badges from `#header_search` to search popup input.
-    headerSearch.querySelectorAll('[data-nb-modelname]').forEach((badge) => addBadge(badge.dataset.nbModelname));
+    // When search popup is open, copy existing badges from `#header_search` to search popup input.
+    headerSearch.querySelectorAll('[data-nb-link]').forEach((badge) => addBadge(badge.dataset.nbLink));
 
     // Automatically focus search popup input when opened and move cursor to the end of input field.
     input.focus();
