@@ -19,10 +19,14 @@ from nautobot.core.filters import (
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.choices import (
+    BreakerPoleChoices,
     CableTypeChoices,
     ConsolePortTypeChoices,
     ControllerCapabilitiesChoices,
     InterfaceTypeChoices,
+    PanelTypeChoices,
+    PanelVoltageChoices,
+    PhaseAssignmentChoices,
     PowerOutletTypeChoices,
     PowerPortTypeChoices,
     RackTypeChoices,
@@ -1620,6 +1624,16 @@ class PowerPanelFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet):
         to_field_name="name",
         label="Rack group (name or ID)",
     )
+    panel_type = django_filters.MultipleChoiceFilter(
+        choices=PanelTypeChoices,
+        null_value=None,
+    )
+    voltage_configuration = django_filters.MultipleChoiceFilter(
+        choices=PanelVoltageChoices,
+        null_value=None,
+    )
+    main_amperage = django_filters.NumberFilter()
+    circuit_positions = django_filters.NumberFilter()
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     power_feeds = NaturalKeyOrPKMultipleChoiceFilter(
         prefers_id=True,
@@ -1631,10 +1645,22 @@ class PowerPanelFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet):
         field_name="power_feeds",
         label="Has power feeds",
     )
+    has_feeders = RelatedMembershipBooleanFilter(
+        field_name="feeders",
+        label="Has feeders",
+    )
 
     class Meta:
         model = PowerPanel
-        fields = ["id", "name", "tags"]
+        fields = [
+            "id",
+            "name",
+            "panel_type",
+            "voltage_configuration",
+            "main_amperage",
+            "circuit_positions",
+            "tags"
+        ]
 
 
 class PowerFeedFilterSet(
@@ -1672,6 +1698,16 @@ class PowerFeedFilterSet(
         to_field_name="name",
         label="Rack (name or ID)",
     )
+    # Add these after the rack filter
+    circuit_position = django_filters.NumberFilter()
+    breaker_poles = django_filters.MultipleChoiceFilter(
+        choices=BreakerPoleChoices,
+        null_value=None,
+    )
+    phase_assignment = django_filters.MultipleChoiceFilter(
+        choices=PhaseAssignmentChoices,
+        null_value=None,
+    )
 
     class Meta:
         model = PowerFeed
@@ -1685,6 +1721,9 @@ class PowerFeedFilterSet(
             "voltage",
             "amperage",
             "max_utilization",
+            "circuit_position",
+            "breaker_poles",
+            "phase_assignment",
             "comments",
             "available_power",
             "tags",

@@ -77,6 +77,7 @@ from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
 from nautobot.wireless.models import RadioProfile
 
 from .choices import (
+    BreakerPoleChoices,
     CableLengthUnitChoices,
     CableTypeChoices,
     ConsolePortTypeChoices,
@@ -87,6 +88,9 @@ from .choices import (
     InterfaceRedundancyGroupProtocolChoices,
     InterfaceTypeChoices,
     LocationDataToContactActionChoices,
+    PanelTypeChoices,
+    PanelVoltageChoices,
+    PhaseAssignmentChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
     PowerFeedSupplyChoices,
@@ -4450,8 +4454,16 @@ class PowerPanelForm(LocatableModelFormMixin, NautobotModelForm):
             "location",
             "rack_group",
             "name",
+            "panel_type",
+            "voltage_configuration",
+            "main_amperage",
+            "circuit_positions",
             "tags",
         ]
+        widgets = {
+            "panel_type": StaticSelect2(),
+            "voltage_configuration": StaticSelect2(),
+        }
 
 
 class PowerPanelBulkEditForm(
@@ -4465,10 +4477,22 @@ class PowerPanelBulkEditForm(
         required=False,
         query_params={"location": "$location"},
     )
+    panel_type = forms.ChoiceField(
+        choices=add_blank_choice(PanelTypeChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
+    voltage_configuration = forms.ChoiceField(
+        choices=add_blank_choice(PanelVoltageChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
+    main_amperage = forms.IntegerField(required=False, min_value=1)
+    circuit_positions = forms.IntegerField(required=False, min_value=1)
 
     class Meta:
         model = PowerPanel
-        nullable_fields = ["location", "rack_group"]
+        nullable_fields = ["location", "rack_group", "panel_type", "voltage_configuration", "main_amperage", "circuit_positions"]
 
 
 class PowerPanelFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
@@ -4481,6 +4505,18 @@ class PowerPanelFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
         null_option="None",
         query_params={"location": "$location"},
     )
+    panel_type = forms.MultipleChoiceField(
+        choices=add_blank_choice(PanelTypeChoices),
+        required=False,
+        widget=StaticSelect2Multiple(),
+    )
+    voltage_configuration = forms.MultipleChoiceField(
+        choices=add_blank_choice(PanelVoltageChoices),
+        required=False,
+        widget=StaticSelect2Multiple(),
+    )
+    main_amperage = forms.IntegerField(required=False, min_value=1)
+    circuit_positions = forms.IntegerField(required=False, min_value=1)
     tags = TagFilterField(model)
 
 
@@ -4521,6 +4557,9 @@ class PowerFeedForm(NautobotModelForm):
             "voltage",
             "amperage",
             "max_utilization",
+            "circuit_position",
+            "breaker_poles",
+            "phase_assignment",
             "comments",
             "tags",
         ]
@@ -4528,6 +4567,8 @@ class PowerFeedForm(NautobotModelForm):
             "type": StaticSelect2(),
             "supply": StaticSelect2(),
             "phase": StaticSelect2(),
+            "breaker_poles": StaticSelect2(),
+            "phase_assignment": StaticSelect2(),
         }
 
 
@@ -4557,10 +4598,24 @@ class PowerFeedBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin,
     voltage = forms.IntegerField(required=False)
     amperage = forms.IntegerField(required=False)
     max_utilization = forms.IntegerField(required=False)
+    circuit_position = forms.IntegerField(required=False, min_value=1)
+    breaker_poles = forms.ChoiceField(
+        choices=add_blank_choice(BreakerPoleChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
+    phase_assignment = forms.ChoiceField(
+        choices=add_blank_choice(PhaseAssignmentChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
     comments = CommentField(widget=SmallTextarea, label="Comments")
 
     class Meta:
         nullable_fields = [
+            "circuit_position",
+            "breaker_poles",
+            "phase_assignment",
             "comments",
         ]
 
@@ -4606,6 +4661,17 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
     voltage = forms.IntegerField(required=False)
     amperage = forms.IntegerField(required=False)
     max_utilization = forms.IntegerField(required=False)
+    circuit_position = forms.IntegerField(required=False, min_value=1)
+    breaker_poles = forms.ChoiceField(
+        choices=add_blank_choice(BreakerPoleChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
+    phase_assignment = forms.ChoiceField(
+        choices=add_blank_choice(PhaseAssignmentChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
     tags = TagFilterField(model)
 
 

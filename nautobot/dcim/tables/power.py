@@ -27,6 +27,10 @@ class PowerPanelTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     location = tables.Column(linkify=True)
+    panel_type = ChoiceFieldColumn()
+    voltage_configuration = ChoiceFieldColumn()
+    main_amperage = tables.Column(verbose_name="Main Amp")
+    circuit_positions = tables.Column(verbose_name="Positions")
     power_feed_count = LinkedCountColumn(
         viewname="dcim:powerfeed_list",
         url_params={"power_panel": "pk"},
@@ -36,8 +40,28 @@ class PowerPanelTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = PowerPanel
-        fields = ("pk", "name", "location", "rack_group", "power_feed_count", "tags")
-        default_columns = ("pk", "name", "location", "rack_group", "power_feed_count")
+        fields = (
+            "pk",
+            "name",
+            "location",
+            "rack_group",
+            "panel_type",
+            "voltage_configuration",
+            "main_amperage",
+            "circuit_positions",
+            "power_feed_count",
+            "tags",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "location",
+            "rack_group",
+            "panel_type",
+            "voltage_configuration",
+            "main_amperage",
+            "power_feed_count",
+        )
 
 
 #
@@ -54,6 +78,9 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
     destination_panel = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
     type = ChoiceFieldColumn()
+    circuit_position = tables.Column(verbose_name="Position")
+    breaker_poles = ChoiceFieldColumn(verbose_name="Poles")
+    phase_assignment = ChoiceFieldColumn(verbose_name="Phase")
     max_utilization = tables.TemplateColumn(template_code="{{ value }}%")
     available_power = tables.Column(verbose_name="Available power (VA)")
     tags = TagColumn(url_name="dcim:powerfeed_list")
@@ -73,6 +100,9 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
             "amperage",
             "phase",
             "max_utilization",
+            "circuit_position",
+            "breaker_poles",
+            "phase_assignment",
             "cable",
             "cable_peer",
             "connection",
@@ -90,6 +120,9 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
             "voltage",
             "amperage",
             "phase",
+            "circuit_position",
+            "breaker_poles",
+            "phase_assignment",
             "cable",
             "cable_peer",
         )

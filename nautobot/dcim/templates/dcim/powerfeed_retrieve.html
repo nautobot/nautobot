@@ -96,6 +96,31 @@
                 </tr>
             </table>
         </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Circuit Configuration</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                {% if object.circuit_position %}
+                <tr>
+                    <td>Circuit Position</td>
+                    <td>{{ object.circuit_position }}</td>
+                </tr>
+                {% endif %}
+                {% if object.breaker_poles %}
+                <tr>
+                    <td>Breaker Poles</td>
+                    <td>{{ object.get_breaker_poles_display }}</td>
+                </tr>
+                {% endif %}
+                {% if object.phase_assignment %}
+                <tr>
+                    <td>Phase Assignment</td>
+                    <td>{{ object.get_phase_assignment_display }}</td>
+                </tr>
+                {% endif %}
+            </table>
+        </div>
 {% endblock content_left_page %}
 
 {% block content_right_page %}

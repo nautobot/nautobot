@@ -4141,6 +4141,10 @@ class PowerPanelUIViewSet(NautobotUIViewSet):
                     "name",
                     "location",
                     "rack_group",
+                    "panel_type",
+                    "voltage_configuration",
+                    "main_amperage",
+                    "circuit_positions",
                 ],
             ),
             object_detail.ObjectsTablePanel(

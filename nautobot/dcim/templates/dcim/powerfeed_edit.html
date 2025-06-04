@@ -29,6 +29,14 @@
             {% render_field form.max_utilization %}
         </div>
     </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Circuit Configuration</strong></div>
+        <div class="panel-body">
+            {% render_field form.circuit_position %}
+            {% render_field form.breaker_poles %}
+            {% render_field form.phase_assignment %}
+        </div>
+    </div>
     {% include 'inc/extras_features_edit_form_fields.html' %}
     <div class="panel panel-default">
         <div class="panel-heading"><strong>Comments</strong></div>
