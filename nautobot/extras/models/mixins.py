@@ -87,11 +87,11 @@ class ApprovableModelMixin(models.Model):
             ]
         )
 
-        self.on_workflow_initiated()
+        self.on_workflow_initiated(approval_workflow)
 
         return approval_workflow
 
-    def on_workflow_initiated(self):
+    def on_workflow_initiated(self, approval_workflow):
         """Called when an approval workflow is initiated."""
         raise NotImplementedError("Subclasses must implement `on_workflow_initiated`.")
 
@@ -99,7 +99,7 @@ class ApprovableModelMixin(models.Model):
         """Called when an approval workflow is approved."""
         raise NotImplementedError("Subclasses must implement `on_workflow_approved`.")
 
-    def on_workflow_denied(self):
+    def on_workflow_denied(self, approval_workflow):
         """Called when an approval workflow is denied."""
         raise NotImplementedError("Subclasses must implement `on_workflow_denied`.")
 

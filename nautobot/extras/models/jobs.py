@@ -1253,7 +1253,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         if bool(self.approved_by_user) ^ bool(self.approved_at):
             raise ValidationError("Approval by user and approval time must either both be set or both be undefined")
 
-    def on_workflow_initiated(self):
+    def on_workflow_initiated(self, approval_workflow):
         """When initiated, set enabled to False."""
         self.enabled = False
         self.approval_required = True
@@ -1261,7 +1261,6 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
 
     def on_workflow_approved(self, approval_workflow):
         """When approved, set enabled to True."""
-        self.approved_by_user = approval_workflow.user
         self.approved_at = approval_workflow.decision_date
         self.enabled = True
         self.save()
@@ -1269,7 +1268,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         publish_event_payload = {"data": serialize_object_v2(self)}
         publish_event(topic="nautobot.jobs.approval.approved", payload=publish_event_payload)
 
-    def on_workflow_denied(self):
+    def on_workflow_denied(self, approval_workflow):
         """When denied, set enabled to False."""
         self.enabled = False
         self.save()

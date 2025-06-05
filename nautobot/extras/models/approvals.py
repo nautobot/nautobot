@@ -263,7 +263,7 @@ class ApprovalWorkflow(OrganizationalModel):
             if self.current_state == ApprovalWorkflowStateChoices.APPROVED:
                 self.object_under_review.on_workflow_approved(self)
             elif self.current_state == ApprovalWorkflowStateChoices.DENIED:
-                self.object_under_review.on_workflow_denied()
+                self.object_under_review.on_workflow_denied(self)
 
 
 @extras_features(
