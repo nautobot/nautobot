@@ -46,26 +46,26 @@ def nav_menu(request):
     """
     Expose nav menu data for navigation and global search.
     """
-    nav_menu = {"tabs": {}}
+    nav_menu_object = {"tabs": {}}
     for tab_name, tab_details in registry["nav_menu"]["tabs"].items():
         if not tab_details["permissions"] or has_one_or_more_perms(request.user, tab_details["permissions"]):
-            nav_menu["tabs"][tab_name] = {"groups": {}}
+            nav_menu_object["tabs"][tab_name] = {"groups": {}}
             for group_name, group_details in tab_details["groups"].items():
                 if not group_details["permissions"] or has_one_or_more_perms(
                     request.user, group_details["permissions"]
                 ):
-                    nav_menu["tabs"][tab_name]["groups"][group_name] = {"items": {}}
+                    nav_menu_object["tabs"][tab_name]["groups"][group_name] = {"items": {}}
                     for item_link, item_details in group_details["items"].items():
                         if not item_details["permissions"] or has_one_or_more_perms(
                             request.user, item_details["permissions"]
                         ):
-                            nav_menu["tabs"][tab_name]["groups"][group_name]["items"][item_link] = {
+                            nav_menu_object["tabs"][tab_name]["groups"][group_name]["items"][item_link] = {
                                 "name": item_details["name"],
                                 "weight": item_details["weight"],
                             }
 
     return {
-        "nav_menu": nav_menu,
+        "nav_menu": nav_menu_object,
     }
 
 
