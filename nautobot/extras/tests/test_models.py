@@ -2164,6 +2164,13 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
             interval=JobExecutionType.TYPE_FUTURE,
             start_time=datetime(year=2050, month=1, day=22, hour=0, minute=0, tzinfo=ZoneInfo("America/New_York")),
         )
+        self.one_off_immediately_job = ScheduledJob.create_schedule(
+            job_model=self.job_model,
+            user=self.user,
+            name="One-off IMMEDIATELY job",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            start_time=now(),
+        )
 
     def test_scheduled_job_queue_setter(self):
         """Test the queue property setter on ScheduledJob."""
@@ -2199,6 +2206,10 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
                 self.one_off_est_job.schedule.clocked_time - self.one_off_utc_job.schedule.clocked_time,
                 timedelta(hours=5),
             )
+
+        with self.subTest("Test TYPE IMMEDIATELY schedules"):
+            self.assertTrue(self.one_off_immediately_job.one_off)
+            self.assertEqual(self.one_off_immediately_job.interval, JobExecutionType.TYPE_FUTURE)
 
     def test_to_cron(self):
         """Test the to_cron() method and its interaction with time zone variants."""

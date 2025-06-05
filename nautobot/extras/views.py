@@ -1687,17 +1687,7 @@ class JobApprovalRequestView(generic.ObjectView):
                     return render(request, "extras/job_approval_confirmation.html", {"scheduled_job": scheduled_job})
                 scheduled_job.approved_by_user = request.user
                 scheduled_job.approved_at = timezone.now()
-                if (
-                    scheduled_job.interval == JobExecutionType.TYPE_IMMEDIATELY
-                    and scheduled_job.start_time < timezone.localtime()
-                ):
-                    # This is needed because otherwise multiple jobs will be scheduled, not just one.
-                    scheduled_job.one_off = True
-                    # This is needed because if we don't change the interval to TYPE_FUTURE, the scheduler will not send this task.
-                    scheduled_job.interval = JobExecutionType.TYPE_FUTURE
-                    scheduled_job.start_time = timezone.localtime()
                 scheduled_job.save()
-
                 publish_event_payload = {"data": serialize_object_v2(scheduled_job)}
                 publish_event(topic="nautobot.jobs.approval.approved", payload=publish_event_payload)
 
