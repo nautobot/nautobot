@@ -12,7 +12,6 @@ from rest_framework import renderers
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
 from nautobot.core.forms import (
     restrict_form_fields,
-    SearchForm,
     TableConfigForm,
 )
 from nautobot.core.forms.forms import DynamicFilterFormSet
@@ -206,7 +205,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         content_type = ContentType.objects.get_for_model(model)
         form = None
         table = None
-        search_form = None
         instance = None
         filter_form = None
         display_filter_params = []
@@ -236,7 +234,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     if view.filterset_form_class is not None:
                         filter_form = view.filterset_form_class(view.filter_params, label_suffix="")
                 table = self.construct_table(view, request=request, permissions=permissions)
-                search_form = SearchForm(data=view.filter_params)
             elif view.action == "destroy":
                 form = form_class(initial=request.GET)
             elif view.action in ["create", "update"]:
@@ -281,7 +278,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "form": form,
             "filter_form": filter_form,
             "dynamic_filter_form": self.get_dynamic_filter_form(view, request, filterset_class=view.filterset_class),
-            "search_form": search_form,
             "filter_params": display_filter_params,
             "object": instance,
             "obj": instance,  # NOTE: This context key is deprecated in favor of `object`.

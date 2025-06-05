@@ -32,3 +32,6 @@
 {% if settings.BRANDING_FILEPATHS.javascript %}
 <script src="{% custom_branding_or_static 'javascript' None %}"></script>
 {% endif %}
+{% if nav_menu %}
+    {{ nav_menu|json_script:'nav_menu' }}
+{% endif %}

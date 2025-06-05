@@ -39,3 +39,16 @@ export const removeElementClasses = (element, ...ignore) =>
   [...element.classList.entries()]
     .filter(([, className]) => !ignore.includes(className))
     .forEach(([, className]) => element.classList.remove(className));
+
+/**
+ * Convert `px` pixel value to `rem` units.
+ * @example
+ * // Convert `20` (`px`) to `rem`, return `1.25` (`rem`).
+ * rem(20);
+ * @param {number} px - Pixel value.
+ * @returns {number} Given pixel value converted to `rem` units.
+ */
+export const rem = (px) => {
+  const rootFontSize = window.getComputedStyle(document.documentElement).fontSize;
+  return px / parseInt(rootFontSize, 10);
+};

@@ -426,6 +426,11 @@ $theme-colors-rgb-dark: map-loop($theme-colors-dark, to-rgb, "$value");
 $utilities: map-merge(
   $utilities,
   (
+    "nb-color": (
+      class: nb-color,
+      property: color,
+      values: transparent,
+    ),
     "nb-cursor": (
       class: nb-cursor,
       property: cursor,
@@ -449,6 +454,22 @@ $utilities: map-merge(
       property: width,
       values: (
         0: 0,
+      )
+    ),
+    "nb-z-index": (
+      class: nb-z,
+      property: z-index,
+      values: (
+        dropdown:           $zindex-dropdown,           /* 1000 */
+        sticky:             $zindex-sticky,             /* 1020 */
+        fixed:              $zindex-fixed,              /* 1030 */
+        offcanvas-backdrop: $zindex-offcanvas-backdrop, /* 1040 */
+        offcanvas:          $zindex-offcanvas,          /* 1045 */
+        modal-backdrop:     $zindex-modal-backdrop,     /* 1050 */
+        modal:              $zindex-modal,              /* 1055 */
+        popover:            $zindex-popover,            /* 1070 */
+        tooltip:            $zindex-tooltip,            /* 1080 */
+        toast:              $zindex-toast,              /* 1090 */
       )
     ),
   )
@@ -714,6 +735,11 @@ $btn-variants: (
   &:hover:not(:disabled):not([readonly]) {
     border-color: var(--#{$prefix}primary-text-emphasis);
   }
+
+  /* Webkit browsers add "X" icon in `[type="search"]` input fields. It looks off and offers little configurability. */
+  &[type="search"]::-webkit-search-cancel-button {
+    display: none;
+  }
 }
 
 .form-check-input {
@@ -860,6 +886,31 @@ $btn-variants: (
 
   a {
     color: inherit;
+  }
+
+  button {
+    align-items: center;
+    background-color: transparent;
+    border: none;
+    border-end-end-radius: $border-radius;
+    border-start-end-radius: $border-radius;
+    color: var(--#{$prefix}secondary-color);
+    display: inline-flex;
+    height: 1.25rem; /* 20px */
+    justify-content: center;
+    margin-block: -#{map.get($spacers, 2) + $border-width};
+    margin-inline-end: -#{map.get($spacers, 8)};
+    padding: map.get($spacers, 6) map.get($spacers, 8);
+    width: 1.5rem; /* 24px */
+
+    &:hover {
+      background-color: var(--#{$prefix}border-color);
+    }
+
+    &:focus-visible {
+      @include box-shadow(0 0 0 #{$focus-ring-width} var(--#{$prefix}tertiary-color));
+      background-color: var(--#{$prefix}border-color);
+    }
   }
 }
 

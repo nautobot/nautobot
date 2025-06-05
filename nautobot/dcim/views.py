@@ -3859,7 +3859,6 @@ class ConsoleConnectionsListView(ConnectionsListView):
         return {
             "title": "Console Connections",
             "list_url": "dcim:console_connections_list",
-            "search_form": None,  # ConsoleConnectionFilterSet do not support q filter
         }
 
 
@@ -3875,7 +3874,6 @@ class PowerConnectionsListView(ConnectionsListView):
         return {
             "title": "Power Connections",
             "list_url": "dcim:power_connections_list",
-            "search_form": None,  # PowerConnectionFilterSet do not support q filter
         }
 
 
@@ -3915,7 +3913,6 @@ class InterfaceConnectionsListView(ConnectionsListView):
         return {
             "title": "Interface Connections",
             "list_url": "dcim:interface_connections_list",
-            "search_form": None,  # InterfaceConnectionFilterSet do not support q filter
         }
 
 
