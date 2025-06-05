@@ -1,5 +1,5 @@
 {% load helpers %}
 
 <div class="rendered-json-data">
-    <pre>{% if format == 'json' %}{{ data|render_json }}{% elif format == 'yaml' %}{{ data|render_yaml }}{% else %}{{ data }}{% endif %}</pre>
+    <pre>{% if data_format == 'json' %}{{ data|render_json }}{% elif data_format == 'yaml' %}{{ data|render_yaml }}{% else %}{{ data }}{% endif %}</pre>
 </div>
