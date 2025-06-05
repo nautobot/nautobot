@@ -9,9 +9,11 @@
         <a href="{% url 'circuits:circuittermination_edit' pk=termination.pk %}" class="btn btn-xs btn-warning">
             <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
         </a>
-        <a href="{% url 'circuits:circuit_terminations_swap' pk=object.pk %}" class="btn btn-xs btn-primary">
-            <span class="mdi mdi-swap-vertical" aria-hidden="true"></span> Swap
-        </a>
+        {% with pk=object.circuit.pk|default:object.pk %}
+            <a href="{% url 'circuits:circuit_terminations_swap' pk=pk %}" class="btn btn-xs btn-primary">
+                <span class="mdi mdi-swap-vertical" aria-hidden="true"></span> Swap
+            </a>
+        {% endwith %}
     {% endif %}
     {% if termination and perms.circuits.delete_circuittermination %}
         <a href="{% url 'circuits:circuittermination_delete' pk=termination.pk %}?return_url={{ object.get_absolute_url }}" class="btn btn-xs btn-danger">
