@@ -302,7 +302,6 @@ class LocationUIViewSet(NautobotUIViewSet):
         )
 
         children_table = tables.LocationTable(children, hide_hierarchy_ui=True)
-
         paginate = {
             "paginator_class": EnhancedPaginator,
             "per_page": get_paginate_count(request),
