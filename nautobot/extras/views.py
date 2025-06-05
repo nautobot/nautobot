@@ -1688,6 +1688,7 @@ class JobApprovalRequestView(generic.ObjectView):
                 scheduled_job.approved_by_user = request.user
                 scheduled_job.approved_at = timezone.now()
                 scheduled_job.save()
+
                 publish_event_payload = {"data": serialize_object_v2(scheduled_job)}
                 publish_event(topic="nautobot.jobs.approval.approved", payload=publish_event_payload)
 
