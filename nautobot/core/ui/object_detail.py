@@ -867,7 +867,7 @@ class ObjectsTablePanel(Panel):
                 body_content_table_queryset = body_content_table_queryset.order_by(*self.order_by_fields)
             body_content_table_queryset = body_content_table_queryset.distinct()
             body_content_table = body_content_table_class(
-                body_content_table_queryset, hide_hierarchy_ui=self.hide_hierarchy_ui
+                body_content_table_queryset, hide_hierarchy_ui=self.hide_hierarchy_ui, user=request.user
             )
             if self.tab_id and "actions" in body_content_table.columns:
                 # Use the `self.tab_id`, if it exists, to determine the correct return URL for the table
@@ -932,6 +932,18 @@ class ObjectsTablePanel(Panel):
             "form_id": self.form_id,
             "more_queryset_count": more_queryset_count,
         }
+
+
+class ObjectsTablePanelWithPaginator(ObjectsTablePanel):
+    """
+    Returns an ObjectsTablePanel with a paginator.
+
+    This class should only be used in DistinctViewTabs where only **one** table is displayed.
+    """
+
+    def __init__(self, *, template_path="components/panel/panel_with_paginator.html", **kwargs):
+        """Initialize the ObjectsTablePanelWithPaginator instance."""
+        super().__init__(template_path=template_path, **kwargs)
 
 
 class KeyValueTablePanel(Panel):

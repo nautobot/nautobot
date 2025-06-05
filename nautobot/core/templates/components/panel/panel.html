@@ -1,16 +1,18 @@
-<div class="panel panel-default">
-    {% if label.strip or header_extra_content.strip %}
-        <div class="panel-heading">
-            {% if label %}
-                <strong>{{ label }}</strong>
-            {% endif %}
-            {{ header_extra_content }}
-        </div>
-    {% endif %}
-    {{ body }}
-    {% if footer_content.strip %}
-        <div class="panel-footer">
-            {{ footer_content }}
-        </div>
-    {% endif %}
-</div>
+{% block panel %}
+    <div class="panel panel-default">
+        {% if label.strip or header_extra_content.strip %}
+            <div class="panel-heading">
+                {% if label %}
+                    <strong>{{ label }}</strong>
+                {% endif %}
+                {{ header_extra_content }}
+            </div>
+        {% endif %}
+        {{ body }}
+        {% if footer_content.strip %}
+            <div class="panel-footer">
+                {{ footer_content }}
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}
