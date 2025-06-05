@@ -109,6 +109,7 @@ class ObjectChange(BaseModel):
 
     documentation_static_path = "docs/user-guide/platform-functionality/change-logging.html"
     natural_key_field_names = ["pk"]
+    hide_in_diff_view = True
 
     class Meta:
         ordering = ["-time"]
