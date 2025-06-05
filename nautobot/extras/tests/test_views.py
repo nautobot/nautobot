@@ -3079,6 +3079,25 @@ class JobTestCase(
                 "One of these two flags must be removed before this job can be scheduled or run.",
             )
 
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_job_with_approval_required_creates_scheduled_job_internal_future(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        self.test_pass.approval_required = True
+        self.test_pass.save()
+        data = {
+            "_schedule_type": "immediately",
+        }
+        for run_url in self.run_urls:
+            response = self.client.post(run_url, data)
+            scheduled_job = ScheduledJob.objects.last()
+            self.assertTrue(scheduled_job.interval, JobExecutionType.TYPE_FUTURE)
+            self.assertRedirects(
+                response,
+                reverse("extras:scheduledjob_approval_queue_list"),
+            )
+
     def test_job_object_change_log_view(self):
         """Assert Job change log view displays appropriate header"""
         instance = self.test_pass

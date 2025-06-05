@@ -1702,7 +1702,7 @@ class JobTest(
         # Assert that we have an immediate ScheduledJob and that it matches the job_model.
         schedule = ScheduledJob.objects.last()
         self.assertIsNotNone(schedule)
-        self.assertEqual(schedule.interval, JobExecutionType.TYPE_IMMEDIATELY)
+        self.assertEqual(schedule.interval, JobExecutionType.TYPE_FUTURE)
         self.assertEqual(schedule.approval_required, self.job_model.approval_required)
         self.assertEqual(schedule.kwargs["var4"], str(device_role.pk))
 

@@ -1,0 +1,1 @@
+Changed the `create_schedule` method in `ScheduleJob` to include a condition that converts an TYPE_IMMEDIATELY interval to a TYPE_FUTURE interval. This change is required because TYPE_IMMEDIATELY isn't one of the values in JobExecutionType.SCHEDULE_CHOICES and the scheduler skipped sending the task.
