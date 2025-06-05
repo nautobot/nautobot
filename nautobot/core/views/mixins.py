@@ -1032,6 +1032,11 @@ class BulkEditAndBulkDeleteModelMixin:
 
         filter_query_params = new_filter_query_params
 
+        if nullified_fields := request.POST.getlist("_nullify"):
+            form_data["_nullify"] = nullified_fields
+        else:
+            form_data["_nullify"] = []
+
         job_form = BulkEditObjects.as_form(
             data={
                 "form_data": form_data,
