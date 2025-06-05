@@ -167,6 +167,12 @@ class CircuitTerminationUIViewSet(NautobotUIViewSet):
         context["circuit_termination_data"] = instance
         return context
 
+    def get_object(self):
+        obj = super().get_object()
+        if self.action in ["create", "update"] and "circuit" in self.kwargs:
+            obj.circuit = get_object_or_404(Circuit, pk=self.kwargs["circuit"])
+        return obj
+
 
 class ProviderUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.ProviderBulkEditForm
