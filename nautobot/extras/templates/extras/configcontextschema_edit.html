@@ -1,19 +1,2 @@
-{% extends 'generic/object_create.html' %}
-{% load form_helpers %}
-
-{% block form %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Config Context Schema</strong></div>
-        <div class="panel-body">
-            {% render_field form.name %}
-            {% render_field form.description %}
-        </div>
-    </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Data Schema</strong></div>
-        <div class="panel-body">
-            {% render_field form.data_schema %}
-        </div>
-    </div>
-    {% include 'inc/extras_features_edit_form_fields.html' %}
-{% endblock %}
+{% extends 'extras/configcontextschema_update.html' %}
+{% comment %}3.0 TODO: remove this template, which only exists for backward compatibility with 2.4 and earlier{% endcomment %}
