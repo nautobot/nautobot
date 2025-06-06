@@ -2,6 +2,7 @@ from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from nautobot.core.celery import app
@@ -219,6 +220,25 @@ class WebRequestContextTestCase(TestCase):
         self.assertEqual(call_args[5], self.user.username)
         self.assertEqual(call_args[6], oc_list[0].request_id)
         self.assertEqual(call_args[7], oc_list[0].get_snapshots())
+
+    def test_web_request_context_raises_exception_correctly(self):
+        """
+        Test implemented to ensure the fix for https://github.com/nautobot/nautobot/issues/7358 is working as intended.
+        The operation should raise and allow an exception to be passed through instead of raising an
+        AttributeError: 'NoneType' object has no attribute 'get'"
+        """
+        valid_location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
+        invalid_location_type = LocationType(name="rackgroup")
+        with self.assertRaises(ValidationError):
+            with web_request_context(self.user, context_detail="test_web_request_context_raises_exception_correctly"):
+                # These operations should generate some ObjectChange records to test the code path that was causing the reported issue.
+                location = Location(name="Test Location 1", location_type=valid_location_type, status=location_status)
+                location.save()
+                location.description = "changed"
+                location.save()
+                # Location type name is not allowed to be "rackgroup" (reserved name), so this should raise an exception.
+                invalid_location_type.validated_save()
 
 
 class WebRequestContextTransactionTestCase(TransactionTestCase):
