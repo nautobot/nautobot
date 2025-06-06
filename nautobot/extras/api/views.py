@@ -771,42 +771,41 @@ class JobViewSetBase(
         if schedule_data is None and approval_required:
             schedule_data = {"interval": JobExecutionType.TYPE_IMMEDIATELY}
 
-        # Skip creating a ScheduledJob when job can be executed immediately
-        elif schedule_data and schedule_data["interval"] == JobExecutionType.TYPE_IMMEDIATELY and not approval_required:
-            schedule_data = None
+        schedule = ScheduledJob.create_schedule(
+            job_model,
+            request.user,
+            name=schedule_data.get("name"),
+            start_time=schedule_data.get("start_time"),
+            interval=schedule_data.get("interval"),
+            crontab=schedule_data.get("crontab", ""),
+            approval_required=approval_required,
+            job_queue=job_queue,
+            validated_save=False,
+            **job_class.serialize_data(cleaned_data),
+        )
 
-        # Try to create a ScheduledJob, or...
-        if schedule_data:
-            schedule = ScheduledJob.create_schedule(
-                job_model,
-                request.user,
-                name=schedule_data.get("name"),
-                start_time=schedule_data.get("start_time"),
-                interval=schedule_data.get("interval"),
-                crontab=schedule_data.get("crontab", ""),
-                approval_required=approval_required,
-                job_queue=job_queue,
-                **job_class.serialize_data(cleaned_data),
-            )
+        if approval_required:
+            if not ApprovalWorkflowDefinition.objects.find_for_model(schedule):
+                return Response(
+                    {"detail": "No approval workflow is defined for this job."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            schedule.validated_save()
+            serializer = serializers.ScheduledJobSerializer(schedule, context={"request": request})
+            return Response({"scheduled_job": serializer.data, "job_result": None}, status=status.HTTP_201_CREATED)
+        elif schedule_data["interval"] in JobExecutionType.SCHEDULE_CHOICES:
+            schedule.validated_save()
+            serializer = serializers.ScheduledJobSerializer(schedule, context={"request": request})
+            return Response({"scheduled_job": serializer.data, "job_result": None}, status=status.HTTP_201_CREATED)
         else:
-            schedule = None
-
-        # ... If we can't create one, create a JobResult instead.
-        if schedule is None:
             job_result = JobResult.enqueue_job(
                 job_model,
                 request.user,
                 job_queue=job_queue,
                 **job_class.serialize_data(cleaned_data),
             )
-
-        # New-style JobModelViewSet response - serialize the schedule or job_result as appropriate
-        data = {"scheduled_job": None, "job_result": None}
-        if schedule:
-            data["scheduled_job"] = serializers.ScheduledJobSerializer(schedule, context={"request": request}).data
-        if job_result:
-            data["job_result"] = serializers.JobResultSerializer(job_result, context={"request": request}).data
-        return Response(data, status=status.HTTP_201_CREATED)
+            serializer = serializers.JobResultSerializer(job_result, context={"request": request})
+            return Response({"scheduled_job": None, "job_result": serializer.data}, status=status.HTTP_201_CREATED)
 
 
 class JobViewSet(

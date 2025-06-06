@@ -1,4 +1,5 @@
 Changed `post` method in `JobRunView` to support job approvals via approval workflows.
+Changed `post` method in `JobViewSetBase` to support job approvals via approval workflows.
 Added `approval_workflow` parameter to `on_workflow_approved`, `on_workflow_initiated` and `on_workflow_denied` methods.
 Changed `ScheduledJob.on_workflow_initiated` by adding set `approval_required = True` when workflow was initiated.
 Changed `ScheduledJob.on_workflow_approved` by adding set `approved_at` and publishing an approval event when workflow was approved.
