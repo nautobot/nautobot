@@ -2519,14 +2519,13 @@ class RelationshipUIViewSet(NautobotUIViewSet):
     )
 
 
-class RelationshipAssociationUIViewSet(
-    ObjectListViewMixin, ObjectDestroyViewMixin, ObjectBulkDestroyViewMixin, ObjectBulkCreateViewMixin
-):
+class RelationshipAssociationUIViewSet(ObjectListViewMixin, ObjectDestroyViewMixin, ObjectBulkDestroyViewMixin):
     filterset_class = filters.RelationshipAssociationFilterSet
     filterset_form_class = forms.RelationshipAssociationFilterForm
     serializer_class = serializers.RelationshipAssociationSerializer
     table_class = tables.RelationshipAssociationTable
     queryset = RelationshipAssociation.objects.all()
+    action_buttons = None
 
 
 #
