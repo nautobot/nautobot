@@ -122,7 +122,6 @@ class CSVParsingRelatedTestCase(TestCase):
                 "rack",
                 "primary_ip4",
                 "primary_ip6",
-                "cluster",
                 "virtual_chassis",
                 "controller_managed_device_group",
                 "device_redundancy_group",
