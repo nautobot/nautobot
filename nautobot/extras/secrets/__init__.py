@@ -51,7 +51,7 @@ def register_secrets_provider(provider):
     if provider.slug in registry["secrets_providers"]:
         raise KeyError(
             f'Cannot register {provider} as slug "{provider.slug}" is already registered '
-            f'by {registry["secrets_providers"][provider.slug]}'
+            f"by {registry['secrets_providers'][provider.slug]}"
         )
     registry["secrets_providers"][provider.slug] = provider
 

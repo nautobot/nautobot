@@ -9,11 +9,11 @@ A common clean method for all these classes looks for any
 validation rules that have been defined for the given model.
 """
 
+from decimal import Decimal
 import inspect
 import logging
 import os
 import re
-from decimal import Decimal
 from typing import Optional
 
 from django.conf import settings

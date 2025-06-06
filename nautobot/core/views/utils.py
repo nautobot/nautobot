@@ -133,13 +133,13 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
                     "help_text": cf_form_field.help_text,
                 }
                 if cf.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
-                    field_info["format"] = mark_safe("<code>true</code> or <code>false</code>")  # noqa: S308
+                    field_info["format"] = mark_safe("<code>true</code> or <code>false</code>")
                 elif cf.type == CustomFieldTypeChoices.TYPE_DATE:
-                    field_info["format"] = mark_safe("<code>YYYY-MM-DD</code>")  # noqa: S308
+                    field_info["format"] = mark_safe("<code>YYYY-MM-DD</code>")
                 elif cf.type == CustomFieldTypeChoices.TYPE_SELECT:
                     field_info["choices"] = {value: value for value in cf.choices}
                 elif cf.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
-                    field_info["format"] = mark_safe('<code>"value,value"</code>')  # noqa: S308
+                    field_info["format"] = mark_safe('<code>"value,value"</code>')
                     field_info["choices"] = {value: value for value in cf.choices}
                 fields.append(field_info)
             continue
@@ -152,29 +152,29 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
             "help_text": field.help_text,
         }
         if isinstance(field, serializers.BooleanField):
-            field_info["format"] = mark_safe("<code>true</code> or <code>false</code>")  # noqa: S308
+            field_info["format"] = mark_safe("<code>true</code> or <code>false</code>")
         elif isinstance(field, serializers.DateField):
-            field_info["format"] = mark_safe("<code>YYYY-MM-DD</code>")  # noqa: S308
+            field_info["format"] = mark_safe("<code>YYYY-MM-DD</code>")
         elif isinstance(field, TimeZoneSerializerField):
-            field_info["format"] = mark_safe(  # noqa: S308
+            field_info["format"] = mark_safe(
                 '<a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">available options</a>'
             )
         elif isinstance(field, serializers.ManyRelatedField):
             if field.field_name == "tags":
-                field_info["format"] = mark_safe('<code>"name,name"</code> or <code>"UUID,UUID"</code>')  # noqa: S308
+                field_info["format"] = mark_safe('<code>"name,name"</code> or <code>"UUID,UUID"</code>')
             elif isinstance(field.child_relation, ContentTypeField):
-                field_info["format"] = mark_safe('<code>"app_label.model,app_label.model"</code>')  # noqa: S308
+                field_info["format"] = mark_safe('<code>"app_label.model,app_label.model"</code>')
             else:
                 field_info["foreign_key"] = field.child_relation.queryset.model._meta.label_lower
-                field_info["format"] = mark_safe('<code>"UUID,UUID"</code> or combination of fields')  # noqa: S308
+                field_info["format"] = mark_safe('<code>"UUID,UUID"</code> or combination of fields')
         elif isinstance(field, serializers.RelatedField):
             if isinstance(field, ContentTypeField):
-                field_info["format"] = mark_safe("<code>app_label.model</code>")  # noqa: S308
+                field_info["format"] = mark_safe("<code>app_label.model</code>")
             else:
                 field_info["foreign_key"] = field.queryset.model._meta.label_lower
-                field_info["format"] = mark_safe("<code>UUID</code> or combination of fields")  # noqa: S308
+                field_info["format"] = mark_safe("<code>UUID</code> or combination of fields")
         elif isinstance(field, (serializers.ListField, serializers.MultipleChoiceField)):
-            field_info["format"] = mark_safe('<code>"value,value"</code>')  # noqa: S308
+            field_info["format"] = mark_safe('<code>"value,value"</code>')
         elif isinstance(field, (serializers.DictField, serializers.JSONField)):
             pass  # Not trivial to specify a format as it could be a JSON dict or a comma-separated string
 
