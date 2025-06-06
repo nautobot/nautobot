@@ -3015,9 +3015,9 @@ class TagUIViewSet(NautobotUIViewSet):
     table_class = tables.TagTable
 
     def get_extra_context(self, request, instance):
-        if self.action == "retrieve" or instance is None:
+        # Only run this logic when retrieving a single object
+        if instance is None or self.action != "retrieve":
             return super().get_extra_context(request, instance)
-
         tagged_items = (
             TaggedItem.objects.filter(tag=instance).select_related("content_type").prefetch_related("content_object")
         )
