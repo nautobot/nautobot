@@ -1255,14 +1255,12 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
 
     def on_workflow_initiated(self, approval_workflow):
         """When initiated, set enabled to False."""
-        self.enabled = False
         self.approval_required = True
         self.save()
 
     def on_workflow_approved(self, approval_workflow):
         """When approved, set enabled to True."""
         self.approved_at = approval_workflow.decision_date
-        self.enabled = True
         self.save()
 
         publish_event_payload = {"data": serialize_object_v2(self)}
@@ -1270,8 +1268,9 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
 
     def on_workflow_denied(self, approval_workflow):
         """When denied, set enabled to False."""
-        self.enabled = False
-        self.save()
+        if self.approved_at:
+            self.approved_at = None
+            self.save()
 
     @property
     def schedule(self):

@@ -2465,6 +2465,42 @@ class ScheduledJobTestCase(
         self.assertHttpStatus(response, 200)
         self.assertNotIn("test4", extract_page_body(response.content.decode(response.charset)))
 
+    def test_approved_required_jobs_are_listed_only_when_approved(self):
+        self.add_permissions("extras.view_scheduledjob")
+
+        # this should not appear, since it's not approved
+        ScheduledJob.objects.create(
+            enabled=True,
+            approval_required=True,
+            approved_at=None,
+            name="test4",
+            task="pass.TestPassJob",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            start_time=timezone.now(),
+        )
+        ScheduledJob.objects.create(
+            enabled=True,
+            approval_required=False,
+            name="test5",
+            task="pass.TestPassJob",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            start_time=timezone.now(),
+        )
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        self.assertNotIn("test4", extract_page_body(response.content.decode(response.charset)))
+        self.assertIn("test5", extract_page_body(response.content.decode(response.charset)))
+
+        scheduled_job = ScheduledJob.objects.get(name="test4")
+        scheduled_job.approved_at = timezone.now()
+        scheduled_job.save()
+
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        self.assertIn("test4", extract_page_body(response.content.decode(response.charset)))
+
     def test_non_valid_crontab_syntax(self):
         self.add_permissions("extras.view_scheduledjob")
 
