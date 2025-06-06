@@ -1,1 +1,0 @@
-Fixed an issue in the Golden Config App where clicking a Configuration Compliance Feature Navigation link or loading a page with a hash would not scroll to the correct section due to conflicting legacy scroll offset logic.
