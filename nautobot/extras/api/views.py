@@ -767,9 +767,9 @@ class JobViewSetBase(
         else:
             approval_required = job_model.approval_required
 
-        # Set schedule for jobs that require approval but request did not supply schedule data
-        if schedule_data is None and approval_required:
-            schedule_data = {"interval": JobExecutionType.TYPE_IMMEDIATELY}
+        # Set schedule for jobs if request did not supply schedule data
+        if schedule_data is None:
+            schedule_data = {"interval": JobExecutionType.TYPE_IMMEDIATELY, "start_time": timezone.now()}
 
         schedule = ScheduledJob.create_schedule(
             job_model,
