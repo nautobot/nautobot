@@ -35,8 +35,7 @@ class ValidationRuleManager(BaseManager.from_queryset(RestrictedQuerySet)):
         app_label, model = content_type.split(".")
         cache_key = (
             # e.g. "nautobot.data_validation.get_for_model.regularexpressionvalidationrule.dcim.device"
-            f"{self.get_for_model.cache_key_prefix}."
-            f"{self.model._meta.concrete_model._meta.model_name}.{content_type}"
+            f"{self.get_for_model.cache_key_prefix}.{self.model._meta.concrete_model._meta.model_name}.{content_type}"
         )
         queryset = cache.get(cache_key)
         if queryset is None:
@@ -195,7 +194,6 @@ class MinMaxValidationRule(ValidationRule):
             )
 
         allowed_field_types = (
-            models.DecimalField,
             models.FloatField,
             models.IntegerField,
         )
@@ -203,6 +201,7 @@ class MinMaxValidationRule(ValidationRule):
         excluded_field_types = (
             models.AutoField,
             models.BigAutoField,
+            models.DecimalField,
         )
 
         model_field = self.content_type.model_class()._meta.get_field(self.field)

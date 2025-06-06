@@ -40,7 +40,7 @@ class ComputedFieldsTestCase(SeleniumTestCase):
         and checks it appears ONLY there!.
         """
         # Visit the device detail page
-        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device", kwargs={"pk": self.device.pk})}')
+        self.browser.visit(f"{self.live_server_url}{reverse('dcim:device', kwargs={'pk': self.device.pk})}")
         # Check the computed field appears in the primary information tab
         self.assertTrue(self.browser.is_text_present("Device Computed Field"))
         self.assertTrue(self.browser.is_text_present(f"{self.device.name} is awesome!"))
@@ -52,7 +52,7 @@ class ComputedFieldsTestCase(SeleniumTestCase):
         self.computed_field.advanced_ui = True
         self.computed_field.save()
         # Visit the device detail page
-        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device", kwargs={"pk": self.device.pk})}')
+        self.browser.visit(f"{self.live_server_url}{reverse('dcim:device', kwargs={'pk': self.device.pk})}")
         # Check the computed field does NOT appear in the primary information tab
         self.assertFalse(self.browser.is_text_present("Device Computed Field"))
         self.assertFalse(self.browser.is_text_present(f"{self.device.name} is awesome!"))

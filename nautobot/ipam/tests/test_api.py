@@ -516,7 +516,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
 
         response = self.client.get(f"{url}?depth=1", **self.header)
         for p in response.data["results"]:
-            self.assertEqual(p["display"], f'{p["prefix"]}: {p["namespace"]["name"]}')
+            self.assertEqual(p["display"], f"{p['prefix']}: {p['namespace']['name']}")
 
     def test_create_single_available_prefix(self):
         """
@@ -540,7 +540,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
                 "prefix_length": child_prefix_length,
                 "status": self.status.pk,
                 "description": f"Test Prefix {i + 1}",
-                "custom_fields": {"prefixcf": f"value {i+1}"},
+                "custom_fields": {"prefixcf": f"value {i + 1}"},
             }
             response = self.client.post(url, data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_201_CREATED)

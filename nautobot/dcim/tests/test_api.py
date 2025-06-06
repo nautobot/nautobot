@@ -3060,7 +3060,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
                     # Interface name starts with parent device's position in VC; e.g. 1/1, 1/2, 1/3...
                     Interface.objects.create(
                         device=device,
-                        name=f"{i%3+1}/{j}",
+                        name=f"{i % 3 + 1}/{j}",
                         type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                         status=interface_status,
                         role=interface_role,
