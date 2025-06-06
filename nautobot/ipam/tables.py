@@ -35,7 +35,9 @@ from .models import (
     VRFPrefixAssignment,
 )
 
-AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>')  # suspicious-mark-safe-usage -- known safe string here
+AVAILABLE_LABEL = mark_safe(  # noqa: S308
+    '<span class="label label-success">Available</span>'
+)  # suspicious-mark-safe-usage -- known safe string here
 
 UTILIZATION_GRAPH = """
 {% load helpers %}

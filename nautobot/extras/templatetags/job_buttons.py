@@ -71,7 +71,7 @@ CONFIRM_MODAL = """
 </div>
 """
 
-SAFE_EMPTY_STR = mark_safe("")  # suspicious-mark-safe-usage -- this one is safe
+SAFE_EMPTY_STR = mark_safe("")  # noqa: S308
 
 
 def _render_job_button_for_obj(job_button, obj, context, content_type):

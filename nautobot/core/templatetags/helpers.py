@@ -26,9 +26,9 @@ from nautobot.core.utils import color, config, data, logging as nautobot_logging
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
 # S308 is suspicious-mark-safe-usage, but these are all using static strings that we know to be safe
-HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')
-HTML_FALSE = mark_safe('<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>')
-HTML_NONE = mark_safe('<span class="text-muted">&mdash;</span>')
+HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')  # noqa: S308
+HTML_FALSE = mark_safe('<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>')  # noqa: S308
+HTML_NONE = mark_safe('<span class="text-muted">&mdash;</span>')  # noqa: S308
 
 DEFAULT_SUPPORT_MESSAGE = (
     "If further assistance is required, please join the `#nautobot` channel "
