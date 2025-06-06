@@ -197,6 +197,7 @@ class CSVParsingRelatedTestCase(TestCase):
                 "url": f"http://testserver/api/dcim/devices/{device.pk}/",
                 "natural_slug": device.natural_slug,
                 "face": CSV_NULL_TYPE,
+                "cluster": CSV_NULL_TYPE,
                 "local_config_context_data": CSV_NULL_TYPE,
                 "local_config_context_data_owner_object_id": CSV_NULL_TYPE,
                 "name": device.name,

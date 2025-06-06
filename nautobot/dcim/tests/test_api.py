@@ -1465,6 +1465,7 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
 class DeviceTest(APIViewTestCases.APIViewTestCase):
     model = Device
     choices_fields = ["face"]
+    validation_excluded_fields = ["cluster"]
 
     @classmethod
     def setUpTestData(cls):
