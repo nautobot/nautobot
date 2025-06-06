@@ -7,13 +7,12 @@ from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.validators import ExclusionValidator
 from nautobot.dcim.choices import (
-    BreakerPoleChoices,
-    PanelTypeChoices,
-    PanelVoltageChoices,
-    PhaseAssignmentChoices,
+    PowerFeedBreakerPoleChoices,
     PowerFeedPhaseChoices,
     PowerFeedSupplyChoices,
     PowerFeedTypeChoices,
+    PowerPanelTypeChoices,
+    PowerPanelVoltageChoices,
 )
 from nautobot.dcim.constants import (
     POWERFEED_AMPERAGE_DEFAULT,
@@ -56,13 +55,13 @@ class PowerPanel(PrimaryModel):
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
     panel_type = models.CharField(
         max_length=30,
-        choices=PanelTypeChoices,
+        choices=PowerPanelTypeChoices,
         blank=True,
         help_text="Panel configuration type"
     )
     voltage_configuration = models.CharField(
         max_length=20,
-        choices=PanelVoltageChoices,
+        choices=PowerPanelVoltageChoices,
         blank=True,
         help_text="Panel voltage configuration (e.g., 208/120V-3Φ-4W)"
     )
@@ -172,17 +171,11 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
         blank=True,
         help_text="Circuit position in panel (1, 2, 3, etc.)"
     )
-    breaker_poles = models.CharField(
-        max_length=3,
-        choices=BreakerPoleChoices,
+    breaker_poles = models.PositiveSmallIntegerField(
+        choices=PowerFeedBreakerPoleChoices,
         blank=True,
-        help_text="Breaker poles (1P, 2P, 3P)"
-    )
-    phase_assignment = models.CharField(
-        max_length=5,
-        choices=PhaseAssignmentChoices,
-        blank=True,
-        help_text="Phase assignment (A, B, C, A-B, etc.)"
+        null=True,
+        help_text="Number of breaker poles (1, 2, or 3)"
     )
     available_power = models.PositiveIntegerField(default=0, editable=False)
     comments = models.TextField(blank=True)
@@ -200,7 +193,6 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
         "max_utilization",
         "circuit_position",
         "breaker_poles",
-        "phase_assignment",
         "available_power",
     ]
 
@@ -213,6 +205,20 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
 
     def clean(self):
         super().clean()
+
+        # Rack must belong to same location hierarchy as PowerPanel
+        if self.rack and self.rack.location and self.power_panel.location:
+            if (
+                self.rack.location not in self.power_panel.location.ancestors(include_self=True)  # pylint: disable=no-member
+                and self.power_panel.location not in self.rack.location.ancestors(include_self=True)  # pylint: disable=no-member
+            ):
+                raise ValidationError(
+                    {
+                        "rack": f'Rack "{self.rack}" ({self.rack.location}) and '  # pylint: disable=no-member
+                        f'power panel "{self.power_panel}" ({self.power_panel.location}) '
+                        f'are not in the same location hierarchy.'
+                    }
+                )
 
         # AC voltage cannot be negative
         if self.voltage < 0 and self.supply == PowerFeedSupplyChoices.SUPPLY_AC:

@@ -77,7 +77,6 @@ from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
 from nautobot.wireless.models import RadioProfile
 
 from .choices import (
-    BreakerPoleChoices,
     CableLengthUnitChoices,
     CableTypeChoices,
     ConsolePortTypeChoices,
@@ -88,15 +87,15 @@ from .choices import (
     InterfaceRedundancyGroupProtocolChoices,
     InterfaceTypeChoices,
     LocationDataToContactActionChoices,
-    PanelTypeChoices,
-    PanelVoltageChoices,
-    PhaseAssignmentChoices,
     PortTypeChoices,
+    PowerFeedBreakerPoleChoices,
     PowerFeedPhaseChoices,
     PowerFeedSupplyChoices,
     PowerFeedTypeChoices,
     PowerOutletFeedLegChoices,
     PowerOutletTypeChoices,
+    PowerPanelTypeChoices,
+    PowerPanelVoltageChoices,
     PowerPortTypeChoices,
     RackDimensionUnitChoices,
     RackTypeChoices,
@@ -4478,12 +4477,12 @@ class PowerPanelBulkEditForm(
         query_params={"location": "$location"},
     )
     panel_type = forms.ChoiceField(
-        choices=add_blank_choice(PanelTypeChoices),
+        choices=add_blank_choice(PowerPanelTypeChoices),
         required=False,
         widget=StaticSelect2(),
     )
     voltage_configuration = forms.ChoiceField(
-        choices=add_blank_choice(PanelVoltageChoices),
+        choices=add_blank_choice(PowerPanelVoltageChoices),
         required=False,
         widget=StaticSelect2(),
     )
@@ -4506,12 +4505,12 @@ class PowerPanelFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
         query_params={"location": "$location"},
     )
     panel_type = forms.MultipleChoiceField(
-        choices=add_blank_choice(PanelTypeChoices),
+        choices=add_blank_choice(PowerPanelTypeChoices),
         required=False,
         widget=StaticSelect2Multiple(),
     )
     voltage_configuration = forms.MultipleChoiceField(
-        choices=add_blank_choice(PanelVoltageChoices),
+        choices=add_blank_choice(PowerPanelVoltageChoices),
         required=False,
         widget=StaticSelect2Multiple(),
     )
@@ -4531,14 +4530,19 @@ class PowerFeedForm(NautobotModelForm):
         required=False,
         initial_params={"power_panels": "$power_panel"},
     )
-    power_panel = DynamicModelChoiceField(queryset=PowerPanel.objects.all(), query_params={"location": "$location"})
+    power_panel = DynamicModelChoiceField(
+        queryset=PowerPanel.objects.all(),
+        query_params={"location": "$location"},
+    )
     destination_panel = DynamicModelChoiceField(
         queryset=PowerPanel.objects.all(),
         required=False,
+        query_params={"location": "$location"}
     )
     rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         required=False,
+        query_params={"location": "$location"}
     )
     comments = CommentField()
 
@@ -4559,7 +4563,6 @@ class PowerFeedForm(NautobotModelForm):
             "max_utilization",
             "circuit_position",
             "breaker_poles",
-            "phase_assignment",
             "comments",
             "tags",
         ]
@@ -4568,7 +4571,6 @@ class PowerFeedForm(NautobotModelForm):
             "supply": StaticSelect2(),
             "phase": StaticSelect2(),
             "breaker_poles": StaticSelect2(),
-            "phase_assignment": StaticSelect2(),
         }
 
 
@@ -4600,12 +4602,7 @@ class PowerFeedBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin,
     max_utilization = forms.IntegerField(required=False)
     circuit_position = forms.IntegerField(required=False, min_value=1)
     breaker_poles = forms.ChoiceField(
-        choices=add_blank_choice(BreakerPoleChoices),
-        required=False,
-        widget=StaticSelect2(),
-    )
-    phase_assignment = forms.ChoiceField(
-        choices=add_blank_choice(PhaseAssignmentChoices),
+        choices=add_blank_choice(PowerFeedBreakerPoleChoices),
         required=False,
         widget=StaticSelect2(),
     )
@@ -4615,15 +4612,13 @@ class PowerFeedBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin,
         nullable_fields = [
             "circuit_position",
             "breaker_poles",
-            "phase_assignment",
             "comments",
         ]
 
 
-class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
+class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, LocatableModelFilterFormMixin):
     model = PowerFeed
     q = forms.CharField(required=False, label="Search")
-    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     power_panel = DynamicModelMultipleChoiceField(
         queryset=PowerPanel.objects.all(),
         required=False,
@@ -4636,6 +4631,7 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
         required=False,
         label="Destination panel",
         null_option="None",
+        query_params={"location": "$location"},
     )
     rack = DynamicModelMultipleChoiceField(
         queryset=Rack.objects.all(),
@@ -4663,12 +4659,7 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
     max_utilization = forms.IntegerField(required=False)
     circuit_position = forms.IntegerField(required=False, min_value=1)
     breaker_poles = forms.ChoiceField(
-        choices=add_blank_choice(BreakerPoleChoices),
-        required=False,
-        widget=StaticSelect2(),
-    )
-    phase_assignment = forms.ChoiceField(
-        choices=add_blank_choice(PhaseAssignmentChoices),
+        choices=add_blank_choice(PowerFeedBreakerPoleChoices),
         required=False,
         widget=StaticSelect2(),
     )

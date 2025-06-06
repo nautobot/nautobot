@@ -80,7 +80,6 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
     type = ChoiceFieldColumn()
     circuit_position = tables.Column(verbose_name="Position")
     breaker_poles = ChoiceFieldColumn(verbose_name="Poles")
-    phase_assignment = ChoiceFieldColumn(verbose_name="Phase")
     max_utilization = tables.TemplateColumn(template_code="{{ value }}%")
     available_power = tables.Column(verbose_name="Available power (VA)")
     tags = TagColumn(url_name="dcim:powerfeed_list")
@@ -102,7 +101,6 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
             "max_utilization",
             "circuit_position",
             "breaker_poles",
-            "phase_assignment",
             "cable",
             "cable_peer",
             "connection",
@@ -122,7 +120,6 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
             "phase",
             "circuit_position",
             "breaker_poles",
-            "phase_assignment",
             "cable",
             "cable_peer",
         )

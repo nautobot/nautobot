@@ -1373,7 +1373,7 @@ class CableLengthUnitChoices(ChoiceSet):
 # Power Panels
 #
 
-class PanelTypeChoices(ChoiceSet):
+class PowerPanelTypeChoices(ChoiceSet):
     TYPE_UTILITY = "utility"
     TYPE_GENERATOR = "generator"
     TYPE_SWITCHGEAR = "switchgear"
@@ -1418,7 +1418,7 @@ class PanelTypeChoices(ChoiceSet):
         ]),
     ]
 
-class PanelVoltageChoices(ChoiceSet):
+class PowerPanelVoltageChoices(ChoiceSet):
     # Single Phase
     VOLTAGE_120V_1P_2W = "120v-1ph-2w"
     VOLTAGE_240V_1P_2W = "240v-1ph-2w"
@@ -1541,35 +1541,15 @@ class PowerFeedPhaseChoices(ChoiceSet):
     )
 
 
-class BreakerPoleChoices(ChoiceSet):
-    POLE_1P = "1P"
-    POLE_2P = "2P"
-    POLE_3P = "3P"
+class PowerFeedBreakerPoleChoices(ChoiceSet):
+    POLE_1 = 1
+    POLE_2 = 2
+    POLE_3 = 3
 
     CHOICES = [
-        (POLE_1P, "1-Pole"),
-        (POLE_2P, "2-Pole"),
-        (POLE_3P, "3-Pole"),
-    ]
-
-
-class PhaseAssignmentChoices(ChoiceSet):
-    PHASE_A = "A"
-    PHASE_B = "B"
-    PHASE_C = "C"
-    PHASE_AB = "A-B"
-    PHASE_AC = "A-C"
-    PHASE_BC = "B-C"
-    PHASE_ABC = "A-B-C"
-
-    CHOICES = [
-        (PHASE_A, "Phase A"),
-        (PHASE_B, "Phase B"),
-        (PHASE_C, "Phase C"),
-        (PHASE_AB, "Phase A-B"),
-        (PHASE_AC, "Phase A-C"),
-        (PHASE_BC, "Phase B-C"),
-        (PHASE_ABC, "Phase A-B-C"),
+        (POLE_1, "1-Pole"),
+        (POLE_2, "2-Pole"),
+        (POLE_3, "3-Pole"),
     ]
 
 

@@ -113,12 +113,6 @@
                     <td>{{ object.get_breaker_poles_display }}</td>
                 </tr>
                 {% endif %}
-                {% if object.phase_assignment %}
-                <tr>
-                    <td>Phase Assignment</td>
-                    <td>{{ object.get_phase_assignment_display }}</td>
-                </tr>
-                {% endif %}
             </table>
         </div>
 {% endblock content_left_page %}
