@@ -2465,6 +2465,42 @@ class ScheduledJobTestCase(
         self.assertHttpStatus(response, 200)
         self.assertNotIn("test4", extract_page_body(response.content.decode(response.charset)))
 
+    def test_approved_required_jobs_are_listed_only_when_approved(self):
+        self.add_permissions("extras.view_scheduledjob")
+
+        # this should not appear, since it's not approved
+        ScheduledJob.objects.create(
+            enabled=True,
+            approval_required=True,
+            approved_at=None,
+            name="test4",
+            task="pass.TestPassJob",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            start_time=timezone.now(),
+        )
+        ScheduledJob.objects.create(
+            enabled=True,
+            approval_required=False,
+            name="test5",
+            task="pass.TestPassJob",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            start_time=timezone.now(),
+        )
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        self.assertNotIn("test4", extract_page_body(response.content.decode(response.charset)))
+        self.assertIn("test5", extract_page_body(response.content.decode(response.charset)))
+
+        scheduled_job = ScheduledJob.objects.get(name="test4")
+        scheduled_job.approved_at = timezone.now()
+        scheduled_job.save()
+
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        self.assertIn("test4", extract_page_body(response.content.decode(response.charset)))
+
     def test_non_valid_crontab_syntax(self):
         self.add_permissions("extras.view_scheduledjob")
 
@@ -3555,8 +3591,12 @@ class JobTestCase(
             )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    @mock.patch("nautobot.extras.models.mixins.ApprovableModelMixin.begin_approval_workflow")
-    def test_run_job_with_requires_approval_triggers_approval_workflow(self, mock_begin_approval_workflow, _):
+    def test_run_job_with_approval_required_triggers_approval_workflow(self, _):
+        ApprovalWorkflowDefinition.objects.create(
+            name="Test Approval Workflow Definition 1",
+            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+            priority=0,
+        )
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
 
@@ -3568,8 +3608,167 @@ class JobTestCase(
         }
         for run_url in self.run_urls:
             response = self.client.post(run_url, data)
-            self.assertRedirects(response, reverse("extras:scheduledjob_approval_queue_list"))
-            mock_begin_approval_workflow.assert_called()
+            scheduled_job = ScheduledJob.objects.last()
+            # Assert the redirect goes to that job's approval workflow view
+            self.assertRedirects(
+                response,
+                reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk]),
+            )
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_scheduled_job_with_approval_required_triggers_approval_workflow(self, _):
+        ApprovalWorkflowDefinition.objects.create(
+            name="Test Approval Workflow Definition 1",
+            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+            priority=0,
+        )
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        self.test_pass.approval_required = True
+        self.test_pass.save()
+        data = {
+            "_schedule_type": "future",
+            "_schedule_name": "test",
+            "_schedule_start_time": str(timezone.now() + timedelta(minutes=1)),
+        }
+        for i, run_url in enumerate(self.run_urls):
+            data["_schedule_name"] = f"test {i}"
+            response = self.client.post(run_url, data)
+            scheduled_job = ScheduledJob.objects.last()
+            self.assertRedirects(
+                response,
+                reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk]),
+            )
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_immediate_job_with_approval_required_fails_without_approval_workflow(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        self.test_pass.approval_required = True
+        self.test_pass.save()
+        data = {
+            "_schedule_type": "immediately",
+        }
+        for run_url in self.run_urls:
+            count_job_result = JobResult.objects.count()
+            response = self.client.post(run_url, data, follow=True)
+            self.assertEqual(ScheduledJob.objects.count(), 0)
+            self.assertEqual(JobResult.objects.count(), count_job_result)
+            self.assertContains(response, "Job was not successfully submitted for approval")
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_scheduled_job_with_approval_required_fails_without_approval_workflow(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        self.test_pass.approval_required = True
+        self.test_pass.save()
+        data = {
+            "_schedule_type": "future",
+            "_schedule_name": "test",
+            "_schedule_start_time": str(timezone.now() + timedelta(minutes=1)),
+        }
+
+        for i, run_url in enumerate(self.run_urls):
+            if "_schedule_name" in data:
+                data["_schedule_name"] = f"test {i}"
+            response = self.client.post(run_url, data, follow=True)
+            self.assertEqual(ScheduledJob.objects.count(), 0)
+            self.assertContains(response, "Job was not successfully submitted for approval")
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_immediate_job_skips_approval_workflow_if_not_required(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
+
+        self.test_pass.approval_required = False
+        self.test_pass.save()
+
+        ApprovalWorkflowDefinition.objects.create(
+            name="Approval Definition",
+            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+            priority=0,
+        )
+        data = {
+            "_schedule_type": "immediately",
+        }
+        for run_url in self.run_urls:
+            response = self.client.post(run_url, data)
+            self.assertEqual(ScheduledJob.objects.count(), 0)
+            result = JobResult.objects.latest()
+            self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_scheduled_job_with_no_approval_flag_still_triggers_approval_workflow_if_defined(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        self.test_pass.approval_required = False
+        self.test_pass.save()
+
+        ApprovalWorkflowDefinition.objects.create(
+            name="Approval Definition",
+            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+            priority=0,
+        )
+        data = {
+            "_schedule_type": "future",
+            "_schedule_name": "test",
+            "_schedule_start_time": str(timezone.now() + timedelta(minutes=1)),
+        }
+
+        for i, run_url in enumerate(self.run_urls):
+            if "_schedule_name" in data:
+                data["_schedule_name"] = f"test {i}"
+            response = self.client.post(run_url, data)
+            scheduled_job = ScheduledJob.objects.last()
+            self.assertRedirects(
+                response,
+                reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk]),
+            )
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_scheduled_job_without_approval_required_and_no_approval_workflow_succeeds(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        self.test_pass.approval_required = False
+        self.test_pass.save()
+
+        data = {
+            "_schedule_type": "future",
+            "_schedule_name": "test",
+            "_schedule_start_time": str(timezone.now() + timedelta(minutes=1)),
+        }
+
+        for i, run_url in enumerate(self.run_urls):
+            if "_schedule_name" in data:
+                data["_schedule_name"] = f"test {i}"
+            response = self.client.post(run_url, data)
+            scheduled_job = ScheduledJob.objects.last()
+            self.assertRedirects(response, reverse("extras:scheduledjob_list"))
+            self.assertFalse(scheduled_job.associated_approval_workflows.exists())
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_immediate_job_without_approval_required_and_no_approval_workflow_succeeds(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
+
+        self.test_pass.approval_required = False
+        self.test_pass.save()
+
+        data = {
+            "_schedule_type": "immediately",
+        }
+
+        for run_url in self.run_urls:
+            response = self.client.post(run_url, data)
+            scheduled_job = ScheduledJob.objects.last()
+            self.assertIsNone(scheduled_job)
+            result = JobResult.objects.latest()
+            self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
 
     def test_job_object_change_log_view(self):
         """Assert Job change log view displays appropriate header"""
