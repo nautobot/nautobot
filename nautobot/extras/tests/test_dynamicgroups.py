@@ -6,7 +6,10 @@ from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError, QuerySet
 from django.urls import reverse
 
-from nautobot.core.forms.fields import MultiMatchModelMultipleChoiceField, MultiValueCharField
+from nautobot.core.forms.fields import (
+    DynamicModelMultipleChoiceField,
+    MultiValueCharField,
+)
 from nautobot.core.forms.widgets import APISelectMultiple, MultiValueCharInput
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.filters import FilterTestCases
@@ -504,9 +507,9 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         # See if a CharField is properly converted to a MultiValueCharField In DynamicGroupEditForm.
         self.assertIsInstance(fields["name"], MultiValueCharField)
         self.assertIsInstance(fields["name"].widget, MultiValueCharInput)
-        # See if a DynamicModelChoiceField is properly converted to a MultiMatchModelMultipleChoiceField
-        self.assertIsInstance(fields["cluster"], MultiMatchModelMultipleChoiceField)
-        self.assertIsInstance(fields["cluster"].widget, APISelectMultiple)
+        # See if a DynamicModelMultipleChoiceField (ManyToMany) remains as DynamicModelMultipleChoiceField
+        self.assertIsInstance(fields["clusters"], DynamicModelMultipleChoiceField)
+        self.assertIsInstance(fields["clusters"].widget, APISelectMultiple)
 
     def test_map_filter_fields_with_custom_filter_method(self):
         """

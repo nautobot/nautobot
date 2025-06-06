@@ -119,8 +119,6 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
         }
         base_query = Q(
             Q(platforms=OuterRef("platform")) | Q(platforms=None),
-            Q(cluster_groups=OuterRef("cluster__cluster_group")) | Q(cluster_groups=None),
-            Q(clusters=OuterRef("cluster")) | Q(clusters=None),
             Q(tenants=OuterRef("tenant")) | Q(tenants=None),
             Q(tags__pk__in=Subquery(TaggedItem.objects.filter(**tag_query_filters).values_list("tag_id", flat=True)))
             | Q(tags=None),
@@ -138,8 +136,14 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
                 (Q(device_redundancy_groups=OuterRef("device_redundancy_group")) | Q(device_redundancy_groups=None)),
                 Q.AND,
             )
+            # For devices, handle clusters as ManyToMany relationship
+            base_query.add((Q(clusters=OuterRef("clusters")) | Q(clusters=None)), Q.AND)
+            base_query.add((Q(cluster_groups=OuterRef("clusters__cluster_group")) | Q(cluster_groups=None)), Q.AND)
         else:
             location_query_string = "cluster__location"
+            # For virtual machines, handle cluster as ForeignKey relationship  
+            base_query.add((Q(clusters=OuterRef("cluster")) | Q(clusters=None)), Q.AND)
+            base_query.add((Q(cluster_groups=OuterRef("cluster__cluster_group")) | Q(cluster_groups=None)), Q.AND)
 
         location_query = Q(locations=None) | Q(locations=OuterRef(location_query_string))
         for _ in range(Location.objects.max_depth + 1):
