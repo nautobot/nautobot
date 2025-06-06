@@ -62,9 +62,7 @@ from nautobot.core.views.mixins import (
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import prepare_cloned_fields
-from nautobot.core.views.viewsets import (
-    NautobotUIViewSet,
-)
+from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Controller, Device, Interface, Module, Rack, VirtualDeviceContext
 from nautobot.dcim.tables import (
     ControllerTable,
@@ -2531,7 +2529,6 @@ class RelationshipAssociationUIViewSet(
     serializer_class = serializers.RelationshipAssociationSerializer
     table_class = tables.RelationshipAssociationTable
     queryset = RelationshipAssociation.objects.all()
-    action_buttons = ("import", "export")
 
 
 #
