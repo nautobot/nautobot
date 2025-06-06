@@ -97,7 +97,7 @@ class BaseValidator(CustomValidator):
                     }
                 )
 
-            elif not isinstance(field_value, (int, float, Decimal)):
+            elif not isinstance(field_value, (int, float)):
                 self.validation_error(
                     {
                         rule.field: f"Unable to validate against min/max rule {rule} because the field value is not numeric."
