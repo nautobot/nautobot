@@ -16,7 +16,7 @@ from nautobot.data_validation.models import (
     UniqueValidationRule,
 )
 from nautobot.data_validation.tests import ValidationRuleTestCaseMixin
-from nautobot.dcim.models import Location, LocationType, Rack
+from nautobot.dcim.models import DeviceType, Location, LocationType, Manufacturer, Rack
 from nautobot.extras.models import Status
 
 
@@ -139,128 +139,144 @@ class RegularExpressionValidationRuleCustomValidatorTestCase(CustomValidatorTest
 class MinMaxValidationRuleCustomValidatorTestCase(CustomValidatorTestCases.CustomValidatorTestCase):
     model = MinMaxValidationRule
 
+    def setUp(self):
+        super().setUp()
+        self.manufacturer = Manufacturer.objects.create(name="Test Manufacturer")
+
     def test_empty_field_values_raise_validation_error(self):
         MinMaxValidationRule.objects.create(
             name="Min max rule 1",
-            content_type=ContentType.objects.get_for_model(Location),
-            field="latitude",
+            content_type=ContentType.objects.get_for_model(DeviceType),
+            field="device_family",  # checking a purposefully None field
             min=1,
             max=1,
         )
 
-        location = Location(
-            name="Location without a latitude",
-            location_type=self.location_type,
-            status=self.status,
-            latitude=None,  # empty value not allowed by the rule
+        device_type = DeviceType.objects.create(
+            model="Device Type without height",
+            manufacturer=self.manufacturer,
+            u_height=5,
         )
 
         with self.assertRaisesRegex(ValidationError, "Value does not conform to mix/max validation: min 1.0, max 1.0"):
-            location.clean()
+            device_type.clean()
 
     def test_field_value_type_raise_validation_error(self):
         MinMaxValidationRule.objects.create(
             name="Min max rule 1",
-            content_type=ContentType.objects.get_for_model(Location),
-            field="latitude",
+            content_type=ContentType.objects.get_for_model(DeviceType),
+            field="model",  # check non-numeric field
             min=1,
             max=1,
         )
 
-        location = Location(
-            name="Location with an invalid latitude",
-            location_type=self.location_type,
-            status=self.status,
-            latitude="foobar",  # wrong type
+        device_type = DeviceType.objects.create(
+            model="Device Type with wrong height type", manufacturer=self.manufacturer, u_height=5
         )
 
         with self.assertRaisesRegex(
             ValidationError,
             "Unable to validate against min/max rule Min max rule 1 because the field value is not numeric.",
         ):
-            location.clean()
+            device_type.clean()
 
     def test_min_violation_raise_validation_error(self):
         MinMaxValidationRule.objects.create(
             name="Min max rule 1",
-            content_type=ContentType.objects.get_for_model(Location),
-            field="latitude",
+            content_type=ContentType.objects.get_for_model(DeviceType),
+            field="u_height",
             min=5,
             max=10,
         )
 
-        location = Location(
-            name="Location with latitude less than min",
-            location_type=self.location_type,
-            status=self.status,
-            latitude=4,  # less than min of 5
+        device_type = DeviceType.objects.create(
+            model="Device Type with wrong height less than min",
+            manufacturer=self.manufacturer,
+            u_height=4,  # less than min of 5
         )
 
         with self.assertRaisesRegex(ValidationError, "Value is less than minimum value: 5.0"):
-            location.clean()
+            device_type.clean()
 
     def test_max_violation_raise_validation_error(self):
         MinMaxValidationRule.objects.create(
             name="Min max rule 1",
-            content_type=ContentType.objects.get_for_model(Location),
-            field="latitude",
+            content_type=ContentType.objects.get_for_model(DeviceType),
+            field="u_height",
             min=5,
             max=10,
         )
 
-        location = Location(
-            name="Location with a latitude more than max",
-            location_type=self.location_type,
-            status=self.status,
-            latitude=11,  # more than max of 10
+        device_type = DeviceType.objects.create(
+            model="Device Type with wrong height more than max",
+            manufacturer=self.manufacturer,
+            u_height=11,  # more than min of 10
         )
 
         with self.assertRaisesRegex(ValidationError, "Value is more than maximum value: 10.0"):
-            location.clean()
+            device_type.clean()
 
     def test_unbounded_min_does_not_raise_validation_error(self):
         MinMaxValidationRule.objects.create(
             name="Min max rule 1",
-            content_type=ContentType.objects.get_for_model(Location),
-            field="latitude",
+            content_type=ContentType.objects.get_for_model(DeviceType),
+            field="u_height",
             min=None,  # unbounded
             max=10,
         )
 
-        location = Location(
-            name="Location with a valid latitude",
-            location_type=self.location_type,
-            status=self.status,
-            latitude=-5,
+        device_type = DeviceType.objects.create(
+            model="Device Type with a valid height",
+            manufacturer=self.manufacturer,
+            u_height=5,
         )
 
         try:
-            location.clean()
+            device_type.clean()
         except ValidationError as e:
             self.fail(f"rule.clean() failed validation: {e}")
 
     def test_unbounded_max_does_not_raise_validation_error(self):
         MinMaxValidationRule.objects.create(
             name="Min max rule 1",
-            content_type=ContentType.objects.get_for_model(Location),
-            field="latitude",
+            content_type=ContentType.objects.get_for_model(DeviceType),
+            field="u_height",
             min=5,
             max=None,  # unbounded
         )
 
-        location = Location(
-            name="Location with a valid latitude",
-            location_type=self.location_type,
-            status=self.status,
-            latitude=30,
+        device_type = DeviceType.objects.create(
+            model="Device Type with a valid height",
+            manufacturer=self.manufacturer,
+            u_height=30,
         )
 
         try:
-            location.clean()
+            device_type.clean()
         except ValidationError as e:
             self.fail(f"rule.clean() failed validation: {e}")
 
     def test_valid_bounded_value_does_not_raise_validation_error(self):
+        MinMaxValidationRule.objects.create(
+            name="Min max rule 1",
+            content_type=ContentType.objects.get_for_model(DeviceType),
+            field="u_height",
+            min=5,
+            max=10,
+        )
+
+        device_type = DeviceType.objects.create(
+            model="Device Type with a valid height",
+            manufacturer=self.manufacturer,
+            u_height=8,
+        )
+
+        try:
+            device_type.clean()
+        except ValidationError as e:
+            self.fail(f"rule.clean() failed validation: {e}")
+
+    def test_decimal_field_validation_fails(self):
         MinMaxValidationRule.objects.create(
             name="Min max rule 1",
             content_type=ContentType.objects.get_for_model(Location),
@@ -270,16 +286,14 @@ class MinMaxValidationRuleCustomValidatorTestCase(CustomValidatorTestCases.Custo
         )
 
         location = Location(
-            name="Location with a valid latitude",
-            location_type=self.location_type,
-            status=self.status,
-            latitude=8,  # within bounds
+            name="Location with a valid latitude", location_type=self.location_type, status=self.status, latitude=8
         )
 
-        try:
+        location.save()
+        location.refresh_from_db()
+
+        with self.assertRaisesRegex(ValidationError, "the field value is not numeric."):
             location.clean()
-        except ValidationError as e:
-            self.fail(f"rule.clean() failed validation: {e}")
 
 
 class RequiredValidationRuleCustomValidatorTestCase(CustomValidatorTestCases.CustomValidatorTestCase):
