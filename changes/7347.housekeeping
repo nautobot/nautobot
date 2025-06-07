@@ -1,0 +1,1 @@
+Refactored RelationshipAssociation model related UI views to use `NautobotUIViewSet`.
