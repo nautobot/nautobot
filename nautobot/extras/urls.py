@@ -8,7 +8,6 @@ from nautobot.extras.models import (
     CustomField,
     DynamicGroup,
     GitRepository,
-    GraphQLQuery,
     Job,
     Note,
     Relationship,
@@ -25,6 +24,7 @@ router.register("contact-associations", views.ContactAssociationUIViewSet)
 router.register("custom-links", views.CustomLinkUIViewSet)
 router.register("export-templates", views.ExportTemplateUIViewSet)
 router.register("external-integrations", views.ExternalIntegrationUIViewSet)
+router.register("graphql-queries", views.GraphQLQueryUiViewSet)
 router.register("job-buttons", views.JobButtonUIViewSet)
 router.register("job-hooks", views.JobHookUIViewSet)
 router.register("job-queues", views.JobQueueUIViewSet)
@@ -274,37 +274,6 @@ urlpatterns = [
         "git-repositories/<uuid:pk>/dry-run/",
         views.GitRepositoryDryRunView.as_view(),
         name="gitrepository_dryrun",
-    ),
-    # GraphQL Queries
-    path("graphql-queries/", views.GraphQLQueryListView.as_view(), name="graphqlquery_list"),
-    path("graphql-queries/add/", views.GraphQLQueryEditView.as_view(), name="graphqlquery_add"),
-    path(
-        "graphql-queries/delete/",
-        views.GraphQLQueryBulkDeleteView.as_view(),
-        name="GraphQLQuery_bulk_delete",
-    ),
-    path("graphql-queries/<uuid:pk>/", views.GraphQLQueryView.as_view(), name="graphqlquery"),
-    path(
-        "graphql-queries/<uuid:pk>/edit/",
-        views.GraphQLQueryEditView.as_view(),
-        name="graphqlquery_edit",
-    ),
-    path(
-        "graphql-queries/<uuid:pk>/delete/",
-        views.GraphQLQueryDeleteView.as_view(),
-        name="graphqlquery_delete",
-    ),
-    path(
-        "graphql-queries/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="graphqlquery_changelog",
-        kwargs={"model": GraphQLQuery},
-    ),
-    path(
-        "graphql-queries/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="graphqlquery_notes",
-        kwargs={"model": GraphQLQuery},
     ),
     # Image attachments
     path(
