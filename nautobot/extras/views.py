@@ -591,7 +591,6 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
                 else:
                     logger.debug("Formset '%s' has errors: %s", name, formset.errors)
                     raise RuntimeError(f"Errors in formset '{name}'")
-
         except ObjectDoesNotExist:
             msg = "Object save failed due to object-level permissions violation"
             logger.debug(msg)
