@@ -576,86 +576,32 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
             ctx["choices"] = forms.CustomFieldChoiceFormSet(instance=instance)
         return ctx
 
-    def perform_create(self, request, *args, **kwargs):
-        return self._perform_create_or_update_with_choices(request)
+    def get_formsets(self, request, instance):
+        if request.method == "POST":
+            return {"choices": forms.CustomFieldChoiceFormSet(data=request.POST, instance=instance)}
+        return {"choices": forms.CustomFieldChoiceFormSet(instance=instance)}
 
-    def perform_update(self, request, *args, **kwargs):
-        return self._perform_create_or_update_with_choices(request)
-
-    def _perform_create_or_update_with_choices(self, request):
-        self.obj = self.get_object()
-        form_class = self.get_form_class()
-        form = form_class(
-            data=request.POST,
-            files=request.FILES,
-            initial=normalize_querydict(request.GET, form_class=form_class),
-            instance=self.obj,
-        )
-        restrict_form_fields(form, request.user)
-
-        if "content_types" in request.POST:
-            raw_cts = request.POST.getlist("content_types")
-            try:
-                cleaned_cts = [int(pk) for pk in raw_cts]
-                form.data = form.data.copy()
-                form.data.setlist("content_types", cleaned_cts)
-            except (ValueError, TypeError):
-                logger.warning("Invalid content_types in POST: %s", raw_cts)
-
-        if form.is_valid():
-            try:
-                with transaction.atomic():
-                    self._process_create_or_update_form(form)
-                    # Handle the formset for custom field choices
-                    choices = self.get_extra_context(request, form.instance).get("choices")
-                    if choices and choices.is_valid():
-                        choices.save()
-                    elif choices:
-                        msg = "Errors encountered when saving custom field choices. See below."
-                        logger.debug("%s: %s", msg, choices.errors)
-                        form.add_error(None, msg)
-                        raise RuntimeError("Choice formset is invalid")
-
-                # Handle _addanother logic
-                if "_addanother" in request.POST:
-                    if hasattr(form.instance, "clone_fields"):
-                        url = f"{request.path}?{prepare_cloned_fields(form.instance)}"
-                        return redirect(url)
-                    return redirect(request.get_full_path())
-
-                return redirect(self.success_url)
-
-            except ObjectDoesNotExist:
-                msg = "Object save failed due to object-level permissions violation"
-                logger.debug(msg)
-                form.add_error(None, msg)
-
-            except RuntimeError:
-                msg = "Errors encountered when saving custom field choices. See below."
-                logger.debug(msg)
-                form.add_error(None, msg)
-
-            except ProtectedError as err:
-                err_msg = err.args[0]
-                protected_obj = err.protected_objects[0]
-                msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
-                logger.debug(msg)
-                form.add_error(None, msg)
-
-        else:
-            logger.warning("Form invalid: %s", form.errors.as_json())
-
-        # Re-render form with validation errors and proper context
-        instance = form.instance
-        context = {
-            "obj": instance,
-            "obj_type": self.queryset.model._meta.verbose_name,
-            "form": form,
-            "return_url": self.get_return_url(request, instance),
-            "editing": instance.present_in_database,
-            **self.get_extra_context(request, instance),
-        }
-        return render(request, self.template_name, context)
+    def _process_create_or_update_form(self, form):
+        try:
+            super()._process_create_or_update_form(form)
+        except ObjectDoesNotExist:
+            msg = "Object save failed due to object-level permissions violation"
+            logger.debug(msg)
+            form.add_error(None, msg)
+            raise
+        except RuntimeError:
+            msg = "Errors encountered when saving custom field choices. See below."
+            logger.debug(msg)
+            form.add_error(None, msg)
+            raise
+        except ProtectedError as err:
+            # e.g. Trying to delete a choice that is in use.
+            err_msg = err.args[0]
+            protected_obj = err.protected_objects[0]
+            msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
+            logger.debug(msg)
+            form.add_error(None, msg)
+            raise
 
 
 #
