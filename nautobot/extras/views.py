@@ -584,6 +584,14 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
     def _process_create_or_update_form(self, form):
         try:
             super()._process_create_or_update_form(form)
+            formsets = self.get_formsets(self.request, form.instance)
+            for name, formset in formsets.items():
+                if formset.is_valid():
+                    formset.save()
+                else:
+                    logger.debug("Formset '%s' has errors: %s", name, formset.errors)
+                    raise RuntimeError(f"Errors in formset '{name}'")
+
         except ObjectDoesNotExist:
             msg = "Object save failed due to object-level permissions violation"
             logger.debug(msg)
