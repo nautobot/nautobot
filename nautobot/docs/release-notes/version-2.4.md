@@ -177,7 +177,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 ### Fixed in v2.4.10
 
 - [#7358](https://github.com/nautobot/nautobot/issues/7358) - Fixed `web_request_context` faulty logic in its `try/finally` block.
-- [#7362](https://github.com/nautobot/nautobot/issues/7362) - Fixed NautobotCSVParser incorrectly parses M2M fields
+- [#7362](https://github.com/nautobot/nautobot/issues/7362) - Fixed NautobotCSVParser incorrect parsing of many-to-many fields.
 
 ## v2.4.9 (2025-05-27)
 
