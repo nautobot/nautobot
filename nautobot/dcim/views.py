@@ -252,7 +252,7 @@ class LocationTypeUIViewSet(NautobotUIViewSet):
 
 
 class LocationUIViewSet(NautobotUIViewSet):
-    queryset = Location.objects.select_related("location_type", "parent", "tenant")
+    queryset = Location.objects.without_tree_fields().all()
     filterset_class = filters.LocationFilterSet
     filterset_form_class = forms.LocationFilterForm
     table_class = tables.LocationTable
