@@ -44,6 +44,17 @@ class SecretsProvider(ABC):
             obj (object): Django model instance or similar providing additional context for retrieving the secret.
         """
 
+    get_value_for_secret.__func__.do_not_call_in_templates = True
+
+    def __init_subclass__(cls, **kwargs):
+        # Automatically apply protection against Django and Jinja2 template execution to child classes.
+        if not getattr(cls.get_value_for_secret, "do_not_call_in_templates", False):  # Django
+            cls.get_value_for_secret.__func__.do_not_call_in_templates = True
+        if not getattr(cls.get_value_for_secret, "unsafe_callable", False):  # Jinja @unsafe decorator
+            cls.get_value_for_secret.__func__.unsafe_callable = True
+
+        super().__init_subclass__(**kwargs)
+
 
 def register_secrets_provider(provider):
     """
