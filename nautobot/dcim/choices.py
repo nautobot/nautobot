@@ -1373,116 +1373,48 @@ class CableLengthUnitChoices(ChoiceSet):
 # Power Panels
 #
 
+
 class PowerPanelTypeChoices(ChoiceSet):
+
     TYPE_UTILITY = "utility"
     TYPE_GENERATOR = "generator"
     TYPE_SWITCHGEAR = "switchgear"
-    TYPE_SWITCHBOARD = "switchboard"
-    TYPE_DISTRIBUTION = "distribution"
-    TYPE_SUBDISTRIBUTION = "subdistribution"
-    TYPE_ATS = "ats"
-    TYPE_STS = "sts"
     TYPE_UPS = "ups"
-    TYPE_PDU = "pdu"
     TYPE_RPP = "rpp"
-    TYPE_PANELBOARD = "panelboard"
-    TYPE_MECHANICAL = "mechanical"
-    TYPE_LIGHTING = "lighting"
+    TYPE_MAIN_PDU = "main-pdu"
 
-    CHOICES = [
-        ("Primary Infrastructure", [
-            (TYPE_UTILITY, "Utility Service"),
-            (TYPE_GENERATOR, "Generator Distribution"),
-            (TYPE_SWITCHGEAR, "Switchgear"),
-            (TYPE_SWITCHBOARD, "Switchboard"),
-        ]),
-        ("Distribution", [
-            (TYPE_DISTRIBUTION, "Distribution Panel"),
-            (TYPE_SUBDISTRIBUTION, "Sub-Distribution Panel"),
-        ]),
-        ("Transfer & Switching", [
-            (TYPE_ATS, "Automatic Transfer Switch"),
-            (TYPE_STS, "Static Transfer Switch"),
-        ]),
-        ("Critical Power", [
-            (TYPE_UPS, "UPS System"),
-        ]),
-        ("IT Infrastructure", [
-            (TYPE_PDU, "Power Distribution Unit"),
-            (TYPE_RPP, "Remote Power Panel"),
-        ]),
-        ("Building Systems", [
-            (TYPE_PANELBOARD, "Panel Board"),
-            (TYPE_MECHANICAL, "Mechanical Systems"),
-            (TYPE_LIGHTING, "Lighting Panel"),
-        ]),
-    ]
+    CHOICES = (
+        (TYPE_UTILITY, "Utility Transformer"),
+        (TYPE_GENERATOR, "Generator"),
+        (TYPE_SWITCHGEAR, "Switchgear"),
+        (TYPE_UPS, "UPS"),
+        (TYPE_RPP, "Remote Power Panel"),
+        (TYPE_MAIN_PDU, "Main Power Distribution Unit"),
+    )
 
 class PowerPanelVoltageChoices(ChoiceSet):
     # Single Phase
     VOLTAGE_120V_1P_2W = "120v-1ph-2w"
     VOLTAGE_240V_1P_2W = "240v-1ph-2w"
-    VOLTAGE_240V_1P_3W = "240v-1ph-3w"
 
-    # Three Phase Wye
+    # Three Phase
     VOLTAGE_208_120V_3P_4W = "208-120v-3ph-4w"
-    VOLTAGE_415_240V_3P_4W = "415-240v-3ph-4w"  # High-efficiency datacenter standard
+    VOLTAGE_400_230V_3P_4W = "400-230v-3ph-4w"
+    VOLTAGE_415_240V_3P_4W = "415-240v-3ph-4w"
     VOLTAGE_480_277V_3P_4W = "480-277v-3ph-4w"
     VOLTAGE_600_347V_3P_4W = "600-347v-3ph-4w"
 
-    # International Standards
-    VOLTAGE_400_230V_3P_4W = "400-230v-3ph-4w"  # European/IEC standard
-    VOLTAGE_380_220V_3P_4W = "380-220v-3ph-4w"  # Some international regions
-
-    # Three Phase Delta
-    VOLTAGE_240V_3P_3W = "240v-3ph-3w"
-    VOLTAGE_480V_3P_3W = "480v-3ph-3w"
-    VOLTAGE_600V_3P_3W = "600v-3ph-3w"
-
-    # High Voltage Distribution
-    VOLTAGE_4160V_3P_3W = "4160v-3ph-3w"
-    VOLTAGE_4160_2400V_3P_4W = "4160-2400v-3ph-4w"
-    VOLTAGE_13800V_3P_3W = "13800v-3ph-3w"
-    VOLTAGE_13800_7970V_3P_4W = "13800-7970v-3ph-4w"
-
-    # DC Systems
-    VOLTAGE_48V_DC = "48v-dc"
-    VOLTAGE_125V_DC = "125v-dc"
-    VOLTAGE_250V_DC = "250v-dc"
-    VOLTAGE_380V_DC = "380v-dc"
-
     CHOICES = [
         ("Single Phase", [
-            (VOLTAGE_120V_1P_2W, "120V Single Phase (2-Wire)"),
-            (VOLTAGE_240V_1P_2W, "240V Single Phase (2-Wire)"),
-            (VOLTAGE_240V_1P_3W, "240V Single Phase (3-Wire)"),
+            (VOLTAGE_120V_1P_2W, "120V Single Phase 2-Wire"),
+            (VOLTAGE_240V_1P_2W, "240V Single Phase 2-Wire"),
         ]),
-        ("Three Phase Wye (4-Wire)", [
-            (VOLTAGE_208_120V_3P_4W, "208/120V 3-Phase Wye (4-Wire)"),
-            (VOLTAGE_415_240V_3P_4W, "415/240V 3-Phase Wye (4-Wire)"),
-            (VOLTAGE_480_277V_3P_4W, "480/277V 3-Phase Wye (4-Wire)"),
-            (VOLTAGE_600_347V_3P_4W, "600/347V 3-Phase Wye (4-Wire)"),
-        ]),
-        ("International Standards", [
-            (VOLTAGE_400_230V_3P_4W, "400/230V 3-Phase Wye (4-Wire) - IEC"),
-            (VOLTAGE_380_220V_3P_4W, "380/220V 3-Phase Wye (4-Wire)"),
-        ]),
-        ("Three Phase Delta (3-Wire)", [
-            (VOLTAGE_240V_3P_3W, "240V 3-Phase Delta (3-Wire)"),
-            (VOLTAGE_480V_3P_3W, "480V 3-Phase Delta (3-Wire)"),
-            (VOLTAGE_600V_3P_3W, "600V 3-Phase Delta (3-Wire)"),
-        ]),
-        ("High Voltage Distribution", [
-            (VOLTAGE_4160V_3P_3W, "4.16kV 3-Phase Delta (3-Wire)"),
-            (VOLTAGE_4160_2400V_3P_4W, "4.16kV/2.4kV 3-Phase Wye (4-Wire)"),
-            (VOLTAGE_13800V_3P_3W, "13.8kV 3-Phase Delta (3-Wire)"),
-            (VOLTAGE_13800_7970V_3P_4W, "13.8kV/7.97kV 3-Phase Wye (4-Wire)"),
-        ]),
-        ("DC Systems", [
-            (VOLTAGE_48V_DC, "48V DC"),
-            (VOLTAGE_125V_DC, "125V DC"),
-            (VOLTAGE_250V_DC, "250V DC"),
-            (VOLTAGE_380V_DC, "380V DC"),
+        ("Three Phase", [
+            (VOLTAGE_208_120V_3P_4W, "208/120V 3-Phase 4-Wire"),
+            (VOLTAGE_400_230V_3P_4W, "400/230V 3-Phase 4-Wire"),
+            (VOLTAGE_415_240V_3P_4W, "415/240V 3-Phase 4-Wire"),
+            (VOLTAGE_480_277V_3P_4W, "480/277V 3-Phase 4-Wire"),
+            (VOLTAGE_600_347V_3P_4W, "600/347V 3-Phase 4-Wire"),
         ]),
     ]
 
@@ -1509,10 +1441,12 @@ class PowerFeedStatusChoices(ChoiceSet):
 class PowerFeedTypeChoices(ChoiceSet):
     TYPE_PRIMARY = "primary"
     TYPE_REDUNDANT = "redundant"
+    TYPE_STANDBY = "standby"
 
     CHOICES = (
         (TYPE_PRIMARY, "Primary"),
         (TYPE_REDUNDANT, "Redundant"),
+        (TYPE_STANDBY, "Standby"),
     )
 
     CSS_CLASSES = {
