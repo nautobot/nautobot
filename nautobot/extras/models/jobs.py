@@ -753,6 +753,8 @@ class JobResult(BaseModel, CustomFieldModel):
                     duration.total_seconds()
                 )
 
+    set_status.alters_data = True
+
     @classmethod
     def execute_job(cls, *args, **kwargs):
         """
@@ -767,6 +769,8 @@ class JobResult(BaseModel, CustomFieldModel):
             JobResult instance
         """
         return cls.enqueue_job(*args, **kwargs, synchronous=True)
+
+    execute_job.__func__.alters_data = True
 
     @classmethod
     def enqueue_job(
@@ -938,6 +942,8 @@ class JobResult(BaseModel, CustomFieldModel):
 
         return job_result
 
+    enqueue_job.__func__.alters_data = True
+
     def log(
         self,
         message,
@@ -988,6 +994,8 @@ class JobResult(BaseModel, CustomFieldModel):
             log.save()
         else:
             log.save(using=JOB_LOGS)
+
+    log.alters_data = True
 
 
 #
@@ -1076,12 +1084,16 @@ class ScheduledJobs(models.Model):
         if not instance.no_changes:
             cls.update_changed()
 
+    changed.__func__.alters_data = True
+
     @classmethod
     def update_changed(cls, raw=False, **kwargs):
         """This function acts as a signal handler to track changes to the scheduled job that is triggered after a change"""
         if raw:
             return
         cls.objects.update_or_create(ident=1, defaults={"last_update": timezone.now()})
+
+    update_changed.__func__.alters_data = True
 
     @classmethod
     def last_change(cls):
@@ -1401,6 +1413,8 @@ class ScheduledJob(BaseModel):
         )
         scheduled_job.validated_save()
         return scheduled_job
+
+    create_schedule.__func__.alters_data = True
 
     def to_cron(self):
         tz = self.time_zone
