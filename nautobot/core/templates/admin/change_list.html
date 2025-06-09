@@ -38,6 +38,9 @@
                 <li>{{ cl.opts.verbose_name_plural|capfirst }}</li>
             </ol>
         </div>
+        <div class="col-sm-4 col-md-3">
+            {% block search %}{% search_form cl %}{% endblock %}
+        </div>
     {% endblock %}
 {% endif %}
 
