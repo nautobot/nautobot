@@ -25,6 +25,10 @@ export const initializeSearch = () => {
     }
   })();
 
+  /*
+   * Pick only the lowest level of nested `nav_menu` object. In TypeScript, it would be manifested as the following type:
+   * `{ [item_link: string]: { name: string; weight: number } };`.
+   */
   const SEARCHABLE_MODELS = Object.fromEntries(
     Object.entries(NAV_MENU.tabs).flatMap(([, tab_details]) =>
       Object.entries(tab_details.groups).flatMap(([, group_details]) =>
