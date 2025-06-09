@@ -38,7 +38,7 @@ As a part of the Nautobot development team's commitment to security, we maintain
     <th>Patched&nbsp;Versions</th>
     <td>
       <ul>
-        <li>1.6.32 (patch link TODO)</li>
+        <li>1.6.32 (<a href="https://github.com/nautobot/nautobot/commit/1c59263fa0284b7ad5293292c60ed03725a4603f">patch</a>)</li>
         <li>2.4.10 (<a href="https://github.com/nautobot/nautobot/commit/a8356bc06642de9c7e6b71a8c89bea6f8a86702b">patch</a>)</li>
       </ul>
     </td>
