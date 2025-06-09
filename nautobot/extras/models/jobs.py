@@ -537,6 +537,7 @@ class JobLogEntry(BaseModel):
     is_metadata_associable_model = False
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
+    hide_in_diff_view = True
 
     def __str__(self):
         return self.message
@@ -680,6 +681,7 @@ class JobResult(BaseModel, CustomFieldModel):
     objects = JobResultManager()
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
+    hide_in_diff_view = True
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
