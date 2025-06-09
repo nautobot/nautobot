@@ -46,7 +46,7 @@ The following context data is available within the template when rendering a Job
 | `user`    | The current user (if authenticated)                                                                               |
 | `perms`   | The [permissions](https://docs.djangoproject.com/en/stable/topics/auth/default/#permissions) assigned to the user |
 
-All [built-in Jinja2 filters](../../additional-features/template-filters.md) are available and it's also possible to [develop and register custom Jinja2 filters](../../plugins/development.md#including-jinja2-filters).
+All [built-in Jinja2 filters](../../additional-features/template-filters.md) are available and it's also possible to [develop and register custom Jinja2 filters](../../plugins/development.md#adding-jinja2-filters).
 
 ## Conditional Rendering
 
