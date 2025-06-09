@@ -1492,6 +1492,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         clusters = (
             Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type),
             Cluster.objects.create(name="Cluster 2", cluster_type=cluster_type),
+            Cluster.objects.create(name="Cluster 3", cluster_type=cluster_type),
         )
 
         secrets_groups = (
@@ -1518,7 +1519,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         for software_image_file in software_image_files:
             software_image_file.device_types.add(device_type)
 
-        Device.objects.create(
+        device1 = Device.objects.create(
             device_type=device_type,
             role=device_role,
             status=device_statuses[0],
@@ -1530,7 +1531,8 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             local_config_context_data={"A": 1},
             software_version=software_version,
         )
-        Device.objects.create(
+        device1.clusters.add(clusters[1])
+        device2 = Device.objects.create(
             device_type=device_type,
             role=device_role,
             status=device_statuses[0],
@@ -1542,7 +1544,8 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             local_config_context_data={"B": 2},
             software_version=software_version,
         )
-        Device.objects.create(
+        device2.clusters.add(clusters[1])
+        device3 = Device.objects.create(
             device_type=device_type,
             role=device_role,
             status=device_statuses[0],
@@ -1553,6 +1556,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             secrets_group=secrets_groups[0],
             local_config_context_data={"C": 3},
         )
+        device3.clusters.add(clusters[1])
 
         cls.create_data = [
             {
@@ -1563,7 +1567,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "name": "Test Device 4",
                 "location": locations[1].pk,
                 "rack": racks[1].pk,
-                "cluster": clusters[1].pk,
+                "cluster": clusters[0].pk,
                 "secrets_group": secrets_groups[1].pk,
                 "software_version": software_version.pk,
                 "software_image_files": [software_image_files[0].pk, software_image_files[1].pk],
@@ -1589,7 +1593,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "name": "Test Device 6",
                 "location": locations[1].pk,
                 "rack": racks[1].pk,
-                "cluster": clusters[1].pk,
+                "cluster": clusters[0].pk,
                 "secrets_group": secrets_groups[1].pk,
             },
         ]

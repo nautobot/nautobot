@@ -547,6 +547,7 @@ class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
             "parent_bay": {"required": False, "allow_null": True},
             "vc_position": {"label": "Virtual chassis position"},
             "vc_priority": {"label": "Virtual chassis priority"},
+            "clusters": {"read_only": True},
         }
 
     def get_field_names(self, declared_fields, info):

@@ -6,7 +6,7 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.db.models import F, ProtectedError, Q
 from django.urls import reverse
 from django.utils.functional import cached_property, classproperty
@@ -590,10 +590,12 @@ class Device(PrimaryModel, ConfigContextModel):
 
         TODO: Remove this property in v3.0.0
         """
-        if value is None:
-            self.clusters.clear()
-        else:
-            self.clusters.set([value])
+        # If the device hasn't been saved yet, defer the cluster assignment
+        if not self.present_in_database:
+            self._deferred_cluster = value
+            return
+
+        self.assign_clusters([value])
 
     virtual_chassis = models.ForeignKey(
         to="VirtualChassis",
@@ -885,6 +887,12 @@ class Device(PrimaryModel, ConfigContextModel):
 
         super().save(*args, **kwargs)
 
+        # Apply any pending cluster assignment that was deferred during creation
+        if hasattr(self, "_deferred_cluster"):
+            cluster_value = self._deferred_cluster
+            delattr(self, "_deferred_cluster")
+            self.assign_clusters([cluster_value])
+
         # If this is a new Device, instantiate all related components per the DeviceType definition
         if is_new:
             self.create_components()
@@ -902,6 +910,16 @@ class Device(PrimaryModel, ConfigContextModel):
 
             if save_child_device:
                 device.save()
+
+    def assign_clusters(self, clusters):
+        """
+        Assign a list of clusters to the device.
+        """
+        with transaction.atomic():
+            if clusters is None:
+                self.clusters.clear()
+            else:
+                self.clusters.set(clusters)
 
     def create_components(self):
         """Create device components from the device type definition."""
