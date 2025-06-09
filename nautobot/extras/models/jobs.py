@@ -738,6 +738,8 @@ class JobResult(BaseModel, CustomFieldModel):
                     duration.total_seconds()
                 )
 
+    set_status.alters_data = True
+
     @classmethod
     def enqueue_job(cls, func, name, obj_type, user, *args, celery_kwargs=None, schedule=None, **kwargs):
         """
@@ -805,6 +807,8 @@ class JobResult(BaseModel, CustomFieldModel):
 
         return job_result
 
+    enqueue_job.__func__.alters_data = True
+
     def log(
         self,
         message,
@@ -867,6 +871,8 @@ class JobResult(BaseModel, CustomFieldModel):
             logger.log(log_level, message)
 
         return log
+
+    log.alters_data = True
 
 
 #
@@ -945,12 +951,16 @@ class ScheduledJobs(models.Model):
         if not instance.no_changes:
             cls.update_changed()
 
+    changed.__func__.alters_data = True
+
     @classmethod
     def update_changed(cls, raw=False, **kwargs):
         """This function acts as a signal handler to track changes to the scheduled job that is triggered after a change"""
         if raw:
             return
         cls.objects.update_or_create(ident=1, defaults={"last_update": timezone.now()})
+
+    update_changed.__func__.alters_data = True
 
     @classmethod
     def last_change(cls):

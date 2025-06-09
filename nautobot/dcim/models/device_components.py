@@ -879,6 +879,8 @@ class InterfaceRedundancyGroup(StatusModel, PrimaryModel):  # pylint: disable=to
         )
         return instance.validated_save()
 
+    add_interface.alters_data = True
+
     def remove_interface(self, interface):
         """
         Remove an interface.
@@ -891,6 +893,8 @@ class InterfaceRedundancyGroup(StatusModel, PrimaryModel):  # pylint: disable=to
             interface=interface,
         )
         return instance.delete()
+
+    remove_interface.alters_data = True
 
 
 @extras_features(

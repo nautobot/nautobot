@@ -64,6 +64,8 @@ class ComponentTemplateModel(BaseModel, ChangeLoggedModel, CustomFieldModel, Rel
         """
         raise NotImplementedError()
 
+    instantiate.alters_data = True
+
     def to_objectchange(self, action, **kwargs):
         """
         Return a new ObjectChange with the `related_object` pinned to the `device_type` by default.
@@ -95,6 +97,8 @@ class ComponentTemplateModel(BaseModel, ChangeLoggedModel, CustomFieldModel, Rel
             _custom_field_data=custom_field_data,
             **kwargs,
         )
+
+    instantiate_model.alters_data = True
 
 
 @extras_features(

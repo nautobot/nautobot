@@ -357,6 +357,8 @@ class DynamicGroup(OrganizationalModel):
 
         return self.members_cached
 
+    update_cached_members.alters_data = True
+
     def has_member(self, obj, use_cache=False):
         """
         Return True if the given object is a member of this group.
@@ -459,6 +461,8 @@ class DynamicGroup(OrganizationalModel):
             new_filter[field_name] = new_value
 
         self.filter = new_filter
+
+    set_filter.alters_data = True
 
     def get_initial(self):
         """
@@ -693,6 +697,8 @@ class DynamicGroup(OrganizationalModel):
         instance = self.children.through(parent_group=self, group=child, operator=operator, weight=weight)
         return instance.validated_save()
 
+    add_child.alters_data = True
+
     def remove_child(self, child):
         """
         Remove a child group.
@@ -702,6 +708,8 @@ class DynamicGroup(OrganizationalModel):
         """
         instance = self.children.through.objects.get(parent_group=self, group=child)
         return instance.delete()
+
+    remove_child.alters_data = True
 
     def get_descendants(self, group=None):
         """

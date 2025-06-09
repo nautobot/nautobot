@@ -295,6 +295,8 @@ class Aggregate(PrimaryModel):
             self.broadcast = str(broadcast)
             self.prefix_length = pre.prefixlen
 
+    _deconstruct_prefix.alters_data = True
+
     def get_absolute_url(self):
         return reverse("ipam:aggregate", args=[self.pk])
 
@@ -333,6 +335,8 @@ class Aggregate(PrimaryModel):
                         "prefix": f"Aggregates cannot overlap. {self.prefix} covers an existing aggregate ({covered_aggregates[0]})."
                     }
                 )
+
+    clean.alters_data = True
 
     def to_csv(self):
         return (
@@ -880,6 +884,8 @@ class IPAddress(PrimaryModel, StatusModel):
             self.broadcast = str(broadcast)
             self.prefix_length = address.prefixlen
 
+    _deconstruct_address.alters_data = True
+
     def get_absolute_url(self):
         return reverse("ipam:ipaddress", args=[self.pk])
 
@@ -947,6 +953,8 @@ class IPAddress(PrimaryModel, StatusModel):
 
         # Force dns_name to lowercase
         self.dns_name = self.dns_name.lower()
+
+    clean.alters_data = True
 
     def save(self, *args, **kwargs):
         if self.address and not self.broadcast:

@@ -873,6 +873,8 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
             model.objects.bulk_create([x.instantiate(self) for x in templates])
         return instantiated_components
 
+    create_components.alters_data = True
+
     def to_csv(self):
         return (
             self.name or "",

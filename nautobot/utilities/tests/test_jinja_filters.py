@@ -3,7 +3,8 @@ from jinja2.exceptions import SecurityError, TemplateAssertionError
 from netutils.utils import jinja2_convenience_function
 
 from nautobot.utilities.utils import render_jinja2
-from nautobot.dcim.models import Site
+from nautobot.dcim import models as dcim_models
+from nautobot.extras import models as extras_models
 
 
 class NautobotJinjaFilterTest(TestCase):
@@ -73,7 +74,7 @@ class NautobotJinjaFilterTest(TestCase):
 
     def test_safe_render(self):
         """Assert that safe Jinja rendering still works."""
-        site = Site.objects.filter(region__isnull=False).first()
+        site = dcim_models.Site.objects.filter(region__isnull=False).first()
         template_code = "{{ obj.region.name }}"
         try:
             value = render_jinja2(template_code=template_code, context={"obj": site})
@@ -81,3 +82,26 @@ class NautobotJinjaFilterTest(TestCase):
             self.fail("SecurityError raised on safe Jinja template render")
         else:
             self.assertEqual(value, site.region.name)
+
+    def test_render_blocks_various_unsafe_methods(self):
+        """Assert that Jinja template rendering correctly blocks various unsafe Nautobot APIs."""
+        location = dcim_models.Location.objects.first()
+        secret = extras_models.Secret.objects.create(name="secret", provider="environment-variable")
+
+        context = {
+            "location": location,
+            "secret": secret,
+            "JobResult": extras_models.JobResult,
+        }
+
+        for call in [
+            # "device.create_components()",  # 1.6 lacks a Device factory
+            # "interface_template.instantiate(device)",  # 1.6 lacks an InterfaceTemplate factory
+            "location.validated_save()",
+            "secret.get_value()",
+            "JobResult.enqueue_job(None, None)",
+            "JobResult.log('hello world')",
+        ]:
+            with self.subTest(call=call):
+                with self.assertRaises(SecurityError):
+                    render_jinja2(template_code="{{ " + call + " }}", context=context)
