@@ -280,12 +280,8 @@ class SearchView(AccessMixin, View):
             if hasattr(app_config, "searchable_models"):
                 searchable_models += [(app_config.label, modelname) for modelname in app_config.searchable_models]
 
-        if request.GET.get("obj_type"):
-            # Searching for a single type of object
-            obj_types = [request.GET.get("obj_type")]
-        else:
-            # Searching all object types
-            obj_types = [model_info[1] for model_info in searchable_models]
+        # Searching all object types
+        obj_types = [model_info[1] for model_info in searchable_models]
 
         for label, modelname in searchable_models:
             if modelname not in obj_types:
