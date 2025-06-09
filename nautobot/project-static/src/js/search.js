@@ -139,18 +139,11 @@ export const initializeSearch = () => {
     );
 
     /* In case there is no badge, use global search. Otherwise, navigate to badge specific model list view. */
-    form.addEventListener('submit', (event) => {
+    form.addEventListener('submit', () => {
       const badge = form.querySelector('[data-nb-link]:last-child');
 
       if (badge) {
-        event.preventDefault();
-
-        const tempSubmit = createElement('input', { name: 'q', type: 'submit', value: input.value });
-        const tempForm = createElement('form', { action: badge.dataset.nbLink, className: 'd-none' }, tempSubmit);
-
-        document.body.appendChild(tempForm);
-        tempSubmit.click();
-        document.body.removeChild(tempForm);
+        form.setAttribute('action', badge.dataset.nbLink);
       }
     });
 
