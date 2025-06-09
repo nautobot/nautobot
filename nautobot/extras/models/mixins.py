@@ -56,7 +56,7 @@ class ApprovableModelMixin(models.Model):
 
         # First check if there's already a pending workflow instance
         if self.associated_approval_workflows.filter(current_state=ApprovalWorkflowStateChoices.PENDING).exists():
-            return self.approval_workflow_instances.filter(current_state=ApprovalWorkflowStateChoices.PENDING).first()
+            return self.associated_approval_workflows.filter(current_state=ApprovalWorkflowStateChoices.PENDING).first()
 
         # Check if there's a relevant workflow definition
         workflow_definition = ApprovalWorkflowDefinition.objects.find_for_model(self)
@@ -68,6 +68,7 @@ class ApprovableModelMixin(models.Model):
             object_under_review_content_type=ContentType.objects.get_for_model(self),
             object_under_review_object_id=self.pk,
             current_state=ApprovalWorkflowStateChoices.PENDING,
+            user=self.user,
         )
 
         # Create workflow stages if the definition has any
@@ -86,19 +87,19 @@ class ApprovableModelMixin(models.Model):
             ]
         )
 
-        self.on_workflow_initiated()
+        self.on_workflow_initiated(approval_workflow)
 
         return approval_workflow
 
-    def on_workflow_initiated(self):
+    def on_workflow_initiated(self, approval_workflow):
         """Called when an approval workflow is initiated."""
         raise NotImplementedError("Subclasses must implement `on_workflow_initiated`.")
 
-    def on_workflow_approved(self):
+    def on_workflow_approved(self, approval_workflow):
         """Called when an approval workflow is approved."""
         raise NotImplementedError("Subclasses must implement `on_workflow_approved`.")
 
-    def on_workflow_denied(self):
+    def on_workflow_denied(self, approval_workflow):
         """Called when an approval workflow is denied."""
         raise NotImplementedError("Subclasses must implement `on_workflow_denied`.")
 
