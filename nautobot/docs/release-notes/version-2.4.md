@@ -165,7 +165,6 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 
 <!-- towncrier release notes start -->
-
 ## v2.4.10 (2025-06-09)
 
 ### Security in v2.4.10
@@ -178,6 +177,11 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 - [#7358](https://github.com/nautobot/nautobot/issues/7358) - Fixed `web_request_context` faulty logic in its `try/finally` block.
 - [#7362](https://github.com/nautobot/nautobot/issues/7362) - Fixed NautobotCSVParser incorrect parsing of many-to-many fields.
+
+### Documentation in v2.4.10
+
+- [#7430](https://github.com/nautobot/nautobot/issues/7430) - Added latest security disclosures to the documentation.
+- [#7430](https://github.com/nautobot/nautobot/issues/7430) - Removed John Anderson as a point of contact for Nautobot security issues.
 
 ## v2.4.9 (2025-05-27)
 
