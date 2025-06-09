@@ -466,6 +466,8 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin
         ):
             raise ValidationError({"name": "An ExportTemplate with this name and content type already exists."})
 
+    clean.alters_data = True
+
 
 #
 # File attachments

@@ -110,6 +110,8 @@ class User(BaseModel, AbstractUser):
         if commit:
             self.save()
 
+    set_config.alters_data = True
+
     def clear_config(self, path, commit=False):
         """
         Delete a configuration parameter specified by its dotted path. The key and any child keys will be deleted.
@@ -136,6 +138,8 @@ class User(BaseModel, AbstractUser):
 
         if commit:
             self.save()
+
+    clear_config.alters_data = True
 
 
 #

@@ -241,6 +241,8 @@ class CustomFieldModel(models.Model):
                 elif cf.required:
                     raise ValidationError(f"Missing required custom field '{cf.name}'.")
 
+    clean.alters_data = True
+
     # Computed Field Methods
     def has_computed_fields(self, advanced_ui=None):
         """
