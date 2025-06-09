@@ -2,7 +2,7 @@
 
 As a part of the Nautobot development team's commitment to security, we maintain the below historical list of security issues which have been fixed and disclosed. Note that this list **only** includes issues in Nautobot itself; while we frequently update our library dependencies to keep them up-to-date and free of known security issues therein, any reported issues in such libraries, and the corresponding updates to Nautobot's specified dependencies, are out of scope for this document.
 
-## GHSA-wjw6-95h5-4jpx
+## CVE-2025-49142
 
 <!-- markdownlint-disable MD033 -->
 <table>
@@ -43,7 +43,7 @@ As a part of the Nautobot development team's commitment to security, we maintain
   </tr>
 </table>
 
-## GHSA-rh67-4c8j-hjjh
+## CVE-2025-49143
 
 <!-- markdownlint-disable MD033 -->
 <table>
