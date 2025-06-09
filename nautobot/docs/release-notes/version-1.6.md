@@ -71,6 +71,47 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 <!-- towncrier release notes start -->
+## v1.6.32 (2025-06-09)
+
+### Security in v1.6.32
+
+- [#6672](https://github.com/nautobot/nautobot/issues/6672) - Added enforcement of user authentication when serving uploaded media files ([GHSA-rh67-4c8j-hjjh](https://github.com/nautobot/nautobot/security/advisories/GHSA-rh67-4c8j-hjjh)).
+- [#7429](https://github.com/nautobot/nautobot/issues/7429) - Added protections against access of various security-related and/or data-altering methods of various Nautobot models from within a Jinja2 sandboxed environment or the Django template renderer ([GHSA-wjw6-95h5-4jpx](https://github.com/nautobot/nautobot/security/advisories/GHSA-wjw6-95h5-4jpx)).
+
+### Added in v1.6.32
+
+- [#7305](https://github.com/nautobot/nautobot/issues/7305) - Added RackRoleFilterForm, ManufacturerFilterForm, DeviceRoleFilterForm, PlatformFilterForm, RoleFilterForm, TenantGroupFilterForm, ClusterTypeFilterForm, ClusterGroupFilterForm, CustomFieldFilterForm, CircuitTypeFilterForm and set them to proper `filterset_form` or `filterset_form_class` in views.
+- [#7305](https://github.com/nautobot/nautobot/issues/7305) - Added a generic test case that asserts that all list views provide an appropriate FilterForm class.
+
+### Fixed in v1.6.32
+
+- [#7250](https://github.com/nautobot/nautobot/issues/7250) - Fixed JSON and MULTISELECT custom field being returned as a `repr()` string when using GraphQL.
+
+## v1.6.31 (2025-05-12)
+
+### Security in v1.6.31
+
+- [#6983](https://github.com/nautobot/nautobot/issues/6983) - Updated dependency `Jinja2` to `~3.1.6` to address `CVE-2025-27516`.
+
+### Fixed in v1.6.31
+
+- [#6985](https://github.com/nautobot/nautobot/issues/6985) - Fixed Rack Elevation filtering by adding `filterset_form` to the `RackElevationListView`.
+
+### Housekeeping in v1.6.31
+
+- [#6618](https://github.com/nautobot/nautobot/issues/6618) - Update GitHub actions `*.yml` file to use minimum ubuntu-24.04 since ubuntu-20.04 is deprecated.
+- [#6988](https://github.com/nautobot/nautobot/issues/6988) - Updated GitHub Actions to use `networktocode/gh-action-setup-poetry-environment@v6`.
+
+## v1.6.30 (2025-01-06)
+
+### Security in v1.6.30
+
+- [#6695](https://github.com/nautobot/nautobot/issues/6695) - Updated dependency `Jinja2` to `~3.1.5` to address `CVE-2024-56201` and `CVE-2024-56326`.
+
+### Housekeeping in v1.6.30
+
+- [#6659](https://github.com/nautobot/nautobot/issues/6659) - Enhanced development environment and associated `invoke` tasks to be Nautobot major/minor version aware, such that a different Docker compose `project-name` (and different local Docker image label) will be used for containers in a `develop`-based branch versus a `next`-based branch versus an `ltm`-based branch.
+
 ## v1.6.29 (2024-12-09)
 
 ### Security in v1.6.29
