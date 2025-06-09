@@ -39,7 +39,7 @@ class InstalledAppsTable(tables.Table):
                 <i class="mdi mdi-book-open-page-variant"></i>
             </a>
         """,
-        attrs={"td": {"class": "text-right text-nowrap noprint"}},
+        attrs={"td": {"class": "text-end text-nowrap noprint nb-w-0"}, "th": {"class": "nb-actionable nb-w-0"}},
         verbose_name="",
     )
 
@@ -49,8 +49,10 @@ class InstalledAppsTable(tables.Table):
         }
         default_columns = ("name", "headline", "version", "actions")
 
-    def __init__(self, *args, user=None, **kwargs):
+    def __init__(self, *args, user=None, configurable=False, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.configurable = configurable
 
         if self.empty_text is None:
             self.empty_text = "No installed Apps found"

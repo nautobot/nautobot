@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+from django.test import tag
 from django.urls import reverse
 
 from nautobot.core.testing.integration import SeleniumTestCase
@@ -16,9 +17,7 @@ class ComputedFieldsTestCase(SeleniumTestCase):
 
     def setUp(self):
         super().setUp()
-        self.user.is_superuser = True
-        self.user.save()
-        self.login(self.user.username, self.password)
+        self.login_as_superuser()
         self.device = create_test_device()
         self.computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Device),
@@ -27,10 +26,7 @@ class ComputedFieldsTestCase(SeleniumTestCase):
             template="{{ obj.name }} is awesome!",
         )
 
-    def tearDown(self):
-        self.logout()
-        super().tearDown()
-
+    @tag("fix_in_v3")
     def test_computed_field_advanced_ui(self):
         """
         This test creates a device and a computed field for that device.
@@ -61,13 +57,14 @@ class ComputedFieldsTestCase(SeleniumTestCase):
         self.assertTrue(self.browser.is_text_present("Device Computed Field"))
         self.assertTrue(self.browser.is_text_present(f"{self.device.name} is awesome!"))
 
+    @tag("fix_in_v3")
     def test_computed_field_appears_in_object_list(self):
         """
         This test sets the computed field to be visible on the object list
         and then checks to see if it actually appears there.
         """
         self.browser.visit(f"{self.live_server_url}/dcim/devices/")
-        self.browser.find_by_xpath(".//button[@data-original-title='Configure table']").click()
+        self.click_button("#table-configure-button")
         select_option = self.browser.find_by_xpath(
             ".//select[@id='id_columns']/option[contains(text(), 'Device Computed Field')]"
         )

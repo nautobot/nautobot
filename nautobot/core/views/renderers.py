@@ -101,6 +101,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     saved_view=self.saved_view,
                     user=request.user,
                     hide_hierarchy_ui=view.hide_hierarchy_ui,
+                    configurable=True,
                 )
                 if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                     table.columns.show("pk")

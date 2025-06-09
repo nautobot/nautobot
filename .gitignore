@@ -3,6 +3,7 @@
 /site/
 /venv/
 **/dist/
+!nautobot/project-static/dist/
 /*.sh
 local_requirements.txt
 !upgrade.sh

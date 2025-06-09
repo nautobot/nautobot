@@ -3,7 +3,7 @@
 {% load helpers %}
 
 {% block extra_breadcrumbs %}
-                <li><a href="{% url 'dcim:moduletype_list' %}?manufacturer={{ object.manufacturer.name }}">{{ object.manufacturer }}</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'dcim:moduletype_list' %}?manufacturer={{ object.manufacturer.name }}">{{ object.manufacturer }}</a></li>
 {% endblock extra_breadcrumbs %}
 
 {% block extra_buttons %}

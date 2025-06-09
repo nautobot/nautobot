@@ -51,23 +51,12 @@ add "&raw" to the end of the URL within a browser.
   </style>
   <!-- As Nautobot may be run without internet access, we source these files locally rather than from an online CDN -->
   <link rel="stylesheet"
-        href="{% static 'graphiql-2.4.7/graphiql.min.css' %}"
-        onerror="window.location='{% url 'media_failure' %}?filename=graphiql-2.4.7/graphiql.min.css'">
-  <link rel="stylesheet"
-        href="{% static 'graphiql-plugin-explorer-0.1.15/style.css' %}"
-        onerror="window.location='{% url 'media_failure' %}?filename=graphiql-plugin-explorer-0.1.15/style.css'">
-  <script src="{% static 'whatwg-fetch-3.6.2/fetch.umd.min.js' %}"
-      onerror="window.location='{% url 'media_failure' %}?filename=whatwg-fetch-3.6.2/fetch.umd.min.js'"></script>
-  <script src="{% static 'react-17.0.2/umd/react.production.min.js' %}"
-          onerror="window.location='{% url 'media_failure' %}?filename=react-17.0.2/umd/react.production.min.js'"></script>
-  <script src="{% static 'react-dom-17.0.2/umd/react-dom.production.min.js' %}"
-          onerror="window.location='{% url 'media_failure' %}?filename=react-dom-17.0.2/umd/react-dom.production.min.js'"></script>
-  <script src="{% static 'graphiql-2.4.7/graphiql.min.js' %}"
-          onerror="window.location='{% url 'media_failure' %}?filename=graphiql-2.4.7/graphiql.min.js'"></script>
-  <script src="{% static 'graphql-ws-5.13.1/umd/graphql-ws.min.js' %}"
-      onerror="window.location='{% url 'media_failure' %}?filename=graphql-ws-5.13.1/umd/graphql-ws.min.js'"></script>
-  <script src="{% static 'graphiql-plugin-explorer-0.1.15/graphiql-plugin-explorer.umd.js' %}"
-          onerror="window.location='{% url 'media_failure' %}?filename=graphiql-plugin-explorer-0.1.15/graphiql-graphiql-plugin-explorer.umd.js'"></script>
+        href="{% static 'dist/css/graphql-libraries.css' %}"
+        onerror="window.location='{% url 'media_failure' %}?filename=dist/css/graphql-libraries.css'">
+  <script src="{% static 'dist/js/graphql-libraries.js' %}"
+      onerror="window.location='{% url 'media_failure' %}?filename=dist/js/graphiql-libraries.js'"></script>
+  <script src="{% static 'dist/js/nautobot-graphiql.js' %}"
+      onerror="window.location='{% url 'media_failure' %}?filename=dist/js/nautobot-graphiql.js'"></script>
 </head>
 <body>
   <!-- Nautobot page contents -->
@@ -96,7 +85,7 @@ add "&raw" to the end of the URL within a browser.
     document.addEventListener('DOMContentLoaded', function() {
       queries_tab = `
         <div class="btn-group" role="button">
-          <button class="graphiql-un-styled graphiql-toolbar-button dropdown-toggle" aria-haspopup="true" aria-expanded="false" data-toggle="dropdown">
+          <button class="graphiql-un-styled graphiql-toolbar-button dropdown-toggle" aria-haspopup="true" aria-expanded="false" data-bs-toggle="dropdown">
               <img class="graphiql-toolbar-icon" src="{% static 'img/nautobot_icon.svg' %}" style="height:24px">
           </button>
           <ul class="dropdown-menu" id="graphql-queries-menu">

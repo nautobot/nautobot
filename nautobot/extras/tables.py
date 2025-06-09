@@ -119,37 +119,53 @@ class="label label-{% if entry.content_identifier in record.provided_contents %}
 """
 
 GITREPOSITORY_BUTTONS = """
-<button data-url="{% url 'extras:gitrepository_sync' pk=record.pk %}" type="submit" class="btn btn-primary btn-xs sync-repository" title="Sync" {% if not perms.extras.change_gitrepository %}disabled="disabled"{% endif %}><i class="mdi mdi-source-branch-sync" aria-hidden="true"></i></button>
+<li>
+    <button
+        data-url="{% url 'extras:gitrepository_sync' pk=record.pk %}"
+        type="submit"
+        class="dropdown-item sync-repository{% if perms.extras.change_gitrepository %} text-primary"{% else %}" disabled="disabled"{% endif %}
+    >
+        <span class="mdi mdi-source-branch-sync" aria-hidden="true"></span>
+        Sync
+    </button>
+</li>
 """
 
 JOB_BUTTONS = """
-<a href="{% url 'extras:job' pk=record.pk %}" class="btn btn-default btn-xs" title="Details"><i class="mdi mdi-information-outline" aria-hidden="true"></i></a>
-<a href="{% url 'extras:jobresult_list' %}?job_model={{ record.name | urlencode }}" class="btn btn-default btn-xs" title="Job Results"><i class="mdi mdi-format-list-bulleted" aria-hidden="true"></i></a>
+<li><a href="{% url 'extras:job' pk=record.pk %}" class="dropdown-item"><span class="mdi mdi-information-outline" aria-hidden="true"></span>Details</a>
+<li><a href="{% url 'extras:jobresult_list' %}?job_model={{ record.name | urlencode }}" class="dropdown-item"><span class="mdi mdi-format-list-bulleted" aria-hidden="true"></span>Job Results</a>
 """
 
 JOB_RESULT_BUTTONS = """
 {% load helpers %}
 {% if perms.extras.run_job %}
     {% if record.job_model and record.task_kwargs %}
-        <a href="{% url 'extras:job_run' pk=record.job_model.pk %}?kwargs_from_job_result={{ record.pk }}"
-           class="btn btn-xs btn-success" title="Re-run job with same arguments.">
-            <i class="mdi mdi-repeat"></i>
-        </a>
+        <li>
+            <a href="{% url 'extras:job_run' pk=record.job_model.pk %}?kwargs_from_job_result={{ record.pk }}" class="dropdown-item text-success">
+                <span class="mdi mdi-repeat" aria-hidden="true"></span>
+                Re-run job with same arguments
+            </a>
+        </li>
     {% elif record.job_model is not None %}
-        <a href="{% url 'extras:job_run' pk=record.job_model.pk %}" class="btn btn-primary btn-xs"
-           title="Run job">
-            <i class="mdi mdi-play"></i>
-        </a>
+        <li>
+            <a href="{% url 'extras:job_run' pk=record.job_model.pk %}" class="dropdown-item text-primary">
+                <span class="mdi mdi-play" aria-hidden="true"></span>
+                Run job
+            </a>
+        </li>
     {% else %}
-        <a href="#" class="btn btn-xs btn-default disabled" title="Job is not available, cannot be re-run">
-            <i class="mdi mdi-repeat-off"></i>
-        </a>
+        <li>
+            <a href="#" class="dropdown-item disabled">
+                <span class="mdi mdi-repeat-off" aria-hidden="true"></span>
+                Job is not available, cannot be re-run
+            </a>
+        </li>
     {% endif %}
 {% endif %}
 """
 
 SCHEDULED_JOB_BUTTONS = """
-<a href="{% url 'extras:jobresult_list' %}?scheduled_job={{ record.name | urlencode }}" class="btn btn-default btn-xs" title="Job Results"><i class="mdi mdi-format-list-bulleted" aria-hidden="true"></i></a>
+<li><a href="{% url 'extras:jobresult_list' %}?scheduled_job={{ record.name | urlencode }}" class="dropdown-item"><span class="mdi mdi-format-list-bulleted" aria-hidden="true"></span>Job Results</a></li>
 """
 
 OBJECTCHANGE_OBJECT = """
@@ -181,24 +197,44 @@ WEBHOOK_CONTENT_TYPES = """
 """
 
 SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS = """
-<button type="button"
-        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_dry_run')"
-        title="Dry Run"
-        class="btn btn-primary btn-xs"{% if not perms.extras.run_job or not record.job_model.supports_dryrun %} disabled="disabled"{% endif %}>
-    <i class="mdi mdi-play"></i>
-</button>
-<button type="button"
-        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_approve')"
-        title="Approve"
-        class="btn btn-success btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
-    <i class="mdi mdi-check"></i>
-</button>
-<button type="button"
-        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_deny')"
-        title="Deny"
-        class="btn btn-danger btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
-    <i class="mdi mdi-close"></i>
-</button>
+<div class="dropdown">
+    <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <span class="mdi mdi-dots-vertical" aria-hidden="true"></span>
+        <span class="visually-hidden">Toggle Dropdown</span>
+    </button>
+    <ul class="dropdown-menu">
+        <li>
+            <button
+                type="button"
+                onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_dry_run')"
+                class="dropdown-item{% if perms.extras.run_job and record.job_model.supports_dryrun %} text-primary"{% else %}" disabled="disabled"{% endif %}
+            >
+                <span class="mdi mdi-play" aria-hidden="true"></span>
+                Dry Run
+            </button>
+        </li>
+        <li>
+            <button
+                type="button"
+                onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_approve')"
+                class="dropdown-item{% if perms.extras.run_job %} text-success"{% else %}" disabled="disabled"{% endif %}
+            >
+                <span class="mdi mdi-check" aria-hidden="true"></span>
+                Approve
+            </button>
+        </li>
+        <li>
+            <button
+                type="button"
+                onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_deny')"
+                class="dropdown-item{% if perms.extras.run_job %} text-danger"{% else %}" disabled="disabled"{% endif %}
+            >
+                <span class="mdi mdi-close" aria-hidden="true"></span>
+                Deny
+            </button>
+        </li>
+    </ul>
+</div>
 """
 
 #
@@ -1456,7 +1492,14 @@ class ScheduledJobApprovalQueueTable(BaseTable):
     interval = tables.Column(verbose_name="Execution Type")
     start_time = tables.Column(verbose_name="Requested")
     user = tables.Column(verbose_name="Requestor")
-    actions = tables.TemplateColumn(SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS)
+    actions = tables.TemplateColumn(
+        SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS,
+        attrs={
+            "td": {"class": "text-end text-nowrap noprint nb-actions nb-w-0"},
+            "tf": {"class": "nb-w-0"},
+            "th": {"class": "nb-actionable nb-w-0"},
+        },
+    )
 
     class Meta(BaseTable.Meta):
         model = ScheduledJob

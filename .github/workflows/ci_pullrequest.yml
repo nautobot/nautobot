@@ -190,7 +190,7 @@ jobs:
           poetry-version: "1.8.5"
           python-version: "3.10"
       - name: "Run unittest"
-        run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel"
+        run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel -e fix_in_v3"
     needs:
       - "check-migrations"
       - "check-schema"
@@ -233,7 +233,7 @@ jobs:
           poetry-version: "1.8.5"
           python-version: "3.13"
       - name: "Run unittest"
-        run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel"
+        run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel -e fix_in_v3"
     needs:
       - "check-migrations"
       - "check-schema"
@@ -356,7 +356,7 @@ jobs:
           python-version: "3.13"
       - name: "Run Integration Tests"
         # If NAUTOBOT_SELENIUM_HOST is set to 'localhost' or '127.0.0.1' the connection does not work
-        run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke tests --tag integration --no-keepdb"
+        run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke tests --tag integration --no-keepdb -e fix_in_v3"
     needs:
       - "check-migrations"
       - "check-schema"

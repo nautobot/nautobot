@@ -976,6 +976,7 @@ class ContactAssociationUIViewSet(
     serializer_class = serializers.ContactAssociationSerializer
     table_class = tables.AssociatedContactsTable
     non_filter_params = ("export", "page", "per_page", "sort")
+    object_detail_content = None
 
 
 class ObjectContactTeamMixin:

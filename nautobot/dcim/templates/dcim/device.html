@@ -1,7 +1,11 @@
 {% extends 'dcim/device/base.html' %}
+{% load buttons %}
+{% load custom_links %}
 {% load helpers %}
+{% load job_buttons %}
 {% load plugins %}
 {% load render_table from django_tables2 %}
+{% load ui_framework %}
 
 {% block content %}
 <div class="tab-content">
@@ -10,6 +14,20 @@
         <div class="col-md-12">
             <div class="tab-content">
                 <div role="tabpanel" class="tab-pane active" id="details">
+                    <div class="align-items-center d-flex flex-wrap mb-16">
+                        {% include 'inc/created_updated.html' %}
+                        <div class="flex-grow-0 flex-shrink-0 noprint">
+                            {% block buttons %}
+                            {% plugin_buttons object %}
+                            {% render_detail_view_extra_buttons %}
+                            {% block extra_buttons %}{% endblock extra_buttons %}
+                            {% consolidate_detail_view_action_buttons %}
+                            {% endblock buttons %}
+                            {% custom_links object %}
+                            {% job_buttons object %}
+                            {% block panel_buttons %}{% endblock panel_buttons %}
+                        </div>
+                    </div>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="panel panel-default">

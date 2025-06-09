@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+from django.test import tag
 from django.urls import reverse
 
 from nautobot.core.testing.integration import SeleniumTestCase
@@ -13,7 +14,8 @@ class ListViewFilterTestCase(SeleniumTestCase):
 
     def setUp(self):
         super().setUp()
-        self.login(self.user.username, self.password)
+        self.login_as_superuser()
+
         if not LocationType.objects.filter(name="Campus").exists():
             LocationTypeFactory.create_batch(7)
         lt1 = LocationType.objects.get(name="Campus")
@@ -32,9 +34,6 @@ class ListViewFilterTestCase(SeleniumTestCase):
         Location.objects.create(
             name="Filter Test Location 5", location_type=lt4, parent=building_loc, status=location_status
         )
-        # set test user to admin
-        self.user.is_superuser = True
-        self.user.save()
 
         self.cf_text_field_label = "Text Field"
         self.cf_integer_field_label = "Integer Field"
@@ -55,10 +54,6 @@ class ListViewFilterTestCase(SeleniumTestCase):
             CustomFieldChoice.objects.create(custom_field=self.custom_fields[2], value=f"SingleSelect Option {x}")
             CustomFieldChoice.objects.create(custom_field=self.custom_fields[3], value=f"MultiSelect Option {x}")
 
-    def tearDown(self):
-        self.logout()
-        super().tearDown()
-
     def test_list_view_filter(self):
         """
         Test adding a filter with the list view filter modal and then
@@ -67,20 +62,20 @@ class ListViewFilterTestCase(SeleniumTestCase):
 
         # retrieve location list view
         self.browser.visit(f"{self.live_server_url}{reverse('dcim:location_list')}")
-        filter_modal = self.browser.find_by_id("FilterForm_modal", wait_time=10)
-        self.assertFalse(filter_modal.visible)
+        filter_drawer = self.browser.find_by_id("FilterForm_drawer", wait_time=10)
+        self.assertFalse(filter_drawer.visible)
 
         # click on filter button to open the filter modal
         filter_button = self.browser.find_by_id("id__filterbtn", wait_time=10)
         filter_button.click()
 
         # assert the filter modal has appeared
-        self.assertTrue(filter_modal.visible)
+        self.assertTrue(filter_drawer.visible)
 
         # start typing a parent into select2
         location_type = LocationType.objects.filter(parent__isnull=True).first()
         parent = Location.objects.filter(location_type=location_type).first()
-        parent_select = filter_modal.find_by_xpath(
+        parent_select = filter_drawer.find_by_xpath(
             "//label[@for='id_parent']/..//input[@class='select2-search__field']", wait_time=10
         )
         for _ in parent_select.type(f"{parent.name[:4]}", slowly=True):
@@ -92,7 +87,7 @@ class ListViewFilterTestCase(SeleniumTestCase):
         parent_option.click()
 
         # click apply button in filter modal
-        apply_button = filter_modal.find_by_xpath("//div[@id='default-filter']//button[@type='submit']", wait_time=10)
+        apply_button = filter_drawer.find_by_xpath("//div[@id='default-filter']//button[@type='submit']", wait_time=10)
         apply_button.click()
 
         # assert the url has changed to add the filter param
@@ -146,6 +141,7 @@ class ListViewFilterTestCase(SeleniumTestCase):
             )
             self.browser.find_by_xpath(select_field_xpath).click()
 
+    @tag("fix_in_v3")
     def test_input_field_gets_updated(self):
         """Assert that a filter input/select field on Dynamic Filter Form updates if same field is updated."""
         self.browser.visit(f'{self.live_server_url}{reverse("dcim:location_list")}')

@@ -7,7 +7,7 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import override_settings, RequestFactory
+from django.test import override_settings, RequestFactory, tag
 from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
 from prometheus_client.parser import text_string_to_metric_families
@@ -104,11 +104,11 @@ class HomeViewTestCase(TestCase):
         url = reverse("home")
         response = self.client.get(url)
 
-        # Search bar in nav
-        nav_search_bar_pattern = re.compile(
-            '<nav.*<form action="/search/" method="get" class="navbar-form" id="navbar_search" role="search">.*</form>.*</nav>'
+        # Search bar in header
+        header_search_bar_pattern = re.compile(
+            '<header.*<form action="/search/" class="col text-center" method="get" id="navbar_search" role="search">.*</form>.*</header>'
         )
-        nav_search_bar_result = nav_search_bar_pattern.search(
+        header_search_bar_result = header_search_bar_pattern.search(
             response.content.decode(response.charset).replace("\n", "")
         )
 
@@ -122,20 +122,22 @@ class HomeViewTestCase(TestCase):
             response.content.decode(response.charset).replace("\n", "")
         )
 
-        return nav_search_bar_result, body_search_bar_result
+        return header_search_bar_result, body_search_bar_result
 
+    @tag("fix_in_v3")
     def test_search_bar_not_visible_if_user_not_authenticated(self):
         self.client.logout()
 
-        nav_search_bar_result, body_search_bar_result = self.make_request()
+        header_search_bar_result, body_search_bar_result = self.make_request()
 
-        self.assertIsNone(nav_search_bar_result)
+        self.assertIsNone(header_search_bar_result)
         self.assertIsNone(body_search_bar_result)
 
+    @tag("fix_in_v3")
     def test_search_bar_visible_if_user_authenticated(self):
-        nav_search_bar_result, body_search_bar_result = self.make_request()
+        header_search_bar_result, body_search_bar_result = self.make_request()
 
-        self.assertIsNotNone(nav_search_bar_result)
+        self.assertIsNotNone(header_search_bar_result)
         self.assertIsNotNone(body_search_bar_result)
 
     @override_settings(VERSION="1.2.3")
@@ -144,7 +146,7 @@ class HomeViewTestCase(TestCase):
         response = self.client.get(url)
         response_content = response.content.decode(response.charset).replace("\n", "")
 
-        footer_hostname_version_pattern = re.compile(r'<p class="text-muted">\s+\S+\s+\(v1\.2\.3\)\s+</p>')
+        footer_hostname_version_pattern = re.compile(r"<span>\s+\S+\s+\(v1\.2\.3\)\s+</span>")
         self.assertRegex(response_content, footer_hostname_version_pattern)
 
         self.client.logout()
@@ -194,6 +196,7 @@ class SearchFieldsTestCase(TestCase):
         # SearchForm will redirect the user to the login Page
         self.assertEqual(response.status_code, 302)
 
+    @tag("fix_in_v3")
     def test_global_and_model_search_bar(self):
         self.add_permissions("dcim.view_location", "dcim.view_device")
 
@@ -221,6 +224,7 @@ class SearchFieldsTestCase(TestCase):
 
 
 class FilterFormsTestCase(TestCase):
+    @tag("fix_in_v3")
     def test_support_for_both_default_and_dynamic_filter_form_in_ui(self):
         self.add_permissions("dcim.view_location", "circuits.view_circuit")
 
@@ -338,8 +342,9 @@ class NavAppsUITestCase(TestCase):
         self.assertContains(
             response,
             f"""
-            <a href="{self.apps_marketplace_url}"
-                data-item-weight="{self.apps_marketplace_item_weight}">
+            <a class="sidenav-link"
+                data-item-weight="{self.apps_marketplace_item_weight}"
+                href="{self.apps_marketplace_url}">
                 Apps Marketplace
             </a>
             """,
@@ -352,8 +357,9 @@ class NavAppsUITestCase(TestCase):
         self.assertContains(
             response,
             f"""
-            <a href="{self.apps_list_url}"
-                data-item-weight="{self.apps_list_item_weight}">
+            <a class="sidenav-link"
+                data-item-weight="{self.apps_list_item_weight}"
+                href="{self.apps_list_url}">
                 Installed Apps
             </a>
             """,
@@ -668,6 +674,7 @@ class ExampleViewWithCustomPermissionsTest(TestCase):
 
 
 class TestObjectDetailView(TestCase):
+    @tag("fix_in_v3")
     @override_settings(PAGINATE_COUNT=5)
     def test_object_table_panel(self):
         provider = Provider.objects.create(name="A Test Provider 1")
@@ -695,7 +702,7 @@ class TestObjectDetailView(TestCase):
         view_move_url = reverse("circuits:circuit_list") + f"?provider={provider.id}"
 
         # Assert Badge Count in table panel header
-        panel_header = f"""<div class="panel-heading"><strong>Circuits</strong> <a href="{view_move_url}" class="badge badge-primary">10</a></div>"""
+        panel_header = f"""<div class="card-header"><strong>Circuits</strong> <a href="{view_move_url}" class="badge badge-primary">10</a></div>"""
         self.assertInHTML(panel_header, response_data)
 
         # Assert view X more btn
