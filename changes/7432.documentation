@@ -1,0 +1,4 @@
+Added "Security Notices" document to the documentation under **Administration**.
+Fixed a number of broken links in the documentation.
+Added latest security disclosures to the documentation.
+Removed John Anderson as a point of contact for Nautobot security issues.

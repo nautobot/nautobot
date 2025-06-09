@@ -144,6 +144,9 @@ nav:
           - Request Profiling: "administration/request-profiling.md"
           - Replicating Nautobot: "administration/replicating-nautobot.md"
           - Task Queues: "administration/celery-queues.md"
+          - Security:
+              - "administration/security/index.md"
+              - Notices: "administration/security/notices.md"
       - User Guides:
           - Creating Devices: "user-guides/getting-started/creating-devices.md"
           - Custom Fields: "user-guides/custom-fields.md"
