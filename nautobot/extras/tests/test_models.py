@@ -88,7 +88,7 @@ class ComputedFieldTest(TestCase):
         )
         self.evil_computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Secret),
-            key="evil_computed_field",
+            slug="evil_computed_field",
             label="Evil Computed Field",
             template="{{ obj.get_value() }}",
             weight=666,
@@ -108,7 +108,7 @@ class ComputedFieldTest(TestCase):
         )
         self.secrets_group = SecretsGroup.objects.create(name="Group of Secrets")
         SecretsGroupAssociation.objects.create(
-            secrets_group=self.secrets_group,
+            group=self.secrets_group,
             secret=self.secret,
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
