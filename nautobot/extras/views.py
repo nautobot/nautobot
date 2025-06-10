@@ -1883,6 +1883,47 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 
         return job_model
 
+    def _handle_approval_workflow_response(self, request, scheduled_job, return_url):
+        """Handle response for jobs requiring approval workflow."""
+        messages.success(request, f"Job '{scheduled_job.name}' successfully submitted for approval")
+        return redirect(return_url or reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk]))
+
+    def _handle_scheduled_job_response(self, request, scheduled_job, return_url):
+        """Handle response for successfully scheduled jobs."""
+        if scheduled_job.associated_approval_workflows.filter(
+            current_state=ApprovalWorkflowStateChoices.PENDING
+        ).exists():
+            return self._handle_approval_workflow_response(request, scheduled_job, return_url)
+
+        messages.success(request, f"Job {scheduled_job.name} successfully scheduled")
+        return redirect(return_url or "extras:scheduledjob_list")
+
+    def _handle_immediate_execution(
+        self, request, job_model, job_class, job_form, profile, ignore_singleton_lock, job_queue, return_url
+    ):
+        """Handle immediate job execution."""
+        job_kwargs = job_class.prepare_job_kwargs(job_form.cleaned_data)
+        job_result = JobResult.enqueue_job(
+            job_model,
+            request.user,
+            profile=profile,
+            ignore_singleton_lock=ignore_singleton_lock,
+            job_queue=job_queue,
+            **job_class.serialize_data(job_kwargs),
+        )
+
+        if return_url:
+            messages.info(
+                request,
+                format_html(
+                    'Job enqueued. <a href="{}">Click here for the results.</a>',
+                    job_result.get_absolute_url(),
+                ),
+            )
+            return redirect(return_url)
+
+        return redirect("extras:jobresult", pk=job_result.pk)
+
     def get(self, request, class_path=None, pk=None):
         job_model = self._get_job_model_or_404(class_path, pk)
 
@@ -1996,7 +2037,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             ignore_singleton_lock = job_form.cleaned_data.pop("_ignore_singleton_lock", False)
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
-            if (not dryrun and job_model.approval_required) or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
+            if not dryrun:
                 scheduled_job = ScheduledJob.create_schedule(
                     job_model,
                     request.user,
@@ -2008,39 +2049,32 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     job_queue=job_queue,
                     profile=profile,
                     ignore_singleton_lock=ignore_singleton_lock,
+                    validated_save=False,
                     **job_class.serialize_data(job_form.cleaned_data),
                 )
-
+                # Step 1: Check if approval is required
                 if job_model.approval_required:
-                    messages.success(request, f"Job {scheduled_job.name} successfully submitted for approval")
-                    return redirect(return_url or "extras:scheduledjob_approval_queue_list")
+                    # Step 2: Check if approval workflow is defined
+                    if not ApprovalWorkflowDefinition.objects.find_for_model(scheduled_job):
+                        messages.error(
+                            request,
+                            "Job was not successfully submitted for approval. No approval workflow definition is defined for it.",
+                        )
+                        return redirect(return_url or request.path)
+                    scheduled_job.validated_save()
+                    return self._handle_approval_workflow_response(request, scheduled_job, return_url)
+
+                # Step 3: If approval is not required
+                elif schedule_type in JobExecutionType.SCHEDULE_CHOICES:
+                    scheduled_job.validated_save()
+                    return self._handle_scheduled_job_response(request, scheduled_job, return_url)
+
+                # Step 4: Immediate execution (no schedule, no approval)
                 else:
-                    messages.success(request, f"Job {scheduled_job.name} successfully scheduled")
-                    return redirect(return_url or "extras:scheduledjob_list")
-
-            else:
-                # Enqueue job for immediate execution
-                job_kwargs = job_class.prepare_job_kwargs(job_form.cleaned_data)
-                job_result = JobResult.enqueue_job(
-                    job_model,
-                    request.user,
-                    profile=profile,
-                    ignore_singleton_lock=ignore_singleton_lock,
-                    job_queue=job_queue,
-                    **job_class.serialize_data(job_kwargs),
-                )
-
-                if return_url:
-                    messages.info(
-                        request,
-                        format_html(
-                            'Job enqueued. <a href="{}">Click here for the results.</a>',
-                            job_result.get_absolute_url(),
-                        ),
+                    # Enqueue job for immediate execution
+                    return self._handle_immediate_execution(
+                        request, job_model, job_class, job_form, profile, ignore_singleton_lock, job_queue, return_url
                     )
-                    return redirect(return_url)
-
-                return redirect("extras:jobresult", pk=job_result.pk)
 
         if return_url:
             return redirect(return_url)
