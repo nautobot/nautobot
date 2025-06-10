@@ -423,7 +423,7 @@ class ApprovalWorkflowStageViewTestCase(
         url = reverse("extras:approvalworkflowstage_approve", args=[approval_workflow_stage.pk])
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
-        self.assertBodyContains(response, '<div class="panel panel-success">')  # Assert the success panel is present
+        self.assertBodyContains(response, '<div class="card border-success">')  # Assert the success panel is present
 
         # Try POST with model-level permission
         request = {
@@ -459,7 +459,7 @@ class ApprovalWorkflowStageViewTestCase(
         url = reverse("extras:approvalworkflowstage_deny", args=[approval_workflow_stage.pk])
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
-        self.assertBodyContains(response, '<div class="panel panel-danger">')  # Assert the danger panel is present
+        self.assertBodyContains(response, '<div class="card border-danger">')  # Assert the danger panel is present
 
         # Try POST with model-level permission
         request = {

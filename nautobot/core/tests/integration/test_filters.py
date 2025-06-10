@@ -246,7 +246,7 @@ class ListViewFilterTestCase(SeleniumTestCase):
         ).click()
         # find the input field for the tag
         container = self.browser.find_by_xpath(
-            "//span[@class='select2 select2-container select2-container--bootstrap select2-container--below']"
+            "//span[@class='select2 select2-container select2-container--bootstrap-5 select2-container--below']"
         )
         container.click()
         # select tag
@@ -257,7 +257,7 @@ class ListViewFilterTestCase(SeleniumTestCase):
 
         apply_btn_xpath = "//div[@id='advanced-filter']//button[@type='submit']"
         self.browser.find_by_xpath(apply_btn_xpath).click()
-        filter_modal = self.browser.find_by_id("FilterForm_modal", wait_time=10)
+        filter_modal = self.browser.find_by_id("FilterForm_drawer", wait_time=10)
         # Model disappears
         self.assertFalse(filter_modal.visible)
         # Assert the choice is applied

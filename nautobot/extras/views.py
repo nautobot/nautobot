@@ -441,7 +441,7 @@ class ApprovalWorkflowStageUIViewSet(
                     "form": form,
                     "obj_type": ApprovalWorkflowStage._meta.verbose_name,
                     "return_url": self.get_return_url(request, obj),
-                    "panel_class": "success",
+                    "card_class": "success",
                     "button_class": "success",
                 },
             )
