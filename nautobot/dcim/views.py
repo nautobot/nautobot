@@ -686,6 +686,45 @@ class RackReservationUIViewSet(NautobotUIViewSet):
     table_class = tables.RackReservationTable
     queryset = RackReservation.objects.all()
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.KeyValueTablePanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                label="Rack",
+                context_data_key="rack_data",
+            ),
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                label="Reservation Details",
+                fields=["unit_list", "tenant", "user", "description"],
+            ),
+            object_detail.Panel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                template_path="dcim/rack_elevation.html",
+            ),
+        ),
+    )
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            context["rack_data"] = self.get_rack_context(instance)
+        return context
+
+    def get_rack_context(self, instance):
+        rack = getattr(instance, "rack", None)
+        if not rack:
+            return {}
+
+        return {
+            "location": rack.location,
+            "rack_group": rack.rack_group,
+            "rack": rack,
+        }
+
     def get_object(self):
         obj = super().get_object()
 
@@ -3356,13 +3395,42 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
     table_class = tables.ModuleBayTable
     create_template_name = "dcim/device_component_add.html"
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                hide_if_unset=("parent_device", "parent_module"),
+            ),
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                context_object_key="installed_module_data",
+                label="Installed Module",
+            ),
+        )
+    )
+
     def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+
         if instance:
-            return {
-                "device_breadcrumb_url": "dcim:device_modulebays",
-                "module_breadcrumb_url": "dcim:module_modulebays",
-            }
-        return {}
+            # Set breadcrumbs always
+            context.update(
+                {
+                    "device_breadcrumb_url": "dcim:device_modulebays",
+                    "module_breadcrumb_url": "dcim:module_modulebays",
+                }
+            )
+
+            # Add installed module context
+            context["installed_module_data"] = self._get_installed_module_context(instance)
+
+        return context
+
+    def _get_installed_module_context(self, instance):
+        return getattr(instance, "installed_module", None)
 
     def get_selected_objects_parents_name(self, selected_objects):
         selected_object = selected_objects.first()
@@ -4403,7 +4471,7 @@ class ControllerUIViewSet(NautobotUIViewSet):
             ),
             object_detail.ObjectFieldsPanel(
                 section=SectionChoices.RIGHT_HALF,
-                weight=100,
+                weight=200,
                 label="Integration",
                 fields=[
                     "external_integration",
