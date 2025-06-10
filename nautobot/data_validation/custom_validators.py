@@ -13,7 +13,6 @@ import inspect
 import logging
 import os
 import re
-from decimal import Decimal
 from typing import Optional
 
 from django.conf import settings
