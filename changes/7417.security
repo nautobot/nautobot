@@ -1,0 +1,1 @@
+Added protections against access of various security-related and/or data-altering methods of various Nautobot models from within a Jinja2 sandboxed environment or the Django template renderer ([GHSA-wjw6-95h5-4jpx](https://github.com/nautobot/nautobot/security/advisories/GHSA-wjw6-95h5-4jpx)).
