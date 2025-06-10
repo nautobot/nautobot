@@ -1,0 +1,1 @@
+Adding range_start and range_end parameter for IPAM api endpoint available-ips. This replaces the use of the offset parameter in this particular case.
