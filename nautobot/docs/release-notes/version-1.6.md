@@ -87,6 +87,13 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 
 - [#7250](https://github.com/nautobot/nautobot/issues/7250) - Fixed JSON and MULTISELECT custom field being returned as a `repr()` string when using GraphQL.
 
+### Documentation in v1.6.32
+
+- [#7432](https://github.com/nautobot/nautobot/issues/7432) - Added "Security Notices" document to the documentation under **Administration**.
+- [#7432](https://github.com/nautobot/nautobot/issues/7432) - Fixed a number of broken links in the documentation.
+- [#7432](https://github.com/nautobot/nautobot/issues/7432) - Added latest security disclosures to the documentation.
+- [#7432](https://github.com/nautobot/nautobot/issues/7432) - Removed John Anderson as a point of contact for Nautobot security issues.
+
 ## v1.6.31 (2025-05-12)
 
 ### Security in v1.6.31
