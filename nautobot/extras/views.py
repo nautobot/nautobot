@@ -3010,9 +3010,18 @@ class TagUIViewSet(NautobotUIViewSet):
     filterset_class = filters.TagFilterSet
     filterset_form_class = forms.TagFilterForm
     form_class = forms.TagForm
-    queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
+    queryset = Tag.objects.all()
     serializer_class = serializers.TagSerializer
     table_class = tables.TagTable
+
+    def alter_queryset(self, request):
+        queryset = super().alter_queryset(request)
+
+        # Only annotate for list, bulk_edit, bulk_delete views
+        if self.action in ["list", "bulk_update", "bulk_destroy"]:
+            queryset = queryset.annotate(items=count_related(TaggedItem, "tag"))
+
+        return queryset
 
     def get_extra_context(self, request, instance):
         # Only run this logic when retrieving a single object
