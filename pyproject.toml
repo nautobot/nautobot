@@ -41,7 +41,7 @@ celery = "~5.3.6"
 # Added as an explicit dependency to protect against various CVEs in older versions.
 cryptography = "~44.0.3"
 # Fundamental web framework for Nautobot
-Django = "~4.2.21"
+Django = "~4.2.22"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
