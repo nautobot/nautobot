@@ -12,7 +12,6 @@ from nautobot.dcim.choices import (
     PowerFeedSupplyChoices,
     PowerFeedTypeChoices,
     PowerPanelTypeChoices,
-    PowerPanelVoltageChoices,
 )
 from nautobot.dcim.constants import (
     POWERFEED_AMPERAGE_DEFAULT,
@@ -58,17 +57,6 @@ class PowerPanel(PrimaryModel):
         choices=PowerPanelTypeChoices,
         blank=True,
         help_text="Panel configuration type"
-    )
-    voltage_configuration = models.CharField(
-        max_length=20,
-        choices=PowerPanelVoltageChoices,
-        blank=True,
-        help_text="Panel voltage configuration (e.g., 208/120V-3Φ-4W)"
-    )
-    main_amperage = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        help_text="Panel main breaker amperage rating (e.g., 400)"
     )
     circuit_positions = models.PositiveIntegerField(
         null=True,

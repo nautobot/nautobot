@@ -1627,11 +1627,6 @@ class PowerPanelFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet):
         choices=PowerPanelTypeChoices,
         null_value=None,
     )
-    voltage_configuration = django_filters.MultipleChoiceFilter(
-        choices=PowerPanelVoltageChoices,
-        null_value=None,
-    )
-    main_amperage = django_filters.NumberFilter()
     circuit_positions = django_filters.NumberFilter()
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     power_feeds = NaturalKeyOrPKMultipleChoiceFilter(
@@ -1655,8 +1650,6 @@ class PowerPanelFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet):
             "id",
             "name",
             "panel_type",
-            "voltage_configuration",
-            "main_amperage",
             "circuit_positions",
             "tags"
         ]

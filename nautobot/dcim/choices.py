@@ -1381,42 +1381,16 @@ class PowerPanelTypeChoices(ChoiceSet):
     TYPE_SWITCHGEAR = "switchgear"
     TYPE_UPS = "ups"
     TYPE_RPP = "rpp"
-    TYPE_MAIN_PDU = "main-pdu"
+    TYPE_PDU = "pdu"
 
     CHOICES = (
         (TYPE_UTILITY, "Utility Transformer"),
         (TYPE_GENERATOR, "Generator"),
         (TYPE_SWITCHGEAR, "Switchgear"),
-        (TYPE_UPS, "UPS"),
+        (TYPE_UPS, "Uninterruptible Power Supply"),
         (TYPE_RPP, "Remote Power Panel"),
-        (TYPE_MAIN_PDU, "Main Power Distribution Unit"),
+        (TYPE_PDU, "Main Power Distribution Unit"),
     )
-
-class PowerPanelVoltageChoices(ChoiceSet):
-    # Single Phase
-    VOLTAGE_120V_1P_2W = "120v-1ph-2w"
-    VOLTAGE_240V_1P_2W = "240v-1ph-2w"
-
-    # Three Phase
-    VOLTAGE_208_120V_3P_4W = "208-120v-3ph-4w"
-    VOLTAGE_400_230V_3P_4W = "400-230v-3ph-4w"
-    VOLTAGE_415_240V_3P_4W = "415-240v-3ph-4w"
-    VOLTAGE_480_277V_3P_4W = "480-277v-3ph-4w"
-    VOLTAGE_600_347V_3P_4W = "600-347v-3ph-4w"
-
-    CHOICES = [
-        ("Single Phase", [
-            (VOLTAGE_120V_1P_2W, "120V Single Phase 2-Wire"),
-            (VOLTAGE_240V_1P_2W, "240V Single Phase 2-Wire"),
-        ]),
-        ("Three Phase", [
-            (VOLTAGE_208_120V_3P_4W, "208/120V 3-Phase 4-Wire"),
-            (VOLTAGE_400_230V_3P_4W, "400/230V 3-Phase 4-Wire"),
-            (VOLTAGE_415_240V_3P_4W, "415/240V 3-Phase 4-Wire"),
-            (VOLTAGE_480_277V_3P_4W, "480/277V 3-Phase 4-Wire"),
-            (VOLTAGE_600_347V_3P_4W, "600/347V 3-Phase 4-Wire"),
-        ]),
-    ]
 
 
 #

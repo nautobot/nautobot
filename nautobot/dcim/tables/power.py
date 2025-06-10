@@ -28,8 +28,6 @@ class PowerPanelTable(BaseTable):
     name = tables.LinkColumn()
     location = tables.Column(linkify=True)
     panel_type = ChoiceFieldColumn()
-    voltage_configuration = ChoiceFieldColumn()
-    main_amperage = tables.Column(verbose_name="Main Amp")
     circuit_positions = tables.Column(verbose_name="Positions")
     power_feed_count = LinkedCountColumn(
         viewname="dcim:powerfeed_list",
@@ -46,8 +44,6 @@ class PowerPanelTable(BaseTable):
             "location",
             "rack_group",
             "panel_type",
-            "voltage_configuration",
-            "main_amperage",
             "circuit_positions",
             "power_feed_count",
             "tags",
@@ -58,8 +54,6 @@ class PowerPanelTable(BaseTable):
             "location",
             "rack_group",
             "panel_type",
-            "voltage_configuration",
-            "main_amperage",
             "power_feed_count",
         )
 

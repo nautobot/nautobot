@@ -4454,14 +4454,11 @@ class PowerPanelForm(LocatableModelFormMixin, NautobotModelForm):
             "rack_group",
             "name",
             "panel_type",
-            "voltage_configuration",
-            "main_amperage",
             "circuit_positions",
             "tags",
         ]
         widgets = {
             "panel_type": StaticSelect2(),
-            "voltage_configuration": StaticSelect2(),
         }
 
 
@@ -4481,17 +4478,11 @@ class PowerPanelBulkEditForm(
         required=False,
         widget=StaticSelect2(),
     )
-    voltage_configuration = forms.ChoiceField(
-        choices=add_blank_choice(PowerPanelVoltageChoices),
-        required=False,
-        widget=StaticSelect2(),
-    )
-    main_amperage = forms.IntegerField(required=False, min_value=1)
     circuit_positions = forms.IntegerField(required=False, min_value=1)
 
     class Meta:
         model = PowerPanel
-        nullable_fields = ["location", "rack_group", "panel_type", "voltage_configuration", "main_amperage", "circuit_positions"]
+        nullable_fields = ["location", "rack_group", "panel_type", "circuit_positions"]
 
 
 class PowerPanelFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
@@ -4509,12 +4500,6 @@ class PowerPanelFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
         required=False,
         widget=StaticSelect2Multiple(),
     )
-    voltage_configuration = forms.MultipleChoiceField(
-        choices=add_blank_choice(PowerPanelVoltageChoices),
-        required=False,
-        widget=StaticSelect2Multiple(),
-    )
-    main_amperage = forms.IntegerField(required=False, min_value=1)
     circuit_positions = forms.IntegerField(required=False, min_value=1)
     tags = TagFilterField(model)
 
