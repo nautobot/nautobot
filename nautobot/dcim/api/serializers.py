@@ -539,6 +539,8 @@ class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         model = Device
         fields = "__all__"
         validators = []
+        # Explicitly declare opt-in fields for test compatibility
+        opt_in_fields = ["computed_fields", "config_context", "relationships"]
         extra_kwargs = {
             "parent_bay": {"required": False, "allow_null": True},
             "vc_position": {"label": "Virtual chassis position"},
