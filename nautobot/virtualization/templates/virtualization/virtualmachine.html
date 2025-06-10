@@ -2,6 +2,12 @@
 {% load helpers %}
 {% load static %}
 
+{% block drawer %}
+    {% if vminterface_table %}
+        {% table_config_form vminterface_table %}
+    {% endif %}
+{% endblock %}
+
 {% block extra_buttons %}
         {% if perms.virtualization.add_vminterface %}
             <a href="{% url 'virtualization:vminterface_add' %}?virtual_machine={{ object.pk }}&return_url={{ object.get_absolute_url }}" class="btn btn-primary">
@@ -205,11 +211,6 @@
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Interfaces</strong>
-                    <div class="pull-right noprint">
-                        {% if request.user.is_authenticated %}
-                            {% table_config_button_small vminterface_table %}
-                        {% endif %}
-                    </div>
                     <div class="pull-right col-md-2 noprint">
                         <input class="form-control interface-filter" type="text" placeholder="Filter" title="Filter text (regular expressions supported)" style="height: 23px" />
                     </div>
@@ -242,7 +243,6 @@
                 {% endif %}
             </div>
         </form>
-        {% table_config_form vminterface_table %}
 {% endblock content_full_width_page %}
 
 {% block javascript %}

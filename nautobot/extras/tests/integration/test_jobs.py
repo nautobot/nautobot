@@ -13,9 +13,7 @@ from nautobot.extras.models.jobs import Job, JobLogEntry, JobResult
 class JobResultTest(SeleniumTestCase):
     def setUp(self):
         super().setUp()
-        self.user.is_superuser = True
-        self.user.save()
-        self.login(self.user.username, self.password)
+        self.login_as_superuser()
 
     def test_log_table_filter(self):
         """

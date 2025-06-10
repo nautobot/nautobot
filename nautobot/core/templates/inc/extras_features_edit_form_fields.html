@@ -1,41 +1,41 @@
 {% load form_helpers %}
 
 {% if form.custom_fields %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Custom Fields</strong></div>
-        <div class="panel-body">
+    <div class="card mb-10">
+        <div class="card-header"><strong>Custom Fields</strong></div>
+        <div class="card-body">
             {% render_custom_fields form %}
         </div>
     </div>
 {% endif %}
 {% if form.relationships %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Relationships</strong></div>
-        <div class="panel-body">
+    <div class="card mb-10">
+        <div class="card-header"><strong>Relationships</strong></div>
+        <div class="card-body">
             {% render_relationships form %}
         </div>
     </div>
 {% endif %}
 {% if form.object_note and perms.extras.add_note %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Notes</strong></div>
-        <div class="panel-body">
+    <div class="card mb-10">
+        <div class="card-header"><strong>Notes</strong></div>
+        <div class="card-body">
             {% render_field form.object_note %}
         </div>
     </div>
 {% endif %}
 {% if form.dynamic_groups and perms.extras.add_staticgroupassociation %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Static Assignment to Dynamic Groups</strong></div>
-        <div class="panel-body">
+    <div class="card mb-10">
+        <div class="card-header"><strong>Static Assignment to Dynamic Groups</strong></div>
+        <div class="card-body">
             {% render_field form.dynamic_groups %}
         </div>
     </div>
 {% endif %}
 {% if form.tags %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Tags</strong></div>
-        <div class="panel-body">
+    <div class="card mb-10">
+        <div class="card-header"><strong>Tags</strong></div>
+        <div class="card-body">
             {% render_field form.tags %}
         </div>
     </div>

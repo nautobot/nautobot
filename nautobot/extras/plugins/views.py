@@ -92,7 +92,7 @@ class InstalledAppsView(GenericView):
         for app_config in app_configs:
             if app_data := extract_app_data(app_config, marketplace_data):
                 data.append(app_data)
-        table = self.table(data, user=request.user)
+        table = self.table(data, user=request.user, configurable=True)
 
         paginate = {
             "paginator_class": EnhancedPaginator,

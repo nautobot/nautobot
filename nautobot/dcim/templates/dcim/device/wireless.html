@@ -2,6 +2,11 @@
 {% load helpers %}
 {% load static %}
 
+{% block drawer %}
+    {% table_config_form wireless_networks_table %}
+    {% table_config_form radio_profiles_table %}
+{% endblock drawer %}
+
 {% block content %}
     <div class="row">
         <div class="col-md-6">
@@ -32,11 +37,6 @@
                 <div class="panel panel-default">
                     <div class="panel-heading">
                         <strong>Wireless Networks</strong>
-                        <div class="pull-right noprint">
-                            {% if request.user.is_authenticated %}
-                                {% table_config_button_small wireless_networks_table %}
-                            {% endif %}
-                        </div>
                     </div>
                     {% include 'responsive_table.html' with table=wireless_networks_table %}
                     <div class="panel-footer noprint">
@@ -44,17 +44,11 @@
                     </div>
                 </div>
             </form>
-            {% table_config_form wireless_networks_table %}
             <form method="post">
                 {% csrf_token %}
                 <div class="panel panel-default">
                     <div class="panel-heading">
                         <strong>Radio Profiles</strong>
-                        <div class="pull-right noprint">
-                            {% if request.user.is_authenticated %}
-                                {% table_config_button_small radio_profiles_table %}
-                            {% endif %}
-                        </div>
                     </div>
                     {% include 'responsive_table.html' with table=radio_profiles_table %}
                     <div class="panel-footer noprint">
@@ -62,7 +56,6 @@
                     </div>
                 </div>
             </form>
-            {% table_config_form radio_profiles_table %}
         </div>
     </div>
 {% endblock content %}

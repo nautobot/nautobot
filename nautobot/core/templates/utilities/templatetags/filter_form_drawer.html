@@ -1,0 +1,72 @@
+{% load form_helpers %}
+{% load static %}
+
+<section class="nb-drawer" tabindex="-1" id="{{ filter_form_name }}_drawer">
+    <div class="nb-drawer-header">
+        <h1>Filter {{ model_plural_name }}</h1>
+        <button type="button" class="btn-close" data-nb-dismiss="drawer" aria-label="Close"></button>
+    </div>
+    <div class="nb-drawer-body">
+        <ul id="tabs" class="nav nav-tabs">
+            {% if filter_form %}
+            <li role="presentation" class="nav-item">
+                <a class="nav-link active"  href="#default-filter" role="tab" data-bs-toggle="tab">
+                    Default
+                </a>
+            </li>
+            {% endif %}
+            {% if dynamic_filter_form %}
+            <li role="presentation" class="nav-item">
+                <a class="nav-link{% if not filter_form %} active{% endif %}" href="#advanced-filter" role="tab" data-bs-toggle="tab">
+                    Advanced
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+        <div class="tab-content">
+            {% if filter_form %}
+            <div id="default-filter" role="tabpanel" class="tab-pane active">
+                {% include 'inc/search_panel.html' %}
+            </div>
+            {% endif %}
+            {% if dynamic_filter_form %}
+            <div id="advanced-filter" role="tabpanel" class="tab-pane {% if not filter_form %} active {% endif %}">
+                <form id="dynamic-filter-form" class="form-horizontal" method="get" action=".">
+                    <div class="">
+                        <table class="table" id="filterform-table">
+                            {{ dynamic_filter_form.management_form }}
+                            {% for form in dynamic_filter_form %}
+                                {% if forloop.first %}
+                                    <thead>
+                                        <tr>
+                                            {% for field in form.visible_fields %}
+                                                <th>{{ field.label|capfirst }}</th>
+                                            {% endfor %}
+                                        </tr>
+                                    </thead>
+                                {% endif %}
+                                <tr class="formset_row-dynamic-filterform">
+                                    {% for field in form.visible_fields %}
+                                        <td>
+                                            {{ field }}
+                                        </td>
+                                    {% endfor %}
+                                </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+
+                    <div class="text-right noprint">
+                        <button type="submit" class="btn btn-primary">
+                            <span class="mdi mdi-magnify" aria-hidden="true"></span> Apply
+                        </button>
+                        <button type="reset" class="btn btn-default">
+                            <span class="mdi mdi-close-thick" aria-hidden="true"></span> Clear
+                        </button>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>

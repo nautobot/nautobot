@@ -441,7 +441,7 @@ class ApprovalWorkflowStageUIViewSet(
                     "form": form,
                     "obj_type": ApprovalWorkflowStage._meta.verbose_name,
                     "return_url": self.get_return_url(request, obj),
-                    "panel_class": "success",
+                    "card_class": "success",
                     "button_class": "success",
                 },
             )
@@ -505,6 +505,7 @@ class ApprovalWorkflowStageResponseUIViewSet(
     queryset = ApprovalWorkflowStageResponse.objects.all()
     serializer_class = serializers.ApprovalWorkflowStageResponseSerializer
     table_class = tables.ApprovalWorkflowStageResponseTable
+    object_detail_content = None
 
 
 class ApproverDashboardView(ObjectListViewMixin):
@@ -976,6 +977,7 @@ class ContactAssociationUIViewSet(
     serializer_class = serializers.ContactAssociationSerializer
     table_class = tables.AssociatedContactsTable
     non_filter_params = ("export", "page", "per_page", "sort")
+    object_detail_content = None
 
 
 class ObjectContactTeamMixin:

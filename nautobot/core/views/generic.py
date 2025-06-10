@@ -106,6 +106,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
             (dict): Additional context data
         """
         return {
+            "object_detail_content": self.object_detail_content,
             "active_tab": request.GET.get("tab", "main"),
         }
 
@@ -350,6 +351,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 saved_view=current_saved_view,
                 user=request.user,
                 hide_hierarchy_ui=hide_hierarchy_ui,
+                configurable=True,
             )
             if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                 table.columns.show("pk")

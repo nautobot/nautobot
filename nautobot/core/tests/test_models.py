@@ -5,7 +5,7 @@ import uuid
 
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
-from django.test import override_settings
+from django.test import override_settings, tag
 from django.test.utils import isolate_apps
 
 from nautobot.core.models import BaseModel
@@ -115,6 +115,7 @@ class NaturalKeyTestCase(BaseModelTest):
         """
         self.assertEqual(self.FakeBaseModel._content_type, self.FakeBaseModel._content_type_cached)
 
+    @tag("fix_in_v3")
     @override_settings(CONTENT_TYPE_CACHE_TIMEOUT=2)
     def test__content_type_caching_enabled(self):
         """

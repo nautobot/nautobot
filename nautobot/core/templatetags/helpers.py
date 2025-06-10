@@ -845,17 +845,20 @@ def querystring(request, **kwargs):
 def table_config_button(table, table_name=None, extra_classes="", disabled=False):
     if table_name is None:
         table_name = table.__class__.__name__
-    html_template = (
-        '<button type="button" class="btn btn-default {}'
-        '" data-toggle="modal" data-target="#{}_config" {} title="Configure table">'
-        '<i class="mdi mdi-cog"></i> Configure</button>'
-    )
-    return format_html(html_template, extra_classes, table_name, 'disabled="disabled"' if disabled else "")
-
-
-@register.simple_tag()
-def table_config_button_small(table, table_name=None):
-    return table_config_button(table, table_name, "btn-xs")
+    html_template = """<button
+            type="button"
+            class="btn border-0 float-end rounded-0 text-end text-secondary {}"
+            data-nb-toggle="drawer"
+            data-nb-target="#{}_config"
+            {}
+            title="Configure table"
+            aria-controls="{}_config"
+            aria-expanded="false"
+        >
+            <span class="mdi mdi-cog" aria-hidden="true"></span>
+            <span class="visually-hidden">Configure</span>
+        </button>"""
+    return format_html(html_template, extra_classes, table_name, 'disabled="disabled"' if disabled else "", table_name)
 
 
 @register.inclusion_tag("utilities/templatetags/utilization_graph.html")
@@ -946,8 +949,8 @@ def table_config_form(table, table_name=None):
     }
 
 
-@register.inclusion_tag("utilities/templatetags/filter_form_modal.html")
-def filter_form_modal(
+@register.inclusion_tag("utilities/templatetags/filter_form_drawer.html")
+def filter_form_drawer(
     filter_form,
     dynamic_filter_form,
     model_plural_name,
@@ -1177,7 +1180,7 @@ def tree_hierarchy_ui_representation(tree_depth, hide_hierarchy_ui, base_depth=0
 def hyperlinked_object_with_color(obj):
     """Render the display view of an object."""
     if obj:
-        content = f'<span class="label" style="color: {fgcolor(obj.color)}; background-color: #{obj.color}">{hyperlinked_object(obj)}</span>'
+        content = f'<span class="badge" style="color: {fgcolor(obj.color)}; background-color: #{obj.color}">{hyperlinked_object(obj)}</span>'
         return format_html(content)
     return HTML_NONE
 
@@ -1225,6 +1228,25 @@ def hyperlinked_object_target_new_tab(value, field="display"):
     return _build_hyperlink(value, field, target="_blank", rel="noreferrer")
 
 
+@register.filter()
+def get_object_link(value):
+    """Function to retrieve just absolute url to the given model instance.
+
+    Args:
+        value (Union[django.db.models.Model, None]): Instance of a Django model or None.
+
+    Returns:
+        (str): url to the object if it defines get_absolute_url(), empty string otherwise.
+    """
+    if value is None:
+        return ""
+
+    if hasattr(value, "get_absolute_url"):
+        return value.get_absolute_url()
+
+    return ""
+
+
 def _build_hyperlink(value, field="", target="", rel=""):
     """Internal function used by filters to build hyperlinks.
 
@@ -1255,3 +1277,35 @@ def _build_hyperlink(value, field="", target="", rel=""):
         except AttributeError:
             pass
     return format_html("{}", display)
+
+
+@register.simple_tag(takes_context=True)
+def format_title_with_saved_view(context, title):
+    """
+    Creates a formatted title that includes saved view information.
+    Usage within a block: {% format_title_with_saved_view title as formatted_title %}
+    """
+    new_changes_not_applied = context.get("new_changes_not_applied", False)
+    current_saved_view = context.get("current_saved_view")
+
+    if not current_saved_view:
+        return title
+
+    if new_changes_not_applied:
+        new_title = format_html('{} — <i title="Pending changes not saved">{}</i>', title, current_saved_view.name)
+    else:
+        new_title = format_html("{} — {}", title, current_saved_view.name)
+
+    return new_title
+
+
+@register.simple_tag(takes_context=True)
+def get_breadcrumbs(context):
+    crumbs = []
+
+    if context_object := context.get("object"):
+        list_url = validated_viewname(context_object, "list")
+        crumbs.append((reverse(list_url), bettertitle(context.get("verbose_name_plural", ""))))
+        crumbs.append((get_object_link(context_object), str(context_object)))
+
+    return crumbs

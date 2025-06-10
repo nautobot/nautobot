@@ -262,7 +262,7 @@ class ViewTestCases:
             if getattr(obj, "is_contact_associable_model", False):
                 self.assertBodyContains(
                     response,
-                    f'<a href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">Contacts</a>',
+                    f'<a aria-controls="contacts" class="nav-link" data-bs-toggle="tab" href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" role="tab">Contacts</a>',
                     html=True,
                 )
             else:
@@ -285,7 +285,7 @@ class ViewTestCases:
                 if getattr(obj, "is_contact_associable_model", False):
                     self.assertBodyContains(
                         response,
-                        f'<a href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">Contacts</a>',
+                        f'<a aria-controls="contacts" class="nav-link" data-bs-toggle="tab" href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" role="tab">Contacts</a>',
                         html=True,
                     )
                 else:
@@ -855,11 +855,14 @@ class ViewTestCases:
             self.assertHttpStatus(response, 200)
             response_body = utils.extract_page_body(response.content.decode(response.charset))
 
-            list_url = self.get_list_url()
+            # Check if title is rendered correctly
             title = self.get_title()
-
-            # Check if breadcrumb is rendered correctly
-            self.assertBodyContains(response, f'<a href="{list_url}">{title}</a>', html=True)
+            expected_title = (
+                '<h1 class="align-items-center d-flex fs-2 gap-8 lh-sm py-6">'
+                '<img alt="Nautobot chevron" class="flex-grow-0 flex-shrink-0 my-n6" role="presentation" src="/static/img/nautobot_chevron.svg" style="width: 1.5rem;">'
+                f"{title}</h1>"
+            )
+            self.assertBodyContains(response, expected_title, html=True)
 
             with self.subTest("Assert import-objects URL is absent due to user permissions"):
                 self.assertNotIn(

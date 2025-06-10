@@ -1,9 +1,5 @@
 /* Layout */
 
-:root {
-    --navbar-transition-duration: 350ms;
-}
-
 * {
     margin: 0;
 }
@@ -12,45 +8,6 @@ html {
 }
 html, body {
     height: 100%;
-}
-body {
-    padding-left: 240px;  /* same as width of .navbar-fixed-left */
-    padding-top: 20px;
-}
-.wrapper {
-    min-height: 100%;
-    height: auto !important;
-    margin: 0 auto -48px; /* the bottom margin is the negative value of the footer's height */
-    padding-bottom: 30px;
-}
-#main-content {
-    transition-duration: var(--navbar-transition-duration);
-    transition-timing-function: ease-in-out;
-    transition-property: margin-left, width;
-    min-height: calc(100vh - 20px);
-}
-#main-content > .form {
-    margin-top: 20px;
-}
-.footer, .push {
-    height: 48px; /* .push must be the same height as .footer */
-}
-.footer {
-    background-color: #f5f5f5;
-    border-top-left-radius: 10px;
-    border-top-right-radius: 10px;
-    white-space: nowrap;
-    transition-duration: var(--navbar-transition-duration);
-    transition-timing-function: ease-in-out;
-    transition-property: margin-left, width;
-    overflow: visible;
-    margin: 0;
-}
-.footer .row {
-    background-color: #f5f5f5;
-}
-footer p {
-    margin: 12px 0;
 }
 .right-side-panel {
     max-width: 400px;
@@ -95,24 +52,8 @@ tfoot td {
 table.attr-table td:nth-child(1) {
     width: 25%;
 }
-.table-headings th {
-    background-color: #f5f5f5;
-    white-space: nowrap;
-}
 td.min-width {
     width: 1%;
-}
-
-/* Paginator */
-div.paginator {
-    margin-bottom: 20px;
-}
-div.paginator form {
-    margin-bottom: 6px;
-}
-nav ul.pagination {
-    margin-top: 0;
-    margin-bottom: 8px !important;
 }
 
 /* Devices */
@@ -298,38 +239,9 @@ table.report th a {
 .banner-bottom {
     margin-bottom: 50px;
 }
-.panel table {
-    margin-bottom: 0;
-    overflow: hidden;
-}
-.panel .table th {
-    border-bottom-width: 1px;
-}
-.panel table tr.even:first-child td {
-    border-top: 0;
-}
-.panel .list-group {
-    max-height: 400px;
-    overflow: auto;
-    border-bottom-left-radius: 9px;
-    border-bottom-right-radius: 9px;
-}
-.panel-heading {
-    font-weight: 700;
-}
-.panel-body {
-    border-bottom-left-radius: 9px;
-    border-bottom-right-radius: 9px;
-}
-ul.nav-tabs, ul.nav-pills {
+ul.nav-pills {
     margin-bottom: 20px;
 }
-ul.nav-tabs li a {
-    padding: 8px 10px;
-    border: none;
-}
-ul.nav-tabs li a:hover,
-ul.nav-tabs li a:focus,
 ul.nav-pills li a:hover,
 ul.nav-pills li.active a:hover,
 ul.nav-pills li a:focus {
@@ -338,7 +250,6 @@ ul.nav-pills li a:focus {
 ul.nav-pills li.active a {
     background-color: #eaf2f9;
 }
-ul.nav-tabs li a:hover,
 .label a {
     color: inherit;
 }
@@ -515,24 +426,6 @@ h1 .btn-inline {
     position: relative;
     top: 2px;
 }
-.breadcrumb {
-    transition-duration: var(--navbar-transition-duration);
-    transition-timing-function: ease-in-out;
-    transition-property: margin-left, width;
-}
-.breadcrumb.collapsed {
-    margin-left: 240px;
-}
-.breadcrumb .mdi::before {
-    position: relative;
-    top: 4px;
-}
-.breadcrumb a:hover {
-    text-decoration: none;
-}
-.breadcrumb a:hover span {
-    text-decoration: underline;
-}
 .alert .mdi::before {
     position: relative;
     top: 4px;
@@ -618,286 +511,6 @@ td span.hover_copy:hover .hover_copy_button {
 .modal-body {
     max-height: calc(100vh - 212px);
     overflow-y: scroll;
-}
-
-/* Navbar */
-.navbar-fixed-left {
-    border: none;
-    border-radius: 0;
-    bottom: 0;
-    left: 0;
-    margin-bottom: 0;
-    margin-right: 20px;
-    overflow: auto;
-    overflow-y: auto;
-    position: fixed;
-    top: 0;
-    width: 240px;  /* same as body padding-left */
-    z-index: 1030; /* `1030` is taken from Bootstrap's `navbar-fixed-top` */
-    -ms-overflow-style: none;  /* Hide scrollbar IE and Edge */
-    scrollbar-width: none;  /* Hide scrollbar Firefox */
-    transition-duration: var(--navbar-transition-duration);
-    transition-timing-function: ease-in-out;
-    transition-property: margin-left, width;
-}
-
-.navbar-fixed-left.collapsed {
-    width: 0px;
-}
-
-.navbar-fixed-left.collapsed:hover {
-    cursor: pointer;
-}
-
-.navbar-fixed-left > .container-fluid {
-    padding-left: 0;
-    padding-right: 0;
-}
-
-.navbar-fixed-left .navbar-header {
-    float: none;
-    margin: 0;
-}
-
-.navbar-fixed-left .navbar-header > .navbar-brand {
-    height: auto;
-    margin: 0;
-    padding: 25px 60px 10px 20px;
-    background-color: transparent;
-}
-
-.navbar-fixed-left .navbar-header > .navbar-brand img {
-    transition: opacity 0.5s ease;
-}
-
-.navbar-fixed-left .navbar-form {
-    border: none;
-    box-shadow: none;
-    margin: 0;
-    padding: 10px 20px 20px 20px;
-}
-
-.navbar-fixed-left .navbar-form input,
-.navbar-fixed-left .navbar-form button {
-    padding: 7px 10px;
-}
-
-.navbar-fixed-left .navbar-nav {
-    margin: 0;
-    width: 100%;
-    display: none; /* Hide menu items by default */
-}
-
-/* When navbar is expanded, show menu items */
-.navbar-fixed-left:not(.collapsed) .navbar-nav {
-    display: block;
-}
-
-.navbar-fixed-left .navbar-nav > .dropdown > a {
-    display: flex;
-    align-items: center;
-}
-
-/* Change color of dropdown anchor element when dropdown is opened */
-.navbar-fixed-left .navbar-nav > .dropdown > a[aria-expanded="true"] {
-    color: #ff8000; /* Color when expanded */
-}
-
-/* Reset focus color when dropdown is closed */
-.navbar-fixed-left .navbar-nav > .dropdown > a[aria-expanded="false"]:focus {
-    color: #999999;
-}
-
-/* Re-add hover color after dropdown is closed */
-.navbar-fixed-left .navbar-nav > .dropdown > a[aria-expanded="false"]:hover {
-    color: #ff8000;
-}
-
-.navbar-fixed-left .navbar-nav > .dropdown > a > .mdi-chevron-down {
-    margin-left: auto;
-}
-
-/* Change arrow direction, color when the dropdown is opened */
-.navbar-fixed-left .navbar-nav > .dropdown > a[aria-expanded="true"] > .mdi-chevron-down::before {
-    transition: transform 300ms ease;
-    transform: rotate(-180deg);
-    color: #ff8000; /* Color when expanded */
-}
-
-/* Change arrow direction, color when the dropdown is closed */
-.navbar-fixed-left .navbar-nav > .dropdown > a[aria-expanded="false"] > .mdi-chevron-down::before {
-    transition: transform 300ms ease;
-}
-
-.navbar-fixed-left .navbar-nav > .dropdown > .dropdown-toggle > #dropdown_title {
-    display: inline-block;
-    max-width: calc(100% - 51px); /* 51px = 30px of chevron + 14px of caret + 7px of whitespaces between inline elements */
-    overflow: hidden;
-    text-overflow: ellipsis;
-    vertical-align: middle;
-    white-space: nowrap;
-}
-
-.navbar-fixed-left .navbar-nav > .dropdown > .dropdown-toggle > img {
-    margin-right: 10px;
-}
-
-.navbar-fixed-left .navbar-nav:last-of-type > .dropdown > .dropdown-toggle {
-    text-transform: uppercase;
-}
-
-/* Navbar Dropdown Behavior */
-.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu {
-    color: #999999 !important;
-    background-color: #151e2a;
-    position: relative;
-    padding: 5px 0;
-    padding-left: 0;
-    margin: 2px 0 0;
-    margin-top: 0;
-    width: 100%;
-    min-width: auto;
-    font-size: 14px;
-    border: none;
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
-    border-radius: 6px;
-}
-
-.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu .divider {
-    height: 1px;
-    margin: 11px 0;
-    overflow: hidden;
-    background-color: #646464;
-}
-
-.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > .dropdown-header {
-    line-height: 2;
-    padding: 3px 20px;
-    text-transform: uppercase;
-}
-
-.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li {
-    display: flex;
-    align-items: center;
-}
-
-/* Default style for the dropdown links */
-.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > a {
-    color: #ffffff;
-    display: block;
-    clear: left;
-    line-height: 1.285714286;
-    margin-right: 0;
-    padding: 8px 20px;
-    white-space: normal;
-    text-decoration: none;
-    transition: color 200ms ease;
-    flex-grow: 1;
-}
-
-/* Change dropdown link on hover */
-.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > a:hover {
-    transition: background-color 200ms ease;
-    background-color: #cdf3ff1a;
-    text-decoration: none;
-    border-radius: 8px;
-}
-
-/* Change dropdown link color when item is active (after clicking) */
-.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li.active > a {
-    color: #ff8000 !important;
-    text-decoration: none;
-}
-
-.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > .buttons {
-    display: flex;
-    margin-left: 5px;
-    margin-right: 5px;
-    gap: 5px;
-    text-wrap: nowrap;
-}
-
-.navbar-fixed-left .navbar-nav > li {
-    width: 100%;
-}
-
-.navbar-fixed-left .navbar-nav > li > a {
-    padding: 12px 20px;
-}
-
-.navbar-fixed-left .navbar-nav > li > a > i.mdi {
-    margin-right: 7px;
-}
-
-.navbar-fixed-left .navbar-nav .nav-divider {
-    margin: 11px 17px;
-    width: 206px;
-    background-color: #999999;
-}
-
-/* Hide scrollbar for Chrome, Safari, and Opera */
-.navbar-fixed-left::-webkit-scrollbar {
-    display: none;
-}
-
-.navbar-inverse .navbar-collapse, .navbar-inverse .navbar-form {
-    border-color: transparent;
-}
-
-.navbar-inverse .navbar-nav > li > a {
-    color: #999999;
-    transition: background-color 200ms ease, color 200ms ease;
-}
-
-.navbar-inverse .navbar-nav > .dropdown > .nav-dropdown-menu {
-    background-color: #151e2a;
-}
-
-.nav-dropdown-menu .mdi {
-    margin-left: 2px;
-}
-
-.navbar-toggler {
-    position: fixed;
-    left: 225px;
-    top: 25px;
-    z-index: 1035;
-    justify-content: flex-start;
-    transition-duration: var(--navbar-transition-duration);
-    transition-timing-function: ease-in-out;
-}
-
-/* Collapse icon on homepage panels */
-.collapse-icon {
-    float: right;
-    cursor: pointer !important;
-    transition: transform 0.3s ease;
-}
-
-/* Rotates element 180 degrees */
-.rotated180 {
-    transform: rotate(180deg);
-}
-
-/* Draggable homepage panels fade in effect on page load */
-#draggable-homepage-panels {
-    opacity: 0;
-}
-
-/* Change cursor when hovering over panel headings on homepage */
-#draggable-homepage-panels .panel-heading {
-    cursor: move;
-}
-
-/* Make text in homepage panels selectable */
-#draggable-homepage-panels .list-group-item {
-    user-select: text !important;
-}
-
-/* Make panel being dragged opaque */
-.dragging {
-    opacity: 0.5;
 }
 
 /* Special diff block `<pre><code>...</code></pre>` backgrounds */
@@ -1009,25 +622,6 @@ a.tile.clickable:visited {
     justify-content: space-between;
     padding-top: 10px;
 }
-
-/* Buttons inside dropdown menus */
-.dropdown-menu button {
-    background: none;
-    border: none;
-    display: block;
-    width: 100%;
-    text-align: left;
-    padding: 3px 20px;
-    cursor: pointer;
-    text-wrap: nowrap;
-}
-.dropdown-menu button:focus,
-.dropdown-menu button:hover {
-    color: #ffffff;
-    text-decoration: none;
-    background-color: #646464;
-}
-
 /* Monaco Editor container */
 .editor-container {
     display: flex;  /* Use flexbox for layout */

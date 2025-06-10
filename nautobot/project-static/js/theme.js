@@ -83,6 +83,7 @@ function detectThemeSettings() {
 function setDarkTheme() {
     // Set theme to dark
     htmlEl.dataset.theme = "dark";
+    htmlEl.dataset.bsTheme = "dark";
     // Set theme cookie
     document.cookie = "theme=dark; path=/";
     // Enable dark element after page load
@@ -109,6 +110,7 @@ function setDarkTheme() {
 
 function setLightTheme() {
     htmlEl.dataset.theme = "light";
+    htmlEl.dataset.bsTheme = "light";
     document.cookie = "theme=light; path=/";
     darkElement.disabled = "disabled";
 }
