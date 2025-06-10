@@ -35,7 +35,7 @@ exclude = [
 [tool.poetry.dependencies]
 python = ">=3.9.2,<3.13"
 # Background task processing
-celery = "~5.3.6"
+celery = "~5.5.3"
 # Cryptographic recipes and primitives.
 # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
 # Added as an explicit dependency to protect against various CVEs in older versions.
@@ -103,9 +103,6 @@ graphene-django-optimizer = "~0.8.0"
 Jinja2 = "~3.1.6"
 # Optional data validation of config contexts - loose dependency since our usage is light but apps may be more specific
 jsonschema = "^4.7.0"
-# Messaging library for Python - dependency of Celery
-# Included as an explicit dependency (for now?) to require a version with https://github.com/celery/kombu/pull/2007
-kombu = "~5.4.2"
 # Library to access Kubernetes API used to develop K8s integration
 kubernetes = "^32.0.1"
 # Rendering of markdown files to HTML
