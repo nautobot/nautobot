@@ -125,6 +125,13 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
             fallback_value="An error occurred while rendering this template.",
             weight=50,
         )
+        self.evil_computed_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Secret),
+            key="evil_computed_field",
+            label="Evil Computed Field",
+            template="{{ obj.get_value() }}",
+            weight=666,
+        )
         self.blank_fallback_value = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Location),
             key="blank_fallback_value",
@@ -133,6 +140,18 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
             weight=50,
         )
         self.location1 = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        self.secret = Secret.objects.create(
+            name="Environment Variable Secret",
+            provider="environment-variable",
+            parameters={"variable": "NAUTOBOT_ROOT"},
+        )
+        self.secrets_group = SecretsGroup.objects.create(name="Group of Secrets")
+        SecretsGroupAssociation.objects.create(
+            secrets_group=self.secrets_group,
+            secret=self.secret,
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+        )
 
     def test_render_method(self):
         rendered_value = self.good_computed_field.render(context={"obj": self.location1})
@@ -145,6 +164,13 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
     def test_render_method_bad_template(self):
         rendered_value = self.bad_computed_field.render(context={"obj": self.location1})
         self.assertEqual(rendered_value, self.bad_computed_field.fallback_value)
+
+    def test_render_method_evil_template(self):
+        rendered_value = self.evil_computed_field.render(context={"obj": self.secret})
+        self.assertEqual(rendered_value, "")
+        self.evil_computed_field.template = "{{ obj.secrets_groups.first().get_secret_value('Generic', 'secret') }}"
+        rendered_value = self.evil_computed_field.render(context={"obj": self.secret})
+        self.assertEqual(rendered_value, "")
 
     def test_check_if_key_is_graphql_safe(self):
         """
