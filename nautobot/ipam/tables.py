@@ -214,7 +214,7 @@ class NamespaceTable(BaseTable):
 class VRFTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    # rd = tables.Column(verbose_name="RD")
+    rd = tables.Column(verbose_name="RD")
     tenant = TenantColumn()
     import_targets = tables.TemplateColumn(template_code=VRF_TARGETS, orderable=False)
     export_targets = tables.TemplateColumn(template_code=VRF_TARGETS, orderable=False)
@@ -225,7 +225,7 @@ class VRFTable(StatusTableMixin, BaseTable):
         fields = (
             "pk",
             "name",
-            # "rd",
+            "rd",
             "status",
             "namespace",
             "tenant",
@@ -234,8 +234,7 @@ class VRFTable(StatusTableMixin, BaseTable):
             "export_targets",
             "tags",
         )
-        # default_columns = ("pk", "name", "rd", "namespace", "tenant", "description")
-        default_columns = ("pk", "name", "status", "namespace", "tenant", "description")
+        default_columns = ("pk", "name", "rd", "status", "namespace", "tenant", "description")
 
 
 class VRFDeviceAssignmentTable(BaseTable):
@@ -355,7 +354,11 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
         template_code=PREFIX_COPY_LINK, attrs={"td": {"class": "text-nowrap"}}, order_by=("network", "prefix_length")
     )
     vrf_count = LinkedCountColumn(
-        viewname="ipam:vrf_list", url_params={"prefix": "pk"}, reverse_lookup="prefixes", verbose_name="VRFs"
+        viewname="ipam:vrf_list",
+        url_params={"prefix": "pk"},
+        display_field="name",
+        reverse_lookup="prefixes",
+        verbose_name="VRFs",
     )
     tenant = TenantColumn()
     namespace = tables.Column(linkify=True)
@@ -364,11 +367,12 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     children = tables.Column(accessor="descendants_count", orderable=False)
     date_allocated = tables.DateTimeColumn()
     location_count = LinkedCountColumn(
-        viewname="dcim:location_list", url_params={"prefixes": "pk"}, verbose_name="Locations"
+        viewname="dcim:location_list", url_params={"prefixes": "pk"}, display_field="name", verbose_name="Locations"
     )
     cloud_networks_count = LinkedCountColumn(
         viewname="cloud:cloudnetwork_list", url_params={"prefixes": "pk"}, verbose_name="Cloud Networks"
     )
+    actions = ButtonsColumn(Prefix)
 
     class Meta(BaseTable.Meta):
         model = Prefix
@@ -388,6 +392,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "rir",
             "date_allocated",
             "description",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -401,6 +406,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "vlan",
             "role",
             "description",
+            "actions",
         )
         row_attrs = {
             "class": lambda record: "success" if not record.present_in_database else "",
@@ -705,6 +711,7 @@ class VLANTable(StatusTableMixin, RoleTableMixin, BaseTable):
     location_count = LinkedCountColumn(
         viewname="dcim:location_list",
         url_params={"vlans": "pk"},
+        display_field="name",
         verbose_name="Locations",
     )
     tenant = TenantColumn()

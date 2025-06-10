@@ -1,0 +1,2 @@
+Resolved an issue where approval workflows were not correctly fetched due to querying the wrong relationship (`approval_workflow_instances` instead of `associated_approval_workflows`).
+Fixed approvalworkflowdefinition_update templates.

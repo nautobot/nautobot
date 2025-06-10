@@ -35,11 +35,15 @@ class ObjectsListMixin:
         """
         self.browser.find_by_css("#object_list_form input.toggle").click()
 
-    def select_one_item(self):
+    def select_one_item(self, pk=None):
         """
         Click first row checkbox on items table list to select one row.
         """
-        self.browser.find_by_css('#object_list_form input[name="pk"]').click()
+        selector = '#object_list_form input[name="pk"]'
+        if pk:
+            selector = f'{selector}[value="{pk}"]'
+
+        self.browser.find_by_css(selector).click()
 
     def set_per_page(self, per_page=1):
         """

@@ -6,7 +6,7 @@ import hmac
 import logging
 import re
 import sys
-from typing import Optional
+from typing import Optional, TYPE_CHECKING, Union
 
 from django.apps import apps
 from django.conf import settings
@@ -28,7 +28,12 @@ from nautobot.core.models.utils import find_models_with_matching_fields
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.lookup import get_filterset_for_model, get_model_for_view_name
 from nautobot.core.utils.requests import is_single_choice_field
-from nautobot.extras.choices import DynamicGroupTypeChoices, JobQueueTypeChoices, ObjectChangeActionChoices
+from nautobot.extras.choices import (
+    ApprovalWorkflowStateChoices,
+    DynamicGroupTypeChoices,
+    JobQueueTypeChoices,
+    ObjectChangeActionChoices,
+)
 from nautobot.extras.constants import (
     CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL,
     EXTRAS_FEATURES,
@@ -36,6 +41,9 @@ from nautobot.extras.constants import (
     JOB_OVERRIDABLE_FIELDS,
 )
 from nautobot.extras.registry import registry
+
+if TYPE_CHECKING:
+    from nautobot.extras.models import JobQueue
 
 logger = logging.getLogger(__name__)
 
@@ -349,6 +357,11 @@ def populate_model_features_registry(refresh=False):
             "field_names": [],
             "additional_constraints": {"is_dynamic_group_associable_model": True},
         },
+        {
+            "feature_name": "approval_workflows",
+            "field_names": [],
+            "additional_constraints": {"is_approval_workflow_model": True},
+        },
     ]
 
     app_models = apps.get_models()
@@ -409,10 +422,12 @@ def get_celery_queues():
     return celery_queues
 
 
-def get_worker_count(request=None, queue=None):
+def get_worker_count(request=None, queue: Optional[Union[str, "JobQueue"]] = None) -> int:
     """
-    Return a count of the active Celery workers in a specified queue (Could be a JobQueue instance, instance pk or instance name).
-    Defaults to the `CELERY_TASK_DEFAULT_QUEUE` setting.
+    Return a count of the active Celery workers in a specified queue.
+
+    Args:
+        queue (str, JobQueue, None): queue name or JobQueue to check; if unset, defaults to CELERY_TASK_DEFAULT_QUEUE.
     """
     from nautobot.extras.models import JobQueue
 
@@ -434,7 +449,7 @@ def get_worker_count(request=None, queue=None):
     return celery_queues.get(queue, 0)
 
 
-def get_job_queue_worker_count(request=None, job_queue=None):
+def get_job_queue_worker_count(request=None, job_queue: Optional["JobQueue"] = None) -> int:
     """
     Return a count of the active Celery workers in a specified queue. Defaults to the `CELERY_TASK_DEFAULT_QUEUE` setting.
     Same as get_worker_count() method above, but job_queue is an actual JobQueue model instance.
@@ -449,27 +464,24 @@ def get_job_queue_worker_count(request=None, job_queue=None):
     return celery_queues.get(queue, 0)
 
 
-def get_job_queue(job_queue):
+def get_job_queue(job_queue: str) -> Optional["JobQueue"]:
     """
     Search for a JobQueue instance based on the str job_queue.
     If no existing Job Queue not found, return None
     """
     from nautobot.extras.models import JobQueue
 
-    queue = None
     if is_uuid(job_queue):
         try:
             # check if the string passed in is a valid UUID
-            queue = JobQueue.objects.get(pk=job_queue)
+            return JobQueue.objects.get(pk=job_queue)
         except JobQueue.DoesNotExist:
-            queue = None
-    else:
-        try:
-            # check if the string passed in is a valid name
-            queue = JobQueue.objects.get(name=job_queue)
-        except JobQueue.DoesNotExist:
-            queue = None
-    return queue
+            return None
+    try:
+        # check if the string passed in is a valid name
+        return JobQueue.objects.get(name=job_queue)
+    except JobQueue.DoesNotExist:
+        return None
 
 
 def task_queues_as_choices(task_queues):
@@ -910,3 +922,38 @@ def fixup_filterset_query_params(param_dict, view_name, non_filter_params):
         except FilterSetFieldNotFound:
             pass
     return param_dict
+
+
+def get_pending_approval_workflow_stages(user, queryset):
+    """
+    Return a list of pending approval workflow stages.
+    """
+    from nautobot.extras.models import ApprovalWorkflow, ApprovalWorkflowStage, ApprovalWorkflowStageResponse
+
+    if user.is_anonymous:
+        return ApprovalWorkflowStage.objects.none()
+    group_pks = user.groups.all().values_list("pk", flat=True)
+    # we only want currently active stages on the approver
+    active_stage_pks = []
+    for workflow in ApprovalWorkflow.objects.all():
+        if workflow.active_stage:
+            active_stage_pks.append(workflow.active_stage.pk)
+    # Get the ApprovalWorkflowStages that are already approved by the current user
+    approved_approval_workflow_stages = ApprovalWorkflowStageResponse.objects.filter(
+        state=ApprovalWorkflowStateChoices.APPROVED,
+        user=user,
+    ).values_list("approval_workflow_stage", flat=True)
+
+    # Return only the approval workflow stages that are pending and active currently
+    # and belong to a pending approval workflow
+    # and are assigned to the current user or any of the groups the user belongs to
+    return (
+        queryset.filter(
+            pk__in=active_stage_pks,
+            approval_workflow__current_state=ApprovalWorkflowStateChoices.PENDING,
+            state=ApprovalWorkflowStateChoices.PENDING,
+            approval_workflow_stage_definition__approver_group__pk__in=group_pks,
+        )
+        .exclude(pk__in=approved_approval_workflow_stages)
+        .order_by("created")
+    )

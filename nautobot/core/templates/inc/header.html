@@ -63,6 +63,7 @@
             <ul class="dropdown-menu dropdown-menu-end">
                 <li><a class="dropdown-item" href="{% url 'about' %}"><i class="mdi mdi-information"></i>About</a></li>
                 <li><a class="dropdown-item" href="{% url 'user:profile' %}"><i class="mdi mdi-account-box"></i>Profile</a></li>
+                <li><a class="dropdown-item" href="{% url 'extras:approver_dashboard' %}"><i class="mdi mdi-check-bold"></i>Approval Dashboard</a></li>
                 {% if request.user.is_staff %}
                     <li><a class="dropdown-item" href="{% url 'worker_status' %}"><i class="mdi mdi-server-network"></i>Worker Status</a></li>
                     <li><a class="dropdown-item" href="{% url 'admin:index' %}"><i class="mdi mdi-cogs"></i>Admin</a></li>

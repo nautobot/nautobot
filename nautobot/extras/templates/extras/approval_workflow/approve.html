@@ -1,0 +1,10 @@
+{% extends 'utilities/confirmation_form.html' %}
+{% load form_helpers %}
+
+{% block title %}Approve {{ obj_type }}?{% endblock %}
+
+{% block message %}
+    <p>Are you sure you want to approve <strong>{{ obj }}</strong> for <strong> {{ object_under_review }}</strong>?</p>
+    <p>You can leave optional comments here.</p>
+    {% render_field form.comments %}
+{% endblock %}

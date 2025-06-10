@@ -2,13 +2,16 @@ import codecs
 import contextlib
 from io import BytesIO
 
+from django.apps import apps as global_apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
     PermissionDenied,
 )
 from django.db import transaction
+from django.db.models import Q
 from django.http import QueryDict
+from django.urls import reverse
 from rest_framework import exceptions as drf_exceptions
 
 from nautobot.core.api.exceptions import SerializerNotFound
@@ -22,6 +25,12 @@ from nautobot.core.jobs.cleanup import LogsCleanup
 from nautobot.core.jobs.groups import RefreshDynamicGroupCaches
 from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
+from nautobot.data_validation import models
+from nautobot.data_validation.custom_validators import (
+    BaseValidator,
+    get_data_compliance_classes_from_git_repo,
+    get_data_compliance_rules_map,
+)
 from nautobot.extras.datasources import (
     ensure_git_repository,
     git_repository_dry_run,
@@ -33,12 +42,15 @@ from nautobot.extras.jobs import (
     ChoiceVar,
     FileVar,
     Job,
+    MultiChoiceVar,
     ObjectVar,
     RunJobTaskFailed,
     StringVar,
     TextVar,
 )
-from nautobot.extras.models import ExportTemplate, GitRepository
+from nautobot.extras.models import ExportTemplate, GitRepository, SavedView
+from nautobot.extras.plugins import CustomValidator, ValidationError
+from nautobot.extras.registry import registry
 
 name = "System Jobs"
 
@@ -150,6 +162,16 @@ class ExportObjectList(Job):
         soft_time_limit = 1800
         time_limit = 2000
 
+    def _get_saved_view_filter_params(self, query_params):
+        """Extract filter params from saved view if applicable."""
+        if "saved_view" in query_params and "all_filters_removed" not in query_params:
+            saved_view_filters = SavedView.objects.get(pk=query_params["saved_view"]).config.get("filter_params", {})
+            if len(query_params) > 1:
+                # Retain only filters also present in query_params
+                saved_view_filters = {key: value for key, value in saved_view_filters.items() if key in query_params}
+            return saved_view_filters
+        return {}
+
     def run(self, *, content_type, query_string="", export_format="csv", export_template=None):  # pylint:disable=arguments-differ
         if not self.user.has_perm(f"{content_type.app_label}.view_{content_type.model}"):
             self.logger.error('User "%s" does not have permission to view %s objects', self.user, content_type.model)
@@ -178,8 +200,9 @@ class ExportObjectList(Job):
             "sort",
             "table_changes_pending",
         )
-        filter_params = get_filterable_params_from_filter_params(
-            query_params, default_non_filter_params, filterset_class()
+        filter_params = self._get_saved_view_filter_params(query_params)
+        filter_params.update(
+            get_filterable_params_from_filter_params(query_params, default_non_filter_params, filterset_class())
         )
         self.logger.debug("Filterset params: `%s`", filter_params)
         filterset = filterset_class(filter_params, queryset)
@@ -361,6 +384,149 @@ class ImportObjects(Job):
             raise RunJobTaskFailed("CSV import not fully successful, see logs")
 
 
+def get_data_compliance_rules():
+    """Generate a list of Audit Ruleset classes that exist from the registry as well as from any Git Repositories."""
+    validators = []
+    for rule_sets in get_data_compliance_rules_map().values():
+        validators.extend(rule_sets)
+
+    # Get rules from Git Repositories
+    for repo in GitRepository.objects.get_for_provided_contents("data_validation.data_compliance_rule"):
+        validators.extend(get_data_compliance_classes_from_git_repo(repo))
+    return validators
+
+
+def get_data_compliance_choices():
+    """Get data compliance choices from registry as well as from any Git Repositories."""
+    choices = []
+    for ruleset_class in get_data_compliance_rules():
+        choices.append((ruleset_class.__name__, ruleset_class.__name__))
+
+    choices.sort()
+    return choices
+
+
+def clean_compliance_rules_results_for_instance(instance, excluded_pks):
+    """
+    Delete data compliance results generated from runs of RunRegisteredDataComplianceRules job,
+    which validates object against user-created rules.
+    e.g. UniqueValidationRules, RegularExpressionValidationRules, MinMaxValidationRules, and RequiredValidationRules.
+
+    The usage is that:
+    If the instance is valid against all user-created rules, then the previous data compliance results of the instance are deleted.
+    If the instance is invalid against any user-created rules, then this method deletes the existing data compliance results of the instance,
+    and preserves only the data compliance result from the most recent job run by including the pk of the result in the `excluded_pks` list.
+
+    Args:
+        instance: The validated object to clean compliance results for.
+        excluded_pks: List of primary keys of compliance results to exclude from deletion.
+    """
+    model_class = instance.__class__
+    model_custom_validators = registry["plugin_custom_validators"][model_class._meta.label_lower]
+    # Prep for compliance names to be deleted.
+    compliance_class_names_to_be_deleted = []
+    for cv in model_custom_validators:
+        if issubclass(cv, BaseValidator):
+            compliance_class_names_to_be_deleted.append(cv.__name__)
+
+    excluded_pks = excluded_pks or []
+    models.DataCompliance.objects.filter(
+        object_id=instance.id,
+        content_type=ContentType.objects.get_for_model(instance),
+        compliance_class_name__in=compliance_class_names_to_be_deleted,
+    ).exclude(pk__in=excluded_pks).delete()
+
+
+class RunRegisteredDataComplianceRules(Job):
+    """Run the validate function on all registered DataComplianceRule classes and, optionally, the built-in data validation rules."""
+
+    name = "Run Registered Data Compliance Rules"
+    description = "Runs selected Data Compliance rule classes."
+
+    selected_data_compliance_rules = MultiChoiceVar(
+        choices=get_data_compliance_choices,
+        label="Select Data Compliance Rules",
+        required=False,
+        description="Not selecting any rules will run all rules listed.",
+    )
+
+    run_user_created_rules_in_report = BooleanVar(
+        label="Run user created validation rules?", description="Include user created data validation rules in report."
+    )
+
+    def run(self, *args, **kwargs):
+        """Run the validate function on all given DataComplianceRule classes."""
+        selected_data_compliance_rules = kwargs.get("selected_data_compliance_rules", None)
+
+        compliance_classes = get_data_compliance_rules()
+
+        for compliance_class in sorted(
+            compliance_classes, key=lambda x: x.model.split(".")
+        ):  # sort by model.app_label and model.model_name
+            if selected_data_compliance_rules and compliance_class.__name__ not in selected_data_compliance_rules:
+                continue
+            self.logger.info(f"Running {compliance_class.__name__}")
+            app_label, model = compliance_class.model.split(".")
+            for obj in global_apps.get_model(app_label, model).objects.iterator():
+                ins = compliance_class(obj)
+                ins.enforce = False
+                ins.clean()
+
+        run_user_created_rules_in_report = kwargs.get("run_user_created_rules_in_report", False)
+        if run_user_created_rules_in_report:
+            self.logger.info("Running user created data validation rules")
+            self.report_for_validation_rules()
+
+        result_url = reverse("data_validation:datacompliance_list")
+        self.logger.info(f"View Data Compliance results [here]({result_url})")
+
+    @staticmethod
+    def report_for_validation_rules():
+        """Run built-in data validation rules and add to report."""
+        query = (
+            Q(uniquevalidationrule__isnull=False)  # pylint: disable=unsupported-binary-operation
+            | Q(regularexpressionvalidationrule__isnull=False)
+            | Q(minmaxvalidationrule__isnull=False)
+            | Q(requiredvalidationrule__isnull=False)
+        )
+
+        # Gather model classes that have any of the user created rules:
+        # UniqueValidationRules, RegularExpressionValidationRules, MinMaxValidationRules, and RequiredValidationRules.
+        model_classes = [ct.model_class() for ct in ContentType.objects.filter(query).distinct()]
+
+        # Gather custom validators of user created rules
+        validator_dicts = []
+        for model_class in model_classes:
+            model_custom_validators = registry["plugin_custom_validators"][model_class._meta.label_lower]
+            # Get only subclasses of BaseValidator
+            # BaseValidator is the validator that enforces the user created rules:
+            # UniqueValidationRules, RegularExpressionValidationRules, MinMaxValidationRules, and RequiredValidationRules.
+            # otherwise, we would get all validators (more than those dynamically created)
+            validator_dicts.extend(
+                [{cv: model_class} for cv in model_custom_validators if issubclass(cv, BaseValidator)]
+            )
+
+        # Run validation on existing objects and add to report
+        for validator_dict in validator_dicts:
+            for validator, class_name in validator_dict.items():
+                if validator.clean == CustomValidator.clean:
+                    continue
+
+                for validated_object in class_name.objects.iterator():
+                    try:
+                        validator(validated_object).clean(exclude_disabled_rules=False)
+                        clean_compliance_rules_results_for_instance(instance=validated_object, excluded_pks=[])
+                    except ValidationError as error:
+                        result = validator.get_compliance_result(
+                            validator,
+                            instance=validated_object,
+                            message=error.messages[0],
+                            attribute=next(iter(error.message_dict.keys())),
+                            valid=False,
+                        )
+                        clean_compliance_rules_results_for_instance(instance=validated_object, excluded_pks=[result.pk])
+
+
 jobs = [
     BulkDeleteObjects,
     BulkEditObjects,
@@ -370,5 +536,6 @@ jobs = [
     ImportObjects,
     LogsCleanup,
     RefreshDynamicGroupCaches,
+    RunRegisteredDataComplianceRules,
 ]
 register_jobs(*jobs)

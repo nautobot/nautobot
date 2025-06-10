@@ -472,6 +472,9 @@ class CustomFieldDataAPITest(APITestCase):
         "dcim.add_location",
         "dcim.change_location",
         "dcim.view_location",
+        "dcim.view_locationtype",
+        "extras.view_status",
+        "extras.view_customfield",
     )
 
     def setUp(self):
@@ -2078,6 +2081,30 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertEqual(len(oc_list), 1)
         self.assertEqual(oc_list[0].changed_object, location)
         self.assertEqual(oc_list[0].change_context_detail, "delete custom field data")
+        self.assertEqual(oc_list[0].user, self.user)
+
+    def test_clear_custom_field_data_task(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+        cf_1 = CustomField.objects.create(label="CF1", type=CustomFieldTypeChoices.TYPE_TEXT)
+        cf_1.content_types.set([obj_type])
+        location_type = LocationType.objects.create(name="Root Type 2")
+        location_status = Status.objects.get_for_model(Location).first()
+        location = Location.objects.create(
+            name="Location 1",
+            location_type=location_type,
+            status=location_status,
+            _custom_field_data={"cf1": "foo"},
+        )
+
+        with web_request_context(self.user):
+            cf_1.content_types.clear()
+            location.refresh_from_db()
+            self.assertNotIn("cf1", location.cf)
+
+        oc_list = get_changes_for_model(location)
+        self.assertEqual(len(oc_list), 1)
+        self.assertEqual(oc_list[0].changed_object, location)
+        self.assertEqual(oc_list[0].change_context_detail, "delete custom field data from existing content types")
         self.assertEqual(oc_list[0].user, self.user)
 
     def test_update_custom_field_choice_data_task(self):

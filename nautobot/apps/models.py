@@ -36,6 +36,7 @@ from nautobot.core.models.utils import (
     serialize_object_v2,
 )
 from nautobot.core.models.validators import EnhancedURLValidator, ExclusionValidator, ValidRegexValidator
+from nautobot.data_validation.custom_validators import ComplianceError, DataComplianceRule
 from nautobot.extras.models import (
     ChangeLoggedModel,
     ConfigContextModel,
@@ -45,6 +46,7 @@ from nautobot.extras.models import (
     StatusModel,
 )
 from nautobot.extras.models.mixins import (
+    ApprovableModelMixin,
     ContactMixin,
     DynamicGroupMixin,
     DynamicGroupsModelMixin,
@@ -56,9 +58,9 @@ from nautobot.extras.plugins import CustomValidator
 from nautobot.extras.utils import extras_features
 from nautobot.ipam.fields import VarbinaryIPField
 from nautobot.ipam.models import get_default_namespace, get_default_namespace_pk
-from nautobot.nautobot_data_validation_engine.custom_validators import ComplianceError, DataComplianceRule
 
 __all__ = (
+    "ApprovableModelMixin",
     "AttributeSetter",
     "AutoSlugField",
     "BaseManager",

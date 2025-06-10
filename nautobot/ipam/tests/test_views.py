@@ -6,6 +6,7 @@ from django.db.models import Count
 from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils.html import strip_tags
+from django.utils.http import urlencode
 from django.utils.timezone import make_aware
 from netaddr import IPNetwork
 
@@ -145,6 +146,25 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         # Ensure that we have at least one RIR with no prefixes that can be used for the "delete_object" tests.
         RIR.objects.create(name="RIR XYZ")
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_list_objects_with_permission(self):
+        """Test rendering of LinkedCountColumn for related fields without display_field override."""
+        response = super().test_list_objects_with_permission()
+        response_body = extract_page_body(response.content.decode(response.charset))
+
+        prefix_list_url = reverse(get_route_for_model(Prefix, "list"))
+
+        for rir in self._get_queryset().all():
+            if str(rir.pk) in response_body:
+                count = rir.prefixes.count()
+                if count > 1:
+                    self.assertBodyContains(
+                        response,
+                        f'<a href="{prefix_list_url}?{urlencode({"rir": rir.name})}" class="badge">{count}</a>',
+                    )
+                elif count == 1:
+                    self.assertBodyContains(response, hyperlinked_object(rir.prefixes.first()))
+
 
 @tag("fix_in_v3")
 class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.ListObjectsViewTestCase):
@@ -195,7 +215,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_list_objects_with_permission(self):
-        """Test rendering of LinkedCountColumn for related fields."""
+        """Test rendering of LinkedCountColumn for related fields with display_field override."""
         response = super().test_list_objects_with_permission()
         response_body = extract_page_body(response.content.decode(response.charset))
 
@@ -209,7 +229,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                         response, f'<a href="{locations_list_url}?prefixes={prefix.pk}" class="badge">{count}</a>'
                     )
                 elif count == 1:
-                    self.assertBodyContains(response, hyperlinked_object(prefix.locations.first()))
+                    self.assertBodyContains(response, hyperlinked_object(prefix.locations.first(), "name"))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_empty_queryset(self):
@@ -1051,12 +1071,16 @@ class IPAddressMergeTestCase(ModelViewTestCase):
                     self.assertEqual(set(associations), set(correct_associations))
 
 
-class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class VLANGroupTestCase(
+    ViewTestCases.OrganizationalObjectViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
+):
     model = VLANGroup
 
     @classmethod
     def setUpTestData(cls):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        location_2 = Location.objects.filter(location_type=LocationType.objects.get(name="Building")).first()
 
         cls.form_data = {
             "name": "VLAN Group X",
@@ -1064,6 +1088,12 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "description": "A new VLAN group",
             "range": "1-4094",
             "tags": [t.pk for t in Tag.objects.get_for_model(VLANGroup)],
+        }
+
+        cls.bulk_edit_data = {
+            "location": location_2.pk,
+            "description": "Updated description for bulk edit",
+            "range": "1-4094",
         }
 
     def get_deletable_object(self):
@@ -1241,3 +1271,25 @@ class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
         response = self.client.post(**request)
         self.assertBodyContains(response, "A service must be associated with either a device or a virtual machine.")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_port_bulk_edit_invalid(self):
+        self.add_permissions("ipam.change_service")
+        url = self._get_url("bulk_edit")
+        pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
+
+        data = {
+            "pk": pk_list,
+            "protocol": ServiceProtocolChoices.PROTOCOL_UDP,
+            "ports": "[106,107]",  # String representation of the list
+            "description": "New description",
+            "_apply": True,
+        }
+
+        response = self.client.post(url, data)
+        response_content = response.content.decode(response.charset)
+        self.assertHttpStatus(response, 200)
+        self.assertInHTML(
+            ' <strong class="panel-title">Ports</strong>: <ul class="errorlist"><li>invalid literal for int() with base 10: &#x27;[106&#x27;</li></ul>',
+            response_content,
+        )

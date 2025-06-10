@@ -474,20 +474,23 @@ class NumericArrayFieldTest(TestCase):
         self.field = dcim_forms.DeviceFilterForm().fields["device_redundancy_group_priority"]
 
     def test_valid_input(self):
-        # Mapping of input => expected
-        tests = {
-            None: [],
-            "": [],
-            "80,443-444": [80, 443, 444],
-            "1024-1028,31337": [1024, 1025, 1026, 1027, 1028, 31337],
-        }
-        for test, expected in tests.items():
+        #  List of (input, expected output) tuples
+        tests = [
+            (None, []),
+            ("", []),
+            ("80,443-444", [80, 443, 444]),
+            ("1024-1028,31337", [1024, 1025, 1026, 1027, 1028, 31337]),
+            (["47-49", "103"], [47, 48, 49, 103]),
+            ([231, 432, 313], [231, 313, 432]),
+        ]
+        for test, expected in tests:
             self.assertEqual(self.field.clean(test), expected)
 
     def test_invalid_input(self):
         tests = [
             "pizza",
             "-41",
+            "[84,52,33]",
         ]
         for test in tests:
             with self.assertRaises(django_forms.ValidationError):

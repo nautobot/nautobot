@@ -36,4 +36,4 @@ class NoteTestCase(SeleniumTestCase):
         self.browser.find_by_text("Create").click()
 
         # Verify form redirect and presence of content.
-        self.assertTrue(self.browser.is_text_present("Created Note"))
+        self.assertTrue(self.browser.is_text_present("Created note"))

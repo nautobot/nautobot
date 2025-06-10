@@ -4,6 +4,35 @@ from nautobot.core.choices import ChoiceSet
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 
 #
+# Approval Workflows
+#
+
+
+class ApprovalWorkflowStateChoices(ChoiceSet):
+    """
+    Choices for:
+    1. current_state field on the ApprovalWorkflow model.
+    2. state field on the ApprovalWorkflowStage model.
+    3. state field on the ApprovalWorkflowStageResponse model.
+    """
+
+    PENDING = "Pending"
+    APPROVED = "Approved"
+    DENIED = "Denied"
+
+    CHOICES = (
+        (PENDING, "Pending"),
+        (APPROVED, "Approved"),
+        (DENIED, "Denied"),
+    )
+    CSS_CLASSES = {
+        PENDING: "info",
+        APPROVED: "success",
+        DENIED: "danger",
+    }
+
+
+#
 # Banners (currently plugin-specific)
 #
 
@@ -488,6 +517,8 @@ class SecretsGroupSecretTypeChoices(ChoiceSet):
     TYPE_SECRET = "secret"  # noqa: S105  # hardcoded-password-string -- false positive
     TYPE_TOKEN = "token"  # noqa: S105  # hardcoded-password-string -- false positive
     TYPE_USERNAME = "username"
+    TYPE_URL = "url"
+    TYPE_NOTES = "notes"
 
     CHOICES = (
         (TYPE_KEY, "Key"),
@@ -495,6 +526,8 @@ class SecretsGroupSecretTypeChoices(ChoiceSet):
         (TYPE_SECRET, "Secret"),
         (TYPE_TOKEN, "Token"),
         (TYPE_USERNAME, "Username"),
+        (TYPE_URL, "URL"),
+        (TYPE_NOTES, "Notes"),
     )
 
 

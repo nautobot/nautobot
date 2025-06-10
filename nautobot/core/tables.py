@@ -460,6 +460,49 @@ class ButtonsColumn(django_tables2.TemplateColumn):
         return ""
 
 
+class ApprovalButtonsColumn(django_tables2.TemplateColumn):
+    """
+    Render detail, changelog, approve, deny, and comment buttons for an approval workflow stage.
+
+    :param model: Model class to use for calculating URL view names
+    :param prepend_template: Additional template content to render in the column (optional)
+    :param return_url_extra: String to append to the return URL (e.g. for specifying a tab) (optional)
+    """
+
+    buttons = ("detail", "changelog", "approve", "deny")
+    attrs = {"td": {"class": "text-right text-nowrap noprint"}}
+    template_name = "extras/inc/approval_buttons_column.html"
+
+    def __init__(
+        self,
+        model,
+        *args,
+        buttons=None,
+        return_url_extra="",
+        **kwargs,
+    ):
+        app_label = model._meta.app_label
+        changelog_route = get_route_for_model(model, "changelog")
+        approval_route = "extras:approvalworkflowstage_approve"
+        deny_route = "extras:approvalworkflowstage_deny"
+
+        super().__init__(template_name=self.template_name, *args, **kwargs)
+
+        self.extra_context.update(
+            {
+                "buttons": buttons or self.buttons,
+                "return_url_extra": return_url_extra,
+                "changelog_route": changelog_route,
+                "approval_route": approval_route,
+                "deny_route": deny_route,
+                "have_permission": f"perms.{app_label}.change_{model._meta.model_name,}",
+            }
+        )
+
+    def header(self):  # pylint: disable=invalid-overridden-method
+        return ""
+
+
 class ChoiceFieldColumn(django_tables2.Column):
     """
     Render a ChoiceField value inside a <span> indicating a particular CSS class. This is useful for displaying colored
@@ -514,6 +557,9 @@ class LinkedCountColumn(django_tables2.Column):
         reverse_lookup (str, optional): The reverse lookup parameter to use to derive the count.
             If not specified, the first key in `url_params` will be implicitly used as the `reverse_lookup` value.
         distinct (bool, optional): Parameter passed through to `count_related()`.
+        display_field (str, optional): Name of the field to use when displaying an object rather than just a count.
+            This will be passed to hyperlinked_object() as the `field` parameter
+            If not specified, it will use the "display" field.
         **kwargs (dict, optional): As the parent Column class.
 
     Examples:
@@ -557,6 +603,7 @@ class LinkedCountColumn(django_tables2.Column):
         reverse_lookup=None,
         distinct=False,
         default=None,
+        display_field="display",
         **kwargs,
     ):
         self.viewname = viewname
@@ -565,6 +612,7 @@ class LinkedCountColumn(django_tables2.Column):
         self.url_params = url_params
         self.reverse_lookup = reverse_lookup or next(iter(url_params.keys()))
         self.distinct = distinct
+        self.display_field = display_field
         self.model = get_model_for_view_name(self.viewname)
         super().__init__(*args, default=default, **kwargs)
 
@@ -586,7 +634,7 @@ class LinkedCountColumn(django_tables2.Column):
         if value > 1:
             return format_html('<a href="{}" class="badge">{}</a>', url, value)
         if related_record is not None:
-            return helpers.hyperlinked_object(related_record)
+            return helpers.hyperlinked_object(related_record, self.display_field)
         if value == 1:
             return format_html('<a href="{}" class="badge">{}</a>', url, value)
         return helpers.placeholder(value)
@@ -720,11 +768,17 @@ class RelationshipColumn(django_tables2.Column):
         if len(value) < 1:
             return "—"
 
+        v = value[0]
+        peer = v.get_peer(record)
+
         # Handle Relationships on the many side.
         if self.relationship.has_many(self.peer_side):
-            v = value[0]
-            meta = type(v.get_peer(record))._meta
-            name = meta.verbose_name_plural if len(value) > 1 else meta.verbose_name
+            if peer is not None:
+                meta = type(peer)._meta
+                name = meta.verbose_name_plural if len(value) > 1 else meta.verbose_name
+            else:  # Perhaps a relationship to an uninstalled App's models?
+                peer_type = getattr(self.relationship, f"{self.peer_side}_type")
+                name = f"{peer_type} object(s)"
             return format_html(
                 '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
                 reverse("extras:relationshipassociation_list"),
@@ -736,6 +790,7 @@ class RelationshipColumn(django_tables2.Column):
             )
         # Handle Relationships on the one side.
         else:
-            v = value[0]
-            peer = v.get_peer(record)
-            return format_html('<a href="{}">{}</a>', peer.get_absolute_url(), peer)
+            if peer is not None:
+                return format_html('<a href="{}">{}</a>', peer.get_absolute_url(), peer)
+            else:
+                return format_html("(unknown)")

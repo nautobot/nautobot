@@ -69,9 +69,11 @@ def generate_filter_resolver(schema_type, resolver_name, field_name):
         if not filterset_class or not kwargs:
             return getattr(self, field_name).all()
 
-        # Inverse of substitution logic from get_filtering_args_from_filterset() - transform "_description" back to "description"
-        if "_description" in kwargs:
-            kwargs["description"] = kwargs.pop("_description")
+        # Backwards-compatibility with Nautobot v2 - "_type" as a (now deprecated) alias for "type" filter
+        if "_type" in kwargs:
+            _type = kwargs.pop("_type")
+            if "type" not in kwargs:
+                kwargs["type"] = _type
 
         resolved_obj = filterset_class(kwargs, getattr(self, field_name).all())
 
@@ -307,9 +309,11 @@ def generate_list_resolver(schema_type, resolver_name):
     def list_resolver(self, info, limit=None, offset=None, **kwargs):
         filterset_class = schema_type._meta.filterset_class
 
-        # Inverse of substitution logic from get_filtering_args_from_filterset() - transform "_description" back to "description"
-        if "_description" in kwargs:
-            kwargs["description"] = kwargs.pop("_description")
+        # Backwards-compatibility with Nautobot v2 - "_type" as a (now deprecated) alias for "type" filter
+        if "_type" in kwargs:
+            _type = kwargs.pop("_type")
+            if "type" not in kwargs:
+                kwargs["type"] = _type
 
         if filterset_class is not None:
             resolved_obj = filterset_class(kwargs, model.objects.restrict(info.context.user, "view").all())

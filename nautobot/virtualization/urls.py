@@ -1,140 +1,22 @@
 from django.urls import path
 
+from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras.views import ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView
 from nautobot.ipam.views import ServiceEditView
 
 from . import views
-from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
+from .models import VirtualMachine, VMInterface
 
 app_name = "virtualization"
+
+router = NautobotUIViewSetRouter()
+router.register("cluster-groups", views.ClusterGroupUIViewSet)
+router.register("clusters", views.ClusterUIViewSet)
+router.register("cluster-types", views.ClusterTypeUIViewSet)
+
+
 urlpatterns = [
-    # Cluster types
-    path("cluster-types/", views.ClusterTypeListView.as_view(), name="clustertype_list"),
-    path(
-        "cluster-types/add/",
-        views.ClusterTypeEditView.as_view(),
-        name="clustertype_add",
-    ),
-    path(
-        "cluster-types/import/",
-        views.ClusterTypeBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="clustertype_import",
-    ),
-    path(
-        "cluster-types/delete/",
-        views.ClusterTypeBulkDeleteView.as_view(),
-        name="clustertype_bulk_delete",
-    ),
-    path(
-        "cluster-types/<uuid:pk>/",
-        views.ClusterTypeView.as_view(),
-        name="clustertype",
-    ),
-    path(
-        "cluster-types/<uuid:pk>/edit/",
-        views.ClusterTypeEditView.as_view(),
-        name="clustertype_edit",
-    ),
-    path(
-        "cluster-types/<uuid:pk>/delete/",
-        views.ClusterTypeDeleteView.as_view(),
-        name="clustertype_delete",
-    ),
-    path(
-        "cluster-types/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="clustertype_changelog",
-        kwargs={"model": ClusterType},
-    ),
-    path(
-        "cluster-types/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="clustertype_notes",
-        kwargs={"model": ClusterType},
-    ),
-    # Cluster groups
-    path(
-        "cluster-groups/",
-        views.ClusterGroupListView.as_view(),
-        name="clustergroup_list",
-    ),
-    path(
-        "cluster-groups/add/",
-        views.ClusterGroupEditView.as_view(),
-        name="clustergroup_add",
-    ),
-    path(
-        "cluster-groups/import/",
-        views.ClusterGroupBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="clustergroup_import",
-    ),
-    path(
-        "cluster-groups/delete/",
-        views.ClusterGroupBulkDeleteView.as_view(),
-        name="clustergroup_bulk_delete",
-    ),
-    path(
-        "cluster-groups/<uuid:pk>/",
-        views.ClusterGroupView.as_view(),
-        name="clustergroup",
-    ),
-    path(
-        "cluster-groups/<uuid:pk>/edit/",
-        views.ClusterGroupEditView.as_view(),
-        name="clustergroup_edit",
-    ),
-    path(
-        "cluster-groups/<uuid:pk>/delete/",
-        views.ClusterGroupDeleteView.as_view(),
-        name="clustergroup_delete",
-    ),
-    path(
-        "cluster-groups/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="clustergroup_changelog",
-        kwargs={"model": ClusterGroup},
-    ),
-    path(
-        "cluster-groups/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="clustergroup_notes",
-        kwargs={"model": ClusterGroup},
-    ),
     # Clusters
-    path("clusters/", views.ClusterListView.as_view(), name="cluster_list"),
-    path("clusters/add/", views.ClusterEditView.as_view(), name="cluster_add"),
-    path("clusters/import/", views.ClusterBulkImportView.as_view(), name="cluster_import"),  # 3.0 TODO: remove, unused
-    path("clusters/edit/", views.ClusterBulkEditView.as_view(), name="cluster_bulk_edit"),
-    path(
-        "clusters/delete/",
-        views.ClusterBulkDeleteView.as_view(),
-        name="cluster_bulk_delete",
-    ),
-    path("clusters/<uuid:pk>/", views.ClusterView.as_view(), name="cluster"),
-    path("clusters/<uuid:pk>/edit/", views.ClusterEditView.as_view(), name="cluster_edit"),
-    path(
-        "clusters/<uuid:pk>/delete/",
-        views.ClusterDeleteView.as_view(),
-        name="cluster_delete",
-    ),
-    path(
-        "clusters/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="cluster_changelog",
-        kwargs={"model": Cluster},
-    ),
-    path(  # 3.0 TODO: remove, no longer needed/used since 2.3
-        "clusters/<uuid:pk>/dynamic-groups/",
-        ObjectDynamicGroupsView.as_view(),
-        name="cluster_dynamicgroups",
-        kwargs={"model": Cluster},
-    ),
-    path(
-        "clusters/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="cluster_notes",
-        kwargs={"model": Cluster},
-    ),
     path(
         "clusters/<uuid:pk>/devices/add/",
         views.ClusterAddDevicesView.as_view(),
@@ -266,3 +148,5 @@ urlpatterns = [
         name="virtualmachine_bulk_add_vminterface",
     ),
 ]
+
+urlpatterns += router.urls

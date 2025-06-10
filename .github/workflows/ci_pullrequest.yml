@@ -9,6 +9,14 @@ on:  # yamllint disable
   workflow_call:
 
 jobs:
+  security-tooling:
+    name: "Security Tooling"
+    runs-on: "ubuntu-22.04"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v4"
+      - name: "Security checks"
+        uses: "./.github/actions/security-checks"
   ruff:
     runs-on: "ubuntu-24.04"
     env:
@@ -20,8 +28,8 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: "--only dev --only linting"
-          poetry-version: "1.8.2"
-          python-version: "3.12"
+          poetry-version: "1.8.5"
+          python-version: "3.13"
       - name: "Linting: ruff"
         run: "poetry run invoke ruff --output-format github"
   yamllint:
@@ -35,8 +43,8 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: "--only dev --only linting"
-          poetry-version: "1.8.2"
-          python-version: "3.12"
+          poetry-version: "1.8.5"
+          python-version: "3.13"
       - name: "Linting: yamllint"
         run: "poetry run invoke yamllint"
   markdownlint:
@@ -50,8 +58,8 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: "--only dev --only linting"
-          poetry-version: "1.8.2"
-          python-version: "3.12"
+          poetry-version: "1.8.5"
+          python-version: "3.13"
       - name: "Linting: pymarkdownlnt"
         run: "poetry run invoke markdownlint"
   hadolint:
@@ -62,7 +70,7 @@ jobs:
       - name: "Check out repository code"
         uses: "actions/checkout@v4"
       - name: "Run Hadolint"
-        uses: "hadolint/hadolint-action@v1.6.0"
+        uses: "hadolint/hadolint-action@d7b38582334d9ac11c12021c16f21d63015fa250" # v1.6.0
         with:
           dockerfile: "docker/Dockerfile"
   check-migrations:
@@ -89,8 +97,8 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-          poetry-version: "1.8.2"
-          python-version: "3.12"
+          poetry-version: "1.8.5"
+          python-version: "3.13"
       - name: "Run check migrations"
         run: "poetry run invoke check-migrations"
   check-schema:
@@ -118,8 +126,8 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-          poetry-version: "1.8.2"
-          python-version: "3.12"
+          poetry-version: "1.8.5"
+          python-version: "3.13"
       - name: "Run check-schema"
         # REST API schema generation currently includes GraphQL schema generation, which is dependent on the DB :-(
         run: "poetry run invoke migrate check-schema"
@@ -147,12 +155,12 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-          poetry-version: "1.8.2"
-          python-version: "3.12"
+          poetry-version: "1.8.5"
+          python-version: "3.13"
       - name: "Run pylint"
         run: "poetry run invoke pylint"
   tests-postgres:
-    name: "Unit tests (PostgreSQL and Python 3.9)"
+    name: "Unit tests (PostgreSQL and Python 3.10)"
     runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -179,10 +187,10 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-          poetry-version: "1.8.2"
-          python-version: "3.9"
+          poetry-version: "1.8.5"
+          python-version: "3.10"
       - name: "Run unittest"
-        run: "poetry run invoke unittest --failfast --no-keepdb --no-cache-test-fixtures --parallel -e fix_in_v3"
+        run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel -e fix_in_v3"
     needs:
       - "check-migrations"
       - "check-schema"
@@ -191,7 +199,7 @@ jobs:
       - "ruff"
       - "yamllint"
   tests-mysql:
-    name: "Unit tests (MySQL and Python 3.12)"
+    name: "Unit tests (MySQL and Python 3.13)"
     runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -222,10 +230,10 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: "--extras mysql"
-          poetry-version: "1.8.2"
-          python-version: "3.12"
+          poetry-version: "1.8.5"
+          python-version: "3.13"
       - name: "Run unittest"
-        run: "poetry run invoke unittest --failfast --no-keepdb --no-cache-test-fixtures --parallel -e fix_in_v3"
+        run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel -e fix_in_v3"
     needs:
       - "check-migrations"
       - "check-schema"
@@ -234,7 +242,7 @@ jobs:
       - "ruff"
       - "yamllint"
   migration-tests-mysql:
-    name: "Run migrations against test dataset (MySQL and Python 3.9)"
+    name: "Run migrations against test dataset (MySQL and Python 3.10)"
     runs-on: "ubuntu-24.04"
     env:
       MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_mysql.tar.gz"
@@ -263,8 +271,8 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: "--extras mysql"
-          poetry-version: "1.8.2"
-          python-version: "3.9"
+          poetry-version: "1.8.5"
+          python-version: "3.10"
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine mysql --dataset $MIGRATION_TEST_DATASET"
     needs:
@@ -275,7 +283,7 @@ jobs:
       - "ruff"
       - "yamllint"
   migration-tests-postgres:
-    name: "Run migrations against test dataset (PostgreSQL and Python 3.12)"
+    name: "Run migrations against test dataset (PostgreSQL and Python 3.13)"
     runs-on: "ubuntu-24.04"
     env:
       MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_postgres.tar.gz"
@@ -301,8 +309,8 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-          poetry-version: "1.8.2"
-          python-version: "3.12"
+          poetry-version: "1.8.5"
+          python-version: "3.13"
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine postgres --dataset $MIGRATION_TEST_DATASET"
     needs:
@@ -344,11 +352,11 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-          poetry-version: "1.8.2"
-          python-version: "3.12"
+          poetry-version: "1.8.5"
+          python-version: "3.13"
       - name: "Run Integration Tests"
         # If NAUTOBOT_SELENIUM_HOST is set to 'localhost' or '127.0.0.1' the connection does not work
-        run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke integration-test --no-keepdb -e fix_in_v3"
+        run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke tests --tag integration --no-keepdb -e fix_in_v3"
     needs:
       - "check-migrations"
       - "check-schema"
@@ -368,14 +376,14 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: "--only dev"
-          poetry-version: "1.8.2"
-          python-version: "3.12"
+          poetry-version: "1.8.5"
+          python-version: "3.13"
       - name: "Check for changelog entry"
         run: |
           git fetch --no-tags origin +refs/heads/${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}
           poetry run towncrier check --compare-with origin/${{ github.base_ref }}
   container-build-test:
-    name: "Test Container Build (amd64 only on Python 3.12)"
+    name: "Test Container Build (amd64 only on Python 3.13)"
     runs-on: "ubuntu-24.04"
     needs:
       - "check-migrations"
@@ -388,11 +396,11 @@ jobs:
       - name: "Check out repository code"
         uses: "actions/checkout@v4"
       - name: "Set up QEMU"
-        uses: "docker/setup-qemu-action@v2"
+        uses: "docker/setup-qemu-action@2b82ce82d56a2a04d2637cd93a637ae1b359c0a7" # v2
       - name: "Set up Docker Buildx"
-        uses: "docker/setup-buildx-action@v2"
+        uses: "docker/setup-buildx-action@885d1462b80bc1c1c7f0b00334ad271f09369c55" # v2
       - name: "Login to GitHub Container Registry"
-        uses: "docker/login-action@v2"
+        uses: "docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc" # v2
         with:
           registry: "ghcr.io"
           username: "${{ github.actor }}"
@@ -404,7 +412,7 @@ jobs:
           image: "ghcr.io/nautobot/nautobot"
           platforms: "linux/amd64"
           push: "false"
-          python-version: "3.12"
+          python-version: "3.13"
           tag-latest: "false"
           tag-latest-for-branch: "false"
           tag-latest-for-py: "false"

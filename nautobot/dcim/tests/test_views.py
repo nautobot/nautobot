@@ -429,7 +429,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(location.contact_email, "")
 
 
-class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = RackGroup
     sort_on_field = "name"
 
@@ -450,6 +450,10 @@ class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "name": "Rack Group X",
             "location": location.pk,
             "description": "A new rack group",
+        }
+        cls.bulk_edit_data = {
+            "description": "Updated description",
+            "location": location.pk,
         }
 
 
@@ -760,7 +764,7 @@ class DeviceFamilyTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         DeviceFamily.objects.create(name="Deletable Device Family 3")
 
 
-class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = Manufacturer
 
     @classmethod
@@ -768,6 +772,9 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         cls.form_data = {
             "name": "Manufacturer X",
             "description": "A new manufacturer",
+        }
+        cls.bulk_edit_data = {
+            "description": "Updated manufacturer description",
         }
 
     def get_deletable_object(self):
@@ -2035,7 +2042,7 @@ class ModuleBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
         }
 
 
-class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = Platform
 
     @classmethod
@@ -2054,6 +2061,13 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "napalm_args": None,
             "network_driver": "juniper_junos",
             "description": "A new platform",
+        }
+        cls.bulk_edit_data = {
+            "manufacturer": manufacturer.pk,
+            "napalm_driver": "iosxr",
+            "napalm_args": '{"timeout": 30, "retries": 3}',
+            "network_driver": "cisco_ios",
+            "description": "Updated platform description",
         }
 
 
@@ -4586,6 +4600,7 @@ class SoftwareImageFileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         device_types = DeviceType.objects.all()[:2]
         statuses = Status.objects.get_for_model(SoftwareImageFile)
         software_versions = SoftwareVersion.objects.all()
+        external_integration = ExternalIntegration.objects.first()
 
         cls.form_data = {
             "software_version": software_versions[0].pk,
@@ -4595,6 +4610,7 @@ class SoftwareImageFileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "image_file_size": 1234567890,
             "hashing_algorithm": SoftwareImageFileHashingAlgorithmChoices.SHA512,
             "download_url": "https://example.com/software_image_file_test_case.bin",
+            "external_integration": external_integration.pk,
             "device_types": [device_types[0].pk, device_types[1].pk],
         }
 
@@ -4605,6 +4621,7 @@ class SoftwareImageFileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "hashing_algorithm": SoftwareImageFileHashingAlgorithmChoices.SHA512,
             "image_file_size": 1234567890,
             "download_url": "https://example.com/software_image_file_test_case.bin",
+            "external_integration": external_integration.pk,
         }
 
 

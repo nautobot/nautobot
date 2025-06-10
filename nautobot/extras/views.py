@@ -15,7 +15,7 @@ from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils import timezone
 from django.utils.encoding import iri_to_uri
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.timezone import get_current_timezone
 from django.views.generic import View
@@ -24,16 +24,18 @@ from jsonschema.validators import Draft7Validator
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 
+from nautobot.apps.ui import BaseTextPanel
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.events import publish_event
 from nautobot.core.exceptions import FilterSetFieldNotFound
-from nautobot.core.forms import restrict_form_fields
+from nautobot.core.forms import ApprovalForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query, serialize_object_v2
 from nautobot.core.tables import ButtonsColumn
+from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
-from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel
+from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectTextPanel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
@@ -59,7 +61,7 @@ from nautobot.core.views.mixins import (
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.views.utils import prepare_cloned_fields
+from nautobot.core.views.utils import common_detail_view_context, get_obj_from_context, prepare_cloned_fields
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Controller, Device, Interface, Module, Rack, VirtualDeviceContext
 from nautobot.dcim.tables import (
@@ -71,7 +73,13 @@ from nautobot.dcim.tables import (
     VirtualDeviceContextTable,
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
-from nautobot.extras.utils import fixup_filterset_query_params, get_base_template, get_job_queue, get_worker_count
+from nautobot.extras.templatetags.approvals import render_approval_workflow_state
+from nautobot.extras.utils import (
+    fixup_filterset_query_params,
+    get_base_template,
+    get_pending_approval_workflow_stages,
+    get_worker_count,
+)
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
@@ -80,6 +88,7 @@ from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
 from . import filters, forms, tables
 from .api import serializers
 from .choices import (
+    ApprovalWorkflowStateChoices,
     DynamicGroupTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
@@ -93,6 +102,11 @@ from .datasources import (
 )
 from .jobs import get_job
 from .models import (
+    ApprovalWorkflow,
+    ApprovalWorkflowDefinition,
+    ApprovalWorkflowStage,
+    ApprovalWorkflowStageDefinition,
+    ApprovalWorkflowStageResponse,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -136,38 +150,548 @@ from .registry import registry
 
 logger = logging.getLogger(__name__)
 
+#
+# Approval Workflows
+#
+
+
+class ApprovalWorkflowDefinitionUIViewSet(NautobotUIViewSet):
+    """ViewSet for ApprovalWorkflowDefinition."""
+
+    bulk_update_form_class = forms.ApprovalWorkflowDefinitionBulkEditForm
+    filterset_class = filters.ApprovalWorkflowDefinitionFilterSet
+    filterset_form_class = forms.ApprovalWorkflowDefinitionFilterForm
+    form_class = forms.ApprovalWorkflowDefinitionForm
+    queryset = ApprovalWorkflowDefinition.objects.all()
+    serializer_class = serializers.ApprovalWorkflowDefinitionSerializer
+    table_class = tables.ApprovalWorkflowDefinitionTable
+
+    object_detail_content = ObjectDetailContent(
+        panels=[
+            ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                table_class=tables.ApprovalWorkflowStageDefinitionTable,
+                table_filter="approval_workflow_definition",
+                section=SectionChoices.RIGHT_HALF,
+                exclude_columns=["approval_workflow_definition", "actions"],
+                add_button_route=None,
+                table_title="Stages",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                table_class=tables.ApprovalWorkflowTable,
+                table_filter="approval_workflow_definition",
+                section=SectionChoices.FULL_WIDTH,
+                exclude_columns=["object_under_review_content_type", "approval_workflow_definition"],
+                add_button_route=None,
+                table_title="Workflows",
+            ),
+        ],
+    )
+
+    def get_extra_context(self, request, instance):
+        ctx = super().get_extra_context(request, instance)
+        if self.action in ("create", "update"):
+            if request.POST:
+                ctx["stages"] = forms.ApprovalWorkflowStageDefinitionFormSet(data=request.POST, instance=instance)
+            else:
+                ctx["stages"] = forms.ApprovalWorkflowStageDefinitionFormSet(instance=instance)
+
+        return ctx
+
+    def form_save(self, form, **kwargs):
+        obj = super().form_save(form, **kwargs)
+
+        # Process the formset for stages
+        ctx = self.get_extra_context(self.request, obj)
+        stages = ctx["stages"]
+        if stages.is_valid():
+            stages.save()
+        else:
+            raise ValidationError(stages.errors)
+
+        return obj
+
+
+class ApprovalWorkflowStageDefinitionUIViewSet(NautobotUIViewSet):
+    """ViewSet for ApprovalWorkflowStageDefinition."""
+
+    bulk_update_form_class = forms.ApprovalWorkflowStageDefinitionBulkEditForm
+    filterset_class = filters.ApprovalWorkflowStageDefinitionFilterSet
+    filterset_form_class = forms.ApprovalWorkflowStageDefinitionFilterForm
+    form_class = forms.ApprovalWorkflowStageDefinitionForm
+    queryset = ApprovalWorkflowStageDefinition.objects.all()
+    serializer_class = serializers.ApprovalWorkflowStageDefinitionSerializer
+    table_class = tables.ApprovalWorkflowStageDefinitionTable
+
+    object_detail_content = ObjectDetailContent(
+        panels=[
+            ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+        ],
+    )
+
+
+class ApprovalWorkflowUIViewSet(
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectNotesViewMixin,
+):
+    """ViewSet for ApprovalWorkflow."""
+
+    filterset_class = filters.ApprovalWorkflowFilterSet
+    filterset_form_class = forms.ApprovalWorkflowFilterForm
+    queryset = ApprovalWorkflow.objects.all()
+    serializer_class = serializers.ApprovalWorkflowSerializer
+    table_class = tables.ApprovalWorkflowTable
+    action_buttons = ()
+
+    class ApprovalWorkflowPanel(ObjectFieldsPanel):
+        def __init__(self, **kwargs):
+            super().__init__(
+                fields=(
+                    "approval_workflow_definition",
+                    "object_under_review",
+                    "current_state",
+                    "decision_date",
+                    "user",
+                ),
+                value_transforms={
+                    "current_state": [render_approval_workflow_state],
+                },
+                hide_if_unset=("decision_date"),
+                **kwargs,
+            )
+
+        def render_key(self, key, value, context):
+            obj = get_obj_from_context(context)
+
+            if key == "object_under_review":
+                return helpers.bettertitle(obj.object_under_review_content_type.model_class()._meta.verbose_name)
+            if key == "user":
+                return "Requesting User"
+            if key == "decision_date":
+                if obj.current_state == ApprovalWorkflowStateChoices.APPROVED:
+                    return "Approval Date"
+                elif obj.current_state == ApprovalWorkflowStateChoices.DENIED:
+                    return "Denial Date"
+
+            return super().render_key(key, value, context)
+
+        def render_value(self, key, value, context):
+            obj = get_obj_from_context(context)
+            if key == "user":
+                if not obj.user:
+                    return obj.user_name
+
+            return super().render_value(key, value, context)
+
+    object_detail_content = ObjectDetailContent(
+        panels=[
+            ApprovalWorkflowPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                table_title="Stages",
+                table_class=tables.RelatedApprovalWorkflowStageTable,
+                table_filter="approval_workflow",
+                section=SectionChoices.RIGHT_HALF,
+                exclude_columns=["approval_workflow"],
+                add_button_route=None,
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                table_title="Responses",
+                table_class=tables.RelatedApprovalWorkflowStageResponseTable,
+                table_filter="approval_workflow_stage__approval_workflow",
+                section=SectionChoices.RIGHT_HALF,
+                exclude_columns=["approval_workflow"],
+                add_button_route=None,
+            ),
+        ],
+    )
+
+
+class ApprovalWorkflowStageUIViewSet(
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectNotesViewMixin,
+):
+    """ViewSet for ApprovalWorkflowStage."""
+
+    filterset_class = filters.ApprovalWorkflowStageFilterSet
+    filterset_form_class = forms.ApprovalWorkflowStageFilterForm
+    queryset = ApprovalWorkflowStage.objects.all()
+    serializer_class = serializers.ApprovalWorkflowStageSerializer
+    table_class = tables.ApprovalWorkflowStageTable
+    action_buttons = ()
+
+    class ApprovalWorkflowStagePanel(ObjectFieldsPanel):
+        def __init__(self, **kwargs):
+            super().__init__(
+                fields=(
+                    "approval_workflow",
+                    "state",
+                    "decision_date",
+                    "approver_group",
+                    "min_approvers",
+                ),
+                value_transforms={
+                    "state": [render_approval_workflow_state],
+                },
+                hide_if_unset=("decision_date"),
+                ignore_nonexistent_fields=True,
+                **kwargs,
+            )
+
+        def render_key(self, key, value, context):
+            obj = get_obj_from_context(context)
+
+            if key == "approval_workflow":
+                return "Approval Workflow"
+            if key == "decision_date":
+                if obj.state == ApprovalWorkflowStateChoices.APPROVED:
+                    return "Approval Date"
+                elif obj.state == ApprovalWorkflowStateChoices.DENIED:
+                    return "Denial Date"
+            if key == "min_approvers":
+                return "Minimum Number of Approvers Needed"
+
+            return super().render_key(key, value, context)
+
+        def render_value(self, key, value, context):
+            if key == "approver_group":
+                user_html = format_html(
+                    "<span>{}</span><ul>{}</ul>",
+                    value,
+                    format_html_join("\n", "<li>{}</li>", ((user,) for user in value.user_set.all())),
+                )
+                return user_html
+
+            return super().render_value(key, value, context)
+
+        def get_data(self, context):
+            obj = get_obj_from_context(context)
+            data = super().get_data(context)
+            data["approver_group"] = obj.approval_workflow_stage_definition.approver_group
+            data["min_approvers"] = obj.approval_workflow_stage_definition.min_approvers
+            return data
+
+    object_detail_content = ObjectDetailContent(
+        panels=[
+            ApprovalWorkflowStagePanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                table_class=tables.ApprovalWorkflowStageResponseTable,
+                table_filter="approval_workflow_stage",
+                section=SectionChoices.RIGHT_HALF,
+                exclude_columns=["approval_workflow_stage"],
+                table_title="Responses",
+            ),
+        ],
+    )
+
+    @action(detail=True, url_path="approve", methods=["get", "post"])
+    def approve(self, request, *args, **kwargs):
+        """
+        Approve the approval workflow stage response.
+        """
+        instance = self.get_object()
+
+        try:
+            approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.get(
+                approval_workflow_stage=instance,
+                user=request.user,
+            )
+        except ApprovalWorkflowStageResponse.DoesNotExist:
+            approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.create(
+                approval_workflow_stage=instance,
+                user=request.user,
+            )
+
+        if request.method == "GET":
+            obj = approval_workflow_stage_response
+            form = ApprovalForm(initial={"comments": obj.comments})
+
+            return render(
+                request,
+                "extras/approval_workflow/approve.html",
+                {
+                    "obj": obj.approval_workflow_stage,
+                    "object_under_review": obj.approval_workflow_stage.approval_workflow.object_under_review,
+                    "form": form,
+                    "obj_type": ApprovalWorkflowStage._meta.verbose_name,
+                    "return_url": self.get_return_url(request, obj),
+                    "card_class": "success",
+                    "button_class": "success",
+                },
+            )
+        approval_workflow_stage_response.comments = request.data.get("comments")
+        approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.APPROVED
+        approval_workflow_stage_response.save()
+        instance.refresh_from_db()
+        messages.success(request, f"You approved {instance}.")
+        return redirect(self.get_return_url(request))
+
+    @action(detail=True, url_path="deny", methods=["get", "post"])
+    def deny(self, request, *args, **kwargs):
+        """
+        Deny the approval workflow stage response.
+        """
+        instance = self.get_object()
+
+        try:
+            approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.get(
+                approval_workflow_stage=instance,
+                user=request.user,
+            )
+        except ApprovalWorkflowStageResponse.DoesNotExist:
+            approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.create(
+                approval_workflow_stage=instance,
+                user=request.user,
+                state=ApprovalWorkflowStateChoices.PENDING,
+            )
+
+        if request.method == "GET":
+            obj = approval_workflow_stage_response
+            form = ApprovalForm(initial={"comments": obj.comments})
+
+            return render(
+                request,
+                "extras/approval_workflow/deny.html",
+                {
+                    "obj": obj.approval_workflow_stage,
+                    "object_under_review": obj.approval_workflow_stage.approval_workflow.object_under_review,
+                    "form": form,
+                    "obj_type": ApprovalWorkflowStage._meta.verbose_name,
+                    "return_url": self.get_return_url(request, obj),
+                },
+            )
+        approval_workflow_stage_response.comments = request.data.get("comments")
+        approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.DENIED
+        approval_workflow_stage_response.save()
+        instance.refresh_from_db()
+        messages.success(request, f"You denied {instance}.")
+        return redirect(self.get_return_url(request))
+
+
+class ApprovalWorkflowStageResponseUIViewSet(
+    ObjectBulkDestroyViewMixin,
+    ObjectDestroyViewMixin,
+):
+    """ViewSet for ApprovalWorkflowStageResponse."""
+
+    filterset_class = filters.ApprovalWorkflowStageResponseFilterSet
+    filterset_form_class = forms.ApprovalWorkflowStageResponseFilterForm
+    queryset = ApprovalWorkflowStageResponse.objects.all()
+    serializer_class = serializers.ApprovalWorkflowStageResponseSerializer
+    table_class = tables.ApprovalWorkflowStageResponseTable
+    object_detail_content = None
+
+
+class ApproverDashboardView(ObjectListViewMixin):
+    """
+    View for the dashboard of approval workflow stages waiting for the current user to approve.
+    """
+
+    queryset = ApprovalWorkflowStage.objects.all()
+    filterset_class = filters.ApprovalWorkflowStageFilterSet
+    filterset_form_class = forms.ApprovalWorkflowStageFilterForm
+    table_class = tables.ApproverDashboardTable
+    template_name = "extras/approval_dashboard.html"
+    action_buttons = ()
+
+    def get_template_name(self):
+        """
+        Override the template names to use the custom dashboard template.
+        """
+        return self.template_name
+
+    def get_extra_context(self, request, instance):
+        """
+        Get the extra context for the dashboard view.
+        """
+        context = super().get_extra_context(request, instance)
+        context["title"] = "My Approvals"
+        context["approval_view"] = True
+        return context
+
+    def get_queryset(self):
+        """
+        Filter the queryset to only include approval workflow stages that are pending approval
+        and are assigned to the current user for approval.
+        """
+        return get_pending_approval_workflow_stages(self.request.user, super().get_queryset())
+
+    def list(self, request, *args, **kwargs):
+        """
+        Override the list method to display a helpful message regarding the page.
+        """
+        messages.info(
+            request,
+            "You are viewing a dashboard of approval workflow stages that are pending for your approval.",
+        )
+        return super().list(request, *args, **kwargs)
+
+
+class ApproveeDashboardView(ObjectListViewMixin):
+    """
+    View for the dashboard of approval workflows trigger by the current user.
+    """
+
+    queryset = ApprovalWorkflow.objects.all()
+    filterset_class = filters.ApprovalWorkflowFilterSet
+    filterset_form_class = forms.ApprovalWorkflowFilterForm
+    table_class = tables.ApprovalWorkflowTable
+    template_name = "extras/approval_dashboard.html"
+    action_buttons = ()
+
+    def get_template_name(self):
+        """
+        Override the template names to use the custom dashboard template.
+        """
+        return self.template_name
+
+    def get_extra_context(self, request, instance):
+        """
+        Get the extra context for the dashboard view.
+        """
+        context = super().get_extra_context(request, instance)
+        context["title"] = "My Requests"
+        return context
+
+    def get_queryset(self):
+        """
+        Filter the queryset to only include workflows that triggered by the current users.
+        """
+        user = self.request.user
+        if user.is_anonymous:
+            return ApprovalWorkflow.objects.none()
+        queryset = super().get_queryset()
+        return queryset.filter(user=user).order_by("created")
+
+    def list(self, request, *args, **kwargs):
+        """
+        Override the list method to display a helpful message regarding the page.
+        """
+        messages.info(
+            request,
+            "You are viewing a dashboard of approval workflows that are requested by you.",
+        )
+        return super().list(request, *args, **kwargs)
+
+
+class ObjectApprovalWorkflowView(generic.GenericView):
+    """
+    Present an pending approval workflow attached to a particular object.
+
+    base_template: Specify to explicitly identify the base object detail template to render.
+        If not provided, "<app>/<model>.html", "<app>/<model>_retrieve.html", or "generic/object_retrieve.html"
+        will be used, as per `get_base_template()`.
+    """
+
+    base_template: Optional[str] = None
+
+    def get(self, request, model, **kwargs):
+        # Handle QuerySet restriction of parent object if needed
+
+        if hasattr(model.objects, "restrict"):
+            obj = get_object_or_404(model.objects.restrict(request.user, "view"), **kwargs)
+        else:
+            obj = get_object_or_404(model, **kwargs)
+
+        job_class = get_job(obj.task)
+        labels = {}
+        if job_class is not None:
+            for name, var in job_class._get_vars().items():
+                field = var.as_field()
+                if field.label:
+                    labels[name] = field.label
+                else:
+                    labels[name] = pretty_name(name)
+
+        # Gather all changes for this object (and its related objects)
+        approval_workflow = ApprovalWorkflow.objects.get(object_under_review_object_id=obj.pk)
+        stage_table = tables.RelatedApprovalWorkflowStageTable(
+            ApprovalWorkflowStage.objects.filter(approval_workflow=approval_workflow),
+        )
+        stage_table.columns.hide("approval_workflow")
+        response_table = tables.RelatedApprovalWorkflowStageResponseTable(
+            ApprovalWorkflowStageResponse.objects.filter(approval_workflow_stage__approval_workflow=approval_workflow)
+        )
+
+        base_template = get_base_template(self.base_template, model)
+
+        return render(
+            request,
+            "extras/object_approvalworkflow.html",
+            {
+                "object": obj,
+                "verbose_name": helpers.bettertitle(obj._meta.verbose_name),
+                "verbose_name_plural": obj._meta.verbose_name_plural,
+                "approval_workflow": approval_workflow,
+                "base_template": base_template,
+                "active_tab": "approval_workflow",
+                "labels": labels,
+                "job_class_found": (job_class is not None),
+                "default_time_zone": get_current_timezone(),
+                "stage_table": stage_table,
+                "response_table": response_table,
+                **common_detail_view_context(request, obj),
+            },
+        )
+
 
 #
 # Computed Fields
 #
 
 
-class ComputedFieldListView(generic.ObjectListView):
+class ComputedFieldUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ComputedFieldBulkEditForm
+    filterset_class = filters.ComputedFieldFilterSet
+    filterset_form_class = forms.ComputedFieldFilterForm
+    form_class = forms.ComputedFieldForm
+    serializer_class = serializers.ComputedFieldSerializer
+    table_class = tables.ComputedFieldTable
     queryset = ComputedField.objects.all()
-    table = tables.ComputedFieldTable
-    filterset = filters.ComputedFieldFilterSet
-    filterset_form = forms.ComputedFieldFilterForm
     action_buttons = ("add",)
-
-
-class ComputedFieldView(generic.ObjectView):
-    queryset = ComputedField.objects.all()
-
-
-class ComputedFieldEditView(generic.ObjectEditView):
-    queryset = ComputedField.objects.all()
-    model_form = forms.ComputedFieldForm
-    template_name = "extras/computedfield_edit.html"
-
-
-class ComputedFieldDeleteView(generic.ObjectDeleteView):
-    queryset = ComputedField.objects.all()
-
-
-class ComputedFieldBulkDeleteView(generic.BulkDeleteView):
-    queryset = ComputedField.objects.all()
-    table = tables.ComputedFieldTable
-    filterset = filters.ComputedFieldFilterSet
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+                exclude_fields=["template"],
+            ),
+            ObjectTextPanel(
+                label="Template",
+                section=SectionChoices.FULL_WIDTH,
+                weight=100,
+                object_field="template",
+                render_as=ObjectTextPanel.RenderOptions.CODE,
+            ),
+        ),
+    )
 
 
 #
@@ -407,22 +931,37 @@ class ContactUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.ContactSerializer
     table_class = tables.ContactTable
 
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            teams = instance.teams.restrict(request.user, "view")
-            teams_table = tables.TeamTable(teams, orderable=False)
-            teams_table.columns.hide("actions")
-            paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-            RequestConfig(request, paginate).configure(teams_table)
-            context["teams_table"] = teams_table
-
-            # TODO: need some consistent ordering of contact_associations
-            associations = instance.contact_associations.restrict(request.user, "view")
-            associations_table = tables.ContactAssociationTable(associations, orderable=False)
-            RequestConfig(request, paginate).configure(associations_table)
-            context["contact_associations_table"] = associations_table
-        return context
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                value_transforms={
+                    "address": [helpers.render_address],
+                    "email": [helpers.hyperlinked_email],
+                    "phone": [helpers.hyperlinked_phone_number],
+                },
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                table_class=tables.TeamTable,
+                table_filter="contacts",
+                table_title="Assigned Teams",
+                exclude_columns=["actions"],
+                add_button_route=None,
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.ContactAssociationTable,
+                table_filter="contact",
+                table_title="Contact For",
+                add_button_route=None,
+            ),
+        ),
+    )
 
 
 class ContactAssociationUIViewSet(
@@ -667,30 +1206,44 @@ class CustomFieldBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class CustomLinkListView(generic.ObjectListView):
+class CustomLinkUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.CustomLinkBulkEditForm
+    filterset_class = filters.CustomLinkFilterSet
+    filterset_form_class = forms.CustomLinkFilterForm
+    form_class = forms.CustomLinkForm
     queryset = CustomLink.objects.all()
-    table = tables.CustomLinkTable
-    filterset = filters.CustomLinkFilterSet
-    filterset_form = forms.CustomLinkFilterForm
-    action_buttons = ("add",)
+    serializer_class = serializers.CustomLinkSerializer
+    table_class = tables.CustomLinkTable
 
-
-class CustomLinkView(generic.ObjectView):
-    queryset = CustomLink.objects.all()
-
-
-class CustomLinkEditView(generic.ObjectEditView):
-    queryset = CustomLink.objects.all()
-    model_form = forms.CustomLinkForm
-
-
-class CustomLinkDeleteView(generic.ObjectDeleteView):
-    queryset = CustomLink.objects.all()
-
-
-class CustomLinkBulkDeleteView(generic.BulkDeleteView):
-    queryset = CustomLink.objects.all()
-    table = tables.CustomLinkTable
+    object_detail_content = ObjectDetailContent(
+        panels=[
+            ObjectFieldsPanel(
+                label="Custom Link",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=[
+                    "content_type",
+                    "name",
+                    "group_name",
+                    "weight",
+                    "target_url",
+                    "button_class",
+                    "new_window",
+                ],
+                value_transforms={
+                    "target_url": [helpers.pre_tag],
+                    "button_class": [helpers.render_button_class],
+                },
+            ),
+            object_detail.ObjectTextPanel(
+                label="Text",
+                section=SectionChoices.LEFT_HALF,
+                weight=200,
+                object_field="text",
+                render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
+            ),
+        ]
+    )
 
 
 #
@@ -960,30 +1513,38 @@ class ObjectDynamicGroupsView(generic.GenericView):
 #
 
 
-class ExportTemplateListView(generic.ObjectListView):
+class ExportTemplateUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ExportTemplateBulkEditForm
+    filterset_class = filters.ExportTemplateFilterSet
+    filterset_form_class = forms.ExportTemplateFilterForm
+    form_class = forms.ExportTemplateForm
     queryset = ExportTemplate.objects.all()
-    table = tables.ExportTemplateTable
-    filterset = filters.ExportTemplateFilterSet
-    filterset_form = forms.ExportTemplateFilterForm
-    action_buttons = ("add",)
+    serializer_class = serializers.ExportTemplateSerializer
+    table_class = tables.ExportTemplateTable
 
-
-class ExportTemplateView(generic.ObjectView):
-    queryset = ExportTemplate.objects.all()
-
-
-class ExportTemplateEditView(generic.ObjectEditView):
-    queryset = ExportTemplate.objects.all()
-    model_form = forms.ExportTemplateForm
-
-
-class ExportTemplateDeleteView(generic.ObjectDeleteView):
-    queryset = ExportTemplate.objects.all()
-
-
-class ExportTemplateBulkDeleteView(generic.BulkDeleteView):
-    queryset = ExportTemplate.objects.all()
-    table = tables.ExportTemplateTable
+    object_detail_content = ObjectDetailContent(
+        panels=[
+            ObjectFieldsPanel(
+                label="Details",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=["name", "owner", "description"],
+            ),
+            ObjectFieldsPanel(
+                label="Template",
+                section=SectionChoices.LEFT_HALF,
+                weight=200,
+                fields=["content_type", "mime_type", "file_extension"],
+            ),
+            ObjectTextPanel(
+                label="Code Template",
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                object_field="template_code",
+                render_as=ObjectTextPanel.RenderOptions.CODE,
+            ),
+        ]
+    )
 
 
 #
@@ -1322,6 +1883,47 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 
         return job_model
 
+    def _handle_approval_workflow_response(self, request, scheduled_job, return_url):
+        """Handle response for jobs requiring approval workflow."""
+        messages.success(request, f"Job '{scheduled_job.name}' successfully submitted for approval")
+        return redirect(return_url or reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk]))
+
+    def _handle_scheduled_job_response(self, request, scheduled_job, return_url):
+        """Handle response for successfully scheduled jobs."""
+        if scheduled_job.associated_approval_workflows.filter(
+            current_state=ApprovalWorkflowStateChoices.PENDING
+        ).exists():
+            return self._handle_approval_workflow_response(request, scheduled_job, return_url)
+
+        messages.success(request, f"Job {scheduled_job.name} successfully scheduled")
+        return redirect(return_url or "extras:scheduledjob_list")
+
+    def _handle_immediate_execution(
+        self, request, job_model, job_class, job_form, profile, ignore_singleton_lock, job_queue, return_url
+    ):
+        """Handle immediate job execution."""
+        job_kwargs = job_class.prepare_job_kwargs(job_form.cleaned_data)
+        job_result = JobResult.enqueue_job(
+            job_model,
+            request.user,
+            profile=profile,
+            ignore_singleton_lock=ignore_singleton_lock,
+            job_queue=job_queue,
+            **job_class.serialize_data(job_kwargs),
+        )
+
+        if return_url:
+            messages.info(
+                request,
+                format_html(
+                    'Job enqueued. <a href="{}">Click here for the results.</a>',
+                    job_result.get_absolute_url(),
+                ),
+            )
+            return redirect(return_url)
+
+        return redirect("extras:jobresult", pk=job_result.pk)
+
     def get(self, request, class_path=None, pk=None):
         job_model = self._get_job_model_or_404(class_path, pk)
 
@@ -1338,14 +1940,16 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     # for example "?kwargs_from_job_result=<UUID>&integervar=22"
                     explicit_initial = initial
                     initial = job_result.task_kwargs.copy()
-                    job_queue = job_result.celery_kwargs.get("queue", None)
-                    jq = None
-                    if job_queue is not None:
+                    task_queue = job_result.celery_kwargs.get("queue", None)
+                    job_queue = None
+                    if task_queue is not None:
                         try:
-                            jq = JobQueue.objects.get(name=job_queue, queue_type=JobQueueTypeChoices.TYPE_CELERY)
+                            job_queue = JobQueue.objects.get(
+                                name=task_queue, queue_type=JobQueueTypeChoices.TYPE_CELERY
+                            )
                         except JobQueue.DoesNotExist:
                             pass
-                    initial["_job_queue"] = jq
+                    initial["_job_queue"] = job_queue
                     initial["_profile"] = job_result.celery_kwargs.get("nautobot_job_profile", False)
                     initial["_ignore_singleton_lock"] = job_result.celery_kwargs.get(
                         "nautobot_job_ignore_singleton_lock", False
@@ -1389,7 +1993,6 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         job_class = get_job(job_model.class_path, reload=True)
         job_form = job_class.as_form(request.POST, request.FILES) if job_class is not None else None
         schedule_form = forms.JobScheduleForm(request.POST)
-        job_queue = request.POST.get("_job_queue")
 
         return_url = request.POST.get("_return_url")
         if return_url is not None and url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
@@ -1397,13 +2000,8 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         else:
             return_url = None
 
-        queue = get_job_queue(job_queue)
-        if queue is None:
-            queue = job_model.default_job_queue
-        # Allow execution only if a worker process is running on a celery queue and the job is runnable.
-        if queue.queue_type == JobQueueTypeChoices.TYPE_CELERY and not get_worker_count(queue=job_queue):
-            messages.error(request, "Unable to run or schedule job: Celery worker process not running.")
-        elif not job_model.installed or job_class is None:
+        # Allow execution only if the job is runnable.
+        if not job_model.installed or job_class is None:
             messages.error(request, "Unable to run or schedule job: Job is not presently installed.")
         elif not job_model.enabled:
             messages.error(request, "Unable to run or schedule job: Job is not enabled to be run.")
@@ -1421,15 +2019,17 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             )
         elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
             job_queue = job_form.cleaned_data.pop("_job_queue", None)
-            jq = None
-            if job_queue is not None:
-                try:
-                    jq = JobQueue.objects.get(pk=job_queue)
-                except (ValidationError, JobQueue.DoesNotExist):
-                    try:
-                        jq = JobQueue.objects.get(name=job_queue)
-                    except JobQueue.DoesNotExist:
-                        pass
+            if job_queue is None:
+                job_queue = job_model.default_job_queue
+
+            if job_queue.queue_type == JobQueueTypeChoices.TYPE_CELERY and not get_worker_count(queue=job_queue):
+                messages.warning(
+                    request,
+                    format_html(
+                        "No celery workers found for queue {}, job may never run unless a worker is started.",
+                        job_queue,
+                    ),
+                )
 
             dryrun = job_form.cleaned_data.get("dryrun", False)
             # Run the job. A new JobResult is created.
@@ -1437,7 +2037,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             ignore_singleton_lock = job_form.cleaned_data.pop("_ignore_singleton_lock", False)
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
-            if (not dryrun and job_model.approval_required) or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
+            if not dryrun:
                 scheduled_job = ScheduledJob.create_schedule(
                     job_model,
                     request.user,
@@ -1446,42 +2046,35 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     interval=schedule_type,
                     crontab=schedule_form.cleaned_data.get("_recurrence_custom_time"),
                     approval_required=job_model.approval_required,
-                    task_queue=jq.name if jq else None,
+                    job_queue=job_queue,
                     profile=profile,
                     ignore_singleton_lock=ignore_singleton_lock,
+                    validated_save=False,
                     **job_class.serialize_data(job_form.cleaned_data),
                 )
-
+                # Step 1: Check if approval is required
                 if job_model.approval_required:
-                    messages.success(request, f"Job {scheduled_job.name} successfully submitted for approval")
-                    return redirect(return_url or "extras:scheduledjob_approval_queue_list")
+                    # Step 2: Check if approval workflow is defined
+                    if not ApprovalWorkflowDefinition.objects.find_for_model(scheduled_job):
+                        messages.error(
+                            request,
+                            "Job was not successfully submitted for approval. No approval workflow definition is defined for it.",
+                        )
+                        return redirect(return_url or request.path)
+                    scheduled_job.validated_save()
+                    return self._handle_approval_workflow_response(request, scheduled_job, return_url)
+
+                # Step 3: If approval is not required
+                elif schedule_type in JobExecutionType.SCHEDULE_CHOICES:
+                    scheduled_job.validated_save()
+                    return self._handle_scheduled_job_response(request, scheduled_job, return_url)
+
+                # Step 4: Immediate execution (no schedule, no approval)
                 else:
-                    messages.success(request, f"Job {scheduled_job.name} successfully scheduled")
-                    return redirect(return_url or "extras:scheduledjob_list")
-
-            else:
-                # Enqueue job for immediate execution
-                job_kwargs = job_class.prepare_job_kwargs(job_form.cleaned_data)
-                job_result = JobResult.enqueue_job(
-                    job_model,
-                    request.user,
-                    profile=profile,
-                    ignore_singleton_lock=ignore_singleton_lock,
-                    task_queue=jq.name if jq else None,
-                    **job_class.serialize_data(job_kwargs),
-                )
-
-                if return_url:
-                    messages.info(
-                        request,
-                        format_html(
-                            'Job enqueued. <a href="{}">Click here for the results.</a>',
-                            job_result.get_absolute_url(),
-                        ),
+                    # Enqueue job for immediate execution
+                    return self._handle_immediate_execution(
+                        request, job_model, job_class, job_form, profile, ignore_singleton_lock, job_queue, return_url
                     )
-                    return redirect(return_url)
-
-                return redirect("extras:jobresult", pk=job_result.pk)
 
         if return_url:
             return redirect(return_url)
@@ -1564,7 +2157,7 @@ class JobApprovalRequestView(generic.ObjectView):
         if job_class is not None:
             # Render the form with all fields disabled
             initial = instance.kwargs
-            initial["_job_queue"] = instance.queue
+            initial["_job_queue"] = instance.job_queue
             initial["_profile"] = instance.celery_kwargs.get("profile", False)
             job_form = job_class().as_form(initial=initial, approval_view=True)
         else:
@@ -1679,17 +2272,27 @@ class JobQueueUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.JobQueueSerializer
     table_class = tables.JobQueueTable
 
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-
-        if self.action == "retrieve":
-            jobs = instance.jobs.restrict(request.user, "view")
-            jobs_table = tables.JobTable(jobs, orderable=False)
-            paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-            RequestConfig(request, paginate).configure(jobs_table)
-            context["jobs_table"] = jobs_table
-
-        return context
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=[
+                    "name",
+                    "queue_type",
+                    "description",
+                    "tenant",
+                ],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_title="Assigned Jobs",
+                table_class=tables.JobTable,
+                table_filter="job_queues",
+            ),
+        )
+    )
 
 
 #
@@ -1980,21 +2583,45 @@ class ScheduledJobView(generic.ObjectView):
     queryset = ScheduledJob.objects.all()
 
     def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+
+        # Add job class labels
         job_class = get_job(instance.task)
         labels = {}
         if job_class is not None:
             for name, var in job_class._get_vars().items():
                 field = var.as_field()
-                if field.label:
-                    labels[name] = field.label
-                else:
-                    labels[name] = pretty_name(name)
-        return {
-            "labels": labels,
-            "job_class_found": (job_class is not None),
-            "default_time_zone": get_current_timezone(),
-            **super().get_extra_context(request, instance),
-        }
+                labels[name] = field.label or pretty_name(name)
+
+        context.update(
+            {
+                "labels": labels,
+                "job_class_found": (job_class is not None),
+                "default_time_zone": get_current_timezone(),
+            }
+        )
+
+        # Add approval workflow table
+        approval_workflows = instance.associated_approval_workflows.all()
+        approval_workflows_count = approval_workflows.count()
+        approval_workflow_table = tables.ApprovalWorkflowTable(
+            data=approval_workflows,
+            user=request.user,
+            exclude=["object_under_review", "object_under_review_content_type"],
+        )
+
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(approval_workflow_table)
+
+        context.update(
+            {
+                "approval_workflows_count": approval_workflows_count,
+                "approval_workflow_table": approval_workflow_table,
+            }
+        )
+
+        return context
 
 
 class ScheduledJobDeleteView(generic.ObjectDeleteView):
@@ -2006,36 +2633,24 @@ class ScheduledJobDeleteView(generic.ObjectDeleteView):
 #
 
 
-class JobHookListView(generic.ObjectListView):
-    queryset = JobHook.objects.all()
-    table = tables.JobHookTable
-    filterset = filters.JobHookFilterSet
-    filterset_form = forms.JobHookFilterForm
-    action_buttons = ("add",)
-
-
-class JobHookView(generic.ObjectView):
+class JobHookUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.JobHookBulkEditForm
+    filterset_class = filters.JobHookFilterSet
+    filterset_form_class = forms.JobHookFilterForm
+    form_class = forms.JobHookForm
+    serializer_class = serializers.JobHookSerializer
+    table_class = tables.JobHookTable
     queryset = JobHook.objects.all()
 
-    def get_extra_context(self, request, instance):
-        return {
-            "content_types": instance.content_types.order_by("app_label", "model"),
-            **super().get_extra_context(request, instance),
-        }
-
-
-class JobHookEditView(generic.ObjectEditView):
-    queryset = JobHook.objects.all()
-    model_form = forms.JobHookForm
-
-
-class JobHookDeleteView(generic.ObjectDeleteView):
-    queryset = JobHook.objects.all()
-
-
-class JobHookBulkDeleteView(generic.BulkDeleteView):
-    queryset = JobHook.objects.all()
-    table = tables.JobHookTable
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+        )
+    )
 
 
 #
@@ -2158,6 +2773,20 @@ class JobButtonUIViewSet(NautobotUIViewSet):
     queryset = JobButton.objects.all()
     serializer_class = serializers.JobButtonSerializer
     table_class = tables.JobButtonTable
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                value_transforms={
+                    "text": [helpers.pre_tag],
+                    "job": [helpers.render_job_run_link],
+                    "button_class": [helpers.render_button_class],
+                },
+            ),
+        )
+    )
 
 
 #
@@ -2279,6 +2908,28 @@ class MetadataTypeUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.MetadataTypeSerializer
     table_class = tables.MetadataTypeTable
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                exclude_fields=("content_types",),
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=200,
+                context_table_key="choices",
+                table_title="Choices",
+            ),
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                fields=["content_types"],
+                label="Assignment",
+            ),
+        ),
+    )
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
 
@@ -2287,6 +2938,8 @@ class MetadataTypeUIViewSet(NautobotUIViewSet):
                 context["choices"] = forms.MetadataChoiceFormSet(data=request.POST, instance=instance)
             else:
                 context["choices"] = forms.MetadataChoiceFormSet(instance=instance)
+        elif self.action == "retrieve":
+            context["choices"] = tables.MetadataChoiceTable(instance.choices.all())
 
         return context
 
@@ -2404,16 +3057,15 @@ class ObjectNotesView(generic.GenericView):
 #
 
 
-class RelationshipListView(generic.ObjectListView):
+class RelationshipUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.RelationshipBulkEditForm
+    filterset_class = filters.RelationshipFilterSet
+    filterset_form_class = forms.RelationshipFilterForm
+    form_class = forms.RelationshipForm
+    serializer_class = serializers.RelationshipSerializer
+    table_class = tables.RelationshipTable
     queryset = Relationship.objects.all()
-    filterset = filters.RelationshipFilterSet
-    filterset_form = forms.RelationshipFilterForm
-    table = tables.RelationshipTable
-    action_buttons = ("add",)
 
-
-class RelationshipView(generic.ObjectView):
-    queryset = Relationship.objects.all()
     object_detail_content = ObjectDetailContent(
         panels=(
             ObjectFieldsPanel(
@@ -2446,22 +3098,6 @@ class RelationshipView(generic.ObjectView):
             ),
         )
     )
-
-
-class RelationshipEditView(generic.ObjectEditView):
-    queryset = Relationship.objects.all()
-    model_form = forms.RelationshipForm
-    template_name = "extras/relationship_edit.html"
-
-
-class RelationshipBulkDeleteView(generic.BulkDeleteView):
-    queryset = Relationship.objects.all()
-    table = tables.RelationshipTable
-    filterset = filters.RelationshipFilterSet
-
-
-class RelationshipDeleteView(generic.ObjectDeleteView):
-    queryset = Relationship.objects.all()
 
 
 class RelationshipAssociationListView(generic.ObjectListView):
@@ -2622,6 +3258,7 @@ class SecretUIViewSet(
                 table_title="Groups containing this secret",
                 table_class=tables.SecretsGroupTable,
                 table_attribute="secrets_groups",
+                related_field_name="secrets",
                 footer_content_template_path=None,
             ),
         ],
@@ -2930,62 +3567,18 @@ class DynamicGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixi
 #
 
 
-class StatusListView(generic.ObjectListView):
-    """List `Status` objects."""
-
-    queryset = Status.objects.all()
-    filterset = filters.StatusFilterSet
-    filterset_form = forms.StatusFilterForm
-    table = tables.StatusTable
-
-
-class StatusEditView(generic.ObjectEditView):
-    """Edit a single `Status` object."""
-
-    queryset = Status.objects.all()
-    model_form = forms.StatusForm
-
-
-class StatusBulkEditView(generic.BulkEditView):
-    """Edit multiple `Status` objects."""
-
-    queryset = Status.objects.all()
-    table = tables.StatusTable
-    form = forms.StatusBulkEditForm
-
-
-class StatusBulkDeleteView(generic.BulkDeleteView):
-    """Delete multiple `Status` objects."""
-
-    queryset = Status.objects.all()
-    table = tables.StatusTable
-    filterset = filters.StatusFilterSet
-
-
-class StatusDeleteView(generic.ObjectDeleteView):
-    """Delete a single `Status` object."""
-
+class StatusUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.StatusBulkEditForm
+    filterset_class = filters.StatusFilterSet
+    filterset_form_class = forms.StatusFilterForm
+    form_class = forms.StatusForm
+    serializer_class = serializers.StatusSerializer
+    table_class = tables.StatusTable
     queryset = Status.objects.all()
 
-
-class StatusBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    """Bulk CSV import of multiple `Status` objects."""
-
-    queryset = Status.objects.all()
-    table = tables.StatusTable
-
-
-class StatusView(generic.ObjectView):
-    """Detail view for a single `Status` object."""
-
-    queryset = Status.objects.all()
-
-    def get_extra_context(self, request, instance):
-        """Return ordered content types."""
-        return {
-            "content_types": instance.content_types.order_by("app_label", "model"),
-            **super().get_extra_context(request, instance),
-        }
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(object_detail.ObjectFieldsPanel(weight=100, section=SectionChoices.LEFT_HALF, fields="__all__"),)
+    )
 
 
 #
@@ -3066,22 +3659,37 @@ class TeamUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.TeamSerializer
     table_class = tables.TeamTable
 
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            contacts = instance.contacts.restrict(request.user, "view")
-            contacts_table = tables.ContactTable(contacts, orderable=False)
-            contacts_table.columns.hide("actions")
-            paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-            RequestConfig(request, paginate).configure(contacts_table)
-            context["contacts_table"] = contacts_table
-
-            # TODO: need some consistent ordering of contact_associations
-            associations = instance.contact_associations.restrict(request.user, "view")
-            associations_table = tables.ContactAssociationTable(associations, orderable=False)
-            RequestConfig(request, paginate).configure(associations_table)
-            context["contact_associations_table"] = associations_table
-        return context
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                value_transforms={
+                    "address": [helpers.render_address],
+                    "email": [helpers.hyperlinked_email],
+                    "phone": [helpers.hyperlinked_phone_number],
+                },
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                table_class=tables.ContactTable,
+                table_filter="teams",
+                table_title="Assigned Contacts",
+                exclude_columns=["actions"],
+                add_button_route=None,
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.ContactAssociationTable,
+                table_filter="team",
+                table_title="Contact For",
+                add_button_route=None,
+            ),
+        )
+    )
 
 
 #
@@ -3089,36 +3697,45 @@ class TeamUIViewSet(NautobotUIViewSet):
 #
 
 
-class WebhookListView(generic.ObjectListView):
+class WebhookUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.WebhookBulkEditForm
+    filterset_class = filters.WebhookFilterSet
+    filterset_form_class = forms.WebhookFilterForm
+    form_class = forms.WebhookForm
     queryset = Webhook.objects.all()
-    table = tables.WebhookTable
-    filterset = filters.WebhookFilterSet
-    filterset_form = forms.WebhookFilterForm
-    action_buttons = ("add",)
+    serializer_class = serializers.WebhookSerializer
+    table_class = tables.WebhookTable
 
-
-class WebhookView(generic.ObjectView):
-    queryset = Webhook.objects.all()
-
-    def get_extra_context(self, request, instance):
-        return {
-            "content_types": instance.content_types.order_by("app_label", "model"),
-            **super().get_extra_context(request, instance),
-        }
-
-
-class WebhookEditView(generic.ObjectEditView):
-    queryset = Webhook.objects.all()
-    model_form = forms.WebhookForm
-
-
-class WebhookDeleteView(generic.ObjectDeleteView):
-    queryset = Webhook.objects.all()
-
-
-class WebhookBulkDeleteView(generic.BulkDeleteView):
-    queryset = Webhook.objects.all()
-    table = tables.WebhookTable
+    object_detail_content = ObjectDetailContent(
+        panels=[
+            ObjectFieldsPanel(
+                label="Webhook",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=("name", "content_types", "type_create", "type_update", "type_delete", "enabled"),
+            ),
+            ObjectFieldsPanel(
+                label="HTTP",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=("http_method", "http_content_type", "payload_url", "additional_headers"),
+                value_transforms={"additional_headers": [helpers.pre_tag]},
+            ),
+            ObjectFieldsPanel(
+                label="Security",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=("secret", "ssl_verification", "ca_file_path"),
+            ),
+            ObjectTextPanel(
+                label="Body Template",
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                object_field="body_template",
+                render_as=BaseTextPanel.RenderOptions.CODE,
+            ),
+        ]
+    )
 
 
 #

@@ -16,6 +16,9 @@ from nautobot.core.events import (
 from nautobot.core.events.exceptions import EventBrokerImproperlyConfigured, EventBrokerNotFound
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
+from nautobot.dcim.models import Location, LocationType
+from nautobot.extras.context_managers import web_request_context
+from nautobot.extras.models import ObjectChange, Status
 
 
 class TestEventBroker(EventBroker):
@@ -112,6 +115,67 @@ class EventNotificationTest(TestCase):
             publish_event(topic="nautobot.test.event.no-publish", payload={"a": 1})
         # This test assets that only `nautobot.test.event` topic was published and `nautobot.test.event.no-publish` was not published
         self.assertEqual(cm.output, ["INFO:nautobot.events.nautobot.test.event:" + json.dumps({"a": 1}, indent=4)])
+
+    @load_event_broker_override_settings(
+        EVENT_BROKERS={
+            "SyslogEventBroker": {
+                "CLASS": "nautobot.core.events.SyslogEventBroker",
+                "TOPICS": {
+                    "INCLUDE": ["nautobot.update.*"],
+                },
+            }
+        }
+    )
+    def test_publish_update_object_event_without_existing_changelog(self):
+        """
+        Test that an update event creates a event notification with a complete event payload even without existing changelogs.
+        https://github.com/nautobot/nautobot/issues/7102
+        """
+        ObjectChange.objects.all().delete()
+        location = Location.objects.first()
+        old_status = location.status
+        new_status = Status.objects.get_for_model(Location).exclude(pk=old_status.pk).first()
+        with self.assertLogs("nautobot.events.nautobot.update.dcim.location") as cm:
+            with web_request_context(self.user):
+                location.status = new_status
+                location.save()
+
+        # Assert that the event notification contains a non-null prechange/postchange values
+        # Assert the old status id and new status id are present in the event payload
+        self.assertNotIn('"prechange": null', cm.output[0])
+        self.assertNotIn('"postchange": null', cm.output[0])
+        self.assertIn(f"{old_status.pk}", cm.output[0])
+        self.assertIn(f"{new_status.pk}", cm.output[0])
+
+    @load_event_broker_override_settings(
+        EVENT_BROKERS={
+            "SyslogEventBroker": {
+                "CLASS": "nautobot.core.events.SyslogEventBroker",
+                "TOPICS": {
+                    "INCLUDE": ["nautobot.delete.*"],
+                },
+            }
+        }
+    )
+    def test_publish_delete_object_event_without_existing_changelog(self):
+        """
+        Test that a delete event creates a event notification with a complete event payload even without existing changelogs.
+        https://github.com/nautobot/nautobot/issues/7102
+        """
+        ObjectChange.objects.all().delete()
+        lt = LocationType.objects.first()
+        location = Location.objects.create(
+            name="New Test Location", location_type=lt, status=Status.objects.get_for_model(Location).first()
+        )
+        deleted_pk = location.pk
+        with self.assertLogs("nautobot.events.nautobot.delete.dcim.location") as cm:
+            with web_request_context(self.user):
+                location.delete()
+
+        # Assert that the event notification contains the deleted object PK, non-null prechange values and null postchange value
+        self.assertIn(f"{deleted_pk}", cm.output[0])
+        self.assertNotIn('"prechange": null', cm.output[0])
+        self.assertIn('"postchange": null', cm.output[0])
 
     @load_event_broker_override_settings(
         EVENT_BROKERS={

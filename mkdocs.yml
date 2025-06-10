@@ -60,12 +60,6 @@ validation:
 extra_css:
   - "assets/extra.css"
 
-# needed for RTD version flyout menu
-# jquery is not (yet) injected by RTD automatically and it might be dropped
-# as a dependency in the future
-extra_javascript:
-  - "https://code.jquery.com/jquery-3.7.1.min.js"
-
 extra:
   generator: false
   ntc_sponsor: true
@@ -397,7 +391,7 @@ nav:
               - VLANS and VLAN Groups: "user-guide/feature-guides/getting-started/vlans-and-vlan-groups.md"
               - IP Address Management: "user-guide/feature-guides/getting-started/ipam.md"
               - The Search Bar: "user-guide/feature-guides/getting-started/search-bar.md"
-          - Data Complilance: "user-guide/feature-guides/data-compliance.md"
+          - Data Compliance: "user-guide/feature-guides/data-compliance.md"
           - Contacts and Teams: "user-guide/feature-guides/contacts-and-teams.md"
           - Custom Fields: "user-guide/feature-guides/custom-fields.md"
           - Git as a Data Source: "user-guide/feature-guides/git-data-source.md"
@@ -517,11 +511,12 @@ nav:
               - Radio Profile: "user-guide/core-data-model/wireless/radioprofile.md"
               - Wireless Network: "user-guide/core-data-model/wireless/wirelessnetwork.md"
       - Platform Functionality:
+          - Approval Workflows: "user-guide/platform-functionality/approval-workflow.md"
           - Change Logging: "user-guide/platform-functionality/change-logging.md"
           - Computed Fields: "user-guide/platform-functionality/computedfield.md"
           - Custom Fields: "user-guide/platform-functionality/customfield.md"
           - Custom Links: "user-guide/platform-functionality/customlink.md"
-          - Data Validation Engine: "user-guide/platform-functionality/data-validation-engine.md"
+          - Data Validation: "user-guide/platform-functionality/data-validation.md"
           - Dynamic Groups:
               - "user-guide/platform-functionality/dynamicgroup.md"
               - Static Group Associations: "user-guide/platform-functionality/staticgroupassociation.md"
@@ -535,12 +530,13 @@ nav:
           - Image Attachments: "user-guide/platform-functionality/imageattachment.md"
           - Jobs:
               - "user-guide/platform-functionality/jobs/index.md"
-              - Kubernetes Job Support: "user-guide/platform-functionality/jobs/kubernetes-job-support.md"
+              - Managing Jobs: "user-guide/platform-functionality/jobs/managing-jobs.md"
+              - Job Scheduling and Approvals: "user-guide/platform-functionality/jobs/job-scheduling-and-approvals.md"
+              - Job Queues: "user-guide/platform-functionality/jobs/jobqueue.md"
               - Job Buttons: "user-guide/platform-functionality/jobs/jobbutton.md"
               - Job Hooks: "user-guide/platform-functionality/jobs/jobhook.md"
+              - Kubernetes Job Support: "user-guide/platform-functionality/jobs/kubernetes-job-support.md"
               - Job Models: "user-guide/platform-functionality/jobs/models.md"
-              - Job Queues: "user-guide/platform-functionality/jobs/jobqueue.md"
-              - Job Scheduling and Approvals: "user-guide/platform-functionality/jobs/job-scheduling-and-approvals.md"
           - NAPALM: "user-guide/platform-functionality/napalm.md"
           - Notes: "user-guide/platform-functionality/note.md"
           - Object Metadata: "user-guide/platform-functionality/objectmetadata.md"
@@ -565,8 +561,15 @@ nav:
       - "development/index.md"
       - Jobs Developer Guide:
           - "development/jobs/index.md"
+          - Getting Started: "development/jobs/getting-started.md"
+          - Installing Jobs: "development/jobs/installation.md"
+          - Job Structure: "development/jobs/job-structure.md"
+          - Job Logging: "development/jobs/job-logging.md"
+          - Common Job Patterns: "development/jobs/job-patterns.md"
+          - Testing Jobs: "development/jobs/testing.md"
+          - Job Extensions: "development/jobs/job-extensions.md"
           - Migration Guides:
-              - "development/jobs/migration/from-v1.md"
+              -  Migrating from v1: "development/jobs/migration/from-v1.md"
       - App Developer Guide:
           - "development/apps/index.md"
           - Setup: "development/apps/api/setup.md"

@@ -53,6 +53,7 @@ from nautobot.core.forms.utils import (
 from nautobot.core.forms.widgets import (
     APISelect,
     APISelectMultiple,
+    AutoPopulateWidget,
     BulkEditNullBooleanSelect,
     ColorSelect,
     ContentTypeSelect,
@@ -67,6 +68,7 @@ from nautobot.core.forms.widgets import (
     StaticSelect2Multiple,
     TimePicker,
 )
+from nautobot.data_validation.form_mixin import DataValidationModelFormMixin
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelCSVForm,
@@ -102,6 +104,7 @@ __all__ = (
     "APISelect",
     "APISelectMultiple",
     "AddressFieldMixin",
+    "AutoPopulateWidget",
     "BootstrapMixin",
     "BulkEditForm",
     "BulkEditNullBooleanSelect",
@@ -123,6 +126,7 @@ __all__ = (
     "CustomFieldModelCSVForm",
     "CustomFieldModelFilterFormMixin",
     "CustomFieldModelFormMixin",
+    "DataValidationModelFormMixin",
     "DatePicker",
     "DateTimePicker",
     "DynamicFilterForm",

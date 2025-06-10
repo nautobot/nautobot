@@ -7,6 +7,30 @@
     <li class="breadcrumb-item">{{ object.grouping }}</li>
 {% endblock extra_breadcrumbs %}
 
+{% block extra_nav_tabs %}
+    {% if approval_workflows_count %}
+        <li role="presentation"{% if request.GET.tab == 'approval_workflows' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#approval_workflows" onclick="switch_tab(this.href, reload=false)" aria-controls="approval_workflows" role="tab" data-toggle="tab">
+                Approval Workflow {% badge approval_workflows_count %}
+            </a>
+        </li>
+    {% endif %}
+{% endblock extra_nav_tabs %}
+
+{% block extra_tab_content %}
+    {% if approval_workflows_count %}
+        <div id="approval_workflows" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "approval_workflows" %}active{% else %}fade{% endif %}">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Approval Workflows</strong>
+                </div>
+                {% include 'inc/table.html' with table=approval_workflow_table %}
+            </div>
+            {% include 'inc/paginator.html' with paginator=approval_workflow_table.paginator page=approval_workflow_table.page %}
+        </div>
+    {% endif %}
+{% endblock extra_tab_content %}
+
 {% block extra_buttons %}
     {% if perms.extras.run_job %}
         <a href="{% url 'extras:job_run' pk=object.pk %}" class="btn btn-primary"

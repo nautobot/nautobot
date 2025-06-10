@@ -9,7 +9,7 @@ import uuid
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 from django.db import models
-from django.db.models import CharField, JSONField, URLField
+from django.db.models import CharField, JSONField, Q, URLField
 from django.db.models.fields.related import ManyToManyField
 from django.template import Context
 from django.template.defaultfilters import truncatechars
@@ -181,6 +181,8 @@ class Button(Component):
         required_permissions=None,
         javascript_template_path=None,
         attributes=None,
+        size=None,
+        link_includes_pk=True,
         **kwargs,
     ):
         """
@@ -200,6 +202,7 @@ class Button(Component):
             javascript_template_path (str, optional): JavaScript template to render and include with this button.
                 Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
             attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
+            size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
         """
         self.label = label
         self.color = color
@@ -209,6 +212,8 @@ class Button(Component):
         self.required_permissions = required_permissions or []
         self.javascript_template_path = javascript_template_path
         self.attributes = attributes
+        self.size = size
+        self.link_includes_pk = link_includes_pk
         super().__init__(**kwargs)
 
     def should_render(self, context: Context):
@@ -222,9 +227,11 @@ class Button(Component):
         Defaults to reversing `self.link_name` with `pk: obj.pk` as a kwarg, but subclasses may override this for
         more advanced link construction.
         """
-        if self.link_name:
+        if self.link_name and self.link_includes_pk:
             obj = get_obj_from_context(context)
             return reverse(self.link_name, kwargs={"pk": obj.pk})
+        elif self.link_name:
+            return reverse(self.link_name)
         return None
 
     def get_extra_context(self, context: Context):
@@ -235,6 +242,7 @@ class Button(Component):
             "color": self.color,
             "icon": self.icon,
             "attributes": self.attributes,
+            "size": self.size,
         }
 
     def render(self, context: Context):
@@ -268,6 +276,41 @@ class DropdownButton(Button):
         return {
             **super().get_extra_context(context),
             "children": [child.get_extra_context(context) for child in self.children if child.should_render(context)],
+        }
+
+
+class FormButton(Button):
+    def __init__(
+        self,
+        form_id: str,
+        link_name: str,
+        template_path="components/button/formbutton.html",
+        **kwargs,
+    ):
+        """
+        Initialize a FormButton instance.
+
+        Args:
+            link_name (str, optional): View name to link to, for example "dcim:locationtype_retrieve".
+                This link will be reversed and will automatically include the current object's PK as a parameter to the
+                `reverse()` call when the button is rendered. For more complex link construction, you can subclass this
+                and override the `get_link()` method.
+        """
+        self.form_id = form_id
+        self.link_name = link_name
+
+        if not self.link_name:
+            raise ValueError("FormButton requires a 'link_name'.")
+
+        if not self.form_id:
+            raise ValueError("FormButton requires 'form_id' to be set in ObjectsTablePanel.")
+
+        super().__init__(link_name=link_name, template_path=template_path, **kwargs)
+
+    def get_extra_context(self, context: Context):
+        return {
+            **super().get_extra_context(context),
+            "form_id": self.form_id,
         }
 
 
@@ -376,6 +419,11 @@ class Tab(Component):
 class DistinctViewTab(Tab):
     """
     A Tab that doesn't render inline on the same page, but instead links to a distinct view of its own when clicked.
+
+    Args:
+        url_name (str): The name of the URL pattern to link to, which will be reversed to generate the URL.
+        label_wrapper_template_path (str, optional): Template path to render the tab label to HTML.
+        related_object_attribute (str, optional): The name of the related object attribute to count for the tab label.
     """
 
     def __init__(
@@ -383,16 +431,39 @@ class DistinctViewTab(Tab):
         *,
         url_name,
         label_wrapper_template_path="components/tab/label_wrapper_distinct_view.html",
+        related_object_attribute="",
         **kwargs,
     ):
         self.url_name = url_name
+        self.related_object_attribute = related_object_attribute
         super().__init__(label_wrapper_template_path=label_wrapper_template_path, **kwargs)
 
     def get_extra_context(self, context: Context):
         return {"url": reverse(self.url_name, kwargs={"pk": get_obj_from_context(context).pk})}
 
-    def render(self, context: Context):
-        return ""
+    def render_label(self, context: Context):
+        if not self.related_object_attribute:
+            return super().render_label(context)
+
+        obj = get_obj_from_context(context)
+        if not hasattr(obj, self.related_object_attribute):
+            logger.warning(
+                f"{obj} does not have a related attribute {self.related_object_attribute} to count for tab label."
+            )
+            return super().render_label(context)
+
+        try:
+            related_obj_count = getattr(obj, self.related_object_attribute).count()
+            return format_html(
+                "{} {}",
+                self.label,
+                render_to_string("utilities/templatetags/badge.html", badge(related_obj_count)),
+            )
+        except AttributeError:
+            logger.warning(
+                f"{obj}'s attribute {self.related_object_attribute} is not a related manager to count for tab label."
+            )
+            return super().render_label(context)
 
 
 class Panel(Component):
@@ -634,10 +705,13 @@ class ObjectsTablePanel(Panel):
         hide_hierarchy_ui=False,
         related_field_name=None,
         enable_bulk_actions=False,
+        tab_id=None,
         body_wrapper_template_path="components/panel/body_wrapper_table.html",
         body_content_template_path="components/panel/body_content_objects_table.html",
         header_extra_content_template_path="components/panel/header_extra_content_table.html",
         footer_content_template_path="components/panel/footer_content_table.html",
+        footer_buttons=None,
+        form_id=None,
         **kwargs,
     ):
         """Instantiate an ObjectsTable panel.
@@ -647,10 +721,14 @@ class ObjectsTablePanel(Panel):
                 Table (`BaseTable`) instance. Mutually exclusive with `table_class`, `table_filter`, `table_attribute`.
             table_class (obj): The table class that will be instantiated and rendered e.g. CircuitTable, DeviceTable.
                 Mutually exclusive with `context_table_key`.
-            table_filter (str, optional): The name of the filter to apply to the queryset to initialize the table class.
+            table_filter (str, list, optional): The filter(s) to apply to the queryset to initialize the table class.
                 For example, in a LocationType detail view, for an ObjectsTablePanel of related Locations, this would
                 be `location_type`, because `Location.objects.filter(location_type=obj)` gives the desired queryset.
                 Mutually exclusive with `table_attribute`.
+                For example, in ProviderNetwork detail view, for an ObjectsTablePanel of related Circuits, this would
+                be `["circuit_termination_a__provider_network", "circuit_termination_z__provider_network"]` because
+                `Circuit.objects.filter(Q(circuit_termination_a__provider_network=instance)
+                | Q(circuit_termination_z__provider_network=instance))` gives the desired queryset.
             table_attribute (str, optional): The attribute of the detail view instance that contains the queryset to
                 initialize the table class. e.g. `dynamic_groups`.
                 Mutually exclusive with `table_filter`.
@@ -663,9 +741,7 @@ class ObjectsTablePanel(Panel):
             table_title (str, optional): The title to display in the panel heading for the table.
                 If None, defaults to the plural verbose name of the table model.
             include_columns (list, optional): A list of field names to include in the table display.
-                If provided, only these fields will be displayed in the table.
             exclude_columns (list, optional): A list of field names to exclude from the table display.
-                Mutually exclusive with `include_columns`.
             add_button_route (str, optional): The route used to generate the "add" button URL. Defaults to "default",
                 which uses the default table's model `add` route.
             add_permissions (list, optional): A list of permissions required for the "add" button to be displayed.
@@ -675,6 +751,11 @@ class ObjectsTablePanel(Panel):
                 to the base model. Defaults to the same as `table_filter` if unset. Used to populate URLs.
             enable_bulk_actions (bool, optional): Show the pk toggle columns on the table if the user has the
                 appropriate permissions.
+            tab_id (str, optional): The ID of the tab this panel belongs to. Used to append to a `return_url` when
+                users navigate away from the tab and redirect them back to the correct one.
+            footer_buttons (list, optional): A list of Button or FormButton components to render in the panel footer.
+                These buttons typically perform actions like bulk delete, edit, or custom form submission.
+            form_id (str, optional): A unique ID for this table's form; used to set the `data-form-id` attribute on each `FormButton`.
         """
         if context_table_key and any(
             [
@@ -698,6 +779,8 @@ class ObjectsTablePanel(Panel):
             raise ValueError("You can only specify either `table_filter` or `table_attribute`")
         if table_class and not (table_filter or table_attribute):
             raise ValueError("You must specify either `table_filter` or `table_attribute`")
+        if table_attribute and not related_field_name:
+            raise ValueError("You must provide a `related_field_name` when specifying `table_attribute`")
         self.table_filter = table_filter
         self.table_attribute = table_attribute
         self.select_related_fields = select_related_fields
@@ -705,8 +788,6 @@ class ObjectsTablePanel(Panel):
         self.order_by_fields = order_by_fields
         self.table_title = table_title
         self.max_display_count = max_display_count
-        if exclude_columns and include_columns:
-            raise ValueError("You can only specify either `exclude_columns` or `include_columns`")
         self.include_columns = include_columns
         self.exclude_columns = exclude_columns
         self.add_button_route = add_button_route
@@ -714,6 +795,9 @@ class ObjectsTablePanel(Panel):
         self.hide_hierarchy_ui = hide_hierarchy_ui
         self.related_field_name = related_field_name
         self.enable_bulk_actions = enable_bulk_actions
+        self.tab_id = tab_id
+        self.footer_buttons = footer_buttons
+        self.form_id = form_id
 
         super().__init__(
             body_wrapper_template_path=body_wrapper_template_path,
@@ -734,6 +818,8 @@ class ObjectsTablePanel(Panel):
         request = context["request"]
         related_field_name = self.related_field_name or self.table_filter or obj._meta.model_name
         return_url = context.get("return_url", obj.get_absolute_url())
+        if self.tab_id:
+            return_url += f"?tab={self.tab_id}"
 
         if self.add_button_route == "default":
             body_content_table_class = self.table_class or context[self.context_table_key].__class__
@@ -763,6 +849,7 @@ class ObjectsTablePanel(Panel):
         request = context["request"]
         if self.context_table_key:
             body_content_table = context.get(self.context_table_key)
+            body_content_table_model = body_content_table.Meta.model
         else:
             body_content_table_class = self.table_class
             body_content_table_model = body_content_table_class.Meta.model
@@ -771,7 +858,16 @@ class ObjectsTablePanel(Panel):
             if self.table_attribute:
                 body_content_table_queryset = getattr(instance, self.table_attribute)
             else:
-                body_content_table_queryset = body_content_table_model.objects.filter(**{self.table_filter: instance})
+                if isinstance(self.table_filter, str):
+                    table_filters = [self.table_filter]
+                elif isinstance(self.table_filter, list):
+                    table_filters = self.table_filter
+                else:
+                    table_filters = []
+                query = Q()
+                for table_filter in table_filters:
+                    query = query | Q(**{table_filter: instance})
+                body_content_table_queryset = body_content_table_model.objects.filter(query)
 
             body_content_table_queryset = body_content_table_queryset.restrict(request.user, "view")
             if self.select_related_fields:
@@ -786,15 +882,22 @@ class ObjectsTablePanel(Panel):
             body_content_table = body_content_table_class(
                 body_content_table_queryset, hide_hierarchy_ui=self.hide_hierarchy_ui
             )
+            if self.tab_id and "actions" in body_content_table.columns:
+                # Use the `self.tab_id`, if it exists, to determine the correct return URL for the table
+                # to redirect the user back to the correct tab after editing/deleteing an object
+                body_content_table.columns["actions"].column.extra_context["return_url_extra"] = f"?tab={self.tab_id}"
 
-        if self.exclude_columns or self.include_columns:
+        if self.exclude_columns:
             for column in body_content_table.columns:
-                if (self.exclude_columns and column.name in self.exclude_columns) or (
-                    self.include_columns and column.name not in self.include_columns
-                ):
+                if column.name in self.exclude_columns:
                     body_content_table.columns.hide(column.name)
-                else:
-                    body_content_table.columns.show(column.name)
+
+        if self.include_columns:
+            for column in self.include_columns:
+                if column not in body_content_table.base_columns:
+                    raise ValueError(f"You are specifying a non-existent column `{column}`")
+                body_content_table.columns.show(column)
+
         # Enable bulk action toggle if the user has appropriate permissions
         user = request.user
         if self.enable_bulk_actions and (
@@ -806,16 +909,27 @@ class ObjectsTablePanel(Panel):
         per_page = self.max_display_count if self.max_display_count is not None else get_paginate_count(request)
         paginate = {"paginator_class": EnhancedPaginator, "per_page": per_page}
         RequestConfig(request, paginate).configure(body_content_table)
-        more_queryset_count = max(body_content_table.data.data.count() - per_page, 0)
+        try:
+            more_queryset_count = max(body_content_table.data.data.count() - per_page, 0)
+        except TypeError:
+            more_queryset_count = max(len(body_content_table.data.data) - per_page, 0)
 
         obj = get_obj_from_context(context)
         body_content_table_model = body_content_table.Meta.model
         related_field_name = self.related_field_name or self.table_filter or obj._meta.model_name
 
+        list_url = getattr(self.table_class, "list_url", None)
+        if not list_url:
+            list_url = get_route_for_model(body_content_table_model, "list")
+
         try:
-            list_route = reverse(get_route_for_model(body_content_table_model, "list"))
-            body_content_table_list_url = f"{list_route}?{related_field_name}={obj.pk}"
+            list_route = reverse(list_url)
         except NoReverseMatch:
+            list_route = None
+
+        if list_route:
+            body_content_table_list_url = f"{list_route}?{related_field_name}={obj.pk}"
+        else:
             body_content_table_list_url = None
 
         body_content_table_add_url = self._get_table_add_url(context)
@@ -827,6 +941,8 @@ class ObjectsTablePanel(Panel):
             "body_content_table_list_url": body_content_table_list_url,
             "body_content_table_verbose_name": body_content_table_model._meta.verbose_name,
             "body_content_table_verbose_name_plural": body_content_table_verbose_name_plural,
+            "footer_buttons": self.footer_buttons,
+            "form_id": self.form_id,
             "more_queryset_count": more_queryset_count,
         }
 
@@ -928,7 +1044,7 @@ class KeyValueTablePanel(Panel):
           the display (returning `""` instead of a placeholder).
 
         There is a lot of "intelligence" built in to this method to handle various data types, including:
-
+        - Instances of `TreeModel` will display the full path from root to node (using `render_ancestor_hierarchy()`)
         - Instances of `Status`, `Role` and similar models will be represented as an appropriately-colored hyperlinked
           badge (using `hyperlinked_object_with_color()`)
         - Instances of `Tenant` will be hyperlinked and will also display their hyperlinked `TenantGroup` if any
@@ -951,6 +1067,9 @@ class KeyValueTablePanel(Panel):
 
         elif isinstance(value, bool):
             return render_boolean(value)
+
+        elif isinstance(value, TreeModel):
+            display = render_ancestor_hierarchy(value)
 
         elif isinstance(value, models.Model):
             if hasattr(value, "color"):
@@ -1081,6 +1200,12 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             field_instance = obj._meta.get_field(key)
         except FieldDoesNotExist:
             field_instance = None
+
+        if key in self.value_transforms:
+            display = value
+            for transform in self.value_transforms[key]:
+                display = transform(display)
+            return display
 
         if key == "_hierarchy":
             return render_ancestor_hierarchy(value)
@@ -1754,6 +1879,7 @@ class _ObjectDetailContactsTab(Tab):
                     weight=100,
                     table_class=AssociatedContactsTable,
                     table_attribute="associated_contacts",
+                    related_field_name="assigned_object_id",
                     order_by_fields=["role__name"],
                     enable_bulk_actions=True,
                     max_display_count=100,  # since there isn't a separate list view for ContactAssociations!

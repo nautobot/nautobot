@@ -33,6 +33,7 @@ class SupportedDataRate(PrimaryModel):
         blank=True,
         null=True,
         help_text="The Modulation and Coding Scheme (MCS) index is a value used in wireless communications to define the modulation type, coding rate, and number of spatial streams used in a transmission.",
+        verbose_name="Modulation and Coding Scheme (MCS) Index",
     )
 
     class Meta:
@@ -61,8 +62,16 @@ class RadioProfile(PrimaryModel):
         choices=RadioProfileFrequencyChoices,
         blank=True,
     )
-    tx_power_min = models.IntegerField(blank=True, null=True)
-    tx_power_max = models.IntegerField(blank=True, null=True)
+    tx_power_min = models.IntegerField(
+        blank=True,
+        null=True,
+        verbose_name="Transmit Power Minimum",
+    )
+    tx_power_max = models.IntegerField(
+        blank=True,
+        null=True,
+        verbose_name="Transmit Power Maximum",
+    )
     channel_width = JSONArrayField(
         base_field=models.IntegerField(choices=RadioProfileChannelWidthChoices),
         blank=True,
@@ -80,7 +89,11 @@ class RadioProfile(PrimaryModel):
         blank=True,
     )
     regulatory_domain = models.CharField(max_length=CHARFIELD_MAX_LENGTH, choices=RadioProfileRegulatoryDomainChoices)
-    rx_power_min = models.IntegerField(blank=True, null=True)
+    rx_power_min = models.IntegerField(
+        blank=True,
+        null=True,
+        verbose_name="Recieve Power Minimum",
+    )
 
     class Meta:
         ordering = ["name"]

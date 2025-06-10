@@ -37,6 +37,7 @@ urlpatterns = [
     # Apps
     path("circuits/", include("nautobot.circuits.urls")),
     path("cloud/", include("nautobot.cloud.urls")),
+    path("data-validation/", include("nautobot.data_validation.urls")),
     path("dcim/", include("nautobot.dcim.urls")),
     path("extras/", include("nautobot.extras.urls")),
     path("ipam/", include("nautobot.ipam.urls")),
@@ -46,7 +47,6 @@ urlpatterns = [
     path("users/", include("nautobot.users.urls", "users")),
     path("virtualization/", include("nautobot.virtualization.urls")),
     path("wireless/", include("nautobot.wireless.urls")),
-    path("data-validation-engine/", include("nautobot.nautobot_data_validation_engine.urls")),
     # API
     path("api/", include("nautobot.core.api.urls")),
     # GraphQL

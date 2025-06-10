@@ -2,7 +2,7 @@ import datetime
 import json
 import logging
 import re
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, quote_plus
 
 from django import template
 from django.conf import settings
@@ -136,7 +136,9 @@ def pre_tag(value):
         >>> pre_tag("hello")
         '<pre>hello</pre>'
     """
-    return format_html("<pre>{}</pre>", value)
+    if value is not None:
+        return format_html("<pre>{}</pre>", value)
+    return HTML_NONE
 
 
 @library.filter()
@@ -695,20 +697,120 @@ def render_content_types(value):
 @library.filter()
 @register.filter()
 def render_ancestor_hierarchy(value):
-    """Renders a nested HTML list representing the hierarchy of ancestors for a given object."""
+    """Renders a nested HTML list representing the hierarchy of ancestors for a given object, with an optional location type."""
+
+    if not value or not hasattr(value, "ancestors"):
+        return HTML_NONE
+
     result = format_html('<ul class="tree-hierarchy">')
     append_to_result = format_html("</ul>")
+
     for ancestor in value.ancestors():
         nestable_tag = format_html('<span title="nestable">↺</span>' if getattr(ancestor, "nestable", False) else "")
-        result += format_html(
-            "<li>{value} {nestable_tag}<ul>", value=hyperlinked_object(ancestor, "name"), nestable_tag=nestable_tag
-        )
+
+        if getattr(ancestor, "location_type", None):
+            location_type = hyperlinked_object(ancestor.location_type, "name")
+            location_type = format_html("({})", location_type) if location_type else ""
+            result += format_html(
+                "<li>{value} {location_type} {nestable_tag}<ul>",
+                value=hyperlinked_object(ancestor, "name"),
+                location_type=location_type,
+                nestable_tag=nestable_tag,
+            )
+        else:
+            result += format_html(
+                "<li>{value} {nestable_tag} <ul>",
+                value=hyperlinked_object(ancestor, "name"),
+                nestable_tag=nestable_tag,
+            )
         append_to_result += format_html("</ul></li>")
-    nestable_tag = format_html('<span title="nestable">↺</span>' if getattr(value, "nestable", False) else "")
-    result += format_html("<li><strong>{value} {nestable_tag}</strong></li>", value=value, nestable_tag=nestable_tag)
+
+    nestable_tag = format_html('<span title="nestable">↺</span>') if getattr(value, "nestable", False) else ""
+
+    if getattr(value, "location_type", None):
+        location_type = hyperlinked_object(value.location_type, "name")
+        location_type = format_html("({})", location_type) if location_type else ""
+        result += format_html(
+            "<li><strong>{value} {location_type} {nestable_tag}</strong></li>",
+            value=hyperlinked_object(value, "name"),
+            location_type=location_type,
+            nestable_tag=nestable_tag,
+        )
+
+    else:
+        result += format_html(
+            "<li><strong>{value} {nestable_tag}</strong></li>",
+            value=hyperlinked_object(value, "name"),
+            nestable_tag=nestable_tag,
+        )
     result += append_to_result
 
     return result
+
+
+@library.filter()
+@register.filter()
+def render_address(address):
+    if address:
+        map_link = format_html(
+            '<a href="https://maps.google.com/?q={}" target="_blank" class="btn btn-primary btn-xs">'
+            '<i class="mdi mdi-map-marker"></i> Map it</a>',
+            quote_plus(address),
+        )
+        address = format_html_join("", "{}<br>", ((line,) for line in address.split("\n")))
+        return format_html('<div class="pull-right noprint">{}</div>{}', map_link, address)
+    return HTML_NONE
+
+
+@library.filter()
+@register.filter()
+def render_button_class(value):
+    """
+    Render a string as a styled HTML button using Bootstrap classes.
+
+    Args:
+        value (str): A string representing the button class (e.g., 'primary').
+
+    Returns:
+        str: HTML string for a button with the given class.
+
+    Example:
+        >>> render_button_class("primary")
+        '<button class="btn btn-primary">primary</button>'
+    """
+    if value:
+        base = value.split()[0]
+        return format_html('<button class="btn btn-{}">{}</button>', base.lower(), base.capitalize())
+    return ""
+
+
+def render_job_run_link(value):
+    """
+    Render the job as a hyperlink to its 'run' view using the class_path.
+
+    Args:
+        value (Job): The job object.
+
+    Returns:
+        str: HTML anchor tag linking to the job's run view.
+    """
+    if hasattr(value, "class_path"):
+        url = reverse("extras:job_run_by_class_path", kwargs={"class_path": value.class_path})
+        return format_html('<a href="{}">{}</a>', url, value)
+    return str(value)
+
+
+@library.filter()
+@register.filter()
+def label_list(value, suffix=""):
+    """Render a list of values with optional suffix (like 'MHz') as span labels."""
+    if not value:
+        return HTML_NONE
+    return format_html_join(
+        " ",
+        '<span class="label label-default">{0}{1}</span>',
+        ((item, suffix) for item in value),
+    )
 
 
 #

@@ -31,7 +31,7 @@ E005 = Error(
 )
 
 E006 = Error(
-    "The Data Validation Engine app has been moved directly into Nautobot Core.  Please remove 'nautobot_data_validation_engine' from PLUGINS and PLUGINS_CONFIG in your nautobot_config.py.  You should also uninstall 'nautobot-data-validation-engine' from the python environment.",
+    "The Data Validation Engine app has been moved directly into Nautobot Core.  Please remove 'nautobot_data_validation_engine' from PLUGINS and PLUGINS_CONFIG in your nautobot_config.py.  After running Nautobot migrations successfully, you can then also uninstall 'nautobot-data-validation-engine' from the Python environment.",
     id="nautobot.core.E006",
     obj=settings,
 )
@@ -149,6 +149,7 @@ def check_sanitizer_patterns(app_configs, **kwargs):
 
 @register(Tags.compatibility)
 def check_data_validation_engine_installed(app_configs, **kwargs):
-    if "nautobot_data_validation_engine" in settings.PLUGINS:
+    app_name = "nautobot_data_validation_engine"
+    if app_name in settings.PLUGINS or app_name in settings.PLUGINS_CONFIG:
         return [E006]
     return []

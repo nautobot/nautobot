@@ -1,5 +1,7 @@
 import logging
 
+from django.conf import settings
+from django.db import models
 from rest_framework.utils.encoders import JSONEncoder
 
 logger = logging.getLogger(__name__)
@@ -26,10 +28,9 @@ class NautobotKombuJSONEncoder(JSONEncoder):
     def default(self, obj):
         # Import here to avoid django.core.exceptions.ImproperlyConfigured Error.
         # Core App is not set up yet if we import this at the top of the file.
-        from nautobot.core.models import BaseModel
         from nautobot.core.models.managers import TagsManager
 
-        if isinstance(obj, BaseModel):
+        if isinstance(obj, models.Model):
             cls = obj.__class__
             module = cls.__module__
             qual_name = ".".join([module, cls.__qualname__])  # fully qualified dotted import path
@@ -40,6 +41,12 @@ class NautobotKombuJSONEncoder(JSONEncoder):
                 # TODO: change to natural key to provide additional context if object is deleted from the db
                 "display": getattr(obj, "display", str(obj)),
             }
+
+            if "nautobot_version_control" in settings.PLUGINS:
+                from nautobot_version_control.utils import active_branch  # pylint: disable=import-error
+
+                data["__nautobot_branch__"] = active_branch()
+
             return data
 
         elif isinstance(obj, set):

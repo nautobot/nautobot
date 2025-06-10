@@ -54,7 +54,7 @@ class ChoiceField(serializers.Field):
         return super().validate_empty_values(data)
 
     def to_representation(self, value):
-        if value == "":
+        if value == "" and "" not in self._choices:
             return None
         return OrderedDict([("value", value), ("label", self._choices[value])])
 
@@ -125,6 +125,33 @@ class ContentTypeField(RelatedField):
 
     def to_representation(self, value):
         return f"{value.app_label}.{value.model}"
+
+
+@extend_schema_field(str)
+class GroupField(RelatedField):
+    """
+    Represent a Group as its name
+    """
+
+    default_error_messages = {
+        "does_not_exist": "Group cannot be found using primary key or name {group}",
+        "invalid": "Invalid value. Specify a group using its primary key or name",
+    }
+
+    def to_internal_value(self, data):
+        try:
+            if isinstance(data, str):
+                return self.queryset.get(name=data)
+            else:
+                return self.queryset.get(pk=data)
+        except ObjectDoesNotExist:
+            self.fail("does_not_exist", group=data)
+        except (AttributeError, TypeError, ValueError):
+            self.fail("invalid")
+        return None
+
+    def to_representation(self, value):
+        return value.name
 
 
 class LaxURLField(URLField):

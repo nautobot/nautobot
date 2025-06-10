@@ -4,18 +4,19 @@ from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.functional import cached_property
-from django_tables2 import RequestConfig
 
+from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic
-from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.views import ObjectConfigContextView
 from nautobot.ipam.models import IPAddress, Service
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable
+from nautobot.virtualization.api import serializers
 
 from . import filters, forms, tables
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
@@ -25,15 +26,15 @@ from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterf
 #
 
 
-class ClusterTypeListView(generic.ObjectListView):
+class ClusterTypeUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ClusterTypeBulkEditForm
+    filterset_class = filters.ClusterTypeFilterSet
+    filterset_form_class = forms.ClusterTypeFilterForm
+    form_class = forms.ClusterTypeForm
+    serializer_class = serializers.ClusterTypeSerializer
+    table_class = tables.ClusterTypeTable
     queryset = ClusterType.objects.all()
-    filterset = filters.ClusterTypeFilterSet
-    filterset_form = forms.ClusterTypeFilterForm
-    table = tables.ClusterTypeTable
 
-
-class ClusterTypeView(generic.ObjectView):
-    queryset = ClusterType.objects.all()
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
@@ -48,28 +49,8 @@ class ClusterTypeView(generic.ObjectView):
                 table_filter="cluster_type",
                 exclude_columns=["cluster_type"],
             ),
-        ),
+        )
     )
-
-
-class ClusterTypeEditView(generic.ObjectEditView):
-    queryset = ClusterType.objects.all()
-    model_form = forms.ClusterTypeForm
-
-
-class ClusterTypeDeleteView(generic.ObjectDeleteView):
-    queryset = ClusterType.objects.all()
-
-
-class ClusterTypeBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = ClusterType.objects.all()
-    table = tables.ClusterTypeTable
-
-
-class ClusterTypeBulkDeleteView(generic.BulkDeleteView):
-    queryset = ClusterType.objects.all()
-    table = tables.ClusterTypeTable
-    filterset = filters.ClusterTypeFilterSet
 
 
 #
@@ -77,50 +58,31 @@ class ClusterTypeBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class ClusterGroupListView(generic.ObjectListView):
-    queryset = ClusterGroup.objects.all()
-    filterset = filters.ClusterGroupFilterSet
-    filterset_form = forms.ClusterGroupFilterForm
-    table = tables.ClusterGroupTable
-
-
-class ClusterGroupView(generic.ObjectView):
-    queryset = ClusterGroup.objects.all()
-
-    def get_extra_context(self, request, instance):
-        # Clusters
-        clusters = Cluster.objects.restrict(request.user, "view").filter(cluster_group=instance)
-
-        cluster_table = tables.ClusterTable(clusters)
-        cluster_table.columns.hide("cluster_group")
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(cluster_table)
-
-        return {"cluster_table": cluster_table, **super().get_extra_context(request, instance)}
-
-
-class ClusterGroupEditView(generic.ObjectEditView):
-    queryset = ClusterGroup.objects.all()
-    model_form = forms.ClusterGroupForm
-
-
-class ClusterGroupDeleteView(generic.ObjectDeleteView):
+class ClusterGroupUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ClusterGroupBulkEditForm
+    filterset_class = filters.ClusterGroupFilterSet
+    filterset_form_class = forms.ClusterGroupFilterForm
+    form_class = forms.ClusterGroupForm
+    serializer_class = serializers.ClusterGroupSerializer
+    table_class = tables.ClusterGroupTable
     queryset = ClusterGroup.objects.all()
 
-
-class ClusterGroupBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = ClusterGroup.objects.all()
-    table = tables.ClusterGroupTable
-
-
-class ClusterGroupBulkDeleteView(generic.BulkDeleteView):
-    queryset = ClusterGroup.objects.all()
-    table = tables.ClusterGroupTable
-    filterset = filters.ClusterGroupFilterSet
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                table_class=tables.ClusterTable,
+                table_filter="cluster_group",
+                exclude_columns=["cluster_group"],
+            ),
+        )
+    )
 
 
 #
@@ -128,52 +90,60 @@ class ClusterGroupBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class ClusterListView(generic.ObjectListView):
-    permission_required = "virtualization.view_cluster"
-    queryset = Cluster.objects.all()
-    table = tables.ClusterTable
-    filterset = filters.ClusterFilterSet
-    filterset_form = forms.ClusterFilterForm
-
-
-class ClusterView(generic.ObjectView):
+class ClusterUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ClusterBulkEditForm
+    filterset_class = filters.ClusterFilterSet
+    filterset_form_class = forms.ClusterFilterForm
+    form_class = forms.ClusterForm
+    serializer_class = serializers.ClusterSerializer
+    table_class = tables.ClusterTable
     queryset = Cluster.objects.all()
 
-    def get_extra_context(self, request, instance):
-        devices = Device.objects.restrict(request.user, "view").filter(cluster=instance)
-        device_table = DeviceTable(list(devices), orderable=False)
-        if request.user.has_perm("virtualization.change_cluster"):
-            device_table.columns.show("pk")
-
-        return {"device_table": device_table, **super().get_extra_context(request, instance)}
-
-
-class ClusterEditView(generic.ObjectEditView):
-    template_name = "virtualization/cluster_edit.html"
-    queryset = Cluster.objects.all()
-    model_form = forms.ClusterForm
-
-
-class ClusterDeleteView(generic.ObjectDeleteView):
-    queryset = Cluster.objects.all()
-
-
-class ClusterBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Cluster.objects.all()
-    table = tables.ClusterTable
-
-
-class ClusterBulkEditView(generic.BulkEditView):
-    queryset = Cluster.objects.all()
-    filterset = filters.ClusterFilterSet
-    table = tables.ClusterTable
-    form = forms.ClusterBulkEditForm
-
-
-class ClusterBulkDeleteView(generic.BulkDeleteView):
-    queryset = Cluster.objects.all()
-    filterset = filters.ClusterFilterSet
-    table = tables.ClusterTable
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                table_class=DeviceTable,
+                table_filter="cluster",
+                table_title="Host Devices",
+                enable_bulk_actions=True,
+                add_button_route=None,
+                form_id="device_form",
+                footer_buttons=[
+                    object_detail.FormButton(
+                        form_id="device_form",
+                        link_name="virtualization:cluster_remove_devices",
+                        label="Remove Devices",
+                        weight=100,
+                        color=ButtonActionColorChoices.DELETE,
+                        icon="mdi-trash-can-outline",
+                        size="xs",
+                    ),
+                    object_detail.Button(
+                        link_name="virtualization:cluster_add_devices",
+                        label="Add Devices",
+                        weight=200,
+                        color=ButtonActionColorChoices.ADD,
+                        icon="mdi-plus",
+                        size="xs",
+                    ),
+                ],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.VirtualMachineTable,
+                table_filter="cluster",
+                add_button_route=None,
+            ),
+        )
+    )
 
 
 class ClusterAddDevicesView(generic.ObjectEditView):

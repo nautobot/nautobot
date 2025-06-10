@@ -48,7 +48,7 @@ class ClearableFileInputTestCase(SeleniumTestCase):
         """
         self._assert_file_picker(
             uri_to_visit=reverse("dcim:devicetype_add"),
-            page_loaded_confirmation="Device Type",
+            page_loaded_confirmation="Add a new device type",
             file_input_selector_id="id_front_image",
         )
 
