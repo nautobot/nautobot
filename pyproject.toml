@@ -225,7 +225,7 @@ django-test-migrations = "~1.4.0"
 # OpenAPI validator to test that our generated schema is valid
 openapi-spec-validator = "~0.7.2"
 # Integration Tests
-requests = "~2.32.3"
+requests = "~2.32.4"
 # Selenium web drivers for live integration testing
 selenium = "~4.27.1"
 # Abstraction layer for working with Selenium
