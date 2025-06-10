@@ -157,13 +157,13 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
     circuit_position = models.PositiveIntegerField(
         null=True,
         blank=True,
-        help_text="Circuit position in panel (1, 2, 3, etc.)"
+        help_text="Starting circuit position in panel"
     )
     breaker_poles = models.PositiveSmallIntegerField(
         choices=PowerFeedBreakerPoleChoices,
         blank=True,
         null=True,
-        help_text="Number of breaker poles (1, 2, or 3)"
+        help_text="Number of breaker poles"
     )
     available_power = models.PositiveIntegerField(default=0, editable=False)
     comments = models.TextField(blank=True)
@@ -191,6 +191,19 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
     def __str__(self):
         return self.name
 
+    def get_occupied_positions(self):
+        """Get set of circuit positions occupied by this feed."""
+        if not (self.circuit_position and self.breaker_poles):
+            return set()
+
+        return set(self.circuit_position + (i * 2) for i in range(self.breaker_poles))
+
+    @property
+    def occupied_positions(self):
+        """All circuit positions occupied by this feed as comma-separated string."""
+        positions = self.get_occupied_positions()
+        return ",".join(map(str, sorted(positions))) if positions else ""
+
     def clean(self):
         super().clean()
 
@@ -217,6 +230,28 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
             # Cannot feed into the same panel
             if self.destination_panel == self.power_panel:
                 raise ValidationError({"destination_panel": "A power feed cannot connect a panel to itself"})
+
+        # Circuit position validation
+        if self.circuit_position is not None and self.breaker_poles is not None:
+            self._validate_circuit_conflicts()
+
+    def _validate_circuit_conflicts(self):
+        """Validate no circuit position conflicts with existing feeds."""
+        new_positions = self.get_occupied_positions()
+
+        # Check existing feeds on same panel
+        conflicts = PowerFeed.objects.filter(
+            power_panel=self.power_panel,
+            circuit_position__isnull=False,
+            breaker_poles__isnull=False
+        ).exclude(pk=self.pk if self.pk else None)
+
+        for feed in conflicts:
+            if new_positions.intersection(feed.get_occupied_positions()):
+                raise ValidationError({
+                    'circuit_position': f'Circuit position {self.circuit_position} conflicts with '
+                    f'feed "{feed.name}" (occupies {feed.occupied_positions})'
+                })
 
     def save(self, *args, **kwargs):
         # Cache the available_power property on the instance
