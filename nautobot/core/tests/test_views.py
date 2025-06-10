@@ -96,8 +96,8 @@ class HomeViewTestCase(TestCase):
         difference = [model for model in existing_models if model not in global_searchable_models]
         if difference:
             self.fail(
-                f"Existing model/models {','.join(difference)} are not included in the searchable_models attribute of the app config.\n"
-                "If you do not want the models to be searchable, please include them in the GLOBAL_SEARCH_EXCLUDE_LIST constant in nautobot.core.constants."
+                f'Existing model/models {",".join(difference)} are not included in the searchable_models attribute of the app config.\n'
+                'If you do not want the models to be searchable, please include them in the GLOBAL_SEARCH_EXCLUDE_LIST constant in nautobot.core.constants.'
             )
 
     def make_request(self):

@@ -355,7 +355,7 @@ class ToggleColumn(django_tables2.CheckBoxColumn):
     def header(self):
         return mark_safe(  # noqa: S308
             '<input type="checkbox" class="toggle" title="Toggle all" />'
-        )  # suspicious-mark-safe-usage, but this is a static string so it's safe
+        )  # noqa: S308  # suspicious-mark-safe-usage, but this is a static string so it's safe
 
 
 class BooleanColumn(django_tables2.Column):
@@ -476,7 +476,7 @@ class ApprovalButtonsColumn(django_tables2.TemplateColumn):
                 "changelog_route": changelog_route,
                 "approval_route": approval_route,
                 "deny_route": deny_route,
-                "have_permission": f"perms.{app_label}.change_{(model._meta.model_name,)}",
+                "have_permission": f"perms.{app_label}.change_{model._meta.model_name,}",
             }
         )
 

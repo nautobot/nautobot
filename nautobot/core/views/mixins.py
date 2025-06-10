@@ -857,7 +857,7 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
             if hasattr(form, "save_note") and callable(form.save_note):
                 form.save_note(instance=obj, user=request.user)
 
-            msg = f"{'Created' if object_created else 'Modified'} {queryset.model._meta.verbose_name}"
+            msg = f'{"Created" if object_created else "Modified"} {queryset.model._meta.verbose_name}'
             self.logger.info(f"{msg} {obj} (PK: {obj.pk})")
             try:
                 msg = format_html(

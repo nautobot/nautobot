@@ -1124,7 +1124,7 @@ def custom_branding_or_static(branding_asset, static_asset):
     branding has been configured in settings, else it returns stock branding via static.
     """
     if settings.BRANDING_FILEPATHS.get(branding_asset):
-        url = f"{settings.MEDIA_URL}{settings.BRANDING_FILEPATHS.get(branding_asset)}"
+        url = f"{ settings.MEDIA_URL }{ settings.BRANDING_FILEPATHS.get(branding_asset) }"
     else:
         url = StaticNode.handle_simple(static_asset)
     return add_nautobot_version_query_param_to_url(url)

@@ -463,7 +463,8 @@ class CustomField(
         blank=True,
         null=True,
         help_text=(
-            'Default value for the field (must be a JSON value). Encapsulate strings with double quotes (e.g. "Foo").'
+            "Default value for the field (must be a JSON value). Encapsulate strings with double quotes (e.g. "
+            '"Foo").'
         ),
     )
     weight = models.PositiveSmallIntegerField(

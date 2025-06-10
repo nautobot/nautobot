@@ -117,7 +117,8 @@ class GitRepository(PrimaryModel):
 
         if self.present_in_database and self.slug != self.__initial_slug:
             raise ValidationError(
-                f"Slug cannot be changed once set. Current slug is {self.__initial_slug}, requested slug is {self.slug}"
+                f"Slug cannot be changed once set. Current slug is {self.__initial_slug}, "
+                f"requested slug is {self.slug}"
             )
 
         if not self.present_in_database:

@@ -367,9 +367,9 @@ class ObjectPermissionTest(APIViewTestCases.APIViewTestCase):
 
         for i in range(3):
             objectpermission = ObjectPermission.objects.create(
-                name=f"Permission {i + 1}",
+                name=f"Permission {i+1}",
                 actions=["view", "add", "change", "delete"],
-                constraints={"name": f"TEST{i + 1}"},
+                constraints={"name": f"TEST{i+1}"},
             )
             objectpermission.object_types.add(object_type)
             objectpermission.groups.add(groups[i])

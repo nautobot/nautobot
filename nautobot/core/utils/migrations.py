@@ -21,7 +21,7 @@ def check_for_duplicates_with_natural_key_fields_in_migration(model_class, natur
     if duplicate_records.exists():
         if len(natural_key_fields) > 1:
             print(
-                f"    Duplicate {model_class.__name__} attributes '{(*natural_key_fields,)}' detected: {list(duplicate_records.values_list(*natural_key_fields))}",
+                f"    Duplicate {model_class.__name__} attributes '{*natural_key_fields,}' detected: {list(duplicate_records.values_list(*natural_key_fields))}",
                 file=sys.stderr,
             )
         else:

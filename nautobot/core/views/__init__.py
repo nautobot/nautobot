@@ -68,7 +68,7 @@ class HomeView(AccessMixin, TemplateView):
                 context[key] = data
 
         # Create standalone template
-        path = f"{details['template_path']}{details['custom_template']}"
+        path = f'{details["template_path"]}{details["custom_template"]}'
         if os.path.isfile(path):
             with open(path, "r") as f:
                 html = f.read()

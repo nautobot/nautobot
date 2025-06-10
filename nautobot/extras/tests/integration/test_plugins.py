@@ -134,13 +134,13 @@ class AppDocumentationTest(SeleniumTestCase):
 
     def test_object_edit_help_provided(self):
         """The ExampleModel object provides model documentation, this test ensures the help link is rendered."""
-        self.browser.visit(f"{self.live_server_url}{reverse('plugins:example_app:examplemodel_add')}")
+        self.browser.visit(f'{self.live_server_url}{reverse("plugins:example_app:examplemodel_add")}')
 
         self.assertTrue(self.browser.links.find_by_partial_href("example_app/docs/models/examplemodel.html"))
 
     def test_object_edit_help_not_provided(self):
         """The AnotherExampleModel object doesn't provide model documentation, this test ensures no help link is provided."""
-        self.browser.visit(f"{self.live_server_url}{reverse('plugins:example_app:anotherexamplemodel_add')}")
+        self.browser.visit(f'{self.live_server_url}{reverse("plugins:example_app:anotherexamplemodel_add")}')
 
         self.assertFalse(self.browser.links.find_by_partial_href("example_app/docs/models/anotherexamplemodel.html"))
 
@@ -158,13 +158,13 @@ class AppReturnUrlTestCase(SeleniumTestCase):
 
     def test_app_return_url(self):
         """This test ensures that Apps return url for new objects is the list view."""
-        self.browser.visit(f"{self.live_server_url}{reverse('plugins:example_app:examplemodel_add')}")
+        self.browser.visit(f'{self.live_server_url}{reverse("plugins:example_app:examplemodel_add")}')
 
         form = self.browser.find_by_tag("form")
 
         # Check that the Cancel button is a link to the examplemodel_list view.
         element = form.first.links.find_by_text("Cancel").first
-        self.assertEqual(element["href"], f"{self.live_server_url}{reverse('plugins:example_app:examplemodel_list')}")
+        self.assertEqual(element["href"], f'{self.live_server_url}{reverse("plugins:example_app:examplemodel_list")}')
 
 
 class AppTabsTestCase(SeleniumTestCase):
@@ -193,7 +193,7 @@ class AppTabsTestCase(SeleniumTestCase):
             status=status,
         )
         # Visit the circuit's detail page and check that the tab is visible
-        self.browser.visit(f"{self.live_server_url}{reverse('circuits:circuit', args=[str(circuit.pk)])}")
+        self.browser.visit(f'{self.live_server_url}{reverse("circuits:circuit", args=[str(circuit.pk)])}')
         self.assertTrue(self.browser.is_text_present("App Tab"))
         # Visit the tab link and check the view content
         self.browser.links.find_by_partial_text("Example App Tab")[0].click()
@@ -210,7 +210,7 @@ class AppTabsTestCase(SeleniumTestCase):
         # Set up the required objects:
         device = create_test_device("Test Device")
         # Visit the device's detail page and check that the tab is visible
-        self.browser.visit(f"{self.live_server_url}{reverse('dcim:device', args=[str(device.pk)])}")
+        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device", args=[str(device.pk)])}')
         for tab_i in [1, 2]:
             self.assertTrue(self.browser.is_text_present(f"Example App Tab {tab_i}"))
             # Visit the tab link and check the view content

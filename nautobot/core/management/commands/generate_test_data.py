@@ -374,7 +374,7 @@ class Command(BaseCommand):
                 confirm = input(
                     f"""\
 You have requested a flush of the database before generating new data.
-This will IRREVERSIBLY DESTROY all data in the "{connections[options["database"]].settings_dict["NAME"]}" database,
+This will IRREVERSIBLY DESTROY all data in the "{connections[options['database']].settings_dict['NAME']}" database,
 including all user accounts, and return each table to an empty state.
 Are you SURE you want to do this?
 
