@@ -2525,7 +2525,7 @@ class RelationshipAssociationUIViewSet(ObjectListViewMixin, ObjectDestroyViewMix
     serializer_class = serializers.RelationshipAssociationSerializer
     table_class = tables.RelationshipAssociationTable
     queryset = RelationshipAssociation.objects.all()
-    action_buttons = None
+    action_buttons = ()
 
 
 #
