@@ -505,6 +505,7 @@ class ApprovalWorkflowStageResponseUIViewSet(
     queryset = ApprovalWorkflowStageResponse.objects.all()
     serializer_class = serializers.ApprovalWorkflowStageResponseSerializer
     table_class = tables.ApprovalWorkflowStageResponseTable
+    object_detail_content = None
 
 
 class ApproverDashboardView(ObjectListViewMixin):

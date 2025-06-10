@@ -223,8 +223,8 @@ class ListViewFilterTestCase(SeleniumTestCase):
         # Go to the location list view
         self.browser.visit(f'{self.live_server_url}{reverse("dcim:location_list")}')
         # create a new tag
-        tag = Tag.objects.create(name="Tag1")
-        tag.content_types.set([ContentType.objects.get_for_model(Location)])
+        tag_object = Tag.objects.create(name="Tag1")
+        tag_object.content_types.set([ContentType.objects.get_for_model(Location)])
 
         # Open the filter modal
         self.browser.find_by_id("id__filterbtn").click()
@@ -252,7 +252,7 @@ class ListViewFilterTestCase(SeleniumTestCase):
         # select tag
         self.browser.find_by_xpath(
             "//span[@class='select2-results']//ul[@class='select2-results__options']/li[contains(@class,'select2-results__option') "
-            f"and contains(text(),{tag.name})]"
+            f"and contains(text(),{tag_object.name})]"
         ).click()
 
         apply_btn_xpath = "//div[@id='advanced-filter']//button[@type='submit']"
@@ -261,4 +261,4 @@ class ListViewFilterTestCase(SeleniumTestCase):
         # Model disappears
         self.assertFalse(filter_modal.visible)
         # Assert the choice is applied
-        self.browser.find_by_xpath(f"//li[@class='filter-selection-choice' and contains(text(),{tag.name})]")
+        self.browser.find_by_xpath(f"//li[@class='filter-selection-choice' and contains(text(),{tag_object.name})]")
