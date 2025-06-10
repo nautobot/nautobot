@@ -2123,9 +2123,9 @@ class ModuleFilterSet(
         return queryset.filter(params)
 
     def filter_module_bay(self, queryset, name, value):
-        """Filter module types based on a module bay's module family."""
+        """Filter modules based on a module bay's module family."""
         if value and value.module_family:
-            return queryset.filter(module_family=value.module_family)
+            return queryset.filter(module_type__module_family=value.module_family)
         return queryset
 
     class Meta:
