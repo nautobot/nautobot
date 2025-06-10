@@ -4429,30 +4429,31 @@ class ControllerUIViewSet(NautobotUIViewSet):
         extra_tabs=(
             object_detail.DistinctViewTab(
                 weight=700,
-                tab_id="wirelessnetworks",
-                url_name="dcim:controller_wirelessnetworks",
+                tab_id="wireless_networks",
+                url_name="dcim:controller_wireless_networks",
                 label="Wireless Networks",
-                related_object_attribute="device_group_wireless_network_assignments",
+                related_object_attribute="wireless_network_assignments",
                 panels=(
-                    object_detail.ObjectsTablePanelWithPaginator(
+                    object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
                         weight=100,
                         table_title="Wireless Networks",
                         table_class=ControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
                         table_filter="controller_managed_device_group__controller",
-                        tab_id="device_type",
+                        tab_id="wireless_networks",
                         add_button_route=None,
                         select_related_fields=["wireless_network"],
                         exclude_columns=["controller"],
                         header_extra_content_template_path="dcim/wirelessnetworks_header_extra_content.html",
+                        include_paginator=True,
                     ),
                 ),
             ),
         ),
     )
 
-    @action(detail=True, url_path="wireless-networks", url_name="wirelessnetworks", methods=["get"])
-    def wirelessnetworks(self, request, *args, **kwargs):
+    @action(detail=True, url_path="wireless-networks", url_name="wireless_networks", methods=["get"])
+    def wireless_networks(self, request, *args, **kwargs):
         return Response({})
 
 

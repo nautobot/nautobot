@@ -699,6 +699,7 @@ class ObjectsTablePanel(Panel):
         footer_content_template_path="components/panel/footer_content_table.html",
         footer_buttons=None,
         form_id=None,
+        include_paginator=False,
         **kwargs,
     ):
         """Instantiate an ObjectsTable panel.
@@ -743,6 +744,7 @@ class ObjectsTablePanel(Panel):
             footer_buttons (list, optional): A list of Button or FormButton components to render in the panel footer.
                 These buttons typically perform actions like bulk delete, edit, or custom form submission.
             form_id (str, optional): A unique ID for this table's form; used to set the `data-form-id` attribute on each `FormButton`.
+            include_paginator (bool, optional): If True, renders a paginator in the panel footer.
         """
         if context_table_key and any(
             [
@@ -785,6 +787,7 @@ class ObjectsTablePanel(Panel):
         self.tab_id = tab_id
         self.footer_buttons = footer_buttons
         self.form_id = form_id
+        self.include_paginator = include_paginator
 
         super().__init__(
             body_wrapper_template_path=body_wrapper_template_path,
@@ -922,20 +925,9 @@ class ObjectsTablePanel(Panel):
             "body_content_table_verbose_name_plural": body_content_table_verbose_name_plural,
             "footer_buttons": self.footer_buttons,
             "form_id": self.form_id,
+            "include_paginator": self.include_paginator,
             "more_queryset_count": more_queryset_count,
         }
-
-
-class ObjectsTablePanelWithPaginator(ObjectsTablePanel):
-    """
-    Returns an ObjectsTablePanel with a paginator.
-
-    This class should only be used in DistinctViewTabs where only **one** table is displayed.
-    """
-
-    def __init__(self, *, template_path="components/panel/panel_with_paginator.html", **kwargs):
-        """Initialize the ObjectsTablePanelWithPaginator instance."""
-        super().__init__(template_path=template_path, **kwargs)
 
 
 class KeyValueTablePanel(Panel):

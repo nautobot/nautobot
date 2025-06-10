@@ -1456,7 +1456,10 @@ class Controller(PrimaryModel):
         return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in self.capabilities))
 
     @property
-    def device_group_wireless_network_assignments(self):
+    def wireless_network_assignments(self):
+        """
+        Returns all Controller Managed Device Group Wireless Network Assignment linked to this controller.
+        """
         return ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
             controller_managed_device_group__controller=self
         )

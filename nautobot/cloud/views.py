@@ -88,13 +88,14 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
                 url_name="cloud:cloudnetwork_children",
                 related_object_attribute="children",
                 panels=(
-                    object_detail.ObjectsTablePanelWithPaginator(
+                    object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
                         weight=100,
                         label="Children",
                         table_class=CloudNetworkTable,
                         table_filter="parent",
                         tab_id="children",
+                        include_paginator=True,
                     ),
                 ),
             ),
@@ -105,13 +106,14 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
                 url_name="cloud:cloudnetwork_prefixes",
                 related_object_attribute="prefixes",
                 panels=(
-                    object_detail.ObjectsTablePanelWithPaginator(
+                    object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
                         weight=100,
                         table_class=PrefixTable,
                         table_filter="cloud_networks",
                         exclude_columns=("location_count", "vlan"),
                         tab_id="prefixes",
+                        include_paginator=True,
                     ),
                 ),
             ),
@@ -122,7 +124,7 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
                 url_name="cloud:cloudnetwork_circuits",
                 related_object_attribute="circuit_terminations",
                 panels=(
-                    object_detail.ObjectsTablePanelWithPaginator(
+                    object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
                         weight=100,
                         table_class=CircuitTable,
@@ -130,6 +132,7 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
                         related_field_name="cloud_network",
                         exclude_columns=("circuit_termination_a", "circuit_termination_z"),
                         tab_id="circuits",
+                        include_paginator=True,
                     ),
                 ),
             ),
@@ -140,13 +143,14 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
                 url_name="cloud:cloudnetwork_cloud_services",
                 related_object_attribute="cloud_services",
                 panels=(
-                    object_detail.ObjectsTablePanelWithPaginator(
+                    object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
                         weight=100,
                         table_class=CloudServiceTable,
                         table_filter="cloud_networks",
                         exclude_columns=("cloud_network_count"),
                         tab_id="cloud_services",
+                        include_paginator=True,
                     ),
                 ),
             ),
