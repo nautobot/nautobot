@@ -588,6 +588,7 @@ def common_test_data(cls):
         label="devicemodulebay1",
         description="device test module bay 1 description",
         module_family=cls.module_families[0],
+        requires_first_party_modules=True,
     )
     ModuleBayTemplate.objects.create(
         device_type=device_types[1],
@@ -596,6 +597,7 @@ def common_test_data(cls):
         label="devicemodulebay2",
         description="device test module bay 2 description",
         module_family=cls.module_families[1],
+        requires_first_party_modules=False,
     )
     ModuleBayTemplate.objects.create(
         device_type=device_types[2],
@@ -603,6 +605,7 @@ def common_test_data(cls):
         position=3,
         label="devicemodulebay3",
         description="device test module bay 3 without a module family",
+        requires_first_party_modules=True,
     )
     secrets_groups = (
         SecretsGroup.objects.create(name="Secrets group 1"),
@@ -731,6 +734,7 @@ def common_test_data(cls):
             name=f"Test Filters Module Module Bay {i+1}",
             position=i + 1,
             module_type=module_types[i % 2],
+            requires_first_party_modules=(i % 2 == 0),  # True for even indices, False for odd
         )
 
     module_roles = Role.objects.get_for_model(Module)
@@ -4148,6 +4152,21 @@ class ModuleBayTemplateTestCase(FilterTestCases.FilterTestCase):
     @classmethod
     def setUpTestData(cls):
         common_test_data(cls)
+
+    def test_requires_first_party_modules(self):
+        # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
+        with self.subTest():
+            params = {"requires_first_party_modules": True}
+            self.assertQuerysetEqual(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(requires_first_party_modules=True),
+            )
+        with self.subTest():
+            params = {"requires_first_party_modules": False}
+            self.assertQuerysetEqual(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(requires_first_party_modules=False),
+            )
 
 
 class ModuleBayTestCase(FilterTestCases.FilterTestCase):
