@@ -24,6 +24,7 @@ from nautobot.extras.filters import NautobotFilterSet, RoleModelFilterSetMixin, 
 from nautobot.ipam import choices, formfields
 from nautobot.tenancy.filters.mixins import TenancyModelFilterSetMixin
 from nautobot.virtualization.models import VirtualMachine, VMInterface
+from nautobot.vpn.models import VPNTunnelEndpoint
 
 from .models import (
     IPAddress,
@@ -332,6 +333,11 @@ class PrefixFilterSet(
         queryset=CloudNetwork.objects.all(),
         to_field_name="name",
         label="Cloud Network (name or ID)",
+    )
+    vpn_tunnel_endpoints = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VPNTunnelEndpoint.objects.all(),
+        to_field_name="pk",
+        label="VPN Tunnel Endpoint ID",
     )
 
     class Meta:

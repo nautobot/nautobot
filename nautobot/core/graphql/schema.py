@@ -51,6 +51,7 @@ from nautobot.extras.registry import registry
 from nautobot.extras.utils import check_if_key_is_graphql_safe
 from nautobot.ipam.graphql.types import IPAddressType, PrefixType, VLANType
 from nautobot.virtualization.graphql.types import VirtualMachineType, VMInterfaceType
+from nautobot.vpn.graphql.types import VPNTunnelEndpointType
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +84,7 @@ registry["graphql_types"]["ipam.prefix"] = PrefixType
 registry["graphql_types"]["ipam.vlan"] = VLANType
 registry["graphql_types"]["virtualization.virtualmachine"] = VirtualMachineType
 registry["graphql_types"]["virtualization.vminterface"] = VMInterfaceType
+registry["graphql_types"]["vpn.vpntunnelendpoint"] = VPNTunnelEndpointType
 
 
 STATIC_TYPES = registry["graphql_types"].keys()
