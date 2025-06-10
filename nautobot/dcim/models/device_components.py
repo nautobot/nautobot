@@ -1240,7 +1240,7 @@ class ModuleBay(PrimaryModel):
     label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Physical label")
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
-    clone_fields = ["parent_device", "parent_module", "module_family"]
+    clone_fields = ["parent_device", "parent_module", "module_family", "requires_first_party_modules"]
 
     # The recursive nature of this model combined with the fact that it can be a child of a
     # device or location makes our natural key implementation unusable, so just use the pk

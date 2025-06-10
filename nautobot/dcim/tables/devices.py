@@ -277,11 +277,7 @@ class ModuleTable(StatusTableMixin, RoleTableMixin, BaseTable):
     )
     location = tables.Column(linkify=True)
     tenant = TenantColumn()
-    module_family = tables.Column(
-        linkify=lambda record: record.module_type.module_family.get_absolute_url(),
-        verbose_name="Family",
-        accessor="module_type__module_family__name",
-    )
+    module_type__module_family = tables.Column(linkify=True, verbose_name="Family")
     tags = TagColumn(url_name="dcim:module_list")
     actions = ButtonsColumn(Module, prepend_template=MODULE_BUTTONS)
 
