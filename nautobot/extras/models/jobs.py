@@ -29,8 +29,10 @@ from nautobot.core.celery import (
     setup_nautobot_job_logging,
 )
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.events import publish_event
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models.utils import serialize_object_v2
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import (
     ButtonClassChoices,
@@ -535,6 +537,7 @@ class JobLogEntry(BaseModel):
     is_metadata_associable_model = False
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
+    hide_in_diff_view = True
 
     def __str__(self):
         return self.message
@@ -678,6 +681,7 @@ class JobResult(BaseModel, CustomFieldModel):
     objects = JobResultManager()
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
+    hide_in_diff_view = True
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1251,20 +1255,24 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         if bool(self.approved_by_user) ^ bool(self.approved_at):
             raise ValidationError("Approval by user and approval time must either both be set or both be undefined")
 
-    def on_workflow_initiated(self):
+    def on_workflow_initiated(self, approval_workflow):
         """When initiated, set enabled to False."""
-        self.enabled = False
+        self.approval_required = True
         self.save()
 
-    def on_workflow_approved(self):
+    def on_workflow_approved(self, approval_workflow):
         """When approved, set enabled to True."""
-        self.enabled = True
+        self.approved_at = approval_workflow.decision_date
         self.save()
 
-    def on_workflow_denied(self):
+        publish_event_payload = {"data": serialize_object_v2(self)}
+        publish_event(topic="nautobot.jobs.approval.approved", payload=publish_event_payload)
+
+    def on_workflow_denied(self, approval_workflow):
         """When denied, set enabled to False."""
-        self.enabled = False
-        self.save()
+        if self.approved_at:
+            self.approved_at = None
+            self.save()
 
     @property
     def schedule(self):
@@ -1332,6 +1340,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         job_queue: Optional[JobQueue] = None,
         task_queue: Optional[str] = None,  # deprecated!
         ignore_singleton_lock: bool = False,
+        validated_save: bool = True,
         **job_kwargs,
     ):
         """
@@ -1418,7 +1427,8 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
             crontab=crontab,
             job_queue=job_queue,
         )
-        scheduled_job.validated_save()
+        if validated_save:
+            scheduled_job.validated_save()
         return scheduled_job
 
     def to_cron(self):
