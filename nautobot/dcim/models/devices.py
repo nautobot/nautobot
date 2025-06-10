@@ -585,7 +585,8 @@ class Device(PrimaryModel, ConfigContextModel):
     @cluster.setter
     def cluster(self, value):
         """
-        Sets the clusters field to a single value, replacing any existing values.
+        Sets the clusters field to a single value.
+        Only assigns the cluster if there are 0 or 1 clusters currently assigned to the device.
         Deprecated. Use `clusters` instead.
 
         TODO: Remove this property in v3.0.0
@@ -595,7 +596,7 @@ class Device(PrimaryModel, ConfigContextModel):
             self._deferred_cluster = value
             return
 
-        self.assign_clusters([value])
+        self.assign_cluster(value)
 
     virtual_chassis = models.ForeignKey(
         to="VirtualChassis",
@@ -693,6 +694,17 @@ class Device(PrimaryModel, ConfigContextModel):
 
     def __str__(self):
         return self.display or super().__str__()
+
+    def assign_cluster(self, cluster):
+        """
+        Assign a single cluster to the device.
+        """
+        if cluster is None:
+            self.clusters.clear()
+        else:
+            if self.clusters.count() <= 1:
+                with transaction.atomic():
+                    self.clusters.set([cluster])
 
     def validate_unique(self, exclude=None):
         # Check for a duplicate name on a device assigned to the same Location and no Tenant. This is necessary
@@ -889,9 +901,9 @@ class Device(PrimaryModel, ConfigContextModel):
 
         # Apply any pending cluster assignment that was deferred during creation
         if hasattr(self, "_deferred_cluster"):
-            cluster_value = self._deferred_cluster
+            cluster = self._deferred_cluster
             delattr(self, "_deferred_cluster")
-            self.assign_clusters([cluster_value])
+            self.assign_cluster(cluster)
 
         # If this is a new Device, instantiate all related components per the DeviceType definition
         if is_new:
@@ -910,16 +922,6 @@ class Device(PrimaryModel, ConfigContextModel):
 
             if save_child_device:
                 device.save()
-
-    def assign_clusters(self, clusters):
-        """
-        Assign a list of clusters to the device.
-        """
-        with transaction.atomic():
-            if clusters is None:
-                self.clusters.clear()
-            else:
-                self.clusters.set(clusters)
 
     def create_components(self):
         """Create device components from the device type definition."""
@@ -2150,22 +2152,6 @@ class VirtualDeviceContext(PrimaryModel):
                     raise ValidationError(
                         {f"{field}": f"{ip} is not part of an interface that belongs to this VDC's device."}
                     )
-                # Note: The validation for primary IPs `validate_primary_ips` is commented out due to the order in which Django processes form validation with
-                # Many-to-Many (M2M) fields. During form saving, Django creates the instance first before assigning the M2M fields (in this case, interfaces).
-                # As a result, the primary_ips fields could fail validation at this point because the interfaces are not yet linked to the instance,
-                # leading to validation errors.
-                # interfaces = self.interfaces.all()
-                # if IPAddressToInterface.objects.filter(ip_address=ip, interface__in=interfaces).exists():
-                #     pass
-                # elif (
-                #     ip.nat_inside is None
-                #     or not IPAddressToInterface.objects.filter(
-                #         ip_address=ip.nat_inside, interface__in=interfaces
-                #     ).exists()
-                # ):
-                #     raise ValidationError(
-                #         {f"{field}": f"The specified IP address ({ip}) is not assigned to this Virtual Device Context."}
-                #     )
 
     def clean(self):
         super().clean()
