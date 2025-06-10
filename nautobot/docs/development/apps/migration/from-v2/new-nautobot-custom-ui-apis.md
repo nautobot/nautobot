@@ -96,6 +96,10 @@ The best place to see how to use Offcanvas is Bootstrap v5.x documentation. For 
 {% endblock %}
 ```
 
+### Table Drawers
+
+Some of the components converted from modals to drawers are table related forms and controls - Config, Filters and Saved Views. As result, `filter_form_modal.html` template and `{% filter_form_modal %}` template tag have been renamed to `filter_form_drawer.html` and `{% filter_form_drawer %}` respectively.
+
 ## Draggable
 
 Nautobot v2.1 introduced reorderable panels on the homepage. In v3.0 we internally standardized reordering items with native [HTML Drag and Drop API](https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API) and now are ready to give it away to use in Nautobot apps as well. Here's what you need to know about Nautobot draggable API:
