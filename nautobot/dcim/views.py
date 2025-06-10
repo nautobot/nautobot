@@ -4570,6 +4570,14 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
 
         return obj
 
+    def get_required_permission(self):
+        view_action = self.get_action()
+        if view_action == "wireless_networks":
+            return ["wireless.view_controllermanageddevicegroupwirelessnetworkassignment"]
+        if view_action == "radio_profiles":
+            return ["wireless.view_radioprofile"]
+        return super().get_required_permission()
+
 
 #
 # Virtual Device Context
