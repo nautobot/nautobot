@@ -1,2 +1,0 @@
-Added RackRoleFilterForm, ManufacturerFilterForm, DeviceRoleFilterForm, PlatformFilterForm, RoleFilterForm, TenantGroupFilterForm, ClusterTypeFilterForm, ClusterGroupFilterForm, CustomFieldFilterForm, CircuitTypeFilterForm and set them to proper `filterset_form` or `filterset_form_class` in views.
-Added a generic test case that asserts that all list views provide an appropriate FilterForm class.

@@ -73,6 +73,29 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 
 <!-- towncrier release notes start -->
 
+## v1.6.32 (2025-06-09)
+
+### Security
+
+- [#6672](https://github.com/nautobot/nautobot/issues/6672) - Added enforcement of user authentication when serving uploaded media files ([GHSA-rh67-4c8j-hjjh](https://github.com/nautobot/nautobot/security/advisories/GHSA-rh67-4c8j-hjjh)).
+- [#7429](https://github.com/nautobot/nautobot/issues/7429) - Added protections against access of various security-related and/or data-altering methods of various Nautobot models from within a Jinja2 sandboxed environment or the Django template renderer ([GHSA-wjw6-95h5-4jpx](https://github.com/nautobot/nautobot/security/advisories/GHSA-wjw6-95h5-4jpx)).
+
+### Added
+
+- [#7305](https://github.com/nautobot/nautobot/issues/7305) - Added RackRoleFilterForm, ManufacturerFilterForm, DeviceRoleFilterForm, PlatformFilterForm, RoleFilterForm, TenantGroupFilterForm, ClusterTypeFilterForm, ClusterGroupFilterForm, CustomFieldFilterForm, CircuitTypeFilterForm and set them to proper `filterset_form` or `filterset_form_class` in views.
+- [#7305](https://github.com/nautobot/nautobot/issues/7305) - Added a generic test case that asserts that all list views provide an appropriate FilterForm class.
+
+### Fixed
+
+- [#7250](https://github.com/nautobot/nautobot/issues/7250) - Fixed JSON and MULTISELECT custom field being returned as a `repr()` string when using GraphQL.
+
+### Documentation
+
+- [#7432](https://github.com/nautobot/nautobot/issues/7432) - Added "Security Notices" document to the documentation under **Administration**.
+- [#7432](https://github.com/nautobot/nautobot/issues/7432) - Fixed a number of broken links in the documentation.
+- [#7432](https://github.com/nautobot/nautobot/issues/7432) - Added latest security disclosures to the documentation.
+- [#7432](https://github.com/nautobot/nautobot/issues/7432) - Removed John Anderson as a point of contact for Nautobot security issues.
+
 ## v1.6.31 (2025-05-12)
 
 ### Security
@@ -85,7 +108,7 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 
 ### Housekeeping
 
-- [#6618](https://github.com/nautobot/nautobot/issues/6618) - Update GitHub actions *.yml file to use minimum ubuntu-24.04 since ubuntu-20.04 is deprecated.
+- [#6618](https://github.com/nautobot/nautobot/issues/6618) - Update GitHub actions `*.yml` file to use minimum ubuntu-24.04 since ubuntu-20.04 is deprecated.
 - [#6988](https://github.com/nautobot/nautobot/issues/6988) - Updated GitHub Actions to use `networktocode/gh-action-setup-poetry-environment@v6`.
 
 ## v1.6.30 (2025-01-06)
@@ -133,7 +156,7 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 
 ### Fixed
 
-- [#6081](https://github.com/nautobot/nautobot/issues/6081) - Fixed AttributeError during pre_migrate when permission constraints are applied to custom fields.
+- [#6081](https://github.com/nautobot/nautobot/issues/6081) - Fixed AttributeError during `pre_migrate` when permission constraints are applied to custom fields.
 
 ## v1.6.26 (2024-07-22)
 
