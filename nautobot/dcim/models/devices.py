@@ -898,6 +898,8 @@ class Device(PrimaryModel, ConfigContextModel):
             model.objects.bulk_create([x.instantiate(device=self) for x in templates])
         return instantiated_components
 
+    create_components.alters_data = True
+
     @property
     def display(self):
         if self.name:
@@ -1868,6 +1870,8 @@ class Module(PrimaryModel):
             model.objects.bulk_create([x.instantiate(device=None, module=self) for x in templates])
         return instantiated_components
 
+    create_components.alters_data = True
+
     def render_component_names(self):
         """
         Replace the {module}, {module.parent}, {module.parent.parent}, etc. template variables in descendant
@@ -1891,6 +1895,8 @@ class Module(PrimaryModel):
 
         for child in self.get_children():
             child.render_component_names()
+
+    render_component_names.alters_data = True
 
     def get_cables(self, pk_list=False):
         """
