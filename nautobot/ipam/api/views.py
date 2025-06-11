@@ -1,7 +1,11 @@
+from collections import Counter
+
 from django.conf import settings
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+import netaddr
+from netaddr.strategy import ipv4, ipv6
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException
@@ -123,6 +127,18 @@ class PrefixViewSet(NautobotModelViewSet):
             return serializers.PrefixLegacySerializer
         return super().get_serializer_class()
 
+    @staticmethod
+    def get_ipaddress_param(request, name, default):
+        response, result = None, None
+        try:
+            result = netaddr.IPAddress(request.query_params.get(name, default))
+        except (netaddr.core.AddrFormatError, ValueError, TypeError) as e:
+            response = Response(
+                {"detail": (f"Incorrectly formatted address in parameter {name}: {e}")},
+                status=status.HTTP_204_NO_CONTENT,
+            )
+        return response, result
+
     class LocationIncompatibleLegacyBehavior(APIException):
         status_code = 412
         default_detail = (
@@ -225,6 +241,33 @@ class PrefixViewSet(NautobotModelViewSet):
 
             return Response(serializer.data)
 
+    @extend_schema(
+        methods=["get", "post"],
+        parameters=[
+            OpenApiParameter(
+                name="range_start",
+                location="query",
+                description="IP from which enumeration/allocation should start.",
+                type={
+                    "oneOf": [
+                        {"type": "string", "format": "ipv6"},
+                        {"type": "string", "format": "ipv4"},
+                    ]
+                },
+            ),
+            OpenApiParameter(
+                name="range_end",
+                location="query",
+                description="IP from which enumeration/allocation should stop.",
+                type={
+                    "oneOf": [
+                        {"type": "string", "format": "ipv6"},
+                        {"type": "string", "format": "ipv4"},
+                    ]
+                },
+            ),
+        ],
+    )
     @extend_schema(methods=["get"], responses={200: serializers.AvailableIPSerializer(many=True)})
     @extend_schema(
         methods=["post"],
@@ -251,6 +294,17 @@ class PrefixViewSet(NautobotModelViewSet):
         """
         prefix = get_object_or_404(Prefix.objects.restrict(request.user), pk=pk)
 
+        if prefix.ip_version == 6:
+            default_first, default_last = netaddr.IPAddress("::"), netaddr.IPAddress(ipv6.max_int)
+        else:
+            default_first, default_last = netaddr.IPAddress(0), netaddr.IPAddress(ipv4.max_int)
+        ((error_response_start, range_start), (error_response_end, range_end)) = (
+            self.get_ipaddress_param(request, "range_start", default_first),
+            self.get_ipaddress_param(request, "range_end", default_last),
+        )
+        if response := error_response_start or error_response_end:
+            return response
+
         # Create the next available IP within the prefix
         if request.method == "POST":
             with cache.lock(
@@ -261,23 +315,32 @@ class PrefixViewSet(NautobotModelViewSet):
 
                 # Determine if the requested number of IPs is available
                 available_ips = prefix.get_available_ips()
-                if available_ips.size < len(requested_ips):
+                if (
+                    available_ips_in_range := Counter(map(lambda i: range_start <= i <= range_end, available_ips))[True]
+                ) < len(requested_ips):
                     return Response(
                         {
                             "detail": (
                                 f"An insufficient number of IP addresses are available within the prefix {prefix} "
-                                f"({len(requested_ips)} requested, {len(available_ips)} available)"
+                                f"({len(requested_ips)} requested, {available_ips_in_range} available between "
+                                f"{range_start} and {range_end})."
                             )
                         },
                         status=status.HTTP_204_NO_CONTENT,
                     )
 
                 # Assign addresses from the list of available IPs and copy Namespace assignment from the parent Prefix
-                available_ips = iter(available_ips)
+                requested_ips_iter = iter(requested_ips)
                 prefix_length = prefix.prefix.prefixlen
-                for requested_ip in requested_ips:
-                    requested_ip["address"] = f"{next(available_ips)}/{prefix_length}"
-                    requested_ip["namespace"] = prefix.namespace
+                ips_count = 0
+                for available_ip in iter(available_ips):
+                    if range_start <= available_ip <= range_end and ips_count < len(requested_ips):
+                        requested_ip = next(requested_ips_iter)
+                        requested_ip["address"] = f"{available_ip}/{prefix_length}"
+                        requested_ip["namespace"] = prefix.namespace
+                        ips_count += 1
+                    elif ips_count >= len(requested_ips):
+                        break
 
                 # Initialize the serializer with a list or a single object depending on what was requested
                 context = {"request": request, "depth": 0}
@@ -307,9 +370,12 @@ class PrefixViewSet(NautobotModelViewSet):
 
             # Calculate available IPs within the prefix
             ip_list = []
-            for index, ip in enumerate(prefix.get_available_ips(), start=1):
-                ip_list.append(ip)
-                if index == limit:
+            ip_list_count = 0
+            for ip in iter(prefix.get_available_ips()):
+                if range_start <= ip <= range_end and ip_list_count < limit:
+                    ip_list.append(ip)
+                    ip_list_count += 1
+                elif ip_list_count >= limit or ip > range_end:
                     break
             serializer = serializers.AvailableIPSerializer(
                 ip_list,
