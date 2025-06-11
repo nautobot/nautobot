@@ -143,10 +143,22 @@ Nautobot extends Bootstrap utilities with its own subset of CSS classes, propert
 !!! note
     We elaborate more on [Bootstrap v5.x Helpers and Utilities](./upgrading-from-bootstrap-v3-to-v5.md#helper-classes-helpers-and-utilities) in another migration guide.
 
-| Class                | Style                              |
-|----------------------|------------------------------------|
-| `nb-cursor-unset`    | `cursor: unset;`                   |
-| `nb-text-none`       | `text-transform: none;`            |
-| `nb-transition-base` | `transition: all .2s ease-in-out;` |
-| `nb-transition-fade` | `transition: opacity .15s linear;` |
-| `nb-w-0`             | `width: 0;`                        |
+| Class                     | Style                              |
+|---------------------------|------------------------------------|
+| `nb-color-transparent`    | `color: transparent;`              |
+| `nb-cursor-unset`         | `cursor: unset;`                   |
+| `nb-text-none`            | `text-transform: none;`            |
+| `nb-transition-base`      | `transition: all .2s ease-in-out;` |
+| `nb-transition-fade`      | `transition: opacity .15s linear;` |
+| `nb-w-0`                  | `width: 0;`                        |
+| `nb-w-0`                  | `width: 0;`                        |
+| `nb-z-dropdown`           | `z-index: 1000;`                   |
+| `nb-z-sticky`             | `z-index: 1020;`                   |
+| `nb-z-fixed`              | `z-index: 1030;`                   |
+| `nb-z-offcanvas-backdrop` | `z-index: 1040;`                   |
+| `nb-z-offcanvas`          | `z-index: 1045;`                   |
+| `nb-z-modal-backdrop`     | `z-index: 1050;`                   |
+| `nb-z-modal`              | `z-index: 1055;`                   |
+| `nb-z-popover`            | `z-index: 1070;`                   |
+| `nb-z-tooltip`            | `z-index: 1080;`                   |
+| `nb-z-toast`              | `z-index: 1090;`                   |

@@ -31,6 +31,7 @@ import 'select2';
 
 import { initializeDraggable } from './draggable.js';
 import { initializeDrawers } from './drawer.js';
+import { initializeSearch } from './search.js';
 import { observeCollapseTabs } from './tabs.js';
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -82,6 +83,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Drawer
   initializeDrawers();
+
+  // Search
+  initializeSearch();
 
   // Tabs
   /*

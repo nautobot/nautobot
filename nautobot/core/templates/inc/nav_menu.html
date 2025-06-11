@@ -41,66 +41,62 @@
             <li class="sidenav-list-divider"></li>
 
             {% with request.user.navbar_favorites_link_list as navbar_favorites_link_list %}
-                {% for tab_name, tab_details in registry.nav_menu.tabs.items %}
-                    {% if not tab_details.permissions or request.user|has_one_or_more_perms:tab_details.permissions %}
-                        <li data-section-name="{{ tab_name }}">
-                            <button
-                                aria-controls="sidenav-flyout-{{ forloop.counter }}"
-                                aria-expanded="false"
-                                class="sidenav-list-item"
-                                type="button"
-                            >
-                                <!-- TODO(norbert-mieczkowski-codilime): This is just a placeholder icon, replace it when new icons are ready to use. -->
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                                    <circle cx="12" cy="12" fill="none" r="10" stroke="currentcolor"
-                                            stroke-width="1.5"/>
-                                </svg>
-                                <span>{{ tab_name }}</span>
-                            </button>
+                {% for tab_name, tab_details in nav_menu.tabs.items %}
+                    <li data-section-name="{{ tab_name }}">
+                        <button
+                            aria-controls="sidenav-flyout-{{ forloop.counter }}"
+                            aria-expanded="false"
+                            class="sidenav-list-item"
+                            type="button"
+                        >
+                            <!-- TODO(norbert-mieczkowski-codilime): This is just a placeholder icon, replace it when new icons are ready to use. -->
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" fill="none" r="10" stroke="currentcolor"
+                                        stroke-width="1.5"/>
+                            </svg>
+                            <span>{{ tab_name }}</span>
+                        </button>
 
-                            <div class="sidenav-flyout" id="sidenav-flyout-{{ forloop.counter }}"
-                                 hx-vals='{"tab_name": "{{ tab_name }}"}'
-                                 hx-swap-oob="true"
-                            >
-                                {% for group_name, group_details in tab_details.groups.items %}
-                                    {% if not group_details.permissions or request.user|has_one_or_more_perms:group_details.permissions %}
-                                        <ul class="list-unstyled">
-                                            <li class="sidenav-link-group"
-                                                data-group-weight="{{ group_details.weight }}">{{ group_name }}</li>
-                                            {% for item_link, item_details in group_details.items.items %}
-                                                {% if not item_details.permissions or request.user|has_one_or_more_perms:item_details.permissions %}
-                                                    <li class="sidenav-link-wrapper{% if item_details.permissions and not request.user|has_perms:item_details.permissions %} disabled{% endif %}">
-                                                        <a class="sidenav-link{% if item_link in request.path %} sidenav-link-active{% endif %}"
-                                                           data-item-weight="{{ item_details.weight }}"
-                                                           href="{{ item_link }}">
-                                                            {{ item_details.name }}
-                                                        </a>
-                                                        <button
-                                                            class="sidenav-favorite{% if item_link in navbar_favorites_link_list %} active{% endif %}"
-                                                            type="button"
-                                                            hx-post="{% if item_link in navbar_favorites_link_list %}{% url "user:navbar_favorites_delete" %}{% else %}{% url "user:navbar_favorites_add" %}{% endif %}"
-                                                            hx-vals='{"name": "{{ item_details.name }}", "link": "{{ item_link }}"}'
-                                                            hx-target="#sidenav-flyout-favorites"
-                                                            hx-select="#sidenav-flyout-favorites"
-                                                            hx-swap="outerHTML"
-                                                            hx-on::after-request="toggleFavorite(this, event)"
-                                                            hx-on::config-request="setRequestUrl(this, event)"
-                                                            data-add-url="{% url "user:navbar_favorites_add" %}"
-                                                            data-delete-url="{% url "user:navbar_favorites_delete" %}"
-                                                        >
-                                                            <span class="visually-hidden">
-                                                                Add to favorites
-                                                            </span>
-                                                        </button>
-                                                    </li>
-                                                {% endif %}
-                                            {% endfor %}
-                                        </ul>
-                                    {% endif %}
-                                {% endfor %}
-                            </div>
-                        </li>
-                    {% endif %}
+                        <div class="sidenav-flyout" id="sidenav-flyout-{{ forloop.counter }}"
+                             hx-vals='{"tab_name": "{{ tab_name }}"}'
+                             hx-swap-oob="true"
+                        >
+                            {% for group_name, group_details in tab_details.groups.items %}
+                                <ul class="list-unstyled">
+                                    <li class="sidenav-link-group" data-group-weight="{{ group_details.weight }}">
+                                        {{ group_name }}
+                                    </li>
+                                    {% for item_link, item_details in group_details.items.items %}
+                                        <li class="sidenav-link-wrapper{% if item_details.permissions and not request.user|has_perms:item_details.permissions %} disabled{% endif %}">
+                                            {% comment %}TODO(norbert-mieczkowski-codilime): Figure out more reliable way of mapping active nav_menu link to browser URL.{% endcomment %}
+                                            <a class="sidenav-link{% if item_link in request.path %} sidenav-link-active{% endif %}"
+                                               data-item-weight="{{ item_details.weight }}"
+                                               href="{{ item_link }}">
+                                                {{ item_details.name }}
+                                            </a>
+                                            <button
+                                                class="sidenav-favorite{% if item_link in navbar_favorites_link_list %} active{% endif %}"
+                                                type="button"
+                                                hx-post="{% if item_link in navbar_favorites_link_list %}{% url "user:navbar_favorites_delete" %}{% else %}{% url "user:navbar_favorites_add" %}{% endif %}"
+                                                hx-vals='{"name": "{{ item_details.name }}", "link": "{{ item_link }}"}'
+                                                hx-target="#sidenav-flyout-favorites"
+                                                hx-select="#sidenav-flyout-favorites"
+                                                hx-swap="outerHTML"
+                                                hx-on::after-request="toggleFavorite(this, event)"
+                                                hx-on::config-request="setRequestUrl(this, event)"
+                                                data-add-url="{% url "user:navbar_favorites_add" %}"
+                                                data-delete-url="{% url "user:navbar_favorites_delete" %}"
+                                            >
+                                                <span class="visually-hidden">
+                                                    Add to favorites
+                                                </span>
+                                            </button>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% endfor %}
+                        </div>
+                    </li>
                 {% endfor %}
             {% endwith %}
         {% else %}
