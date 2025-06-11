@@ -1196,12 +1196,7 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
     form_class = forms.VLANForm
     serializer_class = serializers.VLANSerializer
     table_class = tables.VLANTable
-    queryset = VLAN.objects.annotate(location_count=count_related(Location, "vlans")).select_related(
-        "vlan_group",
-        "role",
-        "status",
-        "tenant__tenant_group",
-    )
+    queryset = VLAN.objects.all()
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
