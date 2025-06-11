@@ -1010,9 +1010,12 @@ class TestModuleLoadingUtils(TestCase):
                 with open(os.path.join(tempdir, "turtle", "__init__.py"), "wt") as fd:
                     fd.write("name = 'turtle'")
 
-                modules = import_modules_privately(tempdir)
-                self.assertIn("some_jobs", sys.modules.keys())
-                self.assertIn("my_jobs", sys.modules.keys())
+                modules = import_modules_privately(tempdir, ignore_import_errors=False)
+                # assertIn/assertNotIn are super noisy when dealing with the huge sys.modules dict, so instead:
+                if "some_jobs" not in sys.modules:
+                    self.fail("Valid module wasn't loaded from JOBS_ROOT")
+                if "my_jobs" not in sys.modules:
+                    self.fail("Valid package wasn't loaded from JOBS_ROOT")
                 with self.assertRaises(KeyError, msg="conflicting module name was loaded unsafely from JOBS_ROOT"):
                     sys.modules["tkinter"]
                 with self.assertRaises(KeyError, msg="conflicting package name was loaded unsafely from JOBS_ROOT"):
@@ -1045,9 +1048,12 @@ class TestModuleLoadingUtils(TestCase):
                 with open(os.path.join(tempdir, "my_jobs", "some_submodule", "__init__.py"), "wt") as fd:
                     fd.write("name = 'my_jobs.some_submodule_new'")
 
-                modules = import_modules_privately(tempdir)
-                self.assertIn("some_jobs", sys.modules.keys())
-                self.assertIn("my_jobs", sys.modules.keys())
+                modules = import_modules_privately(tempdir, ignore_import_errors=False)
+                # assertIn/assertNotIn are super noisy when dealing with the huge sys.modules dict, so instead:
+                if "some_jobs" not in sys.modules:
+                    self.fail("Valid module wasn't loaded from JOBS_ROOT")
+                if "my_jobs" not in sys.modules:
+                    self.fail("Valid package wasn't loaded from JOBS_ROOT")
                 with self.assertRaises(KeyError, msg="conflicting module name was loaded unsafely from JOBS_ROOT"):
                     sys.modules["tkinter"]
                 with self.assertRaises(KeyError, msg="conflicting package name was loaded unsafely from JOBS_ROOT"):
@@ -1074,7 +1080,7 @@ class TestModuleLoadingUtils(TestCase):
                     fd.write("")
                 os.mkdir(os.path.join(tempdir, "my_repo", "jobs"))
                 with open(os.path.join(tempdir, "my_repo", "jobs", "__init__.py"), "wt") as fd:
-                    # fd.write("import my_repo.jobs.some_jobs")
+                    fd.write("import my_repo.jobs.some_jobs")
                     # fd.write("\nimport .some_jobs")
                     fd.write("\nname='my_repo.jobs'")
                 with open(os.path.join(tempdir, "my_repo", "jobs", "some_jobs.py"), "wt") as fd:
@@ -1094,9 +1100,14 @@ class TestModuleLoadingUtils(TestCase):
                 with open(os.path.join(tempdir, "turtle", "__init__.py"), "wt") as fd:
                     fd.write("name = 'turtle'")
 
-                modules = import_modules_privately(tempdir, module_path=["my_repo", "jobs"])
-                self.assertIn("my_repo.jobs", sys.modules.keys())
-                # self.assertNotIn("other_repo", sys.modules.keys())
+                modules = import_modules_privately(tempdir, module_path=["my_repo", "jobs"], ignore_import_errors=False)
+                # assertIn/assertNotIn are super noisy when dealing with the huge sys.modules dict, so instead:
+                if "my_repo" not in sys.modules:
+                    self.fail("Valid repo wasn't loaded from GIT_ROOT")
+                if "my_repo.jobs" not in sys.modules:
+                    self.fail("Valid repo subdirectory wasn't loaded from GIT_ROOT")
+                with self.assertRaises(KeyError, msg="unexpected repo was loaded from GIT_ROOT"):
+                    sys.modules["other_repo"]
                 with self.assertRaises(KeyError, msg="conflicting module name was loaded unsafely from GIT_ROOT"):
                     sys.modules["tkinter"]
                 with self.assertRaises(KeyError, msg="conflicting package name was loaded unsafely from GIT_ROOT"):
@@ -1115,14 +1126,19 @@ class TestModuleLoadingUtils(TestCase):
             try:
                 with open(os.path.join(tempdir, "my_repo", "jobs", "__init__.py"), "wt") as fd:
                     fd.write("import my_repo.jobs.some_jobs")
-                    # fd.write("import .some_jobs")
+                    # fd.write("\nimport .some_jobs")
                     fd.write("\nname='my_repo.jobs_new'")
                 with open(os.path.join(tempdir, "my_repo", "jobs", "some_jobs.py"), "wt") as fd:
                     fd.write("name='my_repo.jobs.some_jobs_new'")
 
-                modules = import_modules_privately(tempdir, module_path=["my_repo", "jobs"])
-                self.assertIn("my_repo.jobs", sys.modules.keys())
-                # self.assertNotIn("other_repo", sys.modules.keys())
+                modules = import_modules_privately(tempdir, module_path=["my_repo", "jobs"], ignore_import_errors=False)
+                # assertIn/assertNotIn are super noisy when dealing with the huge sys.modules dict, so instead:
+                if "my_repo" not in sys.modules:
+                    self.fail("Valid repo wasn't loaded from GIT_ROOT")
+                if "my_repo.jobs" not in sys.modules:
+                    self.fail("Valid repo subdirectory wasn't loaded from GIT_ROOT")
+                with self.assertRaises(KeyError, msg="unexpected repo was loaded from GIT_ROOT"):
+                    sys.modules["other_repo"]
                 with self.assertRaises(KeyError, msg="conflicting module name was loaded unsafely from GIT_ROOT"):
                     sys.modules["tkinter"]
                 with self.assertRaises(KeyError, msg="conflicting package name was loaded unsafely from GIT_ROOT"):

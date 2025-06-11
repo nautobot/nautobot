@@ -10,21 +10,6 @@ import sys
 logger = logging.getLogger(__name__)
 
 
-@contextmanager
-def _temporarily_add_to_sys_path(path):
-    """
-    Allow loading of modules and packages from within the provided directory by temporarily modifying `sys.path`.
-
-    On exit, it restores the original `sys.path` value.
-    """
-    old_sys_path = sys.path.copy()
-    sys.path.insert(0, path)
-    try:
-        yield
-    finally:
-        sys.path = old_sys_path
-
-
 def clear_module_from_sys_modules(module_name):
     """
     Remove the module and all its submodules from sys.modules.
@@ -56,7 +41,7 @@ def check_name_safe_to_import_privately(name: str) -> tuple[bool, str]:
     return True, "a valid and non-conflicting module name"
 
 
-def import_modules_privately(path, module_path=None, ignore_import_errors=True):
+def import_modules_privately(path, module_path=None, module_prefix="", ignore_import_errors=True):
     """
     Import modules from the filesystem without adding the path permanently to `sys.path`.
 
@@ -69,52 +54,46 @@ def import_modules_privately(path, module_path=None, ignore_import_errors=True):
         path (str): Directory path possibly containing Python modules or packages to load.
         module_path (list): If set to a non-empty list, only modules matching the given chain of modules will be loaded.
             For example, `["my_git_repo", "jobs"]`.
+        module_prefix (str): For recursive import - the containing module, if any, for example "my_git_repo" or
+            "my_git_repo.jobs". Generally should be omitted when calling this method directly.
         ignore_import_errors (bool): Exceptions raised while importing modules will be caught and logged.
             If this is set as False, they will then be re-raised to be handled by the caller of this function.
     """
-    if module_path is None:
-        module_path = []
-        module_prefix = None
-    else:
-        module_prefix = ".".join(module_path)
-    with _temporarily_add_to_sys_path(path):
-        for finder, discovered_module_name, is_package in pkgutil.walk_packages([path], onerror=logger.error):
-            if module_prefix and not (
-                module_prefix.startswith(f"{discovered_module_name}.")  # my_repo/__init__.py
-                or discovered_module_name == module_prefix  # my_repo/jobs.py
-                or discovered_module_name.startswith(f"{module_prefix}.")  # my_repo/jobs/foobar.py
-            ):
+    # We formerly used pkgutil.walk_packages() here to handle recursive loading, but that has the downside (and risk!) of
+    # automatically importing all packages that it finds in the given path, whether or not we actually want to do so.
+    # So instead, we use pkgutil.iter_modules() to only discover top-level modules, and recurse ourselves as needed.
+    for finder, discovered_module_name, is_package in pkgutil.iter_modules([path]):
+        if module_path and discovered_module_name != module_path[0]:
+            continue  # This is not the droid we're looking for
+
+        if not module_prefix:  # only needed for top-level packages, submodules can presume the base module was already safe
+            permitted, reason = check_name_safe_to_import_privately(discovered_module_name)
+            if not permitted:
+                logger.error("Unable to load module %r from %s as it is %s", discovered_module_name, path, reason)
                 continue
-            try:
-                existing_module = find_spec(discovered_module_name)
-            except (ModuleNotFoundError, ValueError):
-                existing_module = None
-            if existing_module is not None:
-                existing_module_path = os.path.realpath(existing_module.origin)
-                if not existing_module_path.startswith(path):
-                    logger.error(
-                        "Unable to load module %s from %s as it conflicts with existing module %s",
-                        discovered_module_name,
-                        path,
-                        existing_module_path,
-                    )
-                    continue
+            module_name = discovered_module_name
+            if module_name in sys.modules:
+                clear_module_from_sys_modules(module_name)
+        else:
+            module_name = f"{module_prefix}.{discovered_module_name}"
 
-            if discovered_module_name in sys.modules:
-                clear_module_from_sys_modules(discovered_module_name)
+        try:
+            spec = finder.find_spec(discovered_module_name)
+            if spec is None:
+                raise ValueError("Unable to find module spec")
+            module = module_from_spec(spec)
+            sys.modules[module_name] = module
+            spec.loader.exec_module(module)
+        except Exception as exc:
+            logger.error("Unable to load module %s from %s: %s", discovered_module_name, path, exc)
+            if not ignore_import_errors:
+                raise
+            module = None
 
-            try:
-                if not is_package:
-                    spec = finder.find_spec(discovered_module_name)
-                    if spec is None:
-                        raise ValueError("Unable to find module spec")
-                    module = module_from_spec(spec)
-                    sys.modules[discovered_module_name] = module
-                    spec.loader.exec_module(module)
-                else:
-                    module = importlib.import_module(discovered_module_name)
-                importlib.reload(module)
-            except Exception as exc:
-                logger.error("Unable to load module %s from %s: %s", discovered_module_name, path, exc)
-                if not ignore_import_errors:
-                    raise
+        if module is not None and is_package and module_path:
+            import_modules_privately(
+                path=os.path.join(path, module_path[0]),
+                module_path=module_path[1:],
+                module_prefix=module_path[0],
+                ignore_import_errors=ignore_import_errors,
+            )
