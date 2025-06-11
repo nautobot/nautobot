@@ -1,9 +1,7 @@
-from contextlib import contextmanager
-import importlib
-from importlib.util import find_spec, module_from_spec
+from importlib.machinery import FileFinder, SOURCE_SUFFIXES, SourceFileLoader
+from importlib.util import module_from_spec
 from keyword import iskeyword
 import logging
-import os
 import pkgutil
 import sys
 
@@ -36,7 +34,7 @@ def check_name_safe_to_import_privately(name: str) -> tuple[bool, str]:
         return False, "a reserved keyword"
     if name in sys.builtin_module_names:
         return False, "a Python builtin"
-    if any([module_info.name == name for module_info in pkgutil.iter_modules()]):
+    if any(module_info.name == name for module_info in pkgutil.iter_modules()):
         return False, "the name of an installed Python package"
     return True, "a valid and non-conflicting module name"
 
@@ -54,19 +52,51 @@ def import_modules_privately(path, module_path=None, module_prefix="", ignore_im
         path (str): Directory path possibly containing Python modules or packages to load.
         module_path (list): If set to a non-empty list, only modules matching the given chain of modules will be loaded.
             For example, `["my_git_repo", "jobs"]`.
-        module_prefix (str): For recursive import - the containing module, if any, for example "my_git_repo" or
-            "my_git_repo.jobs". Generally should be omitted when calling this method directly.
         ignore_import_errors (bool): Exceptions raised while importing modules will be caught and logged.
             If this is set as False, they will then be re-raised to be handled by the caller of this function.
     """
-    # We formerly used pkgutil.walk_packages() here to handle recursive loading, but that has the downside (and risk!) of
-    # automatically importing all packages that it finds in the given path, whether or not we actually want to do so.
-    # So instead, we use pkgutil.iter_modules() to only discover top-level modules, and recurse ourselves as needed.
-    for finder, discovered_module_name, is_package in pkgutil.iter_modules([path]):
-        if module_path and discovered_module_name != module_path[0]:
-            continue  # This is not the droid we're looking for
-
-        if not module_prefix:  # only needed for top-level packages, submodules can presume the base module was already safe
+    loaded_modules = []
+    if module_path:
+        permitted, reason = check_name_safe_to_import_privately(module_path[0])
+        if not permitted:
+            logger.error("Unable to load module %r from %s as it is %s", module_path[0], path, reason)
+            if ignore_import_errors:
+                return loaded_modules
+            raise ValueError(f"Unable to load module {module_path[0]!r} from {path} as it is {reason}")
+        module = None
+        module_name = module_path.pop(0)
+        submodule_name = module_name
+        try:
+            while True:
+                finder = FileFinder(path, (SourceFileLoader, SOURCE_SUFFIXES))
+                finder.invalidate_caches()
+                spec = finder.find_spec(module_name)
+                if spec is None:
+                    raise ValueError(f"Unable to find module spec for {module_name}")
+                spec.name = submodule_name
+                spec.loader.name = submodule_name
+                submodule = module_from_spec(spec)
+                sys.modules[submodule_name] = submodule
+                spec.loader.exec_module(submodule)
+                if module is not None:
+                    setattr(module, module_name, submodule)
+                module = submodule
+                loaded_modules.append(module)
+                if module_path:
+                    submodule_name = f"{module_name}.{module_path[0]}"
+                    module_name = module_path.pop(0)
+                    path = module.__path__[0]
+                else:
+                    break
+        except Exception as exc:
+            logger.error("Unable to load module %s from %s: %s", module_name, path, exc)
+            if not ignore_import_errors:
+                raise
+    else:
+        # We formerly used pkgutil.walk_packages() here to handle recursive loading, but that has the downside (and risk!) of
+        # automatically importing all packages that it finds in the given path, whether or not we actually want to do so.
+        # So instead, we use pkgutil.iter_modules() to only discover top-level modules, and recurse ourselves as needed.
+        for finder, discovered_module_name, _ in pkgutil.iter_modules([path]):
             permitted, reason = check_name_safe_to_import_privately(discovered_module_name)
             if not permitted:
                 logger.error("Unable to load module %r from %s as it is %s", discovered_module_name, path, reason)
@@ -74,26 +104,17 @@ def import_modules_privately(path, module_path=None, module_prefix="", ignore_im
             module_name = discovered_module_name
             if module_name in sys.modules:
                 clear_module_from_sys_modules(module_name)
-        else:
-            module_name = f"{module_prefix}.{discovered_module_name}"
 
-        try:
-            spec = finder.find_spec(discovered_module_name)
-            if spec is None:
-                raise ValueError("Unable to find module spec")
-            module = module_from_spec(spec)
-            sys.modules[module_name] = module
-            spec.loader.exec_module(module)
-        except Exception as exc:
-            logger.error("Unable to load module %s from %s: %s", discovered_module_name, path, exc)
-            if not ignore_import_errors:
-                raise
-            module = None
-
-        if module is not None and is_package and module_path:
-            import_modules_privately(
-                path=os.path.join(path, module_path[0]),
-                module_path=module_path[1:],
-                module_prefix=module_path[0],
-                ignore_import_errors=ignore_import_errors,
-            )
+            try:
+                spec = finder.find_spec(discovered_module_name)
+                if spec is None:
+                    raise ValueError(f"Unable to find module spec for {discovered_module_name}")
+                module = module_from_spec(spec)
+                sys.modules[module_name] = module
+                spec.loader.exec_module(module)
+                loaded_modules.append(module)
+            except Exception as exc:
+                logger.error("Unable to load module %s from %s: %s", discovered_module_name, path, exc)
+                if not ignore_import_errors:
+                    raise
+    return loaded_modules

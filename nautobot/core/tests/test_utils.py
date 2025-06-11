@@ -967,6 +967,7 @@ class TestMigrationUtils(TestCase):
             self.assertEqual(ObjectChange.objects.get(request_id=request_id).changed_object_type, location_ct)
             self.assertEqual(ObjectChange.objects.get(request_id=request_id).related_object_type, location_ct)
 
+
 class TestModuleLoadingUtils(TestCase):
     def test_check_name_safe_to_import_privately(self):
         for invalid in (
@@ -992,7 +993,7 @@ class TestModuleLoadingUtils(TestCase):
                 os.mkdir(os.path.join(tempdir, "my_jobs"))
                 with open(os.path.join(tempdir, "my_jobs", "__init__.py"), "wt") as fd:
                     fd.write("import my_jobs.some_submodule")
-                    # fd.write("\nimport .relative_submodule")
+                    fd.write("\nfrom . import relative_submodule")
                     fd.write("\nname = 'my_jobs'")
                 os.mkdir(os.path.join(tempdir, "my_jobs", "some_submodule"))
                 with open(os.path.join(tempdir, "my_jobs", "some_submodule", "__init__.py"), "wt") as fd:
@@ -1011,6 +1012,7 @@ class TestModuleLoadingUtils(TestCase):
                     fd.write("name = 'turtle'")
 
                 modules = import_modules_privately(tempdir, ignore_import_errors=False)
+                self.assertEqual(["my_jobs", "some_jobs"], sorted([module.__name__ for module in modules]))
                 # assertIn/assertNotIn are super noisy when dealing with the huge sys.modules dict, so instead:
                 if "some_jobs" not in sys.modules:
                     self.fail("Valid module wasn't loaded from JOBS_ROOT")
@@ -1043,12 +1045,13 @@ class TestModuleLoadingUtils(TestCase):
                 # Job subdirectory treated as a package
                 with open(os.path.join(tempdir, "my_jobs", "__init__.py"), "wt") as fd:
                     fd.write("import my_jobs.some_submodule")
-                    # fd.write("import .some_submodule")
+                    fd.write("\nfrom . import relative_submodule")
                     fd.write("\nname = 'my_jobs_new'")
                 with open(os.path.join(tempdir, "my_jobs", "some_submodule", "__init__.py"), "wt") as fd:
                     fd.write("name = 'my_jobs.some_submodule_new'")
 
                 modules = import_modules_privately(tempdir, ignore_import_errors=False)
+                self.assertEqual(["my_jobs", "some_jobs"], sorted([module.__name__ for module in modules]))
                 # assertIn/assertNotIn are super noisy when dealing with the huge sys.modules dict, so instead:
                 if "some_jobs" not in sys.modules:
                     self.fail("Valid module wasn't loaded from JOBS_ROOT")
@@ -1077,14 +1080,16 @@ class TestModuleLoadingUtils(TestCase):
                 # Repo that we intend to load
                 os.mkdir(os.path.join(tempdir, "my_repo"))
                 with open(os.path.join(tempdir, "my_repo", "__init__.py"), "wt") as fd:
-                    fd.write("")
+                    fd.write("name='my_repo'")
                 os.mkdir(os.path.join(tempdir, "my_repo", "jobs"))
                 with open(os.path.join(tempdir, "my_repo", "jobs", "__init__.py"), "wt") as fd:
                     fd.write("import my_repo.jobs.some_jobs")
-                    # fd.write("\nimport .some_jobs")
+                    fd.write("\nfrom . import some_other_jobs")
                     fd.write("\nname='my_repo.jobs'")
                 with open(os.path.join(tempdir, "my_repo", "jobs", "some_jobs.py"), "wt") as fd:
                     fd.write("name='my_repo.jobs.some_jobs'")
+                with open(os.path.join(tempdir, "my_repo", "jobs", "some_other_jobs.py"), "wt") as fd:
+                    fd.write("name='my_repo.jobs.some_other_jobs'")
 
                 # A separate repo, not intended to be loaded
                 os.mkdir(os.path.join(tempdir, "other_repo"))
@@ -1101,6 +1106,7 @@ class TestModuleLoadingUtils(TestCase):
                     fd.write("name = 'turtle'")
 
                 modules = import_modules_privately(tempdir, module_path=["my_repo", "jobs"], ignore_import_errors=False)
+                self.assertEqual(["my_repo", "my_repo.jobs"], sorted([module.__name__ for module in modules]))
                 # assertIn/assertNotIn are super noisy when dealing with the huge sys.modules dict, so instead:
                 if "my_repo" not in sys.modules:
                     self.fail("Valid repo wasn't loaded from GIT_ROOT")
@@ -1113,8 +1119,10 @@ class TestModuleLoadingUtils(TestCase):
                 with self.assertRaises(KeyError, msg="conflicting package name was loaded unsafely from GIT_ROOT"):
                     sys.modules["turtle"]
 
+                self.assertEqual(sys.modules["my_repo"].name, "my_repo")
                 self.assertEqual(sys.modules["my_repo.jobs"].name, "my_repo.jobs")
                 self.assertEqual(sys.modules["my_repo.jobs"].some_jobs.name, "my_repo.jobs.some_jobs")
+                self.assertEqual(sys.modules["my_repo.jobs"].some_other_jobs.name, "my_repo.jobs.some_other_jobs")
 
             finally:
                 clear_module_from_sys_modules("my_repo")
@@ -1124,14 +1132,19 @@ class TestModuleLoadingUtils(TestCase):
 
             # Test reloading of modules after code changes
             try:
+                with open(os.path.join(tempdir, "my_repo", "__init__.py"), "wt") as fd:
+                    fd.write("name='my_repo_new'")
                 with open(os.path.join(tempdir, "my_repo", "jobs", "__init__.py"), "wt") as fd:
                     fd.write("import my_repo.jobs.some_jobs")
-                    # fd.write("\nimport .some_jobs")
+                    fd.write("\nfrom . import some_other_jobs")
                     fd.write("\nname='my_repo.jobs_new'")
                 with open(os.path.join(tempdir, "my_repo", "jobs", "some_jobs.py"), "wt") as fd:
                     fd.write("name='my_repo.jobs.some_jobs_new'")
+                with open(os.path.join(tempdir, "my_repo", "jobs", "some_other_jobs.py"), "wt") as fd:
+                    fd.write("name='my_repo.jobs.some_other_jobs_new'")
 
                 modules = import_modules_privately(tempdir, module_path=["my_repo", "jobs"], ignore_import_errors=False)
+                self.assertEqual(["my_repo", "my_repo.jobs"], sorted([module.__name__ for module in modules]))
                 # assertIn/assertNotIn are super noisy when dealing with the huge sys.modules dict, so instead:
                 if "my_repo" not in sys.modules:
                     self.fail("Valid repo wasn't loaded from GIT_ROOT")
@@ -1144,8 +1157,10 @@ class TestModuleLoadingUtils(TestCase):
                 with self.assertRaises(KeyError, msg="conflicting package name was loaded unsafely from GIT_ROOT"):
                     sys.modules["turtle"]
 
+                self.assertEqual(sys.modules["my_repo"].name, "my_repo_new")
                 self.assertEqual(sys.modules["my_repo.jobs"].name, "my_repo.jobs_new")
                 self.assertEqual(sys.modules["my_repo.jobs"].some_jobs.name, "my_repo.jobs.some_jobs_new")
+                self.assertEqual(sys.modules["my_repo.jobs"].some_other_jobs.name, "my_repo.jobs.some_other_jobs_new")
 
             finally:
                 clear_module_from_sys_modules("my_repo")

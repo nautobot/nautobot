@@ -1,7 +1,6 @@
 """Models for representing external data sources."""
 
 from contextlib import contextmanager
-from importlib.util import find_spec
 import logging
 import os
 import shutil
