@@ -180,6 +180,8 @@ class GitRepository(PrimaryModel):
             return enqueue_git_repository_diff_origin_and_local(self, user)
         return enqueue_pull_git_repository_and_refresh_data(self, user)
 
+    sync.alters_data = True
+
     @contextmanager
     def clone_to_directory_context(self, path=None, branch=None, head=None, depth=0):
         """
@@ -206,6 +208,8 @@ class GitRepository(PrimaryModel):
             # Cleanup the temporary directory
             if path_name:
                 self.cleanup_cloned_directory(path_name)
+
+    clone_to_directory_context.alters_data = True
 
     def clone_to_directory(self, path=None, branch=None, head=None, depth=0):
         """
@@ -246,6 +250,8 @@ class GitRepository(PrimaryModel):
         logger.info(f"Cloned repository {self.name} to {path_name}")
         return path_name
 
+    clone_to_directory.alters_data = True
+
     def cleanup_cloned_directory(self, path):
         """
         Cleanup the cloned directory.
@@ -259,3 +265,5 @@ class GitRepository(PrimaryModel):
         except OSError as os_error:
             # log error if the cleanup fails
             logger.error(f"Failed to cleanup temporary directory at {path}: {os_error}")
+
+    cleanup_cloned_directory.alters_data = True
