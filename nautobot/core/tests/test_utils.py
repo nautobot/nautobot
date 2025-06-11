@@ -1,3 +1,7 @@
+import os
+import os.path
+import sys
+import tempfile
 from unittest import mock
 import uuid
 
@@ -17,6 +21,11 @@ from nautobot.core.models import fields as core_fields, utils as models_utils, v
 from nautobot.core.testing import TestCase
 from nautobot.core.utils import data as data_utils, filtering, lookup, querysets, requests
 from nautobot.core.utils.migrations import update_object_change_ct_for_replaced_models
+from nautobot.core.utils.module_loading import (
+    check_name_safe_to_import_privately,
+    clear_module_from_sys_modules,
+    import_modules_privately,
+)
 from nautobot.dcim import filters as dcim_filters, forms as dcim_forms, models as dcim_models, tables
 from nautobot.extras import models as extras_models, utils as extras_utils
 from nautobot.extras.choices import ObjectChangeActionChoices, RelationshipTypeChoices
@@ -957,6 +966,176 @@ class TestMigrationUtils(TestCase):
             )
             self.assertEqual(ObjectChange.objects.get(request_id=request_id).changed_object_type, location_ct)
             self.assertEqual(ObjectChange.objects.get(request_id=request_id).related_object_type, location_ct)
+
+class TestModuleLoadingUtils(TestCase):
+    def test_check_name_safe_to_import_privately(self):
+        for invalid in (
+            "foo.bar",  # not a valid identifier
+            "😂",  # not a valid identifier
+            "from",  # reserved keyword
+            "sys",  # Python builtin
+            "nautobot",  # installed package
+            "tkinter",  # system library
+        ):
+            permitted, reason = check_name_safe_to_import_privately(invalid)
+            self.assertFalse(permitted)
+            self.assertIsInstance(reason, str)
+
+    def test_import_modules_privately_jobs_root_case(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            try:
+                # Job file treated as a standalone module
+                with open(os.path.join(tempdir, "some_jobs.py"), "wt") as fd:
+                    fd.write("name = 'some_jobs'")
+
+                # Job subdirectory treated as a package
+                os.mkdir(os.path.join(tempdir, "my_jobs"))
+                with open(os.path.join(tempdir, "my_jobs", "__init__.py"), "wt") as fd:
+                    fd.write("import my_jobs.some_submodule")
+                    # fd.write("\nimport .relative_submodule")
+                    fd.write("\nname = 'my_jobs'")
+                os.mkdir(os.path.join(tempdir, "my_jobs", "some_submodule"))
+                with open(os.path.join(tempdir, "my_jobs", "some_submodule", "__init__.py"), "wt") as fd:
+                    fd.write("name = 'my_jobs.some_submodule'")
+                os.mkdir(os.path.join(tempdir, "my_jobs", "relative_submodule"))
+                with open(os.path.join(tempdir, "my_jobs", "relative_submodule", "__init__.py"), "wt") as fd:
+                    fd.write("name = 'my_jobs.relative_submodule'")
+
+                # Job file that shouldn't be loaded as it conflicts
+                with open(os.path.join(tempdir, "tkinter.py"), "wt") as fd:
+                    fd.write("name = 'tkinter'")
+
+                # Job submodule that shouldn't be loaded as it conflicts
+                os.mkdir(os.path.join(tempdir, "turtle"))
+                with open(os.path.join(tempdir, "turtle", "__init__.py"), "wt") as fd:
+                    fd.write("name = 'turtle'")
+
+                modules = import_modules_privately(tempdir)
+                self.assertIn("some_jobs", sys.modules.keys())
+                self.assertIn("my_jobs", sys.modules.keys())
+                with self.assertRaises(KeyError, msg="conflicting module name was loaded unsafely from JOBS_ROOT"):
+                    sys.modules["tkinter"]
+                with self.assertRaises(KeyError, msg="conflicting package name was loaded unsafely from JOBS_ROOT"):
+                    sys.modules["turtle"]
+
+                self.assertEqual(sys.modules["some_jobs"].name, "some_jobs")
+                self.assertEqual(sys.modules["my_jobs"].name, "my_jobs")
+                self.assertEqual(sys.modules["my_jobs"].some_submodule.name, "my_jobs.some_submodule")
+                # self.assertEqual(sys.modules["my_jobs"].relative_submodule.name, "my_jobs.relative_submodule")
+
+            finally:
+                clear_module_from_sys_modules("some_jobs")
+                clear_module_from_sys_modules("my_jobs")
+
+                self.assertNotIn("some_jobs", sys.modules.keys())
+                self.assertNotIn("my_jobs", sys.modules.keys())
+                self.assertNotIn("my_jobs.some_submodule", sys.modules.keys())
+
+            # Test reloading of modules after code changes
+            try:
+                # Job file treated as a standalone module
+                with open(os.path.join(tempdir, "some_jobs.py"), "wt") as fd:
+                    fd.write("name = 'some_jobs_new'")
+
+                # Job subdirectory treated as a package
+                with open(os.path.join(tempdir, "my_jobs", "__init__.py"), "wt") as fd:
+                    fd.write("import my_jobs.some_submodule")
+                    # fd.write("import .some_submodule")
+                    fd.write("\nname = 'my_jobs_new'")
+                with open(os.path.join(tempdir, "my_jobs", "some_submodule", "__init__.py"), "wt") as fd:
+                    fd.write("name = 'my_jobs.some_submodule_new'")
+
+                modules = import_modules_privately(tempdir)
+                self.assertIn("some_jobs", sys.modules.keys())
+                self.assertIn("my_jobs", sys.modules.keys())
+                with self.assertRaises(KeyError, msg="conflicting module name was loaded unsafely from JOBS_ROOT"):
+                    sys.modules["tkinter"]
+                with self.assertRaises(KeyError, msg="conflicting package name was loaded unsafely from JOBS_ROOT"):
+                    sys.modules["turtle"]
+
+                self.assertEqual(sys.modules["some_jobs"].name, "some_jobs_new")
+                self.assertEqual(sys.modules["my_jobs"].name, "my_jobs_new")
+                self.assertEqual(sys.modules["my_jobs"].some_submodule.name, "my_jobs.some_submodule_new")
+
+            finally:
+                clear_module_from_sys_modules("some_jobs")
+                clear_module_from_sys_modules("my_jobs")
+
+                self.assertNotIn("some_jobs", sys.modules.keys())
+                self.assertNotIn("my_jobs", sys.modules.keys())
+                self.assertNotIn("my_jobs.some_submodule", sys.modules.keys())
+
+    def test_import_modules_privately_git_repo_jobs_case(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            try:
+                # Repo that we intend to load
+                os.mkdir(os.path.join(tempdir, "my_repo"))
+                with open(os.path.join(tempdir, "my_repo", "__init__.py"), "wt") as fd:
+                    fd.write("")
+                os.mkdir(os.path.join(tempdir, "my_repo", "jobs"))
+                with open(os.path.join(tempdir, "my_repo", "jobs", "__init__.py"), "wt") as fd:
+                    # fd.write("import my_repo.jobs.some_jobs")
+                    # fd.write("\nimport .some_jobs")
+                    fd.write("\nname='my_repo.jobs'")
+                with open(os.path.join(tempdir, "my_repo", "jobs", "some_jobs.py"), "wt") as fd:
+                    fd.write("name='my_repo.jobs.some_jobs'")
+
+                # A separate repo, not intended to be loaded
+                os.mkdir(os.path.join(tempdir, "other_repo"))
+                with open(os.path.join(tempdir, "other_repo", "__init__.py"), "wt") as fd:
+                    fd.write("")
+
+                # File that shouldn't be loaded as it conflicts
+                with open(os.path.join(tempdir, "tkinter.py"), "wt") as fd:
+                    fd.write("name = 'tkinter'")
+
+                # Package that shouldn't be loaded as it conflicts
+                os.mkdir(os.path.join(tempdir, "turtle"))
+                with open(os.path.join(tempdir, "turtle", "__init__.py"), "wt") as fd:
+                    fd.write("name = 'turtle'")
+
+                modules = import_modules_privately(tempdir, module_path=["my_repo", "jobs"])
+                self.assertIn("my_repo.jobs", sys.modules.keys())
+                # self.assertNotIn("other_repo", sys.modules.keys())
+                with self.assertRaises(KeyError, msg="conflicting module name was loaded unsafely from GIT_ROOT"):
+                    sys.modules["tkinter"]
+                with self.assertRaises(KeyError, msg="conflicting package name was loaded unsafely from GIT_ROOT"):
+                    sys.modules["turtle"]
+
+                self.assertEqual(sys.modules["my_repo.jobs"].name, "my_repo.jobs")
+                self.assertEqual(sys.modules["my_repo.jobs"].some_jobs.name, "my_repo.jobs.some_jobs")
+
+            finally:
+                clear_module_from_sys_modules("my_repo")
+
+                self.assertNotIn("my_repo", sys.modules.keys())
+                self.assertNotIn("my_repo.jobs", sys.modules.keys())
+
+            # Test reloading of modules after code changes
+            try:
+                with open(os.path.join(tempdir, "my_repo", "jobs", "__init__.py"), "wt") as fd:
+                    fd.write("import my_repo.jobs.some_jobs")
+                    # fd.write("import .some_jobs")
+                    fd.write("\nname='my_repo.jobs_new'")
+                with open(os.path.join(tempdir, "my_repo", "jobs", "some_jobs.py"), "wt") as fd:
+                    fd.write("name='my_repo.jobs.some_jobs_new'")
+
+                modules = import_modules_privately(tempdir, module_path=["my_repo", "jobs"])
+                self.assertIn("my_repo.jobs", sys.modules.keys())
+                # self.assertNotIn("other_repo", sys.modules.keys())
+                with self.assertRaises(KeyError, msg="conflicting module name was loaded unsafely from GIT_ROOT"):
+                    sys.modules["tkinter"]
+                with self.assertRaises(KeyError, msg="conflicting package name was loaded unsafely from GIT_ROOT"):
+                    sys.modules["turtle"]
+
+                self.assertEqual(sys.modules["my_repo.jobs"].name, "my_repo.jobs_new")
+                self.assertEqual(sys.modules["my_repo.jobs"].some_jobs.name, "my_repo.jobs.some_jobs_new")
+
+            finally:
+                clear_module_from_sys_modules("my_repo")
+
+                self.assertNotIn("my_repo", sys.modules.keys())
+                self.assertNotIn("my_repo.jobs", sys.modules.keys())
 
 
 class TestQuerySetUtils(TestCase):
