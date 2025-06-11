@@ -2,9 +2,87 @@
 
 As a part of the Nautobot development team's commitment to security, we maintain the below historical list of security issues which have been fixed and disclosed. Note that this list **only** includes issues in Nautobot itself; while we frequently update our library dependencies to keep them up-to-date and free of known security issues therein, any reported issues in such libraries, and the corresponding updates to Nautobot's specified dependencies, are out of scope for this document.
 
+<!-- pyml disable-num-lines 500 proper-names -->
+
+## CVE-2025-49142
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>June 9, 2025</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>Due to insufficient security configuration of the Jinja2 templating feature used in computed fields, custom links, etc. in Nautobot:
+      <ol>
+        <li>A malicious user could configure this feature set in ways that could expose the value of Secrets defined in Nautobot when the templated content is rendered.</li>
+        <li>A malicious user could configure this feature set in ways that could call Python APIs to modify data within Nautobot when the templated content is rendered, bypassing the object permissions assigned to the viewing user.</li>
+      </ol>
+    </td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-wjw6-95h5-4jpx">GHSA-wjw6-95h5-4jpx</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;1.6.32</li>
+        <li>&ge;2.0.0, &lt;2.4.10</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>1.6.32 (<a href="https://github.com/nautobot/nautobot/commit/1c59263fa0284b7ad5293292c60ed03725a4603f">patch</a>)</li>
+        <li>2.4.10 (<a href="https://github.com/nautobot/nautobot/commit/a8356bc06642de9c7e6b71a8c89bea6f8a86702b">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## CVE-2025-49143
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>June 9, 2025</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>Files uploaded by users to Nautobot's <code>MEDIA_ROOT</code> directory, including DeviceType image attachments as well as images attached to a Location, Device, or Rack, are served to users via a URL endpoint that was not enforcing user authentication. As a consequence, such files can be retrieved by anonymous users who know or can guess the correct URL for a given file.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-rh67-4c8j-hjjh">GHSA-rh67-4c8j-hjjh</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;1.6.32</li>
+        <li>&ge;2.0.0, &lt;2.4.10</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>1.6.32 (<a href="https://github.com/nautobot/nautobot/commit/d99a53b065129cff3a0fa9abe7355a9ef1ad4c95">patch</a>)</li>
+        <li>2.4.10 (<a href="https://github.com/nautobot/nautobot/commit/9c892dc300429948a4714f743c9c2879d8987340">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
 ## CVE-2024-36112
 
-<!-- pyml disable-num-lines 500 proper-names -->
 <!-- pyml disable-next-line no-inline-html -->
 <table>
   <tr>
