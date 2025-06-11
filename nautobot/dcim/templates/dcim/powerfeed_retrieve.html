@@ -29,6 +29,12 @@
                     <td>Rack</td>
                     <td>{{ object.rack|hyperlinked_object }}</td>
                 </tr>
+                {% if object.occupied_positions %}
+                <tr>
+                    <td>Occupied Positions</td>
+                    <td>{{ object.occupied_positions }}</td>
+                </tr>
+                {% endif %}
                 <tr>
                     <td>Type</td>
                     <td>
@@ -90,29 +96,16 @@
                     <td>Phase</td>
                     <td>{{ object.get_phase_display }}</td>
                 </tr>
+                {% if object.phase_designation %}
+                <tr>
+                    <td>Phase Designation</td>
+                    <td><span class="label label-info">{{ object.phase_designation }}</span></td>
+                </tr>
+                {% endif %}
                 <tr>
                     <td>Max Utilization</td>
                     <td>{{ object.max_utilization }}%</td>
                 </tr>
-            </table>
-        </div>
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <strong>Circuit Configuration</strong>
-            </div>
-            <table class="table table-hover panel-body attr-table">
-                {% if object.circuit_position %}
-                <tr>
-                    <td>Circuit Position</td>
-                    <td>{{ object.circuit_position }}</td>
-                </tr>
-                {% endif %}
-                {% if object.breaker_poles %}
-                <tr>
-                    <td>Breaker Poles</td>
-                    <td>{{ object.get_breaker_poles_display }}</td>
-                </tr>
-                {% endif %}
             </table>
         </div>
 {% endblock content_left_page %}

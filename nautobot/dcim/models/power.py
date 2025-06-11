@@ -6,6 +6,7 @@ from django.db import models
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.validators import ExclusionValidator
+from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.choices import (
     PowerFeedBreakerPoleChoices,
     PowerFeedPhaseChoices,
@@ -53,15 +54,10 @@ class PowerPanel(PrimaryModel):
     )
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
     panel_type = models.CharField(
-        max_length=30,
-        choices=PowerPanelTypeChoices,
-        blank=True,
-        help_text="Panel configuration type"
+        max_length=30, choices=PowerPanelTypeChoices, blank=True, help_text="Panel configuration type"
     )
     circuit_positions = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        help_text="Total number of circuit positions in the panel (e.g., 42)"
+        null=True, blank=True, help_text="Total number of circuit positions in the panel (e.g., 42)"
     )
 
     natural_key_field_names = ["name", "location"]
@@ -119,7 +115,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
         to="PowerPanel",
         on_delete=models.PROTECT,
         related_name="power_feeds",
-        help_text="Source panel that originates this power feed"
+        help_text="Source panel that originates this power feed",
     )
     destination_panel = models.ForeignKey(
         to="PowerPanel",
@@ -127,7 +123,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
         blank=True,
         null=True,
         related_name="feeders",
-        help_text="Destination panel for panel-to-panel power distribution"
+        help_text="Destination panel for panel-to-panel power distribution",
     )
     rack = models.ForeignKey(to="Rack", on_delete=models.PROTECT, blank=True, null=True, related_name="power_feeds")
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
@@ -155,17 +151,14 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
         help_text="Maximum permissible draw (percentage)",
     )
     circuit_position = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        help_text="Starting circuit position in panel"
+        null=True, blank=True, help_text="Starting circuit position in panel"
     )
     breaker_poles = models.PositiveSmallIntegerField(
-        choices=PowerFeedBreakerPoleChoices,
-        blank=True,
-        null=True,
-        help_text="Number of breaker poles"
+        choices=PowerFeedBreakerPoleChoices, blank=True, null=True, help_text="Number of breaker poles"
     )
     available_power = models.PositiveIntegerField(default=0, editable=False)
+    allocated_power = models.PositiveIntegerField(default=0, editable=False)
+    utilization_percentage = models.PositiveSmallIntegerField(default=0, editable=False)
     comments = models.TextField(blank=True)
 
     clone_fields = [
@@ -191,19 +184,6 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
     def __str__(self):
         return self.name
 
-    def get_occupied_positions(self):
-        """Get set of circuit positions occupied by this feed."""
-        if not (self.circuit_position and self.breaker_poles):
-            return set()
-
-        return set(self.circuit_position + (i * 2) for i in range(self.breaker_poles))
-
-    @property
-    def occupied_positions(self):
-        """All circuit positions occupied by this feed as comma-separated string."""
-        positions = self.get_occupied_positions()
-        return ",".join(map(str, sorted(positions))) if positions else ""
-
     def clean(self):
         super().clean()
 
@@ -217,7 +197,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
                     {
                         "rack": f'Rack "{self.rack}" ({self.rack.location}) and '  # pylint: disable=no-member
                         f'power panel "{self.power_panel}" ({self.power_panel.location}) '
-                        f'are not in the same location hierarchy.'
+                        f"are not in the same location hierarchy."
                     }
                 )
 
@@ -235,24 +215,6 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
         if self.circuit_position is not None and self.breaker_poles is not None:
             self._validate_circuit_conflicts()
 
-    def _validate_circuit_conflicts(self):
-        """Validate no circuit position conflicts with existing feeds."""
-        new_positions = self.get_occupied_positions()
-
-        # Check existing feeds on same panel
-        conflicts = PowerFeed.objects.filter(
-            power_panel=self.power_panel,
-            circuit_position__isnull=False,
-            breaker_poles__isnull=False
-        ).exclude(pk=self.pk if self.pk else None)
-
-        for feed in conflicts:
-            if new_positions.intersection(feed.get_occupied_positions()):
-                raise ValidationError({
-                    'circuit_position': f'Circuit position {self.circuit_position} conflicts with '
-                    f'feed "{feed.name}" (occupies {feed.occupied_positions})'
-                })
-
     def save(self, *args, **kwargs):
         # Cache the available_power property on the instance
         kva = abs(self.voltage) * self.amperage * (self.max_utilization / 100)
@@ -267,5 +229,86 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
     def parent(self):
         return self.power_panel
 
+    @property
+    def occupied_positions(self):
+        """All circuit positions occupied by this feed as comma-separated string."""
+        positions = self.get_occupied_positions()
+        return ",".join(map(str, sorted(positions))) if positions else ""
+
+    @property
+    def phase_designation(self):
+        """Calculate phase designation based on occupied circuit positions."""
+        if not (self.circuit_position and self.breaker_poles):
+            return None
+
+        positions = self.get_occupied_positions()
+        if not positions:
+            return None
+
+        # Standard 3-phase panel phase distribution pattern
+        # Positions 1,2=A, 3,4=B, 5,6=C, 7,8=A, 9,10=B, 11,12=C, etc.
+        def position_to_phase(pos):
+            # Calculate which phase this position is on
+            cycle_position = ((pos - 1) // 2) % 3
+            return ["A", "B", "C"][cycle_position]
+
+        phases = {position_to_phase(pos) for pos in positions}
+
+        # Return phase designation based on which phases are used
+        if len(phases) == 1:
+            return next(iter(phases))  # Single phase: "A", "B", or "C"
+        elif len(phases) == 2:
+            sorted_phases = sorted(phases)
+            return f"{sorted_phases[0]}-{sorted_phases[1]}"  # "A-B", "B-C", etc.
+        elif len(phases) == 3:
+            return "A-B-C"  # Three-phase
+        else:
+            return None
+
+    def get_utilization(self):
+        return UtilizationData(numerator=self.allocated_power, denominator=self.available_power or 0)
+
+    def get_occupied_positions(self):
+        """Get set of circuit positions occupied by this feed."""
+        if not (self.circuit_position and self.breaker_poles):
+            return set()
+
+        return set(self.circuit_position + (i * 2) for i in range(self.breaker_poles))
+
     def get_type_class(self):
         return PowerFeedTypeChoices.CSS_CLASSES.get(self.type)
+
+    def update_cached_power(self):
+        calculated_power = self._calculate_allocated_power()
+        self.allocated_power = calculated_power
+
+        if self.available_power > 0:
+            self.utilization_percentage = min(100, int((calculated_power / self.available_power) * 100))
+        else:
+            self.utilization_percentage = 0
+
+        self.save(update_fields=["allocated_power", "utilization_percentage"])
+
+    def _calculate_allocated_power(self):
+        if self.connected_endpoint:
+            power_draw = self.connected_endpoint.get_power_draw()
+            return power_draw.get("allocated", 0)
+        return 0
+
+    def _validate_circuit_conflicts(self):
+        """Validate no circuit position conflicts with existing feeds."""
+        new_positions = self.get_occupied_positions()
+
+        # Check existing feeds on same panel
+        conflicts = PowerFeed.objects.filter(
+            power_panel=self.power_panel, circuit_position__isnull=False, breaker_poles__isnull=False
+        ).exclude(pk=self.pk if self.pk else None)
+
+        for feed in conflicts:
+            if new_positions.intersection(feed.get_occupied_positions()):
+                raise ValidationError(
+                    {
+                        "circuit_position": f"Circuit position {self.circuit_position} conflicts with "
+                        f'feed "{feed.name}" (occupies {feed.occupied_positions})'
+                    }
+                )
