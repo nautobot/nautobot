@@ -56,46 +56,50 @@ def import_modules_privately(path, module_path=None, module_prefix="", ignore_im
             If this is set as False, they will then be re-raised to be handled by the caller of this function.
     """
     loaded_modules = []
+    # We formerly used pkgutil.walk_packages() here to handle submodule loading with a multi-entry module_path,
+    # but that has the downside (and risk!) of automatically importing all packages that it finds in the given path,
+    # whether or not we actually want to do so. So instead, for the case where a module_path is provided, we need to
+    # iteratively import each submodule ourselves.
     if module_path:
+        # Git repository case - e.g. import_modules_privately(settings.GIT_ROOT, module_path=[repository_slug, "jobs"])
+        # Here we want to ONLY auto-load the module sequence identified by module_path.
         permitted, reason = check_name_safe_to_import_privately(module_path[0])
         if not permitted:
             logger.error("Unable to load module %r from %s as it is %s", module_path[0], path, reason)
-            if ignore_import_errors:
-                return loaded_modules
-            raise ValueError(f"Unable to load module {module_path[0]!r} from {path} as it is {reason}")
-        module = None
-        module_name = module_path.pop(0)
-        submodule_name = module_name
-        try:
-            while True:
-                finder = FileFinder(path, (SourceFileLoader, SOURCE_SUFFIXES))
-                finder.invalidate_caches()
-                spec = finder.find_spec(module_name)
-                if spec is None:
-                    raise ValueError(f"Unable to find module spec for {module_name}")
-                spec.name = submodule_name
-                spec.loader.name = submodule_name
-                submodule = module_from_spec(spec)
-                sys.modules[submodule_name] = submodule
-                spec.loader.exec_module(submodule)
-                if module is not None:
-                    setattr(module, module_name, submodule)
-                module = submodule
-                loaded_modules.append(module)
-                if module_path:
-                    submodule_name = f"{module_name}.{module_path[0]}"
-                    module_name = module_path.pop(0)
-                    path = module.__path__[0]
-                else:
-                    break
-        except Exception as exc:
-            logger.error("Unable to load module %s from %s: %s", module_name, path, exc)
-            if not ignore_import_errors:
-                raise
+        else:
+            module = None
+            module_name = module_path.pop(0)
+            submodule_name = module_name
+            try:
+                while True:
+                    finder = FileFinder(path, (SourceFileLoader, SOURCE_SUFFIXES))
+                    finder.invalidate_caches()
+                    spec = finder.find_spec(module_name)
+                    if spec is None or spec.loader is None:
+                        logger.error("Unable to find module spec and/or loader for %r", submodule_name)
+                        break
+                    spec.name = submodule_name
+                    spec.loader.name = submodule_name
+                    submodule = module_from_spec(spec)
+                    sys.modules[submodule_name] = submodule
+                    spec.loader.exec_module(submodule)
+                    if module is not None:
+                        setattr(module, module_name, submodule)
+                    module = submodule
+                    loaded_modules.append(module)
+                    if module_path:
+                        submodule_name = f"{module_name}.{module_path[0]}"
+                        module_name = module_path.pop(0)
+                        path = module.__path__[0]
+                    else:
+                        break
+            except Exception as exc:
+                logger.error("Unable to load module %s from %s: %s", module_name, path, exc)
+                if not ignore_import_errors:
+                    raise
     else:
-        # We formerly used pkgutil.walk_packages() here to handle recursive loading, but that has the downside (and risk!) of
-        # automatically importing all packages that it finds in the given path, whether or not we actually want to do so.
-        # So instead, we use pkgutil.iter_modules() to only discover top-level modules, and recurse ourselves as needed.
+        # JOBS_ROOT case - import ALL top-level modules/packages that we can find in the given path;
+        # they can implement and import submodules as desired by themselves, but we only autoimport top-level ones.
         for finder, discovered_module_name, _ in pkgutil.iter_modules([path]):
             permitted, reason = check_name_safe_to_import_privately(discovered_module_name)
             if not permitted:
@@ -107,8 +111,9 @@ def import_modules_privately(path, module_path=None, module_prefix="", ignore_im
 
             try:
                 spec = finder.find_spec(discovered_module_name)
-                if spec is None:
-                    raise ValueError(f"Unable to find module spec for {discovered_module_name}")
+                if spec is None or spec.loader is None:
+                    logger.error("Unable to find module spec and/or loader for %r", discovered_module_name)
+                    continue
                 module = module_from_spec(spec)
                 sys.modules[module_name] = module
                 spec.loader.exec_module(module)
