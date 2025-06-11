@@ -4189,7 +4189,7 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
             ),
             object_detail.ObjectFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
-                weight=400,
+                weight=200,
                 label="Electrical Characteristics",
                 fields=["supply", "voltage", "amperage", "phase", "max_utilization"],
                 value_transforms={
@@ -4200,7 +4200,7 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
             ),
             object_detail.KeyValueTablePanel(
                 section=SectionChoices.RIGHT_HALF,
-                weight=200,
+                weight=300,
                 label="Connection",
                 context_data_key="connection_data",
                 value_transforms={
@@ -4223,10 +4223,10 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
             return context
 
         powerfeed_data = {
-            "Power Panel": instance.power_panel,
+            "Power Panel": getattr(instance, "power_panel", None),
             "Rack": instance.rack,
             "Type": instance.get_type_display(),
-            "Status": instance.status,
+            "Status": getattr(instance, "status", None),
             **self._get_connected_device_data(instance),
         }
 
