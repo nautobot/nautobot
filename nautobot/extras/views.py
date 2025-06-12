@@ -569,75 +569,28 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
     action_buttons = ("add",)
 
     def get_extra_context(self, request, instance):
-        ctx = super().get_extra_context(request, instance)
-        if request.method == "POST":
-            ctx["choices"] = forms.CustomFieldChoiceFormSet(data=request.POST, instance=instance)
+        context = super().get_extra_context(request, instance)
+
+        if self.action in ("create", "update"):
+            if request.POST:
+                context["choices"] = forms.CustomFieldChoiceFormSet(data=request.POST, instance=instance)
+            else:
+                context["choices"] = forms.CustomFieldChoiceFormSet(instance=instance)
+
+        return context
+
+    def form_save(self, form, **kwargs):
+        obj = super().form_save(form, **kwargs)
+
+        # Process the formset for choices
+        ctx = self.get_extra_context(self.request, obj)
+        choices = ctx["choices"]
+        if choices.is_valid():
+            choices.save()
         else:
-            ctx["choices"] = forms.CustomFieldChoiceFormSet(instance=instance)
-        return ctx
+            raise ValidationError(choices.errors)
 
-    def get_formsets(self, request, instance):
-        if request.method == "POST":
-            return {"choices": forms.CustomFieldChoiceFormSet(data=request.POST, instance=instance)}
-        return {"choices": forms.CustomFieldChoiceFormSet(instance=instance)}
-
-    def form_valid(self, form):
-        return self._process_create_or_update_form(form)
-
-    def _process_create_or_update_form(self, form):
-        instance = form.instance
-        formsets = self.get_formsets(self.request, instance)
-        if not form.is_valid():
-            return self._form_invalid(form, formsets=formsets)
-        for name, formset in formsets.items():
-            if not formset.is_valid():
-                logger.debug("Formset '%s' has errors: %s", name, formset.errors)
-                form.add_error(None, "Errors encountered when saving custom field choices.")
-                return self._form_invalid(form, formsets=formsets)
-        try:
-            object_created = not instance.present_in_database
-            instance = form.save(commit=False)
-            instance.save_base(raw=True, force_insert=object_created)
-            instance.full_clean()
-            instance.save()
-            form.save_m2m()
-            self.object = instance
-            for formset in formsets.values():
-                formset.instance = instance
-                formset.save()
-            verb = "Created" if object_created else "Modified"
-            msg = f"{verb} custom field"
-            try:
-                msg = format_html('{} <a href="{}">{}</a>', msg, instance.get_absolute_url(), instance)
-            except AttributeError:
-                msg = format_html("{} {}", msg, instance)
-            messages.success(self.request, msg)
-            return redirect(self.get_return_url(self.request, instance))
-
-        except ObjectDoesNotExist:
-            msg = "Object save failed due to object-level permissions violation"
-            logger.debug(msg)
-            form.add_error(None, msg)
-            raise
-
-        except ProtectedError as err:
-            err_msg = err.args[0]
-            protected_obj = err.protected_objects[0]
-            msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
-            logger.debug(msg)
-            form.add_error(None, msg)
-            raise
-
-    def _form_invalid(self, form, formsets=None):
-        instance = form.instance
-        context = self.get_extra_context(self.request, instance)
-        context["form"] = form
-        context["formsets"] = formsets or {}
-        context["obj_type"] = instance._meta.verbose_name
-        context["obj"] = instance
-        context["editing"] = True
-
-        return self.render_to_response(context)
+        return obj
 
 
 #
