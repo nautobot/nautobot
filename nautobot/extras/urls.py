@@ -12,7 +12,6 @@ from nautobot.extras.models import (
     Note,
     Relationship,
     SecretsGroup,
-    Tag,
 )
 
 app_name = "extras"
@@ -37,6 +36,7 @@ router.register("saved-views", views.SavedViewUIViewSet)
 router.register("secrets", views.SecretUIViewSet)
 router.register("static-group-associations", views.StaticGroupAssociationUIViewSet)
 router.register("statuses", views.StatusUIViewSet)
+router.register("tags", views.TagUIViewSet)
 router.register("teams", views.TeamUIViewSet)
 router.register("webhooks", views.WebhookUIViewSet)
 
@@ -375,27 +375,6 @@ urlpatterns = [
         views.ObjectNotesView.as_view(),
         name="secretsgroup_notes",
         kwargs={"model": SecretsGroup},
-    ),
-    # Tags
-    path("tags/", views.TagListView.as_view(), name="tag_list"),
-    path("tags/add/", views.TagEditView.as_view(), name="tag_add"),
-    path("tags/import/", views.TagBulkImportView.as_view(), name="tag_import"),  # 3.0 TODO: remove, unused
-    path("tags/edit/", views.TagBulkEditView.as_view(), name="tag_bulk_edit"),
-    path("tags/delete/", views.TagBulkDeleteView.as_view(), name="tag_bulk_delete"),
-    path("tags/<uuid:pk>/", views.TagView.as_view(), name="tag"),
-    path("tags/<uuid:pk>/edit/", views.TagEditView.as_view(), name="tag_edit"),
-    path("tags/<uuid:pk>/delete/", views.TagDeleteView.as_view(), name="tag_delete"),
-    path(
-        "tags/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="tag_changelog",
-        kwargs={"model": Tag},
-    ),
-    path(
-        "tags/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="tag_notes",
-        kwargs={"model": Tag},
     ),
 ]
 
