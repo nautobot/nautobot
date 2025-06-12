@@ -5,7 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.db.models import F, ProtectedError, Q
 from django.urls import reverse
 from django.utils.functional import cached_property, classproperty
@@ -26,9 +26,9 @@ from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.constants import MODULE_RECURSION_DEPTH_LIMIT
+from nautobot.dcim.querysets import DeviceQuerySet
 from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_driver_mapping_tool_names
 from nautobot.extras.models import ChangeLoggedModel, ConfigContextModel, RoleField, StatusField
-from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
 
 from .device_components import (
@@ -560,13 +560,41 @@ class Device(PrimaryModel, ConfigContextModel):
         null=True,
         verbose_name="Primary IPv6",
     )
-    cluster = models.ForeignKey(
+    clusters = models.ManyToManyField(
         to="virtualization.Cluster",
-        on_delete=models.SET_NULL,
         related_name="devices",
+        through="dcim.DeviceClusterAssignment",
         blank=True,
-        null=True,
     )
+
+    @property
+    def cluster(self):
+        """
+        Returns the first cluster assigned to this device.
+        Deprecated. Use `clusters` instead.
+
+        TODO: Remove this property in v3.0.0
+        """
+        # Ensures that the first cluster assigned to the device is returned for maximum
+        # backward compatibility.
+        return self.clusters.order_by("created").first()
+
+    @cluster.setter
+    def cluster(self, value):
+        """
+        Sets the clusters field to a single value.
+        Only assigns the cluster if there are 0 or 1 clusters currently assigned to the device.
+        Deprecated. Use `clusters` instead.
+
+        TODO: Remove this property in v3.0.0
+        """
+        # If the device hasn't been saved yet, defer the cluster assignment
+        if not self.present_in_database:
+            self._deferred_cluster = value
+            return
+
+        self.assign_cluster(value)
+
     virtual_chassis = models.ForeignKey(
         to="VirtualChassis",
         on_delete=models.SET_NULL,
@@ -627,7 +655,7 @@ class Device(PrimaryModel, ConfigContextModel):
         null=True,
     )
 
-    objects = BaseManager.from_queryset(ConfigContextModelQuerySet)()
+    objects = BaseManager.from_queryset(DeviceQuerySet)()
 
     clone_fields = [
         "device_type",
@@ -637,7 +665,7 @@ class Device(PrimaryModel, ConfigContextModel):
         "location",
         "rack",
         "status",
-        "cluster",
+        "clusters",
         "secrets_group",
     ]
 
@@ -663,6 +691,17 @@ class Device(PrimaryModel, ConfigContextModel):
 
     def __str__(self):
         return self.display or super().__str__()
+
+    def assign_cluster(self, cluster):
+        """
+        Assign a single cluster to the device.
+        """
+        if cluster is None:
+            self.clusters.clear()
+        else:
+            if self.clusters.count() <= 1:
+                with transaction.atomic():
+                    self.clusters.set([cluster])
 
     def validate_unique(self, exclude=None):
         # Check for a duplicate name on a device assigned to the same Location and no Tenant. This is necessary
@@ -805,15 +844,14 @@ class Device(PrimaryModel, ConfigContextModel):
                 )
 
         # A Device can only be assigned to a Cluster in the same location or parent location, if any
-        if (
-            self.cluster is not None
-            and self.location is not None
-            and self.cluster.location is not None
-            and self.cluster.location not in self.location.ancestors(include_self=True)
-        ):
-            raise ValidationError(
-                {"cluster": f"The assigned cluster belongs to a location that does not include {self.location}."}
-            )
+        if self.location is not None:
+            for cluster in self.clusters.all():
+                if cluster.location is not None and cluster.location not in self.location.ancestors(include_self=True):
+                    raise ValidationError(
+                        {
+                            "clusters": f"The assigned cluster '{cluster}' belongs to a location that does not include {self.location}."
+                        }
+                    )
 
         # Validate virtual chassis assignment
         if self.virtual_chassis and self.vc_position is None:
@@ -857,6 +895,12 @@ class Device(PrimaryModel, ConfigContextModel):
         is_new = not self.present_in_database
 
         super().save(*args, **kwargs)
+
+        # Apply any pending cluster assignment that was deferred during creation
+        if hasattr(self, "_deferred_cluster"):
+            cluster = self._deferred_cluster
+            delattr(self, "_deferred_cluster")
+            self.assign_cluster(cluster)
 
         # If this is a new Device, instantiate all related components per the DeviceType definition
         if is_new:
@@ -1059,6 +1103,21 @@ class Device(PrimaryModel, ConfigContextModel):
         Return all Rear Ports that are installed in the device or in modules that are installed in the device.
         """
         return RearPort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+
+
+@extras_features("graphql")
+class DeviceClusterAssignment(BaseModel):
+    device = models.ForeignKey("dcim.Device", on_delete=models.CASCADE, related_name="cluster_assignments")
+    cluster = models.ForeignKey("virtualization.Cluster", on_delete=models.CASCADE, related_name="device_assignments")
+    is_metadata_associable_model = False
+    documentation_static_path = "docs/user-guide/core-data-model/dcim/device.html"
+
+    class Meta:
+        unique_together = ["device", "cluster"]
+        ordering = ["device", "cluster"]
+
+    def __str__(self):
+        return f"{self.device}: {self.cluster}"
 
 
 #
@@ -1998,22 +2057,6 @@ class VirtualDeviceContext(PrimaryModel):
                     raise ValidationError(
                         {f"{field}": f"{ip} is not part of an interface that belongs to this VDC's device."}
                     )
-                # Note: The validation for primary IPs `validate_primary_ips` is commented out due to the order in which Django processes form validation with
-                # Many-to-Many (M2M) fields. During form saving, Django creates the instance first before assigning the M2M fields (in this case, interfaces).
-                # As a result, the primary_ips fields could fail validation at this point because the interfaces are not yet linked to the instance,
-                # leading to validation errors.
-                # interfaces = self.interfaces.all()
-                # if IPAddressToInterface.objects.filter(ip_address=ip, interface__in=interfaces).exists():
-                #     pass
-                # elif (
-                #     ip.nat_inside is None
-                #     or not IPAddressToInterface.objects.filter(
-                #         ip_address=ip.nat_inside, interface__in=interfaces
-                #     ).exists()
-                # ):
-                #     raise ValidationError(
-                #         {f"{field}": f"The specified IP address ({ip}) is not assigned to this Virtual Device Context."}
-                #     )
 
     def clean(self):
         super().clean()

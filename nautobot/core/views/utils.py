@@ -286,12 +286,17 @@ def prepare_cloned_fields(instance):
         if field_value is False:
             field_value = ""
 
-        # This is likely an m2m field
-        if isinstance(field_value, list):
+        # Handle M2M fields or lists
+        if hasattr(field_value, "all") and callable(field_value.all):
+            # This is a manager for a M2M relationship
+            for related_obj in field_value.all():
+                item_value = getattr(related_obj, "pk", str(related_obj))  # pk or str()
+                params.append((field_name, item_value))
+        # This is likely a list from another type of field
+        elif isinstance(field_value, list):
             for fv in field_value:
                 item_value = getattr(fv, "pk", str(fv))  # pk or str()
                 params.append((field_name, item_value))
-
         # Omit empty values
         elif field_value not in (None, ""):
             params.append((field_name, field_value))

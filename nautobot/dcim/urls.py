@@ -511,6 +511,16 @@ urlpatterns = [
         name="device_notes",
         kwargs={"model": Device},
     ),
+    path(
+        "devices/<uuid:pk>/clusters/add",
+        views.DeviceAddToClusterView.as_view(),
+        name="device_add_to_clusters",
+    ),
+    path(
+        "devices/<uuid:pk>/clusters/remove/",
+        views.DeviceRemoveFromClustersView.as_view(),
+        name="device_remove_from_clusters",
+    ),
     path(  # 3.0 TODO: remove, no longer needed/used since 2.3
         "devices/<uuid:pk>/dynamic-groups/",
         views.DeviceDynamicGroupsView.as_view(),

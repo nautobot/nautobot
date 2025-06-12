@@ -36,7 +36,7 @@ class ClusterGroupViewSet(NautobotModelViewSet):
 
 class ClusterViewSet(NautobotModelViewSet):
     queryset = Cluster.objects.annotate(
-        device_count=count_related(Device, "cluster"),
+        device_count=count_related(Device, "clusters", distinct=True),
         virtualmachine_count=count_related(VirtualMachine, "cluster"),
     )
     serializer_class = serializers.ClusterSerializer

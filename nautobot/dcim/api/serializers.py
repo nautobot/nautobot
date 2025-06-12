@@ -9,6 +9,7 @@ from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
 from nautobot.core.api import (
     ChoiceField,
     ContentTypeField,
+    NautobotHyperlinkedRelatedField,
     NautobotModelSerializer,
     TimeZoneSerializerField,
     TreeModelSerializerMixin,
@@ -61,6 +62,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceClusterAssignment,
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
@@ -102,6 +104,7 @@ from nautobot.extras.api.mixins import (
     TaggedModelSerializerMixin,
 )
 from nautobot.extras.utils import FeatureQuery
+from nautobot.virtualization.models import Cluster
 
 
 class CableTerminationModelSerializerMixin(serializers.ModelSerializer):
@@ -524,15 +527,25 @@ class DeviceBaySerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
 class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     face = ChoiceField(choices=DeviceFaceChoices, allow_blank=True, required=False)
     config_context = serializers.SerializerMethodField()
+    # for backward compatibility where a Device had only a single Cluster
+    cluster = NautobotHyperlinkedRelatedField(
+        allow_null=True,
+        queryset=Cluster.objects.all(),
+        required=False,
+        view_name="virtualization-api:cluster-detail",
+    )
 
     class Meta:
         model = Device
         fields = "__all__"
         validators = []
+        # Explicitly declare opt-in fields for test compatibility
+        opt_in_fields = ["computed_fields", "config_context", "relationships"]
         extra_kwargs = {
             "parent_bay": {"required": False, "allow_null": True},
             "vc_position": {"label": "Virtual chassis position"},
             "vc_priority": {"label": "Virtual chassis priority"},
+            "clusters": {"read_only": True},
         }
 
     def get_field_names(self, declared_fields, info):
@@ -1123,4 +1136,12 @@ class VirtualDeviceContextSerializer(TaggedModelSerializerMixin, NautobotModelSe
 class InterfaceVDCAssignmentSerializer(ValidatedModelSerializer):
     class Meta:
         model = InterfaceVDCAssignment
+        fields = "__all__"
+
+
+class DeviceClusterAssignmentSerializer(ValidatedModelSerializer):
+    """Serializer for DeviceClusterAssignment model."""
+
+    class Meta:
+        model = DeviceClusterAssignment
         fields = "__all__"
