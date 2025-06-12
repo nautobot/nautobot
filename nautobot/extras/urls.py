@@ -29,6 +29,7 @@ router.register("job-hooks", views.JobHookUIViewSet)
 router.register("job-queues", views.JobQueueUIViewSet)
 router.register("metadata-types", views.MetadataTypeUIViewSet)
 router.register("object-metadata", views.ObjectMetadataUIViewSet)
+router.register("relationship-associations", views.RelationshipAssociationUIViewSet)
 router.register("relationships", views.RelationshipUIViewSet)
 router.register("roles", views.RoleUIViewSet)
 router.register("saved-views", views.SavedViewUIViewSet)
@@ -350,21 +351,6 @@ urlpatterns = [
         views.ObjectNotesView.as_view(),
         name="relationship_notes",
         kwargs={"model": Relationship},
-    ),
-    path(
-        "relationship-associations/",
-        views.RelationshipAssociationListView.as_view(),
-        name="relationshipassociation_list",
-    ),
-    path(
-        "relationship-associations/delete/",
-        views.RelationshipAssociationBulkDeleteView.as_view(),
-        name="relationshipassociation_bulk_delete",
-    ),
-    path(
-        "relationship-associations/<uuid:pk>/delete/",
-        views.RelationshipAssociationDeleteView.as_view(),
-        name="relationshipassociation_delete",
     ),
     # Secrets
     path(
