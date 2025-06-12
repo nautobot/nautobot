@@ -50,6 +50,18 @@ class CircuitTypeUIViewSet(NautobotUIViewSet):
     )
 
 
+class CircuitTerminationObjectFieldsPanel(ObjectFieldsPanel):
+    def get_extra_context(self, context):
+        return {"termination": context["object"]}
+
+    def render_value(self, key, value, context):
+        if key == "cable":
+            if not value:
+                return ""
+            return render_component_template("circuits/inc/circuit_termination_cable_fragment.html", context)
+        return super().render_value(key, value, context)
+
+
 class CircuitTerminationUIViewSet(NautobotUIViewSet):
     action_buttons = ("import", "export")
     bulk_update_form_class = forms.CircuitTerminationBulkEditForm
@@ -59,6 +71,31 @@ class CircuitTerminationUIViewSet(NautobotUIViewSet):
     queryset = CircuitTermination.objects.all()
     serializer_class = serializers.CircuitTerminationSerializer
     table_class = tables.CircuitTerminationTable
+
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            CircuitTerminationObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+                hide_if_unset=[
+                    "location",
+                    "provider_network",
+                    "cloud_network",
+                    "port_speed",
+                    "upstream_speed",
+                    "cable",
+                ],
+                exclude_fields=[
+                    "circuit",
+                ],
+                value_transforms={
+                    "port_speed": [humanize_speed],
+                    "upstream_speed": [humanize_speed],
+                },
+            ),
+        )
+    )
 
     def get_object(self):
         obj = super().get_object()
