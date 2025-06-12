@@ -2494,22 +2494,13 @@ class RelationshipUIViewSet(NautobotUIViewSet):
     )
 
 
-class RelationshipAssociationListView(generic.ObjectListView):
+class RelationshipAssociationUIViewSet(ObjectListViewMixin, ObjectDestroyViewMixin, ObjectBulkDestroyViewMixin):
+    filterset_class = filters.RelationshipAssociationFilterSet
+    filterset_form_class = forms.RelationshipAssociationFilterForm
+    serializer_class = serializers.RelationshipAssociationSerializer
+    table_class = tables.RelationshipAssociationTable
     queryset = RelationshipAssociation.objects.all()
-    filterset = filters.RelationshipAssociationFilterSet
-    filterset_form = forms.RelationshipAssociationFilterForm
-    table = tables.RelationshipAssociationTable
     action_buttons = ()
-
-
-class RelationshipAssociationBulkDeleteView(generic.BulkDeleteView):
-    queryset = RelationshipAssociation.objects.all()
-    table = tables.RelationshipAssociationTable
-    filterset = filters.RelationshipAssociationFilterSet
-
-
-class RelationshipAssociationDeleteView(generic.ObjectDeleteView):
-    queryset = RelationshipAssociation.objects.all()
 
 
 #
@@ -2980,17 +2971,28 @@ class StatusUIViewSet(NautobotUIViewSet):
 #
 
 
-class TagListView(generic.ObjectListView):
-    queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
-    filterset = filters.TagFilterSet
-    filterset_form = forms.TagFilterForm
-    table = tables.TagTable
-
-
-class TagView(generic.ObjectView):
+class TagUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.TagBulkEditForm
+    filterset_class = filters.TagFilterSet
+    filterset_form_class = forms.TagFilterForm
+    form_class = forms.TagForm
     queryset = Tag.objects.all()
+    serializer_class = serializers.TagSerializer
+    table_class = tables.TagTable
+
+    def alter_queryset(self, request):
+        queryset = super().alter_queryset(request)
+
+        # Only annotate for list, bulk_edit, bulk_delete views
+        if self.action in ["list", "bulk_update", "bulk_destroy"]:
+            queryset = queryset.annotate(items=count_related(TaggedItem, "tag"))
+
+        return queryset
 
     def get_extra_context(self, request, instance):
+        # Only run this logic when retrieving a single object
+        if instance is None or self.action != "retrieve":
+            return super().get_extra_context(request, instance)
         tagged_items = (
             TaggedItem.objects.filter(tag=instance).select_related("content_type").prefetch_related("content_object")
         )
@@ -3009,34 +3011,6 @@ class TagView(generic.ObjectView):
             "content_types": instance.content_types.order_by("app_label", "model"),
             **super().get_extra_context(request, instance),
         }
-
-
-class TagEditView(generic.ObjectEditView):
-    queryset = Tag.objects.all()
-    model_form = forms.TagForm
-    template_name = "extras/tag_edit.html"
-
-
-class TagDeleteView(generic.ObjectDeleteView):
-    queryset = Tag.objects.all()
-
-
-class TagBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Tag.objects.all()
-    table = tables.TagTable
-
-
-class TagBulkEditView(generic.BulkEditView):
-    queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
-    table = tables.TagTable
-    form = forms.TagBulkEditForm
-    filterset = filters.TagFilterSet
-
-
-class TagBulkDeleteView(generic.BulkDeleteView):
-    queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
-    table = tables.TagTable
-    filterset = filters.TagFilterSet
 
 
 #
