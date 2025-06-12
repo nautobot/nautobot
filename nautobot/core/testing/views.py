@@ -776,6 +776,9 @@ class ViewTestCases:
             with override_settings(EXEMPT_VIEW_PERMISSIONS=[self.model._meta.label_lower]):
                 response = self.client.get(self._get_url("list"))
                 self.assertHttpStatus(response, 200)
+                # There should be some rows
+                self.assertBodyContains(response, '<tr class="even')
+                self.assertBodyContains(response, '<tr class="odd')
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_filtered(self):
@@ -830,7 +833,7 @@ class ViewTestCases:
                 ],
             )
             self.assertHttpStatus(response, 200)
-            content = utils.extract_page_body(response.content.decode(response.charset))
+            content = utils.extract_page_body(content.decode(response.charset))
             self.assertNotIn("Unknown filter field", content, msg=content)
             self.assertIn("None", content, msg=content)
             # There should be at least two rows in the table
