@@ -4512,7 +4512,6 @@ class ControllerUIViewSet(NautobotUIViewSet):
                         add_button_route=None,
                         select_related_fields=["wireless_network"],
                         exclude_columns=["controller"],
-                        header_extra_content_template_path="dcim/wirelessnetworks_header_extra_content.html",
                         include_paginator=True,
                     ),
                 ),
