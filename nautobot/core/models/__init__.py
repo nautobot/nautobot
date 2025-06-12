@@ -132,6 +132,8 @@ class BaseModel(models.Model):
         self.full_clean()
         self.save(*args, **kwargs)
 
+    validated_save.alters_data = True
+
     def natural_key(self) -> list:
         """
         Smarter default implementation of natural key construction.
