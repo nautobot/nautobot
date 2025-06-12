@@ -833,7 +833,7 @@ class ViewTestCases:
                 ],
             )
             self.assertHttpStatus(response, 200)
-            content = utils.extract_page_body(content.decode(response.charset))
+            content = utils.extract_page_body(response.content.decode(response.charset))
             self.assertNotIn("Unknown filter field", content, msg=content)
             self.assertIn("None", content, msg=content)
             # There should be at least two rows in the table
