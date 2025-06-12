@@ -3,7 +3,6 @@ from django.urls import path
 from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras import views
 from nautobot.extras.models import (
-    ConfigContext,
     ConfigContextSchema,
     CustomField,
     DynamicGroup,
@@ -19,6 +18,7 @@ app_name = "extras"
 
 router = NautobotUIViewSetRouter()
 router.register("computed-fields", views.ComputedFieldUIViewSet)
+router.register("config-contexts", views.ConfigContextUIViewSet)
 router.register("contacts", views.ContactUIViewSet)
 router.register("contact-associations", views.ContactAssociationUIViewSet)
 router.register("custom-links", views.CustomLinkUIViewSet)
@@ -43,54 +43,6 @@ urlpatterns = [
     # Change logging
     path("object-changes/", views.ObjectChangeListView.as_view(), name="objectchange_list"),
     path("object-changes/<uuid:pk>/", views.ObjectChangeView.as_view(), name="objectchange"),
-    # Config contexts
-    path(
-        "config-contexts/",
-        views.ConfigContextListView.as_view(),
-        name="configcontext_list",
-    ),
-    path(
-        "config-contexts/add/",
-        views.ConfigContextEditView.as_view(),
-        name="configcontext_add",
-    ),
-    path(
-        "config-contexts/edit/",
-        views.ConfigContextBulkEditView.as_view(),
-        name="configcontext_bulk_edit",
-    ),
-    path(
-        "config-contexts/delete/",
-        views.ConfigContextBulkDeleteView.as_view(),
-        name="configcontext_bulk_delete",
-    ),
-    path(
-        "config-contexts/<uuid:pk>/",
-        views.ConfigContextView.as_view(),
-        name="configcontext",
-    ),
-    path(
-        "config-contexts/<uuid:pk>/edit/",
-        views.ConfigContextEditView.as_view(),
-        name="configcontext_edit",
-    ),
-    path(
-        "config-contexts/<uuid:pk>/delete/",
-        views.ConfigContextDeleteView.as_view(),
-        name="configcontext_delete",
-    ),
-    path(
-        "config-contexts/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="configcontext_changelog",
-        kwargs={"model": ConfigContext},
-    ),
-    path(
-        "config-contexts/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="configcontext_notes",
-        kwargs={"model": ConfigContext},
-    ),
     # Config context schema
     path(
         "config-context-schemas/",
