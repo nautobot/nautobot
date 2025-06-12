@@ -116,6 +116,8 @@ class RestrictedQuerySet(CompositeKeyQuerySetMixin, QuerySet):
         :param action: The action which must be permitted (e.g. "view" for "dcim.view_location"); default is 'view'
         """
         # Resolve the full name of the required permission
+        if action not in ["view", "add", "change", "delete"]:
+            action = "view" # Default to "view" if a custom action is provided
         app_label = self.model._meta.app_label
         model_name = self.model._meta.model_name
         permission_required = f"{app_label}.{action}_{model_name}"
