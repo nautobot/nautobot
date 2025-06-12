@@ -647,9 +647,10 @@ class CableViewSet(NautobotModelViewSet):
     def get_queryset(self):
         # 6933 fix: with prefetch related in queryset
         # DeviceInterface is not properly cleared of _path_id
+        queryset = super().get_queryset()
         if self.action == "destroy":
-            return Cable.objects.all()
-        return super().get_queryset()
+            queryset = queryset.prefetch_related(None)
+        return queryset
 
 #
 # Virtual chassis
