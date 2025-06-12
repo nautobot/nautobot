@@ -8,6 +8,7 @@ from nautobot.core.tables import (
     ToggleColumn,
 )
 from nautobot.dcim.models import PowerFeed, PowerPanel
+from nautobot.dcim.tables.template_code import UTILIZATION_GRAPH
 from nautobot.extras.tables import StatusTableMixin
 
 from .devices import CableTerminationTable
@@ -72,10 +73,17 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
     destination_panel = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
     type = ChoiceFieldColumn()
-    circuit_position = tables.Column(verbose_name="Position")
-    breaker_poles = ChoiceFieldColumn(verbose_name="Poles")
+    occupied_positions = tables.Column(accessor='occupied_positions', verbose_name="Position"),
+    phase_designation = tables.Column(accessor='phase_designation', verbose_name="Phase Designation"),
     max_utilization = tables.TemplateColumn(template_code="{{ value }}%")
     available_power = tables.Column(verbose_name="Available power (VA)")
+    power_utilization = tables.TemplateColumn(
+        verbose_name="Power (Allocated)",
+        template_code=UTILIZATION_GRAPH,
+        orderable=True,
+        order_by=("utilization_percent",),
+        accessor="get_utilization",
+    ),
     tags = TagColumn(url_name="dcim:powerfeed_list")
 
     class Meta(BaseTable.Meta):
@@ -93,12 +101,11 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
             "amperage",
             "phase",
             "max_utilization",
-            "circuit_position",
-            "breaker_poles",
             "cable",
             "cable_peer",
             "connection",
             "available_power",
+            "power_utilization",
             "tags",
         )
         default_columns = (
@@ -112,8 +119,7 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
             "voltage",
             "amperage",
             "phase",
-            "circuit_position",
-            "breaker_poles",
             "cable",
             "cable_peer",
+            "power_utilization",
         )

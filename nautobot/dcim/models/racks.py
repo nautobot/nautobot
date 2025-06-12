@@ -19,7 +19,6 @@ from nautobot.dcim.elevations import RackElevationSVG
 from nautobot.extras.models import RoleField, StatusField
 from nautobot.extras.utils import extras_features
 
-from .device_components import PowerOutlet, PowerPort
 from .devices import Device
 from .power import PowerFeed
 
@@ -431,22 +430,9 @@ class Rack(PrimaryModel):
         if not available_power_total:
             return UtilizationData(numerator=0, denominator=0)
 
-        pf_powerports = PowerPort.objects.filter(
-            _cable_peer_type=ContentType.objects.get_for_model(PowerFeed),
-            _cable_peer_id__in=powerfeeds.values_list("id", flat=True),
-        )
-        direct_allocated_draw = pf_powerports.aggregate(Sum("allocated_draw"))["allocated_draw__sum"] or 0
-        poweroutlets = PowerOutlet.objects.filter(power_port_id__in=pf_powerports)
-        allocated_draw_total = (
-            PowerPort.objects.filter(
-                _cable_peer_type=ContentType.objects.get_for_model(PowerOutlet),
-                _cable_peer_id__in=poweroutlets.values_list("id", flat=True),
-            ).aggregate(Sum("allocated_draw"))["allocated_draw__sum"]
-            or 0
-        )
-        allocated_draw_total += direct_allocated_draw
+        allocated_power_total = sum(pf.allocated_power for pf in powerfeeds)
 
-        return UtilizationData(numerator=allocated_draw_total, denominator=available_power_total)
+        return UtilizationData(numerator=allocated_power_total, denominator=available_power_total)
 
 
 @extras_features(

@@ -60,18 +60,12 @@
                 </tr>
                 <tr>
                     <td>Utilization (Allocated)</td>
-                    {% with utilization=object.connected_endpoint.get_power_draw %}
-                        {% if utilization %}
-                            <td>
-                                {{ utilization.allocated }}VA / {{ object.available_power }}VA
-                                {% if object.available_power > 0 %}
-                                    {% utilization_graph_raw_data utilization.allocated object.available_power %}
-                                {% endif %}
-                            </td>
-                        {% else %}
-                            <td class="text-muted">N/A</td>
+                    <td>
+                        {{ object.allocated_power }}VA / {{ object.available_power }}VA
+                        {% if object.available_power > 0 %}
+                            {% utilization_graph_raw_data object.allocated_power object.available_power %}
                         {% endif %}
-                    {% endwith %}
+                    </td>
                 </tr>
             </table>
         </div>

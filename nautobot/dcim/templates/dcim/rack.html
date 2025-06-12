@@ -172,19 +172,15 @@
                             <td>
                                 <span class="label label-{{ powerfeed.get_type_class }}">{{ powerfeed.get_type_display }}</span>
                             </td>
-                            {% with power_port=powerfeed.connected_endpoint %}
-                                {% if power_port %}
-                                    {% with utilization=power_port.get_power_draw %}
-                                        {% if utilization %}
-                                            {% if powerfeed.available_power > 0 %}
-                                                <td>{% utilization_graph_raw_data utilization.allocated powerfeed.available_power %}</td>
-                                            {% endif %}
-                                        {% endif %}
-                                    {% endwith %}
+                            {% if powerfeed.connected_endpoint %}
+                                {% if powerfeed.available_power > 0 %}
+                                    <td>{% utilization_graph_raw_data powerfeed.allocated_power powerfeed.available_power %}</td>
                                 {% else %}
                                     <td class="text-muted">N/A</td>
                                 {% endif %}
-                            {% endwith %}
+                            {% else %}
+                                <td class="text-muted">N/A</td>
+                            {% endif %}
                         </tr>
                     {% endfor %}
                 </table>
