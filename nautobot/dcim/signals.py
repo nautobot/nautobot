@@ -18,7 +18,10 @@ from .models import (
     InterfaceVDCAssignment,
     LocationType,
     PathEndpoint,
+    PowerFeed,
+    PowerOutlet,
     PowerPanel,
+    PowerPort,
     Rack,
     RackGroup,
     VirtualChassis,
@@ -54,6 +57,18 @@ def rebuild_paths(obj):
             cp.delete()
             # Prevent looping back to rebuild_paths during the atomic transaction.
             create_cablepath(cp.origin, rebuild=False)
+
+
+def update_upstream_powerfeed_cached_power(power_feed):
+    """
+    Update cached power values for all upstream PowerFeeds in the distribution hierarchy.
+    """
+    if not power_feed.power_panel:
+        return
+
+    for upstream_feed in power_feed.power_panel.feeders.all():
+        upstream_feed.update_cached_power()
+        update_upstream_powerfeed_cached_power(upstream_feed)
 
 
 #
@@ -381,3 +396,42 @@ def content_type_changed(instance, action, **kwargs):
                     )
                 }
             )
+
+
+#
+# PowerPort, PowerOutlet, PowerFeed
+#
+
+@receiver(post_save, sender=PowerPort)
+@receiver(pre_delete, sender=PowerPort)
+@receiver(post_save, sender=PowerOutlet)
+@receiver(pre_delete, sender=PowerOutlet)
+@receiver(post_save, sender=PowerFeed)
+@receiver(pre_delete, sender=PowerFeed)
+def update_powerfeed_cached_power(instance, **kwargs):
+    """
+    Update PowerFeed cached power values when power-related components change.
+    """
+    # Avoid recursion when updating cached power fields
+    update_fields = kwargs.get('update_fields', set())
+    if update_fields and update_fields == {'allocated_power', 'utilization_percentage'}:
+        return
+
+    if isinstance(instance, PowerFeed):
+        # PowerFeed updates itself and upstream chain
+        instance.update_cached_power()
+        update_upstream_powerfeed_cached_power(instance)
+
+    elif isinstance(instance, PowerPort):
+        # PowerPort: check if connected to a PowerFeed
+        if instance.connected_endpoint and isinstance(instance.connected_endpoint, PowerFeed):
+            power_feed = instance.connected_endpoint
+            power_feed.update_cached_power()
+            update_upstream_powerfeed_cached_power(power_feed)
+
+    elif isinstance(instance, PowerOutlet):
+        # PowerOutlet: update via its associated PowerPort
+        if instance.power_port and instance.power_port.connected_endpoint and isinstance(instance.power_port.connected_endpoint, PowerFeed):
+            power_feed = instance.power_port.connected_endpoint
+            power_feed.update_cached_power()
+            update_upstream_powerfeed_cached_power(power_feed)

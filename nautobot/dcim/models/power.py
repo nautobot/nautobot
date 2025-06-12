@@ -279,20 +279,45 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
         return PowerFeedTypeChoices.CSS_CLASSES.get(self.type)
 
     def update_cached_power(self):
-        calculated_power = self._calculate_allocated_power()
-        self.allocated_power = calculated_power
+        """
+        Update cached allocated_power and utilization_percentage values.
+        """
+        # Calculate new values
+        new_allocated_power = self._calculate_allocated_power()
 
         if self.available_power > 0:
-            self.utilization_percentage = min(100, int((calculated_power / self.available_power) * 100))
+            new_utilization_percentage = min(100, int((new_allocated_power / self.available_power) * 100))
         else:
-            self.utilization_percentage = 0
+            new_utilization_percentage = 0
 
-        self.save(update_fields=["allocated_power", "utilization_percentage"])
+        # Only save if values have actually changed
+        if (self.allocated_power != new_allocated_power or 
+            self.utilization_percentage != new_utilization_percentage):
+
+            self.allocated_power = new_allocated_power
+            self.utilization_percentage = new_utilization_percentage
+            # Use update_fields to prevent infinite recursion in signals
+            self.save(update_fields=["allocated_power", "utilization_percentage"])
 
     def _calculate_allocated_power(self):
+        """
+        Calculate allocated power for this feed.
+
+        For feeds connected to devices (PDUs): gets actual power draw from the device
+        For panel-to-panel feeds: sums cached allocated_power from downstream feeds
+        """
+
+        # Direct device connection - get actual power consumption
         if self.connected_endpoint:
             power_draw = self.connected_endpoint.get_power_draw()
             return power_draw.get("allocated", 0)
+
+        # Panel-to-panel feed - sum downstream cached values
+        if self.destination_panel:
+            downstream_feeds = PowerFeed.objects.filter(power_panel=self.destination_panel)
+            return sum(feed.allocated_power for feed in downstream_feeds)
+
+        # No connection - no power allocation
         return 0
 
     def _validate_circuit_conflicts(self):
