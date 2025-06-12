@@ -1,0 +1,1 @@
+Fixed issue where approved scheduled jobs set to run "immediately" were not executed, by changing the `create_schedule` method in `ScheduledJob`.

@@ -1,0 +1,220 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block content_left_page %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Config Context</strong>
+                </div>
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Name</td>
+                        <td>
+                            {{ object.name }}
+                        </td>
+                    </tr>
+                    {% if object.owner %}
+                        <tr>
+                            <td>Owner</td>
+                            <td>{{ object.owner|hyperlinked_object }}</td>
+                        </tr>
+                    {% endif %}
+                    <tr>
+                        <td>Weight</td>
+                        <td>
+                            {{ object.weight }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Description</td>
+                        <td>{{ object.description|placeholder }}</td>
+                    </tr>
+                    <tr>
+                        <td>Schema</td>
+                        <td>{{ object.schema|hyperlinked_object }}</td>
+                    </tr>
+                    <tr>
+                        <td>Active</td>
+                        <td>{{ object.is_active | render_boolean }}</td>
+                    </tr>
+                </table>
+            </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Assignment</strong>
+                </div>
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Locations</td>
+                        <td>
+                            {% if object.locations.all %}
+                                <ul>
+                                    {% for location in object.locations.all %}
+                                        <li>{{ location|hyperlinked_object }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Roles</td>
+                        <td>
+                            {% if object.roles.all %}
+                                <ul>
+                                    {% for role in object.roles.all %}
+                                        <li><a href="{% url 'dcim:device_list' %}?role={{ role.name }}">{{ role }}</a></li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Device Types</td>
+                        <td>
+                            {% if object.device_types.all %}
+                                <ul>
+                                    {% for device_type in object.device_types.all %}
+                                        <li>{{ device_type|hyperlinked_object }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Platforms</td>
+                        <td>
+                            {% if object.platforms.all %}
+                                <ul>
+                                    {% for platform in object.platforms.all %}
+                                        <li>{{ platform|hyperlinked_object }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Cluster Groups</td>
+                        <td>
+                            {% if object.cluster_groups.all %}
+                                <ul>
+                                    {% for cluster_group in object.cluster_groups.all %}
+                                        <li>{{ cluster_group|hyperlinked_object }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Clusters</td>
+                        <td>
+                            {% if object.clusters.all %}
+                                <ul>
+                                    {% for cluster in object.clusters.all %}
+                                        <li>{{ cluster|hyperlinked_object }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Tenant Groups</td>
+                        <td>
+                            {% if object.tenant_groups.all %}
+                                <ul>
+                                    {% for tenant_group in object.tenant_groups.all %}
+                                        <li>{{ tenant_group|hyperlinked_object }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Tenants</td>
+                        <td>
+                            {% if object.tenants.all %}
+                                <ul>
+                                    {% for tenant in object.tenants.all %}
+                                        <li>{{ tenant|hyperlinked_object }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Device Redundancy Groups</td>
+                        <td>
+                            {% if object.device_redundancy_groups.all %}
+                                <ul>
+                                    {% for device_redundancy_group in object.device_redundancy_groups.all %}
+                                        <li>{{ device_redundancy_group|hyperlinked_object }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Tags</td>
+                        <td>
+                            {% if object.tags.all %}
+                                <ul>
+                                    {% for tag in object.tags.all %}
+                                        <li>{{ tag|hyperlinked_object }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% if settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED %}
+                    <tr>
+                        <td>Dynamic Groups</td>
+                        <td>
+                            {% if object.dynamic_groups.all %}
+                                <ul>
+                                    {% for dynamic_group in object.dynamic_groups.all %}
+                                        <li>{{ dynamic_group|hyperlinked_object }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+{% endblock content_right_page %}
+
+{% block content_full_width_page %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Data</strong>
+                    {% include 'extras/inc/json_format.html' %}
+                </div>
+                <div class="panel-body">
+                    {% include 'extras/inc/json_data.html' with data=object.data format=format %}
+                </div>
+            </div>
+{% endblock content_full_width_page %}
