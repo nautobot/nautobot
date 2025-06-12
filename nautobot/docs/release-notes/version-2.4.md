@@ -166,6 +166,24 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.10 (2025-06-09)
+
+### Security in v2.4.10
+
+- [#6672](https://github.com/nautobot/nautobot/issues/6672) - Added enforcement of user authentication when serving uploaded media files ([GHSA-rh67-4c8j-hjjh](https://github.com/nautobot/nautobot/security/advisories/GHSA-rh67-4c8j-hjjh)).
+- [#7417](https://github.com/nautobot/nautobot/issues/7417) - Added protections against access of various security-related and/or data-altering methods of various Nautobot models from within a Jinja2 sandboxed environment or the Django template renderer ([GHSA-wjw6-95h5-4jpx](https://github.com/nautobot/nautobot/security/advisories/GHSA-wjw6-95h5-4jpx)).
+- [#7425](https://github.com/nautobot/nautobot/issues/7425) - Updated `Django` to 4.2.22 to address `CVE-2025-48432`.
+
+### Fixed in v2.4.10
+
+- [#7358](https://github.com/nautobot/nautobot/issues/7358) - Fixed `web_request_context` faulty logic in its `try/finally` block.
+- [#7362](https://github.com/nautobot/nautobot/issues/7362) - Fixed NautobotCSVParser incorrect parsing of many-to-many fields.
+
+### Documentation in v2.4.10
+
+- [#7430](https://github.com/nautobot/nautobot/issues/7430) - Added latest security disclosures to the documentation.
+- [#7430](https://github.com/nautobot/nautobot/issues/7430) - Removed John Anderson as a point of contact for Nautobot security issues.
+
 ## v2.4.9 (2025-05-27)
 
 ### Security in v2.4.9
