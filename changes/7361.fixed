@@ -1,0 +1,1 @@
+Added a check in `refresh_job_code_from_repository()` to cause it to abort early if given a `repository_slug` that is invalid or conflicts with an installed Python package or Python built-in.
