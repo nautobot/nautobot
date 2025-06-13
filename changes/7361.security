@@ -1,0 +1,1 @@
+Fixed the code for loading Jobs from `JOBS_ROOT` and Git repositories to not import discovered packages/modules whose names are invalid as Python module names or whose names conflict with installed Python packages or Python built-ins. **This fix prevents some improper-but-previously-permitted names (e.g. `pass.py`, `nautobot.py`) from being imported.**

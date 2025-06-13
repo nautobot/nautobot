@@ -27,6 +27,9 @@ Jobs may be installed in one of three ways:
 * Packaged as part of a [plugin](../plugins/development.md#including-jobs).
     * Jobs installed this way are part of the plugin module and can import code from elsewhere in the plugin or even have dependencies on other packages, if needed, via the standard Python packaging mechanisms.
 
+!!! tip
+    Files in `JOBS_ROOT` are treated as Python modules by Nautobot. Nautobot will not import files from `JOBS_ROOT` that conflict with an installed Python package or are invalid as a module name. This means that, for example, a file named `nautobot.py` will not be imported since it conflicts with the `nautobot` package.
+
 In any case, each module holds one or more Jobs (Python classes), each of which serves a specific purpose. The logic of each job can be split into a number of distinct methods, each of which performs a discrete portion of the overall job logic.
 
 For example, we can create a module named `devices.py` to hold all of our jobs which pertain to devices in Nautobot. Within that module, we might define several jobs. Each job is defined as a Python class inheriting from `extras.jobs.Job`, which provides the base functionality needed to accept user input and log activity.
