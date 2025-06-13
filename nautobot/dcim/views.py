@@ -1656,6 +1656,17 @@ class PlatformUIViewSet(NautobotUIViewSet):
     table_class = tables.PlatformTable
     queryset = Platform.objects.all()
 
+    def get_template_name(self):
+        """
+        Determine the template to use for the current action.
+
+        Ensures that create/edit actions use the `platform_edit.html` template
+        which contains custom help-block rendering.
+        """
+        if self.action in ["create", "update"]:
+            return "dcim/platform_edit.html"
+        return super().get_template_name()
+
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
