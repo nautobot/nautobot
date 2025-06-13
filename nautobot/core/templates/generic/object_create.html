@@ -3,22 +3,20 @@
 {% load helpers %}
 
 {% block content %}
-    <form action="" method="post" enctype="multipart/form-data" class="form form-horizontal">
+    <form action="" method="post" enctype="multipart/form-data" class="h-100 vstack">
         {% csrf_token %}
         {% for field in form.hidden_fields %}
             {{ field }}
         {% endfor %}
-        <div class="row">
+        <div class="row align-content-start flex-fill">
             <div class="col-lg-8 offset-lg-2 col-md-10 offset-md-1 mb-10">
                 <h3>
                     {% if obj %}
                         {% with obj|get_docs_url as docs_url %}
                             {% if docs_url %}
-                                <div class="float-end">
-                                    <a href="{{ docs_url }}" target="_blank" class="btn btn-link btn-sm" title="Help">
-                                        <i class="mdi mdi-help-circle"></i>
-                                    </a>
-                                </div>
+                                <a href="{{ docs_url }}" target="_blank" class="btn btn-link btn-sm float-end" title="Help">
+                                    <span aria-hidden="true" class="mdi mdi-help-circle"></span>
+                                </a>
                             {% endif %}
                         {% endwith %}
                     {% endif %}
@@ -29,8 +27,10 @@
                 {% block tabs %}{% endblock %}
                 {% block form_errors %}
                     {% if form.non_field_errors or model_form.non_field_errors %}
-                        <div class="card border-danger">
-                            <div class="card-header bg-danger"><strong>Errors</strong></div>
+                        <div class="card border-danger mb-16">
+                            <div class="card-header bg-danger-subtle border-danger text-body">
+                                <strong>Errors</strong>
+                            </div>
                             <div class="card-body">
                                 {{ form.non_field_errors }}
                                 {{ model_form.non_field_errors }}
@@ -39,7 +39,7 @@
                     {% endif %}
                 {% endblock %}
                 {% block form %}
-                    <div class="card">
+                    <div class="card mb-16">
                         <div class="card-header"><strong>{{ obj_type|capfirst }}</strong></div>
                         <div class="card-body">
                             {% block form_fields %}
@@ -51,18 +51,28 @@
                 {% endblock %}
             </div>
         </div>
-        <div class="row">
-            <div class="col-lg-8 offset-lg-2 col-md-10 offset-md-1 text-end">
-                {% block buttons %}
-                    {% if editing %}
-                        <button type="submit" name="_update" class="btn btn-primary">Update</button>
-                    {% else %}
-                        <button type="submit" name="_create" class="btn btn-primary">Create</button>
-                        <button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>
-                    {% endif %}
-                    <a href="{{ return_url }}" class="btn btn-secondary">Cancel</a>
-                {% endblock %}
-            </div>
+        <div class="nb-form-sticky-footer">
+            {% block buttons %}
+                {% if editing %}
+                    <button type="submit" name="_update" class="btn btn-primary">
+                        <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+                        -->Update
+                    </button>
+                {% else %}
+                    <button type="submit" name="_create" class="btn btn-primary">
+                        <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+                        -->Create
+                    </button>
+                    <button type="submit" name="_addanother" class="btn btn-primary">
+                        <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+                        -->Create and Add Another
+                    </button>
+                {% endif %}
+                <a href="{{ return_url }}" class="btn btn-secondary">
+                    <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+                    -->Cancel
+                </a>
+            {% endblock %}
         </div>
     </form>
 {% endblock %}
