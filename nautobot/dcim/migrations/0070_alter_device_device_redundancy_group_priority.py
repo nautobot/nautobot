@@ -5,15 +5,16 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('dcim', '0069_softwareimagefile_external_integration'),
+        ("dcim", "0069_softwareimagefile_external_integration"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='device',
-            name='device_redundancy_group_priority',
-            field=models.PositiveIntegerField(blank=True, null=True, validators=[django.core.validators.MinValueValidator(1)]),
+            model_name="device",
+            name="device_redundancy_group_priority",
+            field=models.PositiveIntegerField(
+                blank=True, null=True, validators=[django.core.validators.MinValueValidator(1)]
+            ),
         ),
     ]
