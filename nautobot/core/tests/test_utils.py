@@ -978,9 +978,10 @@ class TestModuleLoadingUtils(TestCase):
             "nautobot",  # installed package
             "tkinter",  # system library
         ):
-            permitted, reason = check_name_safe_to_import_privately(invalid)
-            self.assertFalse(permitted)
-            self.assertIsInstance(reason, str)
+            with self.subTest(f"Invalid name: {invalid}"):
+                permitted, reason = check_name_safe_to_import_privately(invalid)
+                self.assertFalse(permitted)
+                self.assertIsInstance(reason, str)
 
     def test_import_modules_privately_jobs_root_case(self):
         with tempfile.TemporaryDirectory() as tempdir:
