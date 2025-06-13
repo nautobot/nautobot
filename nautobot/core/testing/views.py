@@ -769,6 +769,17 @@ class ViewTestCases:
             response_body = response.content.decode(response.charset)
             self.assertIn("/login/?next=" + self._get_url("list"), response_body, msg=response_body)
 
+        def test_list_objects_anonymous_with_exempt_permission_for_one_view_only(self):
+            # Make the request as an unauthenticated user
+            self.client.logout()
+            # Test if AnonymousUser can properly render the whole list view
+            with override_settings(EXEMPT_VIEW_PERMISSIONS=[self.model._meta.label_lower]):
+                response = self.client.get(self._get_url("list"))
+                self.assertHttpStatus(response, 200)
+                # There should be some rows
+                self.assertBodyContains(response, '<tr class="even')
+                self.assertBodyContains(response, '<tr class="odd')
+
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_filtered(self):
             instance1, instance2 = self._get_queryset().all()[:2]

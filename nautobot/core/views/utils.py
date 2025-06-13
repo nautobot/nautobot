@@ -17,6 +17,7 @@ from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.filtering import get_filter_field_label
 from nautobot.core.utils.lookup import get_created_and_last_updated_usernames_for_model, get_form_for_model
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.extras.models import SavedView
 from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
 
 
@@ -382,3 +383,18 @@ def common_detail_view_context(request, instance):
         context["associated_object_metadata_table"] = None
 
     return context
+
+
+def get_saved_views_for_user(user, list_url):
+    # We are not using .restrict(request.user, "view") here
+    # User should be able to see any saved view that he has the list view access to.
+    saved_views = SavedView.objects.filter(view=list_url).order_by("name").only("pk", "name")
+    if user.has_perms(["extras.view_savedview"]):
+        return saved_views
+
+    shared_saved_views = saved_views.filter(is_shared=True)
+    if user.is_authenticated:
+        user_owned_saved_views = SavedView.objects.filter(view=list_url, owner=user).order_by("name").only("pk", "name")
+        return shared_saved_views | user_owned_saved_views
+
+    return shared_saved_views
