@@ -4,40 +4,38 @@
 {% load form_helpers %}
 
 {% block content %}
-<form method="post" class="form form-horizontal">
+<form method="post" class="h-100 vstack">
     {% csrf_token %}
     {% for field in form.hidden_fields %}
         {{ field }}
     {% endfor %}
-    {% if form.non_field_errors %}
-        <div class="row">
-            <div class="col-md-6 col-md-offset-3">
-                <div class="panel panel-danger">
-                    <div class="panel-heading"><strong>Errors</strong></div>
-                    <div class="panel-body">
-                        {{ form.non_field_errors }}
-                    </div>
+    <div class="row">
+        {% if form.non_field_errors %}
+            <div class="card border-danger mb-16">
+                <div class="card-header bg-danger-subtle border-danger text-body">
+                    <strong>Errors</strong>
+                </div>
+                <div class="card-body">
+                    {{ form.non_field_errors }}
                 </div>
             </div>
-        </div>
-    {% endif %}
-    {% with termination_a=form.instance.termination_a %}
-        <h3>
-            {% block title %}
-                {% if termination_a.module %}
-                    Connect {{ termination_a.module.display }} {{ termination_a }} to {{ termination_b_type|bettertitle }}
-                {% else %}
-                    Connect {{ termination_a.device }} {{ termination_a }} to {{ termination_b_type|bettertitle }}
-                {% endif %}
-            {% endblock %}
-        </h3>
-        <div class="row">
+        {% endif %}
+        {% with termination_a=form.instance.termination_a %}
+            <h3 class="mb-16">
+                {% block title %}
+                    {% if termination_a.module %}
+                        Connect {{ termination_a.module.display }} {{ termination_a }} to {{ termination_b_type|bettertitle }}
+                    {% else %}
+                        Connect {{ termination_a.device }} {{ termination_a }} to {{ termination_b_type|bettertitle }}
+                    {% endif %}
+                {% endblock %}
+            </h3>
             <div class="col-md-5">
-                <div class="panel panel-default">
-                    <div class="panel-heading text-center">
+                <div class="card mb-16">
+                    <div class="card-header">
                         <strong>A Side</strong>
                     </div>
-                    <div class="panel-body">
+                    <div class="card-body">
                         {% if termination_a.device %}
                             {# Device component #}
                             <div class="form-group">
@@ -151,19 +149,19 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-2 text-center" style="padding-top: 90px;">
-                <i class="mdi mdi-swap-horizontal-bold mdi-48px"></i>
+            <div class="col-md-2 hstack justify-content-center my-16">
+                <span aria-hidden="true" class="mdi mdi-swap-horizontal-bold mdi-48px"></span>
             </div>
             <div class="col-md-5">
-                <div class="panel panel-default">
-                    <div class="panel-heading text-center">
+                <div class="card mb-16">
+                    <div class="card-header text-center">
                         <strong>B Side</strong>
                     </div>
-                    <div class="panel-body">
+                    <div class="card-body">
                         {% if tabs %}
                             <ul class="nav nav-tabs">
                                 {% for url, link in tabs %}
-                                    <li role="presentation"><a href="{{ url }}">{{ link }}</a></li>
+                                    <li class="nav-item" role="presentation"><a class="nav-link" href="{{ url }}">{{ link }}</a></li>
                                 {% endfor %}
                             </ul>
                         {% endif %}
@@ -204,19 +202,21 @@
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="row">
-            <div class="col-md-6 col-md-offset-3">
+            <div class="col-md-6 offset-md-3">
                 {% include 'dcim/inc/cable_form.html' %}
             </div>
-        </div>
-        <div class="form-group">
-            <div class="col-md-12 text-center">
-                <button type="submit" name="_update" class="btn btn-primary">Connect</button>
-                <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
-            </div>
-        </div>
-    {% endwith %}
+        {% endwith %}
+    </div>
+    <div class="nb-form-sticky-footer">
+        <button type="submit" name="_update" class="btn btn-primary">
+            <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+            -->Connect
+        </button>
+        <a href="{{ return_url }}" class="btn btn-secondary">
+            <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+            -->Cancel
+        </a>
+    </div>
 </form>
 {% endblock %}
 

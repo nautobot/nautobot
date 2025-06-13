@@ -31,6 +31,7 @@ import 'select2';
 
 import { initializeDraggable } from './draggable.js';
 import { initializeDrawers } from './drawer.js';
+import { observeFormStickyFooters } from './form.js';
 import { initializeSearch } from './search.js';
 import { observeCollapseTabs } from './tabs.js';
 
@@ -83,6 +84,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Drawer
   initializeDrawers();
+
+  // Form
+  // TODO(norbert-mieczkowski-codilime): for htmx SPA-like behavior, re-initialize sticky footers like tabs below.
+  let unobserveFormStickyFooters = observeFormStickyFooters();
 
   // Search
   initializeSearch();
