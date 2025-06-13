@@ -1896,6 +1896,33 @@ class SecretsGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "secrets_group_associations-MAX_NUM_FORMS": "1000",
         }
 
+    def test_rendering_secretsgroup_edit(self):
+        secrets_group = SecretsGroup.objects.create(name="Secrets Group 1")
+        secrets = (
+            Secret.objects.create(
+                name="secret-1", provider="environment-variable", parameters={"variable": "SOME_VAR"}
+            ),
+            Secret.objects.create(
+                name="secret-2", provider="environment-variable", parameters={"variable": "ANOTHER_VAR"}
+            ),
+            Secret.objects.create(
+                name="secret-3", provider="environment-variable", parameters={"variable": "ANOTHER_VAR3"}
+            ),
+        )
+
+        SecretsGroupAssociation.objects.create(
+            secret=secrets[0],
+            secrets_group=secrets_group,
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+        )
+        self.add_permissions("extras.change_secretsgroup")
+        request = {
+            "path": self._get_url("edit", secrets_group),
+        }
+        with self.assertNumQueries(1):
+            self.assertHttpStatus(self.client.get(**request), 200)
+
 
 class GraphQLQueriesTestCase(
     ViewTestCases.CreateObjectViewTestCase,
