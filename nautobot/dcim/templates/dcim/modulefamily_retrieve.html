@@ -1,0 +1,31 @@
+{% extends 'generic/object_detail.html' %}
+{% load helpers %}
+
+{% block content_left_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Module Family</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>Description</td>
+                <td>{{ object.description|placeholder }}</td>
+            </tr>
+        </table>
+    </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Module Types</strong>
+        </div>
+        {% include 'inc/table.html' with table=module_type_table %}
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Module Bays</strong>
+        </div>
+        {% include 'inc/table.html' with table=module_bay_table %}
+    </div>
+{% endblock content_right_page %} 

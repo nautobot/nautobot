@@ -481,6 +481,18 @@ class ModuleBayTemplate(ModularComponentTemplateModel):
     )
     label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Physical label")
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+    module_family = models.ForeignKey(
+        to="dcim.ModuleFamily",
+        on_delete=models.PROTECT,
+        related_name="module_bay_templates",
+        blank=True,
+        null=True,
+        help_text="Module family that can be installed in this bay. Leave blank for no restriction.",
+    )
+    requires_first_party_modules = models.BooleanField(
+        default=False,
+        help_text="This bay will only accept modules from the same manufacturer as the parent device or module",
+    )
 
     natural_key_field_names = ["device_type", "module_type", "name"]
 
@@ -505,6 +517,8 @@ class ModuleBayTemplate(ModularComponentTemplateModel):
             position=self.position,
             label=self.label,
             description=self.description,
+            module_family=self.module_family,
+            requires_first_party_modules=self.requires_first_party_modules,
             _custom_field_data=custom_field_data,
         )
 

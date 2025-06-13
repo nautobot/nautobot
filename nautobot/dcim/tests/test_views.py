@@ -85,6 +85,7 @@ from nautobot.dcim.models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     Platform,
     PowerFeed,
@@ -2007,6 +2008,7 @@ class ModuleBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
     def setUpTestData(cls):
         device_type = DeviceType.objects.first()
         module_type = ModuleType.objects.first()
+        module_family = ModuleFamily.objects.create(name="Test Module Family")
 
         cls.form_data = {
             "device_type": device_type.pk,
@@ -2015,6 +2017,7 @@ class ModuleBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "position": "Test modulebaytemplate position",
             "description": "Test modulebaytemplate description",
             "label": "Test modulebaytemplate label",
+            "module_family": module_family.pk,
         }
 
         cls.bulk_create_data = {
@@ -2023,10 +2026,12 @@ class ModuleBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "position_pattern": "Test Module Bay Template Position [10-12]",
             "label_pattern": "Test modulebaytemplate label [1-3]",
             "description": "Test modulebaytemplate description",
+            "module_family": module_family.pk,
         }
 
         cls.bulk_edit_data = {
             "description": "Description changed",
+            "module_family": module_family.pk,
         }
 
         test_instance = cls.model.objects.first()
@@ -2037,6 +2042,7 @@ class ModuleBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "position": "new test position",
             "label": "new test label",
             "description": "new test description",
+            "module_family": module_family.pk,
         }
 
 
@@ -4781,3 +4787,32 @@ class VirtualDeviceContextTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         vdc.refresh_from_db()
         self.assertEqual(vdc.primary_ip6, ip_v6)
         self.assertEqual(vdc.primary_ip4, ip_v4)
+
+
+class ModuleFamilyTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    """Test cases for ModuleFamily views."""
+
+    model = ModuleFamily
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create test data for ModuleFamily views."""
+        ModuleFamily.objects.create(name="Module Family 1", description="First Module Family")
+        ModuleFamily.objects.create(name="Module Family 2", description="Second Module Family")
+        ModuleFamily.objects.create(name="Module Family 3", description="Third Module Family")
+
+        cls.form_data = {
+            "name": "Module Family X",
+            "description": "A new module family",
+        }
+
+        cls.csv_data = (
+            "name,description",
+            "Module Family 4,Fourth Module Family",
+            "Module Family 5,Fifth Module Family",
+            "Module Family 6,Sixth Module Family",
+        )
+
+        cls.bulk_edit_data = {
+            "description": "Modified description",
+        }
