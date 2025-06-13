@@ -1,0 +1,1 @@
+Added a `nautobot_get_job_signal` signal to allow apps to augment the behavior of `nautobot.extras.jobs.get_job`.
