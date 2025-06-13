@@ -54,6 +54,7 @@ from nautobot.core.views.utils import (
     check_filter_for_display,
     common_detail_view_context,
     get_csv_form_fields_from_serializer_class,
+    get_saved_views_for_user,
     handle_protectederror,
     import_csv_helper,
     prepare_cloned_fields,
@@ -315,7 +316,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         table_config_form = None
         current_saved_view = None
         current_saved_view_pk = self.request.GET.get("saved_view", None)
-        saved_views = self._get_saved_views_for_user(user, list_url)
+        saved_views = get_saved_views_for_user(user, list_url)
 
         if current_saved_view_pk:
             try:
@@ -392,22 +393,6 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         context.update(self.extra_context())
 
         return render(request, self.template_name, context)
-
-    def _get_saved_views_for_user(self, user, list_url):
-        # We are not using .restrict(request.user, "view") here
-        # User should be able to see any saved view that he has the list view access to.
-        saved_views = SavedView.objects.filter(view=list_url).order_by("name").only("pk", "name")
-        if user.has_perms(["extras.view_savedview"]):
-            return saved_views
-
-        shared_saved_views = saved_views.filter(is_shared=True)
-        if user.is_authenticated:
-            user_owned_saved_views = (
-                SavedView.objects.filter(view=list_url, owner=user).order_by("name").only("pk", "name")
-            )
-            return shared_saved_views | user_owned_saved_views
-
-        return shared_saved_views
 
     def alter_queryset(self, request):
         # .all() is necessary to avoid caching queries
