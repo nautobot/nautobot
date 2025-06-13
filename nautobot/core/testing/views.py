@@ -306,7 +306,9 @@ class ViewTestCases:
             '<button type="submit" name="_create" class="btn btn-primary"><span aria-hidden="true" class="mdi mdi-check me-4"></span><!---->Create</button>',
             '<button type="submit" name="_addanother" class="btn btn-primary"><span aria-hidden="true" class="mdi mdi-check me-4"></span><!---->Create and Add Another</button>',
         ]
-        expected_edit_form_buttons = ['<button type="submit" name="_update" class="btn btn-primary"><span aria-hidden="true" class="mdi mdi-check me-4"></span><!---->Update</button>']
+        expected_edit_form_buttons = [
+            '<button type="submit" name="_update" class="btn btn-primary"><span aria-hidden="true" class="mdi mdi-check me-4"></span><!---->Update</button>'
+        ]
 
         def test_create_object_without_permission(self):
             # Try GET without permission
