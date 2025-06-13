@@ -1933,7 +1933,6 @@ class PlatformForm(NautobotModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # ✅ Use the reusable helper here
         self.fields["network_driver"].help_text = helpers.get_network_driver_help_text()
 
 
