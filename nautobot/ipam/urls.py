@@ -7,7 +7,6 @@ from . import views
 from .models import (
     IPAddress,
     Prefix,
-    VLAN,
 )
 
 app_name = "ipam"
@@ -18,6 +17,7 @@ router.register("namespaces", views.NamespaceUIViewSet)
 router.register("rirs", views.RIRUIViewSet)
 router.register("route-targets", views.RouteTargetUIViewSet)
 router.register("services", views.ServiceUIViewSet)
+router.register("vlans", views.VLANUIViewSet)
 router.register("vlan-groups", views.VLANGroupUIViewSet)
 router.register("vrfs", views.VRFUIViewSet)
 
@@ -140,12 +140,6 @@ urlpatterns = [
         name="ipaddress_delete",
     ),
     # VLANs
-    path("vlans/", views.VLANListView.as_view(), name="vlan_list"),
-    path("vlans/add/", views.VLANEditView.as_view(), name="vlan_add"),
-    path("vlans/import/", views.VLANBulkImportView.as_view(), name="vlan_import"),  # 3.0 TODO: remove, unused
-    path("vlans/edit/", views.VLANBulkEditView.as_view(), name="vlan_bulk_edit"),
-    path("vlans/delete/", views.VLANBulkDeleteView.as_view(), name="vlan_bulk_delete"),
-    path("vlans/<uuid:pk>/", views.VLANView.as_view(), name="vlan"),
     path(
         "vlans/<uuid:pk>/interfaces/",
         views.VLANInterfacesView.as_view(),
@@ -155,20 +149,6 @@ urlpatterns = [
         "vlans/<uuid:pk>/vm-interfaces/",
         views.VLANVMInterfacesView.as_view(),
         name="vlan_vminterfaces",
-    ),
-    path("vlans/<uuid:pk>/edit/", views.VLANEditView.as_view(), name="vlan_edit"),
-    path("vlans/<uuid:pk>/delete/", views.VLANDeleteView.as_view(), name="vlan_delete"),
-    path(
-        "vlans/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="vlan_changelog",
-        kwargs={"model": VLAN},
-    ),
-    path(
-        "vlans/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="vlan_notes",
-        kwargs={"model": VLAN},
     ),
 ]
 
