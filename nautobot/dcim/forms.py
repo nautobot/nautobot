@@ -37,6 +37,7 @@ from nautobot.core.forms import (
 )
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import LaxURLField
+from nautobot.core.templatetags import helpers
 from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
     LocatableModelFilterFormMixin,
@@ -1928,6 +1929,12 @@ class PlatformForm(NautobotModelForm):
         widgets = {
             "napalm_args": SmallTextarea(),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # ✅ Use the reusable helper here
+        self.fields["network_driver"].help_text = helpers.get_network_driver_help_text()
 
 
 class PlatformFilterForm(NautobotFilterForm):

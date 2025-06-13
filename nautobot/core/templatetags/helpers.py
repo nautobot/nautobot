@@ -813,6 +813,18 @@ def label_list(value, suffix=""):
     )
 
 
+@library.filter()
+@register.filter()
+def get_network_driver_help_text():
+    return (
+        'The <a href="https://netutils.readthedocs.io/en/latest/user/lib_use_cases_lib_mapper/" '
+        'target="_blank">normalized network driver</a> to use when interacting with devices '
+        '<i class="mdi mdi-help-circle-outline"></i> '
+        '<a href="#network_driver_choices" data-toggle="modal" data-target="#network_driver_choices">'
+        "Show Configured Choices</a>"
+    )
+
+
 #
 # Tags
 #
