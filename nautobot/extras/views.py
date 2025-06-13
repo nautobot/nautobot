@@ -2736,12 +2736,29 @@ class SecretsGroupEditView(generic.ObjectEditView):
     template_name = "extras/secretsgroup_edit.html"
 
     def get_extra_context(self, request, instance):
-        ctx = super().get_extra_context(request, instance)
+        from django.db.models import Prefetch
 
+        ctx = super().get_extra_context(request, instance)
+        if getattr(instance, "name", None):
+            secrets_group_with_secrets = SecretsGroup.objects.prefetch_related(
+                Prefetch(
+                    "secrets_group_associations",
+                    queryset=SecretsGroupAssociation.objects.select_related("secret"),
+                )
+            ).get(name=instance.name)
+            # secrets_group_with_secrets = (
+            #     SecretsGroup.objects.prefetch_related("secrets_group_associations", "secrets_group_associations__secret")
+            #     .get(name=instance.name)
+            # )
+            # secrets_group_with_secrets = SecretsGroup.objects.prefetch_related("secrets_group_associations").get(
+            #     name="Secrets Group 1"
+            # )
+        else:
+            secrets_group_with_secrets = instance
         if request.POST:
             ctx["secrets"] = forms.SecretsGroupAssociationFormSet(data=request.POST, instance=instance)
         else:
-            ctx["secrets"] = forms.SecretsGroupAssociationFormSet(instance=instance)
+            ctx["secrets"] = forms.SecretsGroupAssociationFormSet(instance=secrets_group_with_secrets)
 
         return ctx
 
