@@ -252,6 +252,10 @@ class LocationTypeUIViewSet(NautobotUIViewSet):
 
 
 class LocationUIViewSet(NautobotUIViewSet):
+    # We aren't accessing tree fields anywhere so this is safe (note that `parent` itself is a normal foreign
+    # key, not a tree field). If we ever do access tree fields, this will perform worse, because django will
+    # automatically issue a second query (similar to behavior for
+    # https://docs.djangoproject.com/en/3.2/ref/models/querysets/#django.db.models.query.QuerySet.only)
     queryset = Location.objects.without_tree_fields().select_related("location_type", "parent", "tenant").all()
     filterset_class = filters.LocationFilterSet
     filterset_form_class = forms.LocationFilterForm
