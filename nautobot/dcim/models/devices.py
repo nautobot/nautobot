@@ -582,7 +582,7 @@ class Device(PrimaryModel, ConfigContextModel):
         null=True,
         verbose_name="Device Redundancy Group",
     )
-    device_redundancy_group_priority = models.PositiveSmallIntegerField(
+    device_redundancy_group_priority = models.PositiveIntegerField(
         blank=True,
         null=True,
         validators=[MinValueValidator(1)],
