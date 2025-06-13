@@ -414,7 +414,7 @@ def update_powerfeed_cached_power(instance, **kwargs):
     """
     # Avoid recursion when updating cached power fields
     update_fields = kwargs.get('update_fields', set())
-    if update_fields and update_fields == {'allocated_power', 'utilization_percentage'}:
+    if update_fields and update_fields == {'allocated_power', 'utilization'}:
         return
 
     if isinstance(instance, PowerFeed):

@@ -158,7 +158,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
     )
     available_power = models.PositiveIntegerField(default=0, editable=False)
     allocated_power = models.PositiveIntegerField(default=0, editable=False)
-    utilization_percentage = models.PositiveSmallIntegerField(default=0, editable=False)
+    utilization = models.PositiveSmallIntegerField(default=0, editable=False)
     comments = models.TextField(blank=True)
 
     clone_fields = [
@@ -280,24 +280,24 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
 
     def update_cached_power(self):
         """
-        Update cached allocated_power and utilization_percentage values.
+        Update cached allocated_power and utilization values.
         """
         # Calculate new values
         new_allocated_power = self._calculate_allocated_power()
 
         if self.available_power > 0:
-            new_utilization_percentage = min(100, int((new_allocated_power / self.available_power) * 100))
+            new_utilization = min(100, int((new_allocated_power / self.available_power) * 100))
         else:
-            new_utilization_percentage = 0
+            new_utilization = 0
 
         # Only save if values have actually changed
-        if (self.allocated_power != new_allocated_power or 
-            self.utilization_percentage != new_utilization_percentage):
+        if (self.allocated_power != new_allocated_power or
+            self.utilization != new_utilization):
 
             self.allocated_power = new_allocated_power
-            self.utilization_percentage = new_utilization_percentage
+            self.utilization = new_utilization
             # Use update_fields to prevent infinite recursion in signals
-            self.save(update_fields=["allocated_power", "utilization_percentage"])
+            self.save(update_fields=["allocated_power", "utilization"])
 
     def _calculate_allocated_power(self):
         """

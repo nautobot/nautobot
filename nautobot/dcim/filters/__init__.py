@@ -26,7 +26,6 @@ from nautobot.dcim.choices import (
     PowerFeedBreakerPoleChoices,
     PowerOutletTypeChoices,
     PowerPanelTypeChoices,
-    PowerPanelVoltageChoices,
     PowerPortTypeChoices,
     RackTypeChoices,
     RackWidthChoices,

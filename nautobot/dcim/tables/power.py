@@ -73,17 +73,17 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
     destination_panel = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
     type = ChoiceFieldColumn()
-    occupied_positions = tables.Column(accessor='occupied_positions', verbose_name="Position"),
-    phase_designation = tables.Column(accessor='phase_designation', verbose_name="Phase Designation"),
+    occupied_positions = tables.Column(accessor='occupied_positions', verbose_name="Position")
+    phase_designation = tables.Column(accessor='phase_designation', verbose_name="Phase Designation")
     max_utilization = tables.TemplateColumn(template_code="{{ value }}%")
     available_power = tables.Column(verbose_name="Available power (VA)")
     power_utilization = tables.TemplateColumn(
         verbose_name="Power (Allocated)",
         template_code=UTILIZATION_GRAPH,
         orderable=True,
-        order_by=("utilization_percent",),
+        order_by=("utilization",),
         accessor="get_utilization",
-    ),
+    )
     tags = TagColumn(url_name="dcim:powerfeed_list")
 
     class Meta(BaseTable.Meta):

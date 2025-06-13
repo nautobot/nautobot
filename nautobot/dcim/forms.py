@@ -95,7 +95,6 @@ from .choices import (
     PowerOutletFeedLegChoices,
     PowerOutletTypeChoices,
     PowerPanelTypeChoices,
-    PowerPanelVoltageChoices,
     PowerPortTypeChoices,
     RackDimensionUnitChoices,
     RackTypeChoices,
