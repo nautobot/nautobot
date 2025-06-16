@@ -983,34 +983,32 @@ class TestModuleLoadingUtils(TestCase):
                 self.assertFalse(permitted)
                 self.assertIsInstance(reason, str)
 
+    def _create_test_files(self, root_directory: str, contents: dict):
+        """Helper function to create arbitrary text files in a given directory."""
+        for relative_path, file_contents in contents.items():
+            os.makedirs(os.path.dirname(os.path.join(root_directory, relative_path)), exist_ok=True)
+            with open(os.path.join(root_directory, relative_path), "wt") as fd:
+                fd.write(file_contents)
+
     def test_import_modules_privately_jobs_root_case(self):
         with tempfile.TemporaryDirectory() as tempdir:
             try:
-                # Job file treated as a standalone module
-                with open(os.path.join(tempdir, "some_jobs.py"), "wt") as fd:
-                    fd.write("name = 'some_jobs'")
-
-                # Job subdirectory treated as a package
-                os.mkdir(os.path.join(tempdir, "my_jobs"))
-                with open(os.path.join(tempdir, "my_jobs", "__init__.py"), "wt") as fd:
-                    fd.write("import my_jobs.some_submodule")
-                    fd.write("\nfrom . import relative_submodule")
-                    fd.write("\nname = 'my_jobs'")
-                os.mkdir(os.path.join(tempdir, "my_jobs", "some_submodule"))
-                with open(os.path.join(tempdir, "my_jobs", "some_submodule", "__init__.py"), "wt") as fd:
-                    fd.write("name = 'my_jobs.some_submodule'")
-                os.mkdir(os.path.join(tempdir, "my_jobs", "relative_submodule"))
-                with open(os.path.join(tempdir, "my_jobs", "relative_submodule", "__init__.py"), "wt") as fd:
-                    fd.write("name = 'my_jobs.relative_submodule'")
-
-                # Job file that shouldn't be loaded as it conflicts
-                with open(os.path.join(tempdir, "tkinter.py"), "wt") as fd:
-                    fd.write("name = 'tkinter'")
-
-                # Job submodule that shouldn't be loaded as it conflicts
-                os.mkdir(os.path.join(tempdir, "turtle"))
-                with open(os.path.join(tempdir, "turtle", "__init__.py"), "wt") as fd:
-                    fd.write("name = 'turtle'")
+                contents = {
+                    # Job file treated as a standalone module
+                    "some_jobs.py": 'name = "some_jobs"',
+                    # Job subdirectory treated as a package
+                    "my_jobs/__init__.py": '''\
+import my_jobs.some_submodule
+from . import relative_submodule
+name = "my_jobs"''',
+                    "my_jobs/some_submodule/__init__.py": 'name = "my_jobs.some_submodule"',
+                    "my_jobs/relative_submodule/__init__.py": 'name = "my_jobs.relative_submodule"',
+                    # Job file that shouldn't be loaded as it conflicts
+                    "tkinter.py": 'name = "tkinter"',
+                    # Job submodule that shouldn't be loaded as it conflicts
+                    "turtle/__init__.py": 'name = "turtle"',
+                }
+                self._create_test_files(tempdir, contents)
 
                 modules = import_modules_privately(tempdir, ignore_import_errors=False)
                 self.assertEqual(["my_jobs", "some_jobs"], sorted([module.__name__ for module in modules]))
@@ -1039,17 +1037,13 @@ class TestModuleLoadingUtils(TestCase):
 
             # Test reloading of modules after code changes
             try:
-                # Job file treated as a standalone module
-                with open(os.path.join(tempdir, "some_jobs.py"), "wt") as fd:
-                    fd.write("name = 'some_jobs_new'")
-
-                # Job subdirectory treated as a package
-                with open(os.path.join(tempdir, "my_jobs", "__init__.py"), "wt") as fd:
-                    fd.write("import my_jobs.some_submodule")
-                    fd.write("\nfrom . import relative_submodule")
-                    fd.write("\nname = 'my_jobs_new'")
-                with open(os.path.join(tempdir, "my_jobs", "some_submodule", "__init__.py"), "wt") as fd:
-                    fd.write("name = 'my_jobs.some_submodule_new'")
+                contents["some_jobs.py"] = 'name = "some_jobs_new"'
+                contents["my_jobs/__init__.py"] = '''\
+import my_jobs.some_submodule
+from . import relative_submodule
+name = "my_jobs_new"'''
+                contents["my_jobs/some_submodule/__init__.py"] = 'name = "my_jobs.some_submodule_new"'
+                self._create_test_files(tempdir, contents)
 
                 modules = import_modules_privately(tempdir, ignore_import_errors=False)
                 self.assertEqual(["my_jobs", "some_jobs"], sorted([module.__name__ for module in modules]))
@@ -1078,33 +1072,23 @@ class TestModuleLoadingUtils(TestCase):
     def test_import_modules_privately_git_repo_jobs_case(self):
         with tempfile.TemporaryDirectory() as tempdir:
             try:
-                # Repo that we intend to load
-                os.mkdir(os.path.join(tempdir, "my_repo"))
-                with open(os.path.join(tempdir, "my_repo", "__init__.py"), "wt") as fd:
-                    fd.write("name='my_repo'")
-                os.mkdir(os.path.join(tempdir, "my_repo", "jobs"))
-                with open(os.path.join(tempdir, "my_repo", "jobs", "__init__.py"), "wt") as fd:
-                    fd.write("import my_repo.jobs.some_jobs")
-                    fd.write("\nfrom . import some_other_jobs")
-                    fd.write("\nname='my_repo.jobs'")
-                with open(os.path.join(tempdir, "my_repo", "jobs", "some_jobs.py"), "wt") as fd:
-                    fd.write("name='my_repo.jobs.some_jobs'")
-                with open(os.path.join(tempdir, "my_repo", "jobs", "some_other_jobs.py"), "wt") as fd:
-                    fd.write("name='my_repo.jobs.some_other_jobs'")
-
-                # A separate repo, not intended to be loaded
-                os.mkdir(os.path.join(tempdir, "other_repo"))
-                with open(os.path.join(tempdir, "other_repo", "__init__.py"), "wt") as fd:
-                    fd.write("")
-
-                # File that shouldn't be loaded as it conflicts
-                with open(os.path.join(tempdir, "tkinter.py"), "wt") as fd:
-                    fd.write("name = 'tkinter'")
-
-                # Package that shouldn't be loaded as it conflicts
-                os.mkdir(os.path.join(tempdir, "turtle"))
-                with open(os.path.join(tempdir, "turtle", "__init__.py"), "wt") as fd:
-                    fd.write("name = 'turtle'")
+                contents = {
+                    # Repo that we intend to load
+                    "my_repo/__init__.py": 'name = "my_repo"',
+                    "my_repo/jobs/__init__.py": '''\
+import my_repo.jobs.some_jobs
+from . import some_other_jobs
+name = "my_repo.jobs"''',
+                    "my_repo/jobs/some_jobs.py": 'name = "my_repo.jobs.some_jobs"',
+                    "my_repo/jobs/some_other_jobs.py": 'name = "my_repo.jobs.some_other_jobs"',
+                    # A separate repo, not intended to be loaded
+                    "other_repo/__init__.py": "",
+                    # File that shouldn't be loaded as it conflicts
+                    "tkinter.py": "",
+                    # Package that shouldn't be loaded as it conflicts
+                    "turtle/__init__.py": "",
+                }
+                self._create_test_files(tempdir, contents)
 
                 modules = import_modules_privately(tempdir, module_path=["my_repo", "jobs"], ignore_import_errors=False)
                 self.assertEqual(["my_repo", "my_repo.jobs"], sorted([module.__name__ for module in modules]))
@@ -1133,16 +1117,14 @@ class TestModuleLoadingUtils(TestCase):
 
             # Test reloading of modules after code changes
             try:
-                with open(os.path.join(tempdir, "my_repo", "__init__.py"), "wt") as fd:
-                    fd.write("name='my_repo_new'")
-                with open(os.path.join(tempdir, "my_repo", "jobs", "__init__.py"), "wt") as fd:
-                    fd.write("import my_repo.jobs.some_jobs")
-                    fd.write("\nfrom . import some_other_jobs")
-                    fd.write("\nname='my_repo.jobs_new'")
-                with open(os.path.join(tempdir, "my_repo", "jobs", "some_jobs.py"), "wt") as fd:
-                    fd.write("name='my_repo.jobs.some_jobs_new'")
-                with open(os.path.join(tempdir, "my_repo", "jobs", "some_other_jobs.py"), "wt") as fd:
-                    fd.write("name='my_repo.jobs.some_other_jobs_new'")
+                contents["my_repo/__init__.py"] = 'name = "my_repo_new"'
+                contents["my_repo/jobs/__init__.py"] = '''\
+import my_repo.jobs.some_jobs
+from . import some_other_jobs
+name = "my_repo.jobs_new"'''
+                contents["my_repo/jobs/some_jobs.py"] = 'name = "my_repo.jobs.some_jobs_new"'
+                contents["my_repo/jobs/some_other_jobs.py"] = 'name = "my_repo.jobs.some_other_jobs_new"'
+                self._create_test_files(tempdir, contents)
 
                 modules = import_modules_privately(tempdir, module_path=["my_repo", "jobs"], ignore_import_errors=False)
                 self.assertEqual(["my_repo", "my_repo.jobs"], sorted([module.__name__ for module in modules]))
