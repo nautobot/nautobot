@@ -4579,6 +4579,9 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
         ),
     )
 
+    def get_queryset(self):
+        return self.queryset.restrict(self.request.user, "view")
+
     @action(detail=True, url_path="wireless-networks", url_name="wireless_networks")
     def wireless_networks(self, request, *args, **kwargs):
         return Response({})
