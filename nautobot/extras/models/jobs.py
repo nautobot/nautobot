@@ -1,10 +1,11 @@
 # Data models relating to Jobs
 
 import contextlib
-from datetime import timedelta
+from datetime import datetime, timedelta
 import json
 import logging
 import signal
+from typing import Optional, TYPE_CHECKING, Union
 
 from billiard.exceptions import SoftTimeLimitExceeded
 from celery.exceptions import NotRegistered
@@ -57,6 +58,11 @@ from nautobot.extras.utils import (
 )
 
 from .customfields import CustomFieldModel
+
+if TYPE_CHECKING:
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
 
 logger = logging.getLogger(__name__)
 
@@ -329,12 +335,12 @@ class Job(PrimaryModel):
             raise NotRegistered from err
 
     @property
-    def task_queues(self):
+    def task_queues(self) -> list[str]:
         """Deprecated backward-compatibility property for the list of queue names for this Job."""
         return self.job_queues.values_list("name", flat=True)
 
     @task_queues.setter
-    def task_queues(self, value):
+    def task_queues(self, value: Union[str, list[str]]):
         job_queues = []
         # value is going to be a comma separated list of queue names
         if isinstance(value, str):
@@ -747,50 +753,39 @@ class JobResult(BaseModel, CustomFieldModel):
                     duration.total_seconds()
                 )
 
+    set_status.alters_data = True
+
     @classmethod
-    def execute_job(cls, job_model, user, *job_args, celery_kwargs=None, profile=False, job_result=None, **job_kwargs):
+    def execute_job(cls, *args, **kwargs):
         """
         Create a JobResult instance and run a job in the current process, blocking until the job finishes.
 
         Running tasks synchronously in celery is *NOT* supported and if possible `enqueue_job` with synchronous=False
         should be used instead.
 
-        Args:
-            job_model (Job): The Job to be enqueued for execution
-            user (User): User object to link to the JobResult instance
-            celery_kwargs (dict, optional): Dictionary of kwargs to pass as **kwargs to Celery when job is run
-            profile (bool, optional): Whether to run cProfile on the job execution
-            job_result (JobResult, optional): Existing JobResult with status PENDING, used in kubernetes job execution
-            *job_args: positional args passed to the job task
-            **job_kwargs: keyword args passed to the job task
+        Args: see `enqueue_job()`
 
         Returns:
             JobResult instance
         """
-        return cls.enqueue_job(
-            job_model,
-            user,
-            *job_args,
-            celery_kwargs=celery_kwargs,
-            profile=profile,
-            job_result=job_result,
-            synchronous=True,
-            **job_kwargs,
-        )
+        return cls.enqueue_job(*args, **kwargs, synchronous=True)
+
+    execute_job.__func__.alters_data = True
 
     @classmethod
     def enqueue_job(
         cls,
-        job_model,
-        user,
+        job_model: Job,
+        user: "User",
         *job_args,
-        celery_kwargs=None,
-        profile=False,
-        schedule=None,
-        task_queue=None,
-        job_result=None,
-        synchronous=False,
-        ignore_singleton_lock=False,
+        celery_kwargs: Optional[dict] = None,
+        profile: bool = False,
+        schedule: Optional["ScheduledJob"] = None,
+        job_queue: Optional["JobQueue"] = None,
+        task_queue: Optional[str] = None,  # deprecated!
+        job_result: Optional["JobResult"] = None,
+        synchronous: bool = False,
+        ignore_singleton_lock: bool = False,
         **job_kwargs,
     ):
         """Create/Modify a JobResult instance and enqueue a job to be executed asynchronously by a Celery worker.
@@ -798,13 +793,16 @@ class JobResult(BaseModel, CustomFieldModel):
         Args:
             job_model (Job): The Job to be enqueued for execution.
             user (User): User object to link to the JobResult instance.
-            celery_kwargs (dict, optional): Dictionary of kwargs to pass as **kwargs to `apply_async()`/`apply()` when job is run.
-            profile (bool, optional): If True, dump cProfile stats on the job execution.
-            schedule (ScheduledJob, optional): ScheduledJob instance to link to the JobResult. Cannot be used with synchronous=True.
-            task_queue (str, optional): The celery queue to send the job to. If not set, use the default celery queue.
-            job_result (JobResult, optional): Existing JobResult with status PENDING, to be modified and to be used in kubernetes job execution.
-            synchronous (bool, optional): If True, run the job in the current process, blocking until the job completes.
-            ignore_singleton_lock (bool, optional): If True, invalidate the singleton lock before running the job.
+            celery_kwargs (dict): Dictionary of kwargs to pass as **kwargs to `apply_async()`/`apply()` when job is run.
+            profile (bool): If True, dump cProfile stats on the job execution.
+            schedule (ScheduledJob): ScheduledJob instance to link to the JobResult.
+                Cannot be used with synchronous=True.
+            job_queue (JobQueue): Job queue to send the job to. If not set, use the default queue for the given Job.
+            task_queue (str): The celery queue name to send the job to. **Deprecated, prefer `job_queue` instead.**
+            job_result (JobResult): Existing JobResult with status PENDING, to be modified and to be used
+                in kubernetes job execution.
+            synchronous (bool): If True, run the job in the current process, blocking until the job completes.
+            ignore_singleton_lock (bool): If True, invalidate the singleton lock before running the job.
               This allows singleton jobs to run twice, or makes it possible to remove the lock when the first instance
               of the job failed to remove it for any reason.
             *job_args: positional args passed to the job task (UNUSED)
@@ -817,6 +815,20 @@ class JobResult(BaseModel, CustomFieldModel):
 
         if schedule is not None and synchronous:
             raise ValueError("Scheduled jobs cannot be run synchronously")
+
+        if job_queue is not None and task_queue is not None and job_queue.name != task_queue:
+            raise ValueError("task_queue and job_queue are mutually exclusive")
+        if job_queue is not None and task_queue is None:
+            task_queue = job_queue.name
+        elif task_queue is not None and job_queue is None:
+            job_queue = JobQueue.objects.get(name=task_queue)
+        else:  # both none
+            if celery_kwargs is not None and "queue" in celery_kwargs:
+                task_queue = celery_kwargs["queue"]
+                job_queue = JobQueue.objects.get(name=task_queue)
+            else:
+                job_queue = job_model.default_job_queue
+                task_queue = job_queue.name
 
         if job_result is None:
             job_result = cls.objects.create(
@@ -835,10 +847,6 @@ class JobResult(BaseModel, CustomFieldModel):
                     f"There is a mismatch between the job specified {job_model} and the job associated with the job result {job_result.job_model}"
                 )
 
-        if task_queue is None:
-            task_queue = job_model.default_job_queue.name
-
-        job_queue = JobQueue.objects.get(name=task_queue)
         # Kubernetes Job Queue logic
         # As we execute Kubernetes jobs, we want to execute `run_kubernetes_job_and_return_job_result`
         # the first time the kubernetes job is enqueued to spin up the kubernetes pod.
@@ -863,6 +871,7 @@ class JobResult(BaseModel, CustomFieldModel):
             job_celery_kwargs["time_limit"] = job_model.time_limit
 
         if celery_kwargs is not None:
+            # TODO: this lets celery_kwargs override keys like `queue` and `nautobot_job_user_id`; is that desirable?
             job_celery_kwargs.update(celery_kwargs)
 
         if synchronous:
@@ -933,6 +942,8 @@ class JobResult(BaseModel, CustomFieldModel):
 
         return job_result
 
+    enqueue_job.__func__.alters_data = True
+
     def log(
         self,
         message,
@@ -983,6 +994,8 @@ class JobResult(BaseModel, CustomFieldModel):
             log.save()
         else:
             log.save(using=JOB_LOGS)
+
+    log.alters_data = True
 
 
 #
@@ -1071,12 +1084,16 @@ class ScheduledJobs(models.Model):
         if not instance.no_changes:
             cls.update_changed()
 
+    changed.__func__.alters_data = True
+
     @classmethod
     def update_changed(cls, raw=False, **kwargs):
         """This function acts as a signal handler to track changes to the scheduled job that is triggered after a change"""
         if raw:
             return
         cls.objects.update_or_create(ident=1, defaults={"last_update": timezone.now()})
+
+    update_changed.__func__.alters_data = True
 
     @classmethod
     def last_change(cls):
@@ -1208,7 +1225,6 @@ class ScheduledJob(BaseModel):
         ordering = ["name"]
 
     def save(self, *args, **kwargs):
-        self.queue = self.queue or ""
         # make sure non-valid crontab doesn't get saved
         if self.interval == JobExecutionType.TYPE_CUSTOM:
             try:
@@ -1253,12 +1269,12 @@ class ScheduledJob(BaseModel):
         return self.to_cron()
 
     @property
-    def queue(self):
+    def queue(self) -> str:
         """Deprecated backward-compatibility property for the queue name this job is scheduled for."""
         return self.job_queue.name if self.job_queue else ""
 
     @queue.setter
-    def queue(self, value):
+    def queue(self, value: str):
         if value:
             try:
                 self.job_queue = JobQueue.objects.get(name=value)
@@ -1301,14 +1317,15 @@ class ScheduledJob(BaseModel):
         cls,
         job_model,
         user,
-        name=None,
-        start_time=None,
-        interval=JobExecutionType.TYPE_IMMEDIATELY,
-        crontab="",
-        profile=False,
-        approval_required=False,
-        task_queue=None,
-        ignore_singleton_lock=False,
+        name: Optional[str] = None,
+        start_time: Optional[datetime] = None,
+        interval: str = JobExecutionType.TYPE_IMMEDIATELY,
+        crontab: str = "",
+        profile: bool = False,
+        approval_required: bool = False,
+        job_queue: Optional[JobQueue] = None,
+        task_queue: Optional[str] = None,  # deprecated!
+        ignore_singleton_lock: bool = False,
         **job_kwargs,
     ):
         """
@@ -1321,20 +1338,31 @@ class ScheduledJob(BaseModel):
         Parameters:
             job_model (JobModel): The job model instance.
             user (User): The user who is scheduling the job.
-            name (str, optional): The name of the scheduled job. Defaults to None.
-            start_time (datetime, optional): The start time for the job. Defaults to None.
-            interval (JobExecutionType, optional): The interval type for the job execution.
+            name (str): The name of the scheduled job. Automatically derived from the job_model and start_time if unset.
+            start_time (datetime): The start time for the job. Defaults to the current time if unset.
+            interval (JobExecutionType): The interval type for the job execution.
                 Defaults to JobExecutionType.TYPE_IMMEDIATELY.
-            crontab (str, optional): The crontab string for the schedule. Defaults to "".
-            profile (bool, optional): Flag indicating whether to profile the job. Defaults to False.
-            approval_required (bool, optional): Flag indicating if approval is required. Defaults to False.
-            task_queue (str, optional): The task queue for the job. Defaults to None, which will use the configured default celery queue.
-            ignore_singleton_lock (bool, optional): Flag indicating whether to ignore singleton locks. Defaults to False.
+            crontab (str): The crontab string for the schedule. Defaults to "".
+            profile (bool): Flag indicating whether to profile the job. Defaults to False.
+            approval_required (bool): Flag indicating if approval is required. Defaults to False.
+            job_queue (JobQueue): The Job queue to use. If unset, use the configured default celery queue.
+            task_queue (str): The queue name to use. **Deprecated, prefer `job_queue`.**
+            ignore_singleton_lock (bool): Whether to ignore singleton locks. Defaults to False.
             **job_kwargs: Additional keyword arguments to pass to the job.
 
         Returns:
             ScheduledJob instance
         """
+
+        if job_queue is not None and task_queue is not None and job_queue.name != task_queue:
+            raise ValueError("task_queue and job_queue are mutually exclusive")
+        if job_queue is not None and task_queue is None:
+            task_queue = job_queue.name
+        elif task_queue is not None and job_queue is None:
+            job_queue = JobQueue.objects.get(name=task_queue)
+        else:  # both None
+            job_queue = job_model.default_job_queue
+            task_queue = job_queue.name
 
         if interval == JobExecutionType.TYPE_IMMEDIATELY:
             start_time = timezone.localtime()
@@ -1355,6 +1383,11 @@ class ScheduledJob(BaseModel):
         if job_model.time_limit > 0:
             celery_kwargs["time_limit"] = job_model.time_limit
 
+        # We do this because when a job creates an approval workflow, a scheduled job is also created.
+        # If the scheduled job has an "immediate" interval, the scheduler will not send this task.
+        # since TYPE_IMMEDIATELY is not a valid value in JobExecutionType.SCHEDULE_CHOICES
+        if interval == JobExecutionType.TYPE_IMMEDIATELY:
+            interval = JobExecutionType.TYPE_FUTURE
         # 2.0 TODO: To revisit this as part of a larger Jobs cleanup in 2.0.
         #
         # We pass in task and job_model here partly for forward/backward compatibility logic, and
@@ -1376,10 +1409,12 @@ class ScheduledJob(BaseModel):
             user=user,
             approval_required=approval_required,
             crontab=crontab,
-            queue=task_queue,
+            job_queue=job_queue,
         )
         scheduled_job.validated_save()
         return scheduled_job
+
+    create_schedule.__func__.alters_data = True
 
     def to_cron(self):
         tz = self.time_zone

@@ -1162,6 +1162,15 @@ class GitRepositoryTestCase(
 ):
     model = GitRepository
     slugify_function = staticmethod(slugify_dashes_to_underscores)
+    expected_edit_form_buttons = [
+        '<button type="submit" name="_dryrun_update" class="btn btn-warning">Update & Dry Run</button>',
+        '<button type="submit" name="_update" class="btn btn-primary">Update & Sync</button>',
+    ]
+    expected_create_form_buttons = [
+        '<button type="submit" name="_dryrun_create" class="btn btn-info">Create & Dry Run</button>',
+        '<button type="submit" name="_create" class="btn btn-primary">Create & Sync</button>',
+        '<button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>',
+    ]
 
     @classmethod
     def setUpTestData(cls):
@@ -2773,10 +2782,14 @@ class JobTestCase(
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=0)
     def test_run_now_no_worker(self, _):
         self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
 
         for run_url in self.run_urls:
-            response = self.client.post(run_url, self.data_run_immediately)
-            self.assertBodyContains(response, "Celery worker process not running.")
+            response = self.client.post(run_url, self.data_run_immediately, follow=True)
+
+            result = JobResult.objects.latest()
+            self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
+            self.assertBodyContains(response, "No celery workers found")
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_now(self, _):
@@ -3064,6 +3077,25 @@ class JobTestCase(
                 "Unable to run or schedule job: "
                 "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
                 "One of these two flags must be removed before this job can be scheduled or run.",
+            )
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_job_with_approval_required_creates_scheduled_job_internal_future(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        self.test_pass.approval_required = True
+        self.test_pass.save()
+        data = {
+            "_schedule_type": "immediately",
+        }
+        for run_url in self.run_urls:
+            response = self.client.post(run_url, data)
+            scheduled_job = ScheduledJob.objects.last()
+            self.assertTrue(scheduled_job.interval, JobExecutionType.TYPE_FUTURE)
+            self.assertRedirects(
+                response,
+                reverse("extras:scheduledjob_approval_queue_list"),
             )
 
     def test_job_object_change_log_view(self):

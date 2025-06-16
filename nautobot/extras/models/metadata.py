@@ -251,6 +251,8 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
         self.clean()
         return super().validated_save(*args, **kwargs)
 
+    validated_save.alters_data = True
+
     def clean(self):
         """
         Validate a value according to the field's type validation rules.
