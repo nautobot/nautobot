@@ -1,1 +1,1 @@
-Updated dependency `celery` to `~5.5.3`.
+Updated dependency `celery` to permit versions up to 5.5.x and `kombu` to permit versions up to 5.5.x as well. Due to concern about potential impacts of the upgrade, we have *not* yet updated the minimum Celery and Kombu versions required by Nautobot. This minimum version will likely be raised in a future release; in the interim, please upgrade Celery and Kombu and verify their operation in your local environment as befits your risk tolerance.
