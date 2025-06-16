@@ -4580,7 +4580,9 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
     )
 
     def get_queryset(self):
-        return self.queryset.restrict(self.request.user, "view")
+        if self.action in ["wireless_networks", "radio_profiles"]:
+            return self.queryset.restrict(self.request.user, "view")
+        return super().get_queryset()
 
     @action(detail=True, url_path="wireless-networks", url_name="wireless_networks")
     def wireless_networks(self, request, *args, **kwargs):
