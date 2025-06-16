@@ -1660,11 +1660,11 @@ class PlatformUIViewSet(NautobotUIViewSet):
         """
         Determine the template to use for the current action.
 
-        Ensures that create/edit actions use the `platform_edit.html` template
+        Ensures that create/edit actions use the `platform_create.html` template
         which contains custom help-block rendering.
         """
         if self.action in ["create", "update"]:
-            return "dcim/platform_edit.html"
+            return "dcim/platform_create.html"
         return super().get_template_name()
 
     object_detail_content = object_detail.ObjectDetailContent(
