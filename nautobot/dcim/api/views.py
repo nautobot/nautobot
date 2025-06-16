@@ -652,6 +652,7 @@ class CableViewSet(NautobotModelViewSet):
             queryset = queryset.prefetch_related(None)
         return queryset
 
+
 #
 # Virtual chassis
 #
