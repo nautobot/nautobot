@@ -813,6 +813,66 @@ def label_list(value, suffix=""):
     )
 
 
+def get_powerfeed_connection_data(request, instance):
+    """
+    Return connection-related context data for a PowerFeed instance.
+    This data is meant to be passed to a KeyValueTablePanel for UI rendering.
+    """
+
+    if not instance:
+        return {}
+
+    if instance.cable:
+        # Render cable + trace button
+        trace_url = reverse("dcim:powerfeed_trace", kwargs={"pk": instance.pk})
+        cable_html = format_html(
+            '{} <a href="{}" class="btn btn-primary btn-xs" title="Trace">'
+            '<i class="mdi mdi-transit-connection-variant"></i></a>',
+            hyperlinked_object(instance.cable),
+            trace_url,
+        )
+
+        # Connected endpoint information
+        endpoint = getattr(instance, "connected_endpoint", None)
+        endpoint_data = {}
+
+        if endpoint:
+            endpoint_obj = getattr(endpoint, "device", None) or getattr(endpoint, "module", None)
+            path = getattr(instance, "path", None)
+            is_reachable = path.is_active if path else False
+
+            endpoint_data = {
+                "Device" if getattr(endpoint, "device", None) else "Module": endpoint_obj,
+                "Power Port": endpoint,
+                "Type": endpoint.get_type_display() if hasattr(endpoint, "get_type_display") else None,
+                "Description": endpoint.description,
+                "Path Status": "Reachable" if is_reachable else "Not Reachable",
+            }
+
+        return {
+            "Cable": cable_html,
+            **endpoint_data,
+        }
+
+    # If not connected and user has permission to connect
+    if request.user.has_perm("dcim.add_cable"):
+        connect_url = (
+            reverse(
+                "dcim:powerfeed_connect",
+                kwargs={"termination_a_id": instance.pk, "termination_b_type": "power-port"},
+            )
+            + f"?return_url={instance.get_absolute_url()}"
+        )
+        connect_link = format_html(
+            '<a href="{}" class="btn btn-primary btn-sm pull-right">'
+            '<span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect</a>',
+            connect_url,
+        )
+        return {"Connection": format_html("Not connected {}", connect_link)}
+
+    return {"Connection": "Not connected"}
+
+
 #
 # Tags
 #
