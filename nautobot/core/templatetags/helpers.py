@@ -12,7 +12,7 @@ from django.contrib.staticfiles.finders import find
 from django.core.exceptions import ObjectDoesNotExist
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
-from django.utils.html import format_html, format_html_join
+from django.utils.html import escape, format_html, format_html_join
 from django.utils.safestring import mark_safe
 from django.utils.text import slugify as django_slugify
 from django_jinja import library
@@ -760,6 +760,26 @@ def render_address(address):
         address = format_html_join("", "{}<br>", ((line,) for line in address.split("\n")))
         return format_html('<div class="pull-right noprint">{}</div>{}', map_link, address)
     return HTML_NONE
+
+
+@library.filter()
+@register.filter()
+def render_ip_addresses(connected_endpoint):
+    if not connected_endpoint:
+        return HTML_NONE
+
+    ip_addresses = getattr(connected_endpoint, "ip_addresses", None)
+    ip_html_parts = []
+
+    for ip in ip_addresses.all():
+        hyperlinked_ip = hyperlinked_object(ip)
+        vrf = getattr(ip, "vrf", None) or "Global"
+        ip_html_parts.append(f"{hyperlinked_ip} ({escape(vrf)})")
+
+    if not ip_html_parts:
+        return HTML_NONE
+
+    return format_html(", ".join(ip_html_parts))
 
 
 @library.filter()

@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.html import format_html
 
 from nautobot.core.forms import ConfirmationForm
-from nautobot.core.templatetags.helpers import bettertitle, humanize_speed, placeholder
+from nautobot.core.templatetags.helpers import bettertitle, humanize_speed, placeholder, render_ip_addresses
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import (
     ObjectDetailContent,
@@ -54,6 +54,11 @@ class CircuitTerminationObjectFieldsPanel(ObjectFieldsPanel):
     def get_extra_context(self, context):
         return {"termination": context["object"]}
 
+    def render_key(self, key, value, context):
+        if key == "connected_endpoint":
+            return "IP Addressing"
+        return super().render_key(key, value, context)
+
     def render_value(self, key, value, context):
         if key == "cable":
             if not value:
@@ -77,7 +82,18 @@ class CircuitTerminationUIViewSet(NautobotUIViewSet):
             CircuitTerminationObjectFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
-                fields="__all__",
+                fields=[
+                    "location",
+                    "provider_network",
+                    "cloud_network",
+                    "cable",
+                    "port_speed",
+                    "upstream_speed",
+                    "connected_endpoint",
+                    "xconnect_id",
+                    "pp_info",
+                    "description",
+                ],
                 hide_if_unset=[
                     "location",
                     "provider_network",
@@ -92,6 +108,7 @@ class CircuitTerminationUIViewSet(NautobotUIViewSet):
                 value_transforms={
                     "port_speed": [humanize_speed],
                     "upstream_speed": [humanize_speed],
+                    "connected_endpoint": [render_ip_addresses],
                 },
             ),
         )
