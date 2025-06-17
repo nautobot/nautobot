@@ -1047,10 +1047,6 @@ class GitRepositoryFilterForm(BootstrapMixin, forms.Form):
 
 class GraphQLQueryBulkEditForm(BootstrapMixin, CustomFieldModelBulkEditFormMixin, NoteModelBulkEditFormMixin):
     pk = forms.ModelMultipleChoiceField(queryset=GraphQLQuery.objects.all(), widget=forms.MultipleHiddenInput)
-    query = forms.CharField(
-        widget=forms.Textarea,
-        required=False,
-    )
 
     class Meta:
         model = GraphQLQuery
