@@ -11,7 +11,6 @@ from nautobot.extras.models import (
     Job,
     Note,
     Relationship,
-    SecretsGroup,
 )
 
 app_name = "extras"
@@ -34,6 +33,7 @@ router.register("relationships", views.RelationshipUIViewSet)
 router.register("roles", views.RoleUIViewSet)
 router.register("saved-views", views.SavedViewUIViewSet)
 router.register("secrets", views.SecretUIViewSet)
+router.register("secrets-groups", views.SecretsGroupUIViewSet)
 router.register("static-group-associations", views.StaticGroupAssociationUIViewSet)
 router.register("statuses", views.StatusUIViewSet)
 router.register("tags", views.TagUIViewSet)
@@ -357,24 +357,6 @@ urlpatterns = [
         "secrets/provider/<str:provider_slug>/form/",
         views.SecretProviderParametersFormView.as_view(),
         name="secret_provider_parameters_form",
-    ),
-    path("secrets-groups/", views.SecretsGroupListView.as_view(), name="secretsgroup_list"),
-    path("secrets-groups/add/", views.SecretsGroupEditView.as_view(), name="secretsgroup_add"),
-    path("secrets-groups/delete/", views.SecretsGroupBulkDeleteView.as_view(), name="secretsgroup_bulk_delete"),
-    path("secrets-groups/<uuid:pk>/", views.SecretsGroupView.as_view(), name="secretsgroup"),
-    path("secrets-groups/<uuid:pk>/edit/", views.SecretsGroupEditView.as_view(), name="secretsgroup_edit"),
-    path("secrets-groups/<uuid:pk>/delete/", views.SecretsGroupDeleteView.as_view(), name="secretsgroup_delete"),
-    path(
-        "secrets-groups/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="secretsgroup_changelog",
-        kwargs={"model": SecretsGroup},
-    ),
-    path(
-        "secrets-groups/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="secretsgroup_notes",
-        kwargs={"model": SecretsGroup},
     ),
 ]
 

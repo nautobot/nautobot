@@ -197,6 +197,7 @@ __all__ = (
     "SecretFilterForm",
     "SecretForm",
     "SecretsGroupAssociationFormSet",
+    "SecretsGroupBulkEditForm",
     "SecretsGroupFilterForm",
     "SecretsGroupForm",
     "StaticGroupAssociationFilterForm",
@@ -2081,6 +2082,8 @@ class RoleFilterForm(NautobotFilterForm):
 #
 # Secrets
 #
+class SecretsGroupBulkEditForm(NautobotBulkEditForm):
+    pass
 
 
 def provider_choices():
