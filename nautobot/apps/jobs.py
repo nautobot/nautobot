@@ -31,7 +31,6 @@ from nautobot.extras.jobs import (
     StringVar,
     TextVar,
 )
-from nautobot.extras.signals import nautobot_get_job_signal
 
 __all__ = (
     "BaseJob",
@@ -63,6 +62,5 @@ __all__ = (
     "get_jobs",
     "is_job",
     "is_variable",
-    "nautobot_get_job_signal",
     "register_jobs",
 )

@@ -40,7 +40,6 @@ from nautobot.extras.context_managers import change_logging, JobHookChangeContex
 from nautobot.extras.jobs import BaseJob, get_job, get_jobs
 from nautobot.extras.models import Job, JobQueue
 from nautobot.extras.models.jobs import JobLogEntry
-from nautobot.extras.signals import nautobot_get_job_signal
 
 
 class JobTest(TestCase):
@@ -286,40 +285,6 @@ register_jobs(BadJob)
         finally:
             # Clean up back to normal behavior
             get_jobs(reload=True)
-
-    def test_nautobot_get_job_signal(self):
-        """
-        Test that the nautobot_get_job_signal signal is called as expected.
-        """
-
-        num_calls = 0
-        mock_signal_handler = mock.Mock()
-        reload = True
-        job_class_name = "pass.TestPassJob"
-
-        def signal_handler(sender, **kwargs):
-            self.assertEqual(sender, job_class_name)
-            self.assertEqual(kwargs["reload"], reload)
-            nonlocal num_calls
-            num_calls += 1
-
-        # Register multiple signal handlers to test that they are all called
-        nautobot_get_job_signal.connect(signal_handler)
-        nautobot_get_job_signal.connect(mock_signal_handler)
-
-        get_job(job_class_name, reload=reload)
-
-        # Test that disconnecting the signal works
-        nautobot_get_job_signal.disconnect(mock_signal_handler)
-
-        reload = False
-        get_job(job_class_name, reload=reload)
-
-        # Clean up by disconnecting the remaining signal handler
-        nautobot_get_job_signal.disconnect(signal_handler)
-
-        mock_signal_handler.assert_called_once()
-        self.assertEqual(num_calls, 2)
 
 
 class JobTransactionTest(TransactionTestCase):
