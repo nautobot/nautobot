@@ -86,7 +86,6 @@ from .choices import (
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
-    LogLevelChoices,
 )
 from .datasources import (
     enqueue_git_repository_diff_origin_and_local,
@@ -111,7 +110,6 @@ from .models import (
     Job as JobModel,
     JobButton,
     JobHook,
-    JobLogEntry,
     JobQueue,
     JobResult,
     MetadataType,
@@ -2052,44 +2050,12 @@ class JobHookUIViewSet(NautobotUIViewSet):
 #
 
 
-def get_annotated_jobresult_queryset():
-    return (
-        JobResult.objects.defer("result")
-        .select_related("job_model", "user")
-        .annotate(
-            debug_log_count=count_related(
-                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_DEBUG}
-            ),
-            success_log_count=count_related(
-                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_SUCCESS}
-            ),
-            info_log_count=count_related(
-                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_INFO}
-            ),
-            warning_log_count=count_related(
-                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_WARNING}
-            ),
-            error_log_count=count_related(
-                JobLogEntry,
-                "job_result",
-                filter_dict={
-                    "log_level__in": [
-                        LogLevelChoices.LOG_FAILURE,
-                        LogLevelChoices.LOG_ERROR,
-                        LogLevelChoices.LOG_CRITICAL,
-                    ],
-                },
-            ),
-        )
-    )
-
-
 class JobResultListView(generic.ObjectListView):
     """
     List JobResults
     """
 
-    queryset = get_annotated_jobresult_queryset()
+    queryset = JobResult.objects.defer("result").select_related("job_model", "user")
     filterset = filters.JobResultFilterSet
     filterset_form = forms.JobResultFilterForm
     table = tables.JobResultTable
@@ -2101,7 +2067,7 @@ class JobResultDeleteView(generic.ObjectDeleteView):
 
 
 class JobResultBulkDeleteView(generic.BulkDeleteView):
-    queryset = get_annotated_jobresult_queryset()
+    queryset = JobResult.objects.defer("result").select_related("job_model", "user")
     table = tables.JobResultTable
     filterset = filters.JobResultFilterSet
 
@@ -2494,22 +2460,13 @@ class RelationshipUIViewSet(NautobotUIViewSet):
     )
 
 
-class RelationshipAssociationListView(generic.ObjectListView):
+class RelationshipAssociationUIViewSet(ObjectListViewMixin, ObjectDestroyViewMixin, ObjectBulkDestroyViewMixin):
+    filterset_class = filters.RelationshipAssociationFilterSet
+    filterset_form_class = forms.RelationshipAssociationFilterForm
+    serializer_class = serializers.RelationshipAssociationSerializer
+    table_class = tables.RelationshipAssociationTable
     queryset = RelationshipAssociation.objects.all()
-    filterset = filters.RelationshipAssociationFilterSet
-    filterset_form = forms.RelationshipAssociationFilterForm
-    table = tables.RelationshipAssociationTable
     action_buttons = ()
-
-
-class RelationshipAssociationBulkDeleteView(generic.BulkDeleteView):
-    queryset = RelationshipAssociation.objects.all()
-    table = tables.RelationshipAssociationTable
-    filterset = filters.RelationshipAssociationFilterSet
-
-
-class RelationshipAssociationDeleteView(generic.ObjectDeleteView):
-    queryset = RelationshipAssociation.objects.all()
 
 
 #
@@ -2980,17 +2937,28 @@ class StatusUIViewSet(NautobotUIViewSet):
 #
 
 
-class TagListView(generic.ObjectListView):
-    queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
-    filterset = filters.TagFilterSet
-    filterset_form = forms.TagFilterForm
-    table = tables.TagTable
-
-
-class TagView(generic.ObjectView):
+class TagUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.TagBulkEditForm
+    filterset_class = filters.TagFilterSet
+    filterset_form_class = forms.TagFilterForm
+    form_class = forms.TagForm
     queryset = Tag.objects.all()
+    serializer_class = serializers.TagSerializer
+    table_class = tables.TagTable
+
+    def alter_queryset(self, request):
+        queryset = super().alter_queryset(request)
+
+        # Only annotate for list, bulk_edit, bulk_delete views
+        if self.action in ["list", "bulk_update", "bulk_destroy"]:
+            queryset = queryset.annotate(items=count_related(TaggedItem, "tag"))
+
+        return queryset
 
     def get_extra_context(self, request, instance):
+        # Only run this logic when retrieving a single object
+        if instance is None or self.action != "retrieve":
+            return super().get_extra_context(request, instance)
         tagged_items = (
             TaggedItem.objects.filter(tag=instance).select_related("content_type").prefetch_related("content_object")
         )
@@ -3009,34 +2977,6 @@ class TagView(generic.ObjectView):
             "content_types": instance.content_types.order_by("app_label", "model"),
             **super().get_extra_context(request, instance),
         }
-
-
-class TagEditView(generic.ObjectEditView):
-    queryset = Tag.objects.all()
-    model_form = forms.TagForm
-    template_name = "extras/tag_edit.html"
-
-
-class TagDeleteView(generic.ObjectDeleteView):
-    queryset = Tag.objects.all()
-
-
-class TagBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Tag.objects.all()
-    table = tables.TagTable
-
-
-class TagBulkEditView(generic.BulkEditView):
-    queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
-    table = tables.TagTable
-    form = forms.TagBulkEditForm
-    filterset = filters.TagFilterSet
-
-
-class TagBulkDeleteView(generic.BulkDeleteView):
-    queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
-    table = tables.TagTable
-    filterset = filters.TagFilterSet
 
 
 #
