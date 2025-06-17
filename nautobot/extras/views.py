@@ -189,6 +189,56 @@ class ConfigContextUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.ConfigContextSerializer
     table_class = tables.ConfigContextTable
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                exclude_fields=[
+                    "data",
+                ],
+            ),
+            object_detail.ObjectTextPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                label="Data",
+                object_field="data",
+                render_as=ObjectTextPanel.RenderOptions.JSON,
+                render_placeholder=True,
+            ),
+            object_detail.ObjectFieldsPanel(
+                weight=200,
+                section=SectionChoices.RIGHT_HALF,
+                label="Assignment",
+                fields=[
+                    "locations",
+                    "roles",
+                    "device_types",
+                    "platforms",
+                    "cluster_groups",
+                    "clusters",
+                    "tenant_groups",
+                    "tenants",
+                    "device_redundancy_groups",
+                    "dynamic_groups",
+                ],
+                value_transforms={
+                    "locations": [helpers.render_m2m],
+                    "roles": [helpers.render_m2m],
+                    "device_types": [helpers.render_m2m],
+                    "platforms": [helpers.render_m2m],
+                    "cluster_groups": [helpers.render_m2m],
+                    "clusters": [helpers.render_m2m],
+                    "tenant_groups": [helpers.render_m2m],
+                    "tenants": [helpers.render_m2m],
+                    "device_redundancy_groups": [helpers.render_m2m],
+                    "dynamic_groups": [helpers.render_m2m],
+                },
+            ),
+        )
+    )
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         # Determine user's preferred output format
