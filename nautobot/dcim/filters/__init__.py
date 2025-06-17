@@ -2385,6 +2385,14 @@ class DeviceClusterAssignmentFilterSet(NautobotFilterSet):
                 "lookup_expr": "icontains",
                 "preprocessor": str.strip,
             },
+            "device__asset_tag": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "device__serial": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
             "cluster__name": {
                 "lookup_expr": "icontains",
                 "preprocessor": str.strip,
