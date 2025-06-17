@@ -180,53 +180,28 @@ class ComputedFieldUIViewSet(NautobotUIViewSet):
 # have an associated owner, such as a Git repository
 
 
-class ConfigContextListView(generic.ObjectListView):
+class ConfigContextUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ConfigContextBulkEditForm
+    filterset_class = filters.ConfigContextFilterSet
+    filterset_form_class = forms.ConfigContextFilterForm
+    form_class = forms.ConfigContextForm
     queryset = ConfigContext.objects.all()
-    filterset = filters.ConfigContextFilterSet
-    filterset_form = forms.ConfigContextFilterForm
-    table = tables.ConfigContextTable
-    action_buttons = ("add",)
-
-
-class ConfigContextView(generic.ObjectView):
-    queryset = ConfigContext.objects.all()
+    serializer_class = serializers.ConfigContextSerializer
+    table_class = tables.ConfigContextTable
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         # Determine user's preferred output format
-        if request.GET.get("format") in ["json", "yaml"]:
-            context["format"] = request.GET.get("format")
+        if request.GET.get("data_format") in ["json", "yaml"]:
+            context["data_format"] = request.GET.get("data_format")
             if request.user.is_authenticated:
-                request.user.set_config("extras.configcontext.format", context["format"], commit=True)
+                request.user.set_config("extras.configcontext.format", context["data_format"], commit=True)
         elif request.user.is_authenticated:
-            context["format"] = request.user.get_config("extras.configcontext.format", "json")
+            context["data_format"] = request.user.get_config("extras.configcontext.format", "json")
         else:
-            context["format"] = "json"
+            context["data_format"] = "json"
 
         return context
-
-
-class ConfigContextEditView(generic.ObjectEditView):
-    queryset = ConfigContext.objects.all()
-    model_form = forms.ConfigContextForm
-    template_name = "extras/configcontext_edit.html"
-
-
-class ConfigContextBulkEditView(generic.BulkEditView):
-    queryset = ConfigContext.objects.all()
-    filterset = filters.ConfigContextFilterSet
-    table = tables.ConfigContextTable
-    form = forms.ConfigContextBulkEditForm
-
-
-class ConfigContextDeleteView(generic.ObjectDeleteView):
-    queryset = ConfigContext.objects.all()
-
-
-class ConfigContextBulkDeleteView(generic.BulkDeleteView):
-    queryset = ConfigContext.objects.all()
-    table = tables.ConfigContextTable
-    filterset = filters.ConfigContextFilterSet
 
 
 class ObjectConfigContextView(generic.ObjectView):
