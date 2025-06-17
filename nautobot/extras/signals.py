@@ -661,4 +661,5 @@ def handle_mdt_removed_obj_types(instance, action, pk_set, **kwargs):  # pylint:
 m2m_changed.connect(handle_mdt_removed_obj_types, sender=MetadataType.content_types.through)
 
 # Signal to be sent at the beginning of `nautobot.extras.jobs.get_job`
+# Sends the job class path as the `sender` kwarg and passes through the `reload` kwarg from the `get_job` call
 nautobot_get_job_signal = Signal()
