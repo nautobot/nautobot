@@ -55,17 +55,19 @@
                     {% with cookie_key='homepanel-'|add:panel_name|slugify %}
                         <div class="card-header nb-draggable-handle">
                             <strong class="text-body nb-text-none">{{ panel_name }}</strong>
-                            <button
+                            {% comment %}Not using <button> element here because of Firefox bug: https://bugzilla.mozilla.org/show_bug.cgi?id=568313 {% endcomment %}
+                            <span
                                 class="btn stretched-link nb-collapse-toggle nb-cursor-unset"
-                                type="button"
                                 panel-id="homepanel-{{ panel_name|slugify }}"
+                                role="button"
+                                tabindex="0"
                                 data-bs-toggle="collapse"
                                 data-bs-target="#homepanel-{{ panel_name|slugify }}"
                                 aria-expanded="{% if request.COOKIES|default:''|get_item:cookie_key|default:'False' == 'False' %}true{% else %}false{% endif %}"
                                 aria-controls="homepanel-{{ panel_name|slugify }}"
                             >
                                 <span class="mdi mdi-chevron-down"></span>
-                            </button>
+                            </span>
                         </div>
                         <ul
                             id="homepanel-{{ panel_name|slugify }}"
