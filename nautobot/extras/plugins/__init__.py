@@ -81,6 +81,9 @@ class NautobotAppConfig(NautobotConfig):
     config_view_name = None
     docs_view_name = None
 
+    # Dynamic jobs
+    provides_dynamic_jobs = False
+
     # Default integration paths. Plugin authors can override these to customize the paths to
     # integrated components.
     banner_function = "banner.banner"

@@ -286,6 +286,19 @@ register_jobs(BadJob)
             # Clean up back to normal behavior
             get_jobs(reload=True)
 
+    def test_app_dynamic_jobs(self):
+        """
+        Test that get_job() correctly reloads dynamic jobs when `NautobotAppConfig.provides_dynamic_jobs` is True.
+        """
+        with mock.patch("nautobot.extras.jobs.get_jobs", autospec=True) as mock_get_jobs:
+            # example_app_with_view_override provides dynamic jobs
+            get_job("example_app_with_view_override.jobs.ExampleHiddenJob", reload=True)
+            mock_get_jobs.assert_called_once_with(reload=True)
+            mock_get_jobs.reset_mock()
+            # example_app does NOT provide dynamic jobs
+            get_job("example_app.jobs.ExampleEverythingJob", reload=True)
+            mock_get_jobs.assert_called_once_with(reload=False)
+
 
 class JobTransactionTest(TransactionTestCase):
     """
