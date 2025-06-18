@@ -1487,7 +1487,6 @@ class JobQueueBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     class Meta:
         model = JobQueue
         nullable_fields = [
-            "secrets_group",
             "description",
             "tenant",
         ]

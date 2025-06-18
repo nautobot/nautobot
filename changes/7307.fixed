@@ -1,1 +1,2 @@
 Fixed incorrect bulk-edit job and view logic around nulling out fields.
+Fixed a number of incorrect `nullable_fields` entries on various bulk-edit forms.

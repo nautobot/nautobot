@@ -623,7 +623,6 @@ class RackBulkEditForm(
     class Meta:
         model = Rack
         nullable_fields = [
-            "location",
             "rack_group",
             "tenant",
             "serial",
@@ -2299,14 +2298,12 @@ class DeviceBulkEditForm(
     class Meta:
         model = Device
         nullable_fields = [
-            "location",
             "tenant",
             "platform",
             "serial",
             "rack",
             "position",
             "face",
-            "rack_group",
             "cluster",
             "comments",
             "secrets_group",
@@ -2585,7 +2582,6 @@ class ModuleBulkEditForm(
     StatusModelBulkEditFormMixin,
     RoleModelBulkEditFormMixin,
     NautobotBulkEditForm,
-    LocalContextModelBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Module.objects.all(), widget=forms.MultipleHiddenInput())
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
@@ -4357,7 +4353,6 @@ class CableBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, Nau
     class Meta:
         nullable_fields = [
             "type",
-            "status",
             "label",
             "color",
             "length",
@@ -4661,7 +4656,7 @@ class PowerPanelBulkEditForm(
 
     class Meta:
         model = PowerPanel
-        nullable_fields = ["location", "rack_group"]
+        nullable_fields = ["rack_group"]
 
 
 class PowerPanelFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
@@ -4818,9 +4813,7 @@ class DeviceRedundancyGroupFilterForm(NautobotFilterForm, StatusModelFilterFormM
     tags = TagFilterField(model)
 
 
-class DeviceRedundancyGroupBulkEditForm(
-    TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm, LocalContextModelBulkEditForm
-):
+class DeviceRedundancyGroupBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=DeviceRedundancyGroup.objects.all(), widget=forms.MultipleHiddenInput)
     failover_strategy = forms.ChoiceField(
         choices=add_blank_choice(DeviceRedundancyGroupFailoverStrategyChoices),
@@ -4935,7 +4928,7 @@ class InterfaceRedundancyGroupBulkEditForm(
         queryset=InterfaceRedundancyGroup.objects.all(),
         widget=forms.MultipleHiddenInput,
     )
-    protocol = forms.ChoiceField(choices=InterfaceRedundancyGroupProtocolChoices)
+    protocol = forms.ChoiceField(choices=InterfaceRedundancyGroupProtocolChoices, required=False)
     description = forms.CharField(required=False)
     virtual_ip = DynamicModelChoiceField(queryset=IPAddress.objects.all(), required=False)
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)

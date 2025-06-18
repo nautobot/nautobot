@@ -9,7 +9,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import URLValidator
-from django.db.models import Model, QuerySet
+from django.db.models import ManyToManyField, Model, QuerySet
 from django.test import override_settings, tag, TestCase as _TestCase
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import escape
@@ -1062,6 +1062,7 @@ class ViewTestCases:
         def validate_redirect_to_job_result(self, response):
             # Get the last Bulk Edit Objects JobResult created
             job_result = JobResult.objects.filter(name="Bulk Edit Objects").first()
+            self.assertIsNotNone(job_result, "No JobResult was created - likely the bulk_edit_data is invalid!")
             # Assert redirect to Job Results
             self.assertRedirects(
                 response,
@@ -1121,6 +1122,45 @@ class ViewTestCases:
                             )
                         else:
                             self.assertEqual(passed_bulk_edit_data.get(key), bulk_edit_form.fields[key].clean(value))
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_edit_objects_nullable_fields(self):
+            """Assert that "set null" fields on the bulk-edit form are correctly passed through to the job."""
+            bulk_edit_form_class = lookup.get_form_for_model(self.model, form_prefix="BulkEdit")
+            bulk_edit_form = bulk_edit_form_class(self.model)
+            if not getattr(bulk_edit_form, "nullable_fields", ()):
+                self.skipTest(f"no nullable fields on {bulk_edit_form_class}")
+
+            for field_name in bulk_edit_form.nullable_fields:
+                with self.subTest(field_name=field_name):
+                    if field_name.startswith("cf_"):
+                        # TODO check whether customfield is nullable
+                        continue
+                    if field_name.startswith("cr_"):
+                        # TODO check whether relationship is required
+                        continue
+                    model_field = self.model._meta.get_field(field_name)
+                    if isinstance(model_field, ManyToManyField):
+                        # always nullable
+                        continue
+                    self.assertTrue(model_field.null or model_field.blank)
+
+            pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
+            data = {
+                "pk": pk_list,
+                "_apply": True,  # Form button
+                "_nullify": list(bulk_edit_form.nullable_fields),
+            }
+
+            # Assign model-level permission
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+
+            with mock.patch.object(JobResult, "enqueue_job", wraps=JobResult.enqueue_job) as mock_enqueue_job:
+                response = self.client.post(self._get_url("bulk_edit"), data)
+                self.validate_redirect_to_job_result(response)
+                mock_enqueue_job.assert_called()
+
+                self.assertEqual(mock_enqueue_job.call_args.kwargs["form_data"].get("_nullify"), data["_nullify"])
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_edit_form_contains_all_pks(self):
