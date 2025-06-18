@@ -1,0 +1,1 @@
+Enhanced `test_bulk_edit_objects_with_permission` generic view test case to include validation that the provided `bulk_edit_data` was processed correctly and correctly passed through to the BulkEditObjects job.

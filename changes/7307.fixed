@@ -1,0 +1,1 @@
+Fixed incorrect bulk-edit job and view logic around nulling out fields.

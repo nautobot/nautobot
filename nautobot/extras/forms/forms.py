@@ -914,13 +914,13 @@ class ExternalIntegrationBulkEditForm(NautobotBulkEditForm):
     secrets_group = DynamicModelChoiceField(required=False, queryset=SecretsGroup.objects.all())
     verify_ssl = forms.NullBooleanField(required=False, label="Verify SSL", widget=BulkEditNullBooleanSelect)
     timeout = forms.IntegerField(required=False, min_value=0)
-    extra_config = forms.JSONField(required=False)
+    extra_config = JSONField(required=False, widget=forms.Textarea, help_text="JSON data")
     http_method = forms.ChoiceField(
         required=False,
         label="HTTP Method",
         choices=add_blank_choice(WebhookHttpMethodChoices),
     )
-    headers = forms.JSONField(required=False, label="HTTP Request headers")
+    headers = JSONField(required=False, widget=forms.Textarea, help_text="Headers for the HTTP request")
 
     class Meta:
         model = ExternalIntegration
@@ -1910,8 +1910,8 @@ class RelationshipBulkEditForm(BootstrapMixin, CustomFieldModelBulkEditFormMixin
     )
     source_hidden = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
     destination_hidden = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
-    source_filter = forms.JSONField(required=False, widget=forms.Textarea, help_text="Filter for the source")
-    destination_filter = forms.JSONField(required=False, widget=forms.Textarea, help_text="Filter for the destination")
+    source_filter = JSONField(required=False, widget=forms.Textarea, help_text="Filter for the source")
+    destination_filter = JSONField(required=False, widget=forms.Textarea, help_text="Filter for the destination")
     source_type = CSVContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()), required=False
     )
@@ -2256,6 +2256,8 @@ class WebhookBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin):
     secret = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
     ca_file_path = forms.CharField(required=False, max_length=4096)
     http_content_type = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
+    additional_headers = forms.CharField(required=False, widget=forms.Textarea)
+    body_template = forms.CharField(required=False, widget=forms.Textarea)
 
     # Choice field
     http_method = forms.ChoiceField(
@@ -2279,6 +2281,8 @@ class WebhookBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin):
             "type_delete",
             "http_method",
             "http_content_type",
+            "additional_headers",
+            "body_template",
             "ssl_verification",
             "ca_file_path",
             "payload_url",
@@ -2286,6 +2290,7 @@ class WebhookBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin):
             "add_content_types",
             "remove_content_types",
         )
+        nullable_fields = ("additional_headers",)
 
 
 class WebhookForm(BootstrapMixin, forms.ModelForm):
