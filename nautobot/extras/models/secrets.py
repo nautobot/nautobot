@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from jinja2.exceptions import TemplateSyntaxError, UndefinedError
+from jinja2.sandbox import unsafe
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseModel
@@ -58,6 +59,7 @@ class Secret(PrimaryModel):
         except (TemplateSyntaxError, UndefinedError) as exc:
             raise SecretParametersError(self, registry["secrets_providers"].get(self.provider), str(exc)) from exc
 
+    @unsafe
     def get_value(self, obj=None):
         """Retrieve the secret value that this Secret is a representation of.
 
@@ -76,6 +78,8 @@ class Secret(PrimaryModel):
             raise
         except Exception as exc:
             raise SecretError(self, provider, str(exc)) from exc
+
+    get_value.do_not_call_in_templates = True
 
     def clean(self):
         provider = registry["secrets_providers"].get(self.provider)
@@ -108,6 +112,7 @@ class SecretsGroup(OrganizationalModel):
     def __str__(self):
         return self.name
 
+    @unsafe
     def get_secret_value(self, access_type, secret_type, obj=None, **kwargs):
         """Helper method to retrieve a specific secret from this group.
 
@@ -117,6 +122,8 @@ class SecretsGroup(OrganizationalModel):
             secrets_group=self, access_type=access_type, secret_type=secret_type
         ).secret
         return secret.get_value(obj=obj, **kwargs)
+
+    get_secret_value.do_not_call_in_templates = True
 
 
 @extras_features(
