@@ -3984,8 +3984,10 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
         return self.form_valid(form)
 
     def get_required_permission(self):
-        if getattr(self, "action", None) in ["add_member", "remove_member"]:
+        if getattr(self, "action", None) == "add_member":
             return ["dcim.change_virtualchassis"]
+        elif getattr(self, "action", None) == "remove_member":
+            return ["dcim.change_device"]
         return super().get_required_permission()
 
     @action(detail=True, methods=["get", "post"], url_path="add-member", url_name="add_member")
@@ -4042,13 +4044,13 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
                 return redirect(device.get_absolute_url())
 
             if form.is_valid():
-                vc_name = device.virtual_chassis
+                virtual_chassis = device.virtual_chassis
                 device.virtual_chassis = None
                 device.vc_position = None
                 device.vc_priority = None
                 device.save()
 
-                msg = f"Removed {device} from virtual chassis {vc_name}"
+                msg = f"Removed {device} from virtual chassis {virtual_chassis }"
                 messages.success(request, msg)
 
                 return redirect(self.get_return_url(request, device))
