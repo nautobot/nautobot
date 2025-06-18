@@ -1574,6 +1574,7 @@ class ModuleFamily(PrimaryModel):
         return self.name
 
 
+# TODO: 5840 - Translate comments field from devicetype library, Nautobot doesn't use that field for ModuleType
 @extras_features(
     "custom_links",
     "custom_validators",
@@ -1581,8 +1582,6 @@ class ModuleFamily(PrimaryModel):
     "graphql",
     "webhooks",
 )
-
-# TODO: 5840 - Translate comments field from devicetype library, Nautobot doesn't use that field for ModuleType
 class ModuleType(PrimaryModel):
     """
     A ModuleType represents a particular make (Manufacturer) and model of Module. A Module can represent
