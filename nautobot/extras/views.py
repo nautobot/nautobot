@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 from urllib.parse import parse_qs
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -15,7 +16,7 @@ from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils import timezone
 from django.utils.encoding import iri_to_uri
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.timezone import get_current_timezone
 from django.views.generic import View
@@ -189,6 +190,24 @@ class ConfigContextUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.ConfigContextSerializer
     table_class = tables.ConfigContextTable
 
+    class AssignmentObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+        def render_value(self, key, value, context):
+            if not value or (key == "dynamic_groups" and not settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED):
+                return helpers.HTML_NONE
+
+            items = []
+            for val in value.all():
+                if isinstance(val, Role):
+                    # Link to devices with this role
+                    url = reverse("dcim:device_list") + f"?role={val.name}"
+                    rendered_val = format_html('<a href="{}">{}</a>', url, val.name)
+                else:
+                    # Default hyperlink for other values
+                    rendered_val = helpers.hyperlinked_object(val)
+                items.append(rendered_val)
+
+            return format_html_join("", "<li>{}</li>", ((item,) for item in items)) if items else helpers.HTML_NONE
+
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
@@ -199,15 +218,14 @@ class ConfigContextUIViewSet(NautobotUIViewSet):
                     "data",
                 ],
             ),
-            object_detail.ObjectTextPanel(
+            object_detail.Panel(
                 weight=100,
-                section=SectionChoices.LEFT_HALF,
+                section=SectionChoices.FULL_WIDTH,
                 label="Data",
-                object_field="data",
-                render_as=ObjectTextPanel.RenderOptions.JSON,
-                render_placeholder=True,
+                header_extra_content_template_path="extras/inc/json_format.html",
+                body_content_template_path="extras/configcontext_data.html",
             ),
-            object_detail.ObjectFieldsPanel(
+            AssignmentObjectFieldsPanel(
                 weight=200,
                 section=SectionChoices.RIGHT_HALF,
                 label="Assignment",
@@ -223,18 +241,6 @@ class ConfigContextUIViewSet(NautobotUIViewSet):
                     "device_redundancy_groups",
                     "dynamic_groups",
                 ],
-                value_transforms={
-                    "locations": [helpers.render_m2m],
-                    "roles": [helpers.render_m2m],
-                    "device_types": [helpers.render_m2m],
-                    "platforms": [helpers.render_m2m],
-                    "cluster_groups": [helpers.render_m2m],
-                    "clusters": [helpers.render_m2m],
-                    "tenant_groups": [helpers.render_m2m],
-                    "tenants": [helpers.render_m2m],
-                    "device_redundancy_groups": [helpers.render_m2m],
-                    "dynamic_groups": [helpers.render_m2m],
-                },
             ),
         )
     )

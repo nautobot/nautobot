@@ -764,16 +764,6 @@ def render_address(address):
 
 @library.filter()
 @register.filter()
-def render_m2m(value):
-    if not value:
-        return HTML_NONE
-    items = [hyperlinked_object(val) for val in value.all()]
-    items = format_html_join("", "<li>{}</li>", ((item,) for item in items))
-    return items if items else HTML_NONE
-
-
-@library.filter()
-@register.filter()
 def render_button_class(value):
     """
     Render a string as a styled HTML button using Bootstrap classes.
