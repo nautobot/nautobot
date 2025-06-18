@@ -87,7 +87,6 @@ from .choices import (
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
-    LogLevelChoices,
 )
 from .datasources import (
     enqueue_git_repository_diff_origin_and_local,
@@ -112,7 +111,6 @@ from .models import (
     Job as JobModel,
     JobButton,
     JobHook,
-    JobLogEntry,
     JobQueue,
     JobResult,
     MetadataType,
@@ -2108,44 +2106,12 @@ class JobHookUIViewSet(NautobotUIViewSet):
 #
 
 
-def get_annotated_jobresult_queryset():
-    return (
-        JobResult.objects.defer("result")
-        .select_related("job_model", "user")
-        .annotate(
-            debug_log_count=count_related(
-                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_DEBUG}
-            ),
-            success_log_count=count_related(
-                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_SUCCESS}
-            ),
-            info_log_count=count_related(
-                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_INFO}
-            ),
-            warning_log_count=count_related(
-                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_WARNING}
-            ),
-            error_log_count=count_related(
-                JobLogEntry,
-                "job_result",
-                filter_dict={
-                    "log_level__in": [
-                        LogLevelChoices.LOG_FAILURE,
-                        LogLevelChoices.LOG_ERROR,
-                        LogLevelChoices.LOG_CRITICAL,
-                    ],
-                },
-            ),
-        )
-    )
-
-
 class JobResultListView(generic.ObjectListView):
     """
     List JobResults
     """
 
-    queryset = get_annotated_jobresult_queryset()
+    queryset = JobResult.objects.defer("result").select_related("job_model", "user")
     filterset = filters.JobResultFilterSet
     filterset_form = forms.JobResultFilterForm
     table = tables.JobResultTable
@@ -2157,7 +2123,7 @@ class JobResultDeleteView(generic.ObjectDeleteView):
 
 
 class JobResultBulkDeleteView(generic.BulkDeleteView):
-    queryset = get_annotated_jobresult_queryset()
+    queryset = JobResult.objects.defer("result").select_related("job_model", "user")
     table = tables.JobResultTable
     filterset = filters.JobResultFilterSet
 
