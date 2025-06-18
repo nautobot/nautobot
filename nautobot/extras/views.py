@@ -217,6 +217,11 @@ class ConfigContextUIViewSet(NautobotUIViewSet):
                 exclude_fields=[
                     "data",
                 ],
+                hide_if_unset=[
+                    "owner",
+                    "owner_content_type",
+                    "owner_object_id",
+                ],
             ),
             object_detail.Panel(
                 weight=100,
