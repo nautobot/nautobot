@@ -3939,7 +3939,7 @@ class WebhookTestCase(
             "http_content_type": "application/json",
         }
         cls.bulk_edit_data = {
-            "enabled": True,
+            "enabled": False,
             "type_create": True,
             "type_update": True,
             "type_delete": False,
