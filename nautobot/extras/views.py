@@ -2946,6 +2946,25 @@ class TagUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.TagSerializer
     table_class = tables.TagTable
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.RIGHT_HALF,
+                table_class=tables.TaggedItemTable,
+                table_filter="tag",
+                select_related_fields=["content_type"],
+                prefetch_related_fields=["content_object"],
+                include_paginator=True,
+            ),
+        ),
+    )
+
     def alter_queryset(self, request):
         queryset = super().alter_queryset(request)
 
@@ -2954,29 +2973,6 @@ class TagUIViewSet(NautobotUIViewSet):
             queryset = queryset.annotate(items=count_related(TaggedItem, "tag"))
 
         return queryset
-
-    def get_extra_context(self, request, instance):
-        # Only run this logic when retrieving a single object
-        if instance is None or self.action != "retrieve":
-            return super().get_extra_context(request, instance)
-        tagged_items = (
-            TaggedItem.objects.filter(tag=instance).select_related("content_type").prefetch_related("content_object")
-        )
-
-        # Generate a table of all items tagged with this Tag
-        items_table = tables.TaggedItemTable(tagged_items)
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(items_table)
-
-        return {
-            "items_count": tagged_items.count(),
-            "items_table": items_table,
-            "content_types": instance.content_types.order_by("app_label", "model"),
-            **super().get_extra_context(request, instance),
-        }
 
 
 #
