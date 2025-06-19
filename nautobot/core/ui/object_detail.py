@@ -1248,6 +1248,11 @@ class ObjectFieldsPanel(KeyValueTablePanel):
 
         data = {}
 
+        # Ensuring the `name` field is displayed first, if present and not explicitly excluded
+        if "name" in fields and "name" not in self.exclude_fields:
+            data["name"] = getattr(instance, "name", None)
+            fields.remove("name")
+
         if isinstance(instance, TreeModel) and (self.fields == "__all__" or "_hierarchy" in self.fields):
             # using `_hierarchy` with the prepended `_` to try to archive a unique name, in cases where a model might have hierarchy field.
             data["_hierarchy"] = instance

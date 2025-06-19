@@ -4516,15 +4516,7 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
             object_detail.ObjectFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
-                fields=[
-                    "name",
-                    "controller",
-                    "parent",
-                    "capabilities",
-                    "weight",
-                    "tenant",
-                    "description",
-                ],
+                fields="__all__",
                 value_transforms={
                     "capabilities": [helpers.label_list],
                 },
