@@ -2957,6 +2957,7 @@ class TagUIViewSet(NautobotUIViewSet):
                 weight=200,
                 section=SectionChoices.RIGHT_HALF,
                 table_class=tables.TaggedItemTable,
+                table_title="Tagged Objects",
                 table_filter="tag",
                 select_related_fields=["content_type"],
                 prefetch_related_fields=["content_object"],
