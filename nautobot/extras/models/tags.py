@@ -1,5 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
+from django.utils.html import format_html
 from taggit.models import GenericUUIDTaggedItemBase
 
 from nautobot.core.choices import ColorChoices
@@ -7,6 +8,7 @@ from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import ColorField
 from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.core.templatetags import helpers
 from nautobot.extras.models.mixins import SavedViewMixin
 from nautobot.extras.utils import extras_features, TaggableClassesQuery
 
@@ -64,6 +66,13 @@ class Tag(
 
     class Meta:
         ordering = ["name"]
+
+    def get_color_display(self):
+        if self.color:
+            return format_html(
+                '<span class="label color-block" style="background-color: #{}">&nbsp;</span>', self.color
+            )
+        return helpers.placeholder(self.color)
 
     def validate_content_types_removal(self, content_types_id):
         """Validate content_types to be removed are not tagged to a model"""
