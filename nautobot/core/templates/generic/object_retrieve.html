@@ -363,4 +363,6 @@
         }
     });
 </script>
+<script src="{% static 'jquery/jquery-3.7.1.min.js' %}" onerror="window.location='{% url 'media_failure' %}?filename=jquery/jquery-3.7.1.min.js'"></script>
+<script src="{% versioned_static 'js/tableconfig.js' %}"></script>
 {% endblock javascript %}
