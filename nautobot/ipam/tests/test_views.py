@@ -166,7 +166,6 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
                     self.assertBodyContains(response, hyperlinked_object(rir.prefixes.first()))
 
 
-@tag("fix_in_v3")
 class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.ListObjectsViewTestCase):
     model = Prefix
     filter_on_field = "prefix_length"
