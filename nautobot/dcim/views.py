@@ -4192,11 +4192,7 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
                 label="Power Feed",
                 context_data_key="powerfeed_data",
                 value_transforms={
-                    "Power Panel": [helpers.hyperlinked_object],
-                    "Rack": [helpers.hyperlinked_object],
-                    "Type": [helpers.placeholder],
-                    "Status": [helpers.hyperlinked_object_with_color],
-                    "Connected Device": [helpers.mark_safe],
+                    # Only apply transforms where customization is needed
                     "Utilization (Allocated)": [_render_utilization_graph],
                 },
             ),
@@ -4216,16 +4212,6 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
                 weight=300,
                 label="Connection",
                 context_data_key="connection_data",
-                value_transforms={
-                    "Cable": [helpers.mark_safe],
-                    "Device": [helpers.hyperlinked_object],
-                    "Module": [helpers.hyperlinked_object],
-                    "Power Port": [helpers.hyperlinked_object],
-                    "Type": [helpers.placeholder],
-                    "Description": [helpers.placeholder],
-                    "Path Status": [helpers.placeholder],
-                    "Connection": [helpers.mark_safe],
-                },
             ),
         )
     )
@@ -4244,7 +4230,7 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
             "Utilization (Allocated)": self._get_utilization_data(instance),
         }
 
-        context["connection_data"] = helpers.get_powerfeed_connection_data(request, instance)
+        context["connection_data"] = self._get_connection_data(request, instance)
         return context
 
     def _get_connected_device_html(self, instance):
@@ -4264,6 +4250,57 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
         allocated = utilization["allocated"]
         available = instance.available_power or 0
         return (allocated, available)
+
+    def _get_connection_data(self, request, instance):
+        if not instance:
+            return {}
+
+        if instance.cable:
+            trace_url = reverse("dcim:powerfeed_trace", kwargs={"pk": instance.pk})
+            cable_html = format_html(
+                '{} <a href="{}" class="btn btn-primary btn-xs" title="Trace">'
+                '<i class="mdi mdi-transit-connection-variant"></i></a>',
+                helpers.hyperlinked_object(instance.cable),
+                trace_url,
+            )
+
+            endpoint = getattr(instance, "connected_endpoint", None)
+            endpoint_data = {}
+
+            if endpoint:
+                endpoint_obj = getattr(endpoint, "device", None) or getattr(endpoint, "module", None)
+                path = getattr(instance, "path", None)
+                is_reachable = path.is_active if path else False
+
+                endpoint_data = {
+                    "Device" if getattr(endpoint, "device", None) else "Module": endpoint_obj,
+                    "Power Port": endpoint,
+                    "Type": endpoint.get_type_display() if hasattr(endpoint, "get_type_display") else None,
+                    "Description": endpoint.description,
+                    "Path Status": "Reachable" if is_reachable else "Not Reachable",
+                }
+
+            return {
+                "Cable": cable_html,
+                **endpoint_data,
+            }
+
+        if request.user.has_perm("dcim.add_cable"):
+            connect_url = (
+                reverse(
+                    "dcim:powerfeed_connect",
+                    kwargs={"termination_a_id": instance.pk, "termination_b_type": "power-port"},
+                )
+                + f"?return_url={instance.get_absolute_url()}"
+            )
+            connect_link = format_html(
+                '<a href="{}" class="btn btn-primary btn-sm pull-right">'
+                '<span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect</a>',
+                connect_url,
+            )
+            return {"Connection": format_html("Not connected {}", connect_link)}
+
+        return {"Connection": "Not connected"}
 
 
 class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
