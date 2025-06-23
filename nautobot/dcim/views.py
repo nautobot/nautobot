@@ -4352,38 +4352,35 @@ class InterfaceRedundancyGroupUIViewSet(NautobotUIViewSet):
     table_class = tables.InterfaceRedundancyGroupTable
     lookup_field = "pk"
 
-    def get_extra_context(self, request, instance):
-        """Return additional panels for display."""
-        context = super().get_extra_context(request, instance)
-        if instance and self.action == "retrieve":
-            interface_table = self._get_interface_redundancy_groups_table(request, instance)
-            context["interface_table"] = interface_table
-        return context
-
-    def _get_interface_redundancy_groups_table(self, request, instance):
-        """Return a table of assigned Interfaces."""
-        queryset = instance.interface_redundancy_group_associations.restrict(request.user)
-        queryset = queryset.prefetch_related("interface")
-        queryset = queryset.order_by("priority")
-        column_sequence = (
-            "interface__device",
-            "interface",
-            "priority",
-            "interface__status",
-            "interface__enabled",
-            "interface__ip_addresses",
-            "interface__type",
-            "interface__description",
-            "interface__label",
-        )
-        table = tables.InterfaceRedundancyGroupAssociationTable(
-            data=queryset,
-            sequence=column_sequence,
-            orderable=False,
-        )
-        for column_name in column_sequence:
-            table.columns.show(column_name)
-        return table
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.InterfaceRedundancyGroupAssociationTable,
+                table_attribute="interface_redundancy_group_associations",
+                prefetch_related_fields=["interface"],
+                order_by_fields=["priority"],
+                table_title="Interfaces",
+                related_field_name="interface_redundancy_group",
+                include_columns=[
+                    "interface__device",
+                    "interface",
+                    "interface__status",
+                    "interface__enabled",
+                    "interface__ip_addresses",
+                    "interface__type",
+                    "interface__description",
+                    "interface__label",
+                ],
+            ),
+        ),
+    )
 
 
 class InterfaceRedundancyGroupAssociationUIViewSet(ObjectEditViewMixin, ObjectDestroyViewMixin):
