@@ -2710,6 +2710,7 @@ class SecretsGroupUIViewSet(NautobotUIViewSet):
                 self.get_queryset().get(pk=obj.pk)
                 secrets_formset = self.get_extra_context(self.request, obj)["secrets"]
 
+                # Check if the formset is valid and save the changes to the related secrets.
                 if secrets_formset.is_valid():
                     secrets_formset.save()
                 else:

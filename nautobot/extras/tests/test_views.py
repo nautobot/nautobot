@@ -1850,7 +1850,10 @@ class SecretTestCase(
         }
 
 
-class SecretsGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class SecretsGroupTestCase(
+    ViewTestCases.OrganizationalObjectViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
+):
     model = SecretsGroup
 
     @classmethod
@@ -1894,6 +1897,9 @@ class SecretsGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "secrets_group_associations-INITIAL_FORMS": "1",
             "secrets_group_associations-MIN_NUM_FORMS": "0",
             "secrets_group_associations-MAX_NUM_FORMS": "1000",
+        }
+        cls.bulk_edit_data = {
+            "description": "This is a very detailed new description",
         }
 
 
