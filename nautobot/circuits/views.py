@@ -229,6 +229,8 @@ class CircuitUIViewSet(NautobotUIViewSet):
                     relationship.key,
                     bettertitle(relationship.get_label(side)),
                 )
+            if key == "ip_addresses":
+                return "IP Addressing"
             return super().render_key(key, value, context)
 
         def render_value(self, key, value, context):
