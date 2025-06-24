@@ -4410,29 +4410,6 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         url = reverse("dcim:powerfeed", kwargs={"pk": powerfeed.pk})
         self.assertHttpStatus(self.client.get(url), 200)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_get_object_anonymous(self):
-        """Anonymous users should be redirected to login when accessing object detail view."""
-        self.client.logout()
-        instance = self._get_queryset().first()
-
-        self.assertIsNotNone(instance, "Expected at least one PowerFeed object in the queryset.")
-
-        url = instance.get_absolute_url()
-
-        response = self.client.get(url, follow=False)
-
-        # Should redirect to login page
-        self.assertEqual(response.status_code, 302)
-        self.assertTrue(response.url.startswith(f"/login/?next={url}"))
-
-    def test_get_object_with_constrained_permission(self):
-        """
-        Skipped: PowerFeed does not support object-level permission constraints directly,
-        as it lacks a direct 'location' or 'site' field for filtering.
-        """
-        self.skipTest("PowerFeed does not support object-level permission constraints.")
-
 
 class PathTraceViewTestCase(ModelViewTestCase):
     def test_get_cable_path_trace_do_not_throw_error(self):
