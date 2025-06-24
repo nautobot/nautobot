@@ -638,12 +638,16 @@ class CustomFieldTestCase(
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = CustomField
     slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
+        ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
+        prefix_ct = ContentType.objects.get_for_model(Prefix)
+        device_ct = ContentType.objects.get_for_model(Device)
         obj_type = ContentType.objects.get_for_model(Location)
 
         custom_fields = [
@@ -674,7 +678,7 @@ class CustomFieldTestCase(
 
         for custom_field in custom_fields:
             custom_field.validated_save()
-            custom_field.content_types.set([obj_type])
+            custom_field.content_types.set([obj_type, device_ct])
 
         cls.form_data = {
             "content_types": [obj_type.pk],
@@ -689,6 +693,17 @@ class CustomFieldTestCase(
             "custom_field_choices-INITIAL_FORMS": "1",
             "custom_field_choices-MIN_NUM_FORMS": "0",
             "custom_field_choices-MAX_NUM_FORMS": "1000",
+        }
+
+        cls.bulk_edit_data = {
+            "grouping": "Updated Grouping",
+            "description": "Updated description for testing bulk edit.",
+            "required": True,
+            "filter_logic": "loose",
+            "weight": 200,
+            "advanced_ui": True,
+            "add_content_types": [ipaddress_ct.pk, prefix_ct.pk],
+            "remove_content_types": [device_ct.pk],
         }
 
     def test_create_object_without_permission(self):
