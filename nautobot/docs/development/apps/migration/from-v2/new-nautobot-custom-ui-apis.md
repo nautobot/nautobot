@@ -46,7 +46,6 @@ Here's a list of what's changed:
 | `tile-footer`                         | `nb-tile-footer`                      |
 | `tile-header`                         | `nb-tile-header`                      |
 
-
 ## Table configuration button
 
 Configurable table columns are no novelty for Nautobot. However, when we redesigned user interface in v3.x, we also changed the way table configuration buttons are rendered, and as result they are now more coupled with tables they manage. Table configuration buttons are no longer standalone buttons on the page, instead they are rendered in the top right header cell of any **configurable** table.
