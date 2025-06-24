@@ -2954,7 +2954,7 @@ class TagUIViewSet(NautobotUIViewSet):
                 fields="__all__",
             ),
             object_detail.ObjectsTablePanel(
-                weight=200,
+                weight=100,
                 section=SectionChoices.RIGHT_HALF,
                 table_class=tables.TaggedItemTable,
                 table_title="Tagged Objects",
