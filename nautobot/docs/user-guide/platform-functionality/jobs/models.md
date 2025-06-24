@@ -21,6 +21,10 @@ Records of this type store the following data as read-only (not modifiable via t
 * Whether the job is a [Job Hook Receiver](../../../development/jobs/job-extensions.md#job-hook-receivers)
 * Whether the job is a [Job Button Receiver](../../../development/jobs/job-extensions.md#job-button-receivers)
 
+Records of this type also store the following configurable data:
+
+* **AI Enabled**: Whether this job is enabled for AI assistance and automation features (`is_ai_enabled`)
+
 !!! note
     As presently implemented, after a job is uninstalled, when the database is next refreshed, the corresponding Job database record will *not* be deleted - only its `installed` flag will be set to False. This allows existing `JobResult` and `ScheduledJob` records to continue to reference the Job that they originated from.
 
@@ -53,6 +57,7 @@ Records of this type store the following data:
 * Timestamps indicating when the task was created and when it completed
 * An overall status such as "pending", "running", "errored", or "completed".
 * A block of structured data representing the return value from the `.run()` method (often rendered as JSON).
+* **AI Enabled**: Whether this job result is associated with AI-enabled job execution (`is_ai_enabled`)
 
 +/- 2.3.0
     The Additional Data tab has been removed, you can now find the data in the Advanced Tab.

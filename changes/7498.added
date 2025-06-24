@@ -1,0 +1,1 @@
+Added `is_ai_enabled` boolean field to Job and JobResult models to support AI assistance and automation features in the Jobs framework.

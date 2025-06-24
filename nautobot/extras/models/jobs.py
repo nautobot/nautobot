@@ -151,6 +151,11 @@ class Job(PrimaryModel):
         help_text="Whether this job should fail to run if another instance of this job is already running",
     )
 
+    is_ai_enabled = models.BooleanField(
+        default=False,
+        help_text="Whether this job is enabled for AI assistance and automation features"
+    )
+
     # Additional properties, potentially inherited from the source code
     # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.
     approval_required = models.BooleanField(
@@ -674,6 +679,11 @@ class JobResult(BaseModel, CustomFieldModel):
     traceback = models.TextField(blank=True, null=True)  # noqa: DJ001  # django-nullable-model-string-field -- TODO: can we remove null=True?
     meta = models.JSONField(null=True, default=None, editable=False)
     scheduled_job = models.ForeignKey(to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True)
+
+    is_ai_enabled = models.BooleanField(
+        default=False,
+        help_text="Whether this job result is associated with AI-enabled job execution"
+    )
 
     objects = JobResultManager()
 

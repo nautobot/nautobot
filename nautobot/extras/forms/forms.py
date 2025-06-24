@@ -1132,6 +1132,7 @@ class JobEditForm(NautobotModelForm):
             "default_job_queue",
             "is_singleton",
             "is_singleton_override",
+            "is_ai_enabled",
             "tags",
         ]
 
@@ -1235,6 +1236,11 @@ class JobBulkEditForm(NautobotBulkEditForm):
         required=False,
         widget=BulkEditNullBooleanSelect,
         help_text="Whether this job should fail to run if another instance of this job is already running",
+    )
+    is_ai_enabled = forms.NullBooleanField(
+        required=False,
+        widget=BulkEditNullBooleanSelect,
+        help_text="Whether this job is enabled for AI assistance and automation features",
     )
     # Flags to indicate whether the above properties are inherited from the source code or overridden by the database
     # Text field overrides
@@ -1363,6 +1369,10 @@ class JobFilterForm(BootstrapMixin, forms.Form):
     )
     is_job_button_receiver = forms.NullBooleanField(
         initial=False,
+        required=False,
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    is_ai_enabled = forms.NullBooleanField(
         required=False,
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )

@@ -30,7 +30,8 @@ from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.jobs import get_task_logger
 from nautobot.extras.models import Status
 
-name = "Example App jobs"  # The "grouping" that will contain all Jobs defined in this file.
+# The "grouping" that will contain all Jobs defined in this file.
+name = "Example App jobs"
 
 
 class ExampleEverythingJob(Job):
@@ -82,7 +83,8 @@ This is a Job that demonstrates as many Job features as it can.
         # Any duplicate job instances will error out with a singleton-specific error message.
 
     # Definition of input variables requested when running this Job
-    should_fail = BooleanVar(description="Check this box to force this Job to fail")
+    should_fail = BooleanVar(
+        description="Check this box to force this Job to fail")
     string_input = StringVar(
         # Common optional parameters to all ScriptVariable types:
         default="Hello World!",
@@ -167,7 +169,8 @@ This is a Job that demonstrates as many Job features as it can.
         default={},
     )
     # the name `dryrun` is significant!
-    dryrun = DryRunVar(description="Set to True to run in dry-run mode, bypassing approval requirements")
+    dryrun = DryRunVar(
+        description="Set to True to run in dry-run mode, bypassing approval requirements")
 
     def before_start(self, task_id, args, kwargs):
         """
@@ -199,39 +202,49 @@ This is a Job that demonstrates as many Job features as it can.
         """
         self.logger.info("Running!")
         for key, value in kwargs.items():
-            self.logger.info("For kwarg %s, the provided value was `%s` `%s`", key, type(value), value)
+            self.logger.info(
+                "For kwarg %s, the provided value was `%s` `%s`", key, type(value), value)
 
         # A few relevant instance attributes are automatically set when a Job runs:
-        self.logger.debug("The user who requested this Job to run is %s", self.user.username)
-        self.logger.debug("The JobResult for this Job has id %s", self.job_result.id)
+        self.logger.debug(
+            "The user who requested this Job to run is %s", self.user.username)
+        self.logger.debug(
+            "The JobResult for this Job has id %s", self.job_result.id)
 
         # Since Jobs are Python classes, you can define any custom methods you like and call them yourself:
         self.demonstrate_logging(kwargs)
 
         # The create_file() helper method takes a filename and either a string or bytestring as input.
         # Users can subsequently download the created file.
-        self.create_file("example.txt", "\n".join([kwargs["string_input"], kwargs["text_input"]]))
+        self.create_file("example.txt", "\n".join(
+            [kwargs["string_input"], kwargs["text_input"]]))
 
         if kwargs["should_fail"]:
-            raise RuntimeError("This unhandled exception will cause the Job to fail")
+            raise RuntimeError(
+                "This unhandled exception will cause the Job to fail")
         # else:
         return {"my job result": {"The return value on success can contain any": ["JSON", "serializable", "data"]}}
 
     def demonstrate_logging(self, kwargs):
         """Not a magic method - this is a custom Python function manually called from run()."""
-        self.logger.debug("This is a simple debug message, with **Markdown** formatting.")
+        self.logger.debug(
+            "This is a simple debug message, with **Markdown** formatting.")
         self.logger.info(
             "This is an info message, with an associated database object",
             extra={"object": kwargs["location_type_input"]},
         )
-        self.logger.success("You can use logger.success() to set the log level to `SUCCESS`.")
+        self.logger.success(
+            "You can use logger.success() to set the log level to `SUCCESS`.")
         self.logger.warning(
             "You can specify a custom grouping for messages, but do so with consideration.",
             extra={"grouping": "warning messages"},
         )
-        self.logger.failure("Note that *logging* a failure does _not_ automatically cause the job to fail.")
-        self.logger.error("Note that *logging* an error does _not_ automatically cause the job to fail.")
-        self.logger.critical("Any supported Python log level can be logged but not all are automatically colorized.")
+        self.logger.failure(
+            "Note that *logging* a failure does _not_ automatically cause the job to fail.")
+        self.logger.error(
+            "Note that *logging* an error does _not_ automatically cause the job to fail.")
+        self.logger.critical(
+            "Any supported Python log level can be logged but not all are automatically colorized.")
 
     def on_success(self, retval, task_id, args, kwargs):
         """
@@ -243,7 +256,8 @@ This is a Job that demonstrates as many Job features as it can.
             args (list): Present for Celery compatibility, can be ignored in most cases.
             kwargs (dict): The keyword args that were passed into `run()`.
         """
-        self.logger.info("Success! The retval is `%s`, kwargs were `%s`", retval, kwargs)
+        self.logger.info(
+            "Success! The retval is `%s`, kwargs were `%s`", retval, kwargs)
 
     def on_failure(self, exc, task_id, args, kwargs, einfo):
         """
@@ -256,7 +270,8 @@ This is a Job that demonstrates as many Job features as it can.
             kwargs (dict): The keyword args that were (or would have been) passed into `run()`.
             einfo (any): Present for Celery compatibility, can be ignored in most cases.
         """
-        self.logger.error("Failure! The exception is `%s`, kwargs were `%s`", exc, kwargs)
+        self.logger.error(
+            "Failure! The exception is `%s`, kwargs were `%s`", exc, kwargs)
 
     def after_return(self, status, retval, task_id, args, kwargs, einfo):
         """
@@ -296,16 +311,20 @@ class ExampleDryRunJob(Job):
                         device.serial = ""
                         device.save()
         except Exception:
-            self.logger.error("%s failed. Database changes rolled back.", self.__class__.__name__)
+            self.logger.error(
+                "%s failed. Database changes rolled back.", self.__class__.__name__)
             raise
-        self.logger.success("We can use the success log level to indicate success.")
+        self.logger.success(
+            "We can use the success log level to indicate success.")
         # Ensure get_task_logger can also use success.
         logger = get_task_logger(__name__)
-        logger.success("We can also use the success log level in get_task_logger.")
+        logger.success(
+            "We can also use the success log level in get_task_logger.")
 
 
 class ExampleJob(Job):
-    some_json_data = JSONVar(label="JSON", description="Example JSONVar for a job.", default={})
+    some_json_data = JSONVar(
+        label="JSON", description="Example JSONVar for a job.", default={})
 
     # specify template_name to override the default job scheduling template
     template_name = "example_app/example_with_custom_template.html"
@@ -343,7 +362,8 @@ class ExampleCustomFormJob(Job):
     #
     # The `StringVar` here would display a simple input field, but we are going to
     # display a text area instead in the template.
-    custom_job_data = StringVar(label="Input Data", description="Some input data", default="Lorem Ipsum")
+    custom_job_data = StringVar(
+        label="Input Data", description="Some input data", default="Lorem Ipsum")
 
     # specify template_name to override the default job scheduling template
     template_name = "example_app/custom_job_form.html"
@@ -368,7 +388,8 @@ class ExampleHiddenJob(Job):
 
 
 class ExampleLoggingJob(Job):
-    interval = IntegerVar(default=4, description="The time in seconds to sleep.")
+    interval = IntegerVar(
+        default=4, description="The time in seconds to sleep.")
 
     class Meta:
         name = "Example logging job."
@@ -386,12 +407,14 @@ class ExampleLoggingJob(Job):
             time.sleep(1)
             self.logger.info("Step %s", step)
             print(f"stdout logging for step {step}, task: {self.request.id}")
-            print(f"stderr logging for step {step}, task: {self.request.id}", file=sys.stderr)
+            print(
+                f"stderr logging for step {step}, task: {self.request.id}", file=sys.stderr)
         self.logger.critical(
             "This log message will not be logged to the database but will be logged to the console.",
             extra={"skip_db_logging": True},
         )
-        self.logger.info("Success", extra={"object": self.job_model, "grouping": "job_run_success"})
+        self.logger.info("Success", extra={
+                         "object": self.job_model, "grouping": "job_run_success"})
         return f"Ran for {interval} seconds"
 
 
@@ -429,15 +452,18 @@ class ExampleJobHookReceiver(JobHookReceiver):
         if "serial" in snapshots["differences"]["added"]:
             old_serial = snapshots["differences"]["removed"]["serial"]
             new_serial = snapshots["differences"]["added"]["serial"]
-            self.logger.info("%s serial has been changed from %s to %s", changed_object, old_serial, new_serial)
+            self.logger.info("%s serial has been changed from %s to %s",
+                             changed_object, old_serial, new_serial)
 
             # Check the new serial is valid and revert if necessary
             if not self.validate_serial(new_serial):
                 changed_object.serial = old_serial
                 changed_object.save()
-                self.logger.info("%s serial %s was not valid. Reverted to %s", changed_object, new_serial, old_serial)
+                self.logger.info("%s serial %s was not valid. Reverted to %s",
+                                 changed_object, new_serial, old_serial)
 
-            self.logger.info("Serial validation completed for %s", changed_object)
+            self.logger.info(
+                "Serial validation completed for %s", changed_object)
 
     def validate_serial(self, serial):
         # add business logic to validate serial
@@ -458,27 +484,32 @@ class ExampleComplexJobButtonReceiver(JobButtonReceiver):
         name = "Example Complex Job Button Receiver"
 
     def _run_location_job(self, obj):
-        self.logger.info("Running Location Job Button Receiver.", extra={"object": obj})
+        self.logger.info(
+            "Running Location Job Button Receiver.", extra={"object": obj})
         # Run Location Job function
 
     def _run_device_job(self, obj):
-        self.logger.info("Running Device Job Button Receiver.", extra={"object": obj})
+        self.logger.info("Running Device Job Button Receiver.",
+                         extra={"object": obj})
         # Run Device Job function
 
     def receive_job_button(self, obj):
         user = self.user
         if isinstance(obj, Location):
             if not user.has_perm("dcim.add_location"):
-                self.logger.error("User '%s' does not have permission to add a Location.", user, extra={"object": obj})
+                self.logger.error(
+                    "User '%s' does not have permission to add a Location.", user, extra={"object": obj})
             else:
                 self._run_location_job(obj)
         elif isinstance(obj, Device):
             if not user.has_perm("dcim.add_device"):
-                self.logger.error("User '%s' does not have permission to add a Device.", user, extra={"object": obj})
+                self.logger.error(
+                    "User '%s' does not have permission to add a Device.", user, extra={"object": obj})
             else:
                 self._run_device_job(obj)
         else:
-            self.logger.error("Unable to run Job Button for type %s.", type(obj).__name__, extra={"object": obj})
+            self.logger.error("Unable to run Job Button for type %s.", type(
+                obj).__name__, extra={"object": obj})
 
 
 class ExampleFailingJob(Job):
@@ -492,10 +523,13 @@ class ExampleFailingJob(Job):
     def run(self, *args, fail_cleanly, **kwargs):  # pylint: disable=arguments-differ
         self.logger.info("Job is running merrily along, when suddenly...")
         if fail_cleanly:
-            self.fail("A failure occurs but is handled cleanly, allowing the job to continue...")
+            self.fail(
+                "A failure occurs but is handled cleanly, allowing the job to continue...")
         else:
-            raise RuntimeError("A failure occurs and is not handled cleanly, aborting the job immediately!")
-        self.logger.failure("The job runs to completion (but is a failure) and returns a result")
+            raise RuntimeError(
+                "A failure occurs and is not handled cleanly, aborting the job immediately!")
+        self.logger.failure(
+            "The job runs to completion (but is a failure) and returns a result")
         return "The job ran to completion"
 
 
@@ -506,6 +540,100 @@ class ExampleSingletonJob(Job):
 
     def run(self, *args, **kwargs):
         time.sleep(60)
+
+
+class ExampleAIEnabledJob(Job):
+    """An example Job that demonstrates AI-enabled functionality."""
+
+    class Meta:
+        name = "Example AI-Enabled Job"
+        description = """\
+This is an example Job that demonstrates the use of the is_ai_enabled field.
+When enabled, this job can benefit from AI assistance and automation features."""
+        has_sensitive_variables = False
+
+    device_location = ObjectVar(
+        model=Location,
+        required=False,
+        description="Optional location to filter devices for AI analysis"
+    )
+
+    ai_analysis_type = ChoiceVar(
+        choices=(
+            ("network_optimization", "Network Optimization"),
+            ("capacity_planning", "Capacity Planning"),
+            ("anomaly_detection", "Anomaly Detection"),
+        ),
+        default="network_optimization",
+        description="Type of AI analysis to perform"
+    )
+
+    def run(self, *args, device_location=None, ai_analysis_type="network_optimization", **kwargs):
+        """
+        Run the AI-enabled job.
+
+        This job demonstrates how AI features could be integrated into job execution.
+        The is_ai_enabled field on the Job model controls whether AI assistance is available.
+        """
+        self.logger.info("Starting AI-enabled job execution")
+
+        # Check if AI features are enabled for this job instance
+        if self.job_model.is_ai_enabled:
+            self.logger.info(
+                "AI assistance is enabled for this job - enhanced features available")
+            self.logger.info(f"Performing AI-powered {ai_analysis_type}")
+
+            # Simulate AI-enhanced processing
+            if device_location:
+                devices = Device.objects.filter(location=device_location)
+                self.logger.info(
+                    f"AI analyzing {devices.count()} devices in location: {device_location}")
+            else:
+                devices = Device.objects.all()[:10]  # Limit for demo
+                self.logger.info(
+                    f"AI analyzing sample of {devices.count()} devices")
+
+            # Simulate AI analysis results
+            for device in devices:
+                self.logger.info(
+                    f"AI analysis for {device}: {ai_analysis_type} recommendations generated")
+
+            self.logger.success("AI-powered analysis completed successfully")
+            return {
+                "ai_enabled": True,
+                "analysis_type": ai_analysis_type,
+                "devices_analyzed": devices.count(),
+                "location": str(device_location) if device_location else "All locations",
+                "recommendations": f"AI generated {devices.count()} optimization recommendations"
+            }
+        else:
+            self.logger.info(
+                "AI assistance is disabled - running in standard mode")
+            self.logger.info(f"Performing standard {ai_analysis_type}")
+
+            # Standard processing without AI features
+            if device_location:
+                devices = Device.objects.filter(location=device_location)
+                self.logger.info(
+                    f"Standard analysis of {devices.count()} devices in location: {device_location}")
+            else:
+                # Smaller sample for standard mode
+                devices = Device.objects.all()[:5]
+                self.logger.info(
+                    f"Standard analysis of sample {devices.count()} devices")
+
+            for device in devices:
+                self.logger.info(
+                    f"Standard analysis for {device}: basic {ai_analysis_type} completed")
+
+            self.logger.success("Standard analysis completed")
+            return {
+                "ai_enabled": False,
+                "analysis_type": ai_analysis_type,
+                "devices_analyzed": devices.count(),
+                "location": str(device_location) if device_location else "All locations",
+                "recommendations": f"Generated {devices.count()} basic recommendations"
+            }
 
 
 jobs = (
@@ -521,5 +649,6 @@ jobs = (
     ExampleComplexJobButtonReceiver,
     ExampleSingletonJob,
     ExampleFailingJob,
+    ExampleAIEnabledJob,
 )
 register_jobs(*jobs)

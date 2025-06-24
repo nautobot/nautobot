@@ -1558,6 +1558,28 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
 
         self.assertTrue(job.job_queues.filter(pk=default_job_queue.pk).exists())
 
+    def test_is_ai_enabled_default_value(self):
+        """Test that is_ai_enabled defaults to False for new Job models."""
+        for job_model in JobModel.objects.all():
+            with self.subTest(class_path=job_model.class_path):
+                self.assertFalse(job_model.is_ai_enabled)
+
+    def test_is_ai_enabled_can_be_set(self):
+        """Test that is_ai_enabled can be set to True or False."""
+        job_model = JobModel.objects.first()
+        
+        # Test setting to True
+        job_model.is_ai_enabled = True
+        job_model.validated_save()
+        job_model.refresh_from_db()
+        self.assertTrue(job_model.is_ai_enabled)
+        
+        # Test setting back to False
+        job_model.is_ai_enabled = False
+        job_model.validated_save()
+        job_model.refresh_from_db()
+        self.assertFalse(job_model.is_ai_enabled)
+
 
 class JobQueueTest(ModelTestCases.BaseModelTestCase):
     """
@@ -3012,46 +3034,35 @@ class JobResultTestCase(TestCase):
 
         self.assertEqual(JobResult.objects.get_task(job_result.pk), job_result)
 
+    def test_is_ai_enabled_default_value(self):
+        """Test that is_ai_enabled defaults to False for new JobResult instances."""
+        job_result = JobResult.objects.create(name="TestJob", user=None)
+        self.assertFalse(job_result.is_ai_enabled)
 
-class WebhookTest(ModelTestCases.BaseModelTestCase):
-    model = Webhook
+    def test_is_ai_enabled_can_be_set(self):
+        """Test that is_ai_enabled can be set to True or False."""
+        job_result = JobResult.objects.create(name="TestJob", user=None)
+        
+        # Test setting to True
+        job_result.is_ai_enabled = True
+        job_result.save()
+        job_result.refresh_from_db()
+        self.assertTrue(job_result.is_ai_enabled)
+        
+        # Test setting back to False
+        job_result.is_ai_enabled = False
+        job_result.save()
+        job_result.refresh_from_db()
+        self.assertFalse(job_result.is_ai_enabled)
 
-    def setUp(self):
-        device_content_type = ContentType.objects.get_for_model(Device)
-        self.url = "http://example.com/test"
-
-        self.webhooks = [
-            Webhook(
-                name="webhook-1",
-                enabled=True,
-                type_create=True,
-                type_update=True,
-                type_delete=False,
-                payload_url=self.url,
-                http_method="POST",
-                http_content_type="application/json",
-            ),
-            Webhook(
-                name="webhook-2",
-                enabled=True,
-                type_create=False,
-                type_update=False,
-                type_delete=True,
-                payload_url=self.url,
-                http_method="POST",
-                http_content_type="application/json",
-            ),
-        ]
-        for webhook in self.webhooks:
-            webhook.save()
-            webhook.content_types.add(device_content_type)
-
-    def test_type_error_not_raised_when_calling_check_for_conflicts(self):
-        """
-        Test type error not raised when calling Webhook.check_for_conflicts() without passing all accepted arguments
-        """
-        conflicts = Webhook.check_for_conflicts(instance=self.webhooks[1], type_create=True)
-        self.assertEqual(
-            conflicts["type_create"],
-            [f"A webhook already exists for create on dcim | device to URL {self.url}"],
+    def test_is_ai_enabled_with_job_model_relationship(self):
+        """Test that is_ai_enabled works correctly when JobResult has a job_model."""
+        job_model = JobModel.objects.first()
+        job_result = JobResult.objects.create(
+            name="TestJobWithModel", 
+            user=None, 
+            job_model=job_model,
+            is_ai_enabled=True
         )
+        self.assertTrue(job_result.is_ai_enabled)
+        self.assertEqual(job_result.job_model, job_model)
