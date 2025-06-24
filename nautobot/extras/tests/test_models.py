@@ -81,7 +81,6 @@ from nautobot.extras.models import (
     Status,
     Tag,
     Team,
-    Webhook,
 )
 from nautobot.extras.models.statuses import StatusModel
 from nautobot.extras.registry import registry
@@ -1567,13 +1566,13 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
     def test_is_ai_enabled_can_be_set(self):
         """Test that is_ai_enabled can be set to True or False."""
         job_model = JobModel.objects.first()
-        
+
         # Test setting to True
         job_model.is_ai_enabled = True
         job_model.validated_save()
         job_model.refresh_from_db()
         self.assertTrue(job_model.is_ai_enabled)
-        
+
         # Test setting back to False
         job_model.is_ai_enabled = False
         job_model.validated_save()
@@ -3042,13 +3041,13 @@ class JobResultTestCase(TestCase):
     def test_is_ai_enabled_can_be_set(self):
         """Test that is_ai_enabled can be set to True or False."""
         job_result = JobResult.objects.create(name="TestJob", user=None)
-        
+
         # Test setting to True
         job_result.is_ai_enabled = True
         job_result.save()
         job_result.refresh_from_db()
         self.assertTrue(job_result.is_ai_enabled)
-        
+
         # Test setting back to False
         job_result.is_ai_enabled = False
         job_result.save()
@@ -3059,10 +3058,7 @@ class JobResultTestCase(TestCase):
         """Test that is_ai_enabled works correctly when JobResult has a job_model."""
         job_model = JobModel.objects.first()
         job_result = JobResult.objects.create(
-            name="TestJobWithModel", 
-            user=None, 
-            job_model=job_model,
-            is_ai_enabled=True
+            name="TestJobWithModel", user=None, job_model=job_model, is_ai_enabled=True
         )
         self.assertTrue(job_result.is_ai_enabled)
         self.assertEqual(job_result.job_model, job_model)

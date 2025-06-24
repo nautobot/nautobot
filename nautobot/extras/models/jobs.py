@@ -152,8 +152,7 @@ class Job(PrimaryModel):
     )
 
     is_ai_enabled = models.BooleanField(
-        default=False,
-        help_text="Whether this job is enabled for AI assistance and automation features"
+        default=False, help_text="Whether this job is enabled for AI assistance and automation features"
     )
 
     # Additional properties, potentially inherited from the source code
@@ -681,8 +680,7 @@ class JobResult(BaseModel, CustomFieldModel):
     scheduled_job = models.ForeignKey(to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True)
 
     is_ai_enabled = models.BooleanField(
-        default=False,
-        help_text="Whether this job result is associated with AI-enabled job execution"
+        default=False, help_text="Whether this job result is associated with AI-enabled job execution"
     )
 
     objects = JobResultManager()
