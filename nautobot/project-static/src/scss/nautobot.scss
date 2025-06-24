@@ -348,7 +348,7 @@ $dropdown-dark-link-active-bg:      $primary-bg-subtle-dark;
 $dropdown-dark-link-disabled-color: $body-tertiary-color-dark;
 $dropdown-dark-header-color:        $body-secondary-color-dark;
 
-// Pagination
+/* Pagination */
 $pagination-padding-y:    $input-btn-padding-y;
 $pagination-padding-x:    $input-btn-padding-x;
 $pagination-padding-y-sm: $input-btn-padding-y-sm;
@@ -731,6 +731,14 @@ $btn-variants: (
 }
 
 /* Forms */
+label.nb-required {
+  font-weight: $font-weight-medium;
+}
+
+textarea {
+  font-family: $font-family-monospace;
+}
+
 .form-control {
   &:hover:not(:disabled):not([readonly]) {
     border-color: var(--#{$prefix}primary-text-emphasis);
@@ -914,6 +922,20 @@ $btn-variants: (
   }
 }
 
+/* Modals */
+/* Fix select dropdowns in modals and improve modal UX by making the modal body scrollable (instead of the whole page). */
+.modal-body {
+  max-height: calc(100vh - 13.25rem); /* 100vh - 212px */
+  overflow-y: scroll;
+}
+
+/* Progress bars */
+.progress {
+  td & {
+    min-width: 100px;
+  }
+}
+
 /* Breadcrumbs */
 .breadcrumb-item {
   align-items: center;
@@ -921,7 +943,7 @@ $btn-variants: (
   display: inline-flex;
 
   + .breadcrumb-item {
-    &::before { // The separator between breadcrumbs (by default, a forward-slash: "/")
+    &::before { /* The separator between breadcrumbs (by default, a forward-slash: "/") */
       @include font-size($h6-font-size);
     }
   }
@@ -956,6 +978,34 @@ $btn-variants: (
 }
 
 /* Nautobot custom components */
+/* Various fixes for printing. */
+@media print {
+  * {
+    print-color-adjust: exact;
+  }
+
+  body {
+    padding-top: map.get($spacers, 0);
+  }
+
+  a[href]:after {
+    content: none !important;
+  }
+}
+
+/* Layout */
+* {
+  margin: 0;
+}
+
+html {
+  overflow-y: scroll;
+}
+
+html, body {
+  height: 100%;
+}
+
 body {
   display: grid;
   grid-template-areas:
@@ -1388,4 +1438,522 @@ $nb-drawer-open-width: 20rem; /* 320px */
       cursor: move;
     }
   }
+}
+
+/* MDI icons */
+:is(i, span).mdi { /* `:is(i, span)` is required to overwrite the default `.mdi` class specificity. */
+  &::before {
+    font-size: $h2-font-size;
+    line-height: $line-height-sm;
+    position: relative;
+    top: map.get($spacers, 2);
+  }
+
+  .alert &::before {
+    margin-inline-end: map.get($spacers, 2);
+    position: relative;
+    top: map.get($spacers, 4);
+  }
+
+  .badge &::before {
+    font-size: $font-size-sm;
+    left: map.get($spacers, 0);
+    line-height: 1;
+    top: map.get($spacers, 0);
+  }
+
+  .btn & {
+    margin-block: -#{map.get($spacers, 2)};
+
+    &::before {
+      font-size: $h2-font-size;
+      line-height: 0.7; /* 20px * 0.7 = 14px */
+      position: relative;
+      top: map.get($spacers, 2);
+    }
+  }
+
+  .btn-sm &::before,
+  .btn-xs &::before {
+    font-size: $font-size-lg;
+    top: 0.1875rem; /* 3px */
+  }
+
+  .dropdown-menu & {
+    margin-inline-start: map.get($spacers, 2);
+  }
+
+  .input-group-addon &::before {
+    position: relative;
+    top: 0.1875rem; /* 3px */
+  }
+
+  .input-group-btn &::before {
+    font-size: $h2-font-size;
+  }
+
+  .list-group-item &::before {
+    left: -0.1875rem; /* -3px */
+    position: relative;
+    top: 0.1875rem;
+  }
+
+  .nav &::before {
+    left: -#{map.get($spacers, 2)};
+    position: relative;
+    top: map.get($spacers, 2);
+  }
+
+  .nb-btn-inline &::before {
+    font-size: .9em;
+    top: map.get($spacers, 0);
+  }
+}
+
+/* Tiles */
+.nb-tiles {
+  $tile-width: 27rem; /* 432px */
+
+  display: grid;
+  grid-gap: map.get($spacers, 16);
+  grid-template-columns: repeat(auto-fill, minmax(min($tile-width, 100%), 1fr));
+
+  .nb-tile {
+    background: var(--#{$prefix}body-bg);;
+    border: $border-width solid $border-color;
+    border-radius: $border-radius;
+    display: flex;
+    flex-direction: column;
+    padding-block: map.get($spacers, 12);
+    padding-inline: map.get($spacers, 16);
+
+    &.nb-clickable {
+      @include transition($btn-transition);
+      cursor: pointer;
+      outline: none;
+
+      &,
+      &:hover,
+      &:focus,
+      &:visited {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      &:active,
+      &:focus-visible,
+      &:hover {
+        @include box-shadow($box-shadow-sm);
+        border-color: var(--#{$prefix}primary-text-emphasis);
+      }
+
+      &:focus-visible {
+        @include box-shadow($box-shadow-sm, $focus-ring-box-shadow);
+      }
+    }
+
+    &.nb-disabled {
+      background: var(--#{$prefix}secondary-bg);
+      color: var(--#{$prefix}secondary-color);
+    }
+
+    h2 {
+      font-size: $font-size-root;
+      margin-block-end: map.get($spacers, 2);
+      margin-block-start: map.get($spacers, 10);
+      margin-inline: 0;
+    }
+
+    .nb-tile-header {
+      align-items: center;
+      display: flex;
+      gap: map.get($spacers, 10);
+
+      h3 {
+        color: var(--#{$prefix}secondary-color);
+        display: flex;
+        flex: 1;
+        font-size: $font-size-sm;
+        font-weight: $font-weight-normal;
+        margin: map.get($spacers, 0);
+      }
+
+      img {
+        float: left;
+        margin-right: map.get($spacers, 16);
+      }
+    }
+
+    .nb-tile-description {
+      flex: 1;
+
+      p {
+        margin-bottom: map.get($spacers, 12);
+      }
+    }
+
+    .nb-tile-footer {
+      border-top: $border-width solid $border-color;
+      column-gap: map.get($spacers, 10);
+      color: var(--#{$prefix}secondary-color);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      padding-top: map.get($spacers, 12);
+    }
+  }
+}
+
+/* Miscellaneous */
+.nb-btn-inline {
+  @include transition($transition-fade);
+  font-size: $font-size-sm;
+  opacity: 0;
+  margin-inline-start: map.get($spacers, 4);
+  padding-block: map.get($spacers, 1);
+  padding-inline: map.get($spacers, 4);
+
+  &:focus-visible,
+  :has(> &):hover .nb-btn-inline { /* Show `nb-btn-inline` while hovering over its parent element. */
+    opacity: 1;
+  }
+}
+
+.nb-color-block {
+  border: $border-width solid var(--#{$prefix}border-color);
+  border-radius: $border-radius;
+  display: block;
+  width: 5rem; /* 80px */
+}
+
+.nb-right-side-panel {
+  max-width: 25rem; /* 400px */
+  min-width: 18.75rem; /* 300px */
+  padding-block-end: map.get($spacers, 0);
+}
+
+ul.nb-software-image-hierarchy {
+  list-style-type: "↳ ";
+  padding-block-start: 1.125rem; /* 18px */
+}
+
+ul.nb-tree-hierarchy {
+  list-style-type: none;
+  padding-block-start: map.get($spacers, 0);
+
+  ul {
+    list-style-type: "↳ ";
+    padding-block-start: 1.125rem; /* 18px */
+  }
+}
+
+/* Banners */
+.nb-banner-bottom {
+  margin-bottom: 3.125rem; /* 50px */
+}
+
+/* Reports */
+.nb-report-stats .badge {
+  min-width: 2.5rem; /* 40px */
+}
+
+/* Cable tracing */
+.nb-cable-trace {
+  margin-block: map.get($spacers, 16);
+  margin-inline: auto;
+  max-width: 37.5rem; /* 600px */
+  text-align: center;
+
+  .nb-active {
+    border: map.get($border-widths, 3) solid var(--#{$prefix}success-text-emphasis);
+  }
+
+  .nb-cable {
+    border-left-style: solid;
+    border-left-width: map.get($border-widths, 4);
+    margin-block: map.get($spacers, 12);
+    margin-inline-end: map.get($spacers, 0);
+    margin-inline-start: 50%;
+    padding: map.get($spacers, 24);
+    text-align: left;
+    width: 50%;
+  }
+
+  .nb-node {
+    background-color: var(--#{$prefix}secondary-bg);
+    border: $border-width solid var(--#{$prefix}border-color);
+    border-radius: $border-radius * 2;
+    padding-block: map.get($spacers, 24);
+    padding-inline: map.get($spacers, 16);
+    position: relative;
+    z-index: 1;
+  }
+
+  .nb-termination {
+    background-color: var(--#{$prefix}tertiary-bg);
+    border: $border-width solid var(--#{$prefix}border-color);
+    border-radius: $border-radius;
+    margin-block: -#{map.get($spacers, 16)};
+    margin-inline: auto;
+    padding: map.get($spacers, 12);
+    position: relative;
+    width: 60%;
+    z-index: 2;
+  }
+
+  .nb-trace-end {
+    margin-top: 3rem; /* 48px */
+    text-align: center;
+  }
+}
+
+/* AJAX loader */
+.nb-loading {
+  display: none;
+  position: fixed;
+  height: 2em;
+  inset: map.get($spacers, 0);
+  margin: auto;
+  overflow: visible;
+  z-index: $zindex-dropdown - 1;
+  width: 2em;
+
+  &::before {
+    background-color: rgba(0, 0, 0, 0.3);
+    content: "";
+    display: block;
+    height: 100%;
+    left: map.get($spacers, 0);
+    position: fixed;
+    top: map.get($spacers, 0);
+    width: 100%;
+  }
+}
+
+/* highlight.js */
+pre code.hljs {
+  background-color: var(--#{$prefix}secondary-bg);
+  border-radius: $border-radius;
+}
+
+/* Rendered Markdown */
+.nb-rendered-markdown {
+  table {
+    width: 100%;
+  }
+
+  th {
+    border-bottom: map.get($border-widths, 2) solid var(--#{$prefix}border-color);
+    padding: map.get($spacers, 8);
+  }
+
+  td {
+    border-top: $border-width solid var(--#{$prefix}border-color);
+    padding: map.get($spacers, 8);
+  }
+
+  :last-child {
+    margin-bottom: map.get($spacers, 0);
+  }
+}
+
+/* Monaco Editor container */
+.nb-editor-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 6.25rem; /* 100px */
+  position: relative; /* Required for Monaco's absolute positioning. */
+  overflow: hidden; /* Let Monaco handle scrolling. */
+}
+
+/* Admonition (docs) */
+.admonition {
+  margin-block-end: map.get($spacers, 10);
+  padding-block-end: map.get($spacers, 2);
+
+  p {
+    padding-block: 0;
+    padding-inline: map.get($spacers, 12);
+
+    &.admonition-title {
+      color: var(--#{$prefix}body-bg);
+      font-weight: $font-weight-medium;
+      padding-block: map.get($spacers, 4);
+      padding-inline: map.get($spacers, 12);
+
+      &::before {
+        content: "\f06a";
+        font-family: "FontAwesome";
+        margin-inline-end: map.get($spacers, 4);
+      }
+    }
+  }
+
+  pre {
+    margin-block-end: map.get($spacers, 10px);
+    margin-block-start: map.get($spacers, 0);
+    margin-inline: map.get($spacers, 12);
+  }
+
+  &.danger {
+    background-color: var(--#{$prefix}danger-bg-subtle);
+
+    .admonition-title {
+      background-color: var(--#{$prefix}danger-border-subtle);
+
+      &::before {
+        content: "\f071";
+      }
+    }
+  }
+
+  &.note {
+    background-color: var(--#{$prefix}info-bg-subtle);
+
+    .admonition-title {
+      background-color: var(--#{$prefix}info-border-subtle);
+
+      &::before {
+        content: "\f05a";
+      }
+    }
+  }
+  &.warning {
+    background-color: var(--#{$prefix}warning-bg-subtle);
+
+    .admonition-title {
+      background-color: var(--#{$prefix}warning-border-subtle);
+
+      &::before {
+        content: "\f06a";
+      }
+    }
+  }
+}
+
+/* TODO(norbert-mieczkowski-codilime): decide what to do with job accordion styles, most likely just remove them. */
+.accordion-toggle {
+  border: 0;
+  color: black;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 0;
+  text-decoration: none;
+}
+
+.accordion-toggle:hover, .accordion-toggle:active, .accordion-toggle:visited, .accordion-toggle:link, .accordion-toggle:focus {
+  border: 0;
+  color: black;
+  outline: 0;
+  padding: 0;
+  text-decoration: none;
+}
+
+.accordion-toggle-all {
+  display: inline;
+}
+
+/* TODO(norbert-mieczkowski-codilime): filters overview should be gone from `object_list.html` in v3.0. */
+.filter-container {
+  box-sizing: border-box;
+  display: inline-block;
+  margin: 0;
+  position: relative;
+  vertical-align: middle;
+}
+
+.filter-container.display-inline {
+  display: inline-block;
+}
+
+.filter-container .filter-selection {
+  min-height: 34px;
+  padding: 5px;
+  height: auto;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: block;
+  user-select: none;
+  -webkit-user-select: none;
+  margin: 0;
+  webkit-box-shadow: inset 0 1px 1px rgb(0 0 0 / 8%);
+  box-shadow: inset 0 1px 1px rgb(0 0 0 / 8%);
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  color: #555;
+  font-size: 14px;
+  outline: 0;
+}
+
+.remove-filter-param {
+  color: #999;
+  cursor: pointer;
+  float: right;
+  font-weight: 700;
+  margin-left: 10px;
+}
+
+.fitler-container .filter-selection .filter-selection-rendered {
+  webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  display: block;
+  line-height: 1.42857143;
+  list-style: none;
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
+  width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filter-container .filter-selection .filter-selection-choice {
+  color: #555;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: default;
+  float: left;
+  margin: 5px 3px 0 0;
+  padding: 0 6px;
+}
+
+.filter-container .filter-selection .filter-selection-rendered {
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  display: block;
+  line-height: 1.42857143;
+  list-style: none;
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
+  width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filter-container .filter-selection .filter-selection-choice-remove {
+  display: inline-block;
+  margin-right: 3px;
+  margin-left: 0;
+  float: none;
+}
+
+.filter-container .filter-selection .filter-selection-rendered {
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  display: block;
+  line-height: 1.42857143;
+  list-style: none;
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
+  width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

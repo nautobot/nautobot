@@ -37,7 +37,7 @@
             <div class="panel-heading">
                 <strong>Comments</strong>
             </div>
-            <div class="panel-body rendered-markdown">
+            <div class="panel-body nb-rendered-markdown">
                 {% if object.comments %}
                     {{ object.comments|render_markdown }}
                 {% else %}
@@ -58,7 +58,7 @@
             {% endif %}
             {% include 'responsive_table.html' with table=device_table %}
             {% if perms.virtualization.change_cluster %}
-                <div class="panel-footer noprint">
+                <div class="panel-footer d-print-none">
                     <div class="pull-right">
                         <a href="{% url 'virtualization:cluster_add_devices' pk=object.pk %}?location={{ object.location.pk }}" class="btn btn-primary btn-xs">
                             <span class="mdi mdi-plus-thick" aria-hidden="true"></span>

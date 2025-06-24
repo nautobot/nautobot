@@ -77,7 +77,7 @@
     <!-- Content -->
     <div class="container-fluid wrapper">
         {% if not is_popup %}
-            <div class="row noprint">
+            <div class="row d-print-none">
                 {% block breadcrumbs %}
                 {% endblock %}
             </div>
@@ -85,7 +85,7 @@
         <div>
             <div>
                 {% block pretitle %}{% endblock %}
-                <div class="pull-right noprint">
+                <div class="pull-right d-print-none">
                     {% block object-tools %}{% endblock %}
                 </div>
                 <div>
@@ -105,7 +105,7 @@
     </div>
     <div class="push"></div>
     {% if "BANNER_BOTTOM"|settings_or_config %}
-        <div class="alert alert-info text-center banner-bottom" role="alert">
+        <div class="alert alert-info text-center nb-banner-bottom" role="alert">
                 {{ "BANNER_BOTTOM"|settings_or_config|render_markdown }}
         </div>
     {% endif %}

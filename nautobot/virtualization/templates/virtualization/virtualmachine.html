@@ -63,7 +63,7 @@
                     <td>Primary IPv4</td>
                     <td>
                         {% if object.primary_ip4 %}
-                            <span class="hover_copy">
+                            <span>
                                 {{ object.primary_ip4|hyperlinked_object|add_html_id:"ipv4" }} ({{ object.primary_ip4.parent.namespace|hyperlinked_object }})
                                 {% if object.primary_ip4.nat_inside %}
                                     <span>(NAT for {{ object.primary_ip4.nat_inside.address.ip }})</span>
@@ -75,8 +75,9 @@
                                         {% endfor %}
                                     </ul>
                                 {% endif %}
-                                <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#ipv4">
-                                    <span class="mdi mdi-content-copy"></span>
+                                <button class="btn btn-secondary nb-btn-inline" data-clipboard-target="#ipv4">
+                                    <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+                                    <span class="visually-hidden">Copy</span>
                                 </button>
                             </span>
                         {% else %}
@@ -88,7 +89,7 @@
                     <td>Primary IPv6</td>
                     <td>
                         {% if object.primary_ip6 %}
-                            <span class="hover_copy">
+                            <span>
                                 {{ object.primary_ip6|hyperlinked_object|add_html_id:"ipv6" }} ({{ object.primary_ip6.parent.namespace|hyperlinked_object }})
                                 {% if object.primary_ip6.nat_inside %}
                                     <span>(NAT for {{ object.primary_ip6.nat_inside.address.ip }})</span>
@@ -100,8 +101,9 @@
                                         {% endfor %}
                                     </ul>
                                 {% endif %}
-                                <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#ipv6">
-                                    <span class="mdi mdi-content-copy"></span>
+                                <button class="btn btn-secondary nb-btn-inline" data-clipboard-target="#ipv6">
+                                    <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+                                    <span class="visually-hidden">Copy</span>
                                 </button>
                             </span>
                         {% else %}
@@ -116,7 +118,7 @@
             <div class="panel-heading">
                 <strong>Comments</strong>
             </div>
-            <div class="panel-body rendered-markdown">
+            <div class="panel-body nb-rendered-markdown">
                 {% if object.comments %}
                     {{ object.comments|render_markdown }}
                 {% else %}
@@ -195,7 +197,7 @@
                 </div>
             {% endif %}
             {% if perms.ipam.add_service %}
-                <div class="panel-footer text-right noprint">
+                <div class="panel-footer text-right d-print-none">
                     <a href="{% url 'virtualization:virtualmachine_service_assign' virtualmachine=object.pk %}" class="btn btn-xs btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Assign service
                     </a>
@@ -211,13 +213,13 @@
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Interfaces</strong>
-                    <div class="pull-right col-md-2 noprint">
+                    <div class="pull-right col-md-2 d-print-none">
                         <input class="form-control interface-filter" type="text" placeholder="Filter" title="Filter text (regular expressions supported)" style="height: 23px" />
                     </div>
                 </div>
                 {% include 'responsive_table.html' with table=vminterface_table %}
                 {% if perms.virtualization.add_vminterface or perms.virtualization.delete_vminterface %}
-                    <div class="panel-footer noprint">
+                    <div class="panel-footer d-print-none">
                         {% if interfaces and perms.virtualization.change_vminterface %}
                             <button type="submit" name="_rename" formaction="{% url 'virtualization:vminterface_bulk_rename' %}?return_url={{ object.get_absolute_url }}" class="btn btn-warning btn-xs">
                                 <span class="mdi mdi-pencil" aria-hidden="true"></span> Rename

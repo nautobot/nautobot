@@ -48,7 +48,7 @@ UTILIZATION_GRAPH = """
 PREFIX_COPY_LINK = """
 {% load helpers %}
 {% tree_hierarchy_ui_representation record.ancestors.count|as_range table.hide_hierarchy_ui base_tree_depth|default:0 %}
-<span class="hover_copy">
+<span>
   <a href="\
 {% if record.present_in_database %}\
 {% url 'ipam:prefix' pk=record.pk %}\
@@ -59,8 +59,9 @@ PREFIX_COPY_LINK = """
 {% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}\
 {% endif %}\
 " id="copy_{{record.id}}">{{ record.prefix }}</a>
-  <button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_{{record.id}}">
-    <span class="mdi mdi-content-copy"></span>
+  <button type="button" class="btn btn-secondary nb-btn-inline" data-clipboard-target="#copy_{{record.id}}">
+    <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+    <span class="visually-hidden">Copy</span>
   </button>
 </span>
 """
@@ -91,11 +92,12 @@ IPADDRESS_LINK = """
 
 IPADDRESS_COPY_LINK = """
 {% if record.present_in_database %}
-    <span class="hover_copy">
+    <span>
         <a href="{{ record.get_absolute_url }}" id="copy_{{record.id}}">
             {{ record.address }}</a>
-        <button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_{{record.id}}">
-            <span class="mdi mdi-content-copy"></span>
+        <button type="button" class="btn btn-secondary nb-btn-inline" data-clipboard-target="#copy_{{record.id}}">
+            <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+            <span class="visually-hidden">Copy</span>
         </button>
     </span>
 {% elif perms.ipam.add_ipaddress %}
@@ -121,7 +123,7 @@ vminterface={{ request.GET.vminterface }}{% endif %}\
 """
 
 IPADDRESS_ASSIGN_COPY_LINK = """
-<span class="hover_copy">
+<span>
 <a href="\
 {% url 'ipam:ipaddress_edit' pk=record.pk %}\
 ?{% if request.GET.interface %}\
@@ -131,8 +133,9 @@ vminterface={{ request.GET.vminterface }}\
 {% endif %}\
 &return_url={{ request.GET.return_url }}" id="copy_{{record.pk}}">\
 {{ record }}\
-</a><button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_{{record.pk}}">
-    <span class="mdi mdi-content-copy"></span>
+</a><button type="button" class="btn btn-secondary nb-btn-inline" data-clipboard-target="#copy_{{record.pk}}">
+    <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+    <span class="visually-hidden">Copy</span>
 </button>
 </span>
 """

@@ -13,14 +13,13 @@
 {% endblock breadcrumbs %}
 
 {% block masthead %}
-    <span class="hover_copy">
-        <h1>
-            <span id="devicename">{% block title %}{{ object }}{% endblock title %}</span>
-            <button class="btn btn-xs btn-default hover_copy_button" data-clipboard-text="{{ object }}">
-                <span class="mdi mdi-content-copy"></span>
-            </button>
-        </h1>
-    </span>
+    <h1>
+        <span id="devicename">{% block title %}{{ object }}{% endblock title %}</span>
+        <button class="btn btn-secondary nb-btn-inline" data-clipboard-text="{{ object }}">
+            <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+            <span class="visually-hidden">Copy</span>
+        </button>
+    </h1>
 {% endblock masthead %}
 
 {% block extra_nav_tabs %}

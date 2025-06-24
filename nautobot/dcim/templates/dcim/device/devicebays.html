@@ -14,7 +14,7 @@
                 <strong>Device Bays</strong>
             </div>
             {% include 'responsive_table.html' with table=devicebay_table %}
-            <div class="panel-footer noprint">
+            <div class="panel-footer d-print-none">
                 {% if perms.dcim.change_devicebay %}
                     <button type="submit" name="_rename" formaction="{% url 'dcim:devicebay_bulk_rename' %}?return_url={{ request.path }}" class="btn btn-warning btn-xs">
                         <span class="mdi mdi-pencil" aria-hidden="true"></span> Rename
