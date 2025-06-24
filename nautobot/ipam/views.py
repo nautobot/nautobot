@@ -11,7 +11,7 @@ from django.forms.models import model_to_dict
 from django.shortcuts import get_object_or_404, redirect, render
 from django.templatetags.static import static
 from django.urls import reverse
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 from django.utils.http import urlencode
 from django.views.generic import View
 from django_tables2 import RequestConfig
@@ -23,6 +23,7 @@ from nautobot.cloud.tables import CloudNetworkTable
 from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
 from nautobot.core.models.querysets import count_related
+from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.config import get_settings_or_config
@@ -1198,6 +1199,24 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
     table_class = tables.VLANTable
     queryset = VLAN.objects.all()
 
+    class VLANObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+        def get_data(self, context):
+            instance = get_obj_from_context(context, self.context_object_key)
+            data = super().get_data(context)
+            data["locations"] = instance.locations.all()
+            return data
+
+        def render_value(self, key, value, context):
+            if key == "locations":
+                items = []
+                for val in value:
+                    rendered_val = helpers.hyperlinked_object(val)
+                    items.append(rendered_val)
+                return (
+                    format_html_join("", "<div>{}</div>", ((item,) for item in items)) if items else helpers.HTML_NONE
+                )
+            return super().render_value(key, value, context)
+
     class PrefixObjectsTablePanel(object_detail.ObjectsTablePanel):
         def _get_table_add_url(self, context):
             obj = get_obj_from_context(context)
@@ -1216,7 +1235,7 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            object_detail.ObjectFieldsPanel(
+            VLANObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
@@ -1231,47 +1250,53 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
                 hide_hierarchy_ui=True,
             ),
         ),
+        extra_tabs=(
+            object_detail.DistinctViewTab(
+                weight=100,
+                label="Device Interfaces",
+                url_name="ipam:vlan_device_interfaces",
+                tab_id="device_interfaces",
+                related_object_attribute="interfaces",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Device Interfaces",
+                        table_class=tables.VLANDevicesTable,
+                        table_filter=["untagged_vlan", "tagged_vlans"],
+                        select_related_fields=["device"],
+                        related_field_name="vlan_id",
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=100,
+                label="VM Interfaces",
+                url_name="ipam:vlan_vm_interfaces",
+                tab_id="vm_interfaces",
+                related_object_attribute="vminterfaces",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Virtual Machine Interfaces",
+                        table_class=tables.VLANVirtualMachinesTable,
+                        table_filter=["untagged_vlan", "tagged_vlans"],
+                        select_related_fields=["virtual_machine"],
+                        related_field_name="vlan_id",
+                    ),
+                ),
+            ),
+        ),
     )
 
+    @action(detail=True, url_path="device-interfaces", url_name="device_interfaces")
+    def device_interfaces(self, request, *args, **kwargs):
+        return Response({})
 
-class VLANInterfacesView(generic.ObjectView):
-    queryset = VLAN.objects.all()
-    template_name = "ipam/vlan_interfaces.html"
-
-    def get_extra_context(self, request, instance):
-        interfaces = instance.get_interfaces().select_related("device")
-        members_table = tables.VLANDevicesTable(interfaces)
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(members_table)
-
-        return {
-            "members_table": members_table,
-            "active_tab": "interfaces",
-        }
-
-
-class VLANVMInterfacesView(generic.ObjectView):
-    queryset = VLAN.objects.all()
-    template_name = "ipam/vlan_vminterfaces.html"
-
-    def get_extra_context(self, request, instance):
-        interfaces = instance.get_vminterfaces().select_related("virtual_machine")
-        members_table = tables.VLANVirtualMachinesTable(interfaces)
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(members_table)
-
-        return {
-            "members_table": members_table,
-            "active_tab": "vminterfaces",
-        }
+    @action(detail=True, url_path="vm-interfaces", url_name="vm_interfaces")
+    def vm_interfaces(self, request, *args, **kwargs):
+        return Response({})
 
 
 #
