@@ -29,7 +29,7 @@ from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.views.utils import handle_protectederror
+from nautobot.core.views.utils import get_obj_from_context, handle_protectederror
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import Role, SavedView, Status, Tag
@@ -1198,28 +1198,40 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
     table_class = tables.VLANTable
     queryset = VLAN.objects.all()
 
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            prefixes = (
-                Prefix.objects.restrict(request.user, "view")
-                .filter(vlan=instance)
-                .select_related(
-                    "status",
-                    "role",
-                    "namespace",
-                )
-            )
-            prefix_table = tables.PrefixTable(list(prefixes), hide_hierarchy_ui=True, exclude=["vlan"])
+    class PrefixObjectsTablePanel(object_detail.ObjectsTablePanel):
+        def _get_table_add_url(self, context):
+            obj = get_obj_from_context(context)
+            request = context["request"]
 
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(prefix_table)
+            if request.user.has_perms(self.add_permissions or []):
+                params = []
+                if obj.tenant:
+                    params.append(("tenant", obj.tenant.pk))
+                if obj.pk:
+                    params.append(("vlan", obj.pk))
+                if hasattr(obj, "locations"):
+                    params += [("locations", loc.pk) for loc in obj.locations.all()]
+                return reverse("ipam:prefix_add") + "?" + urlencode(params)
+            return None
 
-            context["prefix_table"] = prefix_table
-        return context
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            PrefixObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.PrefixTable,
+                select_related_fields=["status", "role", "namespace"],
+                table_filter="vlan",
+                exclude_columns=["vlan"],
+                hide_hierarchy_ui=True,
+            ),
+        ),
+    )
 
 
 class VLANInterfacesView(generic.ObjectView):
