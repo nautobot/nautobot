@@ -3593,10 +3593,6 @@ class ModuleBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
                 pass
         self.assertEqual(matching_count, self.bulk_create_count)
 
-    @tag("fix_in_v3")
-    def test_get_object_with_permission(self):
-        return super().test_get_object_with_permission()
-
 
 class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = InventoryItem

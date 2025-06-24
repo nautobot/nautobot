@@ -126,7 +126,6 @@ class HomeViewTestCase(TestCase):
 
         return header_search_bar_result, body_search_bar_result
 
-    @tag("fix_in_v3")
     def test_search_bar_not_visible_if_user_not_authenticated(self):
         self.client.logout()
 
