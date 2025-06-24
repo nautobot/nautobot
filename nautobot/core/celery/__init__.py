@@ -132,11 +132,10 @@ def _import_dynamic_jobs_from_apps():
             continue
 
         # Unload job modules from sys.modules if they were previously loaded
-        app_jobs = getattr(app_config, "features", {}).get("jobs", None)
-        if app_jobs:
-            for job in app_jobs:
-                if job.__module__ in sys.modules:
-                    del sys.modules[job.__module__]
+        app_jobs = getattr(app_config, "features", {}).get("jobs", [])
+        for job in app_jobs:
+            if job.__module__ in sys.modules:
+                del sys.modules[job.__module__]
 
         # Load app jobs
         app_config.features["jobs"] = import_object(f"{app_config.__module__}.{app_config.jobs}")

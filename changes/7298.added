@@ -1,1 +1,1 @@
-Added a provides_dynamic_jobs setting to NautobotAppConfig.
+Added a provides_dynamic_jobs setting to NautobotAppConfig and associated logic to reload app-provided jobs similar to Git repo jobs.
