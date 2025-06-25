@@ -689,10 +689,10 @@ class LogsCleanupTestCase(TransactionTestCase):
                 cleanup_types=[CleanupTypes.JOB_RESULT],
                 max_age=60,
             )
-        self.assertFalse(JobResult.objects.filter(date_done__lt=cutoff).exists())
-        self.assertTrue(JobResult.objects.filter(date_done__gte=cutoff).exists())
-        self.assertTrue(ObjectChange.objects.filter(time__lt=cutoff).exists())
-        self.assertTrue(ObjectChange.objects.filter(time__gte=cutoff).exists())
+        self.assertFalse(JobResult.objects.filter(date_done__lt=cutoff).exists(), cm.output)
+        self.assertTrue(JobResult.objects.filter(date_done__gte=cutoff).exists(), cm.output)
+        self.assertTrue(ObjectChange.objects.filter(time__lt=cutoff).exists(), cm.output)
+        self.assertTrue(ObjectChange.objects.filter(time__gte=cutoff).exists(), cm.output)
 
         started_logs = {
             "job_result_id": str(job_result.id),
