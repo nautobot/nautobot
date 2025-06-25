@@ -1245,7 +1245,7 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
                 section=SectionChoices.FULL_WIDTH,
                 table_class=tables.PrefixTable,
                 select_related_fields=["status", "role", "namespace"],
-                table_filter="vlan",
+                table_filter="vlan_id",
                 exclude_columns=["vlan"],
                 hide_hierarchy_ui=True,
             ),
