@@ -1323,37 +1323,22 @@ class ModuleTypeUIViewSet(
 #
 
 
-class ConsolePortTemplateCreateView(generic.ComponentCreateView):
+class ConsolePortTemplateUIViewSet(
+    ObjectEditViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+):
+    bulk_update_form_class = forms.ConsolePortTemplateBulkEditForm
+    filterset_class = filters.ConsolePortTemplateFilterSet
+    form_class = forms.ConsolePortTemplateForm
+    serializer_class = serializers.PlatformSerializer
+    table_class = tables.ConsoleServerPortTemplateTable
     queryset = ConsolePortTemplate.objects.all()
-    form = forms.ConsolePortTemplateCreateForm
-    model_form = forms.ConsolePortTemplateForm
-    template_name = "dcim/device_component_add.html"
-
-
-class ConsolePortTemplateEditView(generic.ObjectEditView):
-    queryset = ConsolePortTemplate.objects.all()
-    model_form = forms.ConsolePortTemplateForm
-
-
-class ConsolePortTemplateDeleteView(generic.ObjectDeleteView):
-    queryset = ConsolePortTemplate.objects.all()
-
-
-class ConsolePortTemplateBulkEditView(generic.BulkEditView):
-    queryset = ConsolePortTemplate.objects.all()
-    table = tables.ConsolePortTemplateTable
-    form = forms.ConsolePortTemplateBulkEditForm
-    filterset = filters.ConsolePortTemplateFilterSet
 
 
 class ConsolePortTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
     queryset = ConsolePortTemplate.objects.all()
-
-
-class ConsolePortTemplateBulkDeleteView(generic.BulkDeleteView):
-    queryset = ConsolePortTemplate.objects.all()
-    table = tables.ConsolePortTemplateTable
-    filterset = filters.ConsolePortTemplateFilterSet
 
 
 #
