@@ -644,6 +644,14 @@ class CableViewSet(NautobotModelViewSet):
     serializer_class = serializers.CableSerializer
     filterset_class = filters.CableFilterSet
 
+    def get_queryset(self):
+        # 6933 fix: with prefetch related in queryset
+        # DeviceInterface is not properly cleared of _path_id
+        queryset = super().get_queryset()
+        if self.action == "destroy":
+            queryset = queryset.prefetch_related(None)
+        return queryset
+
 
 #
 # Virtual chassis
