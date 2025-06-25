@@ -1,6 +1,6 @@
 {
   "baseBranches": ["develop", "next"],
-  "enabledManagers": ["pip_requirements", "poetry"],
+  "enabledManagers": ["npm", "pip_requirements", "poetry"],
   "extends": [
     "config:base"
   ],
