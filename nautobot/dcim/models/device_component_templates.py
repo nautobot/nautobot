@@ -249,6 +249,14 @@ class PowerPortTemplate(ModularComponentTemplateModel):
         validators=[MinValueValidator(1)],
         help_text="Allocated power draw (watts)",
     )
+    power_factor = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        default="0.95",
+        blank=True,
+        validators=[MinValueValidator(0.01), MaxValueValidator(1.00)],
+        help_text="Power factor (0.01-1.00) for converting between watts and VA. Defaults to 0.95.",
+    )
 
     def instantiate(self, device, module=None):
         return self.instantiate_model(
@@ -258,6 +266,7 @@ class PowerPortTemplate(ModularComponentTemplateModel):
             type=self.type,
             maximum_draw=self.maximum_draw,
             allocated_draw=self.allocated_draw,
+            power_factor=self.power_factor,
         )
 
     def clean(self):

@@ -1370,6 +1370,37 @@ class CableLengthUnitChoices(ChoiceSet):
 
 
 #
+# Power Panels
+#
+
+
+class PowerPanelTypeChoices(ChoiceSet):
+    TYPE_UTILITY = "utility"
+    TYPE_GENERATOR = "generator"
+    TYPE_SWITCHGEAR = "switchgear"
+    TYPE_MDP = "mdp"
+    TYPE_UPS = "ups"
+    TYPE_TRANSFER_SWITCH = "transfer-switch"
+    TYPE_PDU = "pdu"
+    TYPE_PANELBOARD = "panelboard"
+    TYPE_MLC = "mlc"
+    TYPE_RPP = "rpp"
+
+    CHOICES = (
+        (TYPE_UTILITY, "Utility"),
+        (TYPE_GENERATOR, "Generator"),
+        (TYPE_SWITCHGEAR, "Switchgear"),
+        (TYPE_MDP, "Main Distribution Panel"),
+        (TYPE_UPS, "Uninterruptible Power Supply"),
+        (TYPE_TRANSFER_SWITCH, "Transfer Switch"),
+        (TYPE_PDU, "Power Distribution Unit"),
+        (TYPE_PANELBOARD, "Panelboard"),
+        (TYPE_MLC, "Mini Load Center"),
+        (TYPE_RPP, "Remote Power Panel"),
+    )
+
+
+#
 # PowerFeeds
 #
 
@@ -1391,10 +1422,12 @@ class PowerFeedStatusChoices(ChoiceSet):
 class PowerFeedTypeChoices(ChoiceSet):
     TYPE_PRIMARY = "primary"
     TYPE_REDUNDANT = "redundant"
+    TYPE_STANDBY = "standby"
 
     CHOICES = (
         (TYPE_PRIMARY, "Primary"),
         (TYPE_REDUNDANT, "Redundant"),
+        (TYPE_STANDBY, "Standby"),
     )
 
     CSS_CLASSES = {
@@ -1421,6 +1454,18 @@ class PowerFeedPhaseChoices(ChoiceSet):
         (PHASE_SINGLE, "Single phase"),
         (PHASE_3PHASE, "Three-phase"),
     )
+
+
+class PowerFeedBreakerPoleChoices(ChoiceSet):
+    POLE_1 = 1
+    POLE_2 = 2
+    POLE_3 = 3
+
+    CHOICES = [
+        (POLE_1, "1-Pole"),
+        (POLE_2, "2-Pole"),
+        (POLE_3, "3-Pole"),
+    ]
 
 
 #

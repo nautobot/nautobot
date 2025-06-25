@@ -35,11 +35,13 @@ from nautobot.dcim.choices import (
     InterfaceRedundancyGroupProtocolChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
+    PowerFeedBreakerPoleChoices,
     PowerFeedPhaseChoices,
     PowerFeedSupplyChoices,
     PowerFeedTypeChoices,
     PowerOutletFeedLegChoices,
     PowerOutletTypeChoices,
+    PowerPanelTypeChoices,
     PowerPortTypeChoices,
     RackDimensionUnitChoices,
     RackElevationDetailRenderChoices,
@@ -970,6 +972,7 @@ class VirtualChassisSerializer(TaggedModelSerializerMixin, NautobotModelSerializ
 
 
 class PowerPanelSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
+    panel_type = ChoiceField(choices=PowerPanelTypeChoices, allow_blank=True, required=False)
     power_feed_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -986,6 +989,7 @@ class PowerFeedSerializer(
     type = ChoiceField(choices=PowerFeedTypeChoices, default=PowerFeedTypeChoices.TYPE_PRIMARY)
     supply = ChoiceField(choices=PowerFeedSupplyChoices, default=PowerFeedSupplyChoices.SUPPLY_AC)
     phase = ChoiceField(choices=PowerFeedPhaseChoices, default=PowerFeedPhaseChoices.PHASE_SINGLE)
+    breaker_poles = ChoiceField(choices=PowerFeedBreakerPoleChoices, allow_blank=True, allow_null=True, required=False)
 
     class Meta:
         model = PowerFeed

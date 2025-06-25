@@ -348,7 +348,7 @@ def common_test_data(cls):
     power_feeds = (
         PowerFeed.objects.create(name="Power Feed 1", rack=racks[0], power_panel=power_panels[0], status=pf_status),
         PowerFeed.objects.create(name="Power Feed 2", rack=racks[1], power_panel=power_panels[1], status=pf_status),
-        PowerFeed.objects.create(name="Power Feed 3", rack=racks[2], power_panel=power_panels[2], status=pf_status),
+        PowerFeed.objects.create(name="Power Feed 3", rack=racks[2], power_panel=power_panels[2], status=pf_status, destination_panel=power_panels[0]),
     )
     power_feeds[0].tags.set(Tag.objects.get_for_model(PowerFeed))
     power_feeds[1].tags.set(Tag.objects.get_for_model(PowerFeed)[:3])

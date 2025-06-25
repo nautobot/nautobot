@@ -8,6 +8,7 @@ from nautobot.core.tables import (
     ToggleColumn,
 )
 from nautobot.dcim.models import PowerFeed, PowerPanel
+from nautobot.dcim.tables.template_code import UTILIZATION_GRAPH
 from nautobot.extras.tables import StatusTableMixin
 
 from .devices import CableTerminationTable
@@ -27,6 +28,8 @@ class PowerPanelTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     location = tables.Column(linkify=True)
+    panel_type = tables.Column()
+    circuit_positions = tables.Column(verbose_name="Positions")
     power_feed_count = LinkedCountColumn(
         viewname="dcim:powerfeed_list",
         url_params={"power_panel": "pk"},
@@ -36,8 +39,24 @@ class PowerPanelTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = PowerPanel
-        fields = ("pk", "name", "location", "rack_group", "power_feed_count", "tags")
-        default_columns = ("pk", "name", "location", "rack_group", "power_feed_count")
+        fields = (
+            "pk",
+            "name",
+            "location",
+            "rack_group",
+            "panel_type",
+            "circuit_positions",
+            "power_feed_count",
+            "tags",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "location",
+            "rack_group",
+            "panel_type",
+            "power_feed_count",
+        )
 
 
 #
@@ -51,8 +70,11 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     power_panel = tables.Column(linkify=True)
+    destination_panel = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
     type = ChoiceFieldColumn()
+    occupied_positions = tables.Column(accessor='occupied_positions', verbose_name="Position")
+    phase_designation = tables.Column(accessor='phase_designation', verbose_name="Phase Designation")
     max_utilization = tables.TemplateColumn(template_code="{{ value }}%")
     available_power = tables.Column(verbose_name="Available power (VA)")
     tags = TagColumn(url_name="dcim:powerfeed_list")
@@ -63,6 +85,7 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
             "pk",
             "name",
             "power_panel",
+            "destination_panel",
             "rack",
             "status",
             "type",

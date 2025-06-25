@@ -493,6 +493,7 @@ class PowerPortTable(ModularDeviceComponentTable, PathEndpointTable):
             "description",
             "maximum_draw",
             "allocated_draw",
+            "power_factor",
             "cable",
             "cable_peer",
             "connection",
@@ -507,6 +508,7 @@ class PowerPortTable(ModularDeviceComponentTable, PathEndpointTable):
             "type",
             "maximum_draw",
             "allocated_draw",
+            "power_factor",
             "description",
         )
 
@@ -529,6 +531,7 @@ class DeviceModulePowerPortTable(PowerPortTable):
             "type",
             "maximum_draw",
             "allocated_draw",
+            "power_factor",
             "description",
             "cable",
             "cable_peer",
@@ -544,6 +547,7 @@ class DeviceModulePowerPortTable(PowerPortTable):
             "type",
             "maximum_draw",
             "allocated_draw",
+            "power_factor",
             "description",
             "cable",
             "connection",

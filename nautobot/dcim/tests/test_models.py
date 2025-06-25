@@ -19,6 +19,8 @@ from nautobot.dcim.choices import (
     InterfaceModeChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
+    PowerFeedBreakerPoleChoices,
+    PowerFeedSupplyChoices,
     PowerOutletFeedLegChoices,
     PowerOutletTypeChoices,
     PowerPortTypeChoices,
@@ -52,6 +54,7 @@ from nautobot.dcim.models import (
     ModuleBayTemplate,
     ModuleType,
     Platform,
+    PowerFeed,
     PowerOutlet,
     PowerOutletTemplate,
     PowerPanel,
@@ -2385,6 +2388,135 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         # Enable change logging
         with context_managers.web_request_context(self.user):
             self.device1.delete()
+
+
+class PowerFeedTestCase(ModelTestCases.BaseModelTestCase):
+    model = PowerFeed
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        cls.status = Status.objects.get_for_model(PowerFeed).first()
+        cls.rack_status = Status.objects.get_for_model(Rack).first()
+
+        cls.source_panel = PowerPanel.objects.create(location=cls.location, name="Source Panel 1")
+        cls.destination_panel = PowerPanel.objects.create(location=cls.location, name="Destination Panel 1")
+
+        # Create location in different hierarchy for rack validation test
+        cls.other_location = Location.objects.create(
+            name="Other Location",
+            location_type=LocationType.objects.get(name="Campus"),
+            status=Status.objects.get_for_model(Location).first(),
+        )
+
+        cls.rack = Rack.objects.create(location=cls.location, name="Test Rack", status=cls.rack_status)
+        cls.other_rack = Rack.objects.create(location=cls.other_location, name="Other Rack", status=cls.rack_status)
+
+        PowerFeed.objects.create(
+            name="Test Power Feed 1",
+            power_panel=cls.source_panel,
+            rack=cls.rack,
+            status=cls.status,
+        )
+        PowerFeed.objects.create(
+            name="Test Power Feed 2",
+            power_panel=cls.source_panel,
+            status=cls.status,
+        )
+        PowerFeed.objects.create(
+            name="Test Power Feed 3",
+            power_panel=cls.destination_panel,
+            status=cls.status,
+        )
+
+    def test_destination_panel_self_reference_validation(self):
+        """Test that a power feed cannot reference itself."""
+        feed = PowerFeed(
+            name="Self Reference",
+            power_panel=self.source_panel,
+            destination_panel=self.source_panel,
+            status=self.status,
+        )
+
+        with self.assertRaises(ValidationError) as cm:
+            feed.full_clean()
+        self.assertIn("destination_panel", cm.exception.message_dict)
+
+    def test_circuit_position_conflict_validation(self):
+        """Test that overlapping circuit positions raise validation errors."""
+        # Create first feed at position 1 with 2 poles (occupies 1,3)
+        PowerFeed.objects.create(
+            name="Feed 1",
+            power_panel=self.source_panel,
+            status=self.status,
+            circuit_position=1,
+            breaker_poles=PowerFeedBreakerPoleChoices.POLE_2,
+        )
+
+        # Try to create conflicting feed at position 3
+        conflicting_feed = PowerFeed(
+            name="Feed 2",
+            power_panel=self.source_panel,
+            status=self.status,
+            circuit_position=3,
+            breaker_poles=PowerFeedBreakerPoleChoices.POLE_1,
+        )
+
+        with self.assertRaises(ValidationError) as cm:
+            conflicting_feed.full_clean()
+        self.assertIn("circuit_position", cm.exception.message_dict)
+
+    def test_rack_location_hierarchy_validation(self):
+        """Test that rack must belong to same location hierarchy as power panel."""
+        feed = PowerFeed(
+            name="Invalid Rack Location",
+            power_panel=self.source_panel,
+            rack=self.other_rack,  # Different location hierarchy
+            status=self.status,
+        )
+
+        with self.assertRaises(ValidationError) as cm:
+            feed.full_clean()
+        self.assertIn("rack", cm.exception.message_dict)
+
+    def test_ac_voltage_negative_validation(self):
+        """Test that AC supply cannot have negative voltage."""
+        feed = PowerFeed(
+            name="Negative Voltage",
+            power_panel=self.source_panel,
+            status=self.status,
+            voltage=-120,
+            supply=PowerFeedSupplyChoices.SUPPLY_AC,
+        )
+
+        with self.assertRaises(ValidationError) as cm:
+            feed.full_clean()
+        self.assertIn("voltage", cm.exception.message_dict)
+
+    def test_phase_designation(self):
+        """Test phase designation calculation."""
+        feed = PowerFeed.objects.create(
+            name="Test Feed",
+            power_panel=self.source_panel,
+            status=self.status,
+            circuit_position=1,
+            breaker_poles=PowerFeedBreakerPoleChoices.POLE_1,
+        )
+
+        self.assertEqual(feed.phase_designation, "A")
+
+    def test_occupied_positions(self):
+        """Test occupied positions calculation."""
+        feed = PowerFeed.objects.create(
+            name="Test Feed",
+            power_panel=self.source_panel,
+            status=self.status,
+            circuit_position=5,
+            breaker_poles=PowerFeedBreakerPoleChoices.POLE_2,
+        )
+
+        self.assertEqual(feed.get_occupied_positions(), {5, 7})
+        self.assertEqual(feed.occupied_positions, "5, 7")
 
 
 class PowerPanelTestCase(TestCase):  # TODO: change to BaseModelTestCase once we have a PowerPanelFactory

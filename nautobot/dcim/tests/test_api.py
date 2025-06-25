@@ -16,8 +16,10 @@ from nautobot.dcim.choices import (
     InterfaceModeChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
+    PowerFeedBreakerPoleChoices,
     PowerFeedTypeChoices,
     PowerOutletTypeChoices,
+    PowerPanelTypeChoices,
     PowerPortTypeChoices,
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
@@ -3162,6 +3164,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
 
 class PowerPanelTest(APIViewTestCases.APIViewTestCase):
     model = PowerPanel
+    choices_fields = ["panel_type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -3200,7 +3203,7 @@ class PowerPanelTest(APIViewTestCases.APIViewTestCase):
 
 class PowerFeedTest(APIViewTestCases.APIViewTestCase):
     model = PowerFeed
-    choices_fields = ["phase", "supply", "type"]
+    choices_fields = ["phase", "supply", "type", "breaker_poles"]
 
     @classmethod
     def setUpTestData(cls):
@@ -3225,8 +3228,20 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
         )
 
         power_panels = (
-            PowerPanel.objects.create(location=location, rack_group=rackgroup, name="Power Panel 1"),
-            PowerPanel.objects.create(location=location, rack_group=rackgroup, name="Power Panel 2"),
+            PowerPanel.objects.create(
+                location=location,
+                rack_group=rackgroup,
+                name="Power Panel 1",
+                panel_type=PowerPanelTypeChoices.TYPE_UTILITY,
+                circuit_positions=42,
+            ),
+            PowerPanel.objects.create(
+                location=location,
+                rack_group=rackgroup,
+                name="Power Panel 2",
+                panel_type=PowerPanelTypeChoices.TYPE_RPP,
+                circuit_positions=24,
+            ),
         )
 
         PRIMARY = PowerFeedTypeChoices.TYPE_PRIMARY
@@ -3281,6 +3296,9 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Power Feed 4A",
                 "power_panel": power_panels[0].pk,
+                "destination_panel": power_panels[1].pk,
+                "circuit_position": 5,
+                "breaker_poles": PowerFeedBreakerPoleChoices.POLE_1,
                 "rack": racks[3].pk,
                 "status": statuses[0].pk,
                 "type": PRIMARY,
@@ -3288,6 +3306,8 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Power Feed 4B",
                 "power_panel": power_panels[1].pk,
+                "circuit_position": 10,
+                "breaker_poles": PowerFeedBreakerPoleChoices.POLE_2,
                 "rack": racks[3].pk,
                 "status": statuses[0].pk,
                 "type": REDUNDANT,

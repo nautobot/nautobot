@@ -23,6 +23,12 @@
                     <td>Rack</td>
                     <td>{{ object.rack|hyperlinked_object }}</td>
                 </tr>
+                {% if object.occupied_positions %}
+                <tr>
+                    <td>Occupied Positions</td>
+                    <td>{{ object.occupied_positions }}</td>
+                </tr>
+                {% endif %}
                 <tr>
                     <td>Type</td>
                     <td>
@@ -41,7 +47,12 @@
                         {% if object.connected_endpoint %}
                             {{ object.connected_endpoint.parent|hyperlinked_object }}
                             ({{ object.connected_endpoint }})
-                        {% else %}
+                        {% endif %}
+                        {% if object.destination_panel %}
+                            {% if object.connected_endpoint %}<br/>{% endif %}
+                            {{ object.destination_panel|hyperlinked_object }}
+                        {% endif %}
+                        {% if not object.connected_endpoint and not object.destination_panel %}
                             <span class="text-muted">None</span>
                         {% endif %}
                     </td>
@@ -84,6 +95,12 @@
                     <td>Phase</td>
                     <td>{{ object.get_phase_display }}</td>
                 </tr>
+                {% if object.phase_designation %}
+                <tr>
+                    <td>Phase Designation</td>
+                    <td><span class="label label-info">{{ object.phase_designation }}</span></td>
+                </tr>
+                {% endif %}
                 <tr>
                     <td>Max Utilization</td>
                     <td>{{ object.max_utilization }}%</td>
@@ -93,6 +110,7 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
+        {% if not object.destination_panel %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Connection</strong>
@@ -153,6 +171,7 @@
                 </div>
             {% endif %}
         </div>
+        {% endif %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Comments</strong>

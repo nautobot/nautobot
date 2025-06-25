@@ -236,6 +236,7 @@ class PowerPortTemplateTable(ComponentTemplateTable):
             "type",
             "maximum_draw",
             "allocated_draw",
+            "power_factor",
             "description",
             "actions",
         )
