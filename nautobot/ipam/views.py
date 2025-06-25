@@ -1221,6 +1221,7 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
         def _get_table_add_url(self, context):
             obj = get_obj_from_context(context)
             request = context["request"]
+            return_url = context.get("return_url", obj.get_absolute_url())
 
             if request.user.has_perms(self.add_permissions or []):
                 params = []
@@ -1230,6 +1231,7 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
                     params.append(("vlan", obj.pk))
                 if hasattr(obj, "locations"):
                     params += [("locations", loc.pk) for loc in obj.locations.all()]
+                params.append(("return_url", return_url))
                 return reverse("ipam:prefix_add") + "?" + urlencode(params)
             return None
 
