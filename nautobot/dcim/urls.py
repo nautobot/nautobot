@@ -27,6 +27,7 @@ from .models import (
 app_name = "dcim"
 
 router = NautobotUIViewSetRouter()
+router.register("console-port-templates", views.ConsolePortTemplateUIViewSet)
 router.register("controller-managed-device-groups", views.ControllerManagedDeviceGroupUIViewSet)
 router.register("controllers", views.ControllerUIViewSet)
 router.register("device-families", views.DeviceFamilyUIViewSet)
@@ -128,34 +129,9 @@ urlpatterns = [
     ),
     # Console port templates
     path(
-        "console-port-templates/add/",
-        views.ConsolePortTemplateCreateView.as_view(),
-        name="consoleporttemplate_add",
-    ),
-    path(
-        "console-port-templates/edit/",
-        views.ConsolePortTemplateBulkEditView.as_view(),
-        name="consoleporttemplate_bulk_edit",
-    ),
-    path(
         "console-port-templates/rename/",
         views.ConsolePortTemplateBulkRenameView.as_view(),
         name="consoleporttemplate_bulk_rename",
-    ),
-    path(
-        "console-port-templates/delete/",
-        views.ConsolePortTemplateBulkDeleteView.as_view(),
-        name="consoleporttemplate_bulk_delete",
-    ),
-    path(
-        "console-port-templates/<uuid:pk>/edit/",
-        views.ConsolePortTemplateEditView.as_view(),
-        name="consoleporttemplate_edit",
-    ),
-    path(
-        "console-port-templates/<uuid:pk>/delete/",
-        views.ConsolePortTemplateDeleteView.as_view(),
-        name="consoleporttemplate_delete",
     ),
     # Console server port templates
     path(
