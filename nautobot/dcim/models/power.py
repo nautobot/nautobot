@@ -209,9 +209,28 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
             if self.destination_panel == self.power_panel:
                 raise ValidationError({"destination_panel": "A power feed cannot connect a panel to itself"})
 
-        # Circuit position validation
+        # Breaker position and pole validation
+        if self.breaker_position is not None:
+            # Default to single pole breaker when breaker_position is specified but breaker_poles are not
+            if self.breaker_poles is None:
+                self.breaker_poles = PowerFeedBreakerPoleChoices.POLE_1
+
+            # Ensure breaker positions fit within panel capacity
+            if self.power_panel.circuit_positions is not None:
+                occupied_positions = self.get_occupied_positions()
+                if occupied_positions:
+                    max_occupied_position = max(occupied_positions)
+                    if max_occupied_position > self.power_panel.circuit_positions:
+                        raise ValidationError(
+                            {
+                                "breaker_position": f"Breaker configuration starting at position {self.breaker_position} "
+                                f"with {self.breaker_poles} poles would occupy positions {sorted(occupied_positions)}, "
+                                f"but panel only has {self.power_panel.circuit_positions} circuit positions"
+                            }
+                        )
+
+        # Check for breaker position conflicts with other feeds
         if self.breaker_position is not None and self.breaker_poles is not None:
-            # Validate no circuit position conflicts with existing feeds
             new_positions = self.get_occupied_positions()
             conflicts = PowerFeed.objects.filter(
                 power_panel=self.power_panel, breaker_position__isnull=False, breaker_poles__isnull=False
