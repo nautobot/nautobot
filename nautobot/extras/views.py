@@ -200,6 +200,9 @@ class ConfigContextUIViewSet(NautobotUIViewSet):
                 rendered_val = helpers.hyperlinked_object(val)
                 items.append(rendered_val)
 
+            if not items:
+                return helpers.HTML_NONE
+
             return format_html("<ul>{}</ul>", format_html_join("", "<li>{}</li>", ((item,) for item in items)))
 
     object_detail_content = object_detail.ObjectDetailContent(
