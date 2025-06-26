@@ -2668,30 +2668,17 @@ class SecretsGroupUIViewSet(NautobotUIViewSet):
                 context["secrets"] = forms.SecretsGroupAssociationFormSet(instance=instance)
         return context
 
-    def form_save(self, *args, **kwargs):
-        form = args[0] if args else kwargs.get("form")
-        try:
-            with transaction.atomic():
-                obj = super().form_save(form)
-                self.get_queryset().get(pk=obj.pk)
-                secrets_formset = self.get_extra_context(self.request, obj)["secrets"]
+    def form_save(self, form, **kwargs):
+        obj = super().form_save(form, **kwargs)
+        ctx = self.get_extra_context(self.request, obj)
+        secrets = ctx["secrets"]
 
-                # Check if the formset is valid and save the changes to the related secrets.
-                if secrets_formset.is_valid():
-                    secrets_formset.save()
-                else:
-                    raise RuntimeError("Formset validation failed")
+        if secrets.is_valid():
+            secrets.save()
+        else:
+            raise ValidationError(secrets.errors)
 
-                return obj
-        except ObjectDoesNotExist:
-            raise ValidationError("Object save failed due to object-level permissions violation.")
-        except RuntimeError:
-            raise ValidationError("Errors encountered when saving secrets group associations. See below.")
-        except ProtectedError as err:
-            err_msg = err.args[0]
-            protected_obj = err.protected_objects[0]
-            msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
-            raise ValidationError(msg)
+        return obj
 
 
 #
