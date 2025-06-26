@@ -4162,6 +4162,26 @@ class PowerPanelUIViewSet(NautobotUIViewSet):
 #
 
 
+class CustomPowerFeedKeyValueTablePanel(object_detail.KeyValueTablePanel):
+    """Custom panel to render PowerFeed utilization graph cleanly."""
+
+    def render_value(self, key, value, context):
+        if key == "Utilization (Allocated)":
+            if not value or not isinstance(value, tuple) or len(value) != 2:
+                return helpers.placeholder(None)
+            allocated, available = value
+            if available <= 0:
+                return f"{allocated}VA / {available}VA"
+            graph_html = render_to_string(
+                "utilities/templatetags/utilization_graph.html",
+                helpers.utilization_graph_raw_data(allocated, available),
+            )
+            return format_html("{}VA / {}VA {}", allocated, available, graph_html)
+
+        # Fall back to default behavior for everything else
+        return super().render_value(key, value, context)
+
+
 class PowerFeedUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.PowerFeedBulkEditForm
     filterset_class = filters.PowerFeedFilterSet
@@ -4171,30 +4191,13 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.PowerFeedSerializer
     table_class = tables.PowerFeedTable
 
-    @staticmethod
-    def _render_utilization_graph(value):
-        if not value or not isinstance(value, tuple) or len(value) != 2:
-            return helpers.placeholder(None)
-        allocated, available = value
-        if available <= 0:
-            return f"{allocated}VA / {available}VA"
-        graph_html = render_to_string(
-            "utilities/templatetags/utilization_graph.html",
-            helpers.utilization_graph_raw_data(allocated, available),
-        )
-        return format_html("{}VA / {}VA {}", allocated, available, graph_html)
-
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            object_detail.KeyValueTablePanel(
+            CustomPowerFeedKeyValueTablePanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 label="Power Feed",
                 context_data_key="powerfeed_data",
-                value_transforms={
-                    # Only apply transforms where customization is needed
-                    "Utilization (Allocated)": [_render_utilization_graph],
-                },
             ),
             object_detail.ObjectFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
