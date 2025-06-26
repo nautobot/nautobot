@@ -3934,13 +3934,13 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
             context = self.get_extra_context(self.request, obj)
             formset = context.get("formset")
 
-            if formset and formset.is_valid():
+            if formset.is_valid():
                 with transaction.atomic():
                     members = formset.save(commit=False)
                     Device.objects.filter(pk__in=[m.pk for m in members]).update(vc_position=None)
                     for member in members:
                         member.save()
-            elif formset:
+            else:
                 raise ValidationError(formset.errors)
 
         return obj
