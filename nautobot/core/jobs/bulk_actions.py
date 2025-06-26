@@ -165,6 +165,8 @@ class BulkEditObjects(Job):
             raise RunJobTaskFailed("Model not found")
         try:
             form_cls = get_form_for_model(model, form_prefix="BulkEdit")
+            if not hasattr(form_cls, "Meta") or not hasattr(form_cls.Meta, "model"):
+                form_cls = get_form_for_model(model, form_prefix="BulkUpdate")
         except Exception:
             self.logger.debug(
                 'Could not find the "%s.%s" data bulk edit form. Unable to process Bulk Edit for this model.',

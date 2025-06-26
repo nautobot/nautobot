@@ -50,7 +50,7 @@ __all__ = (  # noqa:RUF022
     "TagsBulkEditFormMixin",
     # 2.0 TODO: remove the below deprecated aliases
     "AddRemoveTagsForm",
-    # "CustomFieldBulkEditForm",
+    "CustomFieldBulkEditForm",
     "CustomFieldModelForm",
     "RelationshipModelForm",
     "RoleModelBulkEditFormMixin",
@@ -862,9 +862,9 @@ class AddRemoveTagsForm(TagsBulkEditFormMixin):
     pass
 
 
-# @class_deprecated_in_favor_of(CustomFieldModelBulkEditFormMixin)
-# class CustomFieldBulkEditForm(CustomFieldModelBulkEditFormMixin):
-#     pass
+@class_deprecated_in_favor_of(CustomFieldModelBulkEditFormMixin)
+class CustomFieldBulkEditForm(CustomFieldModelBulkEditFormMixin):
+    pass
 
 
 @class_deprecated_in_favor_of(CustomFieldModelFormMixin)
