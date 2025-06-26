@@ -3,33 +3,35 @@
 {% load form_helpers %}
 
 {% block content %}
-    <form action="" method="post" enctype="multipart/form-data" class="form form-horizontal">
+    <form action="" method="post" enctype="multipart/form-data" class="h-100 vstack">
         {% csrf_token %}
         {{ pk_form.pk }}
         {{ formset.management_form }}
-        <div class="row">
-            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
-                <h3>{% block title %}{% if vc_form.instance %}Editing {{ vc_form.instance }}{% else %}New Virtual Chassis{% endif %}{% endblock %}</h3>
+        <div class="row align-content-start flex-fill">
+            <div class="col-lg-8 offset-lg-2 col-md-10 offset-md-1">
+                <h3 class="mb-16">{% block title %}{% if vc_form.instance %}Editing {{ vc_form.instance }}{% else %}New Virtual Chassis{% endif %}{% endblock %}</h3>
                 {% if vc_form.non_field_errors %}
-                    <div class="panel panel-danger">
-                        <div class="panel-heading"><strong>Errors</strong></div>
-                        <div class="panel-body">
+                    <div class="card border-danger mb-16">
+                        <div class="card-header bg-danger-subtle border-danger text-body">
+                            <strong>Errors</strong>
+                        </div>
+                        <div class="card-body">
                             {{ vc_form.non_field_errors }}
                         </div>
                     </div>
                 {% endif %}
-                <div class="panel panel-default">
-                    <div class="panel-heading"><strong>Virtual Chassis</strong></div>
-                    <div class="table panel-body">
+                <div class="card mb-16">
+                    <div class="card-header"><strong>Virtual Chassis</strong></div>
+                    <div class="card-body">
                         {% render_field vc_form.name %}
                         {% render_field vc_form.domain %}
                         {% render_field vc_form.master %}
                     </div>
                 </div>
                 {% include 'inc/extras_features_edit_form_fields.html' with form=vc_form %}
-                <div class="panel panel-default">
-                    <div class="panel-heading"><strong>Members</strong></div>
-                    <table class="table panel-body">
+                <div class="card mb-16">
+                    <div class="card-header"><strong>Members</strong></div>
+                    <table class="card-body">
                         <thead>
                             <tr>
                                 <th>Device</th>
@@ -52,7 +54,7 @@
                                             {% if device.rack %}
                                                 {{ device.rack }} / {{ device.position }}
                                             {% else %}
-                                                <span class="text-muted">&mdash;</span>
+                                                <span class="text-secondary">&mdash;</span>
                                             {% endif %}
                                         </td>
                                         <td>{{ device.serial|placeholder }}</td>
@@ -70,7 +72,7 @@
                                         </td>
                                         <td>
                                             {% if virtual_chassis.present_in_database %}
-                                                <a href="{% url 'dcim:virtualchassis_remove_member' pk=device.pk %}?return_url={% url 'dcim:virtualchassis_edit' pk=virtual_chassis.pk %}" class="btn btn-danger btn-xs{% if virtual_chassis.master == device %} disabled{% endif %}">
+                                                <a href="{% url 'dcim:virtualchassis_remove_member' pk=device.pk %}?return_url={% url 'dcim:virtualchassis_edit' pk=virtual_chassis.pk %}" class="btn btn-danger btn-sm{% if virtual_chassis.master == device %} disabled{% endif %}">
                                                     <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
                                                 </a>
                                             {% endif %}
@@ -83,11 +85,15 @@
                 </div>
             </div>
         </div>
-        <div class="row">
-            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 text-right">
-                <button type="submit" name="_update" class="btn btn-primary">Update</button>
-                <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
-            </div>
+        <div class="nb-form-sticky-footer">
+            <button type="submit" name="_update" class="btn btn-primary">
+                <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+                -->Update
+            </button>
+            <a href="{{ return_url }}" class="btn btn-secondary">
+                <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+                -->Cancel
+            </a>
         </div>
     </form>
 {% endblock %}

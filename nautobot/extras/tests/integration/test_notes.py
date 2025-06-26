@@ -33,7 +33,7 @@ class NoteTestCase(SeleniumTestCase):
         self.fill_input("note", "This is a maintenance notice.")
 
         # Click that "Create" button
-        self.browser.find_by_text("Create").click()
+        self.browser.find_by_xpath("//button[contains(normalize-space(), 'Create')]").click()
 
         # Verify form redirect and presence of content.
         self.assertTrue(self.browser.is_text_present("Created note"))

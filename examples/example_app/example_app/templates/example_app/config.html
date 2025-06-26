@@ -2,20 +2,20 @@
 {% load form_helpers %}
 
 {% block content %}
-    <form action="" method="post" enctype="multipart/form-data" class="form form-horizontal">
+    <form action="" method="post" enctype="multipart/form-data" class="h-100 vstack">
         {% csrf_token %}
-        <div class="row">
-            <div class="col-md-6 col-md-offset-3">
-                <h3>{% block title %}Example App Configuration{% endblock title %}</h3>
+        <div class="row align-content-start flex-fill">
+            <div class="col-md-6 offset-md-3">
+                <h3 class="mb-16">{% block title %}Example App Configuration{% endblock title %}</h3>
                 <p>
                     A Nautobot App can implement this page if it has various configuration options that make sense to
                     view and/or update via the web UI (as opposed to configuring them under <code>PLUGINS_CONFIG</code>
                     in <code>nautobot_config.py</code>). The below is just a simple example.
                 </p>
                 {% block form %}
-                    <div class="panel panel-default">
-                        <div class="panel-heading"><strong>Configuration Options</strong></div>
-                        <div class="panel-body">
+                    <div class="card mb-16">
+                        <div class="card-header"><strong>Configuration Options</strong></div>
+                        <div class="card-body">
                             {% block form_fields %}
                                 {% render_form form %}
                             {% endblock %}
@@ -24,10 +24,11 @@
                 {% endblock form %}
             </div>
         </div>
-        <div class="row">
-            <div class="col-md-6 col-md-offset-3 text-right">
-                <button type="submit" class="btn btn-primary">Update Configuration</button>
-            </div>
+        <div class="nb-form-sticky-footer">
+            <button type="submit" class="btn btn-primary">
+                <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+                -->Update Configuration
+            </button>
         </div>
     </form>
 {% endblock content %}

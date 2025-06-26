@@ -3,6 +3,10 @@
 
 {% block title %}User Profile{% endblock %}
 
+{% block breadcrumbs %}
+    {% include 'inc/breadcrumbs.html' with title='User Profile' %}
+{% endblock %}
+
 {% block usercontent %}
     <small class="text-muted">User login</small>
     <h5>{{ request.user.username }}</h5>

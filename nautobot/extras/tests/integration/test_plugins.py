@@ -155,7 +155,7 @@ class AppReturnUrlTestCase(SeleniumTestCase):
         form = self.browser.find_by_tag("form")
 
         # Check that the Cancel button is a link to the examplemodel_list view.
-        element = form.first.links.find_by_text("Cancel").first
+        element = form.first.links.find_by_partial_text("Cancel").first
         self.assertEqual(element["href"], f'{self.live_server_url}{reverse("plugins:example_app:examplemodel_list")}')
 
 
