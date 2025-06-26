@@ -2,7 +2,7 @@
 # nautobot:
 #   project_name: "nautobot"
 #   local: False
-#   python_ver: "3.9"
+#   python_ver: "3.12"
 #   compose_dir: "/full/path/to/nautobot/development"
 #   cache_test_fixtures: False
 #   compose_files:
