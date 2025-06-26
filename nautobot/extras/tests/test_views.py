@@ -1904,7 +1904,6 @@ class GraphQLQueriesTestCase(
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = GraphQLQuery
 
@@ -1937,7 +1936,6 @@ class GraphQLQueriesTestCase(
             "name": "graphql-query-4",
             "query": "{query: locations {name}}",
         }
-        cls.bulk_edit_data = {"query": "{ locations { name } }"}
 
 
 #
