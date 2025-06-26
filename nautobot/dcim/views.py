@@ -3640,7 +3640,7 @@ class CableUIViewSet(NautobotUIViewSet):
     form_class = forms.CableForm
     serializer_class = serializers.CableSerializer
     table_class = tables.CableTable
-    queryset = Cable.objects.all()
+    queryset = Cable.objects.prefetch_related("termination_a", "termination_b")
     action_buttons = ("import", "export")
 
 
