@@ -129,6 +129,11 @@ urlpatterns = [
     ),
     # Console port templates
     path(
+        "console-port-templates/add/",
+        views.ConsolePortTemplateCreateView.as_view(),
+        name="consoleporttemplate_add",
+    ),
+    path(
         "console-port-templates/rename/",
         views.ConsolePortTemplateBulkRenameView.as_view(),
         name="consoleporttemplate_bulk_rename",
