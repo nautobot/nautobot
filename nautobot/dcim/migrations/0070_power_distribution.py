@@ -44,12 +44,12 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="powerport",
             name="power_factor",
-            field=models.DecimalField(decimal_places=2, default=0.95, max_digits=4),
+            field=models.DecimalField(blank=True, decimal_places=2, default='0.95', max_digits=4),
         ),
         migrations.AddField(
             model_name="powerporttemplate",
             name="power_factor",
-            field=models.DecimalField(decimal_places=2, default=0.95, max_digits=4),
+            field=models.DecimalField(blank=True, decimal_places=2, default='0.95', max_digits=4),
         ),
         migrations.AddIndex(
             model_name="powerfeed",

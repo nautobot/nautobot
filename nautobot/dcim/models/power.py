@@ -187,14 +187,14 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
         super().clean()
 
         # Rack must belong to same location hierarchy as PowerPanel
-        if self.rack and self.rack.location and self.power_panel.location:
-            if self.rack.location not in self.power_panel.location.ancestors(
+        if self.rack and self.rack.location and self.power_panel.location:  # pylint: disable=no-member
+            if self.rack.location not in self.power_panel.location.ancestors(  # pylint: disable=no-member
                 include_self=True
-            ) and self.power_panel.location not in self.rack.location.ancestors(include_self=True):
+            ) and self.power_panel.location not in self.rack.location.ancestors(include_self=True):  # pylint: disable=no-member
                 raise ValidationError(
                     {
-                        "rack": f'Rack "{self.rack}" ({self.rack.location}) and '
-                        f'power panel "{self.power_panel}" ({self.power_panel.location}) '
+                        "rack": f'Rack "{self.rack}" ({self.rack.location}) and '  # pylint: disable=no-member
+                        f'power panel "{self.power_panel}" ({self.power_panel.location}) '  # pylint: disable=no-member
                         f"are not in the same location hierarchy."
                     }
                 )
