@@ -190,21 +190,17 @@ class ConfigContextUIViewSet(NautobotUIViewSet):
 
     class AssignmentObjectFieldsPanel(object_detail.ObjectFieldsPanel):
         def render_value(self, key, value, context):
-            if not value or (key == "dynamic_groups" and not settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED):
+            if key == "dynamic_groups" and not settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
+                return
+            if not value:
                 return helpers.HTML_NONE
 
             items = []
             for val in value.all():
-                if isinstance(val, Role):
-                    # Link to devices with this role
-                    url = reverse("dcim:device_list") + f"?role={val.name}"
-                    rendered_val = format_html('<a href="{}">{}</a>', url, val.name)
-                else:
-                    # Default hyperlink for other values
-                    rendered_val = helpers.hyperlinked_object(val)
+                rendered_val = helpers.hyperlinked_object(val)
                 items.append(rendered_val)
 
-            return format_html_join("", "<li>{}</li>", ((item,) for item in items)) if items else helpers.HTML_NONE
+            return format_html("<ul>{}</ul>", format_html_join("", "<li>{}</li>", ((item,) for item in items)))
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -226,7 +222,7 @@ class ConfigContextUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.FULL_WIDTH,
                 label="Data",
                 header_extra_content_template_path="extras/inc/json_format.html",
-                body_content_template_path="extras/configcontext_data.html",
+                body_content_template_path="extras/inc/configcontext_data.html",
             ),
             AssignmentObjectFieldsPanel(
                 weight=200,
