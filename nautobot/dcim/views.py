@@ -1696,36 +1696,28 @@ class DeviceUIViewSet(NautobotUIViewSet):
     filterset_class = filters.DeviceFilterSet
     filterset_form_class = forms.DeviceFilterForm
     form_class = forms.DeviceForm
-    queryset = Device.objects.all()
+    queryset = Device.objects.select_related(
+        "device_type__manufacturer",
+        "device_type__device_family",
+        "cluster__cluster_group",
+        "controller_managed_device_group__controller",
+        "device_redundancy_group",
+        "location",
+        "platform",
+        "primary_ip4",
+        "primary_ip6",
+        "rack__rack_group",
+        "rack",
+        "role",
+        "secrets_group",
+        "software_version",
+        "status",
+        "tenant__tenant_group",
+        "tenant",
+        "controller_managed_device_group",
+    ).prefetch_related("images", "software_image_files")
     serializer_class = serializers.DeviceSerializer
     table_class = tables.DeviceTable
-
-    def alter_queryset(self, request):
-        """
-        Optimize queryset per view type.
-        - Use lightweight `select_related` for list/bulk views.
-        - Use full `select_related` + `prefetch_related` for detail view.
-        """
-        if self.action in ["list", "bulk_edit", "bulk_delete"]:
-            return self.queryset.select_related("device_type__manufacturer")
-        elif self.action == "retrieve":
-            return self.queryset.select_related(
-                "cluster__cluster_group",
-                "controller_managed_device_group__controller",
-                "device_redundancy_group",
-                "device_type__device_family",
-                "location",
-                "platform",
-                "primary_ip4",
-                "primary_ip6",
-                "rack__rack_group",
-                "role",
-                "secrets_group",
-                "software_version",
-                "status",
-                "tenant__tenant_group",
-            ).prefetch_related("images", "software_image_files")
-        return self.queryset
 
     object_detail_content = object_detail.ObjectDetailContent(
         extra_buttons=(
