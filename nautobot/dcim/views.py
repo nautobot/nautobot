@@ -4193,7 +4193,7 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
                 context_data_key="powerfeed_data",
                 value_transforms={
                     # Only apply transforms where customization is needed
-                    "Utilization (Allocated)": [_render_utilization_graph],
+                    "Utilization (Allocated)": [lambda v: PowerFeedUIViewSet._render_utilization_graph(v)],
                 },
             ),
             object_detail.ObjectFieldsPanel(
