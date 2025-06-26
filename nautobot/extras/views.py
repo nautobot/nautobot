@@ -73,7 +73,7 @@ from nautobot.dcim.tables import (
     VirtualDeviceContextTable,
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
-from nautobot.extras.utils import fixup_filterset_query_params, get_base_template, get_job_queue, get_worker_count
+from nautobot.extras.utils import fixup_filterset_query_params, get_base_template, get_worker_count
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
@@ -86,7 +86,6 @@ from .choices import (
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
-    LogLevelChoices,
 )
 from .datasources import (
     enqueue_git_repository_diff_origin_and_local,
@@ -111,7 +110,6 @@ from .models import (
     Job as JobModel,
     JobButton,
     JobHook,
-    JobLogEntry,
     JobQueue,
     JobResult,
     MetadataType,
@@ -153,6 +151,23 @@ class ComputedFieldUIViewSet(NautobotUIViewSet):
     table_class = tables.ComputedFieldTable
     queryset = ComputedField.objects.all()
     action_buttons = ("add",)
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+                exclude_fields=["template"],
+            ),
+            ObjectTextPanel(
+                label="Template",
+                section=SectionChoices.FULL_WIDTH,
+                weight=100,
+                object_field="template",
+                render_as=ObjectTextPanel.RenderOptions.CODE,
+            ),
+        ),
+    )
 
 
 #
@@ -163,53 +178,28 @@ class ComputedFieldUIViewSet(NautobotUIViewSet):
 # have an associated owner, such as a Git repository
 
 
-class ConfigContextListView(generic.ObjectListView):
+class ConfigContextUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ConfigContextBulkEditForm
+    filterset_class = filters.ConfigContextFilterSet
+    filterset_form_class = forms.ConfigContextFilterForm
+    form_class = forms.ConfigContextForm
     queryset = ConfigContext.objects.all()
-    filterset = filters.ConfigContextFilterSet
-    filterset_form = forms.ConfigContextFilterForm
-    table = tables.ConfigContextTable
-    action_buttons = ("add",)
-
-
-class ConfigContextView(generic.ObjectView):
-    queryset = ConfigContext.objects.all()
+    serializer_class = serializers.ConfigContextSerializer
+    table_class = tables.ConfigContextTable
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         # Determine user's preferred output format
-        if request.GET.get("format") in ["json", "yaml"]:
-            context["format"] = request.GET.get("format")
+        if request.GET.get("data_format") in ["json", "yaml"]:
+            context["data_format"] = request.GET.get("data_format")
             if request.user.is_authenticated:
-                request.user.set_config("extras.configcontext.format", context["format"], commit=True)
+                request.user.set_config("extras.configcontext.format", context["data_format"], commit=True)
         elif request.user.is_authenticated:
-            context["format"] = request.user.get_config("extras.configcontext.format", "json")
+            context["data_format"] = request.user.get_config("extras.configcontext.format", "json")
         else:
-            context["format"] = "json"
+            context["data_format"] = "json"
 
         return context
-
-
-class ConfigContextEditView(generic.ObjectEditView):
-    queryset = ConfigContext.objects.all()
-    model_form = forms.ConfigContextForm
-    template_name = "extras/configcontext_edit.html"
-
-
-class ConfigContextBulkEditView(generic.BulkEditView):
-    queryset = ConfigContext.objects.all()
-    filterset = filters.ConfigContextFilterSet
-    table = tables.ConfigContextTable
-    form = forms.ConfigContextBulkEditForm
-
-
-class ConfigContextDeleteView(generic.ObjectDeleteView):
-    queryset = ConfigContext.objects.all()
-
-
-class ConfigContextBulkDeleteView(generic.BulkDeleteView):
-    queryset = ConfigContext.objects.all()
-    table = tables.ConfigContextTable
-    filterset = filters.ConfigContextFilterSet
 
 
 class ObjectConfigContextView(generic.ObjectView):
@@ -1359,14 +1349,16 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     # for example "?kwargs_from_job_result=<UUID>&integervar=22"
                     explicit_initial = initial
                     initial = job_result.task_kwargs.copy()
-                    job_queue = job_result.celery_kwargs.get("queue", None)
-                    jq = None
-                    if job_queue is not None:
+                    task_queue = job_result.celery_kwargs.get("queue", None)
+                    job_queue = None
+                    if task_queue is not None:
                         try:
-                            jq = JobQueue.objects.get(name=job_queue, queue_type=JobQueueTypeChoices.TYPE_CELERY)
+                            job_queue = JobQueue.objects.get(
+                                name=task_queue, queue_type=JobQueueTypeChoices.TYPE_CELERY
+                            )
                         except JobQueue.DoesNotExist:
                             pass
-                    initial["_job_queue"] = jq
+                    initial["_job_queue"] = job_queue
                     initial["_profile"] = job_result.celery_kwargs.get("nautobot_job_profile", False)
                     initial["_ignore_singleton_lock"] = job_result.celery_kwargs.get(
                         "nautobot_job_ignore_singleton_lock", False
@@ -1410,7 +1402,6 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         job_class = get_job(job_model.class_path, reload=True)
         job_form = job_class.as_form(request.POST, request.FILES) if job_class is not None else None
         schedule_form = forms.JobScheduleForm(request.POST)
-        job_queue = request.POST.get("_job_queue")
 
         return_url = request.POST.get("_return_url")
         if return_url is not None and url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
@@ -1418,13 +1409,8 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         else:
             return_url = None
 
-        queue = get_job_queue(job_queue)
-        if queue is None:
-            queue = job_model.default_job_queue
-        # Allow execution only if a worker process is running on a celery queue and the job is runnable.
-        if queue.queue_type == JobQueueTypeChoices.TYPE_CELERY and not get_worker_count(queue=job_queue):
-            messages.error(request, "Unable to run or schedule job: Celery worker process not running.")
-        elif not job_model.installed or job_class is None:
+        # Allow execution only if the job is runnable.
+        if not job_model.installed or job_class is None:
             messages.error(request, "Unable to run or schedule job: Job is not presently installed.")
         elif not job_model.enabled:
             messages.error(request, "Unable to run or schedule job: Job is not enabled to be run.")
@@ -1442,15 +1428,17 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             )
         elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
             job_queue = job_form.cleaned_data.pop("_job_queue", None)
-            jq = None
-            if job_queue is not None:
-                try:
-                    jq = JobQueue.objects.get(pk=job_queue)
-                except (ValidationError, JobQueue.DoesNotExist):
-                    try:
-                        jq = JobQueue.objects.get(name=job_queue)
-                    except JobQueue.DoesNotExist:
-                        pass
+            if job_queue is None:
+                job_queue = job_model.default_job_queue
+
+            if job_queue.queue_type == JobQueueTypeChoices.TYPE_CELERY and not get_worker_count(queue=job_queue):
+                messages.warning(
+                    request,
+                    format_html(
+                        "No celery workers found for queue {}, job may never run unless a worker is started.",
+                        job_queue,
+                    ),
+                )
 
             dryrun = job_form.cleaned_data.get("dryrun", False)
             # Run the job. A new JobResult is created.
@@ -1467,7 +1455,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     interval=schedule_type,
                     crontab=schedule_form.cleaned_data.get("_recurrence_custom_time"),
                     approval_required=job_model.approval_required,
-                    task_queue=jq.name if jq else None,
+                    job_queue=job_queue,
                     profile=profile,
                     ignore_singleton_lock=ignore_singleton_lock,
                     **job_class.serialize_data(job_form.cleaned_data),
@@ -1488,7 +1476,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     request.user,
                     profile=profile,
                     ignore_singleton_lock=ignore_singleton_lock,
-                    task_queue=jq.name if jq else None,
+                    job_queue=job_queue,
                     **job_class.serialize_data(job_kwargs),
                 )
 
@@ -1585,7 +1573,7 @@ class JobApprovalRequestView(generic.ObjectView):
         if job_class is not None:
             # Render the form with all fields disabled
             initial = instance.kwargs
-            initial["_job_queue"] = instance.queue
+            initial["_job_queue"] = instance.job_queue
             initial["_profile"] = instance.celery_kwargs.get("profile", False)
             job_form = job_class().as_form(initial=initial, approval_view=True)
         else:
@@ -2062,44 +2050,12 @@ class JobHookUIViewSet(NautobotUIViewSet):
 #
 
 
-def get_annotated_jobresult_queryset():
-    return (
-        JobResult.objects.defer("result")
-        .select_related("job_model", "user")
-        .annotate(
-            debug_log_count=count_related(
-                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_DEBUG}
-            ),
-            success_log_count=count_related(
-                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_SUCCESS}
-            ),
-            info_log_count=count_related(
-                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_INFO}
-            ),
-            warning_log_count=count_related(
-                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_WARNING}
-            ),
-            error_log_count=count_related(
-                JobLogEntry,
-                "job_result",
-                filter_dict={
-                    "log_level__in": [
-                        LogLevelChoices.LOG_FAILURE,
-                        LogLevelChoices.LOG_ERROR,
-                        LogLevelChoices.LOG_CRITICAL,
-                    ],
-                },
-            ),
-        )
-    )
-
-
 class JobResultListView(generic.ObjectListView):
     """
     List JobResults
     """
 
-    queryset = get_annotated_jobresult_queryset()
+    queryset = JobResult.objects.defer("result").select_related("job_model", "user")
     filterset = filters.JobResultFilterSet
     filterset_form = forms.JobResultFilterForm
     table = tables.JobResultTable
@@ -2111,7 +2067,7 @@ class JobResultDeleteView(generic.ObjectDeleteView):
 
 
 class JobResultBulkDeleteView(generic.BulkDeleteView):
-    queryset = get_annotated_jobresult_queryset()
+    queryset = JobResult.objects.defer("result").select_related("job_model", "user")
     table = tables.JobResultTable
     filterset = filters.JobResultFilterSet
 
@@ -2312,6 +2268,28 @@ class MetadataTypeUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.MetadataTypeSerializer
     table_class = tables.MetadataTypeTable
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                exclude_fields=("content_types",),
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=200,
+                context_table_key="choices",
+                table_title="Choices",
+            ),
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                fields=["content_types"],
+                label="Assignment",
+            ),
+        ),
+    )
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
 
@@ -2320,6 +2298,8 @@ class MetadataTypeUIViewSet(NautobotUIViewSet):
                 context["choices"] = forms.MetadataChoiceFormSet(data=request.POST, instance=instance)
             else:
                 context["choices"] = forms.MetadataChoiceFormSet(instance=instance)
+        elif self.action == "retrieve":
+            context["choices"] = tables.MetadataChoiceTable(instance.choices.all())
 
         return context
 
@@ -2480,22 +2460,13 @@ class RelationshipUIViewSet(NautobotUIViewSet):
     )
 
 
-class RelationshipAssociationListView(generic.ObjectListView):
+class RelationshipAssociationUIViewSet(ObjectListViewMixin, ObjectDestroyViewMixin, ObjectBulkDestroyViewMixin):
+    filterset_class = filters.RelationshipAssociationFilterSet
+    filterset_form_class = forms.RelationshipAssociationFilterForm
+    serializer_class = serializers.RelationshipAssociationSerializer
+    table_class = tables.RelationshipAssociationTable
     queryset = RelationshipAssociation.objects.all()
-    filterset = filters.RelationshipAssociationFilterSet
-    filterset_form = forms.RelationshipAssociationFilterForm
-    table = tables.RelationshipAssociationTable
     action_buttons = ()
-
-
-class RelationshipAssociationBulkDeleteView(generic.BulkDeleteView):
-    queryset = RelationshipAssociation.objects.all()
-    table = tables.RelationshipAssociationTable
-    filterset = filters.RelationshipAssociationFilterSet
-
-
-class RelationshipAssociationDeleteView(generic.ObjectDeleteView):
-    queryset = RelationshipAssociation.objects.all()
 
 
 #
@@ -2966,17 +2937,28 @@ class StatusUIViewSet(NautobotUIViewSet):
 #
 
 
-class TagListView(generic.ObjectListView):
-    queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
-    filterset = filters.TagFilterSet
-    filterset_form = forms.TagFilterForm
-    table = tables.TagTable
-
-
-class TagView(generic.ObjectView):
+class TagUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.TagBulkEditForm
+    filterset_class = filters.TagFilterSet
+    filterset_form_class = forms.TagFilterForm
+    form_class = forms.TagForm
     queryset = Tag.objects.all()
+    serializer_class = serializers.TagSerializer
+    table_class = tables.TagTable
+
+    def alter_queryset(self, request):
+        queryset = super().alter_queryset(request)
+
+        # Only annotate for list, bulk_edit, bulk_delete views
+        if self.action in ["list", "bulk_update", "bulk_destroy"]:
+            queryset = queryset.annotate(items=count_related(TaggedItem, "tag"))
+
+        return queryset
 
     def get_extra_context(self, request, instance):
+        # Only run this logic when retrieving a single object
+        if instance is None or self.action != "retrieve":
+            return super().get_extra_context(request, instance)
         tagged_items = (
             TaggedItem.objects.filter(tag=instance).select_related("content_type").prefetch_related("content_object")
         )
@@ -2995,34 +2977,6 @@ class TagView(generic.ObjectView):
             "content_types": instance.content_types.order_by("app_label", "model"),
             **super().get_extra_context(request, instance),
         }
-
-
-class TagEditView(generic.ObjectEditView):
-    queryset = Tag.objects.all()
-    model_form = forms.TagForm
-    template_name = "extras/tag_edit.html"
-
-
-class TagDeleteView(generic.ObjectDeleteView):
-    queryset = Tag.objects.all()
-
-
-class TagBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Tag.objects.all()
-    table = tables.TagTable
-
-
-class TagBulkEditView(generic.BulkEditView):
-    queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
-    table = tables.TagTable
-    form = forms.TagBulkEditForm
-    filterset = filters.TagFilterSet
-
-
-class TagBulkDeleteView(generic.BulkDeleteView):
-    queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
-    table = tables.TagTable
-    filterset = filters.TagFilterSet
 
 
 #

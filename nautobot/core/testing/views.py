@@ -302,6 +302,11 @@ class ViewTestCases:
         slug_source = None
         slugify_function = staticmethod(slugify)
         slug_test_object = ""
+        expected_create_form_buttons = [
+            '<button type="submit" name="_create" class="btn btn-primary">Create</button>',
+            '<button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>',
+        ]
+        expected_edit_form_buttons = ['<button type="submit" name="_update" class="btn btn-primary">Update</button>']
 
         def test_create_object_without_permission(self):
             # Try GET without permission
@@ -325,7 +330,14 @@ class ViewTestCases:
             self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
 
             # Try GET with model-level permission
-            self.assertHttpStatus(self.client.get(self._get_url("add")), 200)
+            response = self.client.get(self._get_url("add"))
+            self.assertHttpStatus(response, 200)
+            # The response content should contain the expected form buttons
+            for button in self.expected_create_form_buttons:
+                self.assertBodyContains(response, button)
+            # The response content should not contain the expected form buttons
+            for button in self.expected_edit_form_buttons:
+                self.assertNotContains(response, button)
 
             # Try POST with model-level permission
             request = {
@@ -439,6 +451,11 @@ class ViewTestCases:
 
         form_data = {}
         update_data = {}
+        expected_edit_form_buttons = ['<button type="submit" name="_update" class="btn btn-primary">Update</button>']
+        expected_create_form_buttons = [
+            '<button type="submit" name="_create" class="btn btn-primary">Create</button>',
+            '<button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>',
+        ]
 
         def test_edit_object_without_permission(self):
             instance = self._get_queryset().first()
@@ -464,7 +481,15 @@ class ViewTestCases:
             self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
 
             # Try GET with model-level permission
-            self.assertHttpStatus(self.client.get(self._get_url("edit", instance)), 200)
+            response = self.client.get(self._get_url("edit", instance))
+            self.assertHttpStatus(response, 200)
+            # The response content should contain the expected form buttons
+            for button in self.expected_edit_form_buttons:
+                self.assertBodyContains(response, button)
+
+            # The response content should not contain the unexpected form buttons
+            for button in self.expected_create_form_buttons:
+                self.assertNotContains(response, button)
 
             # Try POST with model-level permission
             update_data = self.update_data or self.form_data
@@ -743,6 +768,17 @@ class ViewTestCases:
             # TODO: all this is doing is checking that a login link appears somewhere on the page (i.e. in the nav).
             response_body = response.content.decode(response.charset)
             self.assertIn("/login/?next=" + self._get_url("list"), response_body, msg=response_body)
+
+        def test_list_objects_anonymous_with_exempt_permission_for_one_view_only(self):
+            # Make the request as an unauthenticated user
+            self.client.logout()
+            # Test if AnonymousUser can properly render the whole list view
+            with override_settings(EXEMPT_VIEW_PERMISSIONS=[self.model._meta.label_lower]):
+                response = self.client.get(self._get_url("list"))
+                self.assertHttpStatus(response, 200)
+                # There should be some rows
+                self.assertBodyContains(response, '<tr class="even')
+                self.assertBodyContains(response, '<tr class="odd')
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_filtered(self):

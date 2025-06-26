@@ -154,6 +154,7 @@ class ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(BaseTable):
         verbose_name="Prefixes",
         reverse_lookup="vlan__controller_managed_device_group_wireless_network_assignments",
     )
+    list_url = "dcim:controllermanageddevicegroup_list"
 
     class Meta(BaseTable.Meta):
         model = ControllerManagedDeviceGroupWirelessNetworkAssignment
@@ -180,6 +181,13 @@ class ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(BaseTable):
             "authentication",
             "controller",
         )
+
+
+class DeviceGroupWirelessNetworkTable(ControllerManagedDeviceGroupWirelessNetworkAssignmentTable):
+    list_url = "wireless:wirelessnetwork_list"
+
+    class Meta(ControllerManagedDeviceGroupWirelessNetworkAssignmentTable.Meta):
+        pass
 
 
 class ControllerControllerManagedDeviceGroupWirelessNetworkAssignmentTable(

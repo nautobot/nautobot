@@ -28,6 +28,7 @@ from nautobot.core.views.utils import (
     check_filter_for_display,
     common_detail_view_context,
     get_csv_form_fields_from_serializer_class,
+    get_saved_views_for_user,
     view_changes_not_saved,
 )
 from nautobot.extras.models import SavedView
@@ -301,7 +302,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 # If the view does not have a object_detail_content attribute, set it to None.
                 context["object_detail_content"] = None
             context.update(common_detail_view_context(request, instance))
-        elif view.action == "list":
+        if view.action == "list":
             # Construct valid actions for list view.
             valid_actions = self.validate_action_buttons(view, request)
             # Query SavedViews for dropdown button
@@ -309,18 +310,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             list_url = f"{resolved_path.app_name}:{resolved_path.url_name}"
             saved_views = None
             if model.is_saved_view_model:
-                # We are not using .restrict(request.user, "view") here
-                # User should be able to see any saved view that he has the list view access to.
-                if request.user.has_perms(["extras.view_savedview"]):
-                    saved_views = SavedView.objects.filter(view=list_url).order_by("name").only("pk", "name")
-                else:
-                    shared_saved_views = (
-                        SavedView.objects.filter(view=list_url, is_shared=True).order_by("name").only("pk", "name")
-                    )
-                    user_owned_saved_views = (
-                        SavedView.objects.filter(view=list_url, owner=request.user).order_by("name").only("pk", "name")
-                    )
-                    saved_views = shared_saved_views | user_owned_saved_views
+                saved_views = get_saved_views_for_user(request.user, list_url)
 
             new_changes_not_applied = view_changes_not_saved(request, view, self.saved_view)
             context.update(
