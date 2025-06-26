@@ -191,7 +191,7 @@ class ConfigContextUIViewSet(NautobotUIViewSet):
     class AssignmentObjectFieldsPanel(object_detail.ObjectFieldsPanel):
         def render_value(self, key, value, context):
             if key == "dynamic_groups" and not settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
-                return
+                return None
             if not value:
                 return helpers.HTML_NONE
 
