@@ -188,10 +188,9 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
 
         # Rack must belong to same location hierarchy as PowerPanel
         if self.rack and self.rack.location and self.power_panel.location:
-            if (
-                self.rack.location not in self.power_panel.location.ancestors(include_self=True)
-                and self.power_panel.location not in self.rack.location.ancestors(include_self=True)
-            ):
+            if self.rack.location not in self.power_panel.location.ancestors(
+                include_self=True
+            ) and self.power_panel.location not in self.rack.location.ancestors(include_self=True):
                 raise ValidationError(
                     {
                         "rack": f'Rack "{self.rack}" ({self.rack.location}) and '
@@ -215,9 +214,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
             # Validate no circuit position conflicts with existing feeds
             new_positions = self.get_occupied_positions()
             conflicts = PowerFeed.objects.filter(
-                power_panel=self.power_panel,
-                circuit_position__isnull=False,
-                breaker_poles__isnull=False
+                power_panel=self.power_panel, circuit_position__isnull=False, breaker_poles__isnull=False
             ).exclude(pk=self.pk if self.pk else None)
 
             for feed in conflicts:
@@ -287,4 +284,3 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
 
     def get_type_class(self):
         return PowerFeedTypeChoices.CSS_CLASSES.get(self.type)
-

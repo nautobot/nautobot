@@ -5,53 +5,58 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('dcim', '0069_softwareimagefile_external_integration'),
+        ("dcim", "0069_softwareimagefile_external_integration"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='powerfeed',
-            name='breaker_poles',
+            model_name="powerfeed",
+            name="breaker_poles",
             field=models.PositiveSmallIntegerField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='powerfeed',
-            name='circuit_position',
+            model_name="powerfeed",
+            name="circuit_position",
             field=models.PositiveIntegerField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='powerfeed',
-            name='destination_panel',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='feeders', to='dcim.powerpanel'),
+            model_name="powerfeed",
+            name="destination_panel",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="feeders",
+                to="dcim.powerpanel",
+            ),
         ),
         migrations.AddField(
-            model_name='powerpanel',
-            name='circuit_positions',
+            model_name="powerpanel",
+            name="circuit_positions",
             field=models.PositiveIntegerField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='powerpanel',
-            name='panel_type',
+            model_name="powerpanel",
+            name="panel_type",
             field=models.CharField(blank=True, max_length=30),
         ),
         migrations.AddField(
-            model_name='powerport',
-            name='power_factor',
+            model_name="powerport",
+            name="power_factor",
             field=models.DecimalField(decimal_places=2, default=0.95, max_digits=4),
         ),
         migrations.AddField(
-            model_name='powerporttemplate',
-            name='power_factor',
+            model_name="powerporttemplate",
+            name="power_factor",
             field=models.DecimalField(decimal_places=2, default=0.95, max_digits=4),
         ),
         migrations.AddIndex(
-            model_name='powerfeed',
-            index=models.Index(fields=['destination_panel'], name='dcim_powerf_destina_2e4c42_idx'),
+            model_name="powerfeed",
+            index=models.Index(fields=["destination_panel"], name="dcim_powerf_destina_2e4c42_idx"),
         ),
         migrations.AddIndex(
-            model_name='powerfeed',
-            index=models.Index(fields=['power_panel', 'circuit_position'], name='dcim_powerf_power_p_6b43a5_idx'),
+            model_name="powerfeed",
+            index=models.Index(fields=["power_panel", "circuit_position"], name="dcim_powerf_power_p_6b43a5_idx"),
         ),
     ]

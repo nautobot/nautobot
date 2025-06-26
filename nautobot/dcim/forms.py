@@ -1250,7 +1250,7 @@ class PowerPortTemplateCreateForm(ModularComponentTemplateCreateForm):
         max_value=1.00,
         required=False,
         initial=0.95,
-        help_text="Power factor (0.01-1.00) for converting between watts and VA."
+        help_text="Power factor (0.01-1.00) for converting between watts and VA.",
     )
     field_order = (
         "device_type",
@@ -1282,7 +1282,7 @@ class PowerPortTemplateBulkEditForm(NautobotBulkEditForm):
         min_value=0.01,
         max_value=1.00,
         required=False,
-        help_text="Power factor (0.01-1.00) for converting between watts and VA."
+        help_text="Power factor (0.01-1.00) for converting between watts and VA.",
     )
     description = forms.CharField(required=False)
 
@@ -2804,7 +2804,7 @@ class PowerPortCreateForm(ModularComponentCreateForm):
         max_value=1.00,
         required=False,
         initial=0.95,
-        help_text="Power factor (0.01-1.00) for converting between watts and VA."
+        help_text="Power factor (0.01-1.00) for converting between watts and VA.",
     )
     field_order = (
         "device",
@@ -2832,7 +2832,7 @@ class PowerPortBulkCreateForm(
         max_value=1.00,
         required=False,
         initial=0.95,
-        help_text="Power factor (0.01-1.00) for converting between watts and VA."
+        help_text="Power factor (0.01-1.00) for converting between watts and VA.",
     )
 
     field_order = (
@@ -2859,7 +2859,7 @@ class ModulePowerPortBulkCreateForm(
         max_value=1.00,
         required=False,
         initial=0.95,
-        help_text="Power factor (0.01-1.00) for converting between watts and VA."
+        help_text="Power factor (0.01-1.00) for converting between watts and VA.",
     )
 
     field_order = (
@@ -4576,15 +4576,9 @@ class PowerFeedForm(NautobotModelForm):
         query_params={"location": "$location"},
     )
     destination_panel = DynamicModelChoiceField(
-        queryset=PowerPanel.objects.all(),
-        required=False,
-        query_params={"location": "$location"}
+        queryset=PowerPanel.objects.all(), required=False, query_params={"location": "$location"}
     )
-    rack = DynamicModelChoiceField(
-        queryset=Rack.objects.all(),
-        required=False,
-        query_params={"location": "$location"}
-    )
+    rack = DynamicModelChoiceField(queryset=Rack.objects.all(), required=False, query_params={"location": "$location"})
     comments = CommentField(label="Comments")
 
     class Meta:

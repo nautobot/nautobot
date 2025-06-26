@@ -4151,7 +4151,7 @@ class PowerPanelUIViewSet(NautobotUIViewSet):
                 table_class=tables.PowerFeedTable,
                 table_filter="destination_panel",
                 table_title="Incoming Feeders",
-                exclude_columns=["destination_panel", "cable", "cable_peer", "rack" ],
+                exclude_columns=["destination_panel", "cable", "cable_peer", "rack"],
                 add_button_route=None,
             ),
             object_detail.ObjectsTablePanel(
