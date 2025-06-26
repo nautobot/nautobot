@@ -180,13 +180,15 @@ An example tree for `/jobs/`.
 ▶ tree jobs
 jobs
 ├── __init__.py
-└── get-device-connection.py
+└── get_device_connection.py
 
 1 directory, 2 files
 ```
 
 !!! note
     As shown in the above example, the `/jobs/` directory must contain a file called `__init__.py`. This may be an empty file, but it must exist.
+
+    Additionally, any other `.py` file(s) in the jobs directory must have names that are valid Python module names and do not conflict with existing Python modules or packages in Nautobot's environment. This means that Nautobot will not, for example, load a `nautobot.py` from this directory since it would conflict with `nautobot` itself.
 
 Once the repository is created in Nautobot.
 ![Example Details Jobs](./images/git-as-data-source/10-git-data-source.png)

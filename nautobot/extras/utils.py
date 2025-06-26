@@ -2,6 +2,7 @@ import collections
 import hashlib
 import hmac
 import inspect
+from keyword import iskeyword
 import logging
 import pkgutil
 import sys
@@ -259,6 +260,28 @@ def task_queues_as_choices(task_queues):
     return choices
 
 
+def check_name_safe_to_import_privately(name: str):
+    """
+    Make sure the given package/module name is "safe" to import from the filesystem.
+
+    In other words, make sure it's:
+    - a valid Python identifier and not a reserved keyword
+    - not the name of an existing "real" Python package or builtin
+
+    Returns:
+        (bool, str): Whether safe to load, and an explanatory string fragment for logging/exception messages.
+    """
+    if not name.isidentifier():
+        return False, "not a valid identifier"
+    if iskeyword(name):
+        return False, "a reserved keyword"
+    if name in sys.builtin_module_names:
+        return False, "a Python builtin"
+    if any(module_info.name == name for module_info in pkgutil.iter_modules()):
+        return False, "the name of an installed Python package"
+    return True, "a valid and non-conflicting module name"
+
+
 # namedtuple class yielded by the jobs_in_directory generator function, below
 # Example: ("devices", <module "devices">, "Hostname", <class "devices.Hostname">, None)
 # Example: ("devices", None, None, None, "error at line 40")
@@ -285,20 +308,26 @@ def jobs_in_directory(path, module_name=None, reload_modules=True, report_errors
     """
     from .jobs import is_job  # avoid circular import
 
-    for importer, discovered_module_name, _ in pkgutil.iter_modules([path]):
+    for finder, discovered_module_name, _ in pkgutil.iter_modules([path]):
         if module_name and discovered_module_name != module_name:
             continue
-        if reload_modules and discovered_module_name in sys.modules:
-            del sys.modules[discovered_module_name]
-        try:
-            module = importer.find_module(discovered_module_name).load_module(discovered_module_name)
-            # Get all members of the module that are Job subclasses
-            for job_class_name, job_class in inspect.getmembers(module, is_job):
-                yield JobClassInfo(discovered_module_name, module, job_class_name, job_class)
-        except Exception as exc:
-            logger.error(f"Unable to load module {discovered_module_name} from {path}: {exc}")
+        permitted, reason = check_name_safe_to_import_privately(discovered_module_name)
+        if not permitted:
+            logger.error("Unable to load module %r from %s because it is %s", discovered_module_name, path, reason)
             if report_errors:
-                yield JobClassInfo(module_name=discovered_module_name, error=exc)
+                yield JobClassInfo(module_name=discovered_module_name, error=reason)
+        else:
+            if reload_modules and discovered_module_name in sys.modules:
+                del sys.modules[discovered_module_name]
+            try:
+                module = finder.find_module(discovered_module_name).load_module(discovered_module_name)
+                # Get all members of the module that are Job subclasses
+                for job_class_name, job_class in inspect.getmembers(module, is_job):
+                    yield JobClassInfo(discovered_module_name, module, job_class_name, job_class)
+            except Exception as exc:
+                logger.error(f"Unable to load module {discovered_module_name} from {path}: {exc}")
+                if report_errors:
+                    yield JobClassInfo(module_name=discovered_module_name, error=exc)
 
 
 def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, git_repository=None):

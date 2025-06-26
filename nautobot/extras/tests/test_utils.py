@@ -1,10 +1,24 @@
 from unittest import mock
 
-from nautobot.extras.utils import get_celery_queues, get_worker_count
+from nautobot.extras.utils import check_name_safe_to_import_privately, get_celery_queues, get_worker_count
 from nautobot.utilities.testing import TestCase
 
 
 class UtilsTestCase(TestCase):
+    def test_check_name_safe_to_import_privately(self):
+        for invalid in (
+            "foo.bar",  # not a valid identifier
+            "😂",  # not a valid identifier
+            "from",  # reserved keyword
+            "sys",  # Python builtin
+            "nautobot",  # installed package
+            "tkinter",  # system library
+        ):
+            with self.subTest(f"Invalid name: {invalid}"):
+                permitted, reason = check_name_safe_to_import_privately(invalid)
+                self.assertFalse(permitted)
+                self.assertIsInstance(reason, str)
+
     @mock.patch("celery.app.control.Inspect.active_queues")
     def test_get_celery_queues(self, mock_active_queues):
         with self.subTest("No queues"):
