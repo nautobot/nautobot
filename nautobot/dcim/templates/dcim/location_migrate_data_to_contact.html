@@ -5,9 +5,9 @@
 {% block title %}Migrating contact data from {{ obj_type }} {{ obj }}{% endblock %}
 {% block form %}
     <div id="assign" class="tabcontent">
-        <div class="panel panel-default">
-            <div class="panel-heading"><strong>Contact Data</strong></div>
-            <div class="panel-body">
+        <div class="card mb-16">
+            <div class="card-header"><strong>Contact Data</strong></div>
+            <div class="card-body">
                 {% render_field form.action %}
                 {% render_field form.location %}
                 <div class="form-group">
@@ -41,8 +41,14 @@
 {% endblock %}
 
 {% block buttons %}
-    <button type="submit" name="_create" class="btn btn-primary">Assign</button>
-    <a href="{% url 'dcim:location' pk=obj.pk %}" class="btn btn-default">Cancel</a>
+    <button type="submit" name="_create" class="btn btn-primary">
+        <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+        -->Assign
+    </button>
+    <a href="{% url 'dcim:location' pk=obj.pk %}" class="btn btn-secondary">
+        <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+        -->Cancel
+    </a>
 {% endblock %}
 
 {% block javascript %}
