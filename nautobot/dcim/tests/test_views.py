@@ -833,7 +833,6 @@ class DeviceTypeTestCase(
             "comments": "changed comment",
         }
 
-    @tag("fix_in_v3")
     def test_list_has_correct_links(self):
         """Assert that the DeviceType list view has import/export buttons for both CSV and YAML/JSON formats."""
         self.add_permissions("dcim.add_devicetype", "dcim.view_devicetype")
@@ -862,11 +861,11 @@ class DeviceTypeTestCase(
         )
         self.assertInHTML('<input type="hidden" name="export_format" value="yaml">', content)
         self.assertInHTML(
-            '<button type="submit"><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as YAML</button>',
+            '<button class="dropdown-item" type="submit"><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as YAML</button>',
             content,
         )
         self.assertInHTML(
-            '<button type="submit"><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as CSV</button>',
+            '<button class="dropdown-item" type="submit"><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as CSV</button>',
             content,
         )
 
@@ -4227,7 +4226,6 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "domain": "domain-x",
         }
 
-    @tag("fix_in_v3")
     def test_device_interfaces_count_correct(self):
         """
         This checks whether the other memebers' interfaces are included in the
@@ -4244,7 +4242,7 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Interface.objects.create(device=self.devices[2], name="device 2 interface 1", status=interface_status)
         Interface.objects.create(device=self.devices[2], name="device 2 interface 2", status=interface_status)
         response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": self.devices[0].pk}))
-        self.assertBodyContains(response, 'Interfaces <span class="badge">6</span>')
+        self.assertBodyContains(response, 'Interfaces <span class="badge bg-primary">6</span>')
         self.assertBodyContains(response, "device 1 interface 1")
         self.assertBodyContains(response, "device 1 interface 2")
         self.assertBodyContains(response, "device 2 interface 1")
