@@ -176,6 +176,29 @@ Nautobot v2.1 introduced reorderable panels on the homepage. In v3.0 we internal
 </script>
 ```
 
+## Form Sticky Footers
+
+It is now recommended to use sticky footers to host action buttons in all Nautobot forms. Nautobot implements the `nb-form-sticky-footer` CSS class to achieve this behavior, but it requires a certain page structure to function properly - sticky footer container should occupy the entire remaining browser viewport height and push the footer down to the bottom of the page. Let's take a look at an example:
+
+```html
+<form class="h-100 vstack">
+    {% csrf_token %}
+    <div class="row align-content-start flex-fill">
+        <!-- Form content goes here, it is irrelevant for this example. -->
+    </div>
+    <div class="nb-form-sticky-footer">
+        <button type="submit" class="btn btn-primary">
+            <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+            -->Submit
+        </button>
+        <a href="{{ return_url }}" class="btn btn-secondary">
+            <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+            -->Cancel
+        </a>
+    </div>
+</form>
+```
+
 ## Extended Bootstrap Utilities
 
 Nautobot extends Bootstrap utilities with its own subset of CSS classes, properties and values.

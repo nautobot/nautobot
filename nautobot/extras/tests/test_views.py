@@ -1634,13 +1634,13 @@ class GitRepositoryTestCase(
     model = GitRepository
     slugify_function = staticmethod(slugify_dashes_to_underscores)
     expected_edit_form_buttons = [
-        '<button type="submit" name="_dryrun_update" class="btn btn-warning">Update & Dry Run</button>',
-        '<button type="submit" name="_update" class="btn btn-primary">Update & Sync</button>',
+        '<button type="submit" name="_dryrun_update" class="btn btn-warning"><span aria-hidden="true" class="mdi mdi-check me-4"></span><!---->Update & Dry Run</button>',
+        '<button type="submit" name="_update" class="btn btn-primary"><span aria-hidden="true" class="mdi mdi-check me-4"></span><!---->Update & Sync</button>',
     ]
     expected_create_form_buttons = [
-        '<button type="submit" name="_dryrun_create" class="btn btn-info">Create & Dry Run</button>',
-        '<button type="submit" name="_create" class="btn btn-primary">Create & Sync</button>',
-        '<button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>',
+        '<button type="submit" name="_dryrun_create" class="btn btn-info"><span aria-hidden="true" class="mdi mdi-check me-4"></span><!---->Create & Dry Run</button>',
+        '<button type="submit" name="_create" class="btn btn-primary"><span aria-hidden="true" class="mdi mdi-check me-4"></span><!---->Create & Sync</button>',
+        '<button type="submit" name="_addanother" class="btn btn-primary"><span aria-hidden="true" class="mdi mdi-check me-4"></span><!---->Create and Add Another</button>',
     ]
 
     @classmethod
@@ -3575,8 +3575,9 @@ class JobTestCase(
             self.assertBodyContains(
                 response,
                 """
-                <button type="submit" name="_run" id="id__run" class="btn btn-primary" disabled="disabled">
-                    <i class="mdi mdi-play"></i> Run Job Now
+                <button class="btn btn-primary" id="id__run" name="_run" type="submit" disabled="disabled">
+                    <span aria-hidden="true" class="mdi mdi-play"></span><!--
+                    -->Run Job Now
                 </button>
                 """,
                 html=True,

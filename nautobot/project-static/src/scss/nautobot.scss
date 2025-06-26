@@ -776,6 +776,31 @@ textarea {
   }
 }
 
+.nb-form-sticky-footer {
+  @include transition($transition-base);
+  align-items: center;
+  background-color: var(--#{$prefix}body-bg);
+  border-top: $border-width $border-style var(--#{$prefix}border-color);
+  bottom: -#{map.get($spacers, 1)}; /* Set bottom to `-1px` instead of `0`, this enables detection when element is pinned. */
+  display: flex;
+  flex-wrap: wrap;
+  gap: map.get($spacers, 8);
+  justify-content: center;
+  margin-block-end: -#{map.get($spacers, 16)};
+  margin-inline: -#{map.get($spacers, 20)};
+  padding-block-end: map.get($spacers, 16);
+  padding-block-start: map.get($spacers, 16);
+  padding-inline: map.get($spacers, 20);
+  position: sticky;
+  right: 0;
+  transition: $transition-base;
+  z-index: $zindex-sticky;
+
+  &.nb-is-pinned {
+    @include box-shadow(0 -0.3125rem 0.625rem 0 rgba(0, 0, 0, 0.1));
+  }
+}
+
 /* Tabs */
 .nav-tabs {
   --#{$prefix}nav-link-padding-x: #{map.get($spacers, 12) - $border-width};
@@ -1087,7 +1112,7 @@ body {
   height: 100%;
   position: relative;
   width: $sidenav-link-width;
-  z-index: 1;
+  z-index: $zindex-fixed;
 
   &.sidenav-collapsed {
     width: 4rem; /* 64px */
@@ -1355,7 +1380,7 @@ $nb-drawer-open-width: 20rem; /* 320px */
   overflow: hidden;
   position: relative;
   width: 0;
-  z-index: 1;
+  z-index: $zindex-fixed;
 
   &:has(.nb-drawer-open) {
     @include box-shadow($nb-drawer-open-box-shadow);
@@ -1366,6 +1391,8 @@ $nb-drawer-open-width: 20rem; /* 320px */
 .nb-drawer {
   @include transition(visibility .35s ease);
   background: var(--#{$prefix}body-bg);
+  display: flex;
+  flex-direction: column;
   inset: 0 auto 0 0;
   outline: none;
   overflow: hidden auto;
@@ -1386,6 +1413,12 @@ $nb-drawer-open-width: 20rem; /* 320px */
     justify-content: space-between;
     padding-block: map.get($spacers, 12);
     padding-inline: map.get($spacers, 20);
+  }
+
+  .nb-drawer-body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
   }
 }
 

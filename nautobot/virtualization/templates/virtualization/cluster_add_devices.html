@@ -3,35 +3,41 @@
 {% load form_helpers %}
 
 {% block content %}
-    <form action="." method="post" class="form form-horizontal">
+    <form action="." method="post" class="h-100 vstack">
         {% csrf_token %}
         {% for field in form.hidden_fields %}
             {{ field }}
         {% endfor %}
-        <div class="row">
-            <div class="col-md-6 col-md-offset-3">
-                <h3>{% block title %}Add Devices to Cluster {{ cluster }}{% endblock %}</h3>
+        <div class="row align-content-start flex-fill">
+            <div class="col-md-6 offset-md-3">
+                <h3 class="mb-16">{% block title %}Add Devices to Cluster {{ cluster }}{% endblock %}</h3>
                 {% if form.non_field_errors %}
-                    <div class="panel panel-danger">
-                        <div class="panel-heading"><strong>Errors</strong></div>
-                        <div class="panel-body">
+                    <div class="card border-danger mb-16">
+                        <div class="card-header bg-danger-subtle border-danger text-body">
+                            <strong>Errors</strong>
+                        </div>
+                        <div class="card-body">
                             {{ form.non_field_errors }}
                         </div>
                     </div>
                 {% endif %}
-                <div class="panel panel-default">
-                    <div class="panel-heading"><strong>Device Selection</strong></div>
-                    <div class="panel-body">
+                <div class="card mb-16">
+                    <div class="card-header"><strong>Device Selection</strong></div>
+                    <div class="card-body">
                         {% render_form form %}
                     </div>
                 </div>
             </div>
         </div>
-        <div class="row">
-            <div class="col-md-6 col-md-offset-3 text-right d-print-none">
-                <button type="submit" name="_add" class="btn btn-primary">Add Devices</button>
-                <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
-            </div>
+        <div class="d-print-none nb-form-sticky-footer">
+            <button type="submit" name="_add" class="btn btn-primary">
+                <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+                -->Add Devices
+            </button>
+            <a href="{{ return_url }}" class="btn btn-secondary">
+                <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+                -->Cancel
+            </a>
         </div>
     </form>
 {% endblock %}

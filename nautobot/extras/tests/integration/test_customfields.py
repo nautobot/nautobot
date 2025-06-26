@@ -65,7 +65,7 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
             call_before_create()
 
         # Click that "Create" button
-        self.browser.find_by_text("Create").click()
+        self.browser.find_by_xpath("//button[contains(normalize-space(), 'Create')]").click()
 
         # Verify form redirect and presence of choices
         self.assertTrue(self.browser.is_text_present(f"Created custom field {field_label}"))
@@ -141,7 +141,7 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
         # Null out the first choice, click "Update", expect it to fail.
         self.fill_input("custom_field_choices-0-value", "")
         self.assertEqual(self.browser.find_by_name("custom_field_choices-0-value").value, "")
-        self.browser.find_by_text("Update").click()
+        self.browser.find_by_xpath("//button[contains(normalize-space(), 'Update')]").click()
         self.assertTrue(self.browser.is_text_present("Errors encountered when saving custom field choices"))
 
         #
@@ -149,7 +149,7 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
         #
         # Fix it, save it, assert correctness.
         self.fill_input("custom_field_choices-0-value", "new_choice")
-        self.browser.find_by_text("Update").click()
+        self.browser.find_by_xpath("//button[contains(normalize-space(), 'Update')]").click()
         self.assertEqual(self.browser.url, detail_url)
         self.assertTrue(self.browser.is_text_present("Modified custom field"))
         self.assertTrue(self.browser.is_text_present("new_choice"))
@@ -244,7 +244,7 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
         active_web_element = self.browser.driver.switch_to.active_element
         # Type invalid JSON data into the form
         active_web_element.send_keys('{"test_json_key": "Test JSON Value"}')
-        self.browser.find_by_xpath(".//button[contains(text(), 'Update')]").click()
+        self.browser.find_by_xpath("//button[contains(normalize-space(), 'Update')]").click()
         self.assertTrue(self.browser.is_text_present("Test Device"))
         # Confirm the JSON data is visible
         self.assertTrue(self.browser.is_text_present("Test JSON Value"))
@@ -300,12 +300,15 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
         # Visit the device edit page
         self.browser.visit(f'{self.live_server_url}{reverse("dcim:device_edit", kwargs={"pk": device.pk})}')
         # Get the first item selected on the custom field
+        self.browser.execute_script(
+            'document.querySelector(\'label:has(+ * [name="cf_test_selection_field"])\').scrollIntoView({ behavior: "instant" });'
+        )
         self.browser.find_by_xpath(".//label[contains(text(), 'Device Selection Field')]").click()
         active_web_element = self.browser.driver.switch_to.active_element
         active_web_element.send_keys(Keys.ENTER)
         active_web_element.send_keys(Keys.ENTER)
         # Click update button
-        self.browser.find_by_xpath(".//button[contains(text(), 'Update')]").click()
+        self.browser.find_by_xpath("//button[contains(normalize-space(), 'Update')]").click()
         # Check successful redirect to device object page
         self.assertTrue(self.browser.is_text_present("Modified device"))
         self.find_and_open_panel_v2("Custom Fields")
@@ -317,12 +320,13 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
         self.browser.links.find_by_partial_text("Device Selection Field").click()
         self.browser.find_by_id("actions-dropdown").click()
         self.browser.links.find_by_partial_text("Delete").click()
-        self.browser.find_by_xpath(".//button[contains(text(), 'Confirm')]").click()
+        self.browser.find_by_xpath("//button[contains(normalize-space(), 'Confirm')]").click()
 
         # Visit the device edit page
         self.browser.visit(f'{self.live_server_url}{reverse("dcim:device_edit", kwargs={"pk": device.pk})}')
         # Click update button
-        self.browser.find_by_xpath(".//button[contains(text(), 'Update')]").click()
+
+        self.browser.find_by_xpath("//button[contains(normalize-space(), 'Update')]").click()
         # Check successful redirect to device object page
         self.assertTrue(self.browser.is_text_present("Modified device"))
         # Check custom field is no longer present
