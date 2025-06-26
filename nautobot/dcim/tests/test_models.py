@@ -2442,14 +2442,14 @@ class PowerFeedTestCase(ModelTestCases.BaseModelTestCase):
             feed.full_clean()
         self.assertIn("destination_panel", cm.exception.message_dict)
 
-    def test_circuit_position_conflict_validation(self):
-        """Test that overlapping circuit positions raise validation errors."""
+    def test_circuit_breaker_position_conflict_validation(self):
+        """Test that overlapping circuit breaker positions raise validation errors."""
         # Create first feed at position 1 with 2 poles (occupies 1,3)
         PowerFeed.objects.create(
             name="Feed 1",
             power_panel=self.source_panel,
             status=self.status,
-            circuit_position=1,
+            breaker_position=1,
             breaker_poles=PowerFeedBreakerPoleChoices.POLE_2,
         )
 
@@ -2458,13 +2458,13 @@ class PowerFeedTestCase(ModelTestCases.BaseModelTestCase):
             name="Feed 2",
             power_panel=self.source_panel,
             status=self.status,
-            circuit_position=3,
+            breaker_position=3,
             breaker_poles=PowerFeedBreakerPoleChoices.POLE_1,
         )
 
         with self.assertRaises(ValidationError) as cm:
             conflicting_feed.full_clean()
-        self.assertIn("circuit_position", cm.exception.message_dict)
+        self.assertIn("breaker_position", cm.exception.message_dict)
 
     def test_rack_location_hierarchy_validation(self):
         """Test that rack must belong to same location hierarchy as power panel."""
@@ -2499,7 +2499,7 @@ class PowerFeedTestCase(ModelTestCases.BaseModelTestCase):
             name="Test Feed",
             power_panel=self.source_panel,
             status=self.status,
-            circuit_position=1,
+            breaker_position=1,
             breaker_poles=PowerFeedBreakerPoleChoices.POLE_1,
         )
 
@@ -2511,7 +2511,7 @@ class PowerFeedTestCase(ModelTestCases.BaseModelTestCase):
             name="Test Feed",
             power_panel=self.source_panel,
             status=self.status,
-            circuit_position=5,
+            breaker_position=5,
             breaker_poles=PowerFeedBreakerPoleChoices.POLE_2,
         )
 

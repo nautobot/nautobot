@@ -3297,7 +3297,7 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
                 "name": "Power Feed 4A",
                 "power_panel": power_panels[0].pk,
                 "destination_panel": power_panels[1].pk,
-                "circuit_position": 5,
+                "breaker_position": 5,
                 "breaker_poles": PowerFeedBreakerPoleChoices.POLE_1,
                 "rack": racks[3].pk,
                 "status": statuses[0].pk,
@@ -3306,7 +3306,7 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Power Feed 4B",
                 "power_panel": power_panels[1].pk,
-                "circuit_position": 10,
+                "breaker_position": 10,
                 "breaker_poles": PowerFeedBreakerPoleChoices.POLE_2,
                 "rack": racks[3].pk,
                 "status": statuses[0].pk,

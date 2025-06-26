@@ -4596,7 +4596,7 @@ class PowerFeedForm(NautobotModelForm):
             "voltage",
             "amperage",
             "max_utilization",
-            "circuit_position",
+            "breaker_position",
             "breaker_poles",
             "comments",
             "tags",
@@ -4635,7 +4635,7 @@ class PowerFeedBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin,
     voltage = forms.IntegerField(required=False)
     amperage = forms.IntegerField(required=False)
     max_utilization = forms.IntegerField(required=False)
-    circuit_position = forms.IntegerField(required=False, min_value=1)
+    breaker_position = forms.IntegerField(required=False, min_value=1)
     breaker_poles = forms.ChoiceField(
         choices=add_blank_choice(PowerFeedBreakerPoleChoices),
         required=False,
@@ -4645,7 +4645,7 @@ class PowerFeedBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin,
 
     class Meta:
         nullable_fields = [
-            "circuit_position",
+            "breaker_position",
             "breaker_poles",
             "comments",
         ]
@@ -4692,7 +4692,7 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, Locata
     voltage = forms.IntegerField(required=False)
     amperage = forms.IntegerField(required=False)
     max_utilization = forms.IntegerField(required=False)
-    circuit_position = forms.IntegerField(required=False, min_value=1)
+    breaker_position = forms.IntegerField(required=False, min_value=1)
     breaker_poles = forms.ChoiceField(
         choices=add_blank_choice(PowerFeedBreakerPoleChoices),
         required=False,

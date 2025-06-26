@@ -1682,7 +1682,7 @@ class PowerFeedFilterSet(
         to_field_name="name",
         label="Rack (name or ID)",
     )
-    circuit_position = django_filters.NumberFilter()
+    breaker_position = django_filters.NumberFilter()
     breaker_poles = django_filters.MultipleChoiceFilter(
         choices=PowerFeedBreakerPoleChoices,
         null_value=None,
@@ -1700,7 +1700,7 @@ class PowerFeedFilterSet(
             "voltage",
             "amperage",
             "max_utilization",
-            "circuit_position",
+            "breaker_position",
             "breaker_poles",
             "comments",
             "available_power",

@@ -147,8 +147,8 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
         default=POWERFEED_MAX_UTILIZATION_DEFAULT,
         help_text="Maximum permissible draw (percentage)",
     )
-    circuit_position = models.PositiveIntegerField(
-        null=True, blank=True, help_text="Starting circuit position in panel"
+    breaker_position = models.PositiveIntegerField(
+        null=True, blank=True, help_text="Starting circuit breaker position in panel"
     )
     breaker_poles = models.PositiveSmallIntegerField(
         choices=PowerFeedBreakerPoleChoices, blank=True, null=True, help_text="Number of breaker poles"
@@ -167,7 +167,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
         "voltage",
         "amperage",
         "max_utilization",
-        "circuit_position",
+        "breaker_position",
         "breaker_poles",
         "available_power",
     ]
@@ -177,7 +177,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
         unique_together = ["power_panel", "name"]
         indexes = [
             models.Index(fields=["destination_panel"]),
-            models.Index(fields=["power_panel", "circuit_position"]),
+            models.Index(fields=["power_panel", "breaker_position"]),
         ]
 
     def __str__(self):
@@ -210,18 +210,18 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
                 raise ValidationError({"destination_panel": "A power feed cannot connect a panel to itself"})
 
         # Circuit position validation
-        if self.circuit_position is not None and self.breaker_poles is not None:
+        if self.breaker_position is not None and self.breaker_poles is not None:
             # Validate no circuit position conflicts with existing feeds
             new_positions = self.get_occupied_positions()
             conflicts = PowerFeed.objects.filter(
-                power_panel=self.power_panel, circuit_position__isnull=False, breaker_poles__isnull=False
+                power_panel=self.power_panel, breaker_position__isnull=False, breaker_poles__isnull=False
             ).exclude(pk=self.pk if self.pk else None)
 
             for feed in conflicts:
                 if new_positions.intersection(feed.get_occupied_positions()):
                     raise ValidationError(
                         {
-                            "circuit_position": f"Circuit position {self.circuit_position} conflicts with "
+                            "breaker_position": f"Breaker position {self.breaker_position} conflicts with "
                             f'feed "{feed.name}" (occupies {feed.occupied_positions})'
                         }
                     )
@@ -249,7 +249,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
     @property
     def phase_designation(self):
         """Calculate phase designation based on occupied circuit positions."""
-        if not (self.circuit_position and self.breaker_poles):
+        if not (self.breaker_position and self.breaker_poles):
             return None
 
         positions = self.get_occupied_positions()
@@ -276,11 +276,11 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
             return None
 
     def get_occupied_positions(self):
-        """Get set of circuit positions occupied by this feed."""
-        if not (self.circuit_position and self.breaker_poles):
+        """Get set of circuit breaker positions occupied by this feed."""
+        if not (self.breaker_position and self.breaker_poles):
             return set()
 
-        return set(self.circuit_position + (i * 2) for i in range(self.breaker_poles))
+        return set(self.breaker_position + (i * 2) for i in range(self.breaker_poles))
 
     def get_type_class(self):
         return PowerFeedTypeChoices.CSS_CLASSES.get(self.type)
