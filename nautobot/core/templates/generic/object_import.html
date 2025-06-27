@@ -4,39 +4,50 @@
 
 {% block content %}
 {% block tabs %}{% endblock %}
-<div class="row">
-	<div class="col-md-8 col-md-offset-2">
-        <h1>{% block title %}{{ obj_type|bettertitle }} Import{% endblock %}</h1>
-        {% if form.non_field_errors %}
-            <div class="panel panel-danger">
-                <div class="panel-heading"><strong>Errors</strong></div>
-                <div class="panel-body">
-                    {{ form.non_field_errors }}
+<form action="" method="post" class="object-import-form h-100 vstack">
+    {% csrf_token %}
+    <div class="row align-content-start flex-fill">
+    	<div class="col-md-8 offset-md-2">
+            <h1>{% block title %}{{ obj_type|bettertitle }} Import{% endblock %}</h1>
+            {% if form.non_field_errors %}
+                <div class="card border-danger mb-16">
+                    <div class="card-header bg-danger-subtle border-danger text-body">
+                        <strong>Errors</strong>
+                    </div>
+                    <div class="card-body">
+                        {{ form.non_field_errors }}
+                    </div>
                 </div>
-            </div>
-        {% endif %}
-        <form action="" method="post" class="form form-horizontal object-import-form">
-            {% csrf_token %}
-            <div class="panel panel-default">
-                <div class="panel-heading">Data</div>
-                <div class="panel-body">
+            {% endif %}
+            <div class="card">
+                <div class="card-header">Data</div>
+                <div class="card-body">
                     {% render_field form.data %}
                 </div>
             </div>
-            <div class="panel panel-default">
-                <div class="panel-heading">Format</div>
-                <div class="panel-body">
+            <div class="card">
+                <div class="card-header">Format</div>
+                <div class="card-body">
                     {% render_field form.format %}
                 </div>
             </div>
-            <div class="form-group text-right">
-                <button type="submit" name="_create" class="btn btn-primary">Submit</button>
-                <button type="submit" name="_addanother" class="btn btn-primary">Submit and Import Another</button>
+            <div class="nb-form-sticky-footer">
+                <button type="submit" name="_create" class="btn btn-primary">
+                    <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+                    -->Submit
+                </button>
+                <button type="submit" name="_addanother" class="btn btn-primary">
+                    <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+                    -->Submit and Import Another
+                </button>
                 {% if return_url %}
-                    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+                    <a href="{{ return_url }}" class="btn btn-secondary">
+                        <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+                        -->Cancel
+                    </a>
                 {% endif %}
             </div>
-        </form>
-	</div>
-</div>
+    	</div>
+    </div>
+</form>
 {% endblock %}

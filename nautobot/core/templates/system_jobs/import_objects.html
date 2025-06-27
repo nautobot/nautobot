@@ -7,24 +7,24 @@
     {% render_field job_form.roll_back_if_error %}
     <div id="csv-fetch-failure" class="alert alert-danger" role="alert" style="display: none"></div>
     <ul class="nav nav-tabs" role="tablist">
-        <li role="presentation" class="active"><a href="#csv-file" role="tab" data-toggle="tab">CSV File Upload</a></li>
-        <li role="presentation"><a href="#csv-text" role="tab" data-toggle="tab">CSV Text Input</a></li>
+        <li class="nav-item" role="presentation"><a class="nav-link active" href="#csv-file" role="tab" data-bs-toggle="tab">CSV File Upload</a></li>
+        <li class="nav-item" role="presentation"><a class="nav-link" href="#csv-text" role="tab" data-bs-toggle="tab">CSV Text Input</a></li>
     </ul>
     <div class="tab-content">
-        <div role="tabpanel" class="tab-pane active" id="csv-file">
+        <div role="tabpanel" class="tab-pane fade show active py-16" id="csv-file">
             {% render_field job_form.csv_file %}
         </div>
-        <div role="tabpanel" class="tab-pane" id="csv-text">
+        <div role="tabpanel" class="tab-pane fade py-16" id="csv-text">
             {% render_field job_form.csv_data %}
         </div>
     </div>
     <div id="csv-fields-info" class="alert alert-info" role="alert" style="display: none">
         <p>
-            <span class="text-success"><i class="mdi mdi-check-bold"></i></span>
+            <span class="text-success"><span aria-hidden="true" class="mdi mdi-check-bold"></span></span>
             Required fields <strong>must</strong> be present in the data.
         </p>
         <p>
-            <span class="text-warning"><i class="mdi mdi-key-link"></i></span>
+            <span class="text-warning"><span aria-hidden="true" class="mdi mdi-key-link"></span></span>
             Related objects may be identified by their UUID(s) and/or by any field(s) that uniquely identify them.
             For example:
             <ul>
@@ -40,7 +40,7 @@
             can be given.
         </p>
         <p>
-            <span class="text-info"><i class="mdi mdi-help-circle"></i></span>
+            <span class="text-info"><span aria-hidden="true" class="mdi mdi-help-circle"></span></span>
             Some fields have a defined set of valid values. Click the button to view the list of choices.
         </p>
     </div>
