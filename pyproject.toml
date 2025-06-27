@@ -103,9 +103,6 @@ graphene-django-optimizer = "~0.10.0"
 Jinja2 = "~3.1.6"
 # Optional data validation of config contexts - loose dependency since our usage is light but apps may be more specific
 jsonschema = "^4.7.0"
-# Messaging library for Python - dependency of Celery
-# Included as an explicit dependency (for now?) to require a version with https://github.com/celery/kombu/pull/2007
-kombu = ">=5.5.2,<5.6"
 # Library to access Kubernetes API used to develop K8s integration
 kubernetes = "^32.0.1"
 # Rendering of markdown files to HTML
