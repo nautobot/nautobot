@@ -4453,19 +4453,15 @@ class ControllerUIViewSet(NautobotUIViewSet):
             object_detail.ObjectFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
-                fields=[
-                    "name",
-                    "status",
-                    "role",
-                    "capabilities",
-                    "location",
-                    "platform",
-                    "tenant",
-                    "description",
-                ],
+                fields="__all__",
                 value_transforms={
                     "capabilities": [helpers.label_list],
                 },
+                exclude_fields=[
+                    "external_integration",
+                    "controller_device",
+                    "controller_device_redundancy_group",
+                ],
             ),
             object_detail.ObjectFieldsPanel(
                 section=SectionChoices.RIGHT_HALF,
