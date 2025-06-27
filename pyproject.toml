@@ -41,7 +41,7 @@ celery = "~5.5.3"
 # Added as an explicit dependency to protect against various CVEs in older versions.
 cryptography = "~44.0.3"
 # Fundamental web framework for Nautobot
-Django = "~4.2.21"
+Django = "~4.2.22"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -62,6 +62,8 @@ django-extensions = "~3.2.3"
 django-filter = "~25.1"
 # Health check endpoint
 django-health-check = "~3.18.3"
+# Utility tools to support HTMX requests within a Django framework.
+django-htmx = "^1.23.0"
 # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
 django-jinja = "~2.11.0"
 # Prometheus metrics for Django

@@ -2,24 +2,12 @@
 {% load plugins %}
 {% load static %}
 
-<script src="{% static 'jquery/jquery-3.7.1.min.js' %}"
-        onerror="window.location='{% url 'media_failure' %}?filename=jquery/jquery-3.7.1.min.js'"></script>
-<script src="{% static 'jquery-ui-1.13.2/jquery-ui.min.js' %}"
-        onerror="window.location='{% url 'media_failure' %}?filename=jquery-ui-1.13.2/jquery-ui.min.js'"></script>
-<script src="{% static 'bootstrap-3.4.1-dist/js/bootstrap.min.js' %}"
-        onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/js/bootstrap.min.js'"></script>
-<script src="{% static 'select2-4.0.13/select2.min.js' %}"
-        onerror="window.location='{% url 'media_failure' %}?filename=select2-4.0.13/select2.min.js'"></script>
-<script src="{% static 'clipboard.js-2.0.9/clipboard.min.js' %}"
-        onerror="window.location='{% url 'media_failure' %}?filename=clipboard.js-2.0.9/clipboard.min.js'"></script>
-<script src="{% static 'flatpickr-4.6.9/flatpickr.min.js' %}"
-        onerror="window.location='{% url 'media_failure' %}?filename=flatpickr-4.6.9/flatpickr.min.js'"></script>
-<script src="{% static 'highlight.js-11.9.0/highlight.min.js' %}"
-        onerror="window.location='{% url 'media_failure' %}?filename=highlight.js-11.9.0/highlight.min.js'"></script>
+<script src="{% static 'dist/js/nautobot.js' %}"
+        onerror="window.location='{% url 'media_failure' %}?filename=dist/js/nautobot.js'"></script>
+<script src="{% static 'dist/js/libraries.js' %}"
+        onerror="window.location='{% url 'media_failure' %}?filename=dist/js/libraries.js'"></script>
 <script src="{% versioned_static 'js/forms.js' %}"
         onerror="window.location='{% url 'media_failure' %}?filename=js/forms.js'"></script>
-<script src="{% versioned_static 'js/nav_menu.js' %}"
-        onerror="window.location='{% url 'media_failure' %}?filename=js/nav_menu.js'"></script>
 <script src="{% versioned_static 'js/theme.js' %}"
         onerror="window.location='{% url 'media_failure' %}?filename=js/theme.js'"></script>
 <script src="{% versioned_static 'js/table_sorting_indicator.js' %}"
@@ -36,12 +24,6 @@
     }).ajaxStop(function() {
         loading.hide();
     });
-    // Applies bootstrap tooltip to all elements with the title attribute.
-    // Button groups are "special" and require child tooltips to have
-    // `{ container: 'body' }` option not to break their styles:
-    // https://getbootstrap.com/docs/3.4/javascript/#markup-1
-    $("*:not(.btn-group) > [title]").tooltip();
-    $(".btn-group > [title]").tooltip({ container: 'body' });
 </script>
 <script type="text/javascript">
     hljs.configure({ cssSelector: '.language-graphql, .language-json, .language-xml, .language-yaml' });
@@ -49,4 +31,7 @@
 </script>
 {% if settings.BRANDING_FILEPATHS.javascript %}
 <script src="{% custom_branding_or_static 'javascript' None %}"></script>
+{% endif %}
+{% if nav_menu %}
+    {{ nav_menu|json_script:'nav_menu' }}
 {% endif %}

@@ -10,7 +10,7 @@
         </button>
     {% endif %}
     {% if perms.extras.add_contactassociation %}
-        <div class="pull-right">
+        <div class="float-end">
             <a href="{% url 'extras:object_contact_team_assign' %}?return_url={{return_url}}&associated_object_id={{object.id}}&associated_object_type={{content_type.id}}" class="btn btn-primary btn-xs">
                 <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Contact
             </a>

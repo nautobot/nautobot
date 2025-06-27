@@ -1,29 +1,24 @@
 from django.contrib.contenttypes.models import ContentType
+from django.test import tag
 from django.urls import reverse
 from selenium.webdriver.common.keys import Keys
 
-from nautobot.core.testing.integration import SeleniumTestCase
+from nautobot.core.testing.integration import ObjectDetailsMixin, SeleniumTestCase
 from nautobot.dcim.models import Device
 from nautobot.extras.models import CustomField, CustomFieldChoice
 
 from . import create_test_device
 
 
-class CustomFieldTestCase(SeleniumTestCase):
+class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
     """
     Integration tests for the CustomField and CustomFieldChoice models.
     """
 
     def setUp(self):
         super().setUp()
-        self.user.is_superuser = True
-        self.user.save()
-        self.login(self.user.username, self.password)
+        self.login_as_superuser()
         self.device = create_test_device()
-
-    def tearDown(self):
-        self.logout()
-        super().tearDown()
 
     def _create_custom_field(self, field_label, field_type, choices=None, call_before_create=None):
         """
@@ -45,15 +40,14 @@ class CustomFieldTestCase(SeleniumTestCase):
 
         # Navigate to CustomFields list view
         self.browser.visit(self.live_server_url)
-        self.browser.links.find_by_partial_text("Extensibility").click()
-        self.browser.links.find_by_partial_text("Custom Fields").click()
+        self.click_navbar_entry("Extensibility", "Custom Fields")
 
         # Click add button
         self.browser.find_by_id("add-button").click()
 
         # Fill out form
         self.browser.select("type", field_type)
-        self.browser.fill("label", field_label)
+        self.fill_input("label", field_label)
 
         # Find the "content_types" dynamic multi-select and type into it.
         # See: https://splinter.readthedocs.io/en/latest/elements-in-the-page.html#interacting-with-forms
@@ -64,14 +58,14 @@ class CustomFieldTestCase(SeleniumTestCase):
 
         # Enumerate and set the choices (if any)
         for idx, choice in enumerate(choices):
-            self.browser.fill(f"custom_field_choices-{idx}-value", choice)
+            self.fill_input(f"custom_field_choices-{idx}-value", choice)
 
         # Do the pre-create stuff
         if callable(call_before_create):
             call_before_create()
 
         # Click that "Create" button
-        self.browser.find_by_text("Create").click()
+        self.browser.find_by_xpath("//button[contains(normalize-space(), 'Create')]").click()
 
         # Verify form redirect and presence of choices
         self.assertTrue(self.browser.is_text_present(f"Created custom field {field_label}"))
@@ -119,7 +113,7 @@ class CustomFieldTestCase(SeleniumTestCase):
             self.browser.find_by_css(".add-row").click()
             rows = table.find_by_css(".formset_row-custom_field_choices")
             self.assertEqual(len(rows), 6)
-            self.browser.fill("custom_field_choices-5-value", "choice3")
+            self.fill_input("custom_field_choices-5-value", "choice3")
 
             # Make sure it the new row has default values while we're at it.
             self.assertEqual(rows.last.find_by_name("custom_field_choices-5-weight").value, "100")
@@ -145,22 +139,22 @@ class CustomFieldTestCase(SeleniumTestCase):
         self.assertIn("edit", self.browser.url)
 
         # Null out the first choice, click "Update", expect it to fail.
-        self.browser.fill("custom_field_choices-0-value", "")
+        self.fill_input("custom_field_choices-0-value", "")
         self.assertEqual(self.browser.find_by_name("custom_field_choices-0-value").value, "")
-        self.browser.find_by_text("Update").click()
+        self.browser.find_by_xpath("//button[contains(normalize-space(), 'Update')]").click()
         self.assertTrue(self.browser.is_text_present("Errors encountered when saving custom field choices"))
 
         #
         # Pass updating existing choice (changing value of existing choice)
         #
-
         # Fix it, save it, assert correctness.
-        self.browser.fill("custom_field_choices-0-value", "new_choice")
-        self.browser.find_by_text("Update").click()
+        self.fill_input("custom_field_choices-0-value", "new_choice")
+        self.browser.find_by_xpath("//button[contains(normalize-space(), 'Update')]").click()
         self.assertEqual(self.browser.url, detail_url)
         self.assertTrue(self.browser.is_text_present("Modified custom field"))
         self.assertTrue(self.browser.is_text_present("new_choice"))
 
+    @tag("fix_in_v3")
     def test_update_type_select_create_delete_choices(self):
         """
         Test edit existing field, deleting first choice, adding a new row and saving that as a new choice.
@@ -180,7 +174,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         rows.first.find_by_css(".delete-row").click()  # Delete first row
 
         # Fill the new row, save it, assert correctness.
-        self.browser.fill("custom_field_choices-5-value", "new_choice")  # Fill the last row
+        self.fill_input("custom_field_choices-5-value", "new_choice")  # Fill the last row
         self.browser.find_by_text("Update").click()
         self.assertEqual(self.browser.url, detail_url)
         self.assertTrue(self.browser.is_text_present("Modified custom field"))
@@ -213,7 +207,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         self.assertTrue(self.browser.is_text_present("Device Custom Field"))
         self.assertTrue(self.browser.is_text_present("This is some testing text"))
         # Check the custom field does NOT appear in the advanced tab
-        self.browser.links.find_by_partial_text("Advanced")[0].click()
+        self.switch_tab("Advanced")
         self.assertFalse(self.browser.is_text_present("Device Custom Field"))
         self.assertFalse(self.browser.is_text_present("This is some testing text"))
         # Set the custom_field to only show in the advanced tab
@@ -225,7 +219,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         self.assertFalse(self.browser.is_text_present("Device Custom Field"))
         self.assertFalse(self.browser.is_text_present("This is some testing text"))
         # Check the custom field appears in the advanced tab
-        self.browser.links.find_by_partial_text("Advanced")[0].click()
+        self.switch_tab("Advanced")
         self.assertTrue(self.browser.is_text_present("Device Custom Field"))
         self.assertTrue(self.browser.is_text_present("This is some testing text"))
 
@@ -250,11 +244,12 @@ class CustomFieldTestCase(SeleniumTestCase):
         active_web_element = self.browser.driver.switch_to.active_element
         # Type invalid JSON data into the form
         active_web_element.send_keys('{"test_json_key": "Test JSON Value"}')
-        self.browser.find_by_xpath(".//button[contains(text(), 'Update')]").click()
+        self.browser.find_by_xpath("//button[contains(normalize-space(), 'Update')]").click()
         self.assertTrue(self.browser.is_text_present("Test Device"))
         # Confirm the JSON data is visible
         self.assertTrue(self.browser.is_text_present("Test JSON Value"))
 
+    @tag("fix_in_v3")
     def test_json_type_with_invalid_json(self):
         """
         This test creates a custom field with a type of "json".
@@ -305,29 +300,33 @@ class CustomFieldTestCase(SeleniumTestCase):
         # Visit the device edit page
         self.browser.visit(f'{self.live_server_url}{reverse("dcim:device_edit", kwargs={"pk": device.pk})}')
         # Get the first item selected on the custom field
+        self.browser.execute_script(
+            'document.querySelector(\'label:has(+ * [name="cf_test_selection_field"])\').scrollIntoView({ behavior: "instant" });'
+        )
         self.browser.find_by_xpath(".//label[contains(text(), 'Device Selection Field')]").click()
         active_web_element = self.browser.driver.switch_to.active_element
         active_web_element.send_keys(Keys.ENTER)
         active_web_element.send_keys(Keys.ENTER)
         # Click update button
-        self.browser.find_by_xpath(".//button[contains(text(), 'Update')]").click()
+        self.browser.find_by_xpath("//button[contains(normalize-space(), 'Update')]").click()
         # Check successful redirect to device object page
         self.assertTrue(self.browser.is_text_present("Modified device"))
+        self.find_and_open_panel_v2("Custom Fields")
         self.assertTrue(self.browser.is_text_present("SelectionChoice"))
 
         # Delete the custom field
         # find_by_partial_text finds both Inventory > Platform as well as the desired top-level Platform menu
-        self.browser.links.find_by_partial_text("Extensibility").click()
-        self.browser.links.find_by_partial_text("Custom Fields").click()
+        self.click_navbar_entry("Extensibility", "Custom Fields")
         self.browser.links.find_by_partial_text("Device Selection Field").click()
         self.browser.find_by_id("actions-dropdown").click()
         self.browser.links.find_by_partial_text("Delete").click()
-        self.browser.find_by_xpath(".//button[contains(text(), 'Confirm')]").click()
+        self.browser.find_by_xpath("//button[contains(normalize-space(), 'Confirm')]").click()
 
         # Visit the device edit page
         self.browser.visit(f'{self.live_server_url}{reverse("dcim:device_edit", kwargs={"pk": device.pk})}')
         # Click update button
-        self.browser.find_by_xpath(".//button[contains(text(), 'Update')]").click()
+
+        self.browser.find_by_xpath("//button[contains(normalize-space(), 'Update')]").click()
         # Check successful redirect to device object page
         self.assertTrue(self.browser.is_text_present("Modified device"))
         # Check custom field is no longer present

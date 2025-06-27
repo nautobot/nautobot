@@ -640,6 +640,10 @@ nav:
               - nautobot.apps.views: "code-reference/nautobot/apps/views.md"
           - Migration Guides:
               - From Nautobot v1: "development/apps/migration/from-v1.md"
+              - From Nautobot v2:
+                  - Migrating UI v2 to v3: "development/apps/migration/from-v2/migrating-ui-v2-to-v3.md"
+                  - New Nautobot Custom UI APIs: "development/apps/migration/from-v2/new-nautobot-custom-ui-apis.md"
+                  - Upgrading from Bootstrap v3 to v5: "development/apps/migration/from-v2/upgrading-from-bootstrap-v3-to-v5.md"
               - Dependency Updates: "development/apps/migration/dependency-updates.md"
               - Code Updates: "development/apps/migration/code-updates.md"
               - Model Updates:

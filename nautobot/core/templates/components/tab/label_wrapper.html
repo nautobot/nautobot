@@ -1,5 +1,13 @@
-<li role="presentation"{% if request.GET.tab == tab_id %} class="active"{% endif %}>
-    <a href="{{ object.get_absolute_url }}#{{ tab_id }}" onclick="switch_tab(this.href)" aria-controls="{{ tab_id }}" role="tab" data-toggle="tab">
+<li class="nav-item" role="presentation">
+    <a class="nav-link
+        {% if active_tab == tab_id or request.GET.tab == tab_id %}active{% endif %}"
+        {% if active_tab == tab_id or request.GET.tab == tab_id %}aria-current="page"{% endif %}
+        href="{{ object.get_absolute_url }}#{{ tab_id }}"
+        onclick="switch_tab(this.href)"
+        aria-controls="{{ tab_id }}"
+        data-bs-toggle="tab"
+        role="tab"
+    >
         {{ label }}
     </a>
 </li>

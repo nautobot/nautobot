@@ -1,7 +1,7 @@
 from constance.test import override_config
 from django.conf import settings
 from django.templatetags.static import static
-from django.test import override_settings, TestCase
+from django.test import override_settings, tag, TestCase
 
 from nautobot.core.templatetags import helpers
 from nautobot.dcim import models
@@ -252,6 +252,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
             )
         self.assertEqual(helpers.render_boolean(None), '<span class="text-muted">&mdash;</span>')
 
+    @tag("fix_in_v3")
     def test_hyperlinked_object_with_color(self):
         vlan_with_role = VLAN.objects.filter(role__isnull=False).first()
         role = vlan_with_role.role

@@ -2,6 +2,10 @@
 {% load helpers %}
 {% load static %}
 
+{% block drawer %}
+    {% table_config_form table %}
+{% endblock %}
+
 {% block content %}
     <div class="row noprint">
         <div class="col-md-12">
@@ -23,14 +27,6 @@
             </a>
         </div>
 
-        {% if request.user.is_authenticated and table_config_form %}
-            {% if display == "tiles" %}
-                {% table_config_button table table_name="ObjectTable" disabled=True %}
-            {% else %}
-                {% table_config_button table table_name="ObjectTable" %}
-            {% endif %}
-        {% endif %}
-
         <a class="btn btn-primary" href="{% url 'apps:apps_marketplace' %}">Visit Apps Marketplace</a>
     </div>
 
@@ -49,7 +45,6 @@
             <div class="clearfix"></div>
         </div>
     </div>
-    {% table_config_form table table_name="ObjectTable" %}
 {% endblock %}
 
 {% block javascript %}

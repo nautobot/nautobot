@@ -22,7 +22,7 @@
                     </tr>
                 {% endif %}
                     {% for field, value in fields %}
-                        <tr class="collapseme-{{ count }} collapse in" data-parent="#accordion">
+                        <tr class="collapseme-{{ count }} collapse in show" data-parent="#accordion">
                             <td><span title="{{ field.description }}">{{ field }}</span></td>
                             <td>
                                 {% if field.type == 'boolean' %}

@@ -542,7 +542,7 @@ class ApprovalWorkflowTriggerAPITest(APITestCase):
             start_time=now(),
         )
         self.assertTrue(scheduled_job.associated_approval_workflows.exists())
-        self.assertFalse(scheduled_job.enabled)
+        self.assertIsNone(scheduled_job.approved_at)
         approval_workflow = scheduled_job.associated_approval_workflows.first()
         self.assertEqual(approval_workflow.approval_workflow_stages.count(), 1)
 
@@ -567,7 +567,7 @@ class ApprovalWorkflowTriggerAPITest(APITestCase):
             user=self.user,
             start_time=now(),
         )
-        self.assertFalse(scheduled_job.enabled)
+        self.assertIsNone(scheduled_job.approved_at)
 
         approval_workflow = scheduled_job.associated_approval_workflows.first()
         self.assertEqual(approval_workflow.approval_workflow_stages.count(), 1)
@@ -578,7 +578,7 @@ class ApprovalWorkflowTriggerAPITest(APITestCase):
         self.assertEqual(approval_workflow.current_state, choices.ApprovalWorkflowStateChoices.APPROVED)
 
         scheduled_job.refresh_from_db()
-        self.assertTrue(scheduled_job.enabled)
+        self.assertEqual(scheduled_job.approved_at, approval_workflow.decision_date)
 
     def test_approval_workflow_denied_for_scheduled_job(self):
         """
@@ -599,7 +599,7 @@ class ApprovalWorkflowTriggerAPITest(APITestCase):
             user=self.user,
             start_time=now(),
         )
-        self.assertFalse(scheduled_job.enabled)
+        self.assertIsNone(scheduled_job.approved_at)
         approval_workflow = scheduled_job.associated_approval_workflows.first()
         self.assertEqual(approval_workflow.approval_workflow_stages.count(), 1)
         active_stage = approval_workflow.active_stage
@@ -607,9 +607,8 @@ class ApprovalWorkflowTriggerAPITest(APITestCase):
         active_stage.save()
         approval_workflow.save()
         self.assertEqual(approval_workflow.current_state, choices.ApprovalWorkflowStateChoices.DENIED)
-
         scheduled_job.refresh_from_db()
-        self.assertFalse(scheduled_job.enabled)
+        self.assertIsNone(scheduled_job.approved_at)
 
 
 class ApprovalWorkflowStageAPITest(ApprovalWorkflowTestMixin, APIViewTestCases.APIViewTestCase):

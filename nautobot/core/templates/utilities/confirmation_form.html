@@ -3,19 +3,27 @@
 
 {% block content %}
 <div class="row">
-	<div class="col-md-6 col-md-offset-3">
-        <form action="" method="post" class="form">
+	<div class="col-md-6 mx-auto">
+        <form action="" method="post">
             {% csrf_token %}
             {% for field in form.hidden_fields %}
                 {{ field }}
             {% endfor %}
-            <div class="panel panel-{{ panel_class|default:"danger" }}">
-                <div class="panel-heading">{% block title %}{% endblock %}</div>
-                <div class="panel-body">
+            <div class="card border-{{ card_class|default:'danger' }}">
+                <div class="card-header bg-{{ card_class|default:'danger' }}-subtle border-{{card_class|default:'danger'}} fw-medium text-body">
+                    {% block title %}{% endblock %}
+                </div>
+                <div class="card-body">
                     {% block message %}<p>Are you sure?</p>{% endblock %}
-                    <div class="text-right">
-                        <button type="submit" name="_confirm" class="btn btn-{{ button_class|default:"danger" }}">Confirm</button>
-                        <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+                    <div class="gap-8 hstack justify-content-end">
+                        <button type="submit" name="_confirm" class="btn btn-{{ button_class|default:'danger' }}">
+                            <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+                            -->Confirm
+                        </button>
+                        <a href="{{ return_url }}" class="btn btn-secondary">
+                            <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+                            -->Cancel
+                        </a>
                     </div>
                 </div>
             </div>

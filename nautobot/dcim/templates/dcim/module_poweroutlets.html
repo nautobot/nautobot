@@ -2,17 +2,16 @@
 {% load helpers %}
 {% load static %}
 
+{% block drawer %}
+    {% table_config_form poweroutlet_table %}
+{% endblock %}
+
 {% block content %}
     <form method="post">
         {% csrf_token %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Power Outlets</strong>
-                <div class="pull-right noprint">
-                    {% if request.user.is_authenticated %}
-                        {% table_config_button_small poweroutlet_table %}
-                    {% endif %}
-                </div>
             </div>
             {% include 'responsive_table.html' with table=poweroutlet_table %}
             <div class="panel-footer noprint">
@@ -43,7 +42,6 @@
             </div>
         </div>
     </form>
-    {% table_config_form poweroutlet_table %}
 {% endblock content %}
 
 {% block javascript %}

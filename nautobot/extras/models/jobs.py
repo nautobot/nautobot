@@ -29,8 +29,10 @@ from nautobot.core.celery import (
     setup_nautobot_job_logging,
 )
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.events import publish_event
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models.utils import serialize_object_v2
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import (
     ButtonClassChoices,
@@ -755,6 +757,8 @@ class JobResult(BaseModel, CustomFieldModel):
                     duration.total_seconds()
                 )
 
+    set_status.alters_data = True
+
     @classmethod
     def execute_job(cls, *args, **kwargs):
         """
@@ -769,6 +773,8 @@ class JobResult(BaseModel, CustomFieldModel):
             JobResult instance
         """
         return cls.enqueue_job(*args, **kwargs, synchronous=True)
+
+    execute_job.__func__.alters_data = True
 
     @classmethod
     def enqueue_job(
@@ -941,6 +947,8 @@ class JobResult(BaseModel, CustomFieldModel):
 
         return job_result
 
+    enqueue_job.__func__.alters_data = True
+
     def log(
         self,
         message,
@@ -991,6 +999,8 @@ class JobResult(BaseModel, CustomFieldModel):
             log.save()
         else:
             log.save(using=JOB_LOGS)
+
+    log.alters_data = True
 
 
 #
@@ -1079,12 +1089,16 @@ class ScheduledJobs(models.Model):
         if not instance.no_changes:
             cls.update_changed()
 
+    changed.__func__.alters_data = True
+
     @classmethod
     def update_changed(cls, raw=False, **kwargs):
         """This function acts as a signal handler to track changes to the scheduled job that is triggered after a change"""
         if raw:
             return
         cls.objects.update_or_create(ident=1, defaults={"last_update": timezone.now()})
+
+    update_changed.__func__.alters_data = True
 
     @classmethod
     def last_change(cls):
@@ -1253,20 +1267,24 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         if bool(self.approved_by_user) ^ bool(self.approved_at):
             raise ValidationError("Approval by user and approval time must either both be set or both be undefined")
 
-    def on_workflow_initiated(self):
+    def on_workflow_initiated(self, approval_workflow):
         """When initiated, set enabled to False."""
-        self.enabled = False
+        self.approval_required = True
         self.save()
 
-    def on_workflow_approved(self):
+    def on_workflow_approved(self, approval_workflow):
         """When approved, set enabled to True."""
-        self.enabled = True
+        self.approved_at = approval_workflow.decision_date
         self.save()
 
-    def on_workflow_denied(self):
+        publish_event_payload = {"data": serialize_object_v2(self)}
+        publish_event(topic="nautobot.jobs.approval.approved", payload=publish_event_payload)
+
+    def on_workflow_denied(self, approval_workflow):
         """When denied, set enabled to False."""
-        self.enabled = False
-        self.save()
+        if self.approved_at:
+            self.approved_at = None
+            self.save()
 
     @property
     def schedule(self):
@@ -1334,6 +1352,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         job_queue: Optional[JobQueue] = None,
         task_queue: Optional[str] = None,  # deprecated!
         ignore_singleton_lock: bool = False,
+        validated_save: bool = True,
         **job_kwargs,
     ):
         """
@@ -1420,8 +1439,11 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
             crontab=crontab,
             job_queue=job_queue,
         )
-        scheduled_job.validated_save()
+        if validated_save:
+            scheduled_job.validated_save()
         return scheduled_job
+
+    create_schedule.__func__.alters_data = True
 
     def to_cron(self):
         tz = self.time_zone

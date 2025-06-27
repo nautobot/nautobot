@@ -1,3 +1,4 @@
+from django.test import tag
 from django.urls import reverse
 
 from nautobot.core.testing.integration import SeleniumTestCase
@@ -9,20 +10,19 @@ class RadioProfileTestCase(SeleniumTestCase):
     Perform set of Radio Profile tests using Selenium.
     """
 
+    @tag("fix_in_v3")
     def test_radio_profile_bulk_edit(self):
         """
         This test goes through the process of creating a radio profile and performing bulk edit.
         """
-        self.user.is_superuser = True
-        self.user.save()
-        self.login(self.user.username, self.password)
+        self.login_as_superuser()
 
         # Create a radio profile
         self.click_navbar_entry("Wireless", "Radio Profiles")
         self.assertEqual(self.browser.url, self.live_server_url + reverse("wireless:radioprofile_list"))
         self.click_list_view_add_button()
         self.assertEqual(self.browser.url, self.live_server_url + reverse("wireless:radioprofile_add"))
-        self.browser.fill("name", "Test Radio Profile 1")
+        self.fill_input("name", "Test Radio Profile 1")
         self.browser.find_by_xpath("//select[@id='id_regulatory_domain']/option[@value='PL']").click()
         self.click_edit_form_create_button()
 
