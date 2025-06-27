@@ -236,7 +236,8 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     if view.filterset_form_class is not None:
                         filter_form = view.filterset_form_class(view.filter_params, label_suffix="")
                 table = self.construct_table(view, request=request, permissions=permissions)
-                search_form = SearchForm(data=view.filter_params)
+                q_placeholder = "Search " + bettertitle(model._meta.verbose_name_plural)
+                search_form = SearchForm(data=view.filter_params, q_placeholder=q_placeholder)
             elif view.action == "destroy":
                 form = form_class(initial=request.GET)
             elif view.action in ["create", "update"]:
