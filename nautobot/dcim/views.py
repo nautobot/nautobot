@@ -71,6 +71,7 @@ from nautobot.wireless.models import (
 from nautobot.wireless.tables import (
     ControllerManagedDeviceGroupRadioProfileAssignmentTable,
     ControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
+    DeviceGroupWirelessNetworkTable,
     RadioProfileTable,
 )
 
@@ -4190,38 +4191,35 @@ class InterfaceRedundancyGroupUIViewSet(NautobotUIViewSet):
     table_class = tables.InterfaceRedundancyGroupTable
     lookup_field = "pk"
 
-    def get_extra_context(self, request, instance):
-        """Return additional panels for display."""
-        context = super().get_extra_context(request, instance)
-        if instance and self.action == "retrieve":
-            interface_table = self._get_interface_redundancy_groups_table(request, instance)
-            context["interface_table"] = interface_table
-        return context
-
-    def _get_interface_redundancy_groups_table(self, request, instance):
-        """Return a table of assigned Interfaces."""
-        queryset = instance.interface_redundancy_group_associations.restrict(request.user)
-        queryset = queryset.prefetch_related("interface")
-        queryset = queryset.order_by("priority")
-        column_sequence = (
-            "interface__device",
-            "interface",
-            "priority",
-            "interface__status",
-            "interface__enabled",
-            "interface__ip_addresses",
-            "interface__type",
-            "interface__description",
-            "interface__label",
-        )
-        table = tables.InterfaceRedundancyGroupAssociationTable(
-            data=queryset,
-            sequence=column_sequence,
-            orderable=False,
-        )
-        for column_name in column_sequence:
-            table.columns.show(column_name)
-        return table
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.InterfaceRedundancyGroupAssociationTable,
+                table_attribute="interface_redundancy_group_associations",
+                prefetch_related_fields=["interface"],
+                order_by_fields=["priority"],
+                table_title="Interfaces",
+                related_field_name="interface_redundancy_group",
+                include_columns=[
+                    "interface__device",
+                    "interface",
+                    "interface__status",
+                    "interface__enabled",
+                    "interface__ip_addresses",
+                    "interface__type",
+                    "interface__description",
+                    "interface__label",
+                ],
+            ),
+        ),
+    )
 
 
 class InterfaceRedundancyGroupAssociationUIViewSet(ObjectEditViewMixin, ObjectDestroyViewMixin):
@@ -4482,41 +4480,81 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
     table_class = tables.ControllerManagedDeviceGroupTable
     template_name = "dcim/controllermanageddevicegroup_create.html"
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+                value_transforms={
+                    "capabilities": [helpers.label_list],
+                },
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=100,
+                table_class=tables.DeviceTable,
+                table_filter="controller_managed_device_group",
+                add_button_route=None,
+            ),
+        ),
+        extra_tabs=(
+            object_detail.DistinctViewTab(
+                weight=800,
+                tab_id="wireless_networks",
+                label="Wireless Networks",
+                url_name="dcim:controllermanageddevicegroup_wireless_networks",
+                related_object_attribute="wireless_network_assignments",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Wireless Networks",
+                        table_class=DeviceGroupWirelessNetworkTable,
+                        table_filter="controller_managed_device_group",
+                        related_field_name="controller_managed_device_groups",
+                        tab_id="wireless_networks",
+                        add_button_route=None,
+                        exclude_columns=["controller_managed_device_group", "controller"],
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=900,
+                tab_id="radio_profiles",
+                label="Radio Profiles",
+                url_name="dcim:controllermanageddevicegroup_radio_profiles",
+                related_object_attribute="radio_profiles",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Radio Profiles",
+                        table_class=RadioProfileTable,
+                        table_filter="controller_managed_device_groups",
+                        tab_id="radio_profiles",
+                        add_button_route=None,
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    def get_queryset(self):
+        if self.action in ["wireless_networks", "radio_profiles"]:
+            return self.queryset.restrict(self.request.user, "view")
+        return super().get_queryset()
+
+    @action(detail=True, url_path="wireless-networks", url_name="wireless_networks")
+    def wireless_networks(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(detail=True, url_path="radio-profiles", url_name="radio_profiles")
+    def radio_profiles(self, request, *args, **kwargs):
+        return Response({})
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
-
-        if self.action == "retrieve" and instance:
-            devices = instance.devices.restrict(request.user)
-            devices_table = tables.DeviceTable(devices)
-
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(devices_table)
-
-            context["devices_table"] = devices_table
-
-            # Wireless Networks
-            wireless_networks = instance.wireless_network_assignments.restrict(request.user, "view")
-            wireless_networks_table = ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(wireless_networks)
-            wireless_networks_table.columns.hide("controller_managed_device_group")
-            wireless_networks_table.columns.hide("controller")
-            RequestConfig(
-                request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-            ).configure(wireless_networks_table)
-            context["wireless_networks_table"] = wireless_networks_table
-            context["wireless_networks_count"] = wireless_networks.count()
-
-            # Radio Profiles
-            radio_profiles = instance.radio_profiles.restrict(request.user, "view")
-            radio_profiles_table = RadioProfileTable(radio_profiles)
-            RequestConfig(
-                request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-            ).configure(radio_profiles_table)
-            context["radio_profiles_table"] = radio_profiles_table
-            context["radio_profiles_count"] = radio_profiles.count()
-
         if self.action in ["create", "update"]:
             context["wireless_networks"] = ControllerManagedDeviceGroupWirelessNetworkFormSet(
                 instance=instance,
@@ -4536,6 +4574,14 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
             raise ValidationError(wireless_networks.errors)
 
         return obj
+
+    def get_required_permission(self):
+        view_action = self.get_action()
+        if view_action == "wireless_networks":
+            return ["wireless.view_controllermanageddevicegroupwirelessnetworkassignment"]
+        if view_action == "radio_profiles":
+            return ["wireless.view_radioprofile"]
+        return super().get_required_permission()
 
 
 #
