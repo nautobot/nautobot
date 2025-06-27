@@ -34,7 +34,7 @@ from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
-from nautobot.core.templatetags.helpers import has_perms, get_object_link, bettertitle
+from nautobot.core.templatetags.helpers import bettertitle, get_object_link, has_perms
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.lookup import get_form_for_model
@@ -3443,14 +3443,19 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
                 crumbs = [
                     (reverse("dcim:device_list"), "Devices"),
                     (get_object_link(instance.parent_device), str(instance.parent_device)),
-                    (reverse("dcim:device_modulebays", kwargs={"pk": instance.parent_device.pk}), bettertitle(instance._meta.verbose_name_plural)),
+                    (
+                        reverse("dcim:device_modulebays", kwargs={"pk": instance.parent_device.pk}),
+                        bettertitle(instance._meta.verbose_name_plural),
+                    ),
                 ]
             else:
                 crumbs = [
                     (reverse("dcim:module_list"), "Modules"),
                     (get_object_link(instance.parent_module), str(instance.parent_module)),
-                    (reverse("dcim:module_modulebays", kwargs={"pk": instance.parent_module.pk}),
-                     bettertitle(instance._meta.verbose_name_plural)),
+                    (
+                        reverse("dcim:module_modulebays", kwargs={"pk": instance.parent_module.pk}),
+                        bettertitle(instance._meta.verbose_name_plural),
+                    ),
                 ]
             # Set breadcrumbs always
             context.update(
