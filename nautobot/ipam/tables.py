@@ -1,4 +1,4 @@
-from django.db.models import QuerySet, Prefetch
+from django.db.models import Prefetch, QuerySet
 from django.utils.safestring import mark_safe
 import django_tables2 as tables
 from django_tables2.data import TableData
@@ -426,7 +426,11 @@ class PrefixDetailTable(PrefixTable):
         # Conditionally prefetch children for the utilization calculation if that column is visible.
         if self.columns["utilization"].visible and isinstance(self.data.data, QuerySet):
             self.data = TableData.from_data(
-                self.data.data.prefetch_related(Prefetch("children", queryset=Prefix.objects.only("network", "prefix_length").order_by()))
+                self.data.data.prefetch_related(
+                    Prefetch(
+                        "children", queryset=Prefix.objects.only("network", "prefix_length", "parent_id").order_by()
+                    )
+                )
             )
             self.data.set_table(self)
             self.rows = BoundRows(data=self.data, table=self, pinned_data=self.pinned_data)

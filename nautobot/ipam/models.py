@@ -889,7 +889,7 @@ class Prefix(PrimaryModel):
             prefix_length__lte=self.prefix_length,
             network__lte=self.network,
             broadcast__gte=self.broadcast,
-            namespace=self.namespace,
+            namespace_id=self.namespace_id,
         )
 
         return supernets
@@ -921,7 +921,7 @@ class Prefix(PrimaryModel):
             ip_version=self.ip_version,
             network__gte=self.network,
             broadcast__lte=self.broadcast,
-            namespace=self.namespace,
+            namespace_id=self.namespace_id,
         )
 
     def is_child_node(self):
@@ -1105,7 +1105,7 @@ class Prefix(PrimaryModel):
         # change this when that is the case, see #3873 for historical context.
         if self.type != choices.PrefixTypeChoices.TYPE_CONTAINER:
             pool_ips = IPAddress.objects.filter(
-                parent__namespace=self.namespace,
+                parent__namespace_id=self.namespace_id,
                 ip_version=self.ip_version,
                 host__gte=self.network,
                 host__lte=self.broadcast,
