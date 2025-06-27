@@ -1,0 +1,2 @@
+Fixed Prefix tabs to properly render without http 500.
+Fixed module bays details to properly render title and breadcrumbs.
