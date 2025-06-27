@@ -59,7 +59,7 @@ PREFIX_COPY_LINK = """
 {% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}\
 {% endif %}\
 " id="copy_{{record.id}}">{{ record.prefix }}</a>
-  <button type="button" class="btn btn-secondary nb-btn-inline" data-clipboard-target="#copy_{{record.id}}">
+  <button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#copy_{{record.id}}">
     <span aria-hidden="true" class="mdi mdi-content-copy"></span>
     <span class="visually-hidden">Copy</span>
   </button>
@@ -95,7 +95,7 @@ IPADDRESS_COPY_LINK = """
     <span>
         <a href="{{ record.get_absolute_url }}" id="copy_{{record.id}}">
             {{ record.address }}</a>
-        <button type="button" class="btn btn-secondary nb-btn-inline" data-clipboard-target="#copy_{{record.id}}">
+        <button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#copy_{{record.id}}">
             <span aria-hidden="true" class="mdi mdi-content-copy"></span>
             <span class="visually-hidden">Copy</span>
         </button>
@@ -133,7 +133,7 @@ vminterface={{ request.GET.vminterface }}\
 {% endif %}\
 &return_url={{ request.GET.return_url }}" id="copy_{{record.pk}}">\
 {{ record }}\
-</a><button type="button" class="btn btn-secondary nb-btn-inline" data-clipboard-target="#copy_{{record.pk}}">
+</a><button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#copy_{{record.pk}}">
     <span aria-hidden="true" class="mdi mdi-content-copy"></span>
     <span class="visually-hidden">Copy</span>
 </button>

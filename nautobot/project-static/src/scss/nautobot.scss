@@ -1537,7 +1537,7 @@ $nb-drawer-open-width: 20rem; /* 320px */
     top: map.get($spacers, 2);
   }
 
-  .nb-btn-inline &::before {
+  .nb-btn-inline-hover &::before {
     font-size: .9em;
     top: map.get($spacers, 0);
   }
@@ -1638,7 +1638,7 @@ $nb-drawer-open-width: 20rem; /* 320px */
 }
 
 /* Miscellaneous */
-.nb-btn-inline {
+.nb-btn-inline-hover {
   @include transition($transition-fade);
   font-size: $font-size-sm;
   opacity: 0;
@@ -1647,7 +1647,7 @@ $nb-drawer-open-width: 20rem; /* 320px */
   padding-inline: map.get($spacers, 4);
 
   &:focus-visible,
-  :has(> &):hover .nb-btn-inline { /* Show `nb-btn-inline` while hovering over its parent element. */
+  :has(> &):hover .nb-btn-inline-hover { /* Show `nb-btn-inline-hover` while hovering over its parent element. */
     opacity: 1;
   }
 }

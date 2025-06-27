@@ -786,7 +786,7 @@ class TestObjectDetailView(TestCase):
         name_copy = f"""
         <span>
             <span id="_value_name">{provider.name}</span>
-            <button class="btn btn-secondary nb-btn-inline" data-clipboard-target="#_value_name">
+            <button class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#_value_name">
                 <span aria-hidden="true" class="mdi mdi-content-copy"></span>
                 <span class="visually-hidden">Copy</span>
             </button>

@@ -1139,7 +1139,7 @@ class KeyValueTablePanel(Panel):
                         """
                             <span>
                                 <span id="{unique_id}_value_{key}">{value}</span>
-                                <button class="btn btn-secondary nb-btn-inline" data-clipboard-target="#{unique_id}_value_{key}">
+                                <button class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#{unique_id}_value_{key}">
                                     <span aria-hidden="true" class="mdi mdi-content-copy"></span>
                                     <span class="visually-hidden">Copy</span>
                                 </button>
