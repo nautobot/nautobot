@@ -69,8 +69,8 @@ from nautobot.wireless.models import (
     ControllerManagedDeviceGroupWirelessNetworkAssignment,
 )
 from nautobot.wireless.tables import (
+    BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
     ControllerManagedDeviceGroupRadioProfileAssignmentTable,
-    ControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
     DeviceGroupWirelessNetworkTable,
     RadioProfileTable,
 )
@@ -2257,7 +2257,7 @@ class DeviceWirelessView(generic.ObjectView):
         wireless_networks = ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
             controller_managed_device_group=controller_managed_device_group
         ).select_related("wireless_network", "controller_managed_device_group", "vlan")
-        wireless_networks_table = ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
+        wireless_networks_table = BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
             data=wireless_networks, user=request.user, orderable=False
         )
         wireless_networks_table.columns.hide("controller_managed_device_group")
@@ -4504,7 +4504,7 @@ class ControllerUIViewSet(NautobotUIViewSet):
                         section=SectionChoices.FULL_WIDTH,
                         weight=100,
                         table_title="Wireless Networks",
-                        table_class=ControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
+                        table_class=BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
                         table_filter="controller_managed_device_group__controller",
                         tab_id="wireless_networks",
                         add_button_route=None,
@@ -4520,6 +4520,17 @@ class ControllerUIViewSet(NautobotUIViewSet):
     @action(detail=True, url_path="wireless-networks", url_name="wireless_networks", methods=["get"])
     def wireless_networks(self, request, *args, **kwargs):
         return Response({})
+
+    def get_required_permission(self):
+        view_action = self.get_action()
+        if view_action == "wireless_networks":
+            return ["dcim.view_controller"]
+        return super().get_required_permission()
+
+    def get_queryset(self):
+        if self.action in ["wireless_networks"]:
+            return self.queryset.restrict(self.request.user, "view")
+        return super().get_queryset()
 
 
 class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
