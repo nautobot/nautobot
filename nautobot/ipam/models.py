@@ -1113,7 +1113,9 @@ class Prefix(PrimaryModel):
             child_ips = netaddr.IPSet(pool_ips)
 
         if self.type != choices.PrefixTypeChoices.TYPE_POOL:
-            child_prefixes = netaddr.IPSet(p.prefix for p in self.children.only("network", "prefix_length").iterator())
+            # Using self.children.all over self.children.iterator (with chunk_size given or not) consistently shaves
+            # off around 200 extra SQL queries and shows better performance.
+            child_prefixes = netaddr.IPSet(p.prefix for p in self.children.all())
 
         numerator_set = child_ips | child_prefixes
 

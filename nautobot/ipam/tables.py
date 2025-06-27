@@ -1,5 +1,8 @@
+from django.db.models import QuerySet, Prefetch
 from django.utils.safestring import mark_safe
 import django_tables2 as tables
+from django_tables2.data import TableData
+from django_tables2.rows import BoundRows
 from django_tables2.utils import Accessor
 
 from nautobot.core.tables import (
@@ -417,6 +420,16 @@ class PrefixDetailTable(PrefixTable):
     utilization = tables.TemplateColumn(template_code=UTILIZATION_GRAPH, orderable=False)
     tenant = TenantColumn()
     tags = TagColumn(url_name="ipam:prefix_list")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Conditionally prefetch children for the utilization calculation if that column is visible.
+        if self.columns["utilization"].visible and isinstance(self.data.data, QuerySet):
+            self.data = TableData.from_data(
+                self.data.data.prefetch_related(Prefetch("children", queryset=Prefix.objects.only("network", "prefix_length").order_by()))
+            )
+            self.data.set_table(self)
+            self.rows = BoundRows(data=self.data, table=self, pinned_data=self.pinned_data)
 
     class Meta(PrefixTable.Meta):
         fields = (
