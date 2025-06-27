@@ -3448,7 +3448,7 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
                         bettertitle(instance._meta.verbose_name_plural),
                     ),
                 ]
-            else:
+            elif instance.parent_module:
                 crumbs = [
                     (reverse("dcim:module_list"), "Modules"),
                     (get_object_link(instance.parent_module), str(instance.parent_module)),
@@ -3457,6 +3457,9 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
                         bettertitle(instance._meta.verbose_name_plural),
                     ),
                 ]
+            else:
+                crumbs = [(reverse("dcim:modulebay_list"), "Module Bays")]
+
             # Set breadcrumbs always
             context.update(
                 {
