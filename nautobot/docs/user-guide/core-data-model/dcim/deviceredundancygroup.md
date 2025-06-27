@@ -38,7 +38,7 @@ query ($device_name: [String]) {
         name
         device_redundancy_group {
             name
-            members {
+            devices {
                 name
                 device_redundancy_group_priority
                 interfaces(name__ie: "failover-link") {
@@ -85,7 +85,7 @@ We will demonstrate how to execute the command for Primary Unit only, however yo
                 "name": "nyc-fw-primary",
                 "device_redundancy_group": {
                     "name": "nyc-firewalls",
-                    "members": [
+                    "devices": [
                         {
                             "name": "nyc-fw-primary",
                             "device_redundancy_group_priority": 100,
@@ -150,13 +150,13 @@ template_code = """
 hostname {{ device.name }}
 !
 failover lan unit {{ priority_mapping[failover_device_local.device_redundancy_group_priority] }}
-failover lan interface {{ failover_local_vif.name }} {{ failover_local_vif.parent_interface.name }} 
+failover lan interface {{ failover_local_vif.name }} {{ failover_local_vif.parent_interface.name }}
 !
 failover interface ip {{ failover_local_vif.name }} {{ failover_local_vif.ip_addresses[0].host }}/{{ failover_local_vif.ip_addresses[0].prefix_length }} standby {{ failover_peer_vif.ip_addresses[0].host }}
-interface {{ failover_local_vif.parent_interface.name }} 
+interface {{ failover_local_vif.parent_interface.name }}
   no shutdown
 !
-failover link {{ failover_local_vif.name }} {{ failover_local_vif.parent_interface.name }} 
+failover link {{ failover_local_vif.name }} {{ failover_local_vif.parent_interface.name }}
 !
 !failover ipsec pre-shared-key !Nautobot Secrets
 !
@@ -217,9 +217,9 @@ To retrieve the data about devices forming a Spine redundancy group, we will use
 query {
     device_redundancy_groups(name__ie: "nyc-spines") {
         name
-        members {
+        devices {
           name
-          device_role {
+          role {
             name
           }
           cf_upgrade_operational_state
@@ -238,31 +238,31 @@ An example data returned from Nautobot is presented below.
     "device_redundancy_groups": [
       {
         "name": "nyc-spines",
-        "members": [
+        "devices": [
           {
             "name": "spine-1",
-            "device_role": {
+            "role": {
               "name": "spine"
             },
             "cf_upgrade_operational_state": "in_reboot"
           },
           {
             "name": "spine-2",
-            "device_role": {
+            "role": {
               "name": "spine"
             },
             "cf_upgrade_operational_state": null
           },
           {
             "name": "spine-3",
-            "device_role": {
+            "role": {
               "name": "spine"
             },
             "cf_upgrade_operational_state": null
           },
           {
             "name": "spine-4",
-            "device_role": {
+            "role": {
               "name": "spine"
             },
             "cf_upgrade_operational_state": null

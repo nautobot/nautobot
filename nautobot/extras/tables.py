@@ -1,9 +1,13 @@
 from django.conf import settings
+from django.db.models import QuerySet
 from django.utils.html import format_html, format_html_join
 import django_tables2 as tables
+from django_tables2.data import TableData
+from django_tables2.rows import BoundRows
 from django_tables2.utils import Accessor
 from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 
+from nautobot.core.models.querysets import count_related
 from nautobot.core.tables import (
     BaseTable,
     BooleanColumn,
@@ -19,7 +23,7 @@ from nautobot.core.tables import (
 from nautobot.core.templatetags.helpers import render_boolean, render_json, render_markdown
 from nautobot.tenancy.tables import TenantColumn
 
-from .choices import MetadataTypeDataTypeChoices
+from .choices import LogLevelChoices, MetadataTypeDataTypeChoices
 from .models import (
     ComputedField,
     ConfigContext,
@@ -891,7 +895,7 @@ class JobResultTable(BaseTable):
     )
     summary = tables.Column(
         empty_values=(),
-        verbose_name="Results",
+        verbose_name="Summary",
         orderable=False,
         attrs={"td": {"class": "text-nowrap report-stats"}},
     )
@@ -900,6 +904,40 @@ class JobResultTable(BaseTable):
         verbose_name="Scheduled Job",
     )
     actions = ButtonsColumn(JobResult, buttons=("delete",), prepend_template=JOB_RESULT_BUTTONS)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Only calculate log counts for "summary" column if it's actually visible.
+        if self.columns["summary"].visible and isinstance(self.data.data, QuerySet):
+            self.data = TableData.from_data(
+                self.data.data.annotate(
+                    debug_log_count=count_related(
+                        JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_DEBUG}
+                    ),
+                    success_log_count=count_related(
+                        JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_SUCCESS}
+                    ),
+                    info_log_count=count_related(
+                        JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_INFO}
+                    ),
+                    warning_log_count=count_related(
+                        JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_WARNING}
+                    ),
+                    error_log_count=count_related(
+                        JobLogEntry,
+                        "job_result",
+                        filter_dict={
+                            "log_level__in": [
+                                LogLevelChoices.LOG_FAILURE,
+                                LogLevelChoices.LOG_ERROR,
+                                LogLevelChoices.LOG_CRITICAL,
+                            ],
+                        },
+                    ),
+                )
+            )
+            self.data.set_table(self)
+            self.rows = BoundRows(data=self.data, table=self, pinned_data=self.pinned_data)
 
     def render_summary(self, record):
         """
@@ -940,7 +978,6 @@ class JobResultTable(BaseTable):
             "job_model",
             "user",
             "status",
-            "summary",
             "actions",
         )
 
