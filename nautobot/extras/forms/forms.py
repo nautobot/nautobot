@@ -170,6 +170,7 @@ __all__ = (
     "JobQueueBulkEditForm",
     "JobQueueFilterForm",
     "JobQueueForm",
+    "JobResultBulkEditForm",
     "JobResultFilterForm",
     "JobScheduleForm",
     "LocalContextFilterForm",
@@ -1592,6 +1593,10 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
         ].help_text = (
             f"The scheduled time is relative to the Nautobot configured timezone: {get_current_timezone_name()}."
         )
+
+
+class JobResultBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=JobResult.objects.all(), widget=forms.MultipleHiddenInput)
 
 
 class JobResultFilterForm(BootstrapMixin, forms.Form):

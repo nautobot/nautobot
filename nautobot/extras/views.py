@@ -2055,37 +2055,20 @@ class JobHookUIViewSet(NautobotUIViewSet):
 #
 
 
-class JobResultListView(generic.ObjectListView):
-    """
-    List JobResults
-    """
-
+class JobResultUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.JobResultBulkEditForm
+    filterset_class = filters.JobResultFilterSet
+    filterset_form_class = forms.JobResultFilterForm
+    form_class = None
+    serializer_class = serializers.JobResultSerializer
+    table_class = tables.JobResultTable
+    template_name = "extras/jobresult_retrieve.html"
     queryset = JobResult.objects.defer("result").select_related("job_model", "user")
-    filterset = filters.JobResultFilterSet
-    filterset_form = forms.JobResultFilterForm
-    table = tables.JobResultTable
     action_buttons = ()
 
-
-class JobResultDeleteView(generic.ObjectDeleteView):
-    queryset = JobResult.objects.all()
-
-
-class JobResultBulkDeleteView(generic.BulkDeleteView):
-    queryset = JobResult.objects.defer("result").select_related("job_model", "user")
-    table = tables.JobResultTable
-    filterset = filters.JobResultFilterSet
-
-
-class JobResultView(generic.ObjectView):
-    """
-    Display a JobResult and its Job data.
-    """
-
-    queryset = JobResult.objects.prefetch_related("job_model", "user")
-    template_name = "extras/jobresult.html"
-
     def get_extra_context(self, request, instance):
+        if instance is None:
+            return {}
         associated_record = None
         job_class = None
         if instance.job_model is not None:
