@@ -4468,6 +4468,12 @@ class ControllerUIViewSet(NautobotUIViewSet):
         "wirelessnetworks": "view",
     }
 
+    def get_required_permission(self):
+        permissions = super().get_required_permission()
+        if self.action == "wirelessnetworks":
+            permissions.append("wireless.view_controllermanageddevicegroupwirelessnetworkassignment")
+        return permissions
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
 
@@ -4588,11 +4594,6 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
         ),
     )
 
-    def get_queryset(self):
-        if self.action in ["wireless_networks", "radio_profiles"]:
-            return self.queryset.restrict(self.request.user, "view")
-        return super().get_queryset()
-
     @action(detail=True, url_path="wireless-networks", url_name="wireless_networks")
     def wireless_networks(self, request, *args, **kwargs):
         return Response({})
@@ -4624,12 +4625,12 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
         return obj
 
     def get_required_permission(self):
-        view_action = self.get_action()
-        if view_action == "wireless_networks":
-            return ["wireless.view_controllermanageddevicegroupwirelessnetworkassignment"]
-        if view_action == "radio_profiles":
-            return ["wireless.view_radioprofile"]
-        return super().get_required_permission()
+        permissions = super().get_required_permission()
+        if self.action == "wireless_networks":
+            permissions.append("wireless.view_controllermanageddevicegroupwirelessnetworkassignment")
+        if self.action == "radio_profiles":
+            permissions.append("wireless.view_radioprofile")
+        return permissions
 
 
 #

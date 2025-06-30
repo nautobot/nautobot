@@ -130,6 +130,7 @@ from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup, 
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
+from nautobot.wireless.models import RadioProfile, WirelessNetwork
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -4753,6 +4754,18 @@ class ControllerTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tenant": tenant.pk,
         }
 
+    def test_controller_wirelessnetworks(self):
+        controller = Controller.objects.first()
+        wireless_networks = WirelessNetwork.objects.all()[:3]
+        group = controller.controller_managed_device_groups.first()
+        group.wireless_networks.set(wireless_networks)
+
+        url = reverse("dcim:controller_wirelessnetworks", kwargs={"pk": controller.pk})
+        self.add_permissions("dcim.view_controller")
+        self.assertHttpStatus(self.client.get(url), 403)
+        self.add_permissions("wireless.view_controllermanageddevicegroupwirelessnetworkassignment")
+        self.assertHttpStatus(self.client.get(url), 200)
+
 
 class ControllerManagedDeviceGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = ControllerManagedDeviceGroup
@@ -4777,6 +4790,34 @@ class ControllerManagedDeviceGroupTestCase(ViewTestCases.PrimaryObjectViewTestCa
         cls.bulk_edit_data = {
             "weight": 300,
         }
+
+    def test_controller_managed_device_group_wireless_networks(self):
+        controller_managed_device_group = ControllerManagedDeviceGroup.objects.first()
+
+        wireless_networks = WirelessNetwork.objects.all()[:3]
+        controller_managed_device_group.wireless_networks.set(wireless_networks)
+
+        url = reverse(
+            "dcim:controllermanageddevicegroup_wireless_networks", kwargs={"pk": controller_managed_device_group.pk}
+        )
+        self.add_permissions("dcim.view_controllermanageddevicegroup")
+        self.assertHttpStatus(self.client.get(url), 403)
+        self.add_permissions("wireless.view_controllermanageddevicegroupwirelessnetworkassignment")
+        self.assertHttpStatus(self.client.get(url), 200)
+
+    def test_controller_managed_device_group_radio_profiles(self):
+        controller_managed_device_group = ControllerManagedDeviceGroup.objects.first()
+
+        radio_profiles = RadioProfile.objects.all()[:3]
+        controller_managed_device_group.radio_profiles.set(radio_profiles)
+
+        url = reverse(
+            "dcim:controllermanageddevicegroup_radio_profiles", kwargs={"pk": controller_managed_device_group.pk}
+        )
+        self.add_permissions("dcim.view_controllermanageddevicegroup")
+        self.assertHttpStatus(self.client.get(url), 403)
+        self.add_permissions("wireless.view_radioprofile")
+        self.assertHttpStatus(self.client.get(url), 200)
 
 
 class VirtualDeviceContextTestCase(ViewTestCases.PrimaryObjectViewTestCase):
