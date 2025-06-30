@@ -1594,8 +1594,11 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
         )
 
 
-class JobResultBulkEditForm(NautobotBulkEditForm):
+class JobResultBulkEditForm(NoteModelBulkEditFormMixin):
     pk = forms.ModelMultipleChoiceField(queryset=JobResult.objects.all(), widget=forms.MultipleHiddenInput)
+
+    class Meta:
+        model = JobResult
 
 
 class JobResultFilterForm(BootstrapMixin, forms.Form):
