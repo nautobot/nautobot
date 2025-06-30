@@ -81,6 +81,9 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
     queryset = ExampleModel.objects.all()
     serializer_class = serializers.ExampleModelSerializer
     table_class = tables.ExampleModelTable
+    custom_action_permission_map = {
+        "all_names": "view",
+    }
     object_detail_content = ui.ObjectDetailContent(
         panels=(
             ui.ObjectFieldsPanel(

@@ -74,6 +74,11 @@ class NamespaceUIViewSet(NautobotUIViewSet):
     queryset = Namespace.objects.all()
     serializer_class = serializers.NamespaceSerializer
     table_class = tables.NamespaceTable
+    custom_action_permission_map = {
+        "vrfs": "view",
+        "prefixes": "view",
+        "ip_addresses": "view",
+    }
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(object_detail.ObjectFieldsPanel(section=SectionChoices.LEFT_HALF, weight=100, fields="__all__"),),
         extra_tabs=(
@@ -105,6 +110,18 @@ class NamespaceUIViewSet(NautobotUIViewSet):
         context = super().get_extra_context(request, instance)
         context.update({"object_detail_content": self.object_detail_content})
         return context
+
+    def get_required_permission(self):
+        # TODO: standardize a pattern for permissions enforcement on custom actions
+        permissions = super().get_required_permission()
+        if self.action == "vrfs":
+            permissions.append("ipam.view_vrf")
+        elif self.action == "prefixes":
+            permissions.append("ipam.view_prefix")
+        elif self.action == "ip_addresses":
+            permissions.append("ipam.view_ipaddress")
+
+        return permissions
 
     @action(detail=True, url_path="vrfs")
     def vrfs(self, request, *args, **kwargs):

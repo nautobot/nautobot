@@ -1588,6 +1588,9 @@ class ModuleBayTemplateUIViewSet(
     serializer_class = serializers.ModuleBayTemplateSerializer
     table_class = tables.ModuleBayTemplateTable
     create_template_name = "dcim/device_component_add.html"
+    custom_action_permission_map = {
+        "bulk_rename": "change",
+    }
 
     def get_selected_objects_parents_name(self, selected_objects):
         selected_object = selected_objects.first()
@@ -1595,6 +1598,12 @@ class ModuleBayTemplateUIViewSet(
             parent = selected_object.device_type or selected_object.module_type
             return parent.display
         return ""
+
+    def get_required_permission(self):
+        permissions = super().get_required_permission()
+        if self.action == "bulk_rename":
+            permissions.append("dcim.change_modulebaytemplate")
+        return permissions
 
     @action(detail=False, methods=["GET", "POST"], url_path="rename", url_name="bulk_rename")
     def bulk_rename(self, request, *args, **kwargs):
@@ -2365,16 +2374,23 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     serializer_class = serializers.ModuleSerializer
     table_class = tables.ModuleTable
     component_model = None
-
-    def get_action(self):
-        if self.component_model:
-            method = self.request.method.lower()
-            if method == "get":
-                return "view"
-            else:
-                return "change"
-
-        return super().get_action()
+    custom_action_permission_map = {
+        "consoleports": "view",
+        "consoleserverports": "view",
+        "powerports": "view",
+        "poweroutlets": "view",
+        "interfaces": "view",
+        "frontports": "view",
+        "rearports": "view",
+        "modulebays": "view",
+        "bulk_add_consoleport": "change",
+        "bulk_add_consoleserverport": "change",
+        "bulk_add_powerport": "change",
+        "bulk_add_poweroutlet": "change",
+        "bulk_add_interface": "change",
+        "bulk_add_rearport": "change",
+        "bulk_add_modulebay": "change",
+    }
 
     def get_required_permission(self):
         # TODO: standardize a pattern for permissions enforcement on custom actions
@@ -3367,6 +3383,9 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
     serializer_class = serializers.ModuleBaySerializer
     table_class = tables.ModuleBayTable
     create_template_name = "dcim/device_component_add.html"
+    custom_action_permission_map = {
+        "bulk_rename": "change",
+    }
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -3411,6 +3430,12 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
             parent = selected_object.parent_device or selected_object.parent_module
             return parent.display
         return ""
+
+    def get_required_permission(self):
+        permissions = super().get_required_permission()
+        if self.action == "bulk_rename":
+            permissions.append("dcim.change_modulebay")
+        return permissions
 
     @action(detail=False, methods=["GET", "POST"], url_path="rename", url_name="bulk_rename")
     def bulk_rename(self, request, *args, **kwargs):
@@ -4278,6 +4303,12 @@ class SoftwareImageFileUIViewSet(NautobotUIViewSet):
     queryset = SoftwareImageFile.objects.all()
     serializer_class = serializers.SoftwareImageFileSerializer
     table_class = tables.SoftwareImageFileTable
+    custom_action_permission_map = {
+        "device_types": "view",
+        "devices": "view",
+        "inventory_items": "view",
+        "virtual_machines": "view",
+    }
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -4362,6 +4393,20 @@ class SoftwareImageFileUIViewSet(NautobotUIViewSet):
         ),
     )
 
+    def get_required_permission(self):
+        # TODO: standardize a pattern for permissions enforcement on custom actions
+        permissions = super().get_required_permission()
+        if self.action == "device_types":
+            permissions.append("dcim.view_devicetype")
+        elif self.action == "devices":
+            permissions.append("dcim.view_device")
+        elif self.action == "inventory_items":
+            permissions.append("dcim.view_inventoryitem")
+        elif self.action == "virtual_machines":
+            permissions.append("virtualization.view_virtualmachine")
+
+        return permissions
+
     @action(detail=True, url_path="device-types", url_name="device_types")
     def device_types(self, request, *args, **kwargs):
         return Response({})
@@ -4419,6 +4464,9 @@ class ControllerUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.ControllerSerializer
     table_class = tables.ControllerTable
     template_name = "dcim/controller_create.html"
+    custom_action_permission_map = {
+        "wirelessnetworks": "view",
+    }
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -4465,10 +4513,6 @@ class ControllerUIViewSet(NautobotUIViewSet):
             }
         )
 
-    def get_action(self):
-        "Treat Wireless Networks as the same detail view for permission purposes."
-        return "view" if self.action == "wirelessnetworks" else super().get_action()
-
 
 class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
     filterset_class = filters.ControllerManagedDeviceGroupFilterSet
@@ -4479,6 +4523,10 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.ControllerManagedDeviceGroupSerializer
     table_class = tables.ControllerManagedDeviceGroupTable
     template_name = "dcim/controllermanageddevicegroup_create.html"
+    custom_action_permission_map = {
+        "wireless_networks": "view",
+        "radio_profiles": "view",
+    }
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(

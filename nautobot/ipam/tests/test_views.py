@@ -75,6 +75,42 @@ class NamespaceTestCase(
             "location": locations[1].pk,
         }
 
+    def test_namespace_vrfs(self):
+        namespace = Namespace.objects.first()
+
+        vrfs = VRF.objects.all()[:3]
+        namespace.vrfs.set(vrfs)
+
+        url = reverse("ipam:namespace_vrfs", kwargs={"pk": namespace.pk})
+        self.add_permissions("ipam.view_namespace")
+        self.assertHttpStatus(self.client.get(url), 403)
+        self.add_permissions("ipam.view_vrf")
+        self.assertHttpStatus(self.client.get(url), 200)
+
+    def test_namespace_prefixes(self):
+        namespace = Namespace.objects.first()
+
+        prefixes = Prefix.objects.all()[:3]
+        namespace.prefixes.set(prefixes)
+
+        url = reverse("ipam:namespace_prefixes", kwargs={"pk": namespace.pk})
+        self.add_permissions("ipam.view_namespace")
+        self.assertHttpStatus(self.client.get(url), 403)
+        self.add_permissions("ipam.view_prefix")
+        self.assertHttpStatus(self.client.get(url), 200)
+
+    def test_namespace_ip_addresses(self):
+        namespace = Namespace.objects.first()
+
+        prefixes = Prefix.objects.all()[:3]
+        namespace.prefixes.set(prefixes)
+
+        url = reverse("ipam:namespace_ip_addresses", kwargs={"pk": namespace.pk})
+        self.add_permissions("ipam.view_namespace")
+        self.assertHttpStatus(self.client.get(url), 403)
+        self.add_permissions("ipam.view_ipaddress")
+        self.assertHttpStatus(self.client.get(url), 200)
+
 
 class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = VRF

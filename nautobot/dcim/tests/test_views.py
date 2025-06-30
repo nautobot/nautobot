@@ -129,7 +129,7 @@ from nautobot.ipam.choices import IPAddressTypeChoices
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
-from nautobot.virtualization.models import Cluster, ClusterType
+from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -2668,7 +2668,6 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "status": statuses[2].pk,
         }
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_module_consoleports(self):
         module = Module.objects.first()
 
@@ -2677,9 +2676,11 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         ConsolePort.objects.create(module=module, name="Console Port 3")
 
         url = reverse("dcim:module_consoleports", kwargs={"pk": module.pk})
+        self.add_permissions("dcim.view_module")
+        self.assertHttpStatus(self.client.get(url), 403)
+        self.add_permissions("dcim.view_consoleport")
         self.assertHttpStatus(self.client.get(url), 200)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_module_consoleserverports(self):
         module = Module.objects.first()
 
@@ -2688,9 +2689,11 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         ConsoleServerPort.objects.create(module=module, name="Console Server Port 3")
 
         url = reverse("dcim:module_consoleserverports", kwargs={"pk": module.pk})
+        self.add_permissions("dcim.view_module")
+        self.assertHttpStatus(self.client.get(url), 403)
+        self.add_permissions("dcim.view_consoleserverport")
         self.assertHttpStatus(self.client.get(url), 200)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_module_powerports(self):
         module = Module.objects.first()
 
@@ -2699,9 +2702,11 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         PowerPort.objects.create(module=module, name="Power Port 3")
 
         url = reverse("dcim:module_powerports", kwargs={"pk": module.pk})
+        self.add_permissions("dcim.view_module")
+        self.assertHttpStatus(self.client.get(url), 403)
+        self.add_permissions("dcim.view_powerport")
         self.assertHttpStatus(self.client.get(url), 200)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_module_poweroutlets(self):
         module = Module.objects.first()
 
@@ -2710,6 +2715,9 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         PowerOutlet.objects.create(module=module, name="Power Outlet 3")
 
         url = reverse("dcim:module_poweroutlets", kwargs={"pk": module.pk})
+        self.add_permissions("dcim.view_module")
+        self.assertHttpStatus(self.client.get(url), 403)
+        self.add_permissions("dcim.view_poweroutlet")
         self.assertHttpStatus(self.client.get(url), 200)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -2793,7 +2801,6 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 sorted(interface_ips),
             )
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_module_rearports(self):
         module = Module.objects.first()
 
@@ -2802,9 +2809,11 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         RearPort.objects.create(module=module, name="Rear Port 3")
 
         url = reverse("dcim:module_rearports", kwargs={"pk": module.pk})
+        self.add_permissions("dcim.view_module")
+        self.assertHttpStatus(self.client.get(url), 403)
+        self.add_permissions("dcim.view_rearport")
         self.assertHttpStatus(self.client.get(url), 200)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_module_frontports(self):
         module = Module.objects.first()
         rear_ports = (
@@ -2833,9 +2842,11 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         url = reverse("dcim:module_frontports", kwargs={"pk": module.pk})
+        self.add_permissions("dcim.view_module")
+        self.assertHttpStatus(self.client.get(url), 403)
+        self.add_permissions("dcim.view_frontport")
         self.assertHttpStatus(self.client.get(url), 200)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_module_modulebays(self):
         module = Module.objects.first()
 
@@ -2844,6 +2855,9 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         ModuleBay.objects.create(parent_module=module, name="Test View Module Bay 3")
 
         url = reverse("dcim:module_modulebays", kwargs={"pk": module.pk})
+        self.add_permissions("dcim.view_module")
+        self.assertHttpStatus(self.client.get(url), 403)
+        self.add_permissions("dcim.view_modulebay")
         self.assertHttpStatus(self.client.get(url), 200)
 
 
@@ -4616,6 +4630,54 @@ class SoftwareImageFileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "download_url": "https://example.com/software_image_file_test_case.bin",
             "external_integration": external_integration.pk,
         }
+
+    def test_software_image_file_devices(self):
+        software_image_file = SoftwareImageFile.objects.first()
+
+        devices = Device.objects.all()[:3]
+        software_image_file.devices.set(devices)
+
+        url = reverse("dcim:softwareimagefile_devices", kwargs={"pk": software_image_file.pk})
+        self.add_permissions("dcim.view_softwareimagefile")
+        self.assertHttpStatus(self.client.get(url), 403)
+        self.add_permissions("dcim.view_device")
+        self.assertHttpStatus(self.client.get(url), 200)
+
+    def test_software_image_file_device_types(self):
+        software_image_file = SoftwareImageFile.objects.first()
+
+        device_types = DeviceType.objects.all()[:3]
+        software_image_file.device_types.set(device_types)
+
+        url = reverse("dcim:softwareimagefile_device_types", kwargs={"pk": software_image_file.pk})
+        self.add_permissions("dcim.view_softwareimagefile")
+        self.assertHttpStatus(self.client.get(url), 403)
+        self.add_permissions("dcim.view_devicetype")
+        self.assertHttpStatus(self.client.get(url), 200)
+
+    def test_software_image_file_virtual_machines(self):
+        software_image_file = SoftwareImageFile.objects.first()
+
+        vms = VirtualMachine.objects.all()[:3]
+        software_image_file.virtual_machines.set(vms)
+
+        url = reverse("dcim:softwareimagefile_virtual_machines", kwargs={"pk": software_image_file.pk})
+        self.add_permissions("dcim.view_softwareimagefile")
+        self.assertHttpStatus(self.client.get(url), 403)
+        self.add_permissions("virtualization.view_virtualmachine")
+        self.assertHttpStatus(self.client.get(url), 200)
+
+    def test_software_image_file_inventory_items(self):
+        software_image_file = SoftwareImageFile.objects.first()
+
+        inventory_items = InventoryItem.objects.all()[:3]
+        software_image_file.virtual_machines.set(inventory_items)
+
+        url = reverse("dcim:softwareimagefile_inventory_items", kwargs={"pk": software_image_file.pk})
+        self.add_permissions("dcim.view_softwareimagefile")
+        self.assertHttpStatus(self.client.get(url), 403)
+        self.add_permissions("dcim.view_inventoryitem")
+        self.assertHttpStatus(self.client.get(url), 200)
 
 
 class SoftwareVersionTestCase(ViewTestCases.PrimaryObjectViewTestCase):

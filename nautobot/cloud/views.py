@@ -64,6 +64,12 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
     table_class = CloudNetworkTable
     form_class = CloudNetworkForm
     bulk_update_form_class = CloudNetworkBulkEditForm
+    custom_action_permission_map = {
+        "children": "view",
+        "prefixes": "view",
+        "circuits": "view",
+        "cloud_services": "view",
+    }
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -153,6 +159,18 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
         ),
     )
 
+    def get_required_permission(self):
+        # TODO: standardize a pattern for permissions enforcement on custom actions
+        permissions = super().get_required_permission()
+        if self.action == "prefixes":
+            permissions.append("ipam.view_prefix")
+        elif self.action == "circuits":
+            permissions.append("circuits.view_circuit")
+        elif self.action == "cloud_services":
+            permissions.append("cloud.view_cloudservice")
+
+        return permissions
+
     @action(detail=True, url_path="children")
     def children(self, request, *args, **kwargs):
         return Response({})
@@ -178,6 +196,10 @@ class CloudResourceTypeUIViewSet(NautobotUIViewSet):
     table_class = CloudResourceTypeTable
     form_class = CloudResourceTypeForm
     bulk_update_form_class = CloudResourceTypeBulkEditForm
+    custom_action_permission_map = {
+        "networks": "view",
+        "services": "view",
+    }
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -230,6 +252,16 @@ class CloudResourceTypeUIViewSet(NautobotUIViewSet):
         ),
     )
 
+    def get_required_permission(self):
+        # TODO: standardize a pattern for permissions enforcement on custom actions
+        permissions = super().get_required_permission()
+        if self.action == "networks":
+            permissions.append("cloud.view_cloudnetwork")
+        elif self.action == "services":
+            permissions.append("cloud.view_cloudservice")
+
+        return permissions
+
     @action(detail=True, url_path="networks")
     def networks(self, request, *args, **kwargs):
         return Response({})
@@ -247,6 +279,7 @@ class CloudServiceUIViewSet(NautobotUIViewSet):
     table_class = CloudServiceTable
     form_class = CloudServiceForm
     bulk_update_form_class = CloudServiceBulkEditForm
+    custom_action_permission_map = {"cloud_networks": "view"}
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -283,6 +316,14 @@ class CloudServiceUIViewSet(NautobotUIViewSet):
             ),
         ),
     )
+
+    def get_required_permission(self):
+        # TODO: standardize a pattern for permissions enforcement on custom actions
+        permissions = super().get_required_permission()
+        if self.action == "cloud_networks":
+            permissions.append("cloud.view_cloudnetwork")
+
+        return permissions
 
     @action(detail=True, url_path="cloud-networks", url_name="cloud_networks")
     def cloud_networks(self, request, *args, **kwargs):
