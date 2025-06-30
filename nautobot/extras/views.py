@@ -1501,6 +1501,11 @@ class JobEditView(generic.ObjectEditView):
     model_form = forms.JobEditForm
     template_name = "extras/job_edit.html"
 
+    def alter_obj(self, obj, request, url_args, url_kwargs):
+        # Reload the job class to ensure we have the latest version
+        get_job(obj.class_path, reload=True)
+        return obj
+
 
 class JobBulkEditView(generic.BulkEditView):
     queryset = JobModel.objects.all()
