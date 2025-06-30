@@ -1270,6 +1270,10 @@ class ObjectFieldsPanel(KeyValueTablePanel):
 
             data[field_name] = field_value
 
+        # Ensuring the `name` field is displayed first, if present.
+        if "name" in data:
+            data = {"name": data["name"], **{k: v for k, v in data.items() if k != "name"}}
+
         return data
 
     def render_key(self, key, value, context: Context):
