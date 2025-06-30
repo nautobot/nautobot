@@ -126,7 +126,6 @@ class HomeViewTestCase(TestCase):
 
         return header_search_bar_result, body_search_bar_result
 
-    @tag("fix_in_v3")
     def test_search_bar_not_visible_if_user_not_authenticated(self):
         self.client.logout()
 
@@ -297,24 +296,23 @@ class SearchFieldsTestCase(TestCase):
 
 
 class FilterFormsTestCase(TestCase):
-    @tag("fix_in_v3")
     def test_support_for_both_default_and_dynamic_filter_form_in_ui(self):
         self.add_permissions("dcim.view_location", "circuits.view_circuit")
 
         filter_tabs = """
-            <ul id="tabs" class="nav nav-tabs">
-                <li role="presentation" class="active">
-                    <a href="#default-filter" role="tab" data-toggle="tab">
-                        Default
-                    </a>
-                </li>
-                <li role="presentation" class="">
-                    <a href="#advanced-filter" role="tab" data-toggle="tab">
-                        Advanced
-                    </a>
-                </li>
-            </ul>
-            """
+        <ul class="nav nav-tabs" id="tabs">
+            <li class="nav-item" role="presentation">
+                <a class="active nav-link" data-bs-toggle="tab" href="#default-filter" role="tab">
+                    Default
+                </a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" data-bs-toggle="tab" href="#advanced-filter" role="tab">
+                    Advanced
+                </a>
+            </li>
+        </ul>
+        """
 
         response = self.client.get(reverse("dcim:location_list"))
         self.assertBodyContains(response, filter_tabs, html=True)
@@ -772,6 +770,7 @@ class TestObjectDetailView(TestCase):
         response = self.client.get(f"{url}?tab=main")
         self.assertHttpStatus(response, 200)
         response_data = response.content.decode(response.charset)
+        print(response_data)
         view_move_url = reverse("circuits:circuit_list") + f"?provider={provider.id}"
 
         # Assert Badge Count in table panel header

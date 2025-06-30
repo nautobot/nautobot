@@ -4562,34 +4562,6 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             response, 200, ["content_types: Unable to remove dcim.location. Dependent objects were found."]
         )
 
-    @tag("fix_in_v3")
-    def test_list_objects_with_permission(self):
-        return super().test_list_objects_with_permission()
-
-    @tag("fix_in_v3")
-    def test_list_objects_with_constrained_permission(self):
-        return super().test_list_objects_with_constrained_permission()
-
-    @tag("fix_in_v3")
-    def test_list_objects_anonymous(self):
-        return super().test_list_objects_anonymous()
-
-    @tag("fix_in_v3")
-    def test_list_objects_filtered(self):
-        return super().test_list_objects_filtered()
-
-    @tag("fix_in_v3")
-    def test_list_objects_unknown_filter_no_strict_filtering(self):
-        return super().test_list_objects_unknown_filter_no_strict_filtering()
-
-    @tag("fix_in_v3")
-    def test_list_objects_unknown_filter_strict_filtering(self):
-        return super().test_list_objects_unknown_filter_strict_filtering()
-
-    @tag("fix_in_v3")
-    def test_list_view_app_banner(self):
-        return super().test_list_view_app_banner()
-
 
 class WebhookTestCase(
     ViewTestCases.CreateObjectViewTestCase,

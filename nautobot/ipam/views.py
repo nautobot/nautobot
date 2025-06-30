@@ -343,6 +343,7 @@ class PrefixView(generic.ObjectView):
 
         return {
             "vrf_table": vrf_table,
+            "list_url": "ipam:prefix_list",
             "parent_prefix_table": parent_prefix_table,
             "cloud_network_table": cloud_network_table,
             **super().get_extra_context(request, instance),
@@ -432,6 +433,7 @@ class PrefixIPAddressesView(generic.ObjectView):
 
         return {
             "first_available_ip": instance.get_first_available_ip(),
+            "list_url": "ipam:prefix_list",
             "ip_table": ip_table,
             "permissions": permissions,
             "bulk_querystring": bulk_querystring,
