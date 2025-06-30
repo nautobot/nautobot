@@ -253,21 +253,22 @@ class LocationTypeUIViewSet(NautobotUIViewSet):
 #
 
 
-class LocationListView(generic.ObjectListView):
-    queryset = Location.objects.all()
-    filterset = filters.LocationFilterSet
-    filterset_form = forms.LocationFilterForm
-    table = tables.LocationTable
-
-
-class LocationView(generic.ObjectView):
+class LocationUIViewSet(NautobotUIViewSet):
     # We aren't accessing tree fields anywhere so this is safe (note that `parent` itself is a normal foreign
     # key, not a tree field). If we ever do access tree fields, this will perform worse, because django will
     # automatically issue a second query (similar to behavior for
     # https://docs.djangoproject.com/en/3.2/ref/models/querysets/#django.db.models.query.QuerySet.only)
-    queryset = Location.objects.without_tree_fields().all()
+    queryset = Location.objects.without_tree_fields().select_related("location_type", "parent", "tenant")
+    filterset_class = filters.LocationFilterSet
+    filterset_form_class = forms.LocationFilterForm
+    table_class = tables.LocationTable
+    form_class = forms.LocationForm
+    bulk_update_form_class = forms.LocationBulkEditForm
+    serializer_class = serializers.LocationSerializer
 
     def get_extra_context(self, request, instance):
+        if instance is None:
+            return super().get_extra_context(request, instance)
         related_locations = (
             instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
         )
@@ -307,7 +308,6 @@ class LocationView(generic.ObjectView):
         )
 
         children_table = tables.LocationTable(children, hide_hierarchy_ui=True)
-
         paginate = {
             "paginator_class": EnhancedPaginator,
             "per_page": get_paginate_count(request),
@@ -323,34 +323,6 @@ class LocationView(generic.ObjectView):
             "show_convert_to_contact_button": instance.contact_name or instance.contact_phone or instance.contact_email,
             **super().get_extra_context(request, instance),
         }
-
-
-class LocationEditView(generic.ObjectEditView):
-    queryset = Location.objects.all()
-    model_form = forms.LocationForm
-    template_name = "dcim/location_edit.html"
-
-
-class LocationDeleteView(generic.ObjectDeleteView):
-    queryset = Location.objects.all()
-
-
-class LocationBulkEditView(generic.BulkEditView):
-    queryset = Location.objects.select_related("location_type", "parent", "tenant")
-    filterset = filters.LocationFilterSet
-    table = tables.LocationTable
-    form = forms.LocationBulkEditForm
-
-
-class LocationBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Location.objects.all()
-    table = tables.LocationTable
-
-
-class LocationBulkDeleteView(generic.BulkDeleteView):
-    queryset = Location.objects.select_related("location_type", "parent", "tenant")
-    filterset = filters.LocationFilterSet
-    table = tables.LocationTable
 
 
 class MigrateLocationDataToContactView(generic.ObjectEditView):
