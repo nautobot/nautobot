@@ -3,8 +3,8 @@
 
 {% block extra_nav_tabs %}
     {% if 'wireless' in object.capabilities %}
-        <li role="presentation" {% if active_tab == 'wireless-networks' %} class="active"{% endif %}>
-            <a href="{% url 'dcim:controller_wirelessnetworks' pk=object.pk %}">Wireless Networks</a>
+        <li class="nav-item" role="presentation">
+            <a href="{% url 'dcim:controller_wirelessnetworks' pk=object.pk %}" class="nav-link{% if active_tab == 'wireless-networks' %} active{% endif %}">Wireless Networks</a>
         </li>
     {% endif %}
 {% endblock extra_nav_tabs %}
