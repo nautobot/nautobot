@@ -1,0 +1,82 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block content_left_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Interface</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Virtual Machine</td>
+                    <td>{{ object.virtual_machine|hyperlinked_object }}</td>
+                </tr>
+                <tr>
+                    <td>Name</td>
+                    <td>{{ object.name }}</td>
+                </tr>
+                <tr>
+                    <td>Status</td>
+                        <td>
+                            {{ object.status| hyperlinked_object_with_color }}
+                        </td>
+                </tr>
+                <tr>
+                    <td>Role</td>
+                    <td>
+                        {{ object.role| hyperlinked_object_with_color }}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Enabled</td>
+                    <td>{{ object.enabled | render_boolean }}</td>
+                </tr>
+                <tr>
+                     <td>Parent Interface</td>
+                     <td>
+                         {% if object.parent_interface %}
+                             <a href="{{ object.parent_interface.get_absolute_url }}">{{ object.parent_interface }}</a>
+                         {% else %}
+                             <span class="text-muted">None</span>
+                         {% endif %}
+                     </td>
+                </tr>
+                <tr>
+                    <td>VRF</td>
+                    <td>{{ object.vrf|hyperlinked_object }} </td>
+                </tr>
+                <tr>
+                     <th scope="row">Bridge</th>
+                     <td>
+                         {% if object.bridge %}
+                             <a href="{{ object.bridge.get_absolute_url }}">{{ object.bridge }}</a>
+                         {% else %}
+                             <span class="text-muted">None</span>
+                         {% endif %}
+                     </td>
+                 </tr>
+                <tr>
+                    <td>Description</td>
+                    <td>{{ object.description|placeholder }} </td>
+                </tr>
+                <tr>
+                    <td>MTU</td>
+                    <td>{{ object.mtu|placeholder }}</td>
+                </tr>
+                <tr>
+                    <td>MAC Address</td>
+                    <td><span class="text-monospace">{{ object.mac_address|placeholder }}</span></td>
+                </tr>
+                <tr>
+                    <td>802.1Q Mode</td>
+                    <td>{{ object.get_mode_display }}</td>
+                </tr>
+            </table>
+        </div>
+{% endblock content_left_page %}
+
+{% block content_full_width_page %}
+    {% include 'panel_table.html' with table=ipaddress_table heading="IP Addresses" %}
+    {% include 'panel_table.html' with table=vlan_table heading="VLANs" %}
+    {% include 'panel_table.html' with table=child_interfaces_table heading="Child Interfaces" %}
+{% endblock content_full_width_page %}

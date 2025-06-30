@@ -1,0 +1,43 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+{% load helpers %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Interface</strong></div>
+        <div class="panel-body">
+            {% render_field form.virtual_machine %}
+            {% render_field form.name %}
+            {% render_field form.status %}
+            {% render_field form.role %}
+            {% render_field form.enabled %}
+            {% render_field form.parent_interface %}
+            {% render_field form.bridge %}
+            {% render_field form.vrf %}
+            {% render_field form.mac_address %}
+            {% render_field form.ip_addresses %}
+            {% render_field form.mtu %}
+            {% render_field form.description %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>802.1Q Switching</strong></div>
+        <div class="panel-body">
+            {% render_field form.mode %}
+            {% render_field form.untagged_vlan %}
+            {% render_field form.tagged_vlans %}
+        </div>
+    </div>
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+{% endblock %}
+
+{% block buttons %}
+    {% if editing %}
+        <button type="submit" name="_update" class="btn btn-primary">Update</button>
+        <button type="submit" formaction="?return_url={% url 'virtualization:vminterface_edit' pk=obj.pk %}" class="btn btn-primary">Update and Continue Editing</button>
+    {% else %}
+        <button type="submit" name="_create" class="btn btn-primary">Create</button>
+        <button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>
+    {% endif %}
+    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+{% endblock %}

@@ -336,18 +336,19 @@ class VirtualMachineBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class VMInterfaceListView(generic.ObjectListView):
+class VMInterfaceUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.VMInterfaceBulkEditForm
+    filterset_class = filters.VMInterfaceFilterSet
+    filterset_form_class = forms.VMInterfaceFilterForm
+    form_class = forms.VMInterfaceForm
+    serializer_class = serializers.VMInterfaceSerializer
+    table_class = tables.VMInterfaceTable
     queryset = VMInterface.objects.all()
-    filterset = filters.VMInterfaceFilterSet
-    filterset_form = forms.VMInterfaceFilterForm
-    table = tables.VMInterfaceTable
     action_buttons = ("export",)
 
-
-class VMInterfaceView(generic.ObjectView):
-    queryset = VMInterface.objects.all()
-
     def get_extra_context(self, request, instance):
+        if instance is None:
+            return {}
         # Get assigned IP addresses
         ipaddress_table = InterfaceIPAddressTable(
             data=instance.ip_addresses.restrict(request.user, "view").select_related("role", "status", "tenant"),
@@ -379,36 +380,6 @@ class VMInterfaceView(generic.ObjectView):
         }
 
 
-class VMInterfaceCreateView(generic.ComponentCreateView):
-    queryset = VMInterface.objects.all()
-    form = forms.VMInterfaceCreateForm
-    model_form = forms.VMInterfaceForm
-    template_name = "virtualization/virtualmachine_component_add.html"
-
-
-class VMInterfaceEditView(generic.ObjectEditView):
-    queryset = VMInterface.objects.all()
-    model_form = forms.VMInterfaceForm
-    template_name = "virtualization/vminterface_edit.html"
-
-
-class VMInterfaceDeleteView(generic.ObjectDeleteView):
-    queryset = VMInterface.objects.all()
-    template_name = "virtualization/virtual_machine_vminterface_delete.html"
-
-
-class VMInterfaceBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = VMInterface.objects.all()
-    table = tables.VMInterfaceTable
-
-
-class VMInterfaceBulkEditView(generic.BulkEditView):
-    queryset = VMInterface.objects.all()
-    table = tables.VMInterfaceTable
-    form = forms.VMInterfaceBulkEditForm
-    filterset = filters.VMInterfaceFilterSet
-
-
 class VMInterfaceBulkRenameView(generic.BulkRenameView):
     queryset = VMInterface.objects.all()
     form = forms.VMInterfaceBulkRenameForm
@@ -418,13 +389,6 @@ class VMInterfaceBulkRenameView(generic.BulkRenameView):
         if selected_object:
             return selected_object.virtual_machine.name
         return ""
-
-
-class VMInterfaceBulkDeleteView(generic.BulkDeleteView):
-    queryset = VMInterface.objects.all()
-    table = tables.VMInterfaceTable
-    template_name = "virtualization/vminterface_bulk_delete.html"
-    filterset = filters.VMInterfaceFilterSet
 
 
 #
