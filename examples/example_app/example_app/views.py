@@ -140,6 +140,16 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
         ),
     )
 
+    def get_required_permission(self):
+        """
+        Override to ensure that the custom action `all_names` requires only view permissions.
+        """
+        permissions = super().get_required_permission()
+        if self.action == "all_names":
+            permissions.append("example_app.view_examplemodel")
+
+        return permissions
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
