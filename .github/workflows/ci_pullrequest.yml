@@ -266,7 +266,7 @@ jobs:
           docker run -d --name doltsql \
             -p 3306:3306 \
             custom-dolt \
-            /bin/sh -c "dolt --ignore-lock-file sql-server --config=/dolt-config.yaml"
+            /bin/sh -c "dolt --ignore-lock-file sql-server --config=/var/lib/nautobot/dolt-config.yaml"
       - name: "Install Required Dependencies for MySQL Client"
         run: "sudo apt-get update && sudo apt-get install --no-install-recommends -y default-libmysqlclient-dev gcc"
       - name: "Setup environment"
