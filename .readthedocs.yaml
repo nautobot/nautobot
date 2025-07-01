@@ -11,6 +11,9 @@ build:
   os: "ubuntu-24.04"
   tools:
     python: "3.9"
+  jobs:
+    pre_build:
+      - "./docs/insert-analytics.sh"
 
 # MKDocs configuration file
 mkdocs:
