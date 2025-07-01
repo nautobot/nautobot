@@ -13,7 +13,7 @@ build:
     python: "3.9"
   jobs:
     pre_build:
-      - "./docs/insert-analytics.sh"
+      - "/bin/bash ./docs/insert-analytics.sh"
 
 # MKDocs configuration file
 mkdocs:
