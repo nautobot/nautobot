@@ -53,6 +53,7 @@ from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.extras.forms import GraphQLQueryForm
 from nautobot.extras.models import FileProxy, GraphQLQuery, Status
 from nautobot.extras.registry import registry
+from nautobot.extras.tables import StatusTable
 
 logger = logging.getLogger(__name__)
 
@@ -278,6 +279,7 @@ class ThemePreviewView(LoginRequiredMixin, TemplateView):
             "object": Status.objects.first(),
             "verbose_name": Status.objects.all().model._meta.verbose_name,
             "verbose_name_plural": Status.objects.all().model._meta.verbose_name_plural,
+            "table": StatusTable(Status.objects.none()),
         }
 
 
