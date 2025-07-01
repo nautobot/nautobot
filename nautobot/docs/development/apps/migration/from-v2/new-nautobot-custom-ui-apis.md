@@ -230,6 +230,7 @@ After:
         <span class="visually-hidden">Copy</span>
     </button>
 </span>
+```
 
 ## Toggle All (Collapse All / Expand All)
 
