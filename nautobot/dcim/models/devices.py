@@ -1866,7 +1866,7 @@ class Module(PrimaryModel):
             if self.module_type.manufacturer != parent_mfr:
                 raise ValidationError(
                     {
-                        "module_type": "The selected module bay requires a module type from the same manufacturer as the parent device"
+                        "module_type": "The selected module bay requires a module type from the same manufacturer as the parent device or module"
                     }
                 )
 
