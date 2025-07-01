@@ -6,6 +6,46 @@ Up until v3.x, Nautobot has been *"smuggling"* its own CSS classes along with ot
 
 From now on, all HTML data attributes and CSS classes which refer to Nautobot custom functionalities are prefixed with `nb-*`.
 
+Here's a list of what's changed:
+
+| v2.x                                  | v3.0                                                                      |
+|---------------------------------------|---------------------------------------------------------------------------|
+| `banner-bottom`                       | `nb-banner-bottom`                                                        |
+| `btn-inline`                          | `nb-btn-inline-hover`, refer to [Hover Copy Buttons](#hover-copy-buttons) |
+| `hover_copy`                          | *removed*, refer to [Hover Copy Buttons](#hover-copy-buttons)             |
+| `hover_copy_button`                   | *removed*, refer to [Hover Copy Buttons](#hover-copy-buttons)             |
+| `cable-trace`                         | `nb-cable-trace`                                                          |
+| `active` (scoped to cable trace)      | `nb-active`                                                               |
+| `cable` (scoped to cable trace)       | `nb-cable`                                                                |
+| `node` (scoped to cable trace)        | `nb-node`                                                                 |
+| `termination` (scoped to cable trace) | `nb-termination`                                                          |
+| `trace-end` (scoped to cable trace)   | `nb-trace-end`                                                            |
+| `color-block`                         | `nb-color-block`                                                          |
+| `inline-color-block`                  | *removed*                                                                 |
+| `editor-container`                    | `nb-editor-container`                                                     |
+| `filter-container`                    | *removed*                                                                 |
+| `display-inline` (scoped to filters)  | *removed*                                                                 |
+| `filter-selection`                    | *removed*                                                                 |
+| `filter-selection-choice`             | *removed*                                                                 |
+| `filter-selection-choice-remove`      | *removed*                                                                 |
+| `filter-selection-rendered`           | *removed*                                                                 |
+| `remove-filter-param`                 | *removed*                                                                 |
+| `loading` (scoped to AJAX loaders)    | `nb-loading`                                                              |
+| `required` (scoped to form labels)    | `nb-required`                                                             |
+| `noprint`                             | *removed*, use `d-print-none` instead                                     |
+| `powered-by-nautobot`                 | *removed*                                                                 |
+| `report-stats`                        | `nb-report-stats`                                                         |
+| `right-side-panel`                    | `nb-right-side-panel`                                                     |
+| `software-image-hierarchy`            | `nb-software-image-hierarchy`                                             |
+| `tree-hierarchy`                      | `nb-tree-hierarchy`                                                       |
+| `tiles`                               | `nb-tiles`                                                                |
+| `tile`                                | `nb-tile`                                                                 |
+| `clickable` (scoped to tiles)         | `nb-clickable`                                                            |
+| `disabled` (scoped to tiles)          | `nb-disabled`                                                             |
+| `tile-description`                    | `nb-tile-description`                                                     |
+| `tile-footer`                         | `nb-tile-footer`                                                          |
+| `tile-header`                         | `nb-tile-header`                                                          |
+
 ## Table configuration button
 
 Configurable table columns are no novelty for Nautobot. However, when we redesigned user interface in v3.x, we also changed the way table configuration buttons are rendered, and as result they are now more coupled with tables they manage. Table configuration buttons are no longer standalone buttons on the page, instead they are rendered in the top right header cell of any **configurable** table.
@@ -157,6 +197,37 @@ It is now recommended to use sticky footers to host action buttons in all Nautob
         </a>
     </div>
 </form>
+```
+
+## Hover Copy Buttons
+
+Hover Copy Buttons work as before but they require little adjustments to their existing implementations. Here's what's changed:
+
+1. `btn-inline` CSS class has been renamed to `nb-btn-inline-hover` and it is now the sole indicator that a button is expected to be hidden when idle and only appear on hover.
+2. `hover_copy` CSS class has been removed and is no longer required for annotating Hover Copy Button parent elements. Instead, hover button now always appears while hovering over its immediate parent, regardless of set classes and data attributes.
+3. `hover_copy_button` CSS class has also been removed.
+
+Before:
+
+```html
+<span class="hover_copy">
+    <span id="uuid_copy">{{ object.id }}</span>
+    <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#uuid_copy">
+        <span class="mdi mdi-content-copy"></span>
+    </button>
+</span>
+```
+
+After:
+
+```html
+<span>
+    <span id="uuid_copy">{{ object.id }}</span>
+    <button class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#uuid_copy">
+        <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+        <span class="visually-hidden">Copy</span>
+    </button>
+</span>
 ```
 
 ## Extended Bootstrap Utilities

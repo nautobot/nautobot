@@ -72,17 +72,20 @@ def extract_page_body(content):
     <html>
       <head>...</head>
       <body>
-        <nav>...</nav>
-        <div class="container-fluid wrapper"> <!-- BEGIN -->
-          ...
-        </div> <!-- END -->
+        <nav id="sidenav">...</nav><!-- BEGIN -->
+        <header><nav><!-- breadcrumbs --></nav></header>
+        <main class="container-fluid wrapper" id="main-content" tabindex="-1">
+        ...
+        </div><!-- END -->
         <footer class="footer">...</footer>
         ...
       </body>
     </html>
     """
     try:
-        return re.findall(r"(?<=</nav>).*(?=<footer)", content, flags=(re.MULTILINE | re.DOTALL))[0]
+        return re.findall(
+            r"<nav id=\"sidenav\"[^>]*>.*?</nav>(.*?)(?=<footer)", content, flags=(re.MULTILINE | re.DOTALL)
+        )[0]
     except IndexError:
         return content
 

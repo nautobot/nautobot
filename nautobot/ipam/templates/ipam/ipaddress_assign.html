@@ -57,7 +57,7 @@
                 <div class="col-md-12">
                     <h3 class="my-16">Search Results</h3>
                     {% include 'utilities/obj_table.html' with table_template='panel_table.html' disable_pagination=True %}
-                    <div class="mt-16 noprint text-center">
+                    <div class="d-print-none mt-16 text-center">
                         {% if perms.dcim.change_interface %}
                             <button type="submit" name="_edit" formaction="#" class="btn btn-primary btn-sm">
                                 <span class="mdi mdi-check me-4" aria-hidden="true"></span><!--

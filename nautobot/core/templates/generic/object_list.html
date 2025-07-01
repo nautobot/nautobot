@@ -16,7 +16,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="align-items-center d-flex gap-8 justify-content-end mb-16 noprint">
+<div class="align-items-center d-flex gap-8 justify-content-end mb-16 d-print-none">
     {% block buttons %}{% endblock %}
     {% plugin_buttons content_type.model_class 'list' %}
 
@@ -101,6 +101,7 @@
 <div class="filters-applied">
     <b>Filters:</b>
     {% for field in filter_params %}
+    {% comment %} TODO(norbert-mieczkowski-codilime): filters overview should be gone from here in v3.0.{% endcomment %}
     <span class="filter-container" dir="ltr">
         <span
                 class="filter-selection">
@@ -142,7 +143,7 @@
                 <input type="hidden" name="return_url" value="{% if return_url %}{{ return_url }}{% else %}{{ request.path }}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}{% endif %}" />
                 {% if table.paginator.num_pages > 1 %}
                 <div class="table-responsive">
-                    <div id="select_all_box" class="visually-hidden card mb-16 noprint">
+                    <div id="select_all_box" class="visually-hidden card mb-16 d-print-none">
                         <div class="card-body column-gap-20 hstack row-gap-12 flex-wrap justify-content-end">
                             <div class="checkbox-inline flex-grow-1">
                                 <label for="select_all" class="hstack gap-8">
@@ -182,7 +183,7 @@
                 {% endif %}
                 {% include table_template|default:'panel_table.html' %}
 
-                <div class="noprint mt-16 float-lg-start mt-lg-20">
+                <div class="d-print-none mt-16 float-lg-start mt-lg-20">
                     {% consolidate_bulk_action_buttons %}
                     {% block bulk_buttons %}{% endblock %}
                 </div>

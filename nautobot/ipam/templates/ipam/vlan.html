@@ -70,7 +70,7 @@
                 </div>
                 {% include 'responsive_table.html' with table=prefix_table %}
                 {% if perms.ipam.add_prefix %}
-                    <div class="panel-footer text-right noprint">
+                    <div class="panel-footer text-right d-print-none">
                         <a href="{% url 'ipam:prefix_add' %}?{% if object.tenant %}tenant={{ object.tenant.pk }}{% endif %}&vlan={{ object.pk }}{% for loc in object.locations.all %}&locations={{ loc.pk }}{% endfor %}" class="btn btn-primary btn-xs">
                             <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                             Add a prefix

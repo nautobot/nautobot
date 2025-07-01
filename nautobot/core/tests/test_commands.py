@@ -1,7 +1,6 @@
 from io import StringIO
 
 from django.core.management import call_command
-from django.test import tag
 import yaml
 
 from nautobot.core.testing import TestCase
@@ -18,7 +17,6 @@ class ManagementCommandTestCase(TestCase):
         self.user.save()
         self.client.force_login(self.user)
 
-    @tag("fix_in_v3")
     def test_generate_performance_test_endpoints(self):
         """Test the generate_performance_test_endpoints management command."""
         out = StringIO()

@@ -14,7 +14,7 @@
                 </td>
                 <td>{{ attachment.size|filesizeformat }}</td>
                 <td>{{ attachment.created }}</td>
-                <td class="text-right noprint">
+                <td class="text-right d-print-none">
                     {% if perms.extras.change_imageattachment %}
                         <a href="{% url 'extras:imageattachment_edit' pk=attachment.pk %}" class="btn btn-warning btn-xs" title="Edit image">
                             <i class="mdi mdi-pencil" aria-hidden="true"></i>

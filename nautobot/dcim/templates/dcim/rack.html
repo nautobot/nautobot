@@ -141,7 +141,7 @@
             <div class="panel-heading">
                 <strong>Comments</strong>
             </div>
-            <div class="panel-body rendered-markdown">
+            <div class="panel-body nb-rendered-markdown">
                 {% if object.comments %}
                     {{ object.comments|render_markdown }}
                 {% else %}
@@ -196,7 +196,7 @@
             </div>
             {% include 'inc/image_attachments.html' with images=object.images.all %}
             {% if perms.extras.add_imageattachment %}
-                <div class="panel-footer text-right noprint">
+                <div class="panel-footer text-right d-print-none">
                     <a href="{% url 'dcim:rack_add_image' object_id=object.pk %}" class="btn btn-primary btn-xs">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                         Attach an image
@@ -228,7 +228,7 @@
                                 {{ resv.description }}<br />
                                 <small>{{ resv.user }} &middot; {{ resv.created }}</small>
                             </td>
-                            <td class="text-right noprint">
+                            <td class="text-right d-print-none">
                                 {% if perms.dcim.change_rackreservation %}
                                     <a href="{% url 'dcim:rackreservation_edit' pk=resv.pk %}?return_url={{ object.get_absolute_url }}" class="btn btn-warning btn-xs" title="Edit reservation">
                                         <i class="mdi mdi-pencil" aria-hidden="true"></i>
@@ -247,7 +247,7 @@
                 <div class="panel-body text-muted">None</div>
             {% endif %}
             {% if perms.dcim.add_rackreservation %}
-                <div class="panel-footer text-right noprint">
+                <div class="panel-footer text-right d-print-none">
                     <a href="{% url 'dcim:rackreservation_add' %}?rack={{ object.pk }}&return_url={{ object.get_absolute_url }}" class="btn btn-primary btn-xs">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                         Add a reservation
@@ -302,7 +302,7 @@
                 <div class="panel-body text-muted">None</div>
             {% endif %}
             {% if perms.dcim.add_device %}
-                <div class="panel-footer text-right noprint">
+                <div class="panel-footer text-right d-print-none">
                     <a href="{% url 'dcim:device_add' %}?location={{ object.location.pk }}&rack={{ object.pk }}" class="btn btn-primary btn-xs">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                         Add a non-racked device
