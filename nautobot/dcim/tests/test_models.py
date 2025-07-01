@@ -3405,6 +3405,130 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
         )
         self.assertEqual(child_module.interfaces.first().name, "Interface " + module_bay_position + "/3/2")
 
+    def test_module_manufacturer_constraint_requires_first_party_false(self):
+        """Test that modules are allowed when requires_first_party_modules is False, regardless of manufacturer."""
+        manufacturer = Manufacturer.objects.create(name="Different Manufacturer")
+        module_type = ModuleType.objects.create(manufacturer=manufacturer, model="Different Module")
+        module_bay = ModuleBay.objects.create(
+            parent_device=self.device, position="test1", requires_first_party_modules=False
+        )
+        module = Module(
+            module_type=module_type,
+            parent_module_bay=module_bay,
+            status=self.status,
+        )
+
+        module.full_clean()
+        module.save()
+
+    def test_module_manufacturer_constraint_device_parent_same_manufacturer(self):
+        """Test that modules are allowed when requires_first_party_modules is True and manufacturers match."""
+        device_manufacturer = self.device.device_type.manufacturer
+        module_type = ModuleType.objects.create(manufacturer=device_manufacturer, model="Same Manufacturer Module")
+        module_bay = ModuleBay.objects.create(
+            parent_device=self.device, position="test2", requires_first_party_modules=True
+        )
+        module = Module(
+            module_type=module_type,
+            parent_module_bay=module_bay,
+            status=self.status,
+        )
+
+        module.full_clean()
+        module.save()
+
+    def test_module_manufacturer_constraint_device_parent_different_manufacturer(self):
+        """Test that modules are rejected when requires_first_party_modules is True and manufacturers don't match."""
+        manufacturer = Manufacturer.objects.create(name="Different Manufacturer")
+        module_type = ModuleType.objects.create(manufacturer=manufacturer, model="Different Module")
+        module_bay = ModuleBay.objects.create(
+            parent_device=self.device, position="test3", requires_first_party_modules=True
+        )
+        module = Module(
+            module_type=module_type,
+            parent_module_bay=module_bay,
+            status=self.status,
+        )
+
+        with self.assertRaises(ValidationError) as context:
+            module.full_clean()
+
+        self.assertIn("module_type", context.exception.message_dict)
+        self.assertIn(
+            "The selected module bay requires a module type from the same manufacturer as the parent device or module",
+            context.exception.message_dict["module_type"],
+        )
+
+    def test_module_manufacturer_constraint_module_parent_same_manufacturer(self):
+        """Test that modules are allowed when requires_first_party_modules is True and manufacturers match."""
+        manufacturer = Manufacturer.objects.create(name="Parent Manufacturer")
+        parent_module_type = ModuleType.objects.create(manufacturer=manufacturer, model="Parent Module")
+        ModuleBayTemplate.objects.create(module_type=parent_module_type, position="child1")
+
+        parent_module = Module.objects.create(
+            module_type=parent_module_type,
+            location=self.location,
+            status=self.status,
+        )
+        child_module_type = ModuleType.objects.create(manufacturer=manufacturer, model="Child Module")
+        parent_module_bay = parent_module.module_bays.first()
+        parent_module_bay.requires_first_party_modules = True
+        parent_module_bay.save()
+
+        child_module = Module(
+            module_type=child_module_type,
+            parent_module_bay=parent_module_bay,
+            status=self.status,
+        )
+
+        child_module.full_clean()
+        child_module.save()
+
+    def test_module_manufacturer_constraint_module_parent_different_manufacturer(self):
+        """Test that modules are rejected when requires_first_party_modules is True and manufacturers don't match."""
+        parent_manufacturer = Manufacturer.objects.create(name="Parent Manufacturer")
+        parent_module_type = ModuleType.objects.create(manufacturer=parent_manufacturer, model="Parent Module")
+        ModuleBayTemplate.objects.create(module_type=parent_module_type, position="child2")
+
+        parent_module = Module.objects.create(
+            module_type=parent_module_type,
+            location=self.location,
+            status=self.status,
+        )
+        child_manufacturer = Manufacturer.objects.create(name="Child Manufacturer")
+        child_module_type = ModuleType.objects.create(manufacturer=child_manufacturer, model="Child Module")
+        parent_module_bay = parent_module.module_bays.first()
+        parent_module_bay.requires_first_party_modules = True
+        parent_module_bay.save()
+
+        child_module = Module(
+            module_type=child_module_type,
+            parent_module_bay=parent_module_bay,
+            status=self.status,
+        )
+
+        with self.assertRaises(ValidationError) as context:
+            child_module.full_clean()
+
+        self.assertIn("module_type", context.exception.message_dict)
+        self.assertIn(
+            "The selected module bay requires a module type from the same manufacturer as the parent device or module",
+            context.exception.message_dict["module_type"],
+        )
+
+    def test_module_manufacturer_constraint_no_parent_module_bay(self):
+        """Test that manufacturer constraint validation is skipped when parent_module_bay is None."""
+        manufacturer = Manufacturer.objects.create(name="Any Manufacturer")
+        module_type = ModuleType.objects.create(manufacturer=manufacturer, model="Any Module")
+        module = Module(
+            module_type=module_type,
+            location=self.location,
+            status=self.status,
+        )
+
+        module.full_clean()
+        module.save()
+
 
 class ModuleTypeTestCase(ModelTestCases.BaseModelTestCase):
     model = ModuleType

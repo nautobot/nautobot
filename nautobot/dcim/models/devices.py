@@ -1859,11 +1859,13 @@ class Module(PrimaryModel):
 
         # Validate module manufacturer constraint
         if self.parent_module_bay and self.parent_module_bay.requires_first_party_modules:
-            if hasattr(self.parent_module_bay.parent, "device_type"):
-                parent_mfr = self.parent_module_bay.parent.device_type.manufacturer
+            if self.parent_module_bay.parent_device:
+                parent_mfr = self.parent_module_bay.parent_device.device_type.manufacturer
+            elif self.parent_module_bay.parent_module:
+                parent_mfr = self.parent_module_bay.parent_module.module_type.manufacturer
             else:
-                parent_mfr = self.parent_module_bay.parent.module_type.manufacturer
-            if self.module_type.manufacturer != parent_mfr:
+                parent_mfr = None
+            if parent_mfr and self.module_type.manufacturer != parent_mfr:
                 raise ValidationError(
                     {
                         "module_type": "The selected module bay requires a module type from the same manufacturer as the parent device or module"
