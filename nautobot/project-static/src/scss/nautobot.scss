@@ -447,6 +447,7 @@ $utilities: map-merge(
       values: (
         base: $transition-base,
         fade: $transition-fade,
+        none: none,
       ),
     ),
     "nb-w": (
@@ -1553,7 +1554,7 @@ $nb-drawer-open-width: 20rem; /* 320px */
 
   .nb-tile {
     background: var(--#{$prefix}body-bg);;
-    border: $border-width solid $border-color;
+    border: $border-width solid var(--#{$prefix}border-color);
     border-radius: $border-radius;
     display: flex;
     flex-direction: column;
@@ -1626,7 +1627,7 @@ $nb-drawer-open-width: 20rem; /* 320px */
     }
 
     .nb-tile-footer {
-      border-top: $border-width solid $border-color;
+      border-top: $border-width solid var(--#{$prefix}border-color);
       column-gap: map.get($spacers, 10);
       color: var(--#{$prefix}secondary-color);
       display: flex;
@@ -1863,28 +1864,6 @@ pre code.hljs {
       }
     }
   }
-}
-
-/* TODO(norbert-mieczkowski-codilime): decide what to do with job accordion styles, most likely just remove them. */
-.accordion-toggle {
-  border: 0;
-  color: black;
-  font-size: 14px;
-  font-weight: 700;
-  padding: 0;
-  text-decoration: none;
-}
-
-.accordion-toggle:hover, .accordion-toggle:active, .accordion-toggle:visited, .accordion-toggle:link, .accordion-toggle:focus {
-  border: 0;
-  color: black;
-  outline: 0;
-  padding: 0;
-  text-decoration: none;
-}
-
-.accordion-toggle-all {
-  display: inline;
 }
 
 /* TODO(norbert-mieczkowski-codilime): filters overview should be gone from `object_list.html` in v3.0. */

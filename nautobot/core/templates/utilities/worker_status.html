@@ -59,16 +59,23 @@
                             </td>
                         </tr>
                         <tr>
-                            <th colspan="{{ worker.running_tasks_table.columns|length }}">
-                                <button type="button" class="btn-link accordion-toggle mdi mdi-chevron-right"
-                                        name="running-tasks-{{ worker.hostname|slugify }}" data-toggle="collapse"
-                                        data-target=".collapseme-running-tasks-{{ worker.hostname|slugify }}">
-                                    Running Tasks {% badge worker.running_tasks_table.rows|length show_empty=True %}
+                            <th class="position-relative" colspan="{{ worker.running_tasks_table.columns|length }}">
+                                <button
+                                    aria-controls="collapseme-running-tasks-{{ worker.hostname|slugify }}"
+                                    aria-expanded="false"
+                                    class="btn float-none fs-4 stretched-link nb-collapse-toggle"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#collapseme-running-tasks-{{ worker.hostname|slugify }}"
+                                    name="running-tasks-{{ worker.hostname|slugify }}"
+                                    type="button"
+                                >
+                                    <span class="mdi mdi-chevron-down me-4"></span><!--
+                                    -->Running Tasks {% badge worker.running_tasks_table.rows|length show_empty=True %}
                                 </button>
                             </th>
                         </tr>
                     </tbody>
-                    <tbody class="collapseme-running-tasks-{{ worker.hostname|slugify }} collapse" data-parent="#accordion" aria-expanded="false">
+                    <tbody class="collapse nb-transition-none" id="collapseme-running-tasks-{{ worker.hostname|slugify }}">
                         <tr>
                             {% for column in worker.running_tasks_table.columns %}
                                 <th {{ column.attrs.th.as_html }}>{{ column.header }}</th>
@@ -92,16 +99,23 @@
                     </tbody>
                     <tbody>
                         <tr>
-                            <th colspan="{{ worker.pending_tasks_table.columns|length }}">
-                                <button type="button" class="btn-link accordion-toggle mdi mdi-chevron-right"
-                                        name="pending-tasks-{{ worker.hostname|slugify }}" data-toggle="collapse"
-                                        data-target=".collapseme-pending-tasks-{{ worker.hostname|slugify }}">
-                                    Pending Tasks {% badge worker.pending_tasks_table.rows|length show_empty=True %}
+                            <th class="position-relative" colspan="{{ worker.pending_tasks_table.columns|length }}">
+                                <button
+                                    aria-controls="collapseme-pending-tasks-{{ worker.hostname|slugify }}"
+                                    aria-expanded="false"
+                                    class="btn float-none fs-4 stretched-link nb-collapse-toggle"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#collapseme-pending-tasks-{{ worker.hostname|slugify }}"
+                                    name="pending-tasks-{{ worker.hostname|slugify }}"
+                                    type="button"
+                                >
+                                    <span class="mdi mdi-chevron-down me-4"></span><!--
+                                    -->Pending Tasks {% badge worker.pending_tasks_table.rows|length show_empty=True %}
                                 </button>
                             </th>
                         </tr>
                     </tbody>
-                    <tbody class="collapseme-pending-tasks-{{ worker.hostname|slugify }} collapse" data-parent="#accordion" aria-expanded="false">
+                    <tbody class="collapse" id="collapseme-pending-tasks-{{ worker.hostname|slugify }}">
                         <tr>
                             {% for column in worker.pending_tasks_table.columns %}
                                 <th {{ column.attrs.th.as_html }}>{{ column.header }}</th>
@@ -139,14 +153,4 @@
             {% endwith %}
     {% endfor %}
 </div>
-{% endblock %}
-
-{% block javascript %}
-{{ block.super }}
-<script>
-    // Toggle v -. >
-    $("#accordion .accordion-toggle").click(function() {
-        $(this).toggleClass("mdi-chevron-down mdi-chevron-right");
-    });
-</script>
 {% endblock %}
