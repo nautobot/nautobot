@@ -11,7 +11,7 @@ from django.forms.models import model_to_dict
 from django.shortcuts import get_object_or_404, redirect, render
 from django.templatetags.static import static
 from django.urls import reverse
-from django.utils.html import format_html, format_html_join
+from django.utils.html import format_html
 from django.utils.http import urlencode
 from django.views.generic import View
 from django_tables2 import RequestConfig
@@ -1206,17 +1206,6 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
             data["locations"] = instance.locations.all()
             return data
 
-        def render_value(self, key, value, context):
-            if key == "locations":
-                items = []
-                for val in value:
-                    rendered_val = helpers.hyperlinked_object(val)
-                    items.append(rendered_val)
-                return (
-                    format_html_join("", "<div>{}</div>", ((item,) for item in items)) if items else helpers.HTML_NONE
-                )
-            return super().render_value(key, value, context)
-
     class PrefixObjectsTablePanel(object_detail.ObjectsTablePanel):
         def _get_table_add_url(self, context):
             obj = get_obj_from_context(context)
@@ -1241,6 +1230,7 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
+                value_transforms={"locations": [helpers.render_m2m]},
             ),
             PrefixObjectsTablePanel(
                 weight=100,
