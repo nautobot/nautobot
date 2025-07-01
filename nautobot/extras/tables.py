@@ -1169,7 +1169,7 @@ class JobLogEntryTable(BaseTable):
     )
     log_object = tables.Column(verbose_name="Object", linkify=log_object_link)
     message = tables.Column(
-        attrs={"td": {"class": "rendered-markdown"}},
+        attrs={"td": {"class": "nb-rendered-markdown"}},
     )
 
     def render_log_level(self, value):
@@ -1495,7 +1495,7 @@ class ScheduledJobApprovalQueueTable(BaseTable):
     actions = tables.TemplateColumn(
         SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS,
         attrs={
-            "td": {"class": "text-end text-nowrap noprint nb-actions nb-w-0"},
+            "td": {"class": "d-print-none text-end text-nowrap nb-actions nb-w-0"},
             "tf": {"class": "nb-w-0"},
             "th": {"class": "nb-actionable nb-w-0"},
         },

@@ -16,7 +16,7 @@
                 <div role="tabpanel" class="tab-pane active" id="details">
                     <div class="align-items-center d-flex flex-wrap mb-16">
                         {% include 'inc/created_updated.html' %}
-                        <div class="flex-grow-0 flex-shrink-0 noprint">
+                        <div class="flex-grow-0 flex-shrink-0 d-print-none">
                             {% block buttons %}
                             {% plugin_buttons object %}
                             {% render_detail_view_extra_buttons %}
@@ -83,11 +83,12 @@
                                     <tr>
                                         <td>Serial Number</td>
                                         <td>
-                                            <span class="hover_copy">
+                                            <span>
                                                 <span id="serial_number">{{ object.serial|placeholder }}</span>
                                                 {% if object.serial %}
-                                                    <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#serial_number">
-                                                        <span class="mdi mdi-content-copy"></span>
+                                                    <button class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#serial_number">
+                                                        <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+                                                        <span class="visually-hidden">Copy</span>
                                                     </button>
                                                 {% endif %}
                                             </span>
@@ -120,7 +121,7 @@
                                             </tr>
                                         {% endfor %}
                                     </table>
-                                    <div class="panel-footer text-right noprint">
+                                    <div class="panel-footer text-right d-print-none">
                                         <a href="{{ object.virtual_chassis.get_absolute_url }}" class="btn btn-primary btn-xs">
                                             <span class="mdi mdi-arrow-right-bold" aria-hidden="true"></span> View Virtual Chassis
                                         </a>
@@ -152,7 +153,7 @@
                                         <td>Primary IPv4</td>
                                         <td>
                                             {% if object.primary_ip4 %}
-                                                <span class="hover_copy">
+                                                <span>
                                                     {{ object.primary_ip4|hyperlinked_object|add_html_id:"ipv4" }} ({{ object.primary_ip4.parent.namespace|hyperlinked_object }})
                                                     {% if object.primary_ip4.nat_inside %}
                                                         <span>(NAT for {{ object.primary_ip4.nat_inside.address.ip }})</span>
@@ -164,8 +165,9 @@
                                                             {% endfor %}
                                                         </ul>
                                                     {% endif %}
-                                                    <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#ipv4">
-                                                        <span class="mdi mdi-content-copy"></span>
+                                                    <button class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#ipv4">
+                                                        <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+                                                        <span class="visually-hidden">Copy</span>
                                                     </button>
                                                 </span>
                                             {% else %}
@@ -177,7 +179,7 @@
                                         <td>Primary IPv6</td>
                                         <td>
                                             {% if object.primary_ip6 %}
-                                                <span class="hover_copy">
+                                                <span>
                                                     {{ object.primary_ip6|hyperlinked_object|add_html_id:"ipv6" }} ({{ object.primary_ip6.parent.namespace|hyperlinked_object }})
                                                     {% if object.primary_ip6.nat_inside %}
                                                         <span>(NAT for {{ object.primary_ip6.nat_inside.address.ip }})</span>
@@ -189,8 +191,9 @@
                                                             {% endfor %}
                                                         </ul>
                                                     {% endif %}
-                                                    <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#ipv6">
-                                                        <span class="mdi mdi-content-copy"></span>
+                                                    <button class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#ipv6">
+                                                        <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+                                                        <span class="visually-hidden">Copy</span>
                                                     </button>
                                                 </span>
                                             {% else %}
@@ -249,7 +252,7 @@
                                 <div class="panel-heading">
                                     <strong>Comments</strong>
                                 </div>
-                                <div class="panel-body rendered-markdown">
+                                <div class="panel-body nb-rendered-markdown">
                                     {% if object.comments %}
                                         {{ object.comments|render_markdown }}
                                     {% else %}
@@ -320,7 +323,7 @@
                                     </div>
                                 {% endif %}
                                 {% if perms.ipam.add_service %}
-                                    <div class="panel-footer text-right noprint">
+                                    <div class="panel-footer text-right d-print-none">
                                         <a href="{% url 'dcim:device_service_assign' device=object.pk %}" class="btn btn-xs btn-primary">
                                             <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Assign service
                                         </a>
@@ -333,7 +336,7 @@
                                 </div>
                                 {% include 'inc/image_attachments.html' with images=object.images.all %}
                                 {% if perms.extras.add_imageattachment %}
-                                    <div class="panel-footer text-right noprint">
+                                    <div class="panel-footer text-right d-print-none">
                                         <a href="{% url 'dcim:device_add_image' object_id=object.pk %}" class="btn btn-primary btn-xs">
                                             <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                                             Attach an image
@@ -382,14 +385,14 @@
                         <div class="panel-heading">
                             <strong>Contact Associations</strong>
                         </div>
-                        <div class="pull-right noprint">
+                        <div class="pull-right d-print-none">
                             <!-- Insert table config button here -->
                         </div>
                         <div class="table-responsive">
                             {% render_table associated_contacts_table 'inc/table.html' %}
                         </div>
                         {% with request.path|add:"?tab=contacts"|urlencode as return_url %}
-                            <div class="panel-footer noprint">
+                            <div class="panel-footer d-print-none">
                                 {% if perms.extras.change_contactassociation %}
                                     <button type="submit" name="_edit" formaction="{% url 'extras:contactassociation_bulk_edit' %}?return_url={{return_url}}" class="btn btn-warning btn-xs">
                                         <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
@@ -437,7 +440,7 @@
                     <div class="panel panel-default">
                         <div class="panel-heading">
                             <strong>Dynamic Groups</strong>
-                            <div class="pull-right noprint">
+                            <div class="pull-right d-print-none">
                                 <!-- Insert table config button here -->
                             </div>
                         </div>
@@ -459,7 +462,7 @@
                     <div class="panel panel-default">
                         <div class="panel-heading">
                             <strong>Object Metadata</strong>
-                            <div class="pull-right noprint">
+                            <div class="pull-right d-print-none">
                                 <!-- Insert table config button here -->
                             </div>
                         </div>

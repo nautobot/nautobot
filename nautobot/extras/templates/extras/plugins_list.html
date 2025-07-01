@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block content %}
-    <div class="row noprint">
+    <div class="row d-print-none">
         <div class="col-md-12">
             <ol class="breadcrumb">
                 {% block breadcrumbs %}
@@ -17,7 +17,7 @@
         </div>
     </div>
 
-    <div class="pull-right noprint">
+    <div class="pull-right d-print-none">
         <div class="btn-group">
             <a class="btn btn-default set-apps-display" data-display="tiles" href="" title="Tiles">
                 <i class="mdi mdi-view-grid{% if display == "list" %}-outline{% endif %}"></i>
@@ -35,7 +35,7 @@
     <div class="row">
         <div class="col-md-12">
             {% if filter_form %}
-                <div class="col-md-3 pull-right right-side-panel noprint">
+                <div class="col-md-3 float-end nb-right-side-panel d-print-none">
                     {% include 'inc/search_panel.html' %}
                     {% block sidebar %}{% endblock %}
                 </div>

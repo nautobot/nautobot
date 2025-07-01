@@ -4,7 +4,7 @@
 {% load django_htmx %}
 
 <!DOCTYPE html>
-<html lang="en"{% if request.COOKIES|get_item:"theme" == 'dark' %} data-theme="dark" data-bs-theme="dark"{% endif %}>
+<html lang="en"{% with cookie_theme=request.COOKIES|get_item:'theme' %}{% if cookie_theme == 'dark' or cookie_theme == 'light' %} data-theme="{{cookie_theme}}" data-bs-theme="{{cookie_theme}}"{% endif %}{% endwith %}>
 <head>
     <title>{% block title %}Home{% endblock %} - {{ settings.BRANDING_TITLE }}</title>
     {% include 'inc/media.html' %}
@@ -56,7 +56,7 @@
         <div class="push"></div>
         {% if request.user.is_authenticated %}
             {% if "BANNER_BOTTOM"|settings_or_config %}
-                <div class="alert alert-info text-center banner-bottom" role="alert">
+                <div class="alert alert-info text-center nb-banner-bottom" role="alert">
                     {{ "BANNER_BOTTOM"|settings_or_config|render_markdown }}
                 </div>
             {% endif %}

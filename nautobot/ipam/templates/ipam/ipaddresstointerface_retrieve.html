@@ -4,8 +4,9 @@
 
 {% block masthead %}
 <h1>
-<span class="hover_copy"><span id="copy_title">{{ object }}</span><button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-text="{{ object }}">
-    <span class="mdi mdi-content-copy"></span>
+<span><span id="copy_title">{{ object }}</span><button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-text="{{ object }}">
+    <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+    <span class="visually-hidden">Copy</span>
 </button>
 </span>
 </h1>

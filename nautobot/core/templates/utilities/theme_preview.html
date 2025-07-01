@@ -3,7 +3,7 @@
 {% load helpers %}
 
 {% block header %}
-<div class="row noprint">
+<div class="row d-print-none">
     <div class="col-md-12">
         <ol class="breadcrumb">
             <li><a href="{% url 'home' %}">Nautobot</a></li>
@@ -18,7 +18,7 @@
 
 {% block content %}
 <!-- Begin example of "object_list.html" -->
-<div class="row noprint">
+<div class="row d-print-none">
     <div class="col-sm-8 col-md-9">
         <ol class="breadcrumb">
             <li><a>Statuses</a></li>
@@ -38,7 +38,7 @@
     </div>
 </div>
 
-<div class="pull-right noprint">
+<div class="pull-right d-print-none">
     <button type="button" class="btn btn-default"><i class="mdi mdi-cog"></i> Configure</button>
     <button type="button" class="btn btn-default"><i class="mdi mdi-filter"></i> Filter</button>
     <div class="btn-group">
@@ -68,7 +68,7 @@
     <div class="col-md-12">
         <form>
             {% include "panel_table.html" %}
-            <div class="pull-left noprint">
+            <div class="pull-left d-print-none">
                 <button type="submit" name="_edit" class="btn btn-warning btn-sm">
                     <span class="mdi mdi-pencil"></span> Edit Selected
                 </button>
@@ -132,14 +132,15 @@
     </div>
 </div>
 
-<div class="pull-right noprint">
+<div class="pull-right d-print-none">
     {% consolidate_detail_view_action_buttons %}
 </div>
 <h1>
-    <span class="hover_copy">
+    <span>
         Object Detail
-        <button type="button" class="btn btn-inline btn-default hover_copy_button">
-            <span class="mdi mdi-content-copy"></span>
+        <button type="button" class="btn btn-secondary nb-btn-inline-hover">
+            <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+            <span class="visually-hidden">Copy</span>
         </button>
     </span>
 </h1>
@@ -201,7 +202,7 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label class="col-md-3 control-label required" for="id_status">Status</label>
+                        <label class="col-md-3 control-label nb-required" for="id_status">Status</label>
                         <div class="col-md-9">
                             <select name="status" class="nautobot-select2-api form-control select2-hidden-accessible" data-query-param-content_types="[&quot;dcim.device&quot;]" display-field="display" value-field="id" data-depth="0" required="" placeholder="Status" data-url="/api/extras/statuses/" id="id_status">
                             </select>

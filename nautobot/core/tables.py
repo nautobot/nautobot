@@ -351,7 +351,7 @@ class ToggleColumn(django_tables2.CheckBoxColumn):
         default = kwargs.pop("default", "")
         visible = kwargs.pop("visible", False)
         if "attrs" not in kwargs:
-            kwargs["attrs"] = {"td": {"class": "min-width"}}
+            kwargs["attrs"] = {"td": {"class": "nb-w-0"}}
         super().__init__(*args, default=default, visible=visible, **kwargs)
 
     @property
@@ -380,7 +380,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
 
     buttons = ("changelog", "edit", "delete")
     attrs = {
-        "td": {"class": "text-end text-nowrap noprint nb-actions nb-w-0"},
+        "td": {"class": "d-print-none text-end text-nowrap nb-actions nb-w-0"},
         "tf": {"class": "nb-w-0"},
         "th": {"class": "nb-actionable nb-w-0"},
     }
@@ -470,7 +470,7 @@ class ApprovalButtonsColumn(django_tables2.TemplateColumn):
     """
 
     buttons = ("detail", "changelog", "approve", "deny")
-    attrs = {"td": {"class": "text-right text-nowrap noprint"}}
+    attrs = {"td": {"class": "d-print-none text-right text-nowrap"}}
     template_name = "extras/inc/approval_buttons_column.html"
 
     def __init__(
@@ -524,7 +524,7 @@ class ColorColumn(django_tables2.Column):
     """
 
     def render(self, value):
-        return format_html('<span class="label color-block" style="background-color: #{}">&nbsp;</span>', value)
+        return format_html('<span class="label nb-color-block" style="background-color: #{}">&nbsp;</span>', value)
 
 
 class ColoredLabelColumn(django_tables2.TemplateColumn):

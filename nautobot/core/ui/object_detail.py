@@ -1137,10 +1137,11 @@ class KeyValueTablePanel(Panel):
                 else:
                     value_tag = format_html(
                         """
-                            <span class="hover_copy">
+                            <span>
                                 <span id="{unique_id}_value_{key}">{value}</span>
-                                <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#{unique_id}_value_{key}">
-                                    <span class="mdi mdi-content-copy"></span>
+                                <button class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#{unique_id}_value_{key}">
+                                    <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+                                    <span class="visually-hidden">Copy</span>
                                 </button>
                             </span>
                         """,

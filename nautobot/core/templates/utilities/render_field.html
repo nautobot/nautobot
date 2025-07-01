@@ -28,7 +28,7 @@
                 <span class="help-block">{{ field.help_text|safe }}</span>
             {% endif %}
     {% else %}
-        <label class="col-md-3 col-form-label{% if field.field.required %} required{% endif %}" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        <label class="col-md-3 col-form-label{% if field.field.required %} nb-required{% endif %}" for="{{ field.id_for_label }}">{{ field.label }}</label>
         <div class="col-md-9">
             {{ field }}
             {% if bulk_nullable %}

@@ -34,6 +34,7 @@ import { initializeDrawers } from './drawer.js';
 import { observeFormStickyFooters } from './form.js';
 import { initializeSearch } from './search.js';
 import { observeCollapseTabs } from './tabs.js';
+import { initializeTheme } from './theme.js';
 
 document.addEventListener('DOMContentLoaded', function () {
   // Tooltips
@@ -105,6 +106,9 @@ document.addEventListener('DOMContentLoaded', function () {
    *   ```
    */
   let unobserveCollapseTabs = observeCollapseTabs();
+
+  // Theme
+  initializeTheme();
 
   const toggleFavorite = (element, event) => {
     if (event.detail.successful) {

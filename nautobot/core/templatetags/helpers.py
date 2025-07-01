@@ -702,7 +702,7 @@ def render_ancestor_hierarchy(value):
     if not value or not hasattr(value, "ancestors"):
         return HTML_NONE
 
-    result = format_html('<ul class="tree-hierarchy">')
+    result = format_html('<ul class="nb-tree-hierarchy">')
     append_to_result = format_html("</ul>")
 
     for ancestor in value.ancestors():
@@ -758,7 +758,7 @@ def render_address(address):
             quote_plus(address),
         )
         address = format_html_join("", "{}<br>", ((line,) for line in address.split("\n")))
-        return format_html('<div class="pull-right noprint">{}</div>{}', map_link, address)
+        return format_html('<div class="pull-right d-print-none">{}</div>{}', map_link, address)
     return HTML_NONE
 
 

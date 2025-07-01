@@ -77,7 +77,7 @@
                 <td>Physical Address</td>
                 <td>
                     {% if object.physical_address %}
-                        <div class="pull-right noprint">
+                        <div class="pull-right d-print-none">
                             <a href="https://maps.google.com/?q={{ object.physical_address|urlencode }}" target="_blank" class="btn btn-primary btn-xs">
                                 <i class="mdi mdi-map-marker"></i> Map it
                             </a>
@@ -96,7 +96,7 @@
                 <td>GPS Coordinates</td>
                 <td>
                     {% if object.latitude and object.longitude %}
-                        <div class="pull-right noprint">
+                        <div class="pull-right d-print-none">
                             <a href="https://maps.google.com/?q={{ object.latitude }},{{ object.longitude }}" target="_blank" class="btn btn-primary btn-xs">
                                 <i class="mdi mdi-map-marker"></i> Map it
                             </a>
@@ -130,7 +130,7 @@
             </table>
             {% if request.user|has_perms:contact_association_permission %}
                 {% with request.path|add:"?tab=contacts"|urlencode as return_url %}
-                    <div class="panel-footer text-right noprint">
+                    <div class="panel-footer text-right d-print-none">
                         <a href="{% url 'dcim:location_migrate_data_to_contact' pk=object.pk %}?return_url={{return_url}}" class="btn btn-primary btn-xs">
                             <span class="mdi mdi-account-edit" aria-hidden="true"></span>
                             Convert to contact/team record
@@ -144,7 +144,7 @@
         <div class="panel-heading">
             <strong>Comments</strong>
         </div>
-        <div class="panel-body rendered-markdown">
+        <div class="panel-body nb-rendered-markdown">
             {% if object.comments %}
                 {{ object.comments|render_markdown }}
             {% else %}
@@ -195,7 +195,7 @@
                 <tr>
                     <td style="padding-left: {{ rg.tree_depth }}8px"><i class="mdi mdi-folder-open"></i> <a href="{{ rg.get_absolute_url }}">{{ rg }}</a></td>
                     <td>{{ rg.rack_count }}</td>
-                    <td class="text-right noprint">
+                    <td class="text-right d-print-none">
                         <a href="{% url 'dcim:rack_elevation_list' %}?rack_group={{ rg.pk }}" class="btn btn-xs btn-primary" title="View elevations">
                             <i class="mdi mdi-server"></i>
                         </a>
@@ -205,7 +205,7 @@
             <tr>
                 <td><i class="mdi mdi-folder-open"></i> All racks</td>
                 <td>{{ stats.rack_count }}</td>
-                <td class="text-right noprint">
+                <td class="text-right d-print-none">
                     <a href="{% url 'dcim:rack_elevation_list' %}?location={{ object.pk }}" class="btn btn-xs btn-primary" title="View elevations">
                         <i class="mdi mdi-server"></i>
                     </a>
@@ -219,7 +219,7 @@
         </div>
         {% include 'inc/image_attachments.html' with images=object.images.all %}
         {% if perms.extras.add_imageattachment %}
-            <div class="panel-footer text-right noprint">
+            <div class="panel-footer text-right d-print-none">
                 <a href="{% url 'dcim:location_add_image' object_id=object.pk %}" class="btn btn-primary btn-xs">
                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                     Attach an image
@@ -237,7 +237,7 @@
             </div>
             {% include 'inc/table.html' with table=children_table %}
             {% if perms.dcim.add_location %}
-                <div class="panel-footer text-right noprint">
+                <div class="panel-footer text-right d-print-none">
                     <a href="{% url 'dcim:location_add' %}?parent={{ object.pk }}" class="btn btn-xs btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add child
                     </a>

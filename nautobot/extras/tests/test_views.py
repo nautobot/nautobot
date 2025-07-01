@@ -4682,7 +4682,7 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases
                     if result == "Contact Associations":
                         # AssociationContact Table in the contact tab should be there.
                         self.assertIn(
-                            f'<strong>{result}</strong>\n                                    <div class="pull-right noprint">\n',
+                            f'<strong>{result}</strong>\n                                    <div class="pull-right d-print-none">\n',
                             response_body,
                         )
                         # ContactAssociationTable related to this role instances should not be there.
