@@ -37,6 +37,7 @@ from nautobot.dcim.choices import (
     PortTypeChoices,
     PowerFeedBreakerPoleChoices,
     PowerFeedPhaseChoices,
+    PowerFeedSideChoices,
     PowerFeedSupplyChoices,
     PowerFeedTypeChoices,
     PowerOutletFeedLegChoices,
@@ -987,6 +988,7 @@ class PowerFeedSerializer(
     NautobotModelSerializer,
 ):
     type = ChoiceField(choices=PowerFeedTypeChoices, default=PowerFeedTypeChoices.TYPE_PRIMARY)
+    side = ChoiceField(choices=PowerFeedSideChoices, allow_blank=True, required=False)
     supply = ChoiceField(choices=PowerFeedSupplyChoices, default=PowerFeedSupplyChoices.SUPPLY_AC)
     phase = ChoiceField(choices=PowerFeedPhaseChoices, default=PowerFeedPhaseChoices.PHASE_SINGLE)
     breaker_poles = ChoiceField(choices=PowerFeedBreakerPoleChoices, allow_blank=True, allow_null=True, required=False)

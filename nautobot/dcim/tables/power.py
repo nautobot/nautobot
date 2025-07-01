@@ -72,6 +72,7 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
     destination_panel = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
     type = ChoiceFieldColumn()
+    side = ChoiceFieldColumn()
     occupied_positions = tables.Column(accessor="occupied_positions", verbose_name="Position")
     phase_designation = tables.Column(accessor="phase_designation", verbose_name="Phase Designation")
     max_utilization = tables.TemplateColumn(template_code="{{ value }}%")
@@ -88,6 +89,7 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
             "rack",
             "status",
             "type",
+            "side",
             "supply",
             "voltage",
             "amperage",
@@ -106,6 +108,7 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
             "rack",
             "status",
             "type",
+            "side",
             "supply",
             "voltage",
             "amperage",

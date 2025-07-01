@@ -1422,18 +1422,28 @@ class PowerFeedStatusChoices(ChoiceSet):
 class PowerFeedTypeChoices(ChoiceSet):
     TYPE_PRIMARY = "primary"
     TYPE_REDUNDANT = "redundant"
-    TYPE_STANDBY = "standby"
 
     CHOICES = (
         (TYPE_PRIMARY, "Primary"),
         (TYPE_REDUNDANT, "Redundant"),
-        (TYPE_STANDBY, "Standby"),
     )
 
     CSS_CLASSES = {
         TYPE_PRIMARY: "success",
         TYPE_REDUNDANT: "info",
     }
+
+
+class PowerFeedSideChoices(ChoiceSet):
+    SIDE_A = "a-side"
+    SIDE_B = "b-side"
+    SIDE_C = "c-side"  # For complex 3-path designs
+
+    CHOICES = (
+        (SIDE_A, "A-Side"),
+        (SIDE_B, "B-Side"),
+        (SIDE_C, "C-Side"),
+    )
 
 
 class PowerFeedSupplyChoices(ChoiceSet):

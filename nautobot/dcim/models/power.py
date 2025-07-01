@@ -9,6 +9,7 @@ from nautobot.core.models.validators import ExclusionValidator
 from nautobot.dcim.choices import (
     PowerFeedBreakerPoleChoices,
     PowerFeedPhaseChoices,
+    PowerFeedSideChoices,
     PowerFeedSupplyChoices,
     PowerFeedTypeChoices,
     PowerPanelTypeChoices,
@@ -129,6 +130,12 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
         max_length=50,
         choices=PowerFeedTypeChoices,
         default=PowerFeedTypeChoices.TYPE_PRIMARY,
+    )
+    side = models.CharField(
+        max_length=20,
+        choices=PowerFeedSideChoices,
+        help_text="Physical power distribution side/path",
+        blank=True,
     )
     supply = models.CharField(
         max_length=50,

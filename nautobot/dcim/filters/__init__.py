@@ -23,7 +23,6 @@ from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
     ControllerCapabilitiesChoices,
     InterfaceTypeChoices,
-    PowerFeedBreakerPoleChoices,
     PowerOutletTypeChoices,
     PowerPanelTypeChoices,
     PowerPortTypeChoices,
@@ -1682,11 +1681,6 @@ class PowerFeedFilterSet(
         to_field_name="name",
         label="Rack (name or ID)",
     )
-    breaker_position = django_filters.NumberFilter()
-    breaker_poles = django_filters.MultipleChoiceFilter(
-        choices=PowerFeedBreakerPoleChoices,
-        null_value=None,
-    )
 
     class Meta:
         model = PowerFeed
@@ -1695,6 +1689,7 @@ class PowerFeedFilterSet(
             "name",
             "status",
             "type",
+            "side",
             "supply",
             "phase",
             "voltage",

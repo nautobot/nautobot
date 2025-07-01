@@ -12,4 +12,4 @@ Cables can connect power ports only to power outlets or power feeds. (Pass-throu
 
 ## Example Power Topology
 
-![Power distribution model](../../../media/power_distribution.png)
+![Power distribution model](../../../media/power_distribution.png){: style="width: 50%"}

@@ -3203,7 +3203,7 @@ class PowerPanelTest(APIViewTestCases.APIViewTestCase):
 
 class PowerFeedTest(APIViewTestCases.APIViewTestCase):
     model = PowerFeed
-    choices_fields = ["phase", "supply", "type", "breaker_poles"]
+    choices_fields = ["phase", "supply", "type", "breaker_poles", "side"]
 
     @classmethod
     def setUpTestData(cls):

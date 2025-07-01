@@ -90,6 +90,7 @@ from .choices import (
     PortTypeChoices,
     PowerFeedBreakerPoleChoices,
     PowerFeedPhaseChoices,
+    PowerFeedSideChoices,
     PowerFeedSupplyChoices,
     PowerFeedTypeChoices,
     PowerOutletFeedLegChoices,
@@ -4591,6 +4592,7 @@ class PowerFeedForm(NautobotModelForm):
             "name",
             "status",
             "type",
+            "side",
             "supply",
             "phase",
             "voltage",
@@ -4603,6 +4605,7 @@ class PowerFeedForm(NautobotModelForm):
         ]
         widgets = {
             "type": StaticSelect2(),
+            "side": StaticSelect2(),
             "supply": StaticSelect2(),
             "phase": StaticSelect2(),
             "breaker_poles": StaticSelect2(),
@@ -4616,6 +4619,12 @@ class PowerFeedBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin,
     rack = DynamicModelChoiceField(queryset=Rack.objects.all(), required=False)
     type = forms.ChoiceField(
         choices=add_blank_choice(PowerFeedTypeChoices),
+        required=False,
+        initial="",
+        widget=StaticSelect2(),
+    )
+    side = forms.ChoiceField(
+        choices=add_blank_choice(PowerFeedSideChoices),
         required=False,
         initial="",
         widget=StaticSelect2(),
@@ -4645,6 +4654,7 @@ class PowerFeedBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin,
 
     class Meta:
         nullable_fields = [
+            "side",
             "breaker_position",
             "breaker_poles",
             "comments",
@@ -4677,6 +4687,12 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, Locata
     type = forms.ChoiceField(
         choices=add_blank_choice(PowerFeedTypeChoices),
         required=False,
+        widget=StaticSelect2(),
+    )
+    side = forms.ChoiceField(
+        choices=add_blank_choice(PowerFeedSideChoices),
+        required=False,
+        initial="",
         widget=StaticSelect2(),
     )
     supply = forms.ChoiceField(
