@@ -560,6 +560,9 @@ class RackUIViewSet(NautobotUIViewSet):
     def get_extra_context(self, request, instance):
         if not getattr(instance, "location", None):
             return super().get_extra_context(request, instance)
+
+        context = super().get_extra_context(request, instance)
+
         # Get 0U and child devices located within the rack
         nonracked_devices = Device.objects.filter(rack=instance, position__isnull=True).select_related(
             "device_type__manufacturer"
@@ -571,6 +574,7 @@ class RackUIViewSet(NautobotUIViewSet):
             peer_racks = peer_racks.filter(rack_group=instance.rack_group)
         else:
             peer_racks = peer_racks.filter(rack_group__isnull=True)
+
         next_rack = peer_racks.filter(name__gt=instance.name).order_by("name").first()
         prev_rack = peer_racks.filter(name__lt=instance.name).order_by("-name").first()
 
@@ -578,18 +582,16 @@ class RackUIViewSet(NautobotUIViewSet):
         power_feeds = (
             PowerFeed.objects.restrict(request.user, "view").filter(rack=instance).select_related("power_panel")
         )
-
         device_count = Device.objects.restrict(request.user, "view").filter(rack=instance).count()
 
-        return {
-            "device_count": device_count,
-            "reservations": reservations,
-            "power_feeds": power_feeds,
-            "nonracked_devices": nonracked_devices,
-            "next_rack": next_rack,
-            "prev_rack": prev_rack,
-            **super().get_extra_context(request, instance),
-        }
+        context["device_count"] = device_count
+        context["reservations"] = reservations
+        context["power_feeds"] = power_feeds
+        context["nonracked_devices"] = nonracked_devices
+        context["next_rack"] = next_rack
+        context["prev_rack"] = prev_rack
+
+        return context
 
 
 class RackElevationListView(generic.ObjectListView):
