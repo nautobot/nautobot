@@ -14,6 +14,7 @@ RUN dolt config --global --add user.email opensource@networktocode.COM
 RUN mkdir -p /var/lib/
 WORKDIR /var/lib
 RUN dolt sql -q "CREATE DATABASE nautobot CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
+RUN dolt sql -q "CREATE DATABASE test_nautobot CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
 RUN dolt sql -q "CREATE USER 'root'@'%' IDENTIFIED BY 'decinablesprewad';"
 RUN dolt sql -q "GRANT ALL PRIVILEGES ON *.* to 'root'@'%';"
 
