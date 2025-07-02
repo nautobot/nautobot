@@ -347,37 +347,41 @@ class VMInterfaceUIViewSet(NautobotUIViewSet):
     action_buttons = ("export",)
 
     def get_extra_context(self, request, instance):
-        if instance is None:
-            return {}
-        # Get assigned IP addresses
-        ipaddress_table = InterfaceIPAddressTable(
-            data=instance.ip_addresses.restrict(request.user, "view").select_related("role", "status", "tenant"),
-            orderable=False,
-        )
+        context = super().get_extra_context(request, instance)
 
-        # Get child interfaces
-        child_interfaces = instance.child_interfaces.restrict(request.user, "view")
-        child_interfaces_tables = tables.VMInterfaceTable(
-            child_interfaces, orderable=False, exclude=("virtual_machine",)
-        )
+        if self.action == "retrieve":
+            # Get assigned IP addresses
+            ipaddress_table = InterfaceIPAddressTable(
+                data=instance.ip_addresses.restrict(request.user, "view").select_related("role", "status", "tenant"),
+                orderable=False,
+            )
 
-        # Get assigned VLANs and annotate whether each is tagged or untagged
-        vlans = []
-        if instance.untagged_vlan is not None:
-            vlans.append(instance.untagged_vlan)
-            vlans[0].tagged = False
+            # Get child interfaces
+            child_interfaces = instance.child_interfaces.restrict(request.user, "view")
+            child_interfaces_tables = tables.VMInterfaceTable(
+                child_interfaces, orderable=False, exclude=("virtual_machine",)
+            )
 
-        for vlan in instance.tagged_vlans.restrict(request.user).select_related("vlan_group", "tenant", "role"):
-            vlan.tagged = True
-            vlans.append(vlan)
-        vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
+            # Get assigned VLANs and annotate whether each is tagged or untagged
+            vlans = []
+            if instance.untagged_vlan is not None:
+                vlans.append(instance.untagged_vlan)
+                vlans[0].tagged = False
 
-        return {
-            "ipaddress_table": ipaddress_table,
-            "child_interfaces_table": child_interfaces_tables,
-            "vlan_table": vlan_table,
-            **super().get_extra_context(request, instance),
-        }
+            for vlan in instance.tagged_vlans.restrict(request.user).select_related("vlan_group", "tenant", "role"):
+                vlan.tagged = True
+                vlans.append(vlan)
+            vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
+
+            context.update(
+                {
+                    "ipaddress_table": ipaddress_table,
+                    "child_interfaces_table": child_interfaces_tables,
+                    "vlan_table": vlan_table,
+                }
+            )
+
+        return context
 
 
 class VMInterfaceBulkRenameView(generic.BulkRenameView):
