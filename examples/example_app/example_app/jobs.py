@@ -357,16 +357,6 @@ class ExampleCustomFormJob(Job):
         self.logger.debug("Data is %s", custom_job_data)
 
 
-class ExampleHiddenJob(Job):
-    class Meta:
-        hidden = True
-        name = "Example hidden job"
-        description = "I should not show in the UI!"
-
-    def run(self):  # pylint:disable=arguments-differ
-        pass
-
-
 class ExampleLoggingJob(Job):
     interval = IntegerVar(default=4, description="The time in seconds to sleep.")
 
@@ -513,7 +503,6 @@ jobs = (
     ExampleDryRunJob,
     ExampleJob,
     ExampleCustomFormJob,
-    ExampleHiddenJob,
     ExampleLoggingJob,
     ExampleFileInputOutputJob,
     ExampleJobHookReceiver,

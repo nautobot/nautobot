@@ -35,6 +35,7 @@ router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet
 router.register("device-types", views.DeviceTypeUIViewSet)
 router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
 router.register("interface-redundancy-groups-associations", views.InterfaceRedundancyGroupAssociationUIViewSet)
+router.register("locations", views.LocationUIViewSet)
 router.register("location-types", views.LocationTypeUIViewSet)
 router.register("manufacturers", views.ManufacturerUIViewSet)
 router.register("module-bays", views.ModuleBayUIViewSet)
@@ -52,26 +53,6 @@ router.register("virtual-device-contexts", views.VirtualDeviceContextUIViewSet)
 
 urlpatterns = [
     # Locations
-    path("locations/", views.LocationListView.as_view(), name="location_list"),
-    path("locations/add/", views.LocationEditView.as_view(), name="location_add"),
-    path("locations/edit/", views.LocationBulkEditView.as_view(), name="location_bulk_edit"),
-    path("locations/import/", views.LocationBulkImportView.as_view(), name="location_import"),  # 3.0 TODO: remove
-    path("locations/delete/", views.LocationBulkDeleteView.as_view(), name="location_bulk_delete"),
-    path("locations/<uuid:pk>/", views.LocationView.as_view(), name="location"),
-    path("locations/<uuid:pk>/edit/", views.LocationEditView.as_view(), name="location_edit"),
-    path("locations/<uuid:pk>/delete/", views.LocationDeleteView.as_view(), name="location_delete"),
-    path(
-        "locations/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="location_changelog",
-        kwargs={"model": Location},
-    ),
-    path(
-        "locations/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="location_notes",
-        kwargs={"model": Location},
-    ),
     path(
         "locations/<uuid:pk>/migrate-data-to-contact/",
         views.MigrateLocationDataToContactView.as_view(),
