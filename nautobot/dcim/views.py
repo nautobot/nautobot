@@ -2374,19 +2374,6 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     table_class = tables.ModuleTable
     component_model = None
 
-    def get_required_permission(self):
-        # TODO figure out a case where we can handle this with custom_view_base_action and custom_view_additional_permissions attributes
-        # I am not too sure what views are using these permissions
-        if self.custom_view_base_action not in ["view", "add"] and self.component_model:
-            component_action = "change"
-            permissions = [
-                *self.get_permissions_for_model(self.component_model, [component_action]),
-                "dcim.change_module",
-            ]
-            return permissions
-
-        return super().get_required_permission()
-
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         if instance:

@@ -70,9 +70,6 @@ PERMISSIONS_ACTION_MAP = {
     "notes": "view",
 }
 
-# Standard base actions we use for model-level permissions.
-BASE_ACTIONS = ["view", "add", "change", "delete"]
-
 
 class ContentTypePermissionRequiredMixin(AccessMixin):
     """
@@ -255,22 +252,11 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         model_permissions = []
         for action in actions:
-            # Append the base action permission if and only if it is valid and the model provided matches the queryset model.
-            if self.custom_view_base_action:
-                if self.custom_view_base_action not in BASE_ACTIONS:
-                    self.logger.error(
-                        f"Invalid base action '{self.custom_view_base_action}' specified in {self.__class__.__name__}. "
-                    )
-                elif model == self.get_queryset().model:
-                    model_permissions.append(
-                        f"{model._meta.app_label}.{self.custom_view_base_action}_{model._meta.model_name}"
-                    )
-
             # Append additional object permissions if specified.
             if self.custom_view_additional_permissions:
                 model_permissions.append(*self.custom_view_additional_permissions)
-            else:
-                model_permissions.append(f"{model._meta.app_label}.{action}_{model._meta.model_name}")
+            # Append the model-level permissions for the action.
+            model_permissions.append(f"{model._meta.app_label}.{action}_{model._meta.model_name}")
         return model_permissions
 
     def get_required_permission(self):
@@ -520,21 +506,14 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         queryset = super().get_queryset()
         return queryset.restrict(self.request.user, self.get_action())
 
-    def get_action_map(self):
-        """
-        Return a mapping of action names to their corresponding permissions.
-        This is used to determine the permissions required for each action.
-        """
-        return PERMISSIONS_ACTION_MAP
-
     def get_action(self):
         """Helper method for retrieving action and if action not set defaulting to action name."""
-        action_map = self.get_action_map()
-        if self.action in action_map:
-            # If the action is in the action_map, return the mapped permission
-            return action_map[self.action]
-        elif self.custom_view_base_action:
+        if self.custom_view_base_action:
             return self.custom_view_base_action
+        if self.action in PERMISSIONS_ACTION_MAP:
+            # If the action is in the action_map, return the mapped permission
+            return PERMISSIONS_ACTION_MAP[self.action]
+
         return self.action
 
     def get_extra_context(self, request, instance=None):
