@@ -959,7 +959,7 @@ class DeviceFilterSet(
         field_name="controller_managed_device_group__wireless_networks",
         label="Has wireless networks",
     )
-    controllers = NaturalKeyOrPKMultipleChoiceFilter(
+    controller = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="controller_managed_device_group__controller",
         queryset=Controller.objects.all(),
         to_field_name="name",
