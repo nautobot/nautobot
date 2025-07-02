@@ -70,6 +70,9 @@ PERMISSIONS_ACTION_MAP = {
     "notes": "view",
 }
 
+# Standard base actions we use for model-level permissions.
+BASE_ACTIONS = ["view", "add", "change", "delete"]
+
 
 class ContentTypePermissionRequiredMixin(AccessMixin):
     """
@@ -238,8 +241,10 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     serializer_class = None
     table_class = None
     notes_form_class = NoteForm
-    custom_action_permission_map = None
     permission_classes = []
+    # custom view attributes used for permission checks and handling
+    custom_view_base_action = None
+    custom_view_additional_permissions = None
 
     def get_permissions_for_model(self, model, actions):
         """
@@ -250,7 +255,22 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         model_permissions = []
         for action in actions:
-            model_permissions.append(f"{model._meta.app_label}.{action}_{model._meta.model_name}")
+            # Append the base action permission if and only if it is valid and the model provided matches the queryset model.
+            if self.custom_view_base_action:
+                if self.custom_view_base_action not in BASE_ACTIONS:
+                    self.logger.error(
+                        f"Invalid base action '{self.custom_view_base_action}' specified in {self.__class__.__name__}. "
+                    )
+                elif model == self.get_queryset().model:
+                    model_permissions.append(
+                        f"{model._meta.app_label}.{self.custom_view_base_action}_{model._meta.model_name}"
+                    )
+
+            # Append additional object permissions if specified.
+            if self.custom_view_additional_permissions:
+                model_permissions.append(*self.custom_view_additional_permissions)
+            else:
+                model_permissions.append(f"{model._meta.app_label}.{action}_{model._meta.model_name}")
         return model_permissions
 
     def get_required_permission(self):
@@ -505,14 +525,17 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         Return a mapping of action names to their corresponding permissions.
         This is used to determine the permissions required for each action.
         """
-        if self.custom_action_permission_map:
-            return dict(self.custom_action_permission_map, **PERMISSIONS_ACTION_MAP)
         return PERMISSIONS_ACTION_MAP
 
     def get_action(self):
         """Helper method for retrieving action and if action not set defaulting to action name."""
         action_map = self.get_action_map()
-        return action_map.get(self.action, self.action)
+        if self.action in action_map:
+            # If the action is in the action_map, return the mapped permission
+            return action_map[self.action]
+        elif self.custom_view_base_action:
+            return self.custom_view_base_action
+        return self.action
 
     def get_extra_context(self, request, instance=None):
         """

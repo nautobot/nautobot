@@ -74,11 +74,6 @@ class NamespaceUIViewSet(NautobotUIViewSet):
     queryset = Namespace.objects.all()
     serializer_class = serializers.NamespaceSerializer
     table_class = tables.NamespaceTable
-    custom_action_permission_map = {
-        "vrfs": "view",
-        "prefixes": "view",
-        "ip_addresses": "view",
-    }
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(object_detail.ObjectFieldsPanel(section=SectionChoices.LEFT_HALF, weight=100, fields="__all__"),),
         extra_tabs=(
@@ -111,19 +106,12 @@ class NamespaceUIViewSet(NautobotUIViewSet):
         context.update({"object_detail_content": self.object_detail_content})
         return context
 
-    def get_required_permission(self):
-        # TODO: standardize a pattern for permissions enforcement on custom actions
-        permissions = super().get_required_permission()
-        if self.action == "vrfs":
-            permissions.append("ipam.view_vrf")
-        elif self.action == "prefixes":
-            permissions.append("ipam.view_prefix")
-        elif self.action == "ip_addresses":
-            permissions.append("ipam.view_ipaddress")
-
-        return permissions
-
-    @action(detail=True, url_path="vrfs")
+    @action(
+        detail=True,
+        url_path="vrfs",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["ipam.view_vrf"],
+    )
     def vrfs(self, request, *args, **kwargs):
         instance = self.get_object()
         vrfs = instance.vrfs.restrict(request.user, "view")
@@ -145,7 +133,12 @@ class NamespaceUIViewSet(NautobotUIViewSet):
             }
         )
 
-    @action(detail=True, url_path="prefixes")
+    @action(
+        detail=True,
+        url_path="prefixes",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["ipam.view_prefix"],
+    )
     def prefixes(self, request, *args, **kwargs):
         instance = self.get_object()
         prefixes = instance.prefixes.restrict(request.user, "view").select_related("status")
@@ -163,7 +156,13 @@ class NamespaceUIViewSet(NautobotUIViewSet):
             }
         )
 
-    @action(detail=True, url_path="ip-addresses", url_name="ip_addresses")
+    @action(
+        detail=True,
+        url_path="ip-addresses",
+        url_name="ip_addresses",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["ipam.view_ipaddress"],
+    )
     def ip_addresses(self, request, *args, **kwargs):
         instance = self.get_object()
         ip_addresses = instance.ip_addresses.restrict(request.user, "view").select_related("role", "status", "tenant")

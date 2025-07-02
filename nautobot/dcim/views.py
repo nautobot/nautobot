@@ -1588,9 +1588,6 @@ class ModuleBayTemplateUIViewSet(
     serializer_class = serializers.ModuleBayTemplateSerializer
     table_class = tables.ModuleBayTemplateTable
     create_template_name = "dcim/device_component_add.html"
-    custom_action_permission_map = {
-        "bulk_rename": "change",
-    }
 
     def get_selected_objects_parents_name(self, selected_objects):
         selected_object = selected_objects.first()
@@ -1599,13 +1596,14 @@ class ModuleBayTemplateUIViewSet(
             return parent.display
         return ""
 
-    def get_required_permission(self):
-        permissions = super().get_required_permission()
-        if self.action == "bulk_rename":
-            permissions.append("dcim.change_modulebaytemplate")
-        return permissions
-
-    @action(detail=False, methods=["GET", "POST"], url_path="rename", url_name="bulk_rename")
+    @action(
+        detail=False,
+        methods=["GET", "POST"],
+        url_path="rename",
+        url_name="bulk_rename",
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.change_modulebaytemplate"],
+    )
     def bulk_rename(self, request, *args, **kwargs):
         return self._bulk_rename(request, *args, **kwargs)
 
@@ -2374,39 +2372,16 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     serializer_class = serializers.ModuleSerializer
     table_class = tables.ModuleTable
     component_model = None
-    custom_action_permission_map = {
-        "consoleports": "view",
-        "consoleserverports": "view",
-        "powerports": "view",
-        "poweroutlets": "view",
-        "interfaces": "view",
-        "frontports": "view",
-        "rearports": "view",
-        "modulebays": "view",
-        "bulk_add_consoleport": "change",
-        "bulk_add_consoleserverport": "change",
-        "bulk_add_powerport": "change",
-        "bulk_add_poweroutlet": "change",
-        "bulk_add_interface": "change",
-        "bulk_add_rearport": "change",
-        "bulk_add_modulebay": "change",
-    }
 
     def get_required_permission(self):
-        # TODO: standardize a pattern for permissions enforcement on custom actions
-        if self.component_model:
-            model = self.component_model
-            method = self.request.method.lower()
-            if method == "get":
-                component_action = "view"
-                permissions = [*self.get_permissions_for_model(model, [component_action]), "dcim.view_module"]
-            elif self.action.startswith("bulk_add"):
-                component_action = "add"
-                permissions = [*self.get_permissions_for_model(model, [component_action]), "dcim.change_module"]
-            else:
-                component_action = "change"
-                permissions = [*self.get_permissions_for_model(model, [component_action]), "dcim.change_module"]
-
+        # TODO figure out a case where we can handle this with custom_view_base_action and custom_view_additional_permissions attributes
+        # I am not too sure what views are using these permissions
+        if self.custom_view_base_action not in ["view", "add"] and self.component_model:
+            component_action = "change"
+            permissions = [
+                *self.get_permissions_for_model(self.component_model, [component_action]),
+                "dcim.change_module",
+            ]
             return permissions
 
         return super().get_required_permission()
@@ -2437,7 +2412,13 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
 
         return active_parent_tab
 
-    @action(detail=True, url_path="console-ports", component_model=ConsolePort)
+    @action(
+        detail=True,
+        url_path="console-ports",
+        component_model=ConsolePort,
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_consoleport"],
+    )
     def consoleports(self, request, *args, **kwargs):
         instance = self.get_object()
         consoleports = (
@@ -2456,7 +2437,13 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             }
         )
 
-    @action(detail=True, url_path="console-server-ports", component_model=ConsoleServerPort)
+    @action(
+        detail=True,
+        url_path="console-server-ports",
+        component_model=ConsoleServerPort,
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_consoleserverport"],
+    )
     def consoleserverports(self, request, *args, **kwargs):
         instance = self.get_object()
         consoleserverports = (
@@ -2479,7 +2466,13 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             }
         )
 
-    @action(detail=True, url_path="power-ports", component_model=PowerPort)
+    @action(
+        detail=True,
+        url_path="power-ports",
+        component_model=PowerPort,
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_powerport"],
+    )
     def powerports(self, request, *args, **kwargs):
         instance = self.get_object()
         powerports = (
@@ -2500,7 +2493,13 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             }
         )
 
-    @action(detail=True, url_path="power-outlets", component_model=PowerOutlet)
+    @action(
+        detail=True,
+        url_path="power-outlets",
+        component_model=PowerOutlet,
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_poweroutlet"],
+    )
     def poweroutlets(self, request, *args, **kwargs):
         instance = self.get_object()
         poweroutlets = (
@@ -2521,7 +2520,12 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             }
         )
 
-    @action(detail=True, component_model=Interface)
+    @action(
+        detail=True,
+        component_model=Interface,
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_interface"],
+    )
     def interfaces(self, request, *args, **kwargs):
         instance = self.get_object()
         interfaces = (
@@ -2547,7 +2551,13 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             }
         )
 
-    @action(detail=True, url_path="front-ports", component_model=FrontPort)
+    @action(
+        detail=True,
+        url_path="front-ports",
+        component_model=FrontPort,
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_frontport"],
+    )
     def frontports(self, request, *args, **kwargs):
         instance = self.get_object()
         frontports = instance.front_ports.restrict(request.user, "view").select_related("cable", "rear_port")
@@ -2564,7 +2574,13 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             },
         )
 
-    @action(detail=True, url_path="rear-ports", component_model=RearPort)
+    @action(
+        detail=True,
+        url_path="rear-ports",
+        component_model=RearPort,
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_rearport"],
+    )
     def rearports(self, request, *args, **kwargs):
         instance = self.get_object()
         rearports = instance.rear_ports.restrict(request.user, "view").select_related("cable")
@@ -2581,7 +2597,13 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             }
         )
 
-    @action(detail=True, url_path="module-bays", component_model=ModuleBay)
+    @action(
+        detail=True,
+        url_path="module-bays",
+        component_model=ModuleBay,
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_modulebay"],
+    )
     def modulebays(self, request, *args, **kwargs):
         instance = self.get_object()
         modulebays = instance.module_bays.restrict(request.user, "view").prefetch_related(
@@ -2604,6 +2626,8 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
         url_path="console-ports/add",
         url_name="bulk_add_consoleport",
         component_model=ConsolePort,
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.add_consoleport"],
     )
     def bulk_add_consoleport(self, request, *args, **kwargs):
         return self._bulk_component_create(
@@ -2618,6 +2642,8 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
         url_path="console-server-ports/add",
         url_name="bulk_add_consoleserverport",
         component_model=ConsoleServerPort,
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.add_consoleserverport"],
     )
     def bulk_add_consoleserverport(self, request, *args, **kwargs):
         return self._bulk_component_create(
@@ -2632,6 +2658,8 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
         url_path="power-ports/add",
         url_name="bulk_add_powerport",
         component_model=PowerPort,
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.add_powerport"],
     )
     def bulk_add_powerport(self, request, *args, **kwargs):
         return self._bulk_component_create(
@@ -2646,6 +2674,8 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
         url_path="power-outlets/add",
         url_name="bulk_add_poweroutlet",
         component_model=PowerOutlet,
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.add_poweroutlet"],
     )
     def bulk_add_poweroutlet(self, request, *args, **kwargs):
         return self._bulk_component_create(
@@ -2660,6 +2690,8 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
         url_path="interfaces/add",
         url_name="bulk_add_interface",
         component_model=Interface,
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.add_interface"],
     )
     def bulk_add_interface(self, request, *args, **kwargs):
         return self._bulk_component_create(
@@ -2674,6 +2706,8 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
         url_path="rear-ports/add",
         url_name="bulk_add_rearport",
         component_model=RearPort,
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.add_rearport"],
     )
     def bulk_add_rearport(self, request, *args, **kwargs):
         return self._bulk_component_create(
@@ -2688,6 +2722,8 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
         url_path="module-bays/add",
         url_name="bulk_add_modulebay",
         component_model=ModuleBay,
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.add_modulebay"],
     )
     def bulk_add_modulebay(self, request, *args, **kwargs):
         return self._bulk_component_create(
@@ -3383,10 +3419,6 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
     serializer_class = serializers.ModuleBaySerializer
     table_class = tables.ModuleBayTable
     create_template_name = "dcim/device_component_add.html"
-    custom_action_permission_map = {
-        "bulk_rename": "change",
-    }
-
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
@@ -3431,13 +3463,14 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
             return parent.display
         return ""
 
-    def get_required_permission(self):
-        permissions = super().get_required_permission()
-        if self.action == "bulk_rename":
-            permissions.append("dcim.change_modulebay")
-        return permissions
-
-    @action(detail=False, methods=["GET", "POST"], url_path="rename", url_name="bulk_rename")
+    @action(
+        detail=False,
+        methods=["GET", "POST"],
+        url_path="rename",
+        url_name="bulk_rename",
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.change_modulebay"],
+    )
     def bulk_rename(self, request, *args, **kwargs):
         return self._bulk_rename(request, *args, **kwargs)
 
@@ -4303,13 +4336,6 @@ class SoftwareImageFileUIViewSet(NautobotUIViewSet):
     queryset = SoftwareImageFile.objects.all()
     serializer_class = serializers.SoftwareImageFileSerializer
     table_class = tables.SoftwareImageFileTable
-    custom_action_permission_map = {
-        "device_types": "view",
-        "devices": "view",
-        "inventory_items": "view",
-        "virtual_machines": "view",
-    }
-
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
@@ -4393,33 +4419,42 @@ class SoftwareImageFileUIViewSet(NautobotUIViewSet):
         ),
     )
 
-    def get_required_permission(self):
-        # TODO: standardize a pattern for permissions enforcement on custom actions
-        permissions = super().get_required_permission()
-        if self.action == "device_types":
-            permissions.append("dcim.view_devicetype")
-        elif self.action == "devices":
-            permissions.append("dcim.view_device")
-        elif self.action == "inventory_items":
-            permissions.append("dcim.view_inventoryitem")
-        elif self.action == "virtual_machines":
-            permissions.append("virtualization.view_virtualmachine")
-
-        return permissions
-
-    @action(detail=True, url_path="device-types", url_name="device_types")
+    @action(
+        detail=True,
+        url_path="device-types",
+        url_name="device_types",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_devicetype"],
+    )
     def device_types(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="devices")
+    @action(
+        detail=True,
+        url_path="devices",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_device"],
+    )
     def devices(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="inventory-items", url_name="inventory_items")
+    @action(
+        detail=True,
+        url_path="inventory-items",
+        url_name="inventory_items",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_inventoryitem"],
+    )
     def inventory_items(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="virtual-machines", url_name="virtual_machines")
+    @action(
+        detail=True,
+        url_path="virtual-machines",
+        url_name="virtual_machines",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["virtualization.view_virtualmachine"],
+    )
     def virtual_machines(self, request, *args, **kwargs):
         return Response({})
 
@@ -4464,15 +4499,6 @@ class ControllerUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.ControllerSerializer
     table_class = tables.ControllerTable
     template_name = "dcim/controller_create.html"
-    custom_action_permission_map = {
-        "wirelessnetworks": "view",
-    }
-
-    def get_required_permission(self):
-        permissions = super().get_required_permission()
-        if self.action == "wirelessnetworks":
-            permissions.append("wireless.view_controllermanageddevicegroupwirelessnetworkassignment")
-        return permissions
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -4494,7 +4520,14 @@ class ControllerUIViewSet(NautobotUIViewSet):
 
         return context
 
-    @action(detail=True, url_path="wireless-networks", url_name="wirelessnetworks", methods=["get"])
+    @action(
+        detail=True,
+        url_path="wireless-networks",
+        url_name="wirelessnetworks",
+        methods=["get"],
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["wireless.view_controllermanageddevicegroupwirelessnetworkassignment"],
+    )
     def wirelessnetworks(self, request, *args, **kwargs):
         instance = self.get_object()
         controller_managed_device_groups = instance.controller_managed_device_groups.restrict(
@@ -4529,11 +4562,6 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.ControllerManagedDeviceGroupSerializer
     table_class = tables.ControllerManagedDeviceGroupTable
     template_name = "dcim/controllermanageddevicegroup_create.html"
-    custom_action_permission_map = {
-        "wireless_networks": "view",
-        "radio_profiles": "view",
-    }
-
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
@@ -4594,11 +4622,23 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
         ),
     )
 
-    @action(detail=True, url_path="wireless-networks", url_name="wireless_networks")
+    @action(
+        detail=True,
+        url_path="wireless-networks",
+        url_name="wireless_networks",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["wireless.view_controllermanageddevicegroupwirelessnetworkassignment"],
+    )
     def wireless_networks(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="radio-profiles", url_name="radio_profiles")
+    @action(
+        detail=True,
+        url_path="radio-profiles",
+        url_name="radio_profiles",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["wireless.view_radioprofile"],
+    )
     def radio_profiles(self, request, *args, **kwargs):
         return Response({})
 
@@ -4623,14 +4663,6 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
             raise ValidationError(wireless_networks.errors)
 
         return obj
-
-    def get_required_permission(self):
-        permissions = super().get_required_permission()
-        if self.action == "wireless_networks":
-            permissions.append("wireless.view_controllermanageddevicegroupwirelessnetworkassignment")
-        if self.action == "radio_profiles":
-            permissions.append("wireless.view_radioprofile")
-        return permissions
 
 
 #

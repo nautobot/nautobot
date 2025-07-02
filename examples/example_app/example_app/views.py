@@ -81,9 +81,6 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
     queryset = ExampleModel.objects.all()
     serializer_class = serializers.ExampleModelSerializer
     table_class = tables.ExampleModelTable
-    custom_action_permission_map = {
-        "all_names": "view",
-    }
     object_detail_content = ui.ObjectDetailContent(
         panels=(
             ui.ObjectFieldsPanel(
@@ -139,16 +136,6 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
             ),
         ),
     )
-
-    def get_required_permission(self):
-        """
-        Override to ensure that the custom action `all_names` requires only view permissions.
-        """
-        permissions = super().get_required_permission()
-        if self.action == "all_names":
-            permissions.append("example_app.view_examplemodel")
-
-        return permissions
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -207,7 +194,14 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
 
         return context
 
-    @action(detail=False, name="All Names", methods=["get"], url_path="all-names", url_name="all_names")
+    @action(
+        detail=False,
+        name="All Names",
+        methods=["get"],
+        url_path="all-names",
+        url_name="all_names",
+        custom_view_base_action="view",
+    )
     def all_names(self, request):
         """
         Returns a list of all the example model names.
