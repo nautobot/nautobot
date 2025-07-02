@@ -37,7 +37,6 @@ class CloudAccountTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "provider": providers[1].pk,
             "secrets_group": secrets_groups[1].pk,
             "description": "New description",
-            "comments": "New comments",
         }
 
     def test_post_without_secrets_group(self):
