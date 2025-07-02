@@ -1137,7 +1137,7 @@ class ExportTemplateTestCase(
 
 class ExternalIntegrationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = ExternalIntegration
-    bulk_edit_data = {"timeout": 10, "verify_ssl": True, "extra_config": r"{}", "headers": r"{}"}
+    bulk_edit_data = {"timeout": 10, "verify_ssl": True, "extra_config": '{"baz": "quux"}', "headers": '{"a": "b"}'}
     form_data = {
         "name": "Test External Integration",
         "remote_url": "https://example.com/test1/",
@@ -3976,8 +3976,7 @@ class WebhookTestCase(
             "http_content_type": "application/json",
         }
         cls.bulk_edit_data = {
-            "name": "webhook-4",
-            "enabled": True,
+            "enabled": False,
             "type_create": True,
             "type_update": True,
             "type_delete": False,
