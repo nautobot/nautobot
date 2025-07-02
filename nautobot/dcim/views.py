@@ -107,6 +107,7 @@ from .models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     PathEndpoint,
     Platform,
@@ -4227,6 +4228,51 @@ class InterfaceRedundancyGroupAssociationUIViewSet(ObjectEditViewMixin, ObjectDe
     form_class = forms.InterfaceRedundancyGroupAssociationForm
     template_name = "dcim/interfaceredundancygroupassociation_create.html"
     lookup_field = "pk"
+
+
+class ModuleFamilyUIViewSet(NautobotUIViewSet):
+    """ViewSet for the ModuleFamily model."""
+
+    filterset_class = filters.ModuleFamilyFilterSet
+    filterset_form_class = forms.ModuleFamilyFilterForm
+    form_class = forms.ModuleFamilyForm
+    bulk_update_form_class = forms.ModuleFamilyBulkEditForm
+    queryset = ModuleFamily.objects.all()
+    serializer_class = serializers.ModuleFamilySerializer
+    table_class = tables.ModuleFamilyTable
+    lookup_field = "pk"
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if not instance:
+            return context
+
+        if self.action == "retrieve":
+            module_types = (
+                ModuleType.objects.restrict(request.user, "view")
+                .filter(module_family=instance)
+                .select_related("manufacturer")
+            )
+            module_type_table = tables.ModuleTypeTable(module_types, orderable=False)
+
+            module_bays = (
+                ModuleBay.objects.restrict(request.user, "view")
+                .filter(module_family=instance)
+                .select_related("parent_device", "parent_module")
+            )
+            module_bay_table = tables.ModuleBayTable(module_bays, orderable=False)
+
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(module_type_table)
+            RequestConfig(request, paginate).configure(module_bay_table)
+
+            context["module_type_table"] = module_type_table
+            context["module_bay_table"] = module_bay_table
+
+        return context
 
 
 class DeviceFamilyUIViewSet(NautobotUIViewSet):
