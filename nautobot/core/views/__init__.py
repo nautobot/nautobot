@@ -279,7 +279,7 @@ class ThemePreviewView(LoginRequiredMixin, TemplateView):
             "object": Status.objects.first(),
             "verbose_name": Status.objects.all().model._meta.verbose_name,
             "verbose_name_plural": Status.objects.all().model._meta.verbose_name_plural,
-            "table": StatusTable(Status.objects.none()),
+            "table": StatusTable(Status.objects.all()[:3]),
         }
 
 
