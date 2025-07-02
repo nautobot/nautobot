@@ -1,10 +1,10 @@
 from django.contrib import messages
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 
 from nautobot.core.forms import ConfirmationForm
-from nautobot.core.templatetags.helpers import bettertitle, humanize_speed, placeholder, render_ip_addresses
+from nautobot.core.templatetags import helpers
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import (
     ObjectDetailContent,
@@ -64,6 +64,16 @@ class CircuitTerminationObjectFieldsPanel(ObjectFieldsPanel):
             if not value:
                 return ""
             return render_component_template("circuits/inc/circuit_termination_cable_fragment.html", context)
+
+        if key == "connected_endpoint":
+            ip_addresses = getattr(value, "ip_addresses", None)
+            if not ip_addresses or not ip_addresses.exists():
+                return helpers.HTML_NONE
+            return format_html_join(
+                ", ",
+                "{} ({})",
+                ((helpers.hyperlinked_object(ip), getattr(ip, "vrf", None) or "Global") for ip in ip_addresses.all()),
+            )
         return super().render_value(key, value, context)
 
 
@@ -106,9 +116,8 @@ class CircuitTerminationUIViewSet(NautobotUIViewSet):
                     "circuit",
                 ],
                 value_transforms={
-                    "port_speed": [humanize_speed],
-                    "upstream_speed": [humanize_speed],
-                    "connected_endpoint": [render_ip_addresses],
+                    "port_speed": [helpers.humanize_speed],
+                    "upstream_speed": [helpers.humanize_speed],
                 },
             ),
         )
@@ -181,8 +190,8 @@ class CircuitUIViewSet(NautobotUIViewSet):
                     "description",
                 ),
                 value_transforms={
-                    "port_speed": [humanize_speed, placeholder],
-                    "upstream_speed": [humanize_speed],
+                    "port_speed": [helpers.humanize_speed, helpers.placeholder],
+                    "upstream_speed": [helpers.humanize_speed],
                 },
                 hide_if_unset=("location", "provider_network", "cloud_network", "upstream_speed"),
                 ignore_nonexistent_fields=True,  # ip_addresses may be undefined
@@ -227,7 +236,7 @@ class CircuitUIViewSet(NautobotUIViewSet):
                     '<span title="{} ({})">{}</span>',
                     relationship.label,
                     relationship.key,
-                    bettertitle(relationship.get_label(side)),
+                    helpers.bettertitle(relationship.get_label(side)),
                 )
             if key == "ip_addresses":
                 return "IP Addressing"
@@ -265,7 +274,7 @@ class CircuitUIViewSet(NautobotUIViewSet):
                 weight=100,
                 fields="__all__",
                 exclude_fields=["comments", "circuit_termination_a", "circuit_termination_z"],
-                value_transforms={"commit_rate": [humanize_speed, placeholder]},
+                value_transforms={"commit_rate": [helpers.humanize_speed, helpers.placeholder]},
             ),
             CircuitTerminationPanel(
                 label="Termination - A Side",
