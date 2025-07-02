@@ -784,7 +784,7 @@ class ViewTestCases:
             self.assertHttpStatus(response, 200)
             content = utils.extract_page_body(response.content.decode(response.charset))
             # There should be only one row in the table
-            self.assertEqual(len(re.compile(r"<main.*<tr ", flags=re.DOTALL).findall(content)), 1)
+            self.assertEqual(content.split("<main")[1].count("<tr "), 1)
             if hasattr(self.model, "name"):
                 self.assertRegex(content, r">\s*" + re.escape(escape(instance1.name)) + r"\s*<", msg=content)
                 self.assertNotRegex(content, r">\s*" + re.escape(escape(instance2.name)) + r"\s*<", msg=content)
@@ -829,8 +829,7 @@ class ViewTestCases:
             self.assertNotIn("Unknown filter field", content, msg=content)
             self.assertIn("None", content, msg=content)
             # There should be at least two rows in the table
-            self.assertIn('<tr class="even', content)
-            self.assertIn('<tr class="odd', content)
+            self.assertGreaterEqual(content.split("<main")[1].count("<tr "), 2)
             if hasattr(self.model, "name"):
                 self.assertRegex(content, r">\s*" + re.escape(escape(instance1.name)) + r"\s*<", msg=content)
                 self.assertRegex(content, r">\s*" + re.escape(escape(instance2.name)) + r"\s*<", msg=content)
