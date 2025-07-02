@@ -213,11 +213,11 @@ class ConfigContextUIViewSet(NautobotUIViewSet):
                 fields="__all__",
                 exclude_fields=[
                     "data",
+                    "owner_content_type",
+                    "owner_object_id",
                 ],
                 hide_if_unset=[
                     "owner",
-                    "owner_content_type",
-                    "owner_object_id",
                 ],
             ),
             object_detail.Panel(
