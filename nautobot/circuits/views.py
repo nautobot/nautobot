@@ -13,6 +13,7 @@ from nautobot.core.ui.object_detail import (
 )
 from nautobot.core.ui.utils import render_component_template
 from nautobot.core.views import generic
+from nautobot.core.views.utils import get_obj_from_context
 from nautobot.core.views.viewsets import NautobotUIViewSet
 
 from . import filters, forms, tables
@@ -60,9 +61,14 @@ class CircuitTerminationObjectFieldsPanel(ObjectFieldsPanel):
         return super().render_key(key, value, context)
 
     def render_value(self, key, value, context):
-        if key == "cable":
-            if not value:
-                return ""
+        instance = get_obj_from_context(context, self.context_object_key)
+        location = getattr(instance, "location", None)
+
+        # Cable column is hidden if the location is unset
+        if not location and key == "cable":
+            return None
+
+        if location and key == "cable":
             return render_component_template("circuits/inc/circuit_termination_cable_fragment.html", context)
 
         if key == "connected_endpoint":
@@ -110,7 +116,6 @@ class CircuitTerminationUIViewSet(NautobotUIViewSet):
                     "cloud_network",
                     "port_speed",
                     "upstream_speed",
-                    "cable",
                 ],
                 exclude_fields=[
                     "circuit",
