@@ -29,6 +29,7 @@ window.$ = window.jQuery;
 import 'jquery-ui';
 import 'select2';
 
+import { initializeCollapseToggleAll } from './collapse.js';
 import { initializeDraggable } from './draggable.js';
 import { initializeDrawers } from './drawer.js';
 import { observeFormStickyFooters } from './form.js';
@@ -79,6 +80,9 @@ document.addEventListener('DOMContentLoaded', function () {
         : document.addEventListener('click', onClickDocument);
     });
   });
+
+  // Collapse
+  initializeCollapseToggleAll();
 
   // Draggable
   initializeDraggable();

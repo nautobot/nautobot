@@ -8,43 +8,45 @@ From now on, all HTML data attributes and CSS classes which refer to Nautobot cu
 
 Here's a list of what's changed:
 
-| v2.x                                  | v3.0                                                                      |
-|---------------------------------------|---------------------------------------------------------------------------|
-| `banner-bottom`                       | `nb-banner-bottom`                                                        |
-| `btn-inline`                          | `nb-btn-inline-hover`, refer to [Hover Copy Buttons](#hover-copy-buttons) |
-| `hover_copy`                          | *removed*, refer to [Hover Copy Buttons](#hover-copy-buttons)             |
-| `hover_copy_button`                   | *removed*, refer to [Hover Copy Buttons](#hover-copy-buttons)             |
-| `cable-trace`                         | `nb-cable-trace`                                                          |
-| `active` (scoped to cable trace)      | `nb-active`                                                               |
-| `cable` (scoped to cable trace)       | `nb-cable`                                                                |
-| `node` (scoped to cable trace)        | `nb-node`                                                                 |
-| `termination` (scoped to cable trace) | `nb-termination`                                                          |
-| `trace-end` (scoped to cable trace)   | `nb-trace-end`                                                            |
-| `color-block`                         | `nb-color-block`                                                          |
-| `inline-color-block`                  | *removed*                                                                 |
-| `editor-container`                    | `nb-editor-container`                                                     |
-| `filter-container`                    | *removed*                                                                 |
-| `display-inline` (scoped to filters)  | *removed*                                                                 |
-| `filter-selection`                    | *removed*                                                                 |
-| `filter-selection-choice`             | *removed*                                                                 |
-| `filter-selection-choice-remove`      | *removed*                                                                 |
-| `filter-selection-rendered`           | *removed*                                                                 |
-| `remove-filter-param`                 | *removed*                                                                 |
-| `loading` (scoped to AJAX loaders)    | `nb-loading`                                                              |
-| `required` (scoped to form labels)    | `nb-required`                                                             |
-| `noprint`                             | *removed*, use `d-print-none` instead                                     |
-| `powered-by-nautobot`                 | *removed*                                                                 |
-| `report-stats`                        | `nb-report-stats`                                                         |
-| `right-side-panel`                    | `nb-right-side-panel`                                                     |
-| `software-image-hierarchy`            | `nb-software-image-hierarchy`                                             |
-| `tree-hierarchy`                      | `nb-tree-hierarchy`                                                       |
-| `tiles`                               | `nb-tiles`                                                                |
-| `tile`                                | `nb-tile`                                                                 |
-| `clickable` (scoped to tiles)         | `nb-clickable`                                                            |
-| `disabled` (scoped to tiles)          | `nb-disabled`                                                             |
-| `tile-description`                    | `nb-tile-description`                                                     |
-| `tile-footer`                         | `nb-tile-footer`                                                          |
-| `tile-header`                         | `nb-tile-header`                                                          |
+| v2.x                                  | v3.0                                                                                               |
+|---------------------------------------|----------------------------------------------------------------------------------------------------|
+| `accordion-toggle`                    | `nb-collapse-toggle`                                                                               |
+| `accordion-toggle-all`                | *removed*, refer to [Toggle All (Collapse All / Expand All)](#toggle-all-collapse-all-expand-all)  |
+| `banner-bottom`                       | `nb-banner-bottom`                                                                                 |
+| `btn-inline`                          | `nb-btn-inline-hover`, refer to [Hover Copy Buttons](#hover-copy-buttons)                          |
+| `hover_copy`                          | *removed*, refer to [Hover Copy Buttons](#hover-copy-buttons)                                      |
+| `hover_copy_button`                   | *removed*, refer to [Hover Copy Buttons](#hover-copy-buttons)                                      |
+| `cable-trace`                         | `nb-cable-trace`                                                                                   |
+| `active` (scoped to cable trace)      | `nb-active`                                                                                        |
+| `cable` (scoped to cable trace)       | `nb-cable`                                                                                         |
+| `node` (scoped to cable trace)        | `nb-node`                                                                                          |
+| `termination` (scoped to cable trace) | `nb-termination`                                                                                   |
+| `trace-end` (scoped to cable trace)   | `nb-trace-end`                                                                                     |
+| `color-block`                         | `nb-color-block`                                                                                   |
+| `inline-color-block`                  | *removed*                                                                                          |
+| `editor-container`                    | `nb-editor-container`                                                                              |
+| `filter-container`                    | *removed*                                                                                          |
+| `display-inline` (scoped to filters)  | *removed*                                                                                          |
+| `filter-selection`                    | *removed*                                                                                          |
+| `filter-selection-choice`             | *removed*                                                                                          |
+| `filter-selection-choice-remove`      | *removed*                                                                                          |
+| `filter-selection-rendered`           | *removed*                                                                                          |
+| `remove-filter-param`                 | *removed*                                                                                          |
+| `loading` (scoped to AJAX loaders)    | `nb-loading`                                                                                       |
+| `required` (scoped to form labels)    | `nb-required`                                                                                      |
+| `noprint`                             | *removed*, use `d-print-none` instead                                                              |
+| `powered-by-nautobot`                 | *removed*                                                                                          |
+| `report-stats`                        | `nb-report-stats`                                                                                  |
+| `right-side-panel`                    | `nb-right-side-panel`                                                                              |
+| `software-image-hierarchy`            | `nb-software-image-hierarchy`                                                                      |
+| `tree-hierarchy`                      | `nb-tree-hierarchy`                                                                                |
+| `tiles`                               | `nb-tiles`                                                                                         |
+| `tile`                                | `nb-tile`                                                                                          |
+| `clickable` (scoped to tiles)         | `nb-clickable`                                                                                     |
+| `disabled` (scoped to tiles)          | `nb-disabled`                                                                                      |
+| `tile-description`                    | `nb-tile-description`                                                                              |
+| `tile-footer`                         | `nb-tile-footer`                                                                                   |
+| `tile-header`                         | `nb-tile-header`                                                                                   |
 
 ## Table configuration button
 
@@ -230,6 +232,27 @@ After:
 </span>
 ```
 
+## Toggle All (Collapse All / Expand All)
+
+To extend the basic Bootstrap 5 Accordion and Collapse components functionality, Nautobot delivers a Toggle All (Collapse all / Expand all) button implementation. Although Bootstrap 5 is shipped with a feature to toggle multiple collapsibles with a single button, it treats controlled elements individually rather than collectively, by inverting their current state and not by forcing them to collapse or expand, as we would expect. Depending on desired behavior, you are free to choose between the default Bootstrap 5 or custom Nautobot mechanisms.
+
+Most of the logic is already implemented in Nautobot by default and there are just two data attributes that control a Toggle All (Collapse All / Expand All) button:
+
+1. `data-nb-toggle="collapse-all"` - mandatory, indicates that given button is of Toggle All (Collapse All / Expand All) type.
+2. `data-nb-target="{collapse CSS selector}"` - optional, specifies which collapse elements does the button control; when not explicitly set, target collapse CSS selector falls back to `".collapse"`.
+
+```html
+<button
+    aria-expanded="true"
+    class="btn btn-secondary"
+    data-nb-toggle="collapse-all"
+    data-nb-target="#accordion .collapse"
+    type="button"
+>
+    Collapse All
+</button>
+```
+
 ## Extended Bootstrap Utilities
 
 Nautobot extends Bootstrap utilities with its own subset of CSS classes, properties and values.
@@ -244,6 +267,7 @@ Nautobot extends Bootstrap utilities with its own subset of CSS classes, propert
 | `nb-text-none`            | `text-transform: none;`            |
 | `nb-transition-base`      | `transition: all .2s ease-in-out;` |
 | `nb-transition-fade`      | `transition: opacity .15s linear;` |
+| `nb-transition-none`      | `transition: none;`                |
 | `nb-w-0`                  | `width: 0;`                        |
 | `nb-w-0`                  | `width: 0;`                        |
 | `nb-z-dropdown`           | `z-index: 1000;`                   |

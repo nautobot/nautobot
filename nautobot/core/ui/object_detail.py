@@ -1312,8 +1312,17 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
     def render_header_extra_content(self, context: Context):
         """Add a "Collapse All" button to the header."""
         return format_html(
-            '<button type="button" class="btn-xs btn-primary pull-right accordion-toggle-all" data-target="#{body_id}">'
-            "Collapse All</button>",
+            """
+            <button
+                aria-expanded="true"
+                class="btn btn-primary btn-sm float-end"
+                data-nb-target="[class^=&quot;collapseme-{body_id}-&quot;]"
+                data-nb-toggle="collapse-all"
+                type="button"
+            >
+                Collapse All
+            </button>
+            """,
             body_id=self.body_id,
         )
 
@@ -1342,7 +1351,7 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
                 if value_display:
                     # TODO: add a copy button on hover to all display items
                     result += format_html(
-                        '<tr class="collapseme-{body_id}-{counter} collapse in" data-parent="#{body_id}">'
+                        '<tr class="collapseme-{body_id}-{counter} collapse show nb-transition-none">'
                         "<td>{key}</td><td>{value}</td></tr>",
                         counter=counter,
                         body_id=self.body_id,

@@ -1,0 +1,1 @@
+Genericize and standardize the way "Collapse/Expand All" buttons work in the app using data-nb-toggle="collapse-all" data attribute.
