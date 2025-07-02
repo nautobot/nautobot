@@ -71,6 +71,7 @@ from nautobot.wireless.models import (
 from nautobot.wireless.tables import (
     ControllerManagedDeviceGroupRadioProfileAssignmentTable,
     ControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
+    DeviceGroupWirelessNetworkTable,
     RadioProfileTable,
 )
 
@@ -252,21 +253,22 @@ class LocationTypeUIViewSet(NautobotUIViewSet):
 #
 
 
-class LocationListView(generic.ObjectListView):
-    queryset = Location.objects.all()
-    filterset = filters.LocationFilterSet
-    filterset_form = forms.LocationFilterForm
-    table = tables.LocationTable
-
-
-class LocationView(generic.ObjectView):
+class LocationUIViewSet(NautobotUIViewSet):
     # We aren't accessing tree fields anywhere so this is safe (note that `parent` itself is a normal foreign
     # key, not a tree field). If we ever do access tree fields, this will perform worse, because django will
     # automatically issue a second query (similar to behavior for
     # https://docs.djangoproject.com/en/3.2/ref/models/querysets/#django.db.models.query.QuerySet.only)
-    queryset = Location.objects.without_tree_fields().all()
+    queryset = Location.objects.without_tree_fields().select_related("location_type", "parent", "tenant")
+    filterset_class = filters.LocationFilterSet
+    filterset_form_class = forms.LocationFilterForm
+    table_class = tables.LocationTable
+    form_class = forms.LocationForm
+    bulk_update_form_class = forms.LocationBulkEditForm
+    serializer_class = serializers.LocationSerializer
 
     def get_extra_context(self, request, instance):
+        if instance is None:
+            return super().get_extra_context(request, instance)
         related_locations = (
             instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
         )
@@ -306,7 +308,6 @@ class LocationView(generic.ObjectView):
         )
 
         children_table = tables.LocationTable(children, hide_hierarchy_ui=True)
-
         paginate = {
             "paginator_class": EnhancedPaginator,
             "per_page": get_paginate_count(request),
@@ -322,34 +323,6 @@ class LocationView(generic.ObjectView):
             "show_convert_to_contact_button": instance.contact_name or instance.contact_phone or instance.contact_email,
             **super().get_extra_context(request, instance),
         }
-
-
-class LocationEditView(generic.ObjectEditView):
-    queryset = Location.objects.all()
-    model_form = forms.LocationForm
-    template_name = "dcim/location_edit.html"
-
-
-class LocationDeleteView(generic.ObjectDeleteView):
-    queryset = Location.objects.all()
-
-
-class LocationBulkEditView(generic.BulkEditView):
-    queryset = Location.objects.select_related("location_type", "parent", "tenant")
-    filterset = filters.LocationFilterSet
-    table = tables.LocationTable
-    form = forms.LocationBulkEditForm
-
-
-class LocationBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Location.objects.all()
-    table = tables.LocationTable
-
-
-class LocationBulkDeleteView(generic.BulkDeleteView):
-    queryset = Location.objects.select_related("location_type", "parent", "tenant")
-    filterset = filters.LocationFilterSet
-    table = tables.LocationTable
 
 
 class MigrateLocationDataToContactView(generic.ObjectEditView):
@@ -4553,41 +4526,81 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
     table_class = tables.ControllerManagedDeviceGroupTable
     template_name = "dcim/controllermanageddevicegroup_create.html"
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+                value_transforms={
+                    "capabilities": [helpers.label_list],
+                },
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=100,
+                table_class=tables.DeviceTable,
+                table_filter="controller_managed_device_group",
+                add_button_route=None,
+            ),
+        ),
+        extra_tabs=(
+            object_detail.DistinctViewTab(
+                weight=800,
+                tab_id="wireless_networks",
+                label="Wireless Networks",
+                url_name="dcim:controllermanageddevicegroup_wireless_networks",
+                related_object_attribute="wireless_network_assignments",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Wireless Networks",
+                        table_class=DeviceGroupWirelessNetworkTable,
+                        table_filter="controller_managed_device_group",
+                        related_field_name="controller_managed_device_groups",
+                        tab_id="wireless_networks",
+                        add_button_route=None,
+                        exclude_columns=["controller_managed_device_group", "controller"],
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=900,
+                tab_id="radio_profiles",
+                label="Radio Profiles",
+                url_name="dcim:controllermanageddevicegroup_radio_profiles",
+                related_object_attribute="radio_profiles",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Radio Profiles",
+                        table_class=RadioProfileTable,
+                        table_filter="controller_managed_device_groups",
+                        tab_id="radio_profiles",
+                        add_button_route=None,
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    def get_queryset(self):
+        if self.action in ["wireless_networks", "radio_profiles"]:
+            return self.queryset.restrict(self.request.user, "view")
+        return super().get_queryset()
+
+    @action(detail=True, url_path="wireless-networks", url_name="wireless_networks")
+    def wireless_networks(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(detail=True, url_path="radio-profiles", url_name="radio_profiles")
+    def radio_profiles(self, request, *args, **kwargs):
+        return Response({})
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
-
-        if self.action == "retrieve" and instance:
-            devices = instance.devices.restrict(request.user)
-            devices_table = tables.DeviceTable(devices)
-
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(devices_table)
-
-            context["devices_table"] = devices_table
-
-            # Wireless Networks
-            wireless_networks = instance.wireless_network_assignments.restrict(request.user, "view")
-            wireless_networks_table = ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(wireless_networks)
-            wireless_networks_table.columns.hide("controller_managed_device_group")
-            wireless_networks_table.columns.hide("controller")
-            RequestConfig(
-                request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-            ).configure(wireless_networks_table)
-            context["wireless_networks_table"] = wireless_networks_table
-            context["wireless_networks_count"] = wireless_networks.count()
-
-            # Radio Profiles
-            radio_profiles = instance.radio_profiles.restrict(request.user, "view")
-            radio_profiles_table = RadioProfileTable(radio_profiles)
-            RequestConfig(
-                request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-            ).configure(radio_profiles_table)
-            context["radio_profiles_table"] = radio_profiles_table
-            context["radio_profiles_count"] = radio_profiles.count()
-
         if self.action in ["create", "update"]:
             context["wireless_networks"] = ControllerManagedDeviceGroupWirelessNetworkFormSet(
                 instance=instance,
@@ -4607,6 +4620,14 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
             raise ValidationError(wireless_networks.errors)
 
         return obj
+
+    def get_required_permission(self):
+        view_action = self.get_action()
+        if view_action == "wireless_networks":
+            return ["wireless.view_controllermanageddevicegroupwirelessnetworkassignment"]
+        if view_action == "radio_profiles":
+            return ["wireless.view_radioprofile"]
+        return super().get_required_permission()
 
 
 #
