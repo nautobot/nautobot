@@ -1211,6 +1211,12 @@ urlpatterns = [
         views.InterfaceConnectionsListView.as_view(),
         name="interface_connections_list",
     ),
+    # Virtual chassis
+    path(
+        "virtual-chassis-members/<uuid:pk>/delete/",
+        views.VirtualChassisRemoveMemberView.as_view(),
+        name="virtualchassis_remove_member",
+    ),
     # Power feeds
     path(
         "power-feeds/<uuid:pk>/trace/",

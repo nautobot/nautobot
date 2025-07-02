@@ -3990,34 +3990,50 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
             },
         )
 
-    @action(detail=True, methods=["get", "post"], url_path="remove-member", url_name="remove_member")
-    def remove_member(self, request, pk=None):
-        device = get_object_or_404(
-            Device.objects.restrict(request.user, "change"), pk=pk, virtual_chassis__isnull=False
+
+class VirtualChassisRemoveMemberView(ObjectPermissionRequiredMixin, GetReturnURLMixin, View):
+    queryset = Device.objects.all()
+
+    def get_required_permission(self):
+        return "dcim.change_device"
+
+    def get(self, request, pk):
+        device = get_object_or_404(self.queryset, pk=pk, virtual_chassis__isnull=False)
+        form = ConfirmationForm(initial=request.GET)
+
+        return render(
+            request,
+            "dcim/virtualchassis_remove_member.html",
+            {
+                "device": device,
+                "form": form,
+                "return_url": self.get_return_url(request, device),
+            },
         )
 
+    def post(self, request, pk):
+        device = get_object_or_404(self.queryset, pk=pk, virtual_chassis__isnull=False)
+        form = ConfirmationForm(request.POST)
+
+        # Protect master device from being removed
         virtual_chassis = VirtualChassis.objects.filter(master=device).first()
+        if virtual_chassis is not None:
+            msg = format_html("Unable to remove master device {} from the virtual chassis.", device)
+            messages.error(request, msg)
+            return redirect(device.get_absolute_url())
 
-        if request.method == "POST":
-            form = ConfirmationForm(request.POST)
-            if virtual_chassis is not None:
-                msg = format_html("Unable to remove master device {} from the virtual chassis.", device)
-                messages.error(request, msg)
-                return redirect(device.get_absolute_url())
-
-            if form.is_valid():
-                virtual_chassis = device.virtual_chassis
+        if form.is_valid():
+            devices = Device.objects.filter(pk=device.pk)
+            for device in devices:
                 device.virtual_chassis = None
                 device.vc_position = None
                 device.vc_priority = None
                 device.save()
 
-                msg = f"Removed {device} from virtual chassis {virtual_chassis }"
-                messages.success(request, msg)
+            msg = f"Removed {device} from virtual chassis {device.virtual_chassis}"
+            messages.success(request, msg)
 
-                return redirect(self.get_return_url(request, device))
-        else:
-            form = ConfirmationForm(initial=request.GET)
+            return redirect(self.get_return_url(request, device))
 
         return render(
             request,
