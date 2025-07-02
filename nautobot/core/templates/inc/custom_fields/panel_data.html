@@ -3,26 +3,38 @@
     <div class="panel panel-default">
         <div class="panel-heading">
             <strong>Custom Fields</strong>
-            <button type="button"
-                    class="btn-xs btn-primary pull-right accordion-toggle-all"
-                    data-target="#custom_fields_accordion_{{ advanced_ui }}">Collapse All</button>
+            <button
+                aria-expanded="true"
+                class="btn btn-primary btn-sm float-end"
+                data-nb-target="#custom_fields_accordion_{{ advanced_ui }} .collapse"
+                data-nb-toggle="collapse-all"
+                type="button"
+            >
+                Collapse All
+            </button>
         </div>
         <table id="custom_fields_accordion_{{ advanced_ui }}" class="table table-hover panel-body attr-table">
             {% for grouping, fields in custom_fields.items %}
             {% with forloop.counter0 as count %}
                 {% if grouping != "" %}
                     <tr>
-                        <td colspan="2"><strong>
-                            <button type="button" class="accordion-toggle mdi mdi-chevron-down"
-                                    name="grouping.{{ grouping }}" data-toggle="collapse"
-                                    data-target=".collapseme-{{ count }}">
-                                {{ grouping }}
-                            </button></strong>
+                        <td class="position-relative" colspan="2">
+                            <button
+                                aria-expanded="true"
+                                class="btn float-none fs-4 fw-medium stretched-link nb-collapse-toggle"
+                                data-bs-target=".collapseme-{{ count }}"
+                                data-bs-toggle="collapse"
+                                name="grouping.{{ grouping }}"
+                                type="button"
+                            >
+                                <span aria-hidden="true" class="mdi mdi-chevron-down me-4"></span><!--
+                                -->{{ grouping }}
+                            </button>
                         </td>
                     </tr>
                 {% endif %}
                     {% for field, value in fields %}
-                        <tr class="collapseme-{{ count }} collapse in show" data-parent="#accordion">
+                        <tr class="collapseme-{{ count }} collapse show nb-transition-none">
                             <td><span title="{{ field.description }}">{{ field }}</span></td>
                             <td>
                                 {% if field.type == 'boolean' %}

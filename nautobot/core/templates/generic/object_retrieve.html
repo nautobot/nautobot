@@ -297,33 +297,5 @@
     }
 
     window.addEventListener('popstate', (event) => show_tab(event.state.id));
-
-    // Toggle v -. >
-    $(".accordion-toggle").click(function () {
-        $(this).toggleClass("mdi-chevron-down mdi-chevron-right");
-    });
-    // Dynamically collapse/expand all when clicking the "Collapse All" button, and then update the button text.
-    $('.accordion-toggle-all').click(function () {
-
-        if ($(this).data("lastState") === null || $(this).data("lastState") === 1) {
-            $($(this).data("target") + ' .collapse').collapse('show');
-            $(this).data("lastState", 0);
-
-            $($(this).data("target") + " .accordion-toggle").addClass("mdi-chevron-down").removeClass("mdi-chevron-right");
-
-            $(this).text("Collapse All");
-        }
-        else {
-            $($(this).data("target") + ' [class^=collapseme]').removeData('bs.collapse').collapse({parent: false, toggle: false})
-            .collapse('hide')
-            .removeData('bs.collapse')
-            .collapse({parent: $(this).data("target"), toggle: false});
-
-            $(this).data("lastState", 1);
-            $($(this).data("target") + " .accordion-toggle").addClass("mdi-chevron-right").removeClass("mdi-chevron-down");
-
-            $(this).text("Expand All");
-        }
-    });
 </script>
 {% endblock javascript %}
