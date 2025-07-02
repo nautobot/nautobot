@@ -298,6 +298,10 @@ def main():
 
     # If we get here, it's a regular Django management command - so load in the nautobot_config.py then hand off
     load_settings(args.config_path)
+    if "--testrunner=django_test_runner.CustomExecutionTestRunner" in unparsed_args:
+        # We are launching tests from VS Code, override with correct runner
+        unparsed_args.remove("--testrunner=django_test_runner.CustomExecutionTestRunner")
+        unparsed_args.append("--testrunner=nautobot.core.tests.runner.VSCodeNautobotTestRunner")
     execute_from_command_line([sys.argv[0], *unparsed_args])
 
 

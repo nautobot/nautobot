@@ -19,6 +19,14 @@ from nautobot.core.celery import app, setup_nautobot_job_logging
 from nautobot.core.settings_funcs import parse_redis_connection
 
 
+try:
+    from django_test_runner import CustomExecutionTestRunner
+except ImportError:
+    # Create a fake CustomExecutionTestRunner class if the import fails
+    class CustomExecutionTestRunner():
+        """Fallback class when django_test_runner is not available."""
+        pass
+
 def init_worker_with_unique_cache(*args, **kwargs):
     """Extend Django's default parallel unit test setup to also ensure distinct Redis caches."""
     _init_worker(*args, **kwargs)  # call Django default to set _worker_id and set up parallel DB instances
@@ -209,3 +217,6 @@ class NautobotTestRunner(DiscoverRunner):
                     print(f"Database {db_name} emptied!")
 
                 connection.creation.destroy_test_db(old_name, self.verbosity, self.keepdb)
+
+class VSCodeNautobotTestRunner(CustomExecutionTestRunner, NautobotTestRunner):
+    ...
