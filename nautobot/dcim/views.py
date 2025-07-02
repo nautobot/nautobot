@@ -4228,7 +4228,7 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
         context["powerfeed_data"] = {
             "Power Panel": instance.power_panel,
             "Rack": instance.rack,
-            "Type": instance.get_type_display(),
+            "Type": self._get_type_html(instance),  # Render Type with HTML label
             "Status": instance.status,
             "Connected Device": self._get_connected_device_html(instance),
             "Utilization (Allocated)": self._get_utilization_data(instance),
@@ -4236,6 +4236,14 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
 
         context["connection_data"] = self._get_connection_data(request, instance)
         return context
+
+    def _get_type_html(self, instance):
+        """
+        Render the PowerFeed type as a label with the appropriate CSS class.
+        """
+
+        type_class = instance.get_type_class()
+        return format_html('<span class="label label-{}">{}</span>', type_class, instance.get_type_display())
 
     def _get_connected_device_html(self, instance):
         endpoint = getattr(instance, "connected_endpoint", None)
@@ -4273,15 +4281,13 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
 
             if endpoint:
                 endpoint_obj = getattr(endpoint, "device", None) or getattr(endpoint, "module", None)
-                path = getattr(instance, "path", None)
-                is_reachable = path.is_active if path else False
-
+                # Removed the unused 'path' variable
                 endpoint_data = {
                     "Device" if getattr(endpoint, "device", None) else "Module": endpoint_obj,
                     "Power Port": endpoint,
                     "Type": endpoint.get_type_display() if hasattr(endpoint, "get_type_display") else None,
                     "Description": endpoint.description,
-                    "Path Status": "Reachable" if is_reachable else "Not Reachable",
+                    "Path Status": self._get_path_status_html(instance),  # Render Path Status dynamically
                 }
 
             return {
@@ -4305,6 +4311,17 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
             return {"Connection": format_html("Not connected {}", connect_link)}
 
         return {"Connection": "Not connected"}
+
+    def _get_path_status_html(self, instance):
+        """
+        Render the Path Status as a label based on the path status (active or not).
+        """
+        path_status = (
+            '<span class="label label-success">Reachable</span>'
+            if getattr(instance, "path", None) and instance.path.is_active
+            else '<span class="label label-danger">Not Reachable</span>'
+        )
+        return format_html(path_status)  # Safely render HTML
 
 
 class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
