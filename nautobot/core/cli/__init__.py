@@ -302,6 +302,10 @@ def main():
         # We are launching tests from VS Code, override with correct runner
         unparsed_args.remove("--testrunner=django_test_runner.CustomExecutionTestRunner")
         unparsed_args.append("--testrunner=nautobot.core.tests.runner.VSCodeNautobotTestRunner")
+    if "--testrunner=django_test_runner.CustomDiscoveryTestRunner" in unparsed_args:
+        # We are launching tests from VS Code, override with correct runner
+        unparsed_args.remove("--testrunner=django_test_runner.CustomDiscoveryTestRunner")
+        unparsed_args.append("--testrunner=nautobot.core.tests.runner.VSCodeNautobotDiscoveryTestRunner")
     execute_from_command_line([sys.argv[0], *unparsed_args])
 
 
