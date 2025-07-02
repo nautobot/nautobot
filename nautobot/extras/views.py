@@ -2966,7 +2966,6 @@ class TagUIViewSet(NautobotUIViewSet):
                 table_filter="tag",
                 select_related_fields=["content_type"],
                 prefetch_related_fields=["content_object"],
-                include_paginator=True,
             ),
         ),
     )
