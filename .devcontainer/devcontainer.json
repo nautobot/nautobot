@@ -69,7 +69,7 @@
                             "args": {
                                 "fileName": "${workspaceFolder}/.service_ports.json",
                                 "json": "content.celery_worker['6898']",
-                                "default": "6898",
+                                "default": "6898"
                             }
                         },
                         {
@@ -79,23 +79,50 @@
                             "args": {
                                 "fileName": "${workspaceFolder}/.service_ports.json",
                                 "json": "content.nautobot['6899']",
-                                "default": "6899",
+                                "default": "6899"
                             }
                         }
                     ],
                     "configurations": [
                         {
-                            "name": "Python: Nautobot",
+                            "name": "Local: Nautobot",
+                            "type": "debugpy",
+                            "request": "launch",
+                            "args": [
+                                "runserver",
+                                "--config=development/nautobot_config.py"
+                            ],
+                            "django": true,
+                            "autoStartBrowser": false,
+                            "program": "${workspaceFolder}/nautobot/core/cli/__main__.py",
+                            "justMyCode": false
+                        },
+                        {
+                            "name": "Local: Nautobot-Celery",
+                            "type": "debugpy",
+                            "request": "launch",
+                            "args": [
+                                "celery",
+                                "worker",
+                                "--config=development/nautobot_config.py"
+                            ],
+                            "django": true,
+                            "autoStartBrowser": false,
+                            "program": "${workspaceFolder}/nautobot/core/cli/__main__.py",
+                            "justMyCode": false
+                        },
+                        {
+                            "name": "Remote Attach: Nautobot",
                             "type": "debugpy",
                             "request": "attach",
                             "connect": {
                                 "host": "127.0.0.1",
                                 "port": "${input:nautobotport}"
                             },
-                            "django": true,
+                            "django": true
                         },
                         {
-                            "name": "Python: Nautobot-Celery",
+                            "name": "Remote Attach: Nautobot-Celery",
                             "type": "debugpy",
                             "request": "attach",
                             "connect": {
@@ -112,5 +139,5 @@
     "workspaceFolder": "/source",
     "postCreateCommand": "bash .devcontainer/postCreateCommand.sh",
     "postAttachCommand": "bash .devcontainer/postStartCommand.sh",
-    "initializeCommand": "bash .devcontainer/initializeCommand.sh",
+    "overrideCommand": false
 }
