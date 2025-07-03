@@ -446,7 +446,6 @@ class PrefixDetailTable(PrefixTable):
             "status",
             "children",
             "vrf_count",
-            "utilization",
             "tenant",
             "location_count",
             "vlan",
