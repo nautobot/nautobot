@@ -6,6 +6,7 @@
                         <div class="panel-heading"><strong>{{ obj_type|capfirst }}</strong></div>
                         <div class="panel-body">
                             {% render_field form.manufacturer %}
+                            {% render_field form.module_family %}
                             {% render_field form.module_type %}
                             {% render_field form.serial %}
                             {% render_field form.asset_tag %}

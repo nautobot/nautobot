@@ -1,0 +1,1 @@
+Added support for bulk-editing Webhook `additional_headers` and `body_template` fields.
