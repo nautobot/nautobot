@@ -166,7 +166,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
-## v2.4.11 (2025-07-03)
+## v2.4.11 (2025-07-07)
 
 ### Security in v2.4.11
 
@@ -199,6 +199,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#7361](https://github.com/nautobot/nautobot/issues/7361) - Fixed the code for loading Jobs from `JOBS_ROOT` and Git repositories to not import discovered packages/modules whose names are invalid as Python module names or whose names conflict with installed Python packages or Python built-ins. **This fix prevents some improper-but-previously-permitted names (e.g. `pass.py`, `nautobot.py`) from being imported.**
 - [#7361](https://github.com/nautobot/nautobot/issues/7361) - Added additional validation constraints on GitRepository `slug` to disallow values that would conflict with Python built-ins and keywords. **This fix will disallow some improper-but-previously-permitted slugs (e.g. `sys`, `pass`); you can run `nautobot-server validate_models extras.GitRepository` after upgrading to identify entries that should be deleted and recreated with a different slug.**
 - [#7427](https://github.com/nautobot/nautobot/issues/7427) - Fixed return URL for single "Remove cable" operations.
+- [#7460](https://github.com/nautobot/nautobot/issues/7460) - Added missing permission enforcement for custom actions in NautobotUIViewSet supported models.
 - [#7464](https://github.com/nautobot/nautobot/issues/7464) - Fixed issue where network driver help text and choices modal were missing in `Platform`.
 - [#7489](https://github.com/nautobot/nautobot/issues/7489) - Fixed broken Relationship "Move to advanced tab" functionality.
 - [#7503](https://github.com/nautobot/nautobot/issues/7503) - Fixed issue where retrieving the username of the latest change log entry loaded large unrelated fields.
