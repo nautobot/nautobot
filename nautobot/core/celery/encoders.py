@@ -1,4 +1,5 @@
 import logging
+from zoneinfo import ZoneInfo
 
 from django.db import models
 from rest_framework.utils.encoders import JSONEncoder
@@ -52,5 +53,7 @@ class NautobotKombuJSONEncoder(JSONEncoder):
             # JobResult.result uses NautobotKombuJSONEncoder as an encoder and expects a JSONSerializable object,
             # although an exception, such as a RuntimeException, can be supplied as the obj.
             return f"{obj.__class__.__name__}: {obj}"
+        elif isinstance(obj, ZoneInfo):
+            return obj.key
         else:
             return super().default(obj)

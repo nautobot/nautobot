@@ -16,6 +16,7 @@ from django.forms import (
     MultipleHiddenInput,
 )
 from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.encoding import iri_to_uri
 from django.utils.functional import cached_property
@@ -107,6 +108,7 @@ from .models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     PathEndpoint,
     Platform,
@@ -252,21 +254,22 @@ class LocationTypeUIViewSet(NautobotUIViewSet):
 #
 
 
-class LocationListView(generic.ObjectListView):
-    queryset = Location.objects.all()
-    filterset = filters.LocationFilterSet
-    filterset_form = forms.LocationFilterForm
-    table = tables.LocationTable
-
-
-class LocationView(generic.ObjectView):
+class LocationUIViewSet(NautobotUIViewSet):
     # We aren't accessing tree fields anywhere so this is safe (note that `parent` itself is a normal foreign
     # key, not a tree field). If we ever do access tree fields, this will perform worse, because django will
     # automatically issue a second query (similar to behavior for
     # https://docs.djangoproject.com/en/3.2/ref/models/querysets/#django.db.models.query.QuerySet.only)
-    queryset = Location.objects.without_tree_fields().all()
+    queryset = Location.objects.without_tree_fields().select_related("location_type", "parent", "tenant")
+    filterset_class = filters.LocationFilterSet
+    filterset_form_class = forms.LocationFilterForm
+    table_class = tables.LocationTable
+    form_class = forms.LocationForm
+    bulk_update_form_class = forms.LocationBulkEditForm
+    serializer_class = serializers.LocationSerializer
 
     def get_extra_context(self, request, instance):
+        if instance is None:
+            return super().get_extra_context(request, instance)
         related_locations = (
             instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
         )
@@ -306,7 +309,6 @@ class LocationView(generic.ObjectView):
         )
 
         children_table = tables.LocationTable(children, hide_hierarchy_ui=True)
-
         paginate = {
             "paginator_class": EnhancedPaginator,
             "per_page": get_paginate_count(request),
@@ -322,34 +324,6 @@ class LocationView(generic.ObjectView):
             "show_convert_to_contact_button": instance.contact_name or instance.contact_phone or instance.contact_email,
             **super().get_extra_context(request, instance),
         }
-
-
-class LocationEditView(generic.ObjectEditView):
-    queryset = Location.objects.all()
-    model_form = forms.LocationForm
-    template_name = "dcim/location_edit.html"
-
-
-class LocationDeleteView(generic.ObjectDeleteView):
-    queryset = Location.objects.all()
-
-
-class LocationBulkEditView(generic.BulkEditView):
-    queryset = Location.objects.select_related("location_type", "parent", "tenant")
-    filterset = filters.LocationFilterSet
-    table = tables.LocationTable
-    form = forms.LocationBulkEditForm
-
-
-class LocationBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Location.objects.all()
-    table = tables.LocationTable
-
-
-class LocationBulkDeleteView(generic.BulkDeleteView):
-    queryset = Location.objects.select_related("location_type", "parent", "tenant")
-    filterset = filters.LocationFilterSet
-    table = tables.LocationTable
 
 
 class MigrateLocationDataToContactView(generic.ObjectEditView):
@@ -4160,6 +4134,28 @@ class PowerPanelUIViewSet(NautobotUIViewSet):
 #
 # Power feeds
 #
+
+
+class CustomPowerFeedKeyValueTablePanel(object_detail.KeyValueTablePanel):
+    """Custom panel to render PowerFeed utilization graph cleanly."""
+
+    def render_value(self, key, value, context):
+        if key == "Utilization (Allocated)":
+            if not value or not isinstance(value, tuple) or len(value) != 2:
+                return helpers.placeholder(None)
+            allocated, available = value
+            if available <= 0:
+                return f"{allocated}VA / {available}VA"
+            graph_html = render_to_string(
+                "utilities/templatetags/utilization_graph.html",
+                helpers.utilization_graph_raw_data(allocated, available),
+            )
+            return format_html("{}VA / {}VA {}", allocated, available, graph_html)
+
+        # Fall back to default behavior for everything else
+        return super().render_value(key, value, context)
+
+
 class PowerFeedUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.PowerFeedBulkEditForm
     filterset_class = filters.PowerFeedFilterSet
@@ -4168,6 +4164,137 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
     queryset = PowerFeed.objects.all()
     serializer_class = serializers.PowerFeedSerializer
     table_class = tables.PowerFeedTable
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            CustomPowerFeedKeyValueTablePanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                label="Power Feed",
+                context_data_key="powerfeed_data",
+            ),
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=200,
+                label="Electrical Characteristics",
+                fields=["supply", "voltage", "amperage", "phase", "max_utilization"],
+                value_transforms={
+                    "voltage": [lambda v: f"{v}V" if v is not None else helpers.placeholder(v)],
+                    "amperage": [lambda a: f"{a}A" if a is not None else helpers.placeholder(a)],
+                    "max_utilization": [lambda p: f"{p}%" if p is not None else helpers.placeholder(p)],
+                },
+            ),
+            object_detail.KeyValueTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=300,
+                label="Connection",
+                context_data_key="connection_data",
+            ),
+        )
+    )
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if not instance or self.action != "retrieve":
+            return context
+
+        context["powerfeed_data"] = {
+            "Power Panel": instance.power_panel,
+            "Rack": instance.rack,
+            "Type": self._get_type_html(instance),  # Render Type with HTML label
+            "Status": instance.status,
+            "Connected Device": self._get_connected_device_html(instance),
+            "Utilization (Allocated)": self._get_utilization_data(instance),
+        }
+
+        context["connection_data"] = self._get_connection_data(request, instance)
+        return context
+
+    def _get_type_html(self, instance):
+        """
+        Render the PowerFeed type as a label with the appropriate CSS class.
+        """
+
+        type_class = instance.get_type_class()
+        return format_html('<span class="label label-{}">{}</span>', type_class, instance.get_type_display())
+
+    def _get_connected_device_html(self, instance):
+        endpoint = getattr(instance, "connected_endpoint", None)
+        if endpoint and endpoint.parent:
+            parent = helpers.hyperlinked_object(endpoint.parent)
+            return format_html("{} ({})", parent, endpoint)
+        return None
+
+    def _get_utilization_data(self, instance):
+        endpoint = getattr(instance, "connected_endpoint", None)
+        if not endpoint or not hasattr(endpoint, "get_power_draw"):
+            return None
+        utilization = endpoint.get_power_draw()
+        if not utilization or "allocated" not in utilization:
+            return None
+        allocated = utilization["allocated"]
+        available = instance.available_power or 0
+        return (allocated, available)
+
+    def _get_connection_data(self, request, instance):
+        if not instance:
+            return {}
+
+        if instance.cable:
+            trace_url = reverse("dcim:powerfeed_trace", kwargs={"pk": instance.pk})
+            cable_html = format_html(
+                '{} <a href="{}" class="btn btn-primary btn-xs" title="Trace">'
+                '<i class="mdi mdi-transit-connection-variant"></i></a>',
+                helpers.hyperlinked_object(instance.cable),
+                trace_url,
+            )
+
+            endpoint = getattr(instance, "connected_endpoint", None)
+            endpoint_data = {}
+
+            if endpoint:
+                endpoint_obj = getattr(endpoint, "device", None) or getattr(endpoint, "module", None)
+                # Removed the unused 'path' variable
+                endpoint_data = {
+                    "Device" if getattr(endpoint, "device", None) else "Module": endpoint_obj,
+                    "Power Port": endpoint,
+                    "Type": endpoint.get_type_display() if hasattr(endpoint, "get_type_display") else None,
+                    "Description": endpoint.description,
+                    "Path Status": self._get_path_status_html(instance),  # Render Path Status dynamically
+                }
+
+            return {
+                "Cable": cable_html,
+                **endpoint_data,
+            }
+
+        if request.user.has_perm("dcim.add_cable"):
+            connect_url = (
+                reverse(
+                    "dcim:powerfeed_connect",
+                    kwargs={"termination_a_id": instance.pk, "termination_b_type": "power-port"},
+                )
+                + f"?return_url={instance.get_absolute_url()}"
+            )
+            connect_link = format_html(
+                '<a href="{}" class="btn btn-primary btn-sm pull-right">'
+                '<span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect</a>',
+                connect_url,
+            )
+            return {"Connection": format_html("Not connected {}", connect_link)}
+
+        return {"Connection": "Not connected"}
+
+    def _get_path_status_html(self, instance):
+        """
+        Render the Path Status as a label based on the path status (active or not).
+        """
+        path_status = (
+            '<span class="label label-success">Reachable</span>'
+            if getattr(instance, "path", None) and instance.path.is_active
+            else '<span class="label label-danger">Not Reachable</span>'
+        )
+        return format_html(path_status)  # Safely render HTML
 
 
 class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
@@ -4255,6 +4382,51 @@ class InterfaceRedundancyGroupAssociationUIViewSet(ObjectEditViewMixin, ObjectDe
     form_class = forms.InterfaceRedundancyGroupAssociationForm
     template_name = "dcim/interfaceredundancygroupassociation_create.html"
     lookup_field = "pk"
+
+
+class ModuleFamilyUIViewSet(NautobotUIViewSet):
+    """ViewSet for the ModuleFamily model."""
+
+    filterset_class = filters.ModuleFamilyFilterSet
+    filterset_form_class = forms.ModuleFamilyFilterForm
+    form_class = forms.ModuleFamilyForm
+    bulk_update_form_class = forms.ModuleFamilyBulkEditForm
+    queryset = ModuleFamily.objects.all()
+    serializer_class = serializers.ModuleFamilySerializer
+    table_class = tables.ModuleFamilyTable
+    lookup_field = "pk"
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if not instance:
+            return context
+
+        if self.action == "retrieve":
+            module_types = (
+                ModuleType.objects.restrict(request.user, "view")
+                .filter(module_family=instance)
+                .select_related("manufacturer")
+            )
+            module_type_table = tables.ModuleTypeTable(module_types, orderable=False)
+
+            module_bays = (
+                ModuleBay.objects.restrict(request.user, "view")
+                .filter(module_family=instance)
+                .select_related("parent_device", "parent_module")
+            )
+            module_bay_table = tables.ModuleBayTable(module_bays, orderable=False)
+
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(module_type_table)
+            RequestConfig(request, paginate).configure(module_bay_table)
+
+            context["module_type_table"] = module_type_table
+            context["module_bay_table"] = module_bay_table
+
+        return context
 
 
 class DeviceFamilyUIViewSet(NautobotUIViewSet):
