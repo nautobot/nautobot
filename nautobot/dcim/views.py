@@ -564,7 +564,7 @@ class RackUIViewSet(NautobotUIViewSet):
         context = super().get_extra_context(request, instance)
 
         # Get 0U and child devices located within the rack
-        nonracked_devices = Device.objects.filter(rack=instance, position__isnull=True).select_related(
+        context["nonracked_devices"] = Device.objects.filter(rack=instance, position__isnull=True).select_related(
             "device_type__manufacturer"
         )
 
@@ -575,21 +575,14 @@ class RackUIViewSet(NautobotUIViewSet):
         else:
             peer_racks = peer_racks.filter(rack_group__isnull=True)
 
-        next_rack = peer_racks.filter(name__gt=instance.name).order_by("name").first()
-        prev_rack = peer_racks.filter(name__lt=instance.name).order_by("-name").first()
+        context["next_rack"] = peer_racks.filter(name__gt=instance.name).order_by("name").first()
+        context["prev_rack"] = peer_racks.filter(name__lt=instance.name).order_by("-name").first()
 
-        reservations = RackReservation.objects.restrict(request.user, "view").filter(rack=instance)
-        power_feeds = (
+        context["reservations"] = RackReservation.objects.restrict(request.user, "view").filter(rack=instance)
+        context["power_feeds"] = (
             PowerFeed.objects.restrict(request.user, "view").filter(rack=instance).select_related("power_panel")
         )
-        device_count = Device.objects.restrict(request.user, "view").filter(rack=instance).count()
-
-        context["device_count"] = device_count
-        context["reservations"] = reservations
-        context["power_feeds"] = power_feeds
-        context["nonracked_devices"] = nonracked_devices
-        context["next_rack"] = next_rack
-        context["prev_rack"] = prev_rack
+        context["device_count"] = Device.objects.restrict(request.user, "view").filter(rack=instance).count()
 
         return context
 
