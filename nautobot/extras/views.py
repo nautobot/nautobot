@@ -244,6 +244,38 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
     queryset = ConfigContextSchema.objects.all()
     serializer_class = serializers.ConfigContextSchemaSerializer
     table_class = tables.ConfigContextSchemaTable
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                exclude_fields=[
+                    "data_schema",
+                    "owner_content_type",
+                    "owner_object_id",
+                ],
+                hide_if_unset=[
+                    "owner",
+                ],
+            ),
+            object_detail.Panel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                label="Data Schema",
+                header_extra_content_template_path="extras/inc/json_format.html",
+                body_content_template_path="extras/inc/configcontextschema_data.html",
+            ),
+        ),
+        extra_tabs=(
+            object_detail.DistinctViewTab(
+                weight=300,
+                tab_id="validation",
+                label="Validation",
+                url_name="extras:configcontextschema_object_validation",
+            ),
+        ),
+    )
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
