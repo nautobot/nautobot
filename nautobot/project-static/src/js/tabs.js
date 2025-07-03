@@ -17,8 +17,8 @@ export const collapseTabs = (tabs) => {
   // For safety, do not operate on original tabs element, deep clone tabs to operate on its clone instead.
   const tabsClone = tabs.cloneNode(true);
 
-  // Remove `id` element attribute from cloned tabs element to avoid potential `id` conflicts.
-  tabsClone.removeAttribute('id');
+  // Update `id` element attribute from cloned tabs element to avoid `id` conflicts.
+  tabsClone.setAttribute('id', 'tabs-cloned');
 
   // Set `data-clone` attribute to `"true"` on tabs clone element to be able to easily distinguish it from the original.
   tabsClone.dataset.clone = 'true';
@@ -59,6 +59,7 @@ export const collapseTabs = (tabs) => {
       className: 'btn dropdown-toggle text-secondary',
       'data-bs-toggle': 'dropdown',
       type: 'button',
+      id: 'tabs-toggle-button',
     },
     dropdownToggleIcon,
     dropdownToggleLabel,

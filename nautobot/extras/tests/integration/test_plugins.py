@@ -3,7 +3,7 @@ import os
 import tempfile
 
 from django.contrib.contenttypes.models import ContentType
-from django.test import override_settings, tag
+from django.test import override_settings
 from django.urls import reverse
 
 from nautobot.circuits.models import (
@@ -12,7 +12,7 @@ from nautobot.circuits.models import (
     Provider,
     ProviderNetwork,
 )
-from nautobot.core.testing.integration import SeleniumTestCase
+from nautobot.core.testing.integration import ObjectDetailsMixin, SeleniumTestCase
 from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.extras.choices import WebhookHttpMethodChoices
 from nautobot.extras.context_managers import web_request_context
@@ -159,7 +159,7 @@ class AppReturnUrlTestCase(SeleniumTestCase):
         self.assertEqual(element["href"], f'{self.live_server_url}{reverse("plugins:example_app:examplemodel_list")}')
 
 
-class AppTabsTestCase(SeleniumTestCase):
+class AppTabsTestCase(SeleniumTestCase, ObjectDetailsMixin):
     """
     Integration tests for extra object detail UI tabs.
     """
@@ -184,16 +184,19 @@ class AppTabsTestCase(SeleniumTestCase):
         )
         # Visit the circuit's detail page and check that the tab is visible
         self.browser.visit(f'{self.live_server_url}{reverse("circuits:circuit", args=[str(circuit.pk)])}')
-        self.assertTrue(self.browser.is_text_present("App Tab"))
-        # Visit the tab link and check the view content
-        self.browser.links.find_by_partial_text("Example App Tab")[0].click()
+
+        # Assert if tab can be found
+        tab_link = self.get_tab_link("Example App Tab")
+        self.assertTrue(tab_link)
+
+        # Navigate to this tab
+        tab_link.click()
         self.assertTrue(
             self.browser.is_text_present(
                 f"I am some content for the Example App's circuit ({circuit.pk!s}) detail tab."
             )
         )
 
-    @tag("fix_in_v3")
     def test_device_detail_tab(self):
         """
         This test checks that both app device tabs from the Example App are visible and render correctly.
@@ -203,9 +206,11 @@ class AppTabsTestCase(SeleniumTestCase):
         # Visit the device's detail page and check that the tab is visible
         self.browser.visit(f'{self.live_server_url}{reverse("dcim:device", args=[str(device.pk)])}')
         for tab_i in [1, 2]:
-            self.assertTrue(self.browser.is_text_present(f"Example App Tab {tab_i}"))
+            tab_link = self.get_tab_link(f"Example App Tab {tab_i}")
+            self.assertTrue(tab_link)
+
             # Visit the tab link and check the view content
-            self.browser.links.find_by_partial_text(f"Example App Tab {tab_i}")[0].click()
+            tab_link.click()
             self.assertTrue(
                 self.browser.is_text_present(
                     f"I am some content for the Example App's device ({device.pk!s}) detail tab {tab_i}."

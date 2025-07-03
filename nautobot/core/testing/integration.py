@@ -151,8 +151,31 @@ class ObjectDetailsMixin:
         return self.browser.find_by_xpath(f"{panel_xpath}/../table")
 
     def switch_tab(self, tab_name):
-        tab_xpath = f'//ul[@class="nav nav-tabs"]//a[contains(normalize-space(), "{tab_name}")]'
-        self.browser.find_by_xpath(tab_xpath, wait_time=5).click()
+        """Finds and click tab based on tab name from the tab link."""
+        self.get_tab_link(tab_name).click()
+
+    def get_tab_link(self, tab_name):
+        """
+        Finds tab link either in dropdown menu, cloned menu or standard tabs list
+        depending on the browser size and tabs count.
+
+        Please note, that if tab will be placed in dropdown menu this function will left this menu open.
+        """
+        toggle_button = self.browser.find_by_id("tabs-toggle-button", wait_time=5)
+        if toggle_button:
+            # Our tab might be hidden
+            tab_xpath = f'//ul[@id="tabs-cloned"]/li/a[contains(normalize-space(), "{tab_name}")]'
+            visible_tab = self.browser.find_by_xpath(tab_xpath, wait_time=5)
+            if visible_tab:
+                return visible_tab
+
+            # If hidden, click toggle to show the dropdown menu
+            toggle_button.click()
+            tab_xpath = f'//button[@id="tabs-toggle-button"]/following-sibling::ul//a[contains(normalize-space(), "{tab_name}")]'
+            return self.browser.find_by_xpath(tab_xpath, wait_time=5)
+
+        tab_xpath = f'//ul[@id="tabs"]//a[contains(normalize-space(), "{tab_name}")]'
+        return self.browser.find_by_xpath(tab_xpath, wait_time=5)
 
 
 class BulkOperationsMixin:
@@ -306,6 +329,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         return f"http://{cls.selenium_host}:{cls.server_thread.port}"
 
     def tearDown(self):
+        breakpoint()
         if self.logged_in:
             self.logout()
 
