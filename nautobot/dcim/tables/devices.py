@@ -26,6 +26,7 @@ from nautobot.dcim.models import (
     InventoryItem,
     Module,
     ModuleBay,
+    ModuleFamily,
     Platform,
     PowerOutlet,
     PowerPort,
@@ -86,6 +87,7 @@ __all__ = (
     "InterfaceTable",
     "InventoryItemTable",
     "ModuleBayTable",
+    "ModuleFamilyTable",
     "ModuleModuleBayTable",
     "ModuleTable",
     "PlatformTable",
@@ -275,6 +277,7 @@ class ModuleTable(StatusTableMixin, RoleTableMixin, BaseTable):
     )
     location = tables.Column(linkify=True)
     tenant = TenantColumn()
+    module_type__module_family = tables.Column(linkify=True, verbose_name="Family")
     tags = TagColumn(url_name="dcim:module_list")
     actions = ButtonsColumn(Module, prepend_template=MODULE_BUTTONS)
 
@@ -283,6 +286,7 @@ class ModuleTable(StatusTableMixin, RoleTableMixin, BaseTable):
         fields = (
             "pk",
             "module_type",
+            "module_family",
             "parent_module_bay",
             "location",
             "serial",
@@ -296,6 +300,7 @@ class ModuleTable(StatusTableMixin, RoleTableMixin, BaseTable):
         default_columns = (
             "pk",
             "module_type",
+            "module_family",
             "parent_module_bay",
             "location",
             "serial",
@@ -303,6 +308,40 @@ class ModuleTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "status",
             "role",
             "tenant",
+            "actions",
+        )
+
+
+class ModuleFamilyTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    module_type_count = LinkedCountColumn(
+        viewname="dcim:moduletype_list", url_params={"module_family": "pk"}, verbose_name="Module Types"
+    )
+    module_bay_count = LinkedCountColumn(
+        viewname="dcim:modulebay_list", url_params={"module_family": "pk"}, verbose_name="Module Bays"
+    )
+    tags = TagColumn()
+    actions = ButtonsColumn(ModuleFamily)
+
+    class Meta(BaseTable.Meta):
+        model = ModuleFamily
+        fields = (
+            "pk",
+            "name",
+            "description",
+            "module_type_count",
+            "module_bay_count",
+            "tags",
+            "created",
+            "last_updated",
+            "actions",
+        )
+        default_columns = (
+            "name",
+            "description",
+            "module_type_count",
+            "module_bay_count",
             "actions",
         )
 
@@ -943,6 +982,7 @@ class ModuleBayTable(BaseTable):
     installed_module = tables.Column(linkify=True, verbose_name="Installed Module")
     installed_module__status = ColoredLabelColumn()
     tags = TagColumn(url_name="dcim:devicebay_list")
+    module_family = tables.Column(linkify=True, verbose_name="Family")
 
     class Meta(BaseTable.Meta):
         model = ModuleBay
@@ -953,6 +993,7 @@ class ModuleBayTable(BaseTable):
             "name",
             "position",
             "label",
+            "module_family",
             "description",
             "installed_module",
             "installed_module__status",
@@ -965,6 +1006,7 @@ class ModuleBayTable(BaseTable):
             "name",
             "position",
             "label",
+            "module_family",
             "description",
             "installed_module",
             "installed_module__status",
@@ -1008,8 +1050,10 @@ class DeviceModuleBayTable(ModuleBayTable):
         '"></i> <a href="{{ record.get_absolute_url }}">{{ value }}</a>',
         attrs={"td": {"class": "text-nowrap"}},
     )
+    module_family = tables.Column(linkify=True, verbose_name="Family")
     installed_module = tables.Column(linkify=True, verbose_name="Installed Module")
     installed_module__status = ColoredLabelColumn(verbose_name="Installed Module Status")
+    requires_first_party_modules = BooleanColumn(verbose_name="First-Party Only")
     actions = ButtonsColumn(model=ModuleBay, buttons=("edit", "delete"), prepend_template=MODULEBAY_BUTTONS)
 
     class Meta(ModularDeviceComponentTable.Meta):
@@ -1018,6 +1062,8 @@ class DeviceModuleBayTable(ModuleBayTable):
             "pk",
             "name",
             "position",
+            "module_family",
+            "requires_first_party_modules",
             "installed_module",
             "installed_module__status",
             "label",
@@ -1029,6 +1075,8 @@ class DeviceModuleBayTable(ModuleBayTable):
             "pk",
             "name",
             "position",
+            "module_family",
+            "requires_first_party_modules",
             "installed_module",
             "installed_module__status",
             "actions",
