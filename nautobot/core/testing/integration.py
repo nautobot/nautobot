@@ -329,7 +329,6 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         return f"http://{cls.selenium_host}:{cls.server_thread.port}"
 
     def tearDown(self):
-        breakpoint()
         if self.logged_in:
             self.logout()
 
