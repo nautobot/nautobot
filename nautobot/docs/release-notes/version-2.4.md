@@ -182,16 +182,14 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 ### Changed in v2.4.11
 
-- [#7038](https://github.com/nautobot/nautobot/issues/7038) - Changed the `create_schedule` method in `ScheduledJob` to include a condition that converts an `TYPE_IMMEDIATELY` interval to a `TYPE_FUTURE` interval. This change is required because `TYPE_IMMEDIATELY` isn't one of the values in `JobExecutionType.SCHEDULE_CHOICES` and the scheduler skipped sending the task.
 - [#7178](https://github.com/nautobot/nautobot/issues/7178) - Changed JobResult list view default configuration to not calculate and show "summary" of log entries by default, as it is not performant at scale.
-- [#7518](https://github.com/nautobot/nautobot/issues/7518) - Improved performance for the "utilization" column of the prefix list view.
 
 ### Fixed in v2.4.11
 
 - [#6933](https://github.com/nautobot/nautobot/issues/6933) - Fixed Cable deleting via API.
 - [#7007](https://github.com/nautobot/nautobot/issues/7007) - Fixed an exception when bulk-editing Location `time_zone` values.
 - [#7038](https://github.com/nautobot/nautobot/issues/7038) - Fixed issue where approved scheduled jobs set to run "immediately" were not executed, by changing the `create_schedule` method in `ScheduledJob`.
-- [#7149](https://github.com/nautobot/nautobot/issues/7149) - Fixed `EXEMPT_VIEW_PERMISSIONS` causing crash site.
+- [#7149](https://github.com/nautobot/nautobot/issues/7149) - Fixed `EXEMPT_VIEW_PERMISSIONS` causing an exception.
 - [#7307](https://github.com/nautobot/nautobot/issues/7307) - Fixed incorrect bulk-edit job and view logic around nulling out fields.
 - [#7307](https://github.com/nautobot/nautobot/issues/7307) - Fixed a number of incorrect `nullable_fields` entries on various bulk-edit forms.
 - [#7361](https://github.com/nautobot/nautobot/issues/7361) - Added a check in `refresh_job_code_from_repository()` to cause it to abort early if given a `repository_slug` that is invalid or conflicts with an installed Python package or Python built-in.
@@ -203,6 +201,8 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#7464](https://github.com/nautobot/nautobot/issues/7464) - Fixed issue where network driver help text and choices modal were missing in `Platform`.
 - [#7489](https://github.com/nautobot/nautobot/issues/7489) - Fixed broken Relationship "Move to advanced tab" functionality.
 - [#7503](https://github.com/nautobot/nautobot/issues/7503) - Fixed issue where retrieving the username of the latest change log entry loaded large unrelated fields.
+- [#7518](https://github.com/nautobot/nautobot/issues/7518) - Improved performance for the "utilization" column of the Prefix list view.
+- [#7528](https://github.com/nautobot/nautobot/issues/7528) - Fixed a typo in the RadioProfile model.
 
 ### Dependencies in v2.4.11
 
@@ -231,7 +231,6 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#7450](https://github.com/nautobot/nautobot/issues/7450) - Removed deprecated sandbox deployment workflow.
 - [#7461](https://github.com/nautobot/nautobot/issues/7461) - Updated testing dependency `openapi-spec-validator` to `~0.7.2`.
 - [#7483](https://github.com/nautobot/nautobot/issues/7483) - Refactored ConfigContext model related UI views to use `UI component framework`.
-- [#7528](https://github.com/nautobot/nautobot/issues/7528) - Fixed a typo in the RadioProfile model.
 
 ## v2.4.10 (2025-06-09)
 
