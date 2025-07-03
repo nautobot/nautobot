@@ -1,3 +1,4 @@
+from http import HTTPStatus
 import logging
 
 from django.contrib import messages
@@ -22,7 +23,16 @@ from nautobot.core.forms import ConfirmationForm
 from nautobot.core.views.generic import GenericView
 from nautobot.users.utils import serialize_user_without_config_and_views
 
-from .forms import AdvancedProfileSettingsForm, LoginForm, PasswordChangeForm, PreferenceProfileSettingsForm, TokenForm
+from ..core.views.mixins import GetReturnURLMixin
+from .forms import (
+    AdvancedProfileSettingsForm,
+    LoginForm,
+    NavbarFavoritesAddForm,
+    NavbarFavoritesRemoveForm,
+    PasswordChangeForm,
+    PreferenceProfileSettingsForm,
+    TokenForm,
+)
 from .models import Token
 
 #
@@ -150,11 +160,13 @@ class UserConfigView(GenericView):
     def get(self, request):
         tzname = request.user.get_config("timezone", get_default_timezone_name())
         form = PreferenceProfileSettingsForm(initial={"timezone": tzname})
+        preferences = request.user.all_config()
+
         return render(
             request,
             self.template_name,
             {
-                "preferences": request.user.all_config(),
+                "preferences": preferences,
                 "form": form,
                 "active_tab": "preferences",
                 "is_django_auth_user": is_django_auth_user(request),
@@ -193,6 +205,43 @@ class UserConfigView(GenericView):
             messages.success(request, "Your preferences have been updated.")
 
             return redirect("user:preferences")
+
+
+class UserNavbarFavoritesAddView(GetReturnURLMixin, GenericView):
+    def post(self, request):
+        if request.htmx:
+            form = NavbarFavoritesAddForm(request.POST)
+            if form.is_valid():
+                navbar_favorites = request.user.get_config("navbar_favorites", [])
+                navbar_favorites.append(form.cleaned_data)
+                navbar_favorites = sorted(navbar_favorites, key=lambda d: d.get("name", ""))
+                request.user.set_config("navbar_favorites", navbar_favorites, commit=True)
+
+                return render(
+                    request,
+                    "inc/nav_menu.html",
+                    status=HTTPStatus.CREATED,
+                )
+
+        return redirect(self.get_return_url(request))
+
+
+class UserNavbarFavoritesDeleteView(GetReturnURLMixin, GenericView):
+    def post(self, request):
+        if request.htmx:
+            form = NavbarFavoritesRemoveForm(request.POST)
+            if form.is_valid():
+                navbar_favorites = request.user.get_config("navbar_favorites", [])
+                navbar_favorites = [item for item in navbar_favorites if item.get("link") != form.cleaned_data["link"]]
+                request.user.set_config("navbar_favorites", navbar_favorites, commit=True)
+
+                return render(
+                    request,
+                    "inc/nav_menu.html",
+                    status=HTTPStatus.OK,
+                )
+
+        return redirect(self.get_return_url(request))
 
 
 class ChangePasswordView(GenericView):

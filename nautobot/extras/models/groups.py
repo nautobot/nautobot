@@ -338,6 +338,8 @@ class DynamicGroup(PrimaryModel):
 
         return self.members
 
+    _set_members.alters_data = True
+
     def add_members(self, objects_to_add):
         """Add the given list or QuerySet of objects to this staticly defined group."""
         if self.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
@@ -353,6 +355,8 @@ class DynamicGroup(PrimaryModel):
             existing_members = self.members
             objects_to_add = [obj for obj in objects_to_add if obj not in existing_members]
         return self._add_members(objects_to_add)
+
+    add_members.alters_data = True
 
     def _add_members(self, objects_to_add):
         """
@@ -377,6 +381,8 @@ class DynamicGroup(PrimaryModel):
             ]
             StaticGroupAssociation.all_objects.bulk_create(sgas, batch_size=1000)
 
+    _add_members.alters_data = True
+
     def remove_members(self, objects_to_remove):
         """Remove the given list or QuerySet of objects from this staticly defined group."""
         if self.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
@@ -389,6 +395,8 @@ class DynamicGroup(PrimaryModel):
                 if not isinstance(obj, self.model):
                     raise TypeError(f"{obj} is not a {self.model._meta.label_lower}")
         return self._remove_members(objects_to_remove)
+
+    remove_members.alters_data = True
 
     def _remove_members(self, objects_to_remove):
         """Internal API for removing the given list or QuerySet from the cached/static members of this Group."""
@@ -417,6 +425,8 @@ class DynamicGroup(PrimaryModel):
             if self.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
                 logger.debug("Re-connecting the _handle_deleted_object signal")
                 pre_delete.connect(_handle_deleted_object)
+
+    _remove_members.alters_data = True
 
     @property
     @method_deprecated("Members are now cached in the database via StaticGroupAssociations rather than in Redis.")
@@ -450,6 +460,8 @@ class DynamicGroup(PrimaryModel):
         logger.debug("Refreshed cache for %s, now with %d members", self, self.count)
 
         return members
+
+    update_cached_members.alters_data = True
 
     def has_member(self, obj, use_cache=False):
         """
@@ -559,6 +571,8 @@ class DynamicGroup(PrimaryModel):
             new_filter[field_name] = new_value
 
         self.filter = new_filter
+
+    set_filter.alters_data = True
 
     def get_initial(self):
         """
@@ -815,6 +829,8 @@ class DynamicGroup(PrimaryModel):
         instance = self.children.through(parent_group=self, group=child, operator=operator, weight=weight)
         return instance.validated_save()
 
+    add_child.alters_data = True
+
     # TODO: unused in core
     def remove_child(self, child):
         """
@@ -828,6 +844,8 @@ class DynamicGroup(PrimaryModel):
 
         instance = self.children.through.objects.get(parent_group=self, group=child)
         return instance.delete()
+
+    remove_child.alters_data = True
 
     def get_descendants(self, group=None):
         """

@@ -8,7 +8,7 @@
 {% block content %}
     <div class="row">
         <div class="col-md-5 col-sm-12">
-            <div class="cable-trace">
+            <div class="nb-cable-trace">
                 {% with traced_path=path.origin.trace %}
                     {% for near_end, cable, far_end in traced_path %}
 
@@ -47,7 +47,7 @@
 
                         {% if forloop.last %}
                             {% if path.is_split %}
-                                <div class="trace-end">
+                                <div class="nb-trace-end">
                                     <h3 class="text-danger">Path split!</h3>
                                     <p>Select a node below to continue:</p>
                                     <ul class="text-left">
@@ -64,7 +64,7 @@
                                     </ul>
                                 </div>
                             {% else %}
-                                <div class="trace-end">
+                                <div class="nb-trace-end">
                                     <h3{% if far_end %} class="text-success"{% endif %}>Trace completed</h3>
                                     <h5>Total segments: {{ traced_path|length }}</h5>
                                     <h5>Total length:

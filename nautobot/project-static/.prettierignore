@@ -1,0 +1,3 @@
+# Ignore all CSS and SCSS files. Although Prettier *can* format them, it is not well-suited for the job:
+**/*.css
+**/*.scss

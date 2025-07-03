@@ -392,7 +392,12 @@ class FilterTestCases:
                         # This field is not part of the Filterset.
                         continue
                     self.assertIsInstance(
-                        filter_field, (ContentTypeFilter, ContentTypeMultipleChoiceFilter, ContentTypeChoiceFilter)
+                        filter_field,
+                        (
+                            ContentTypeFilter,
+                            ContentTypeMultipleChoiceFilter,
+                            ContentTypeChoiceFilter,
+                        ),
                     )
 
     # Test cases should just explicitly include `name` as a generic_filter_tests entry

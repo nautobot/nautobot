@@ -2,7 +2,7 @@
 {% load helpers %}
 
 {% block header %}
-    <div class="row noprint">
+    <div class="row d-print-none">
         <div class="col-md-12">
             <ol class="breadcrumb">
                 {% block breadcrumbs %}
@@ -12,7 +12,7 @@
             </ol>
         </div>
     </div>
-    <div class="pull-right noprint">
+    <div class="pull-right d-print-none">
         {% block buttons %}
             {% if app_data.home_url %}
                 <a href="{% url app_data.home_url %}" class="btn btn-primary">

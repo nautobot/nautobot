@@ -334,9 +334,8 @@ class CoreConfig(NautobotConfig):
             # Register in django_jinja
             library.filter(name=name, fn=func)
 
+        from graphene.types.scalars import BigInt
         from graphene_django.converter import convert_django_field
-
-        from nautobot.core.graphql import BigInteger
 
         @convert_django_field.register(JSONField)
         def convert_json(field, registry=None):  # pylint: disable=redefined-outer-name
@@ -350,8 +349,8 @@ class CoreConfig(NautobotConfig):
 
         @convert_django_field.register(BigIntegerField)
         def convert_biginteger(field, registry=None):  # pylint: disable=redefined-outer-name
-            """Convert BigIntegerField to BigInteger scalar."""
-            return BigInteger()
+            """Convert BigIntegerField to BigInt scalar."""
+            return BigInt()
 
         from django.conf import settings
         from django.contrib.auth.models import update_last_login

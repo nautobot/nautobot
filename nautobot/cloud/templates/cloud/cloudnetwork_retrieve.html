@@ -3,6 +3,6 @@
 
 {% block extra_breadcrumbs %}
     {% if object.parent %}
-        <li>{{ object.parent|hyperlinked_object:"name" }}</li>
+        <li class="breadcrumb-item">{{ object.parent|hyperlinked_object:"name" }}</li>
     {% endif %}
 {% endblock extra_breadcrumbs %}

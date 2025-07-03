@@ -6,7 +6,7 @@ import zoneinfo
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
-from django.test import override_settings
+from django.test import override_settings, tag
 from django.urls import reverse
 from netaddr import EUI
 import yaml
@@ -861,11 +861,11 @@ class DeviceTypeTestCase(
         )
         self.assertInHTML('<input type="hidden" name="export_format" value="yaml">', content)
         self.assertInHTML(
-            '<button type="submit"><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as YAML</button>',
+            '<button class="dropdown-item" type="submit"><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as YAML</button>',
             content,
         )
         self.assertInHTML(
-            '<button type="submit"><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as CSV</button>',
+            '<button class="dropdown-item" type="submit"><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as CSV</button>',
             content,
         )
 
@@ -1194,7 +1194,7 @@ module-bays:
         response_content = response.content.decode(response.charset)
         self.assertHttpStatus(response, 200)
         self.assertInHTML(
-            '<strong class="panel-title">U height</strong>: <ul class="errorlist"><li>Ensure this value is greater than or equal to 0.</li></ul>',
+            '<strong>U height</strong>: <ul class="errorlist"><li>Ensure this value is greater than or equal to 0.</li></ul>',
             response_content,
         )
 
@@ -1248,6 +1248,7 @@ class ModuleTypeTestCase(
             "comments": "changed comment",
         }
 
+    @tag("fix_in_v3")
     def test_list_has_correct_links(self):
         """Assert that the ModuleType list view has import/export buttons for both CSV and YAML/JSON formats."""
         self.add_permissions("dcim.add_moduletype", "dcim.view_moduletype")
@@ -4241,7 +4242,7 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Interface.objects.create(device=self.devices[2], name="device 2 interface 1", status=interface_status)
         Interface.objects.create(device=self.devices[2], name="device 2 interface 2", status=interface_status)
         response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": self.devices[0].pk}))
-        self.assertBodyContains(response, 'Interfaces <span class="badge">6</span>')
+        self.assertBodyContains(response, 'Interfaces <span class="badge bg-primary">6</span>')
         self.assertBodyContains(response, "device 1 interface 1")
         self.assertBodyContains(response, "device 1 interface 2")
         self.assertBodyContains(response, "device 2 interface 1")

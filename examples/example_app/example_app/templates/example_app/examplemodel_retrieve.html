@@ -3,7 +3,7 @@
 {% load helpers %}
 
 {% block extra_breadcrumbs %}
-        <li>
+        <li class="breadcrumb-item">
             <a href="{% url 'plugins:example_app:examplemodel_list' %}?number={{ object.number }}">{{ object.number }} (Breadcrumbs)</a>
         </li>
 {% endblock extra_breadcrumbs %}

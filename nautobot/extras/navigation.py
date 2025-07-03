@@ -7,6 +7,35 @@ from nautobot.core.apps import (
 
 menu_items = (
     NavMenuTab(
+        name="Approvals",
+        groups=(
+            NavMenuGroup(
+                name="Approval Workflows",
+                weight=50,
+                items=(
+                    NavMenuItem(
+                        link="extras:approvalworkflowdefinition_list",
+                        name="Workflow Definitions",
+                        weight=100,
+                        permissions=["extras.view_approvalworkflowdefinition"],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:approvalworkflowdefinition_add",
+                                permissions=["extras.add_approvalworkflowdefinition"],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="extras:approver_dashboard",
+                        name="Approval Dashboard",
+                        weight=200,
+                        permissions=["extras.view_approvalworkflow"],
+                    ),
+                ),
+            ),
+        ),
+    ),
+    NavMenuTab(
         name="Organization",
         weight=100,
         groups=(

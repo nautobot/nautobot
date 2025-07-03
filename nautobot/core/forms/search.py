@@ -1,7 +1,4 @@
-from django import forms
 from django.apps import apps
-
-from nautobot.core.forms import BootstrapMixin
 
 
 def search_model_choices():
@@ -19,15 +16,3 @@ def search_model_choices():
         ]
         choices.append((app_label, model_tuples))
     return choices
-
-
-class SearchForm(BootstrapMixin, forms.Form):
-    q = forms.CharField(label="Search")
-
-    obj_type = forms.ChoiceField(choices=search_model_choices, required=False, label="Type")
-
-    def __init__(self, *args, q_placeholder=None, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        if q_placeholder:
-            self.fields["q"].widget.attrs["placeholder"] = q_placeholder

@@ -260,7 +260,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
         display = helpers.hyperlinked_object(role)
         self.assertEqual(
             helpers.hyperlinked_object_with_color(obj=role),
-            f'<span class="label" style="color: {fbcolor}; background-color: #{color}">{display}</span>',
+            f'<span class="badge" style="color: {fbcolor}; background-color: #{color}">{display}</span>',
         )
         # Assert when obj is None
         self.assertEqual(helpers.hyperlinked_object_with_color(obj=None), '<span class="text-muted">&mdash;</span>')

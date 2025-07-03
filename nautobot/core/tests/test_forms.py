@@ -15,18 +15,6 @@ from nautobot.extras import filters as extras_filters, models as extras_models
 from nautobot.ipam import forms as ipam_forms, models as ipam_models
 
 
-class SearchFormTestCase(TestCase):
-    def test_q_placeholder(self):
-        from nautobot.core.forms import SearchForm
-
-        self.assertEqual(SearchForm().fields["q"].widget.attrs["placeholder"], "Search")
-
-        # Assert the q field placeholder is overridden
-        self.assertEqual(
-            SearchForm(q_placeholder="Search Locations").fields["q"].widget.attrs["placeholder"], "Search Locations"
-        )
-
-
 class ExpandIPAddress(TestCase):
     """
     Validate the operation of expand_ipaddress_pattern().

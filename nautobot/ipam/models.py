@@ -200,6 +200,8 @@ class VRF(PrimaryModel):
         instance.validated_save()
         return instance
 
+    add_device.alters_data = True
+
     def remove_device(self, device):
         """
         Remove a `device` from this VRF.
@@ -212,6 +214,8 @@ class VRF(PrimaryModel):
         """
         instance = self.devices.through.objects.get(vrf=self, device=device)
         return instance.delete()
+
+    remove_device.alters_data = True
 
     def add_virtual_machine(self, virtual_machine, rd="", name=""):
         """
@@ -231,6 +235,8 @@ class VRF(PrimaryModel):
         instance.validated_save()
         return instance
 
+    add_virtual_machine.alters_data = True
+
     def remove_virtual_machine(self, virtual_machine):
         """
         Remove a `virtual_machine` from this VRF.
@@ -243,6 +249,8 @@ class VRF(PrimaryModel):
         """
         instance = self.virtual_machines.through.objects.get(vrf=self, virtual_machine=virtual_machine)
         return instance.delete()
+
+    remove_virtual_machine.alters_data = True
 
     def add_virtual_device_context(self, virtual_device_context, rd="", name=""):
         """
@@ -264,6 +272,8 @@ class VRF(PrimaryModel):
         instance.validated_save()
         return instance
 
+    add_virtual_device_context.alters_data = True
+
     def remove_virtual_device_context(self, virtual_device_context):
         """
         Remove a `virtual_device_context` from this VRF.
@@ -279,6 +289,8 @@ class VRF(PrimaryModel):
         )
         return instance.delete()
 
+    remove_virtual_device_context.alters_data = True
+
     def add_prefix(self, prefix):
         """
         Add a `prefix` to this VRF. Each object must be in the same Namespace.
@@ -293,6 +305,8 @@ class VRF(PrimaryModel):
         instance.validated_save()
         return instance
 
+    add_prefix.alters_data = True
+
     def remove_prefix(self, prefix):
         """
         Remove a `prefix` from this VRF.
@@ -305,6 +319,8 @@ class VRF(PrimaryModel):
         """
         instance = self.prefixes.through.objects.get(vrf=self, prefix=prefix)
         return instance.delete()
+
+    remove_prefix.alters_data = True
 
 
 @extras_features("graphql")
@@ -373,6 +389,8 @@ class VRFDeviceAssignment(BaseModel):
             raise ValidationError(
                 "A VRFDeviceAssignment entry must be associated with a device, a virtual machine, or a virtual device context."
             )
+
+    clean.alters_data = True
 
 
 @extras_features("graphql")
@@ -640,6 +658,8 @@ class Prefix(PrimaryModel):
             self.prefix_length = prefix.prefixlen
             self.ip_version = prefix.version
 
+    _deconstruct_prefix.alters_data = True
+
     def delete(self, *args, **kwargs):
         """
         A Prefix with children will be impossible to delete and raise a `ProtectedError`.
@@ -705,6 +725,8 @@ class Prefix(PrimaryModel):
             return parent
         return None
 
+    get_parent.alters_data = True
+
     def clean(self):
         if self.prefix is not None:  # missing network/prefix_length will be caught by super().clean()
             # Clear host bits from prefix
@@ -715,6 +737,8 @@ class Prefix(PrimaryModel):
             self.parent = self.get_parent()
 
         super().clean()
+
+    clean.alters_data = True
 
     def save(self, *args, **kwargs):
         self.clean()
@@ -821,6 +845,8 @@ class Prefix(PrimaryModel):
 
         return query.update(parent=self)
 
+    reparent_subnets.alters_data = True
+
     def reparent_ips(self):
         """Determine the list of child IPAddresses and set the parent to self."""
         query = IPAddress.objects.select_for_update().filter(
@@ -831,6 +857,8 @@ class Prefix(PrimaryModel):
         )
 
         return query.update(parent=self)
+
+    reparent_ips.alters_data = True
 
     def supernets(self, direct=False, include_self=False, for_update=False):
         """
@@ -1228,6 +1256,8 @@ class IPAddress(PrimaryModel):
             self.mask_length = address.prefixlen
             self.ip_version = address.version
 
+    _deconstruct_address.alters_data = True
+
     natural_key_field_names = ["parent__namespace", "host"]
 
     def _get_closest_parent(self):
@@ -1288,6 +1318,8 @@ class IPAddress(PrimaryModel):
             self.dns_name = self.dns_name.lower()
 
         super().clean()
+
+    clean.alters_data = True
 
     def save(self, *args, **kwargs):
         self.clean()  # MUST do data fixup as above

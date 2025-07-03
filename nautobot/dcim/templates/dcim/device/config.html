@@ -5,25 +5,23 @@
 {% block content %}
     {% include 'inc/ajax_loader.html' %}
     <div class="row">
-        <div class="col-md-10 col-md-offset-1">
-            <div class="panel panel-default">
-                <div class="panel-heading"><strong>Device Configuration</strong></div>
-                <div class="panel-body">
-                    <ul class="nav nav-tabs" role="tablist">
-                        <li role="presentation" class="active"><a href="#running" aria-controls="running" role="tab" data-toggle="tab">Running</a></li>
-                        <li role="presentation"><a href="#startup" aria-controls="startup" role="tab" data-toggle="tab">Startup</a></li>
-                        <li role="presentation"><a href="#candidate" aria-controls="candidate" role="tab" data-toggle="tab">Candidate</a></li>
-                    </ul>
-                    <div class="tab-content">
-                        <div role="tabpanel" class="tab-pane active" id="running">
-                            <pre id="running_config"></pre>
-                        </div>
-                        <div role="tabpanel" class="tab-pane" id="startup">
-                            <pre id="startup_config"></pre>
-                        </div>
-                        <div role="tabpanel" class="tab-pane" id="candidate">
-                            <pre id="candidate_config"></pre>
-                        </div>
+        <div class="col-md-10 offset-md-1">
+            <div class="card mb-16">
+                <div class="card-header"><strong>Device Configuration</strong></div>
+                <ul class="nav nav-tabs mt-16" role="tablist">
+                    <li class="nav-item" role="presentation"><a class="nav-link active" href="#running" aria-controls="running" role="tab" data-toggle="tab">Running</a></li>
+                    <li class="nav-item" role="presentation"><a class="nav-link" href="#startup" aria-controls="startup" role="tab" data-toggle="tab">Startup</a></li>
+                    <li class="nav-item" role="presentation"><a class="nav-link" href="#candidate" aria-controls="candidate" role="tab" data-toggle="tab">Candidate</a></li>
+                </ul>
+                <div class="tab-content">
+                    <div role="tabpanel" class="tab-pane fade show active" id="running">
+                        <pre class="m-16" id="running_config"></pre>
+                    </div>
+                    <div role="tabpanel" class="tab-pane fade" id="startup">
+                        <pre class="m-16" id="startup_config"></pre>
+                    </div>
+                    <div role="tabpanel" class="tab-pane fade" id="candidate">
+                        <pre class="m-16" id="candidate_config"></pre>
                     </div>
                 </div>
             </div>

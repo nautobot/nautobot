@@ -36,7 +36,6 @@ from nautobot.core.forms import (
     CSVFileField,
     ImportForm,
     restrict_form_fields,
-    SearchForm,
     TableConfigForm,
 )
 from nautobot.core.forms.forms import DynamicFilterFormSet
@@ -106,6 +105,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
             (dict): Additional context data
         """
         return {
+            "object_detail_content": self.object_detail_content,
             "active_tab": request.GET.get("tab", "main"),
         }
 
@@ -350,6 +350,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 saved_view=current_saved_view,
                 user=request.user,
                 hide_hierarchy_ui=hide_hierarchy_ui,
+                configurable=True,
             )
             if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                 table.columns.show("pk")
@@ -368,10 +369,6 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                     f'Requested "per_page" is too large. No more than {max_page_size} items may be displayed at a time.',
                 )
 
-        # For the search form field, use a custom placeholder.
-        q_placeholder = "Search " + bettertitle(model._meta.verbose_name_plural)
-        search_form = SearchForm(data=filter_params, q_placeholder=q_placeholder)
-
         valid_actions = self.validate_action_buttons(request)
 
         # Query SavedViews for dropdown button
@@ -386,7 +383,6 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "filter_params": display_filter_params,
             "filter_form": filter_form,
             "dynamic_filter_form": dynamic_filter_form,
-            "search_form": search_form,
             "list_url": list_url,
             "title": bettertitle(model._meta.verbose_name_plural),
             "new_changes_not_applied": new_changes_not_applied,

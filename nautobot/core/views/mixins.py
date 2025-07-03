@@ -68,6 +68,8 @@ PERMISSIONS_ACTION_MAP = {
     "bulk_update": "change",
     "changelog": "view",
     "notes": "view",
+    "approve": "change",
+    "deny": "change",
 }
 
 
@@ -511,6 +513,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         if instance is not None:
             return {
+                "object_detail_content": self.object_detail_content,
                 "active_tab": request.GET.get("tab", "main"),
             }
         return {}

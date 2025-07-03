@@ -2,10 +2,10 @@
 {% load helpers %}
 {% load static %}
 
-{% block title %}{{ object }}{% endblock %}
+{% block title %}{{ object }} - Change Log{% endblock %}
 
 {% block header %}
-    <div class="row noprint">
+    <div class="row d-print-none">
         <div class="col-sm-8 col-md-9">
             <ol class="breadcrumb">
                 <li><a href="{% url 'extras:objectchange_list' %}">Change Log</a></li>
@@ -101,7 +101,7 @@
                     <strong>Object Data</strong>
                 </div>
                 <div class="panel-body">
-                    <div class="editor-container" 
+                    <div class="nb-editor-container"
                          data-lang="json"
                          data-value="{{ object.object_data|render_json:False }}"
                          style="max-height: 300px">
@@ -113,7 +113,7 @@
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Difference</strong>
-                    <div class="btn-group btn-group-xs pull-right noprint">
+                    <div class="btn-group btn-group-xs pull-right d-print-none">
                         <a {% if prev_change %}href="{% url 'extras:objectchange' pk=prev_change.pk %}"{% else %}disabled{% endif %} class="btn btn-default">
                             <span class="mdi mdi-chevron-left" aria-hidden="true"></span> Previous
                         </a>
@@ -134,7 +134,7 @@
                             {% endif %}
                         </span>
                     {% else %}
-                        <div class="editor-container" 
+                        <div class="nb-editor-container"
                             data-mode="diff"
                             data-original="{{ diff_removed | render_json:False }}"
                             data-modified="{{ diff_added | render_json:False }}"
@@ -148,7 +148,7 @@
     </div>
     <div class="row">
         <div class="col-md-12">
-            {% include 'panel_table.html' with table=related_changes_table heading='Related Changes' panel_class='default' %}
+            {% include 'panel_table.html' with table=related_changes_table heading='Related Changes' %}
             {% if related_changes_count > related_changes_table.rows|length %}
                 <div class="pull-right">
                     <a href="{% url 'extras:objectchange_list' %}?request_id={{ object.request_id }}" class="btn btn-primary">See all {{ related_changes_count|add:"1" }} changes</a>
@@ -162,4 +162,3 @@
     {{ block.super }}
     <script src="{% static 'js/editor.js' %}"></script>
 {% endblock %}
-

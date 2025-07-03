@@ -356,6 +356,7 @@ class PrefixView(generic.ObjectView):
 
         return {
             "vrf_table": vrf_table,
+            "list_url": "ipam:prefix_list",
             "parent_prefix_table": parent_prefix_table,
             "cloud_network_table": cloud_network_table,
             "vpn_endpoints_table": vpn_endpoints_table,
@@ -446,6 +447,7 @@ class PrefixIPAddressesView(generic.ObjectView):
 
         return {
             "first_available_ip": instance.get_first_available_ip(),
+            "list_url": "ipam:prefix_list",
             "ip_table": ip_table,
             "permissions": permissions,
             "bulk_querystring": bulk_querystring,
@@ -1072,7 +1074,9 @@ class IPAddressVMInterfacesView(generic.ObjectView):
         vm_interfaces = instance.vm_interfaces.restrict(request.user, "view").prefetch_related(
             Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)),
         )
-        vm_interface_table = tables.IPAddressVMInterfaceTable(data=vm_interfaces, user=request.user, orderable=False)
+        vm_interface_table = tables.IPAddressVMInterfaceTable(
+            data=vm_interfaces, user=request.user, orderable=False, configurable=True
+        )
         if request.user.has_perm("virtualization.change_vminterface") or request.user.has_perm(
             "virtualization.delete_vminterface"
         ):

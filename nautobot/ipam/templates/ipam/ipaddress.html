@@ -3,7 +3,7 @@
 {% load render_table from django_tables2 %}
 
 {% block extra_breadcrumbs %}
-                    <li>{{ object.parent.namespace|hyperlinked_object }}</li>
+                    <li class="breadcrumb-item">{{ object.parent.namespace|hyperlinked_object }}</li>
 {% endblock extra_breadcrumbs %}
 
 {% block extra_nav_tabs %}

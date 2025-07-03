@@ -1,0 +1,2 @@
+Migrated homepage to Bootstrap 5.
+Abstracted out draggable API to a generic and reusable form.

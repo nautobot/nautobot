@@ -1,8 +1,10 @@
-<div class="panel-body">
-    {% for url, value, title in stats.values %}
-        <div class="col-md-4 text-center">
-            <h2><a href="{% url url %}?{{ filter_name }}={{ object.pk }}" class="btn {% if value > 0 %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ value }}</a></h2>
-            <p>{{ title }}</p>
-        </div>
-    {% endfor %}
+<div class="collapse show" {% if body_id %} id="{{ body_id }}"{% endif %}>
+    <div class="row row-cols-3">
+        {% for url, value, title in stats.values %}
+            <div class="col text-center">
+                <h2><a href="{% url url %}?{{ filter_name }}={{ object.pk }}" class="btn {% if value > 0 %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ value }}</a></h2>
+                <p>{{ title }}</p>
+            </div>
+        {% endfor %}
+    </div>
 </div>

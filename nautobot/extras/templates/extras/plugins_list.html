@@ -2,8 +2,12 @@
 {% load helpers %}
 {% load static %}
 
+{% block drawer %}
+    {% table_config_form table %}
+{% endblock %}
+
 {% block content %}
-    <div class="row noprint">
+    <div class="row d-print-none">
         <div class="col-md-12">
             <ol class="breadcrumb">
                 {% block breadcrumbs %}
@@ -13,7 +17,7 @@
         </div>
     </div>
 
-    <div class="pull-right noprint">
+    <div class="pull-right d-print-none">
         <div class="btn-group">
             <a class="btn btn-default set-apps-display" data-display="tiles" href="" title="Tiles">
                 <i class="mdi mdi-view-grid{% if display == "list" %}-outline{% endif %}"></i>
@@ -23,14 +27,6 @@
             </a>
         </div>
 
-        {% if request.user.is_authenticated and table_config_form %}
-            {% if display == "tiles" %}
-                {% table_config_button table table_name="ObjectTable" disabled=True %}
-            {% else %}
-                {% table_config_button table table_name="ObjectTable" %}
-            {% endif %}
-        {% endif %}
-
         <a class="btn btn-primary" href="{% url 'apps:apps_marketplace' %}">Visit Apps Marketplace</a>
     </div>
 
@@ -39,7 +35,7 @@
     <div class="row">
         <div class="col-md-12">
             {% if filter_form %}
-                <div class="col-md-3 pull-right right-side-panel noprint">
+                <div class="col-md-3 float-end nb-right-side-panel d-print-none">
                     {% include 'inc/search_panel.html' %}
                     {% block sidebar %}{% endblock %}
                 </div>
@@ -49,7 +45,6 @@
             <div class="clearfix"></div>
         </div>
     </div>
-    {% table_config_form table table_name="ObjectTable" %}
 {% endblock %}
 
 {% block javascript %}

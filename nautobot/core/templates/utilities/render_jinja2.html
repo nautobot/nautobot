@@ -31,7 +31,7 @@
                 <div class="panel-heading"><strong>Template</strong></div>
                 <div class="panel-body">
                     <div class="form-group">
-                        <label class="col-md-3 control-label required" for="id_template_code">Jinja Template</label>
+                        <label class="col-md-3 control-label nb-required" for="id_template_code">Jinja Template</label>
                         <div class="col-md-9">
                             <textarea cols="40" rows="10" class="form-control" id="id_template_code" required=""></textarea>
                         </div>
@@ -53,8 +53,9 @@
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Rendered Template</strong>
-                    <button type="button" class="btn btn-inline btn-default copy-rendered-template" data-clipboard-target="#rendered_template">
-                        <span class="mdi mdi-content-copy"></span>
+                    <button type="button" class="btn btn-secondary opacity-100 nb-btn-inline-hover copy-rendered-template" data-clipboard-target="#rendered_template">
+                        <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+                        <span class="visually-hidden">Copy</span>
                     </button>
                 </div>
                 <div class="panel-body">

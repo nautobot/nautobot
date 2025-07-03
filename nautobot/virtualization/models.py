@@ -444,6 +444,8 @@ class VMInterface(PrimaryModel, BaseInterface):
                 instance.validated_save()
         return len(ip_addresses)
 
+    add_ip_addresses.alters_data = True
+
     def remove_ip_addresses(self, ip_addresses):
         """Remove one or more IPAddress instances from this interface's `ip_addresses` many-to-many relationship.
 
@@ -462,6 +464,8 @@ class VMInterface(PrimaryModel, BaseInterface):
                 deleted_count, _ = qs.delete()
                 count += deleted_count
         return count
+
+    remove_ip_addresses.alters_data = True
 
     @property
     def parent(self):

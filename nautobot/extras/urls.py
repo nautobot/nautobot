@@ -12,6 +12,7 @@ from nautobot.extras.models import (
     Job,
     Note,
     Relationship,
+    ScheduledJob,
     SecretsGroup,
     Tag,
 )
@@ -19,6 +20,11 @@ from nautobot.extras.models import (
 app_name = "extras"
 
 router = NautobotUIViewSetRouter()
+router.register("approval-workflows", views.ApprovalWorkflowUIViewSet)
+router.register("approval-workflow-definitions", views.ApprovalWorkflowDefinitionUIViewSet)
+router.register("approval-workflow-stages", views.ApprovalWorkflowStageUIViewSet)
+router.register("approval-workflow-stage-definitions", views.ApprovalWorkflowStageDefinitionUIViewSet)
+router.register("approval-workflow-stage-responses", views.ApprovalWorkflowStageResponseUIViewSet)
 router.register("computed-fields", views.ComputedFieldUIViewSet)
 router.register("contacts", views.ContactUIViewSet)
 router.register("contact-associations", views.ContactAssociationUIViewSet)
@@ -40,6 +46,10 @@ router.register("teams", views.TeamUIViewSet)
 router.register("webhooks", views.WebhookUIViewSet)
 
 urlpatterns = [
+    # Approver Dashboard
+    path("approver-dashboard/", views.ApproverDashboardView.as_view({"get": "list"}), name="approver_dashboard"),
+    # Approvee Dashboard
+    path("approvee-dashboard/", views.ApproveeDashboardView.as_view({"get": "list"}), name="approvee_dashboard"),
     # Change logging
     path("object-changes/", views.ObjectChangeListView.as_view(), name="objectchange_list"),
     path("object-changes/<uuid:pk>/", views.ObjectChangeView.as_view(), name="objectchange"),
@@ -331,6 +341,12 @@ urlpatterns = [
         "jobs/scheduled-jobs/approval-queue/",
         views.ScheduledJobApprovalQueueListView.as_view(),
         name="scheduledjob_approval_queue_list",
+    ),
+    path(
+        "jobs/scheduled-jobs/<uuid:pk>/approval-workflow/",
+        views.ObjectApprovalWorkflowView.as_view(),
+        name="scheduledjob_approvalworkflow",
+        kwargs={"model": ScheduledJob},
     ),
     path(
         "jobs/scheduled-jobs/approval-queue/<uuid:pk>/",

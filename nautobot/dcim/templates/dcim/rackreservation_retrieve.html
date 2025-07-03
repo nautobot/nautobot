@@ -3,7 +3,7 @@
 {% load static %}
 
 {% block extra_breadcrumbs %}
-                <li>{{ object.rack|hyperlinked_object }}</li>
+                <li class="breadcrumb-item">{{ object.rack|hyperlinked_object }}</li>
 {% endblock extra_breadcrumbs %}
 {% block javascript %}
     {{ block.super }}

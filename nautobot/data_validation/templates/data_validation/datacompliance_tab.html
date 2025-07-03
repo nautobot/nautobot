@@ -1,0 +1,10 @@
+{% extends base_template %}
+{% load helpers %}
+{% load tz %}
+{% load static %}
+
+{% block title %} {{ object }} - Data Compliance {% endblock %}
+
+{% block content %}
+    {% include 'responsive_table.html' %}
+{% endblock %}

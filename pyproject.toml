@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.4.10b1"
+version = "3.0.0a1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -15,10 +15,10 @@ classifiers = [
     "Intended Audience :: Developers",
     "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 packages = [
     {include = "nautobot"}
@@ -33,15 +33,15 @@ exclude = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.9.2,<3.13"
+python = ">=3.10,<3.14"
 # Background task processing
-celery = "~5.3.6"
+celery = "~5.5.3"
 # Cryptographic recipes and primitives.
 # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
 # Added as an explicit dependency to protect against various CVEs in older versions.
 cryptography = "~44.0.3"
 # Fundamental web framework for Nautobot
-Django = "~4.2.21"
+Django = "~4.2.22"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -62,6 +62,8 @@ django-extensions = "~3.2.3"
 django-filter = "~25.1"
 # Health check endpoint
 django-health-check = "~3.18.3"
+# Utility tools to support HTMX requests within a Django framework.
+django-htmx = "^1.23.0"
 # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
 django-jinja = "~2.11.0"
 # Prometheus metrics for Django
@@ -94,18 +96,13 @@ emoji = "~2.12.1"
 # Git integrations for Python
 GitPython = "~3.1.44"
 # GraphQL support
-# NOTE: graphene-django 3.x is available but includes breaking changes. Will address in a future release.
-graphene-django = "~2.16.0"
+graphene-django = "~3.2.3"
 # Graphene Optimizer
-# NOTE: graphene-django-optimizer 0.9 and later require Graphene v3
-graphene-django-optimizer = "~0.8.0"
+graphene-django-optimizer = "~0.10.0"
 # Template rendering engine
 Jinja2 = "~3.1.6"
 # Optional data validation of config contexts - loose dependency since our usage is light but apps may be more specific
 jsonschema = "^4.7.0"
-# Messaging library for Python - dependency of Celery
-# Included as an explicit dependency (for now?) to require a version with https://github.com/celery/kombu/pull/2007
-kombu = "~5.4.2"
 # Library to access Kubernetes API used to develop K8s integration
 kubernetes = "^32.0.1"
 # Rendering of markdown files to HTML
@@ -119,7 +116,7 @@ netaddr = "~1.3.0"
 # Library of network related utilities including network driver mappings and Jinja Filters
 # Note: netutils is limited in scope, dependencies, and observes semver, as such
 #       we permit a looser (^) version constraint here.
-netutils = "^1.6.0"
+netutils = "^1.12.0"
 # HTML sanitization
 nh3 = "~0.2.21"
 # Handling of version numbers
@@ -253,7 +250,7 @@ omit = [
 
 [tool.pylint.master]
 load-plugins = "pylint_django"
-py-version = "3.9"
+py-version = "3.10"
 ignore-paths = [
     ".*third_party.*",
     "nautobot/extras/tests/git_data/02-invalid-files/",
@@ -371,7 +368,7 @@ plugins.ul-indent.enabled = false  # doesn't work well with MkDocs expectations,
 
 [tool.ruff]
 line-length = 120
-target-version = "py39"
+target-version = "py310"
 extend-exclude = [
     # Intentionally malformed files
     "nautobot/extras/tests/git_data/02-invalid-files/jobs",

@@ -4,6 +4,7 @@ import contextlib
 from dataclasses import dataclass
 from enum import Enum
 import logging
+import uuid
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
@@ -524,6 +525,8 @@ class Panel(Component):
         """
         if not self.should_render(context):
             return ""
+        if not self.body_id:
+            self.body_id = self._get_body_id(context)
         with context.update(self.get_extra_context(context)):
             return render_component_template(
                 self.template_path,
@@ -532,11 +535,21 @@ class Panel(Component):
                 header_extra_content=self.render_header_extra_content(context),
                 body=self.render_body(context),
                 footer_content=self.render_footer_content(context),
+                body_id=self.body_id,
             )
+
+    def _get_body_id(self, context: Context):
+        """Retreive the `body_id` attribute to the rendered components, used for the collapsible panel feature."""
+        if self.body_id:
+            return self.body_id
+        if self.label:
+            return slugify(self.label)
+
+        return str(uuid.uuid4())
 
     def render_label(self, context: Context):
         """Render the label of this panel, if any."""
-        return self.label
+        return self.label.upper()
 
     def render_header_extra_content(self, context: Context):
         """
@@ -1124,10 +1137,11 @@ class KeyValueTablePanel(Panel):
                 else:
                     value_tag = format_html(
                         """
-                            <span class="hover_copy">
+                            <span>
                                 <span id="{unique_id}_value_{key}">{value}</span>
-                                <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#{unique_id}_value_{key}">
-                                    <span class="mdi mdi-content-copy"></span>
+                                <button class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#{unique_id}_value_{key}">
+                                    <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+                                    <span class="visually-hidden">Copy</span>
                                 </button>
                             </span>
                         """,
@@ -1178,7 +1192,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
     def render_label(self, context: Context):
         """Default to rendering the provided object's `verbose_name` if no more specific `label` was defined."""
         if self.label is None:
-            return bettertitle(get_obj_from_context(context, self.context_object_key)._meta.verbose_name)
+            return get_obj_from_context(context, self.context_object_key)._meta.verbose_name.upper()
         return super().render_label(context)
 
     def render_value(self, key, value, context: Context):
@@ -1298,8 +1312,17 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
     def render_header_extra_content(self, context: Context):
         """Add a "Collapse All" button to the header."""
         return format_html(
-            '<button type="button" class="btn-xs btn-primary pull-right accordion-toggle-all" data-target="#{body_id}">'
-            "Collapse All</button>",
+            """
+            <button
+                aria-expanded="true"
+                class="btn btn-primary btn-sm float-end"
+                data-nb-target="[class^=&quot;collapseme-{body_id}-&quot;]"
+                data-nb-toggle="collapse-all"
+                type="button"
+            >
+                Collapse All
+            </button>
+            """,
             body_id=self.body_id,
         )
 
@@ -1328,7 +1351,7 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
                 if value_display:
                     # TODO: add a copy button on hover to all display items
                     result += format_html(
-                        '<tr class="collapseme-{body_id}-{counter} collapse in" data-parent="#{body_id}">'
+                        '<tr class="collapseme-{body_id}-{counter} collapse show nb-transition-none">'
                         "<td>{key}</td><td>{value}</td></tr>",
                         counter=counter,
                         body_id=self.body_id,
@@ -1873,6 +1896,7 @@ class _ObjectDetailContactsTab(Tab):
                     # TODO: we should provide a standard reusable component template for bulk-actions in the footer
                     footer_content_template_path="components/panel/footer_contacts_table.html",
                     header_extra_content_template_path=None,
+                    label="Contacts/Teams",
                 ),
             )
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
@@ -1958,6 +1982,7 @@ class _ObjectDetailMetadataTab(Tab):
                     add_button_route=None,
                     related_field_name="assigned_object_id",
                     header_extra_content_template_path=None,
+                    label="Object Metadata",
                 ),
             )
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)

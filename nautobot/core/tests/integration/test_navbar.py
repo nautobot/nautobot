@@ -16,7 +16,7 @@ class NavBarTestCase(SeleniumTestCase):
                     "buttons": ["Add"],
                 },
             },
-            "Tags": {
+            "Metadata": {
                 "Tags": {
                     "permission": "extras.view_tag",
                     "buttons": ["Add"],
@@ -24,7 +24,7 @@ class NavBarTestCase(SeleniumTestCase):
             },
         },
         "Extensibility": {
-            "Data Management": {
+            "Data Model": {
                 "Relationships": {
                     "permission": "extras.view_relationship",
                     "buttons": [
@@ -39,10 +39,6 @@ class NavBarTestCase(SeleniumTestCase):
         super().setUp()
         self.login(self.user.username, self.password)
 
-    def tearDown(self):
-        self.logout()
-        super().tearDown()
-
     def test_navbar_render_superuser(self):
         """
         Render navbar from home page with superuser.
@@ -56,20 +52,22 @@ class NavBarTestCase(SeleniumTestCase):
 
         for tab_name, groups in self.navbar.items():
             # XPath to find tabs using the tab name
-            tab_xpath = f"//*[@id='navbar']//span[normalize-space()='{tab_name}']/.."
-            tab = self.browser.find_by_xpath(tab_xpath)
-            tab.click()
-            self.assertEqual(tab["aria-expanded"], "true")
+            sidenav_section = self.find_sidenav_section(tab_name)
+            sidenav_section.button.click()
+
+            self.assertTrue(sidenav_section.is_expanded)
 
             for group_name, items in groups.items():
                 # Append onto tab xpath with group name search
-                group = tab.find_by_xpath(f"{tab_xpath}/following-sibling::ul//li[normalize-space()='{group_name}']")
+                group = sidenav_section.flyout.find_by_xpath(
+                    f"//li[@class='sidenav-link-group' and normalize-space()='{group_name}']"
+                )
 
                 for item_name in items:
-                    item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[normalize-space()='{item_name}']]"
+                    item_xpath = f"//a[@class='sidenav-link' and normalize-space()='{item_name}']"
                     group.find_by_xpath(item_xpath)
 
-            tab.click()
+            sidenav_section.button.click()
 
     def test_navbar_render_with_limited_permissions(self):
         """
@@ -91,8 +89,8 @@ class NavBarTestCase(SeleniumTestCase):
                         tab_flag = True
 
             # XPath to find tabs using the tab name
-            tabs = self.browser.find_by_xpath(f"//*[@id='navbar']//span[normalize-space()='{tab_name}']/..")
+            tabs = self.browser.find_by_xpath(f"//*[@id='sidenav']//li[@data-section-name='{tab_name}']")
             if tab_flag:
-                self.assertEqual(len(tabs), 1)
+                self.assertEqual(len(tabs), 1, msg=f'"{tab_name}" was unexpectedly not found.')
             else:
-                self.assertEqual(len(tabs), 0)
+                self.assertTrue(tabs.is_empty(), msg=f'"{tab_name}" was unexpectedly found.')

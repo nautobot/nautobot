@@ -6,7 +6,7 @@
 {% block title %}{{ job_model }} - Approval Request{% endblock %}
 
 {% block content %}
-    <div class="row noprint">
+    <div class="row d-print-none">
         <div class="col-md-12">
             <ol class="breadcrumb">
                 <li><a href="{% url 'extras:job_list' %}">Jobs</a></li>
@@ -85,13 +85,13 @@
                             </div>
                             <div class="panel-body">
                                 <div class="form-group">
-                                    <label class="col-md-3 control-label required">Requestor</label>
+                                    <label class="col-md-3 control-label nb-required">Requestor</label>
                                     <div class="col-md-9">
                                         <span>{{ object.user.username|placeholder }}</span>
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label class="col-md-3 control-label required">Requested Start Time</label>
+                                    <label class="col-md-3 control-label nb-required">Requested Start Time</label>
                                     <div class="col-md-9">
                                         <span>{{ object.start_time|placeholder }}</span>
                                     </div>

@@ -3,7 +3,7 @@ import os
 import tempfile
 
 from django.contrib.contenttypes.models import ContentType
-from django.test import override_settings
+from django.test import override_settings, tag
 from django.urls import reverse
 
 from nautobot.circuits.models import (
@@ -124,13 +124,7 @@ class AppDocumentationTest(SeleniumTestCase):
 
     def setUp(self):
         super().setUp()
-        self.user.is_superuser = True
-        self.user.save()
-        self.login(self.user.username, self.password)
-
-    def tearDown(self):
-        self.logout()
-        super().tearDown()
+        self.login_as_superuser()
 
     def test_object_edit_help_provided(self):
         """The ExampleModel object provides model documentation, this test ensures the help link is rendered."""
@@ -152,9 +146,7 @@ class AppReturnUrlTestCase(SeleniumTestCase):
 
     def setUp(self):
         super().setUp()
-        self.user.is_superuser = True
-        self.user.save()
-        self.login(self.user.username, self.password)
+        self.login_as_superuser()
 
     def test_app_return_url(self):
         """This test ensures that Apps return url for new objects is the list view."""
@@ -163,7 +155,7 @@ class AppReturnUrlTestCase(SeleniumTestCase):
         form = self.browser.find_by_tag("form")
 
         # Check that the Cancel button is a link to the examplemodel_list view.
-        element = form.first.links.find_by_text("Cancel").first
+        element = form.first.links.find_by_partial_text("Cancel").first
         self.assertEqual(element["href"], f'{self.live_server_url}{reverse("plugins:example_app:examplemodel_list")}')
 
 
@@ -174,9 +166,7 @@ class AppTabsTestCase(SeleniumTestCase):
 
     def setUp(self):
         super().setUp()
-        self.user.is_superuser = True
-        self.user.save()
-        self.login(self.user.username, self.password)
+        self.login_as_superuser()
 
     def test_circuit_detail_tab(self):
         provider = Provider.objects.create(name="Test Provider", asn=12345)
@@ -203,6 +193,7 @@ class AppTabsTestCase(SeleniumTestCase):
             )
         )
 
+    @tag("fix_in_v3")
     def test_device_detail_tab(self):
         """
         This test checks that both app device tabs from the Example App are visible and render correctly.

@@ -262,7 +262,7 @@ class ViewTestCases:
             if getattr(obj, "is_contact_associable_model", False):
                 self.assertBodyContains(
                     response,
-                    f'<a href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">Contacts</a>',
+                    f'<a aria-controls="contacts" class="nav-link" data-bs-toggle="tab" href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" role="tab">Contacts</a>',
                     html=True,
                 )
             else:
@@ -285,7 +285,7 @@ class ViewTestCases:
                 if getattr(obj, "is_contact_associable_model", False):
                     self.assertBodyContains(
                         response,
-                        f'<a href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">Contacts</a>',
+                        f'<a aria-controls="contacts" class="nav-link" data-bs-toggle="tab" href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" role="tab">Contacts</a>',
                         html=True,
                     )
                 else:
@@ -303,10 +303,12 @@ class ViewTestCases:
         slugify_function = staticmethod(slugify)
         slug_test_object = ""
         expected_create_form_buttons = [
-            '<button type="submit" name="_create" class="btn btn-primary">Create</button>',
-            '<button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>',
+            '<button type="submit" name="_create" class="btn btn-primary"><span aria-hidden="true" class="mdi mdi-check me-4"></span><!---->Create</button>',
+            '<button type="submit" name="_addanother" class="btn btn-primary"><span aria-hidden="true" class="mdi mdi-check me-4"></span><!---->Create and Add Another</button>',
         ]
-        expected_edit_form_buttons = ['<button type="submit" name="_update" class="btn btn-primary">Update</button>']
+        expected_edit_form_buttons = [
+            '<button type="submit" name="_update" class="btn btn-primary"><span aria-hidden="true" class="mdi mdi-check me-4"></span><!---->Update</button>'
+        ]
 
         def test_create_object_without_permission(self):
             # Try GET without permission
@@ -334,10 +336,10 @@ class ViewTestCases:
             self.assertHttpStatus(response, 200)
             # The response content should contain the expected form buttons
             for button in self.expected_create_form_buttons:
-                self.assertBodyContains(response, button)
+                self.assertBodyContains(response, button, html=True)
             # The response content should not contain the expected form buttons
             for button in self.expected_edit_form_buttons:
-                self.assertNotContains(response, button)
+                self.assertNotContains(response, button, html=True)
 
             # Try POST with model-level permission
             request = {
@@ -451,10 +453,12 @@ class ViewTestCases:
 
         form_data = {}
         update_data = {}
-        expected_edit_form_buttons = ['<button type="submit" name="_update" class="btn btn-primary">Update</button>']
+        expected_edit_form_buttons = [
+            '<button type="submit" name="_update" class="btn btn-primary"><span aria-hidden="true" class="mdi mdi-check me-4"></span><!---->Update</button>',
+        ]
         expected_create_form_buttons = [
-            '<button type="submit" name="_create" class="btn btn-primary">Create</button>',
-            '<button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>',
+            '<button type="submit" name="_create" class="btn btn-primary"><span aria-hidden="true" class="mdi mdi-check me-4"></span><!---->Create</button>',
+            '<button type="submit" name="_addanother" class="btn btn-primary"><span aria-hidden="true" class="mdi mdi-check me-4"></span><!---->Create and Add Another</button>',
         ]
 
         def test_edit_object_without_permission(self):
@@ -485,11 +489,11 @@ class ViewTestCases:
             self.assertHttpStatus(response, 200)
             # The response content should contain the expected form buttons
             for button in self.expected_edit_form_buttons:
-                self.assertBodyContains(response, button)
+                self.assertBodyContains(response, button, html=True)
 
             # The response content should not contain the unexpected form buttons
             for button in self.expected_create_form_buttons:
-                self.assertNotContains(response, button)
+                self.assertNotContains(response, button, html=True)
 
             # Try POST with model-level permission
             update_data = self.update_data or self.form_data
@@ -780,8 +784,7 @@ class ViewTestCases:
             self.assertHttpStatus(response, 200)
             content = utils.extract_page_body(response.content.decode(response.charset))
             # There should be only one row in the table
-            self.assertIn('<tr class="even', content)
-            self.assertNotIn('<tr class="odd', content)
+            self.assertEqual(content.split("<main")[1].count("<tr "), 1)
             if hasattr(self.model, "name"):
                 self.assertRegex(content, r">\s*" + re.escape(escape(instance1.name)) + r"\s*<", msg=content)
                 self.assertNotRegex(content, r">\s*" + re.escape(escape(instance2.name)) + r"\s*<", msg=content)
@@ -826,8 +829,7 @@ class ViewTestCases:
             self.assertNotIn("Unknown filter field", content, msg=content)
             self.assertIn("None", content, msg=content)
             # There should be at least two rows in the table
-            self.assertIn('<tr class="even', content)
-            self.assertIn('<tr class="odd', content)
+            self.assertGreaterEqual(content.split("<main")[1].count("<tr "), 2)
             if hasattr(self.model, "name"):
                 self.assertRegex(content, r">\s*" + re.escape(escape(instance1.name)) + r"\s*<", msg=content)
                 self.assertRegex(content, r">\s*" + re.escape(escape(instance2.name)) + r"\s*<", msg=content)
@@ -855,11 +857,14 @@ class ViewTestCases:
             self.assertHttpStatus(response, 200)
             response_body = utils.extract_page_body(response.content.decode(response.charset))
 
-            list_url = self.get_list_url()
+            # Check if title is rendered correctly
             title = self.get_title()
-
-            # Check if breadcrumb is rendered correctly
-            self.assertBodyContains(response, f'<a href="{list_url}">{title}</a>', html=True)
+            expected_title = (
+                '<h1 class="align-items-center d-flex fs-2 gap-8 lh-sm py-6">'
+                '<img alt="Nautobot chevron" class="flex-grow-0 flex-shrink-0 my-n6" role="presentation" src="/static/img/nautobot_chevron.svg" style="width: 1.5rem;">'
+                f"{title}</h1>"
+            )
+            self.assertBodyContains(response, expected_title, html=True)
 
             with self.subTest("Assert import-objects URL is absent due to user permissions"):
                 self.assertNotIn(

@@ -37,6 +37,11 @@ from nautobot.extras.choices import JobExecutionType, JobQueueTypeChoices
 from nautobot.extras.filters import RoleFilterSet
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
+    ApprovalWorkflow,
+    ApprovalWorkflowDefinition,
+    ApprovalWorkflowStage,
+    ApprovalWorkflowStageDefinition,
+    ApprovalWorkflowStageResponse,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -257,6 +262,51 @@ class NautobotModelViewSet(NotesViewSetMixin, CustomFieldModelViewSet):
 
 
 #
+# Approval Workflows
+#
+
+
+class ApprovalWorkflowDefinitionViewSet(NautobotModelViewSet):
+    """ApprovalWorkflowDefinition viewset."""
+
+    queryset = ApprovalWorkflowDefinition.objects.all()
+    serializer_class = serializers.ApprovalWorkflowDefinitionSerializer
+    filterset_class = filters.ApprovalWorkflowDefinitionFilterSet
+
+
+class ApprovalWorkflowStageDefinitionViewSet(NautobotModelViewSet):
+    """ApprovalWorkflowStageDefinition viewset."""
+
+    queryset = ApprovalWorkflowStageDefinition.objects.all()
+    serializer_class = serializers.ApprovalWorkflowStageDefinitionSerializer
+    filterset_class = filters.ApprovalWorkflowStageDefinitionFilterSet
+
+
+class ApprovalWorkflowViewSet(NautobotModelViewSet):
+    """ApprovalWorkflow viewset."""
+
+    queryset = ApprovalWorkflow.objects.all()
+    serializer_class = serializers.ApprovalWorkflowSerializer
+    filterset_class = filters.ApprovalWorkflowFilterSet
+
+
+class ApprovalWorkflowStageViewSet(NautobotModelViewSet):
+    """ApprovalWorkflowStage viewset."""
+
+    queryset = ApprovalWorkflowStage.objects.all()
+    serializer_class = serializers.ApprovalWorkflowStageSerializer
+    filterset_class = filters.ApprovalWorkflowStageFilterSet
+
+
+class ApprovalWorkflowStageResponseViewSet(ModelViewSet):
+    """ApprovalWorkflowStageResponse viewset."""
+
+    queryset = ApprovalWorkflowStageResponse.objects.all()
+    serializer_class = serializers.ApprovalWorkflowStageResponseSerializer
+    filterset_class = filters.ApprovalWorkflowStageResponseFilterSet
+
+
+#
 # Contacts
 #
 
@@ -472,8 +522,8 @@ class GraphQLQueryViewSet(NotesViewSetMixin, ModelViewSet):
     def run(self, request, pk):
         try:
             query = get_object_or_404(self.queryset, pk=pk)
-            result = execute_saved_query(query.name, variables=request.data.get("variables"), request=request).to_dict()
-            return Response(result)
+            result = execute_saved_query(query.name, variables=request.data.get("variables"), request=request)
+            return Response({"data": result.data, "errors": result.errors})
         except GraphQLError as error:
             return Response(
                 {"errors": [GraphQLView.format_error(error)]},
@@ -717,46 +767,45 @@ class JobViewSetBase(
         else:
             approval_required = job_model.approval_required
 
-        # Set schedule for jobs that require approval but request did not supply schedule data
-        if schedule_data is None and approval_required:
-            schedule_data = {"interval": JobExecutionType.TYPE_IMMEDIATELY}
+        # Set schedule for jobs if request did not supply schedule data
+        if schedule_data is None:
+            schedule_data = {"interval": JobExecutionType.TYPE_IMMEDIATELY, "start_time": timezone.now()}
 
-        # Skip creating a ScheduledJob when job can be executed immediately
-        elif schedule_data and schedule_data["interval"] == JobExecutionType.TYPE_IMMEDIATELY and not approval_required:
-            schedule_data = None
+        schedule = ScheduledJob.create_schedule(
+            job_model,
+            request.user,
+            name=schedule_data.get("name"),
+            start_time=schedule_data.get("start_time"),
+            interval=schedule_data.get("interval"),
+            crontab=schedule_data.get("crontab", ""),
+            approval_required=approval_required,
+            job_queue=job_queue,
+            validated_save=False,
+            **job_class.serialize_data(cleaned_data),
+        )
 
-        # Try to create a ScheduledJob, or...
-        if schedule_data:
-            schedule = ScheduledJob.create_schedule(
-                job_model,
-                request.user,
-                name=schedule_data.get("name"),
-                start_time=schedule_data.get("start_time"),
-                interval=schedule_data.get("interval"),
-                crontab=schedule_data.get("crontab", ""),
-                approval_required=approval_required,
-                job_queue=job_queue,
-                **job_class.serialize_data(cleaned_data),
-            )
+        if approval_required:
+            if not ApprovalWorkflowDefinition.objects.find_for_model(schedule):
+                return Response(
+                    {"detail": "No approval workflow is defined for this job."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            schedule.validated_save()
+            serializer = serializers.ScheduledJobSerializer(schedule, context={"request": request})
+            return Response({"scheduled_job": serializer.data, "job_result": None}, status=status.HTTP_201_CREATED)
+        elif schedule_data["interval"] in JobExecutionType.SCHEDULE_CHOICES:
+            schedule.validated_save()
+            serializer = serializers.ScheduledJobSerializer(schedule, context={"request": request})
+            return Response({"scheduled_job": serializer.data, "job_result": None}, status=status.HTTP_201_CREATED)
         else:
-            schedule = None
-
-        # ... If we can't create one, create a JobResult instead.
-        if schedule is None:
             job_result = JobResult.enqueue_job(
                 job_model,
                 request.user,
                 job_queue=job_queue,
                 **job_class.serialize_data(cleaned_data),
             )
-
-        # New-style JobModelViewSet response - serialize the schedule or job_result as appropriate
-        data = {"scheduled_job": None, "job_result": None}
-        if schedule:
-            data["scheduled_job"] = serializers.ScheduledJobSerializer(schedule, context={"request": request}).data
-        if job_result:
-            data["job_result"] = serializers.JobResultSerializer(job_result, context={"request": request}).data
-        return Response(data, status=status.HTTP_201_CREATED)
+            serializer = serializers.JobResultSerializer(job_result, context={"request": request})
+            return Response({"scheduled_job": None, "job_result": serializer.data}, status=status.HTTP_201_CREATED)
 
 
 class JobViewSet(

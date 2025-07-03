@@ -403,9 +403,9 @@ class ChangeLogAPITest(APITestCase):
         self.assertHttpStatus(new_location_response, status.HTTP_201_CREATED)
 
         gql_payload = '{query: object_changes(q: "") { object_repr } }'
-        resp = execute_query(gql_payload, user=self.user).to_dict()
-        self.assertFalse(resp["data"].get("error"))
-        self.assertEqual(first=location_payload["name"], second=resp["data"]["query"][0].get("object_repr", ""))
+        resp = execute_query(gql_payload, user=self.user)
+        self.assertIsNone(resp.errors)
+        self.assertEqual(first=location_payload["name"], second=resp.data["query"][0].get("object_repr", ""))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_graphql_object_lte_filter(self):
@@ -423,11 +423,11 @@ class ChangeLogAPITest(APITestCase):
         self.assertHttpStatus(new_location_response, status.HTTP_201_CREATED)
 
         gql_payload = f'{{query: object_changes(time__lte: "{time}") {{ object_repr }} }}'
-        resp = execute_query(gql_payload, user=self.user).to_dict()
-        self.assertFalse(resp["data"].get("error"))
-        self.assertIsInstance(resp["data"].get("query"), list)
+        resp = execute_query(gql_payload, user=self.user)
+        self.assertIsNone(resp.errors)
+        self.assertIsInstance(resp.data.get("query"), list)
         # ObjectChangeFactory creates records in the last year only; there shouldn't be any in this filtered response.
-        self.assertEqual(len(resp["data"].get("query")), 0)
+        self.assertEqual(len(resp.data.get("query")), 0)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_graphql_object_gte_filter(self):
@@ -445,10 +445,10 @@ class ChangeLogAPITest(APITestCase):
         self.assertHttpStatus(new_location_response, status.HTTP_201_CREATED)
 
         gql_payload = f'{{query: object_changes(time__gte: "{time}") {{ object_repr }} }}'
-        resp = execute_query(gql_payload, user=self.user).to_dict()
-        self.assertFalse(resp["data"].get("error"))
-        self.assertIsInstance(resp["data"].get("query"), list)
-        self.assertEqual(first=location_payload["name"], second=resp["data"]["query"][0].get("object_repr", ""))
+        resp = execute_query(gql_payload, user=self.user)
+        self.assertIsNone(resp.errors)
+        self.assertIsInstance(resp.data.get("query"), list)
+        self.assertEqual(first=location_payload["name"], second=resp.data["query"][0].get("object_repr", ""))
 
     def test_change_context(self):
         location_type = LocationType.objects.get(name="Campus")

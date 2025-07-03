@@ -260,7 +260,9 @@ class VirtualMachineView(generic.ObjectView):
             .filter(virtual_machine=instance)
             .prefetch_related(Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)))
         )
-        vminterface_table = tables.VirtualMachineVMInterfaceTable(vminterfaces, user=request.user, orderable=False)
+        vminterface_table = tables.VirtualMachineVMInterfaceTable(
+            vminterfaces, user=request.user, orderable=False, configurable=True
+        )
         if request.user.has_perm("virtualization.change_vminterface") or request.user.has_perm(
             "virtualization.delete_vminterface"
         ):

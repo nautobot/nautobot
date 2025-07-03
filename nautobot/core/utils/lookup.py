@@ -425,6 +425,8 @@ def get_url_for_url_pattern(url_pattern):
     # Fixup tokens in path-style "classic" view URLs:
     # "/admin/users/user/<id>/password/"
     url = re.sub(r"<id>", "00000000-0000-0000-0000-000000000000", url)
+    # "/data-validation-engine/data-compliance/<model>/00000000-0000-0000-0000-000000000000/"
+    url = re.sub(r"<model>", "circuits.circuit", url)
     # "/silk/request/<uuid:request_id>/profile/<int:profile_id>/"
     url = re.sub(r"<int:\w+>", "1", url)
     # "/admin/admin/logentry/<path:object_id>/"

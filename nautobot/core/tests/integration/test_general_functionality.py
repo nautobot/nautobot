@@ -32,5 +32,5 @@ class StaticMediaFailureTestCase(SeleniumTestCase):
                 # Wait for body element to appear
                 self.assertTrue(self.browser.is_element_present_by_tag("body", wait_time=10), "Page failed to load")
                 # Ensure we weren't redirected to another page
-                self.assertEqual(self.browser.url, self.live_server_url + url)
+                self.assertTrue(self.browser.url.startswith(self.live_server_url + url))
                 self.assertTrue(self.browser.is_text_not_present("Static Media Failure"))

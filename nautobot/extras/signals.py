@@ -200,6 +200,13 @@ def _handle_changed_object_pre_save(sender, instance, raw=False, **kwargs):
         _cache_obj_data_in_change_context(ObjectChangeActionChoices.ACTION_UPDATE, sender, instance)
 
 
+@receiver(post_save, sender=GitRepository)
+@receiver(post_delete, sender=GitRepository)
+def invalidate_gitrepository_provided_contents_cache(sender, **kwargs):
+    with contextlib.suppress(redis.exceptions.ConnectionError):
+        cache.delete_pattern(f"{GitRepository.objects.get_for_provided_contents.cache_key_prefix}.*")
+
+
 @receiver(post_save)
 @receiver(m2m_changed)
 def _handle_changed_object(sender, instance, raw=False, **kwargs):

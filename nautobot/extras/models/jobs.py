@@ -29,8 +29,10 @@ from nautobot.core.celery import (
     setup_nautobot_job_logging,
 )
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.events import publish_event
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models.utils import serialize_object_v2
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import (
     ButtonClassChoices,
@@ -48,7 +50,7 @@ from nautobot.extras.constants import (
 )
 from nautobot.extras.managers import JobResultManager, ScheduledJobsManager
 from nautobot.extras.models import ChangeLoggedModel, GitRepository
-from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin
+from nautobot.extras.models.mixins import ApprovableModelMixin, ContactMixin, DynamicGroupsModelMixin, NotesMixin
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
@@ -535,6 +537,7 @@ class JobLogEntry(BaseModel):
     is_metadata_associable_model = False
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
+    hide_in_diff_view = True
 
     def __str__(self):
         return self.message
@@ -678,6 +681,7 @@ class JobResult(BaseModel, CustomFieldModel):
     objects = JobResultManager()
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
+    hide_in_diff_view = True
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -753,6 +757,8 @@ class JobResult(BaseModel, CustomFieldModel):
                     duration.total_seconds()
                 )
 
+    set_status.alters_data = True
+
     @classmethod
     def execute_job(cls, *args, **kwargs):
         """
@@ -767,6 +773,8 @@ class JobResult(BaseModel, CustomFieldModel):
             JobResult instance
         """
         return cls.enqueue_job(*args, **kwargs, synchronous=True)
+
+    execute_job.__func__.alters_data = True
 
     @classmethod
     def enqueue_job(
@@ -849,6 +857,7 @@ class JobResult(BaseModel, CustomFieldModel):
         # And from the kubernetes pod, we specify "--local"/synchronous=True
         # so that `run_kubernetes_job_and_return_job_result` is not executed again and the job will be run locally.
         if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES and not synchronous:
+            # TODO: make this branch aware!
             return run_kubernetes_job_and_return_job_result(job_queue, job_result, json.dumps(job_kwargs))
 
         job_celery_kwargs = {
@@ -938,6 +947,8 @@ class JobResult(BaseModel, CustomFieldModel):
 
         return job_result
 
+    enqueue_job.__func__.alters_data = True
+
     def log(
         self,
         message,
@@ -988,6 +999,8 @@ class JobResult(BaseModel, CustomFieldModel):
             log.save()
         else:
             log.save(using=JOB_LOGS)
+
+    log.alters_data = True
 
 
 #
@@ -1076,12 +1089,16 @@ class ScheduledJobs(models.Model):
         if not instance.no_changes:
             cls.update_changed()
 
+    changed.__func__.alters_data = True
+
     @classmethod
     def update_changed(cls, raw=False, **kwargs):
         """This function acts as a signal handler to track changes to the scheduled job that is triggered after a change"""
         if raw:
             return
         cls.objects.update_or_create(ident=1, defaults={"last_update": timezone.now()})
+
+    update_changed.__func__.alters_data = True
 
     @classmethod
     def last_change(cls):
@@ -1092,7 +1109,7 @@ class ScheduledJobs(models.Model):
             return None
 
 
-class ScheduledJob(BaseModel):
+class ScheduledJob(ApprovableModelMixin, BaseModel):
     """Model representing a periodic task."""
 
     name = models.CharField(
@@ -1235,8 +1252,10 @@ class ScheduledJob(BaseModel):
                 self.last_run_at = self.start_time - timedelta(
                     **{JobExecutionType.CELERY_INTERVAL_MAP[self.interval]: multiplier},
                 )
-
+        is_new = not self.present_in_database
         super().save(*args, **kwargs)
+        if is_new:
+            self.begin_approval_workflow()
 
     def clean(self):
         """
@@ -1247,6 +1266,25 @@ class ScheduledJob(BaseModel):
         # bitwise xor also works on booleans, but not on complex values
         if bool(self.approved_by_user) ^ bool(self.approved_at):
             raise ValidationError("Approval by user and approval time must either both be set or both be undefined")
+
+    def on_workflow_initiated(self, approval_workflow):
+        """When initiated, set enabled to False."""
+        self.approval_required = True
+        self.save()
+
+    def on_workflow_approved(self, approval_workflow):
+        """When approved, set enabled to True."""
+        self.approved_at = approval_workflow.decision_date
+        self.save()
+
+        publish_event_payload = {"data": serialize_object_v2(self)}
+        publish_event(topic="nautobot.jobs.approval.approved", payload=publish_event_payload)
+
+    def on_workflow_denied(self, approval_workflow):
+        """When denied, set enabled to False."""
+        if self.approved_at:
+            self.approved_at = None
+            self.save()
 
     @property
     def schedule(self):
@@ -1314,6 +1352,7 @@ class ScheduledJob(BaseModel):
         job_queue: Optional[JobQueue] = None,
         task_queue: Optional[str] = None,  # deprecated!
         ignore_singleton_lock: bool = False,
+        validated_save: bool = True,
         **job_kwargs,
     ):
         """
@@ -1366,6 +1405,12 @@ class ScheduledJob(BaseModel):
             "queue": task_queue,
             "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
         }
+        if "nautobot_version_control" in settings.PLUGINS:
+            from nautobot_version_control.utils import active_branch  # pylint: disable=import-error
+
+            branch_name = active_branch()
+            # TODO: what do we do when merging a branch's ScheduledJob down to main?
+            celery_kwargs["nautobot_job_branch_name"] = branch_name
         if job_model.soft_time_limit > 0:
             celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
         if job_model.time_limit > 0:
@@ -1394,8 +1439,11 @@ class ScheduledJob(BaseModel):
             crontab=crontab,
             job_queue=job_queue,
         )
-        scheduled_job.validated_save()
+        if validated_save:
+            scheduled_job.validated_save()
         return scheduled_job
+
+    create_schedule.__func__.alters_data = True
 
     def to_cron(self):
         tz = self.time_zone

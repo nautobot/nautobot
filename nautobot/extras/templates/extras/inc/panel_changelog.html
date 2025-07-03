@@ -4,11 +4,11 @@
         {% with action=change.get_action_display|lower %}
             <div class="list-group-item">
                 {% if action == 'created' %}
-                    <span class="label label-success">Created</span>
+                    <span class="badge bg-success me-4">Created</span>
                 {% elif action == 'updated' %}
-                    <span class="label label-warning">Modified</span>
+                    <span class="badge bg-warning me-4">Modified</span>
                 {% elif action == 'deleted' %}
-                    <span class="label label-danger">Deleted</span>
+                    <span class="badge bg-danger me-4">Deleted</span>
                 {% endif %}
                 {{ change.changed_object_type.name|bettertitle }}
                 {% if change and change.changed_object and change.changed_object.get_absolute_url %}
@@ -20,23 +20,23 @@
                 {% endif %}
                 <br />
                 <small>
-                    <span class="text-muted">{{ change.user_name }} -</span>
-                    <a href="{{ change.get_absolute_url }}" class="text-muted">{{ change.time|date:settings.SHORT_DATETIME_FORMAT }}</a>
+                    <span class="text-secondary">{{ change.user_name }} -</span>
+                    <a href="{{ change.get_absolute_url }}" class="text-secondary">{{ change.time|date:settings.SHORT_DATETIME_FORMAT }}</a>
                 </small>
             </div>
         {% endwith %}
         {% if forloop.last %}
-            <div class="list-group-item text-right">
+            <div class="list-group-item text-end">
                 <a href="{% url 'extras:objectchange_list' %}">View All Changes</a>
             </div>
         {% endif %}
     {% endfor %}
 {% elif perms.extras.view_objectchange %}
-    <div class="panel-body text-muted">
+    <div class="card-body text-secondary">
         No change history found
     </div>
 {% else %}
-    <div class="panel-body text-muted">
-        <i class="mdi mdi-lock"></i> No permission
+    <div class="card-body text-secondary">
+        <span class="mdi mdi-lock" aria-hidden="true"></span> No permission
     </div>
 {% endif %}

@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+from django.test import tag
 from django.urls import reverse
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
@@ -47,6 +48,7 @@ class CircuitTestCase(SeleniumTestCase, ObjectsListMixin, ObjectDetailsMixin):
         )
         return circuit
 
+    @tag("fix_in_v3")
     def test_circuit_create(self):
         cid = "Circuit-test-abc123"
         description = "My Precious Circuit"
@@ -60,12 +62,12 @@ class CircuitTestCase(SeleniumTestCase, ObjectsListMixin, ObjectDetailsMixin):
 
         # Fill Circuit creation form
         self.fill_select2_field("provider", self.provider.name)
-        self.browser.fill("cid", cid)
+        self.fill_input("cid", cid)
         self.fill_select2_field("circuit_type", self.circuit_type.name)
         self.fill_select2_field("status", "")  # pick first status
-        self.browser.fill("install_date", "2025-01-01")
-        self.browser.fill("commit_rate", 192)
-        self.browser.fill("description", "My Precious Circuit")
+        self.fill_input("install_date", "2025-01-01")
+        self.fill_input("commit_rate", 192)
+        self.fill_input("description", "My Precious Circuit")
         self.fill_select2_field("tenant_group", "Family Inc.")
         self.fill_select2_field("tenant", "Tenant 1")
 
@@ -94,6 +96,7 @@ class CircuitTestCase(SeleniumTestCase, ObjectsListMixin, ObjectDetailsMixin):
         self.assertPanelValue("Circuit", "Commit Rate (Kbps)", "192")
         self.assertPanelValue("Circuit", "Description", description)
 
+    @tag("fix_in_v3")
     def test_circuit_create_termination(self):
         circuit = self.create_circuit("Circuit-test-termination")
         sides = ["A", "Z"]
@@ -105,7 +108,7 @@ class CircuitTestCase(SeleniumTestCase, ObjectsListMixin, ObjectDetailsMixin):
                 self.assertIn(details_url, self.browser.url)
 
                 # Find and click add termination button
-                termination_panel_xpath = f'//*[@id="main"]//div[@class="panel-heading"][contains(normalize-space(), "Termination - {side} Side")]'
+                termination_panel_xpath = f'//*[@id="main"]//div[@class="card-header"][contains(normalize-space(), "Termination - {side} Side")]'
                 self.browser.find_by_xpath(f'{termination_panel_xpath}//a[normalize-space()="Add"]').click()
 
                 port_speed = ord(side)
@@ -116,11 +119,11 @@ class CircuitTestCase(SeleniumTestCase, ObjectsListMixin, ObjectDetailsMixin):
 
                 # Fill termination creation form
                 self.fill_select2_field("location", self.location.name)
-                self.browser.fill("port_speed", port_speed)
-                self.browser.fill("upstream_speed", upstream_speed)
-                self.browser.fill("xconnect_id", xconnect_id)
-                self.browser.fill("pp_info", pp_info)
-                self.browser.fill("description", description)
+                self.fill_input("port_speed", port_speed)
+                self.fill_input("upstream_speed", upstream_speed)
+                self.fill_input("xconnect_id", xconnect_id)
+                self.fill_input("pp_info", pp_info)
+                self.fill_input("description", description)
                 self.click_edit_form_create_button()
 
                 self.assertTrue(self.browser.is_text_present(f"Created circuit termination Termination {side}"))

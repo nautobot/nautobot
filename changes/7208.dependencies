@@ -1,0 +1,2 @@
+Updated `select2` dependency to v4.0.13.
+Added `select2-bootstrap-5-theme` dependency to make `select2` work with `Bootstrap5`

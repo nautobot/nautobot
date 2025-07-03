@@ -3,7 +3,7 @@
 
 {% block extra_breadcrumbs %}
     {% if object.vlan_group %}
-        <li><a href="{% url 'ipam:vlan_list' %}?vlan_group={{ object.vlan_group.name }}">{{ object.vlan_group }}</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'ipam:vlan_list' %}?vlan_group={{ object.vlan_group.name }}">{{ object.vlan_group }}</a></li>
     {% endif %}
 {% endblock extra_breadcrumbs %}
 
@@ -70,7 +70,7 @@
                 </div>
                 {% include 'responsive_table.html' with table=prefix_table %}
                 {% if perms.ipam.add_prefix %}
-                    <div class="panel-footer text-right noprint">
+                    <div class="panel-footer text-right d-print-none">
                         <a href="{% url 'ipam:prefix_add' %}?{% if object.tenant %}tenant={{ object.tenant.pk }}{% endif %}&vlan={{ object.pk }}{% for loc in object.locations.all %}&locations={{ loc.pk }}{% endfor %}" class="btn btn-primary btn-xs">
                             <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                             Add a prefix

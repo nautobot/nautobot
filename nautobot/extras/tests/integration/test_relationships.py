@@ -1,7 +1,8 @@
 from django.contrib.contenttypes.models import ContentType
+from django.test import tag
 from django.urls import reverse
 
-from nautobot.core.testing.integration import SeleniumTestCase
+from nautobot.core.testing.integration import ObjectDetailsMixin, SeleniumTestCase
 from nautobot.dcim.models import Device, PowerPanel
 from nautobot.extras.choices import RelationshipTypeChoices
 from nautobot.extras.models import Relationship, RelationshipAssociation
@@ -9,21 +10,16 @@ from nautobot.extras.models import Relationship, RelationshipAssociation
 from . import create_test_device
 
 
-class RelationshipsTestCase(SeleniumTestCase):
+class RelationshipsTestCase(SeleniumTestCase, ObjectDetailsMixin):
     """
     Integration test to check nautobot.extras.models.Relationship.advanced_ui functionality
     """
 
     def setUp(self):
         super().setUp()
-        self.user.is_superuser = True
-        self.user.save()
-        self.login(self.user.username, self.password)
+        self.login_as_superuser()
 
-    def tearDown(self):
-        self.logout()
-        super().tearDown()
-
+    @tag("fix_in_v3")
     def test_relationship_advanced_ui(self):
         """
         This test creates a device and a relationship for that device.
@@ -57,6 +53,7 @@ class RelationshipsTestCase(SeleniumTestCase):
         self.assertTrue(self.browser.is_text_present("Power Panel"))
         # Check the relationship does NOT appear in the advanced tab
         self.browser.links.find_by_partial_text("Advanced")[0].click()
+        self.switch_tab("Advanced")
         self.assertFalse(self.browser.is_text_present("power panel"))
         self.assertFalse(self.browser.is_text_present("Power Panel"))
         # Set the custom_field to only show in the advanced tab
@@ -68,6 +65,6 @@ class RelationshipsTestCase(SeleniumTestCase):
         self.assertFalse(self.browser.is_text_present("power panel"))
         self.assertFalse(self.browser.is_text_present("Power Panel"))
         # Check the relationship appears in the advanced tab
-        self.browser.links.find_by_partial_text("Advanced")[0].click()
+        self.switch_tab("Advanced")
         self.assertTrue(self.browser.is_text_present("power panel"))
         self.assertTrue(self.browser.is_text_present("Power Panel"))

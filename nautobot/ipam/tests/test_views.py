@@ -1288,6 +1288,6 @@ class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         response_content = response.content.decode(response.charset)
         self.assertHttpStatus(response, 200)
         self.assertInHTML(
-            ' <strong class="panel-title">Ports</strong>: <ul class="errorlist"><li>invalid literal for int() with base 10: &#x27;[106&#x27;</li></ul>',
+            ' <strong>Ports</strong>: <ul class="errorlist"><li>invalid literal for int() with base 10: &#x27;[106&#x27;</li></ul>',
             response_content,
         )

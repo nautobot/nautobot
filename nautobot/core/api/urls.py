@@ -44,6 +44,7 @@ urlpatterns = [
     path("", APIRootView.as_view(), name="api-root"),
     path("circuits/", include("nautobot.circuits.api.urls")),
     path("cloud/", include("nautobot.cloud.api.urls")),
+    path("data-validation/", include("nautobot.data_validation.api.urls")),
     path("dcim/", include("nautobot.dcim.api.urls")),
     path("extras/", include("nautobot.extras.api.urls")),
     path("ipam/", include("nautobot.ipam.api.urls")),

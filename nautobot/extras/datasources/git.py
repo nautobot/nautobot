@@ -1050,6 +1050,19 @@ def delete_git_graphql_queries(repository_record, job_result, preserve=None):
                 job_result.log(error_msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="graphql queries")
 
 
+def refresh_git_data_compliance_rules(repository_record, job_result, delete=False):  # pylint: disable=W0613
+    """Callback function for GitRepository updates - refresh all DataComplianceRules managed by this repository."""
+    from nautobot.data_validation.custom_validators import get_data_compliance_classes_from_git_repo
+
+    if "data_validation.data_compliance_rule" in repository_record.provided_contents:
+        for compliance_class in get_data_compliance_classes_from_git_repo(repository_record):
+            job_result.log(
+                f"Found class {compliance_class.__name__!s}",
+                level_choice=LogLevelChoices.LOG_INFO,
+                grouping="data compliance rules",
+            )
+
+
 # Register built-in callbacks for data types potentially provided by a GitRepository
 register_datasource_contents(
     [
@@ -1101,6 +1114,15 @@ register_datasource_contents(
                 icon="mdi-graphql",
                 weight=400,
                 callback=refresh_git_graphql_queries,
+            ),
+        ),
+        (
+            "extras.gitrepository",
+            DatasourceContent(
+                name="data compliance rules",
+                content_identifier="data_validation.data_compliance_rule",
+                icon="mdi-file-document-outline",
+                callback=refresh_git_data_compliance_rules,
             ),
         ),
     ]

@@ -2,34 +2,42 @@
 {% load form_helpers %}
 
 {% block content %}
-    <form action="" method="post" enctype="multipart/form-data" class="form form-horizontal">
-        {% csrf_token %}
-        <div class="row">
-            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
-                <h3>{% block title %}Add New Member to Virtual Chassis {{ virtual_chassis }}{% endblock %}</h3>
+    <form action="" method="post" enctype="multipart/form-data" class="h-100 vstack">
+        {% csrf_token %}b
+            <div class="col-lg-8 offset-lg-2 col-md-10 offset-md-1">
+                <h3 class="mb-16">{% block title %}Add New Member to Virtual Chassis {{ virtual_chassis }}{% endblock %}</h3>
                 {% if membership_form.non_field_errors %}
-                    <div class="panel panel-danger">
-                        <div class="panel-heading"><strong>Errors</strong></div>
-                        <div class="panel-body">
+                    <div class="card border-danger mb-16">
+                        <div class="card-header bg-danger-subtle border-danger text-body">
+                            <strong>Errors</strong>
+                        </div>
+                        <div class="card-body">
                             {{ membership_form.non_field_errors }}
                         </div>
                     </div>
                 {% endif %}
-                <div class="panel panel-default">
-                    <div class="panel-heading"><strong>Add New Member</strong></div>
-                    <div class="table panel-body">
+                <div class="card mb-16">
+                    <div class="card-header"><strong>Add New Member</strong></div>
+                    <div class="card-body">
                         {% render_form member_select_form %}
                         {% render_form membership_form %}
                     </div>
                 </div>
             </div>
         </div>
-        <div class="row">
-            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 text-right">
-                <button type="submit" name="_save" class="btn btn-primary">Save</button>
-                <button type="submit" name="_addanother" class="btn btn-primary">Add Another</button>
-                <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
-            </div>
+        <div class="nb-form-sticky-footer">
+            <button type="submit" name="_save" class="btn btn-primary">
+                <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+                -->Save
+            </button>
+            <button type="submit" name="_addanother" class="btn btn-primary">
+                <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+                -->Add Another
+            </button>
+            <a href="{{ return_url }}" class="btn btn-secondary">
+                <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+                -->Cancel
+            </a>
         </div>
     </form>
 {% endblock %}

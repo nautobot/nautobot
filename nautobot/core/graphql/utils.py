@@ -9,7 +9,6 @@ from nautobot.core.filters import (
     MultiValueFloatFilter,
     MultiValueNumberFilter,
 )
-from nautobot.core.graphql import BigInteger
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 
 logger = logging.getLogger(__name__)
@@ -41,7 +40,7 @@ def get_filtering_args_from_filterset(filterset_class):
         (dict[graphene.Argument]): Filter Arguments organized in a dictionary
     """
 
-    args = {}
+    args = {"args": {}}
     instance = filterset_class()
 
     for filter_name, filter_field in instance.filters.items():
@@ -60,7 +59,7 @@ def get_filtering_args_from_filterset(filterset_class):
         filter_field_class = type(filter_field)
 
         if issubclass(filter_field_class, MultiValueBigNumberFilter):
-            field_type = graphene.List(BigInteger)
+            field_type = graphene.List(graphene.types.scalars.BigInt)
         elif issubclass(filter_field_class, (MultiValueFloatFilter, MultiValueDecimalFilter)):
             field_type = graphene.List(graphene.Float)
         elif issubclass(filter_field_class, MultiValueNumberFilter):
@@ -82,13 +81,12 @@ def get_filtering_args_from_filterset(filterset_class):
             required=False,
         )
 
-    # Hack to swap `type` fields to `_type` since they will conflict with
-    # `graphene.types.fields.Field.type` in Graphene 2.x.
-    # 2.0 TODO(jathan): Once we upgrade to Graphene 3.x we can remove this, but we
-    # will still need to do an API migration to deprecate it. This argument was
-    # validated to be safe to keep even in Graphene 3.
+    # Hack to avoid conflict with `graphene.types.field.Field.description`.
+    if "description" in args:
+        args["args"].update({"description": args.pop("description")})
     if "type" in args:
-        args["_type"] = args.pop("type")
+        # for backwards compatibility with our filters in graphene v2 where `type` was a reserved keyword
+        args["args"].update({"_type": args["type"]})
 
     return args
 
