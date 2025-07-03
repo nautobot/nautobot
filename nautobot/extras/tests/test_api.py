@@ -8,7 +8,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import override_settings
+from django.test import override_settings, tag as test_tag
 from django.urls import reverse
 from django.utils.timezone import make_aware, now
 from rest_framework import status
@@ -4436,6 +4436,7 @@ class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
             self.assertTrue(StaticGroupAssociation.all_objects.filter(pk=sga.pk).exists())
 
 
+@test_tag("doltdb_stuck")
 class StatusTest(APIViewTestCases.APIViewTestCase):
     model = Status
     bulk_update_data = {
