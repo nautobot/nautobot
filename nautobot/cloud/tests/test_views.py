@@ -1,13 +1,10 @@
 from django.contrib.contenttypes.models import ContentType
-from django.urls import reverse
 
-from nautobot.circuits.models import CircuitTermination
 from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudResourceType, CloudService
 from nautobot.core.testing import ViewTestCases
 from nautobot.core.testing.utils import post_data
 from nautobot.dcim.models import Manufacturer
 from nautobot.extras.models import SecretsGroup, Tag
-from nautobot.ipam.models import Prefix
 
 
 class CloudAccountTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -58,6 +55,12 @@ class CloudAccountTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class CloudNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = CloudNetwork
+    custom_action_required_permissions = {
+        "cloud:cloudnetwork_children": ["cloud.view_cloudnetwork"],
+        "cloud:cloudnetwork_prefixes": ["cloud.view_cloudnetwork", "ipam.view_prefix"],
+        "cloud:cloudnetwork_circuits": ["cloud.view_cloudnetwork", "circuits.view_circuit"],
+        "cloud:cloudnetwork_cloud_services": ["cloud.view_cloudnetwork", "cloud.view_cloudservice"],
+    }
 
     @classmethod
     def setUpTestData(cls):
@@ -103,68 +106,13 @@ class CloudNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "remove_cloud_services": [cloud_services[0].pk],
         }
 
-    def test_cloudnetwork_children(self):
-        cloud_network = CloudNetwork.objects.first()
-
-        CloudNetwork.objects.create(
-            name="Child Network 1",
-            parent=cloud_network,
-            cloud_resource_type=cloud_network.cloud_resource_type,
-            cloud_account=cloud_network.cloud_account,
-        )
-        CloudNetwork.objects.create(
-            name="Child Network 2",
-            parent=cloud_network,
-            cloud_resource_type=cloud_network.cloud_resource_type,
-            cloud_account=cloud_network.cloud_account,
-        )
-        CloudNetwork.objects.create(
-            name="Child Network 3",
-            parent=cloud_network,
-            cloud_resource_type=cloud_network.cloud_resource_type,
-            cloud_account=cloud_network.cloud_account,
-        )
-
-        url = reverse("cloud:cloudnetwork_children", kwargs={"pk": cloud_network.pk})
-        self.add_permissions("cloud.view_cloudnetwork")
-        self.assertHttpStatus(self.client.get(url), 200)
-
-    def test_cloudnetwork_prefixes(self):
-        cloud_network = CloudNetwork.objects.first()
-
-        prefixes = Prefix.objects.all()[:3]
-        cloud_network.prefixes.set(prefixes)
-
-        url = reverse("cloud:cloudnetwork_prefixes", kwargs={"pk": cloud_network.pk})
-        self.add_permissions("cloud.view_cloudnetwork")
-        self.assertHttpStatus(self.client.get(url), 403)
-        self.add_permissions("ipam.view_prefix")
-        self.assertHttpStatus(self.client.get(url), 200)
-
-    def test_cloudnetwork_circuits(self):
-        cloud_network = CircuitTermination.objects.filter(cloud_network__isnull=False).first().cloud_network
-
-        url = reverse("cloud:cloudnetwork_circuits", kwargs={"pk": cloud_network.pk})
-        self.add_permissions("cloud.view_cloudnetwork")
-        self.assertHttpStatus(self.client.get(url), 403)
-        self.add_permissions("circuits.view_circuit")
-        self.assertHttpStatus(self.client.get(url), 200)
-
-    def test_cloudnetwork_cloud_services(self):
-        cloud_network = CloudNetwork.objects.first()
-
-        cloud_services = CloudService.objects.all()[:3]
-        cloud_network.cloud_services.set(cloud_services)
-
-        url = reverse("cloud:cloudnetwork_cloud_services", kwargs={"pk": cloud_network.pk})
-        self.add_permissions("cloud.view_cloudnetwork")
-        self.assertHttpStatus(self.client.get(url), 403)
-        self.add_permissions("cloud.view_cloudservice")
-        self.assertHttpStatus(self.client.get(url), 200)
-
 
 class CloudResourceTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = CloudResourceType
+    custom_action_required_permissions = {
+        "cloud:cloudresourcetype_services": ["cloud.view_cloudresourcetype", "cloud.view_cloudservice"],
+        "cloud:cloudresourcetype_networks": ["cloud.view_cloudresourcetype", "cloud.view_cloudnetwork"],
+    }
 
     @classmethod
     def setUpTestData(cls):
@@ -191,33 +139,12 @@ class CloudResourceTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "description": "New description",
         }
 
-    def test_cloud_resource_type_services(self):
-        cloud_resource_type = CloudResourceType.objects.first()
-
-        cloud_services = CloudService.objects.all()[:3]
-        cloud_resource_type.cloud_services.set(cloud_services)
-
-        url = reverse("cloud:cloudresourcetype_services", kwargs={"pk": cloud_resource_type.pk})
-        self.add_permissions("cloud.view_cloudresourcetype")
-        self.assertHttpStatus(self.client.get(url), 403)
-        self.add_permissions("cloud.view_cloudservice")
-        self.assertHttpStatus(self.client.get(url), 200)
-
-    def test_cloud_resource_type_networks(self):
-        cloud_resource_type = CloudResourceType.objects.first()
-
-        cloud_networks = CloudNetwork.objects.all()[:3]
-        cloud_resource_type.cloud_networks.set(cloud_networks)
-
-        url = reverse("cloud:cloudresourcetype_networks", kwargs={"pk": cloud_resource_type.pk})
-        self.add_permissions("cloud.view_cloudresourcetype")
-        self.assertHttpStatus(self.client.get(url), 403)
-        self.add_permissions("cloud.view_cloudnetwork")
-        self.assertHttpStatus(self.client.get(url), 200)
-
 
 class CloudServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = CloudService
+    custom_action_required_permissions = {
+        "cloud:cloudservice_cloud_networks": ["cloud.view_cloudservice", "cloud.view_cloudnetwork"],
+    }
 
     @classmethod
     def setUpTestData(cls):
@@ -253,15 +180,3 @@ class CloudServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "add_cloud_networks": [cloud_networks[2].pk],
             "remove_cloud_networks": [cloud_networks[0].pk],
         }
-
-    def test_cloud_service_cloud_networks(self):
-        cloud_service = CloudService.objects.first()
-
-        cloud_networks = CloudNetwork.objects.all()[:3]
-        cloud_service.cloud_networks.set(cloud_networks)
-
-        url = reverse("cloud:cloudservice_cloud_networks", kwargs={"pk": cloud_service.pk})
-        self.add_permissions("cloud.view_cloudservice")
-        self.assertHttpStatus(self.client.get(url), 403)
-        self.add_permissions("cloud.view_cloudnetwork")
-        self.assertHttpStatus(self.client.get(url), 200)
