@@ -171,7 +171,7 @@ class NautobotTestCaseMixin:
             >>> remove_permissions("ipam.add_vlangroup", "ipam.view_vlangroup", constraints={"pk": "uuid-1234"})
         """
         for name in names:
-            ct, action = permissions.resolve_permission_ct(name)
+            _, action, _ = permissions.resolve_permission(name)
             try:
                 obj_perm = users_models.ObjectPermission.objects.get(name=name, actions=[action], **kwargs)
                 obj_perm.delete()
