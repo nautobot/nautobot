@@ -18,13 +18,14 @@ from django.test.utils import get_unique_databases_and_mirrors, NullTimeKeeper, 
 from nautobot.core.celery import app, setup_nautobot_job_logging
 from nautobot.core.settings_funcs import parse_redis_connection
 
-
 try:
-    from django_test_runner import CustomExecutionTestRunner, CustomDiscoveryTestRunner
+    from django_test_runner import CustomDiscoveryTestRunner, CustomExecutionTestRunner
 except ImportError:
     # Create a fake CustomExecutionTestRunner class if the import fails
-    class CustomExecutionTestRunner(): ...
-    class CustomDiscoveryTestRunner(): ...
+    class CustomExecutionTestRunner: ...
+
+    class CustomDiscoveryTestRunner: ...
+
 
 def init_worker_with_unique_cache(*args, **kwargs):
     """Extend Django's default parallel unit test setup to also ensure distinct Redis caches."""
@@ -217,8 +218,9 @@ class NautobotTestRunner(DiscoverRunner):
 
                 connection.creation.destroy_test_db(old_name, self.verbosity, self.keepdb)
 
-class VSCodeNautobotTestRunner(CustomExecutionTestRunner, NautobotTestRunner):
-    ...
+
+class VSCodeNautobotTestRunner(CustomExecutionTestRunner, NautobotTestRunner): ...
+
 
 class VSCodeNautobotDiscoveryTestRunner(CustomDiscoveryTestRunner):
     @classmethod
