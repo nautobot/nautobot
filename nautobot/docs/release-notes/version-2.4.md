@@ -165,23 +165,24 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 
 <!-- towncrier release notes start -->
+
 ## v2.4.11 (2025-07-03)
 
 ### Security in v2.4.11
 
 - [#7440](https://github.com/nautobot/nautobot/issues/7440) - Updated `requests` to `2.32.4` to address `CVE-2024-47081`. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
 - [#7461](https://github.com/nautobot/nautobot/issues/7461) - Updated `Django` to 4.2.23 to further address `CVE-2025-48432`.
-- [#7487](https://github.com/nautobot/nautobot/issues/7487) - Updated `urllib3` to 2.5.0 due to CVE-2025-50181 and CVE-2025-50182. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#7487](https://github.com/nautobot/nautobot/issues/7487) - Updated `urllib3` to 2.5.0 due to `CVE-2025-50181` and `CVE-2025-50182`. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
 
 ### Added in v2.4.11
 
 - [#6941](https://github.com/nautobot/nautobot/issues/6941) - `ModuleTypes` can now be classified into a new `ModuleFamily` model. `ModuleBay` and `ModuleBayTemplates` can define a `ModuleFamily` they will accept.
 - [#7007](https://github.com/nautobot/nautobot/issues/7007) - Added support for bulk-editing Webhook `additional_headers` and `body_template` fields.
-- [#7298](https://github.com/nautobot/nautobot/issues/7298) - Added a provides_dynamic_jobs setting to NautobotAppConfig and associated logic to reload app-provided jobs similar to Git repo jobs.
+- [#7298](https://github.com/nautobot/nautobot/issues/7298) - Added a `provides_dynamic_jobs` setting to NautobotAppConfig and associated logic to reload app-provided jobs similar to Git repo jobs.
 
 ### Changed in v2.4.11
 
-- [#7038](https://github.com/nautobot/nautobot/issues/7038) - Changed the `create_schedule` method in `ScheduleJob` to include a condition that converts an TYPE_IMMEDIATELY interval to a TYPE_FUTURE interval. This change is required because TYPE_IMMEDIATELY isn't one of the values in JobExecutionType.SCHEDULE_CHOICES and the scheduler skipped sending the task.
+- [#7038](https://github.com/nautobot/nautobot/issues/7038) - Changed the `create_schedule` method in `ScheduledJob` to include a condition that converts an `TYPE_IMMEDIATELY` interval to a `TYPE_FUTURE` interval. This change is required because `TYPE_IMMEDIATELY` isn't one of the values in `JobExecutionType.SCHEDULE_CHOICES` and the scheduler skipped sending the task.
 - [#7178](https://github.com/nautobot/nautobot/issues/7178) - Changed JobResult list view default configuration to not calculate and show "summary" of log entries by default, as it is not performant at scale.
 - [#7518](https://github.com/nautobot/nautobot/issues/7518) - Improved performance for the "utilization" column of the prefix list view.
 
