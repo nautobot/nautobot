@@ -143,6 +143,8 @@ class ViewTestCases:
         Retrieve a single instance.
         """
 
+        custom_action_required_permissions = {}
+
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_get_object_anonymous(self):
             # Make the request as an unauthenticated user
@@ -247,6 +249,21 @@ class ViewTestCases:
             response = self.client.get(instance.get_absolute_url())
             self.assertBodyContains(response, f"{instance.get_absolute_url()}#advanced")
             self.assertBodyContains(response, "Advanced")
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_custom_actions(self):
+            instance = self._get_queryset().first()
+            for url_name, required_permissions in self.custom_action_required_permissions.items():
+                url = reverse(url_name, kwargs={"pk": instance.pk})
+                self.assertHttpStatus(self.client.get(url), 403)
+                for permission in required_permissions[:-1]:
+                    self.add_permissions(permission)
+                    self.assertHttpStatus(self.client.get(url), 403)
+
+                self.add_permissions(required_permissions[-1])
+                self.assertHttpStatus(self.client.get(url), 200)
+                # delete the permissions here so that repetitive calls to add_permissions do not create duplicate permissions.
+                self.remove_permissions(*required_permissions)
 
     class GetObjectChangelogViewTestCase(ModelViewTestCase):
         """
