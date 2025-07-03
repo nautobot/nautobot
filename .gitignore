@@ -1,7 +1,6 @@
 *.pyc
 *.swp
 /site/
-/.venv/
 /venv/
 **/dist/
 /*.sh
