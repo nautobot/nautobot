@@ -818,13 +818,49 @@ This:
     <div class="col-md-3">
         <h1>Badges</h1>
         <p>
-            <a href="#">Inbox <span class="badge">42</span></a>
+            <a href="#">Inbox <span class="badge bg-primary">42</span></a>
         </p>
-        <ul class="nav nav-pills" role="tablist">
-            <li role="presentation" class="active"><a href="#">Home <span class="badge">42</span></a></li>
-            <li role="presentation"><a href="#">Profile</a></li>
-            <li role="presentation"><a href="#">Messages <span class="badge">3</span></a></li>
-        </ul>
+        <p>
+            <ul class="nav nav-pills" role="tablist">
+                <li class="nav-item" role="presentation"><a class="nav-link active" href="#">Home <span class="badge bg-primary">42</span></a></li>
+                <li class="nav-item" role="presentation"><a class="nav-link" href="#">Profile</a></li>
+                <li class="nav-item" role="presentation"><a class="nav-link" href="#">Messages <span class="badge bg-primary">3</span></a></li>
+            </ul>
+        </p>
+        <p>
+            <span class="badge nb-multi-badge">
+                Multi-badge:
+                <span class="nb-multi-badge-items">
+                    <span class="badge">Badge</span>
+                    <span class="badge">Badge</span>
+                </span>
+            </span>
+        </p>
+        <p>
+            <span class="badge nb-multi-badge">
+                Multi-badge:
+                <span class="nb-multi-badge-items">
+                    <span class="badge"><!--
+                        -->Badge<!--
+                        --><button type="button">
+                            <span aria-hidden="true" class="mdi mdi-close"></span>
+                            <span class="visually-hidden">Remove</span>
+                        </button>
+                    </span>
+                    <span class="badge"><!--
+                        -->Badge<!--
+                        --><button type="button">
+                            <span aria-hidden="true" class="mdi mdi-close"></span>
+                            <span class="visually-hidden">Remove</span>
+                        </button>
+                    </span>
+                </span>
+                <button type="button">
+                    <span aria-hidden="true" class="mdi mdi-close"></span>
+                    <span class="visually-hidden">Remove All</span>
+                </button>
+            </span>
+        </p>
     </div>
     <div class="col-md-3">
         <h1>Dropdown menus</h1>

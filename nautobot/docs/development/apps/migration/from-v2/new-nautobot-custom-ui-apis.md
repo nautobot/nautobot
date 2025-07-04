@@ -8,45 +8,45 @@ From now on, all HTML data attributes and CSS classes which refer to Nautobot cu
 
 Here's a list of what's changed:
 
-| v2.x                                  | v3.0                                                                                               |
-|---------------------------------------|----------------------------------------------------------------------------------------------------|
-| `accordion-toggle`                    | `nb-collapse-toggle`                                                                               |
-| `accordion-toggle-all`                | *removed*, refer to [Toggle All (Collapse All / Expand All)](#toggle-all-collapse-all-expand-all)  |
-| `banner-bottom`                       | `nb-banner-bottom`                                                                                 |
-| `btn-inline`                          | `nb-btn-inline-hover`, refer to [Hover Copy Buttons](#hover-copy-buttons)                          |
-| `hover_copy`                          | *removed*, refer to [Hover Copy Buttons](#hover-copy-buttons)                                      |
-| `hover_copy_button`                   | *removed*, refer to [Hover Copy Buttons](#hover-copy-buttons)                                      |
-| `cable-trace`                         | `nb-cable-trace`                                                                                   |
-| `active` (scoped to cable trace)      | `nb-active`                                                                                        |
-| `cable` (scoped to cable trace)       | `nb-cable`                                                                                         |
-| `node` (scoped to cable trace)        | `nb-node`                                                                                          |
-| `termination` (scoped to cable trace) | `nb-termination`                                                                                   |
-| `trace-end` (scoped to cable trace)   | `nb-trace-end`                                                                                     |
-| `color-block`                         | `nb-color-block`                                                                                   |
-| `inline-color-block`                  | *removed*                                                                                          |
-| `editor-container`                    | `nb-editor-container`                                                                              |
-| `filter-container`                    | *removed*                                                                                          |
-| `display-inline` (scoped to filters)  | *removed*                                                                                          |
-| `filter-selection`                    | *removed*                                                                                          |
-| `filter-selection-choice`             | *removed*                                                                                          |
-| `filter-selection-choice-remove`      | *removed*                                                                                          |
-| `filter-selection-rendered`           | *removed*                                                                                          |
-| `remove-filter-param`                 | *removed*                                                                                          |
-| `loading` (scoped to AJAX loaders)    | `nb-loading`                                                                                       |
-| `required` (scoped to form labels)    | `nb-required`                                                                                      |
-| `noprint`                             | *removed*, use `d-print-none` instead                                                              |
-| `powered-by-nautobot`                 | *removed*                                                                                          |
-| `report-stats`                        | `nb-report-stats`                                                                                  |
-| `right-side-panel`                    | `nb-right-side-panel`                                                                              |
-| `software-image-hierarchy`            | `nb-software-image-hierarchy`                                                                      |
-| `tree-hierarchy`                      | `nb-tree-hierarchy`                                                                                |
-| `tiles`                               | `nb-tiles`                                                                                         |
-| `tile`                                | `nb-tile`                                                                                          |
-| `clickable` (scoped to tiles)         | `nb-clickable`                                                                                     |
-| `disabled` (scoped to tiles)          | `nb-disabled`                                                                                      |
-| `tile-description`                    | `nb-tile-description`                                                                              |
-| `tile-footer`                         | `nb-tile-footer`                                                                                   |
-| `tile-header`                         | `nb-tile-header`                                                                                   |
+| v2.x                                  | v3.0                                                                                              |
+|---------------------------------------|---------------------------------------------------------------------------------------------------|
+| `accordion-toggle`                    | `nb-collapse-toggle`                                                                              |
+| `accordion-toggle-all`                | *removed*, refer to [Toggle All (Collapse All / Expand All)](#toggle-all-collapse-all-expand-all) |
+| `banner-bottom`                       | `nb-banner-bottom`                                                                                |
+| `btn-inline`                          | `nb-btn-inline-hover`, refer to [Hover Copy Buttons](#hover-copy-buttons)                         |
+| `hover_copy`                          | *removed*, refer to [Hover Copy Buttons](#hover-copy-buttons)                                     |
+| `hover_copy_button`                   | *removed*, refer to [Hover Copy Buttons](#hover-copy-buttons)                                     |
+| `cable-trace`                         | `nb-cable-trace`                                                                                  |
+| `active` (scoped to cable trace)      | `nb-active`                                                                                       |
+| `cable` (scoped to cable trace)       | `nb-cable`                                                                                        |
+| `node` (scoped to cable trace)        | `nb-node`                                                                                         |
+| `termination` (scoped to cable trace) | `nb-termination`                                                                                  |
+| `trace-end` (scoped to cable trace)   | `nb-trace-end`                                                                                    |
+| `color-block`                         | `nb-color-block`                                                                                  |
+| `inline-color-block`                  | *removed*                                                                                         |
+| `editor-container`                    | `nb-editor-container`                                                                             |
+| `filter-container`                    | *removed*, refer to [Multi-badge](#multi-badge)                                                   |
+| `display-inline` (scoped to filters)  | *removed*, refer to [Multi-badge](#multi-badge)                                                   |
+| `filter-selection`                    | *removed*, refer to [Multi-badge](#multi-badge)                                                   |
+| `filter-selection-choice`             | *removed*, refer to [Multi-badge](#multi-badge)                                                   |
+| `filter-selection-choice-remove`      | *removed*, refer to [Multi-badge](#multi-badge)                                                   |
+| `filter-selection-rendered`           | *removed*, refer to [Multi-badge](#multi-badge)                                                   |
+| `remove-filter-param`                 | *removed*, refer to [Multi-badge](#multi-badge)                                                   |
+| `loading` (scoped to AJAX loaders)    | `nb-loading`                                                                                      |
+| `required` (scoped to form labels)    | `nb-required`                                                                                     |
+| `noprint`                             | *removed*, use `d-print-none` instead                                                             |
+| `powered-by-nautobot`                 | *removed*                                                                                         |
+| `report-stats`                        | `nb-report-stats`                                                                                 |
+| `right-side-panel`                    | `nb-right-side-panel`                                                                             |
+| `software-image-hierarchy`            | `nb-software-image-hierarchy`                                                                     |
+| `tree-hierarchy`                      | `nb-tree-hierarchy`                                                                               |
+| `tiles`                               | `nb-tiles`                                                                                        |
+| `tile`                                | `nb-tile`                                                                                         |
+| `clickable` (scoped to tiles)         | `nb-clickable`                                                                                    |
+| `disabled` (scoped to tiles)          | `nb-disabled`                                                                                     |
+| `tile-description`                    | `nb-tile-description`                                                                             |
+| `tile-footer`                         | `nb-tile-footer`                                                                                  |
+| `tile-header`                         | `nb-tile-header`                                                                                  |
 
 ## Table configuration button
 
@@ -252,6 +252,51 @@ Most of the logic is already implemented in Nautobot by default and there are ju
     Collapse All
 </button>
 ```
+
+## Multi-badge
+
+In place of legacy `filter-container` and `filter-selection`, Nautobot 3.0 introduces a general purpose Multi-badge component to serve as a container for multiple badges.
+
+1. Use both `badge` and `nb-multi-badge` CSS classes on an element to make it a multi-badge container.
+2. Wrap `badge` child elements of a multi-badge container in an element of `nb-multi-badge-items` CSS class.
+3. Like basic badges, multi-badge and badges inside it support clear/remove buttons.
+
+```html
+<span class="badge nb-multi-badge">
+    Multi-badge:
+    <span class="nb-multi-badge-items">
+        <span class="badge">Badge</span>
+        <span class="badge">Badge</span>
+    </span>
+</span>
+```
+
+```html
+<span class="badge nb-multi-badge">
+    Multi-badge:
+    <span class="nb-multi-badge-items">
+        <span class="badge"><!--
+            -->Badge<!--
+            --><button type="button">
+                <span aria-hidden="true" class="mdi mdi-close"></span>
+                <span class="visually-hidden">Remove</span>
+            </button>
+        </span>
+        <span class="badge"><!--
+            -->Badge<!--
+            --><button type="button">
+                <span aria-hidden="true" class="mdi mdi-close"></span>
+                <span class="visually-hidden">Remove</span>
+            </button>
+        </span>
+    </span>
+    <button type="button">
+        <span aria-hidden="true" class="mdi mdi-close"></span>
+        <span class="visually-hidden">Remove All</span>
+    </button>
+</span>
+```
+
 
 ## Extended Bootstrap Utilities
 
