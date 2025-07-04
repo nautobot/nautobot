@@ -97,6 +97,40 @@ def hyperlinked_phone_number(value):
     return format_html('<a href="tel:{}">{}</a>', value, value)
 
 
+def render_map_button(query, icon="mdi-map-marker"):
+    return format_html(
+        '<div class="pull-right noprint">'
+        '<a href="https://maps.google.com/?q={}" target="_blank" class="btn btn-primary btn-xs">'
+        '<i class="mdi {}"></i> Map it</a></div>',
+        query, icon
+    )
+
+def render_footer_button(url, icon, label):
+    return format_html(
+        '<div class="panel-footer text-right noprint">'
+        '<a href="{}" class="btn btn-primary btn-xs">'
+        '<span class="mdi {}" aria-hidden="true"></span> {}</a></div>',
+        url, icon, label
+    )
+
+def render_rack_row(indent_px, url, name, count, elevation_url):
+    return format_html(
+        '''
+        <tr>
+            <td style="padding-left: {}px">
+                <i class="mdi mdi-folder-open"></i>
+                <a href="{}">{}</a>
+            </td>
+            <td>{}</td>
+            <td class="text-right noprint">
+                <a href="{}" class="btn btn-xs btn-primary" title="View elevations">
+                    <i class="mdi mdi-server"></i>
+                </a>
+            </td>
+        </tr>
+        ''',
+        indent_px, url, name, count, elevation_url
+    )
 @library.filter()
 @register.filter()
 def placeholder(value):

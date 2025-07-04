@@ -19,7 +19,7 @@ from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
 from django.urls import reverse
 from django.utils.encoding import iri_to_uri
 from django.utils.functional import cached_property
-from django.utils.html import format_html
+from django.utils.html import format_html,format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import View
 from django_tables2 import RequestConfig
@@ -254,58 +254,103 @@ class LocationTypeUIViewSet(NautobotUIViewSet):
 from nautobot.core.views.utils import (
     get_obj_from_context,
 )
+
 class CustomLocationFieldsPanel(object_detail.ObjectFieldsPanel):
-    """
-    Custom panel that renders a single "GPS Coordinates" field combining latitude and longitude, along with a "Map it" button.
-    """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     def get_data(self, context):
-        """
-        Override the data retrieval to include a single field for 'GPS Coordinates' by combining latitude and longitude.
-        """
         data = super().get_data(context)
-        
-        # Get the object instance from context
         obj = get_obj_from_context(context, self.context_object_key)
-        
-        # Combine latitude and longitude into a single "GPS Coordinates" entry
+
         if obj and obj.latitude and obj.longitude:
-            # Combine latitude and longitude properly
-            gps_coordinates = f"{obj.latitude}, {obj.longitude}"
-            # Add GPS Coordinates as a key-value pair
-            data["GPS Coordinates"] = gps_coordinates
+            data["GPS Coordinates"] = f"{obj.latitude}, {obj.longitude}"
         else:
             data["GPS Coordinates"] = "Not available"
-        
+
         return data
 
     def render_value(self, key, value, context):
-        """
-        Custom rendering for 'GPS Coordinates'. If it exists, we will show the coordinates with a "Map it" button.
-        """
         if key == "GPS Coordinates":
-            # If coordinates are available, render them with a "Map it" button
             if value != "Not available":
                 lat, lon = value.split(', ')
                 return format_html(
-                    '<div class="pull-right noprint">'
-                    '<a href="https://maps.google.com/?q={},{}" target="_blank" class="btn btn-primary btn-xs">'
-                    '<i class="mdi mdi-map-marker"></i> Map it'
-                    '</a></div>'
-                    '<span>{}</span>', lat, lon, value
+                    '{}<span>{}</span>',
+                    helpers.render_map_button(f"{lat},{lon}"),
+                    value
                 )
             return format_html('<span class="text-muted">&mdash;</span>')
 
-        # For other fields, return the normal behavior
+        if key == "physical_address":
+            if value:
+                return format_html(
+                    '{}<span>{}</span>',
+                    helpers.render_map_button(value),
+                    value.replace('\n', '<br>')
+                )
+            return format_html('<span class="text-muted">&mdash;</span>')
+
         return super().render_value(key, value, context)
+
+
+class CustomContactInfoPanel(object_detail.ObjectFieldsPanel):
+    def render(self, context):
+        base_content = super().render(context)
+        request = context.get("request")
+        obj = get_obj_from_context(context, self.context_object_key)
+
+        if not request or not obj or not request.user.has_perms(["dcim.contact_association"]):
+            return base_content
+
+        return_url = f"{request.path}?tab=contacts"
+        button_html = helpers.render_footer_button(
+            f"{reverse('dcim:location_migrate_data_to_contact', kwargs={'pk': obj.pk})}?return_url={return_url}",
+            "mdi-account-edit",
+            "Convert to contact/team record"
+        )
+
+        if "</div>" in base_content:
+            parts = base_content.rsplit("</div>", 1)
+            return format_html(f"{parts[0]}{button_html}</div>")
+        return base_content
+
+class CustomRackGroupsPanel(object_detail.ObjectFieldsPanel):  # ✅ Not ObjectFieldsPanel
+    def render(self, context):
+        obj = get_obj_from_context(context, self.context_object_key or "object")
+        if not obj:
+            return ""
+
+        rack_groups = context.get("rack_groups", [])
+        stats = context.get("stats", {})
+
+        rows = []
+        for rg in rack_groups:
+            rows.append(helpers.render_rack_row(
+                getattr(rg, "tree_depth", 0) * 8,
+                rg.get_absolute_url(),
+                str(rg),
+                rg.rack_count,
+                f"{reverse('dcim:rack_elevation_list')}?rack_group={rg.pk}"
+            ))
+
+        rows.append(helpers.render_rack_row(
+            10,
+            "#",
+            "All racks",
+            stats.get("rack_count", 0),
+            f"{reverse('dcim:rack_elevation_list')}?location={obj.pk}"
+        ))
+
+        return format_html(
+            '''
+            <div class="panel panel-default">
+                <div class="panel-heading"><strong>Rack Groups</strong></div>
+                <table class="table table-hover panel-body">{}</table>
+            </div>
+            ''',
+            format_html_join('', '{}', ((row,) for row in rows))
+        )
+
+
+
 class LocationUIViewSet(NautobotUIViewSet):
-    # We aren't accessing tree fields anywhere so this is safe (note that `parent` itself is a normal foreign
-    # key, not a tree field). If we ever do access tree fields, this will perform worse, because django will
-    # automatically issue a second query (similar to behavior for
-    # https://docs.djangoproject.com/en/3.2/ref/models/querysets/#django.db.models.query.QuerySet.only)
     queryset = Location.objects.without_tree_fields().select_related("location_type", "parent", "tenant")
     filterset_class = filters.LocationFilterSet
     filterset_form_class = forms.LocationFilterForm
@@ -320,23 +365,33 @@ class LocationUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
-                exclude_fields=["parent", "physical_address", "shipping_address", "latitude", "longitude", "contact_name", "contact_phone", "contact_email"],
+                exclude_fields=[
+                    "parent", "physical_address", "shipping_address",
+                    "latitude", "longitude",
+                    "contact_name", "contact_phone", "contact_email",
+                ],
             ),
             CustomLocationFieldsPanel(
-                weight=200,
+                weight=100,
                 section=SectionChoices.LEFT_HALF,
-                label="Geographical Info",  
+                label="Geographical Info",
                 fields=["physical_address", "shipping_address"],
             ),
-            object_detail.ObjectFieldsPanel(
-                weight=300,
+            CustomContactInfoPanel(
+                weight=100,
                 section=SectionChoices.LEFT_HALF,
-                label="Contact Info",  
-                fields=["contact_name", "contact_phone","contact_email"],
+                label="Contact Info",
+                fields=["contact_name", "contact_phone", "contact_email"],
                 value_transforms={
                     "contact_phone": [helpers.hyperlinked_phone_number],
                     "contact_email": [helpers.hyperlinked_email],
                 },
+            ),
+            CustomRackGroupsPanel(
+                label="Rack Groups",
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                context_object_key="object",
             ),
             object_detail.StatsPanel(
                 weight=100,
@@ -344,35 +399,42 @@ class LocationUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.RIGHT_HALF,
                 filter_name="location",
                 related_models=[
-                    Rack,  
-                    Device,  
+                    Rack,
+                    Device,
                     (Prefix, "location__in"),
                     (VLAN, "locations__in"),
-                    (Circuit, "circuit_terminations__location__in"),  
-                    (VirtualMachine, "cluster__location__in"),  
+                    (Circuit, "circuit_terminations__location__in"),
+                    (VirtualMachine, "cluster__location__in"),
                 ],
             ),
             object_detail.ObjectsTablePanel(
-                label="Rack Groups",
-                section=SectionChoices.RIGHT_HALF,
-                table_class=tables.RackGroupTable,
-                table_attribute="rack_groups",  # Must match related_name
-                related_field_name="location_id",  # ForeignKey field on RackGroup
-                weight=200,
-                enable_bulk_actions=False,  # Optional, depending on use
-            ),
-            object_detail.ObjectsTablePanel(
-                label="Children",
                 section=SectionChoices.FULL_WIDTH,
-                table_class=tables.LocationTable,
-                table_attribute="children", 
-                related_field_name="parent", 
-                order_by_fields=["name"],
                 weight=100,
+                label="Children",
+                table_class=tables.LocationTable,
+                table_attribute="children",
+                related_field_name="parent",
+                order_by_fields=["name"],
+                
             )
-    
-        ),
+        )
     )
+
+    def get_extra_context(self, request, instance):
+        if not instance:
+            return {}
+
+        related_locations = instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
+
+        return {
+            "rack_groups": RackGroup.objects.annotate(
+                rack_count=count_related(Rack, "rack_group")
+            ).restrict(request.user, "view").filter(location__in=related_locations),
+            "stats": {
+                "rack_count": Rack.objects.restrict(request.user, "view").filter(location__in=related_locations).count()
+            }
+        }
+    
 
 
 class MigrateLocationDataToContactView(generic.ObjectEditView):
