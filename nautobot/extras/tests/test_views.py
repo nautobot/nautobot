@@ -1938,7 +1938,7 @@ class GraphQLQueriesTestCase(
             "query": "{query: locations {name}}",
         }
 
-        cls.bulk_edit_data = {"note": "Updated note via bulk edit"}
+        cls.bulk_edit_data = {"notes": "Updated note via bulk edit"}
 
 
 #
