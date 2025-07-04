@@ -1,0 +1,1 @@
+Removed legacy CSS classes: `filter-container`, `display-inline`, `filter-selection`, `filter-selection-choice`, `filter-selection-choice-remove`, `filter-selection-rendered` and `remove-filter-param`.
