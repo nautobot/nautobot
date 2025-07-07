@@ -1,1 +1,1 @@
-Refactored Jobs detail view to use `NautobotUIViewSet` and `UI component framework`.
+Refactored Jobs detail view to use `UI component framework`.

@@ -26,7 +26,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 
 from nautobot.apps.ui import BaseTextPanel
-from nautobot.core.choices import ButtonColorChoices
+from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.events import publish_event
 from nautobot.core.exceptions import FilterSetFieldNotFound
@@ -1552,13 +1552,9 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         )
 
 
-class JobUIViewSet(NautobotUIViewSet):
-    filterset_class = filters.JobFilterSet
-    filterset_form_class = forms.JobFilterForm
-    form_class = forms.JobForm
+class JobView(generic.ObjectView):
     queryset = JobModel.objects.all()
-    serializer_class = serializers.JobSerializer
-    table_class = tables.JobTable
+    template_name = "extras/job_detail.html"
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[
             object_detail.ObjectFieldsPanel(
@@ -1578,7 +1574,7 @@ class JobUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 label="Job",
-                fields=["grouping", "name", "description", "enabled", "job_results"],  # TODO: improve job_results
+                fields=["grouping", "name", "description", "enabled", "job_results"],
                 value_transforms={
                     "job_results": [helpers.render_job_results_link],
                 },
@@ -1621,7 +1617,7 @@ class JobUIViewSet(NautobotUIViewSet):
                 link_name="extras:job_run",
                 label="Run/Schedule",
                 icon="mdi-play",
-                color=ButtonColorChoices.BLUE,
+                color=ButtonActionColorChoices.SUBMIT,
                 required_permissions=["extras.job_run"],
             ),
         ],
