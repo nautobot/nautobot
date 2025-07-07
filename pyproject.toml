@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.4.10"
+version = "2.4.11"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -35,13 +35,13 @@ exclude = [
 [tool.poetry.dependencies]
 python = ">=3.9.2,<3.13"
 # Background task processing
-celery = "~5.3.6"
+celery = ">=5.3.6,<5.6.0"
 # Cryptographic recipes and primitives.
 # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
 # Added as an explicit dependency to protect against various CVEs in older versions.
 cryptography = "~44.0.3"
 # Fundamental web framework for Nautobot
-Django = "~4.2.22"
+Django = "~4.2.23"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -104,8 +104,9 @@ Jinja2 = "~3.1.6"
 # Optional data validation of config contexts - loose dependency since our usage is light but apps may be more specific
 jsonschema = "^4.7.0"
 # Messaging library for Python - dependency of Celery
-# Included as an explicit dependency (for now?) to require a version with https://github.com/celery/kombu/pull/2007
-kombu = "~5.4.2"
+# Included as an explicit dependency for now to require a version with https://github.com/celery/kombu/pull/2007
+# This can be removed once we increate the lower bound of permitted versions of Celery itself above.
+kombu = ">=5.4.2,<5.6.0"
 # Library to access Kubernetes API used to develop K8s integration
 kubernetes = "^32.0.1"
 # Rendering of markdown files to HTML
@@ -223,9 +224,9 @@ coverage = "6.4.0"
 # Testing of data migrations
 django-test-migrations = "~1.4.0"
 # OpenAPI validator to test that our generated schema is valid
-openapi-spec-validator = "^0.7.1"
+openapi-spec-validator = "~0.7.2"
 # Integration Tests
-requests = "~2.32.3"
+requests = "~2.32.4"
 # Selenium web drivers for live integration testing
 selenium = "~4.27.1"
 # Abstraction layer for working with Selenium
