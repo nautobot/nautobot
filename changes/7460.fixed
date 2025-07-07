@@ -1,0 +1,1 @@
+Added missing permission enforcement for custom actions in NautobotUIViewSet supported models.

@@ -17,6 +17,7 @@ from celery.exceptions import Ignore, Reject
 from celery.utils.log import get_task_logger
 from db_file_storage.form_widgets import DBClearableFileInput
 from django import forms
+from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
@@ -1142,8 +1143,9 @@ def get_job(class_path, reload=False):
             # System job - not reloadable
             reload = False
         if any(class_path.startswith(f"{app_name}.") for app_name in settings.PLUGINS):
-            # App provided job - not reloadable
-            reload = False
+            # App provided job - only reload if the app provides dynamic jobs
+            app_config = apps.get_app_config(class_path.split(".")[0])
+            reload = getattr(app_config, "provides_dynamic_jobs", False)
     jobs = get_jobs(reload=reload)
     return jobs.get(class_path, None)
 

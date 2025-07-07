@@ -125,6 +125,13 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
             fallback_value="An error occurred while rendering this template.",
             weight=50,
         )
+        self.evil_computed_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Secret),
+            key="evil_computed_field",
+            label="Evil Computed Field",
+            template="{{ obj.get_value() }}",
+            weight=666,
+        )
         self.blank_fallback_value = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Location),
             key="blank_fallback_value",
@@ -133,6 +140,18 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
             weight=50,
         )
         self.location1 = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        self.secret = Secret.objects.create(
+            name="Environment Variable Secret",
+            provider="environment-variable",
+            parameters={"variable": "NAUTOBOT_ROOT"},
+        )
+        self.secrets_group = SecretsGroup.objects.create(name="Group of Secrets")
+        SecretsGroupAssociation.objects.create(
+            secrets_group=self.secrets_group,
+            secret=self.secret,
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+        )
 
     def test_render_method(self):
         rendered_value = self.good_computed_field.render(context={"obj": self.location1})
@@ -145,6 +164,13 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
     def test_render_method_bad_template(self):
         rendered_value = self.bad_computed_field.render(context={"obj": self.location1})
         self.assertEqual(rendered_value, self.bad_computed_field.fallback_value)
+
+    def test_render_method_evil_template(self):
+        rendered_value = self.evil_computed_field.render(context={"obj": self.secret})
+        self.assertEqual(rendered_value, "")
+        self.evil_computed_field.template = "{{ obj.secrets_groups.first().get_secret_value('Generic', 'secret') }}"
+        rendered_value = self.evil_computed_field.render(context={"obj": self.secret})
+        self.assertEqual(rendered_value, "")
 
     def test_check_if_key_is_graphql_safe(self):
         """
@@ -1378,7 +1404,7 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.app_job.job_class, ExampleJob)
 
     def test_class_path(self):
-        self.assertEqual(self.local_job.class_path, "pass.TestPassJob")
+        self.assertEqual(self.local_job.class_path, "pass_job.TestPassJob")
         self.assertIsNotNone(self.local_job.job_class)
         self.assertEqual(self.local_job.class_path, self.local_job.job_class.class_path)
 
@@ -2119,7 +2145,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
 
         self.daily_utc_job = ScheduledJob.objects.create(
             name="Daily UTC Job",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_DAILY,
             start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
@@ -2127,7 +2153,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         )
         self.daily_est_job = ScheduledJob.objects.create(
             name="Daily EST Job",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_DAILY,
             start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=ZoneInfo("America/New_York")),
@@ -2142,7 +2168,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         )
         self.crontab_est_job = ScheduledJob.objects.create(
             name="Crontab EST Job",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_CUSTOM,
             start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=ZoneInfo("America/New_York")),
@@ -2151,7 +2177,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         )
         self.one_off_utc_job = ScheduledJob.objects.create(
             name="One-off UTC Job",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,
             start_time=datetime(year=2050, month=1, day=22, hour=0, minute=0, tzinfo=ZoneInfo("UTC")),
@@ -2163,6 +2189,13 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
             name="One-off EST Job",
             interval=JobExecutionType.TYPE_FUTURE,
             start_time=datetime(year=2050, month=1, day=22, hour=0, minute=0, tzinfo=ZoneInfo("America/New_York")),
+        )
+        self.one_off_immediately_job = ScheduledJob.create_schedule(
+            job_model=self.job_model,
+            user=self.user,
+            name="One-off IMMEDIATELY job",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            start_time=now(),
         )
 
     def test_scheduled_job_queue_setter(self):
@@ -2199,6 +2232,10 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
                 self.one_off_est_job.schedule.clocked_time - self.one_off_utc_job.schedule.clocked_time,
                 timedelta(hours=5),
             )
+
+        with self.subTest("Test TYPE IMMEDIATELY schedules"):
+            self.assertTrue(self.one_off_immediately_job.one_off)
+            self.assertEqual(self.one_off_immediately_job.interval, JobExecutionType.TYPE_FUTURE)
 
     def test_to_cron(self):
         """Test the to_cron() method and its interaction with time zone variants."""
@@ -2298,7 +2335,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         """Test that TYPE_CUSTOM behavior around DST is as expected."""
         cronjob = ScheduledJob.objects.create(
             name="DST Aware Cronjob",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             enabled=False,
             interval=JobExecutionType.TYPE_CUSTOM,
@@ -2353,7 +2390,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         """Test the interaction of TYPE_DAILY around DST."""
         daily = ScheduledJob.objects.create(
             name="Daily Job",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             enabled=False,
             interval=JobExecutionType.TYPE_DAILY,
@@ -2926,7 +2963,7 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
     """
 
     def setUp(self):
-        module = "pass"
+        module = "pass_job"
         name = "TestPassJob"
         job_class = get_job(f"{module}.{name}")
 
