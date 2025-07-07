@@ -13,6 +13,7 @@ class ExampleAppWithOverrideConfig(NautobotAppConfig):
     version = __version__
     description = "For testing purposes only"
     base_url = "example-app-with-view-override"
+    provides_dynamic_jobs = True
 
 
 config = ExampleAppWithOverrideConfig
