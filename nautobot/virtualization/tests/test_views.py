@@ -358,7 +358,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
-            "custom_field_1": "New Custom Field Data",
+            "cf_custom_field_1": "New Custom Field Data",
             "vrf": vrf.pk,
         }
 

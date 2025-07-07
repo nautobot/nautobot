@@ -1137,7 +1137,7 @@ class ExportTemplateTestCase(
 
 class ExternalIntegrationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = ExternalIntegration
-    bulk_edit_data = {"timeout": 10, "verify_ssl": True, "extra_config": r"{}", "headers": r"{}"}
+    bulk_edit_data = {"timeout": 10, "verify_ssl": True, "extra_config": '{"baz": "quux"}', "headers": '{"a": "b"}'}
     form_data = {
         "name": "Test External Integration",
         "remote_url": "https://example.com/test1/",
@@ -1956,21 +1956,21 @@ class ScheduledJobTestCase(
         user = User.objects.create(username="user1", is_active=True)
         ScheduledJob.objects.create(
             name="test1",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test2",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_DAILY,
             user=user,
             start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test3",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_CUSTOM,
             user=user,
             start_time=timezone.now(),
@@ -1984,7 +1984,7 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             enabled=False,
             name="test4",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             start_time=timezone.now(),
@@ -2001,7 +2001,7 @@ class ScheduledJobTestCase(
             ScheduledJob.objects.create(
                 enabled=True,
                 name=name,
-                task="pass.TestPassJob",
+                task="pass_job.TestPassJob",
                 interval=JobExecutionType.TYPE_CUSTOM,
                 user=self.user,
                 start_time=timezone.now(),
@@ -2032,7 +2032,7 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             enabled=True,
             name="test11",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_CUSTOM,
             user=self.user,
             start_time=timezone.now(),
@@ -2092,7 +2092,7 @@ class ApprovalQueueTestCase(
 
         ScheduledJob.objects.create(
             name="test4",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
@@ -2483,7 +2483,7 @@ class JobResultTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        JobResult.objects.create(name="pass.TestPassJob")
+        JobResult.objects.create(name="pass_job.TestPassJob")
         JobResult.objects.create(name="fail.TestFailJob")
         JobLogEntry.objects.create(
             log_level=LogLevelChoices.LOG_INFO,
@@ -3976,8 +3976,7 @@ class WebhookTestCase(
             "http_content_type": "application/json",
         }
         cls.bulk_edit_data = {
-            "name": "webhook-4",
-            "enabled": True,
+            "enabled": False,
             "type_create": True,
             "type_update": True,
             "type_delete": False,

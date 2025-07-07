@@ -1560,6 +1560,30 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
 #
 
 
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
+class ModuleFamily(PrimaryModel):
+    """
+    A ModuleFamily represents a classification of ModuleTypes.
+    It is used to enforce compatibility between ModuleBays and Modules.
+    """
+
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name_plural = "module families"
+
+    def __str__(self):
+        return self.name
+
+
 # TODO: 5840 - Translate comments field from devicetype library, Nautobot doesn't use that field for ModuleType
 @extras_features(
     "custom_links",
@@ -1587,6 +1611,13 @@ class ModuleType(PrimaryModel):
     """
 
     manufacturer = models.ForeignKey(to="dcim.Manufacturer", on_delete=models.PROTECT, related_name="module_types")
+    module_family = models.ForeignKey(
+        to="dcim.ModuleFamily",
+        on_delete=models.PROTECT,
+        related_name="module_types",
+        blank=True,
+        null=True,
+    )
     model = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     part_number = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Discrete part number (optional)"
@@ -1595,6 +1626,7 @@ class ModuleType(PrimaryModel):
 
     clone_fields = [
         "manufacturer",
+        "module_family",
     ]
 
     class Meta:
@@ -1818,6 +1850,36 @@ class Module(PrimaryModel):
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
                     {"location": f'Modules may not associate to locations of type "{self.location.location_type}".'}
+                )
+
+        # Validate module family compatibility
+        if self.parent_module_bay and self.parent_module_bay.module_family:
+            if self.module_type.module_family != self.parent_module_bay.module_family:
+                module_family_name = self.parent_module_bay.module_family.name
+                if self.module_type.module_family is None:
+                    module_type_family = "not assigned to a family"
+                else:
+                    module_type_family = f"in the family {self.module_type.module_family.name}"
+                raise ValidationError(
+                    {
+                        "module_type": f"The selected module bay requires a module type in the family {module_family_name}, "
+                        f"but the selected module type is {module_type_family}."
+                    }
+                )
+
+        # Validate module manufacturer constraint
+        if self.parent_module_bay and self.parent_module_bay.requires_first_party_modules:
+            if self.parent_module_bay.parent_device:
+                parent_mfr = self.parent_module_bay.parent_device.device_type.manufacturer
+            elif self.parent_module_bay.parent_module:
+                parent_mfr = self.parent_module_bay.parent_module.module_type.manufacturer
+            else:
+                parent_mfr = None
+            if parent_mfr and self.module_type.manufacturer != parent_mfr:
+                raise ValidationError(
+                    {
+                        "module_type": "The selected module bay requires a module type from the same manufacturer as the parent device or module"
+                    }
                 )
 
     def save(self, *args, **kwargs):

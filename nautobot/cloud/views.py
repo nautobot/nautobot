@@ -64,7 +64,6 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
     table_class = CloudNetworkTable
     form_class = CloudNetworkForm
     bulk_update_form_class = CloudNetworkBulkEditForm
-
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
@@ -157,19 +156,35 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
         ),
     )
 
-    @action(detail=True, url_path="children")
+    @action(detail=True, url_path="children", custom_view_base_action="view")
     def children(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="prefixes")
+    @action(
+        detail=True,
+        url_path="prefixes",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["ipam.view_prefix"],
+    )
     def prefixes(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="circuits")
+    @action(
+        detail=True,
+        url_path="circuits",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["circuits.view_circuit"],
+    )
     def circuits(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="cloud-services", url_name="cloud_services")
+    @action(
+        detail=True,
+        url_path="cloud-services",
+        url_name="cloud_services",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["cloud.view_cloudservice"],
+    )
     def cloud_services(self, request, *args, **kwargs):
         return Response({})
 
@@ -182,7 +197,6 @@ class CloudResourceTypeUIViewSet(NautobotUIViewSet):
     table_class = CloudResourceTypeTable
     form_class = CloudResourceTypeForm
     bulk_update_form_class = CloudResourceTypeBulkEditForm
-
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
@@ -234,11 +248,21 @@ class CloudResourceTypeUIViewSet(NautobotUIViewSet):
         ),
     )
 
-    @action(detail=True, url_path="networks")
+    @action(
+        detail=True,
+        url_path="networks",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["cloud.view_cloudnetwork"],
+    )
     def networks(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="services")
+    @action(
+        detail=True,
+        url_path="services",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["cloud.view_cloudservice"],
+    )
     def services(self, request, *args, **kwargs):
         return Response({})
 
@@ -288,6 +312,12 @@ class CloudServiceUIViewSet(NautobotUIViewSet):
         ),
     )
 
-    @action(detail=True, url_path="cloud-networks", url_name="cloud_networks")
+    @action(
+        detail=True,
+        url_path="cloud-networks",
+        url_name="cloud_networks",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["cloud.view_cloudnetwork"],
+    )
     def cloud_networks(self, request, *args, **kwargs):
         return Response({})
