@@ -297,7 +297,6 @@ In place of legacy `filter-container` and `filter-selection`, Nautobot 3.0 intro
 </span>
 ```
 
-
 ## Extended Bootstrap Utilities
 
 Nautobot extends Bootstrap utilities with its own subset of CSS classes, properties and values.
