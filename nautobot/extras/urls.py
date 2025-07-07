@@ -24,6 +24,7 @@ router.register("contact-associations", views.ContactAssociationUIViewSet)
 router.register("custom-links", views.CustomLinkUIViewSet)
 router.register("export-templates", views.ExportTemplateUIViewSet)
 router.register("external-integrations", views.ExternalIntegrationUIViewSet)
+router.register("jobs", views.JobUIViewSet)
 router.register("job-buttons", views.JobButtonUIViewSet)
 router.register("job-hooks", views.JobHookUIViewSet)
 router.register("job-queues", views.JobQueueUIViewSet)
@@ -242,11 +243,6 @@ urlpatterns = [
         "jobs/scheduled-jobs/approval-queue/<uuid:pk>/",
         views.JobApprovalRequestView.as_view(),
         name="scheduledjob_approval_request_view",
-    ),
-    path(
-        "jobs/<uuid:pk>/",
-        views.JobView.as_view(),
-        name="job",
     ),
     path("jobs/<uuid:pk>/edit/", views.JobEditView.as_view(), name="job_edit"),
     path("jobs/<uuid:pk>/delete/", views.JobDeleteView.as_view(), name="job_delete"),

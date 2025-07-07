@@ -26,6 +26,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 
 from nautobot.apps.ui import BaseTextPanel
+from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.events import publish_event
 from nautobot.core.exceptions import FilterSetFieldNotFound
@@ -1551,9 +1552,80 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         )
 
 
-class JobView(generic.ObjectView):
+class JobUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.JobFilterSet
+    filterset_form_class = forms.JobFilterForm
+    form_class = forms.JobForm
     queryset = JobModel.objects.all()
-    template_name = "extras/job_detail.html"
+    serializer_class = serializers.JobSerializer
+    table_class = tables.JobTable
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                label="Source Code",
+                fields=[
+                    "module_name",
+                    "job_class_name",
+                    "class_path",
+                    "installed",
+                    "is_job_hook_receiver",
+                    "is_job_button_receiver",
+                ],
+            ),
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                label="Job",
+                fields=["grouping", "name", "description", "enabled", "job_results"],  # TODO: improve job_results
+                value_transforms={
+                    "job_results": [helpers.render_job_results_link],
+                },
+            ),
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                label="Properties",
+                fields=[
+                    "approval_required",
+                    "supports_dryrun",
+                    "dryrun_default",
+                    "read_only",
+                    "hidden",
+                    "has_sensitive_variables",
+                    "is_singleton",
+                    "soft_time_limit",
+                    "soft_time_limit_override",
+                    "time_limit",
+                    "time_limit_override",
+                    "job_queues",
+                    "job_queues_override",
+                    "default_job_queue",
+                ],
+                value_transforms={
+                    "soft_time_limit": [lambda st: f"{st} seconds" if st is not None else helpers.placeholder(st)],
+                    "time_limit": [lambda tl: f"{tl} seconds" if tl is not None else helpers.placeholder(tl)],
+                    # Transform time from boolean to None to can hide it if it not set.
+                    "soft_time_limit_override": [lambda st: None if st is False else st],
+                    "time_limit_override": [lambda tl: None if tl is False else tl],
+                    # Transform job queues override from boolean to None to can hide it if it not set.
+                    "job_queues_override": [lambda jq: None if jq is False else jq],
+                    "job_queues": [helpers.render_job_queues_list],
+                },
+            ),
+        ],
+        extra_buttons=[
+            object_detail.Button(
+                weight=100,
+                link_name="extras:job_run",
+                label="Run/Schedule",
+                icon="mdi-play",
+                color=ButtonColorChoices.BLUE,
+                required_permissions=["extras.job_run"],
+            ),
+        ],
+    )
 
 
 class JobEditView(generic.ObjectEditView):
