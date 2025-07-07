@@ -4763,17 +4763,6 @@ class ControllerUIViewSet(NautobotUIViewSet):
     def wireless_networks(self, request, *args, **kwargs):
         return Response({})
 
-    def get_required_permission(self):
-        view_action = self.get_action()
-        if view_action == "wireless_networks":
-            return ["dcim.view_controller"]
-        return super().get_required_permission()
-
-    def get_queryset(self):
-        if self.action in ["wireless_networks"]:
-            return self.queryset.restrict(self.request.user, "view")
-        return super().get_queryset()
-
 
 class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
     filterset_class = filters.ControllerManagedDeviceGroupFilterSet
