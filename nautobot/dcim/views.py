@@ -1148,8 +1148,8 @@ class ConsolePortTemplateUIViewSet(
     bulk_update_form_class = forms.ConsolePortTemplateBulkEditForm
     filterset_class = filters.ConsolePortTemplateFilterSet
     form_class = forms.ConsolePortTemplateForm
-    serializer_class = serializers.PlatformSerializer
-    table_class = tables.ConsoleServerPortTemplateTable
+    serializer_class = serializers.ConsolePortTemplateSerializer
+    table_class = tables.ConsolePortTemplateTable
     queryset = ConsolePortTemplate.objects.all()
 
 
