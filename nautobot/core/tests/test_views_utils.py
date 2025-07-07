@@ -1,13 +1,16 @@
 import urllib.parse
 
+from django.contrib.auth.models import AnonymousUser
 from django.db import ProgrammingError
 from django.test import TestCase
 
 from nautobot.core.models.querysets import count_related
-from nautobot.core.views.utils import check_filter_for_display, prepare_cloned_fields
+from nautobot.core.testing import TransactionTestCase
+from nautobot.core.views.utils import check_filter_for_display, get_saved_views_for_user, prepare_cloned_fields
 from nautobot.dcim.filters import DeviceFilterSet
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, InventoryItem, Location, Manufacturer
-from nautobot.extras.models import Role, Status
+from nautobot.extras.models import Role, SavedView, Status
+from nautobot.users.models import User
 
 
 class CheckFilterForDisplayTest(TestCase):
@@ -168,3 +171,51 @@ class CheckPrepareClonedFields(TestCase):
                 self.assertTrue(isinstance(query_params["description"], list))
                 self.assertTrue(len(query_params["description"]) == 1)
                 self.assertTrue(query_params["description"][0] == description)
+
+
+class GetSavedViewsForUserTestCase(TransactionTestCase):
+    """
+    Class to test `get_saved_views_for_user`.
+    """
+
+    def create_saved_view(self, name, owner=None, is_shared=False):
+        """Helper to create a SavedView."""
+        return SavedView.objects.create(
+            name=name, owner=owner or self.user, view="dcim:device_list", is_shared=is_shared
+        )
+
+    def setUp(self):
+        super().setUp()
+        self.user2 = User.objects.create_user(username="second_user")
+        self.create_saved_view(name="saved_view")
+        self.create_saved_view(name="saved_view_shared", is_shared=True)
+        self.create_saved_view(name="saved_view_different_owner", owner=self.user2)
+        self.create_saved_view(name="saved_view_shared_different_owner", is_shared=True, owner=self.user2)
+
+    def test_user_with_permissions_get_all_saved_views(self):
+        """Test if for user with permissions method will return all saved views."""
+        self.add_permissions("extras.view_savedview")
+        saved_views = get_saved_views_for_user(self.user, "dcim:device_list")
+        self.assertEqual(saved_views.count(), 4)
+        expected_names = [
+            "saved_view",
+            "saved_view_different_owner",
+            "saved_view_shared",
+            "saved_view_shared_different_owner",
+        ]
+        self.assertEqual(list(saved_views.values_list("name", flat=True)), expected_names)
+
+    def test_user_without_permissions_get_shared_views_and_own_views_only(self):
+        """Test if user without permissions can see shared views and own views."""
+        saved_views = get_saved_views_for_user(self.user, "dcim:device_list")
+        self.assertEqual(saved_views.count(), 3)
+        expected_names = ["saved_view", "saved_view_shared", "saved_view_shared_different_owner"]
+        self.assertEqual(list(saved_views.values_list("name", flat=True)), expected_names)
+
+    def test_anonymous_user_get_shared_views_only(self):
+        """Test if method is working with anonymous users and return only shared views."""
+        user = AnonymousUser()
+        saved_views = get_saved_views_for_user(user, "dcim:device_list")
+        self.assertEqual(saved_views.count(), 2)
+        expected_names = ["saved_view_shared", "saved_view_shared_different_owner"]
+        self.assertEqual(list(saved_views.values_list("name", flat=True)), expected_names)

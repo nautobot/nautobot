@@ -182,6 +182,8 @@ class ModularComponentModel(ComponentModel):
                 if save:
                     self.save(update_fields=["_name", "name"])
 
+    render_name_template.alters_data = True
+
     def to_objectchange(self, action, **kwargs):
         """
         Return a new ObjectChange with the `related_object` pinned to the parent `device` or `module`.
@@ -820,6 +822,8 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
                 instance.validated_save()
         return len(ip_addresses)
 
+    add_ip_addresses.alters_data = True
+
     def remove_ip_addresses(self, ip_addresses):
         """Remove one or more IPAddress instances from this interface's `ip_addresses` many-to-many relationship.
 
@@ -838,6 +842,8 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
                 deleted_count, _ = qs.delete()
                 count += deleted_count
         return count
+
+    remove_ip_addresses.alters_data = True
 
     @property
     def is_connectable(self):
@@ -939,6 +945,8 @@ class InterfaceRedundancyGroup(PrimaryModel):  # pylint: disable=too-many-ancest
         )
         return instance.validated_save()
 
+    add_interface.alters_data = True
+
     def remove_interface(self, interface):
         """
         Remove an interface.
@@ -951,6 +959,8 @@ class InterfaceRedundancyGroup(PrimaryModel):  # pylint: disable=too-many-ancest
             interface=interface,
         )
         return instance.delete()
+
+    remove_interface.alters_data = True
 
 
 @extras_features("graphql")
@@ -1208,6 +1218,18 @@ class ModuleBay(PrimaryModel):
         blank=True,
         null=True,
     )
+    module_family = models.ForeignKey(
+        to="dcim.ModuleFamily",
+        on_delete=models.PROTECT,
+        related_name="module_bays",
+        blank=True,
+        null=True,
+        help_text="Module family that can be installed in this bay",
+    )
+    requires_first_party_modules = models.BooleanField(
+        default=False,
+        help_text="This bay will only accept modules from the same manufacturer as the parent device or module",
+    )
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
     _name = NaturalOrderingField(target_field="name", max_length=CHARFIELD_MAX_LENGTH, blank=True, db_index=True)
     position = models.CharField(
@@ -1218,7 +1240,7 @@ class ModuleBay(PrimaryModel):
     label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Physical label")
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
-    clone_fields = ["parent_device", "parent_module"]
+    clone_fields = ["parent_device", "parent_module", "module_family", "requires_first_party_modules"]
 
     # The recursive nature of this model combined with the fact that it can be a child of a
     # device or location makes our natural key implementation unusable, so just use the pk
@@ -1287,3 +1309,5 @@ class ModuleBay(PrimaryModel):
 
         if not self.position:
             self.position = self.name
+
+    clean.alters_data = True
