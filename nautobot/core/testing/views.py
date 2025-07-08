@@ -800,8 +800,8 @@ class ViewTestCases:
                 response = self.client.get(self._get_url("list"))
                 self.assertHttpStatus(response, 200)
                 # There should be some rows
-                self.assertBodyContains(response, '<tr class="even')
-                self.assertBodyContains(response, '<tr class="odd')
+                self.assertBodyContains(response, 'class="even')
+                self.assertBodyContains(response, 'class="odd')
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_filtered(self):

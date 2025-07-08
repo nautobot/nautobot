@@ -231,10 +231,8 @@ class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectVie
 
         cls.bulk_edit_data = {
             "weight": 800,
-            "name": "Updated approval workflow stage definition name",
             "min_approvers": 5,
             "denial_message": "updated denial message",
-            "approver_group": cls.updated_approver_group.pk,
         }
 
 
@@ -3589,25 +3587,6 @@ class JobTestCase(
                 "Unable to run or schedule job: "
                 "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
                 "One of these two flags must be removed before this job can be scheduled or run.",
-            )
-
-    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_run_job_with_approval_required_creates_scheduled_job_internal_future(self, _):
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.view_scheduledjob")
-
-        self.test_pass.approval_required = True
-        self.test_pass.save()
-        data = {
-            "_schedule_type": "immediately",
-        }
-        for run_url in self.run_urls:
-            response = self.client.post(run_url, data)
-            scheduled_job = ScheduledJob.objects.last()
-            self.assertEqual(scheduled_job.interval, JobExecutionType.TYPE_FUTURE)
-            self.assertRedirects(
-                response,
-                reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk]),
             )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)

@@ -526,7 +526,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         if instance is not None:
             return {
-                "object_detail_content": self.object_detail_content,
+                "object_detail_content": getattr(self, "object_detail_content", None),
                 "active_tab": request.GET.get("tab", "main"),
             }
         return {}

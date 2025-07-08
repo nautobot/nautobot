@@ -2190,8 +2190,7 @@ class JobTest(
                     "data": self.job_proper_data,
                     # schedule is omitted - should create immediate schedule
                 },
-                # after fix #7414 should be TYPE_FUTURE
-                "expected_interval": JobExecutionType.TYPE_IMMEDIATELY,
+                "expected_interval": JobExecutionType.TYPE_FUTURE,
                 "expected_name": None,
             },
             {
