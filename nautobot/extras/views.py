@@ -23,6 +23,7 @@ from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from nautobot.apps.ui import BaseTextPanel
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
@@ -273,9 +274,24 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
                 tab_id="validation",
                 label="Validation",
                 url_name="extras:configcontextschema_object_validation",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Validation",
+                        table_class=tables.ConfigContextSchemaTable,
+                        table_filter="config_context_schema",
+                        tab_id="validation",
+                        enable_bulk_actions=True,
+                    ),
+                ),
             ),
         ),
     )
+
+    @action(detail=True, url_path="validation")
+    def validation(self, request, *args, **kwargs):
+        return Response({})
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
