@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 from urllib.parse import parse_qs
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -15,7 +16,7 @@ from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils import timezone
 from django.utils.encoding import iri_to_uri
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.timezone import get_current_timezone
 from django.views.generic import View
@@ -187,6 +188,65 @@ class ConfigContextUIViewSet(NautobotUIViewSet):
     queryset = ConfigContext.objects.all()
     serializer_class = serializers.ConfigContextSerializer
     table_class = tables.ConfigContextTable
+
+    class AssignmentObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+        def render_value(self, key, value, context):
+            if key == "dynamic_groups" and not settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
+                return None
+            if not value:
+                return helpers.HTML_NONE
+
+            items = []
+            for val in value.all():
+                rendered_val = helpers.hyperlinked_object(val)
+                items.append(rendered_val)
+
+            if not items:
+                return helpers.HTML_NONE
+
+            return format_html("<ul>{}</ul>", format_html_join("", "<li>{}</li>", ((item,) for item in items)))
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                exclude_fields=[
+                    "data",
+                    "owner_content_type",
+                    "owner_object_id",
+                ],
+                hide_if_unset=[
+                    "owner",
+                ],
+            ),
+            object_detail.Panel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                label="Data",
+                header_extra_content_template_path="extras/inc/json_format.html",
+                body_content_template_path="extras/inc/configcontext_data.html",
+            ),
+            AssignmentObjectFieldsPanel(
+                weight=200,
+                section=SectionChoices.RIGHT_HALF,
+                label="Assignment",
+                fields=[
+                    "locations",
+                    "roles",
+                    "device_types",
+                    "platforms",
+                    "cluster_groups",
+                    "clusters",
+                    "tenant_groups",
+                    "tenants",
+                    "device_redundancy_groups",
+                    "dynamic_groups",
+                ],
+            ),
+        )
+    )
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -2974,6 +3034,25 @@ class TagUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.TagSerializer
     table_class = tables.TagTable
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                table_class=tables.TaggedItemTable,
+                table_title="Tagged Objects",
+                table_filter="tag",
+                select_related_fields=["content_type"],
+                prefetch_related_fields=["content_object"],
+            ),
+        ),
+    )
+
     def alter_queryset(self, request):
         queryset = super().alter_queryset(request)
 
@@ -2982,29 +3061,6 @@ class TagUIViewSet(NautobotUIViewSet):
             queryset = queryset.annotate(items=count_related(TaggedItem, "tag"))
 
         return queryset
-
-    def get_extra_context(self, request, instance):
-        # Only run this logic when retrieving a single object
-        if instance is None or self.action != "retrieve":
-            return super().get_extra_context(request, instance)
-        tagged_items = (
-            TaggedItem.objects.filter(tag=instance).select_related("content_type").prefetch_related("content_object")
-        )
-
-        # Generate a table of all items tagged with this Tag
-        items_table = tables.TaggedItemTable(tagged_items)
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(items_table)
-
-        return {
-            "items_count": tagged_items.count(),
-            "items_table": items_table,
-            "content_types": instance.content_types.order_by("app_label", "model"),
-            **super().get_extra_context(request, instance),
-        }
 
 
 #
