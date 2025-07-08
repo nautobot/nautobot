@@ -129,10 +129,10 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
             User.objects.create(username="User 4", is_active=True),
             User.objects.create(username="User 5", is_active=True),
         )
-        job_model = JobModel.objects.get_for_class_path("pass.TestPassJob")
+        job_model = JobModel.objects.get_for_class_path("pass_job.TestPassJob")
         cls.scheduled_job = ScheduledJob.objects.create(
             name="Test Pass Scheduled Job",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=cls.users[0],

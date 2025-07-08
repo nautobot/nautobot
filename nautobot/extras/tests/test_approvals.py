@@ -470,7 +470,7 @@ class ApprovalWorkflowTriggerAPITest(APITestCase):
         users = list(User.objects.all())
         for user in users:
             user.groups.add(approver_group_1)
-        self.job_model = models.Job.objects.get_for_class_path("pass.TestPassJob")
+        self.job_model = models.Job.objects.get_for_class_path("pass_job.TestPassJob")
         self.content_type = ContentType.objects.get_for_model(models.ScheduledJob)
         self.approval_workflow_def = models.ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow Definition",
@@ -506,7 +506,7 @@ class ApprovalWorkflowTriggerAPITest(APITestCase):
 
         scheduled_job = models.ScheduledJob.objects.create(
             name="test0",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=choices.JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
@@ -535,7 +535,7 @@ class ApprovalWorkflowTriggerAPITest(APITestCase):
 
         scheduled_job = models.ScheduledJob.objects.create(
             name="test1",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=choices.JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
@@ -561,7 +561,7 @@ class ApprovalWorkflowTriggerAPITest(APITestCase):
         """
         scheduled_job = models.ScheduledJob.objects.create(
             name="test2",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=choices.JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
@@ -593,7 +593,7 @@ class ApprovalWorkflowTriggerAPITest(APITestCase):
         """
         scheduled_job = models.ScheduledJob.objects.create(
             name="test3",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=choices.JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,

@@ -255,12 +255,12 @@ class ApprovalWorkflowViewTestCase(
         """Set up test data."""
         super().setUpTestData()
         cls.scheduledjob_ct = ContentType.objects.get_for_model(ScheduledJob)
-        job_model = Job.objects.get_for_class_path("pass.TestPassJob")
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
         user = User.objects.first()
         cls.scheduled_jobs = [
             ScheduledJob.objects.create(
                 name=f"TessPassJob Scheduled Job {i}",
-                task="pass.TestPassJob",
+                task="pass_job.TestPassJob",
                 job_model=job_model,
                 interval=JobExecutionType.TYPE_IMMEDIATELY,
                 user=user,
@@ -320,12 +320,12 @@ class ApprovalWorkflowStageViewTestCase(
         """Set up test data."""
         super().setUpTestData()
         cls.scheduledjob_ct = ContentType.objects.get_for_model(ScheduledJob)
-        job_model = Job.objects.get_for_class_path("pass.TestPassJob")
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
         user = User.objects.first()
         cls.scheduled_jobs = [
             ScheduledJob.objects.create(
                 name=f"TessPassJob Scheduled Job {i}",
-                task="pass.TestPassJob",
+                task="pass_job.TestPassJob",
                 job_model=job_model,
                 interval=JobExecutionType.TYPE_IMMEDIATELY,
                 user=user,
@@ -505,11 +505,11 @@ class ApprovalWorkflowStageResponseViewTestCase(
             for group in cls.approver_groups:
                 user.groups.add(group)
 
-        job_model = Job.objects.get_for_class_path("pass.TestPassJob")
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
         cls.scheduled_jobs = [
             ScheduledJob.objects.create(
                 name=f"TessPassJob Scheduled Job {i}",
-                task="pass.TestPassJob",
+                task="pass_job.TestPassJob",
                 job_model=job_model,
                 interval=JobExecutionType.TYPE_IMMEDIATELY,
                 user=cls.users[0],
@@ -2474,7 +2474,7 @@ class ScheduledJobTestCase(
             approval_required=True,
             approved_at=None,
             name="test4",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             start_time=timezone.now(),
@@ -2483,7 +2483,7 @@ class ScheduledJobTestCase(
             enabled=True,
             approval_required=False,
             name="test5",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             start_time=timezone.now(),
