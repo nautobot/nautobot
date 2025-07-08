@@ -809,18 +809,6 @@ def render_job_queues_list(value):
     return format_html("<ul>{}</ul>", items)
 
 
-def render_job_results_link(value):
-    """Returns a link to job results if any exist, or a placeholder."""
-    if not value or not value.exists():
-        return placeholder(None)
-
-    url = reverse("extras:jobresult_list")
-    query_param = f"?job_model={value.instance.name}"
-    count = value.count()
-
-    return format_html('<a href="{}{}">{}</a>', url, query_param, count)
-
-
 @library.filter()
 @register.filter()
 def label_list(value, suffix=""):

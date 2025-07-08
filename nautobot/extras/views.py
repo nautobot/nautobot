@@ -1574,10 +1574,13 @@ class JobView(generic.ObjectView):
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 label="Job",
-                fields=["grouping", "name", "description", "enabled", "job_results"],
-                value_transforms={
-                    "job_results": [helpers.render_job_results_link],
-                },
+                fields=["grouping", "name", "description", "enabled"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                table_class=tables.JobResultTable,
+                table_title="JobResults",
+                table_filter=["job_model"],
             ),
             object_detail.ObjectFieldsPanel(
                 weight=100,
@@ -1612,7 +1615,7 @@ class JobView(generic.ObjectView):
             ),
         ],
         extra_buttons=[
-            object_detail.Button(
+            object_detail.RunScheduleButton(
                 weight=100,
                 link_name="extras:job_run",
                 label="Run/Schedule",
