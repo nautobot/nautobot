@@ -63,6 +63,11 @@ class NamespaceTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = Namespace
+    custom_action_required_permissions = {
+        "ipam:namespace_vrfs": ["ipam.view_namespace", "ipam.view_vrf"],
+        "ipam:namespace_prefixes": ["ipam.view_namespace", "ipam.view_prefix"],
+        "ipam:namespace_ip_addresses": ["ipam.view_namespace", "ipam.view_ipaddress"],
+    }
 
     @classmethod
     def setUpTestData(cls):
