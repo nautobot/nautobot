@@ -3,15 +3,15 @@
 
 {% block extra_nav_tabs %}
     {% if wireless_networks_count %}
-        <li role="presentation"{% if request.GET.tab == 'wireless_networks' %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}#wireless_networks" onclick="switch_tab(this.href, reload=false)" aria-controls="wireless_networks" role="tab" data-toggle="tab">
+        <li role="presentation" class="nav-item">
+            <a href="{{ object.get_absolute_url }}#wireless_networks" onclick="switch_tab(this.href, reload=false)" aria-controls="wireless_networks" role="tab" data-toggle="tab" class="nav-link{% if request.GET.tab == 'wireless_networks' %} active{% endif %}">
                 Wireless Networks {% badge wireless_networks_count %}
             </a>
         </li>
     {% endif %}
     {% if radio_profiles_count %}
-        <li role="presentation"{% if request.GET.tab == 'radio_profiles' %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}#radio_profiles" onclick="switch_tab(this.href, reload=false)" aria-controls="radio_profiles" role="tab" data-toggle="tab">
+        <li role="presentation" class="nav-item">
+            <a href="{{ object.get_absolute_url }}#radio_profiles" onclick="switch_tab(this.href, reload=false)" aria-controls="radio_profiles" role="tab" data-toggle="tab" class="nav-link{% if request.GET.tab == 'radio_profiles' %} active{% endif %}">
                 Radio Profiles {% badge radio_profiles_count %}
             </a>
         </li>
