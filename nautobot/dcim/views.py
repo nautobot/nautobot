@@ -3913,10 +3913,13 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
             else:
                 formset = VCMemberFormSet(queryset=members_queryset)
 
+            vc_form = forms.VirtualChassisForm(instance=instance)
+            vc_form.fields["master"].queryset = members_queryset
+
             context.update(
                 {
                     "formset": formset,
-                    "vc_form": self.get_form_class()(instance=instance),
+                    "vc_form": vc_form,
                     "return_url": self.get_return_url(request, instance),
                 }
             )
@@ -3937,6 +3940,8 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
             if formset.is_valid():
                 with transaction.atomic():
                     members = formset.save(commit=False)
+                    # Nullify the vc_position of each member first to allow reordering without raising an IntegrityError on
+                    # duplicate positions. Then save each member instance.
                     Device.objects.filter(pk__in=[m.pk for m in members]).update(vc_position=None)
                     for member in members:
                         member.save()
@@ -3945,14 +3950,14 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
 
         return obj
 
-    def get_required_permission(self):
-        if getattr(self, "action", None) == "add_member":
-            return ["dcim.change_virtualchassis"]
-        elif getattr(self, "action", None) == "remove_member":
-            return ["dcim.change_device"]
-        return super().get_required_permission()
-
-    @action(detail=True, methods=["get", "post"], url_path="add-member", url_name="add_member")
+    @action(
+        detail=True,
+        methods=["get", "post"],
+        url_path="add-member",
+        url_name="add_member",
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.change_virtualchassis"],
+    )
     def add_member(self, request, pk=None):
         virtual_chassis = self.get_object()
 
