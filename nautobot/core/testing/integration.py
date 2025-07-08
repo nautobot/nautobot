@@ -166,7 +166,9 @@ class ObjectDetailsMixin:
         toggle_button = self.browser.find_by_xpath(toggle_button_xpath, wait_time=5)
         if toggle_button:
             # Our tab might be hidden
-            tab_xpath = f'{tabs_container_xpath}//ul[@data-clone="true"]/li/a[contains(normalize-space(), "{tab_name}")]'
+            tab_xpath = (
+                f'{tabs_container_xpath}//ul[@data-clone="true"]/li/a[contains(normalize-space(), "{tab_name}")]'
+            )
             visible_tab = self.browser.find_by_xpath(tab_xpath, wait_time=5)
             if visible_tab:
                 return visible_tab
