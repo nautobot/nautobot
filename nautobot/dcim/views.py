@@ -4745,7 +4745,6 @@ class ControllerUIViewSet(NautobotUIViewSet):
                         add_button_route=None,
                         select_related_fields=["wireless_network"],
                         exclude_columns=["controller"],
-                        include_paginator=True,
                     ),
                 ),
             ),
