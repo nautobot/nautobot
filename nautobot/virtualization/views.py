@@ -3,8 +3,7 @@ from django.db import transaction
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from rest_framework.decorators import action
-from rest_framework.response import Response
+from django.utils.functional import cached_property
 
 from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.ui import object_detail
@@ -14,6 +13,7 @@ from nautobot.core.views import generic
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
+from nautobot.extras.views import ObjectConfigContextView
 from nautobot.ipam.models import IPAddress, Service
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable
 from nautobot.virtualization.api import serializers
@@ -249,22 +249,14 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
     form_class = forms.VirtualMachineForm
     serializer_class = serializers.VirtualMachineSerializer
     table_class = tables.VirtualMachineDetailTable
-    queryset = VirtualMachine.objects.select_related("software_version", "tenant__tenant_group")
-
-    @action(detail=True)
-    def configcontext(self, request, *args, **kwargs):
-        """Custom detail view to show the config context."""
-        instance = self.get_object()
-        context = {
-            "object": instance,
-            "config_context": instance.get_config_context(),
-            "base_template": "virtualization/virtualmachine.html",
-        }
-        return Response(context)
+    queryset = VirtualMachine.objects.select_related(
+        "cluster", "role", "status", "tenant", "software_version", "tenant__tenant_group"
+    )
 
     def get_extra_context(self, request, instance):
         if not instance:
             return {}
+
         # Interfaces
         vminterfaces = (
             VMInterface.objects.restrict(request.user, "view")
@@ -301,6 +293,17 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
             "vrf_table": vrf_table,
             **super().get_extra_context(request, instance),
         }
+
+
+class VirtualMachineConfigContextView(ObjectConfigContextView):
+    base_template = "virtualization/virtualmachine.html"
+
+    @cached_property
+    def queryset(self):  # pylint: disable=method-hidden
+        """
+        A cached_property rather than a class attribute because annotate_config_context_data() is unsafe at import time.
+        """
+        return VirtualMachine.objects.annotate_config_context_data()
 
 
 #

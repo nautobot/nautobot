@@ -29,6 +29,11 @@ urlpatterns = [
     ),
     # Virtual machines
     path(
+        "virtual-machines/<uuid:pk>/config-context/",
+        views.VirtualMachineConfigContextView.as_view(),
+        name="virtualmachine_configcontext",
+    ),
+    path(
         "virtual-machines/<uuid:virtualmachine>/services/assign/",
         ServiceEditView.as_view(),
         name="virtualmachine_service_assign",
