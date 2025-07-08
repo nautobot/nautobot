@@ -102,8 +102,7 @@ class DeviceComponentModelFilterSetMixin(CustomFieldModelFilterSetMixin):
     )
 
 
-class ModularDeviceComponentModelFilterSetMixin(DeviceComponentModelFilterSetMixin,
-                                                RelationshipModelFilterSetMixin):
+class ModularDeviceComponentModelFilterSetMixin(DeviceComponentModelFilterSetMixin, RelationshipModelFilterSetMixin):
     module = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Module.objects.all(),
         to_field_name="module_type__model",
