@@ -1,1 +1,1 @@
-Added `RunScheduleButton` class to UI Component Framework.
+Added `JobRunScheduleButton` class to `nautobot.extras.views`.

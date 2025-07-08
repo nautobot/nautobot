@@ -1304,6 +1304,26 @@ class ImageAttachmentDeleteView(generic.ObjectDeleteView):
 #
 
 
+class JobRunScheduleButton(object_detail.Button):
+    """
+    A custom button for running or scheduling a job.
+
+    This button is rendered only if the user has the 'extras.run_job' permission.
+    It also disables itself (via HTML 'disabled' attribute) if the related object is not
+    installed or not enabled.
+    """
+
+    def get_extra_context(self, context):
+        """Inject dynamic attributes (e.g. 'disabled') based on object state into the rendering context."""
+        extra_context = super().get_extra_context(context)
+        obj = context.get("object")
+        if not obj.installed or not obj.enabled:
+            if extra_context["attributes"] is None:
+                extra_context["attributes"] = {}
+            extra_context["attributes"]["disabled"] = "disabled"
+        return extra_context
+
+
 class JobListView(generic.ObjectListView):
     """
     Retrieve all of the available jobs from disk and the recorded JobResult (if any) for each.
@@ -1571,13 +1591,14 @@ class JobView(generic.ObjectView):
                 ],
             ),
             object_detail.ObjectFieldsPanel(
-                weight=100,
+                weight=200,
                 section=SectionChoices.LEFT_HALF,
                 label="Job",
                 fields=["grouping", "name", "description", "enabled"],
             ),
             object_detail.ObjectsTablePanel(
                 weight=100,
+                section=SectionChoices.FULL_WIDTH,
                 table_class=tables.JobResultTable,
                 table_title="JobResults",
                 table_filter=["job_model"],
@@ -1615,7 +1636,7 @@ class JobView(generic.ObjectView):
             ),
         ],
         extra_buttons=[
-            object_detail.RunScheduleButton(
+            JobRunScheduleButton(
                 weight=100,
                 link_name="extras:job_run",
                 label="Run/Schedule",
