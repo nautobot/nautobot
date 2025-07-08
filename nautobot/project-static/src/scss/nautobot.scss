@@ -637,6 +637,7 @@ $s2bs5-clear-hover-bg:  transparent escape-svg($s2bs5-clear-icon) center / $s2bs
   .select2-selection--multiple {
     .select2-selection__rendered {
       .select2-selection__choice {
+        border-color: var(--#{$prefix}tertiary-color); /* Supposed to be the standard border color but on a special request it was darkened to improve contrast and readability. */
         line-height: $line-height-sm;
         overflow-x: hidden;
 
