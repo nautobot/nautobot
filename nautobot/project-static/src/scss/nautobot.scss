@@ -893,8 +893,38 @@ textarea {
   }
 }
 
+.form-check {
+  /* Bootstrap 5 uses floats as a workaround here. Nautobot makes it more manageable with `display: flex` instead. */
+  display: flex;
+
+  &:not(:last-child) {
+    margin-block-end: map.get($spacers, 10);
+  }
+
+  .form-check-input {
+    float: none;
+
+    ~ .form-check-label {
+      padding-inline-start: map.get($spacers, 10);
+    }
+  }
+}
+
+.form-check-reverse {
+  justify-content: flex-end;
+
+  .form-check-input {
+    order: 9999; /* In `reverse` configuration, make sure this element always goes to the right-hand side. */
+
+    ~ .form-check-label {
+      padding-inline-end: map.get($spacers, 10);
+    }
+  }
+}
+
 .form-check-input {
   @include transition($btn-transition);
+  margin-top: 0; /* Reset Bootstrap 5 who-knows-why top margin. */
 
   &:focus {
     background-color: var(--#{$prefix}primary-bg-subtle);
@@ -916,6 +946,18 @@ textarea {
     ~ .form-check-label {
       color: $input-disabled-color;
     }
+  }
+}
+
+.nb-form-group {
+  &:not(:last-child) {
+    margin-block-end: map.get($spacers, 10);
+  }
+
+  label {
+    font-size: $font-size-sm;
+    margin-block-end: map.get($spacers, 4);
+    margin-inline-start: map.get($spacers, 12);
   }
 }
 
