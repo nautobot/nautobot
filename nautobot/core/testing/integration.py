@@ -178,7 +178,9 @@ class ObjectDetailsMixin:
             tab_xpath = f'{toggle_button_xpath}/following-sibling::ul//a[contains(normalize-space(), "{tab_name}")]'
             return self.browser.find_by_xpath(tab_xpath, wait_time=5)
 
-        tab_xpath = f'//ul[@id="tabs"]//a[contains(normalize-space(), "{tab_name}")]'
+        tab_xpath = (
+            f'//ul[@data-nb-tests-id="object-details-header-tabs-ul"]//a[contains(normalize-space(), "{tab_name}")]'
+        )
         return self.browser.find_by_xpath(tab_xpath, wait_time=5)
 
 
