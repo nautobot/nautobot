@@ -1,1 +1,0 @@
-`ModuleTypes` can now be classified into a new `ModuleFamily` model. `ModuleBay` and `ModuleBayTemplates` can define a `ModuleFamily` they will accept.
