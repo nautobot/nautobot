@@ -10,4 +10,5 @@ Module bays contain a required `position` field that is unique to the parent dev
 
 Since module bays can be nested within modules, there are two fields on module bay, `parent_module` and `installed_module` to reduce confusion.
 
-Module bays may be assigned to a [module family](modulefamily.md), which limits the module types that may be installed in it.
++++ 2.4.11
+    Module bays may be assigned to a [module family](modulefamily.md), which limits the module types that may be installed in it.
