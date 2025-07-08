@@ -1,6 +1,9 @@
 {% load static %}
+{% load ui_framework %}
 
+{% render_title page_headings as title %}
 <div>
+    {% if title %}
     <h1 class="align-items-center d-flex fs-2 gap-8 lh-sm py-6">
         <img
             alt="Nautobot chevron"
@@ -9,7 +12,7 @@
             src="{% static 'img/nautobot_chevron.svg' %}"
             style="width: 1.5rem;"
         />
-        {% if copy_title %}
+        {% if view_action == 'retrieve' %}
         <span class="d-flex gap-4">
             <span id="copy_title">{{ title }}</span>
             <button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-text="{{ title }}">
@@ -21,6 +24,7 @@
             {{ title }}
         {% endif %}
     </h1>
+    {% endif %}
 
     {% if crumbs %}
         <nav aria-label="Breadcrumbs" class="mt-4">

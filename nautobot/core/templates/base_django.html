@@ -2,11 +2,13 @@
 {% load helpers %}
 {% load plugins %}
 {% load django_htmx %}
+{% load ui_framework %}
 
 <!DOCTYPE html>
 <html lang="en"{% with cookie_theme=request.COOKIES|get_item:'theme' %}{% if cookie_theme == 'dark' or cookie_theme == 'light' %} data-theme="{{cookie_theme}}" data-bs-theme="{{cookie_theme}}"{% endif %}{% endwith %}>
 <head>
-    <title>{% block title %}Home{% endblock %} - {{ settings.BRANDING_TITLE }}</title>
+    {% render_title document_titles as document_title %}
+    <title>{{ document_title|default:"Home" }} - {{ settings.BRANDING_TITLE }}</title>
     {% include 'inc/media.html' %}
     {% block extra_styles %}{% endblock %}
     {% htmx_script %}
@@ -44,7 +46,7 @@
         <div class="container-fluid mb-12 mt-16">
             <div class="row row-cols-3">
                 <div class="col">
-                    {% block breadcrumbs %}{% endblock breadcrumbs %}
+                    {% include 'inc/page_heading.html' %}
                 </div>
                 {% include 'inc/header.html' %}
             </div>

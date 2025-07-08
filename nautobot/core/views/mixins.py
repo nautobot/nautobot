@@ -41,6 +41,7 @@ from nautobot.core.forms import (
     restrict_form_fields,
 )
 from nautobot.core.jobs import BulkDeleteObjects, BulkEditObjects
+from nautobot.core.ui.titles import DocumentTitles, PageHeadings
 from nautobot.core.utils import filtering, lookup, permissions
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params, normalize_querydict
 from nautobot.core.views.renderers import NautobotHTMLRenderer
@@ -241,6 +242,23 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     table_class = None
     notes_form_class = NoteForm
     permission_classes = []
+    document_titles = None
+    page_headings = None
+
+    def get_document_titles(self):
+        if self.document_titles is None:
+            return DocumentTitles()
+        if isinstance(self.document_titles, type):
+            return self.document_titles()
+        return self.document_titles
+
+    def get_page_headings(self):
+        if self.page_headings is None:
+            return PageHeadings()
+        elif isinstance(self.page_headings, type):
+            return self.page_headings()
+        else:
+            return self.page_headings
 
     def get_permissions_for_model(self, model, actions):
         """

@@ -289,7 +289,18 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "table_config_form": TableConfigForm(table=table) if table else None,
             "verbose_name": queryset.model._meta.verbose_name,
             "verbose_name_plural": queryset.model._meta.verbose_name_plural,
+            "view_action": view.action,
+            "document_titles": view.get_document_titles(),
+            "page_headings": view.get_page_headings(),
         }
+
+        try:
+            context["document_titles"] = view.get_document_titles()
+            context["page_headings"] = view.get_page_headings()
+        except AttributeError:
+            context["document_titles"] = None
+            context["page_headings"] = None
+
         if view.detail:
             # If we are in a retrieve related detail view (retrieve and custom actions).
             try:
