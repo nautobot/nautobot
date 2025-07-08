@@ -167,7 +167,7 @@ class JobTest(TestCase):
         self.assertTrue(job_class.supports_dryrun)
         self.assertTrue(job_model.supports_dryrun)
 
-        module = "pass"
+        module = "pass_job"
         name = "TestPassJob"
         job_class, job_model = get_job_class_and_model(module, name)
         self.assertFalse(job_class.supports_dryrun)
@@ -212,7 +212,7 @@ register_jobs(MyJob)
                     self.assertIsNotNone(get_job("my_jobs.MyJob"))
                     # Also make sure some representative previous JOBS_ROOT jobs aren't still around:
                     self.assertNotIn("dry_run.TestDryRun", jobs_data.keys())
-                    self.assertNotIn("pass.TestPassJob", jobs_data.keys())
+                    self.assertNotIn("pass_job.TestPassJob", jobs_data.keys())
 
                     # Create a second Job in the same module
                     with open(os.path.join(temp_dir, "my_jobs.py"), "a") as fd:
@@ -285,6 +285,19 @@ register_jobs(BadJob)
         finally:
             # Clean up back to normal behavior
             get_jobs(reload=True)
+
+    def test_app_dynamic_jobs(self):
+        """
+        Test that get_job() correctly reloads dynamic jobs when `NautobotAppConfig.provides_dynamic_jobs` is True.
+        """
+        with mock.patch("nautobot.extras.jobs.get_jobs", autospec=True) as mock_get_jobs:
+            # example_app_with_view_override provides dynamic jobs
+            get_job("example_app_with_view_override.jobs.ExampleHiddenJob", reload=True)
+            mock_get_jobs.assert_called_once_with(reload=True)
+            mock_get_jobs.reset_mock()
+            # example_app does NOT provide dynamic jobs
+            get_job("example_app.jobs.ExampleEverythingJob", reload=True)
+            mock_get_jobs.assert_called_once_with(reload=False)
 
 
 class JobTransactionTest(TransactionTestCase):
@@ -423,7 +436,7 @@ class JobTransactionTest(TransactionTestCase):
         """
         Job test with pass result.
         """
-        module = "pass"
+        module = "pass_job"
         name = "TestPassJob"
         job_result = create_job_result_and_run_job(module, name)
         self.assertJobResultStatus(job_result)
@@ -693,7 +706,7 @@ class JobTransactionTest(TransactionTestCase):
         """
         Job test to see if the latest_result property is indeed returning the most recent job result
         """
-        module = "pass"
+        module = "pass_job"
         name = "TestPassJob"
         job_result_1 = create_job_result_and_run_job(module, name)
         self.assertJobResultStatus(job_result_1)
@@ -946,7 +959,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
 
     def test_runjob_nochange_successful(self):
         """Basic success-path test for Jobs that don't modify the Nautobot database."""
-        module = "pass"
+        module = "pass_job"
         name = "TestPassJob"
         _job_class, job_model = get_job_class_and_model(module, name)
 
@@ -1044,7 +1057,7 @@ class JobButtonReceiverTest(TestCase):
 
     def test_is_job_button(self):
         with self.subTest(expected=False):
-            module = "pass"
+            module = "pass_job"
             name = "TestPassJob"
             _job_class, job_model = get_job_class_and_model(module, name)
             self.assertFalse(job_model.is_job_button_receiver)
@@ -1107,7 +1120,7 @@ class JobHookReceiverTest(TestCase):
 
     def test_is_job_hook(self):
         with self.subTest(expected=False):
-            module = "pass"
+            module = "pass_job"
             name = "TestPassJob"
             _job_class, job_model = get_job_class_and_model(module, name)
             self.assertFalse(job_model.is_job_hook_receiver)
@@ -1269,7 +1282,7 @@ class RemoveScheduledJobManagementCommandTestCase(TestCase):
         for i in range(1, 7):
             models.ScheduledJob.objects.create(
                 name=f"test{i}",
-                task="pass.TestPassJob",
+                task="pass_job.TestPassJob",
                 interval=JobExecutionType.TYPE_FUTURE,
                 user=self.user,
                 start_time=timezone.now() - datetime.timedelta(days=i * 30),
@@ -1278,7 +1291,7 @@ class RemoveScheduledJobManagementCommandTestCase(TestCase):
 
         models.ScheduledJob.objects.create(
             name="test7",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_DAILY,
             user=self.user,
             start_time=timezone.now() - datetime.timedelta(days=180),
@@ -1306,7 +1319,7 @@ class ScheduledJobIntervalTestCase(TestCase):
         start_time = timezone.now() + datetime.timedelta(days=6)
         scheduled_job = models.ScheduledJob.objects.create(
             name="weekly_interval",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_WEEKLY,
             user=self.user,
             start_time=start_time,

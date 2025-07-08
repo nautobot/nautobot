@@ -1,0 +1,1 @@
+Changed JobResult list view default configuration to not calculate and show "summary" of log entries by default, as it is not performant at scale.

@@ -1,0 +1,1 @@
+Fixed issue where retrieving the username of the latest change log entry loaded large unrelated fields.

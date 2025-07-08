@@ -115,7 +115,7 @@
         const field_name = field_id.slice(3);
         if ($(this).prop("checked")) {
             field.attr("readonly", null);
-            field.attr("disabled", null);
+            field.prop("disabled", false);
         } else {
             /* Revert the field to its default value */
             if (field.attr("type") == "checkbox") {
@@ -131,11 +131,11 @@
                  * Note that "disabled" fields aren't included in form submission, so we have to be sure to
                  * re-enable them at form submission time.
                  */
-                field.attr("disabled", "disabled");
+                field.prop("disabled", true);
             } else {
                 /* Do we have a job class object to derive properties from? */
                 if (job_class_properties != "") {
-                    if (field_name != "job_queues") {
+                    if (field_name != "job_queues" && field_name != "default_job_queue") {
                         field.val(job_class_properties[field_name]);
                     }
                 } else if (field_name != "description") {
@@ -145,17 +145,23 @@
                     /* Textarea fields don't have a "value" attribute */
                     field.val(description_default);
                 }
-                field.attr("readonly", "readonly");
+                if (field_name == "job_queues" || field_name == "default_job_queue") {
+                    field.prop("disabled", true);
+                } else {
+                    field.attr("readonly", "readonly");
+                }
             }
         }
     });
     $("[id^=id_][id$=_override]").change();
 
-    /* As mentioned above, we need to re-enable all checkboxes on form submission so they get included */
+    /* As mentioned above, we need to re-enable all checkboxes, job_queues and default_job_queue fields on form submission so they get included */
     $("form").submit(function() {
         $('input[type="checkbox"]:disabled').each(function() {
-            $(this).attr("disabled", null);
+            $(this).prop("disabled", false);
         });
+        $('#id_job_queues').prop("disabled", false);
+        $('#id_default_job_queues').prop("disabled", false);
     });
 </script>
 {% endblock javascript %}
