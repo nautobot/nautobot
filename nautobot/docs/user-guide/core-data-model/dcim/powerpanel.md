@@ -5,7 +5,7 @@ A power panel represents a distribution point in Nautobot's electrical power hie
 Each power panel must be assigned to a location, and may optionally be assigned to a rack group.
 
 !!! info
-    Rack-level PDUs should not be modeled as power panels. Instead, they should be modeled as devices with [power outlets](./poweroutlet.md) that connect to power feeds from upstream power panels.
+    Rack-level PDUs should **not** be modeled as power panels. Instead, they should be modeled as devices with [power outlets](./poweroutlet.md) that connect to power feeds from upstream power panels.
 
 ## Panel Types
 
