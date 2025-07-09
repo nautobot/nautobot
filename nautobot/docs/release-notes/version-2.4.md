@@ -166,6 +166,72 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.11 (2025-07-07)
+
+### Security in v2.4.11
+
+- [#7440](https://github.com/nautobot/nautobot/issues/7440) - Updated `requests` to `2.32.4` to address `CVE-2024-47081`. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#7461](https://github.com/nautobot/nautobot/issues/7461) - Updated `Django` to 4.2.23 to further address `CVE-2025-48432`.
+- [#7487](https://github.com/nautobot/nautobot/issues/7487) - Updated `urllib3` to 2.5.0 due to `CVE-2025-50181` and `CVE-2025-50182`. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
+### Added in v2.4.11
+
+- [#6941](https://github.com/nautobot/nautobot/issues/6941) - `ModuleTypes` can now be classified into a new `ModuleFamily` model. `ModuleBay` and `ModuleBayTemplates` can define a `ModuleFamily` they will accept.
+- [#7007](https://github.com/nautobot/nautobot/issues/7007) - Added support for bulk-editing Webhook `additional_headers` and `body_template` fields.
+- [#7298](https://github.com/nautobot/nautobot/issues/7298) - Added a `provides_dynamic_jobs` setting to NautobotAppConfig and associated logic to reload app-provided jobs similar to Git repo jobs.
+
+### Changed in v2.4.11
+
+- [#7178](https://github.com/nautobot/nautobot/issues/7178) - Changed JobResult list view default configuration to not calculate and show "summary" of log entries by default, as it is not performant at scale.
+
+### Fixed in v2.4.11
+
+- [#6933](https://github.com/nautobot/nautobot/issues/6933) - Fixed Cable deleting via API.
+- [#7007](https://github.com/nautobot/nautobot/issues/7007) - Fixed an exception when bulk-editing Location `time_zone` values.
+- [#7038](https://github.com/nautobot/nautobot/issues/7038) - Fixed issue where approved scheduled jobs set to run "immediately" were not executed, by changing the `create_schedule` method in `ScheduledJob`.
+- [#7149](https://github.com/nautobot/nautobot/issues/7149) - Fixed `EXEMPT_VIEW_PERMISSIONS` causing an exception.
+- [#7307](https://github.com/nautobot/nautobot/issues/7307) - Fixed incorrect bulk-edit job and view logic around nulling out fields.
+- [#7307](https://github.com/nautobot/nautobot/issues/7307) - Fixed a number of incorrect `nullable_fields` entries on various bulk-edit forms.
+- [#7361](https://github.com/nautobot/nautobot/issues/7361) - Added a check in `refresh_job_code_from_repository()` to cause it to abort early if given a `repository_slug` that is invalid or conflicts with an installed Python package or Python built-in.
+- [#7361](https://github.com/nautobot/nautobot/issues/7361) - Fixed the code for loading Jobs from a GitRepository to only auto-import the `<repository_slug>` and `<repository_slug>.jobs` modules from `GIT_ROOT`, rather than loading all Python packages present in `GIT_ROOT`.
+- [#7361](https://github.com/nautobot/nautobot/issues/7361) - Fixed the code for loading Jobs from `JOBS_ROOT` and Git repositories to not import discovered packages/modules whose names are invalid as Python module names or whose names conflict with installed Python packages or Python built-ins. **This fix prevents some improper-but-previously-permitted names (e.g. `pass.py`, `nautobot.py`) from being imported.**
+- [#7361](https://github.com/nautobot/nautobot/issues/7361) - Added additional validation constraints on GitRepository `slug` to disallow values that would conflict with Python built-ins and keywords. **This fix will disallow some improper-but-previously-permitted slugs (e.g. `sys`, `pass`); you can run `nautobot-server validate_models extras.GitRepository` after upgrading to identify entries that should be deleted and recreated with a different slug.**
+- [#7427](https://github.com/nautobot/nautobot/issues/7427) - Fixed return URL for single "Remove cable" operations.
+- [#7460](https://github.com/nautobot/nautobot/issues/7460) - Added missing permission enforcement for custom actions in NautobotUIViewSet supported models.
+- [#7464](https://github.com/nautobot/nautobot/issues/7464) - Fixed issue where network driver help text and choices modal were missing in `Platform`.
+- [#7489](https://github.com/nautobot/nautobot/issues/7489) - Fixed broken Relationship "Move to advanced tab" functionality.
+- [#7503](https://github.com/nautobot/nautobot/issues/7503) - Fixed issue where retrieving the username of the latest change log entry loaded large unrelated fields.
+- [#7518](https://github.com/nautobot/nautobot/issues/7518) - Improved performance for the "utilization" column of the Prefix list view.
+- [#7528](https://github.com/nautobot/nautobot/issues/7528) - Fixed a typo in the RadioProfile model.
+
+### Dependencies in v2.4.11
+
+- [#7444](https://github.com/nautobot/nautobot/issues/7444) - Updated dependency `celery` to permit versions up to 5.5.x and `kombu` to permit versions up to 5.5.x as well. Due to concern about potential impacts of the upgrade, we have *not* yet updated the minimum Celery and Kombu versions required by Nautobot. This minimum version will likely be raised in a future release; in the interim, please upgrade Celery and Kombu and verify their operation in your local environment as befits your risk tolerance.
+
+### Documentation in v2.4.11
+
+- [#7469](https://github.com/nautobot/nautobot/issues/7469) - Updated sample Device Redundancy Group GraphQL queries with correct v2 field names.
+- [#7514](https://github.com/nautobot/nautobot/issues/7514) - Updated BootstrapMixin import location in secrets provider example docs.
+- [#7527](https://github.com/nautobot/nautobot/issues/7527) - Added Analytics GTM template override only to the public ReadTheDocs build.
+
+### Housekeeping in v2.4.11
+
+- [#7007](https://github.com/nautobot/nautobot/issues/7007) - Enhanced `test_bulk_edit_objects_with_permission` generic view test case to include validation that the provided `bulk_edit_data` was processed correctly and correctly passed through to the BulkEditObjects job.
+- [#7007](https://github.com/nautobot/nautobot/issues/7007) - Added `test_bulk_edit_objects_nullable_fields` generic view test case to verify correct definition and operation of `nullable_fields` on bulk edit forms.
+- [#7238](https://github.com/nautobot/nautobot/issues/7238) - Refactored InterfaceRedundancyGroup model related UI views to use `UI component framework`.
+- [#7258](https://github.com/nautobot/nautobot/issues/7258) - Refactored ControllerManagedDeviceGroup model related UI views to use `UI component framework`.
+- [#7303](https://github.com/nautobot/nautobot/issues/7303) - Refactored PowerFeed model related UI views to use `UI component framework`.
+- [#7346](https://github.com/nautobot/nautobot/issues/7346) - Refactored Location model related UI views to use `NautobotUIViewSet`.
+- [#7347](https://github.com/nautobot/nautobot/issues/7347) - Refactored RelationshipAssociation model related UI views to use `NautobotUIViewSet`.
+- [#7357](https://github.com/nautobot/nautobot/issues/7357) - Refactored Tag model related UI views to use `NautobotUIViewSet`.
+- [#7361](https://github.com/nautobot/nautobot/issues/7361) - Added unit tests for `import_modules_privately` utility method.
+- [#7409](https://github.com/nautobot/nautobot/issues/7409) - Refactored ConfigContext model related UI views to use `NautobotUIViewSet`.
+- [#7413](https://github.com/nautobot/nautobot/issues/7413) - Refactored VLAN model related UI views to use `NautobotUIViewSet`.
+- [#7421](https://github.com/nautobot/nautobot/issues/7421) - Refactored ConfigContextSchema model related UI views to use `NautobotUIViewSet`.
+- [#7450](https://github.com/nautobot/nautobot/issues/7450) - Removed deprecated sandbox deployment workflow.
+- [#7461](https://github.com/nautobot/nautobot/issues/7461) - Updated testing dependency `openapi-spec-validator` to `~0.7.2`.
+- [#7483](https://github.com/nautobot/nautobot/issues/7483) - Refactored ConfigContext model related UI views to use `UI component framework`.
+
 ## v2.4.10 (2025-06-09)
 
 ### Security in v2.4.10
