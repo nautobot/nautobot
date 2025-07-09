@@ -20,6 +20,7 @@ The [`django-storages`](https://django-storages.readthedocs.io/en/stable/) libra
 In `nautobot_config.py` define the following configuration:
 
 ```python
+# TODO (glennmatthews) STATICFILES_STORAGE is replaced with STORAGES["staticfiles"], need a similar pattern for Jobs
 STORAGE_BACKEND = "storages.backends.s3.S3Storage"
 
 STORAGE_CONFIG = {

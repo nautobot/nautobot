@@ -120,19 +120,19 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         kwargs = {"parent": [self.parent_location_1.name]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqual(qs, [self.child_location_1, self.child_location_same_name_1])
+        self.assertQuerySetEqual(qs, [self.child_location_1, self.child_location_same_name_1])
 
     def test_filter_single_pk(self):
         kwargs = {"parent": [self.parent_location_1.pk]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqual(qs, [self.child_location_1, self.child_location_same_name_1])
+        self.assertQuerySetEqual(qs, [self.child_location_1, self.child_location_same_name_1])
 
     def test_filter_multiple_name(self):
         kwargs = {"parent": [self.parent_location_1.name, self.parent_location_2.name]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             qs,
             [
                 self.child_location_1,
@@ -149,19 +149,19 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         kwargs = {"parent": [settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqual(qs, [self.child_location_0])
+        self.assertQuerySetEqual(qs, [self.child_location_0])
 
     def test_filter_combined_name(self):
         kwargs = {"parent": [self.parent_location_1.name, settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqual(qs, [self.child_location_0, self.child_location_1, self.child_location_same_name_1])
+        self.assertQuerySetEqual(qs, [self.child_location_0, self.child_location_1, self.child_location_same_name_1])
 
     def test_filter_combined_pk(self):
         kwargs = {"parent": [self.parent_location_2.pk, settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             qs,
             [
                 self.child_location_0,
@@ -176,7 +176,7 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         kwargs = {"parent__n": [self.parent_location_1.name]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             qs,
             [
                 self.child_location_0,
@@ -191,19 +191,19 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         kwargs = {"parent__n": [self.parent_location_2.pk]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqual(qs, [self.child_location_0, self.child_location_1, self.child_location_same_name_1])
+        self.assertQuerySetEqual(qs, [self.child_location_0, self.child_location_1, self.child_location_same_name_1])
 
     def test_filter_multiple_name_exclude(self):
         kwargs = {"parent__n": [self.parent_location_1.name, self.parent_location_2.name]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqual(qs, [self.child_location_0])
+        self.assertQuerySetEqual(qs, [self.child_location_0])
 
     def test_filter_null_exclude(self):
         kwargs = {"parent__n": [settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             qs,
             [
                 self.child_location_1,
@@ -220,7 +220,7 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         kwargs = {"parent__n": [self.parent_location_1.name, settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             qs,
             [self.child_location_2, self.child_location_2a, self.child_location_2ab, self.child_location_same_name_2],
         )
@@ -229,7 +229,7 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         kwargs = {"parent__n": [self.parent_location_2.pk, settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqual(qs, [self.child_location_1, self.child_location_same_name_1])
+        self.assertQuerySetEqual(qs, [self.child_location_1, self.child_location_same_name_1])
 
     def test_lookup_expr_param_ignored(self):
         """
@@ -277,32 +277,32 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
         kwargs = {"power_panels": ["test-power-panel1"]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqualAndNotEmpty(qs, [self.locations[0]])
+        self.assertQuerySetEqualAndNotEmpty(qs, [self.locations[0]])
 
     def test_filter_single_pk(self):
         kwargs = {"power_panels": [self.power_panel1.pk]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqualAndNotEmpty(qs, [self.locations[0]])
+        self.assertQuerySetEqualAndNotEmpty(qs, [self.locations[0]])
 
     def test_filter_multiple_name(self):
         kwargs = {"power_panels": ["test-power-panel1", "test-power-panel2"]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqualAndNotEmpty(qs, [self.locations[0], self.locations[1]])
+        self.assertQuerySetEqualAndNotEmpty(qs, [self.locations[0], self.locations[1]])
 
     def test_filter_duplicate_name(self):
         kwargs = {"power_panels": ["test-power-panel3"]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqualAndNotEmpty(qs, [self.locations[0], self.locations[1]])
+        self.assertQuerySetEqualAndNotEmpty(qs, [self.locations[0], self.locations[1]])
 
     def test_filter_null(self):
         kwargs = {"power_panels": [settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
         expected_result = dcim_models.Location.objects.filter(power_panels__isnull=True)
 
-        self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
+        self.assertQuerySetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_combined_name(self):
         kwargs = {"power_panels": ["test-power-panel1", settings.FILTERS_NULL_CHOICE_VALUE]}
@@ -311,7 +311,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
             power_panels__isnull=True
         ) | dcim_models.Location.objects.filter(power_panels__name__in=["test-power-panel1"])
 
-        self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
+        self.assertQuerySetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_combined_pk(self):
         kwargs = {"power_panels": [self.power_panel2.pk, settings.FILTERS_NULL_CHOICE_VALUE]}
@@ -320,21 +320,21 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
             power_panels__isnull=True
         ) | dcim_models.Location.objects.filter(power_panels__pk__in=[self.power_panel2.pk])
 
-        self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
+        self.assertQuerySetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_single_name_exclude(self):
         kwargs = {"power_panels__n": ["test-power-panel1"]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
         expected_result = dcim_models.Location.objects.exclude(power_panels__name__in=["test-power-panel1"])
 
-        self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
+        self.assertQuerySetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_single_pk_exclude(self):
         kwargs = {"power_panels__n": [self.power_panel2.pk]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
         expected_result = dcim_models.Location.objects.exclude(power_panels__pk__in=[self.power_panel2.pk])
 
-        self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
+        self.assertQuerySetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_multiple_name_exclude(self):
         kwargs = {"power_panels__n": ["test-power-panel1", "test-power-panel2"]}
@@ -343,32 +343,32 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
             power_panels__name__in=["test-power-panel2"]
         )
 
-        self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
+        self.assertQuerySetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_duplicate_name_exclude(self):
         kwargs = {"power_panels__n": ["test-power-panel3"]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
         expected_result = dcim_models.Location.objects.exclude(power_panels__name__in=["test-power-panel3"])
 
-        self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
+        self.assertQuerySetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_null_exclude(self):
         kwargs = {"power_panels__n": [settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqualAndNotEmpty(qs, [self.locations[0], self.locations[1]])
+        self.assertQuerySetEqualAndNotEmpty(qs, [self.locations[0], self.locations[1]])
 
     def test_filter_combined_name_exclude(self):
         kwargs = {"power_panels__n": ["test-power-panel1", settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqualAndNotEmpty(qs, [self.locations[1]])
+        self.assertQuerySetEqualAndNotEmpty(qs, [self.locations[1]])
 
     def test_filter_combined_pk_exclude(self):
         kwargs = {"power_panels__n": [self.power_panel2.pk, settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqualAndNotEmpty(qs, [self.locations[0]])
+        self.assertQuerySetEqualAndNotEmpty(qs, [self.locations[0]])
 
     def test_get_filter_predicate(self):
         """
@@ -379,7 +379,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
         uuid_obj = self.power_panel1.pk
         kwargs = {"power_panels": [uuid_obj]}
         fs = self.LocationFilterSet(kwargs, self.queryset)
-        self.assertQuerysetEqualAndNotEmpty(fs.qs, [self.locations[0]])
+        self.assertQuerySetEqualAndNotEmpty(fs.qs, [self.locations[0]])
         self.assertEqual(
             fs.filters["power_panels"].get_filter_predicate(uuid_obj),
             {"power_panels": str(uuid_obj)},
@@ -389,7 +389,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
         instance = self.power_panel1
         kwargs = {"power_panels": [instance]}
         fs = self.LocationFilterSet(kwargs, self.queryset)
-        self.assertQuerysetEqualAndNotEmpty(fs.qs, [self.locations[0]])
+        self.assertQuerySetEqualAndNotEmpty(fs.qs, [self.locations[0]])
         self.assertEqual(
             fs.filters["power_panels"].get_filter_predicate(instance),
             {"power_panels": str(instance.pk)},
@@ -399,7 +399,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
         name = self.power_panel1.name
         kwargs = {"power_panels": [name]}
         fs = self.LocationFilterSet(kwargs, self.queryset)
-        self.assertQuerysetEqualAndNotEmpty(fs.qs, [self.locations[0]])
+        self.assertQuerySetEqualAndNotEmpty(fs.qs, [self.locations[0]])
         self.assertEqual(
             fs.filters["power_panels"].get_filter_predicate(name),
             {"power_panels__name": name},
@@ -918,21 +918,21 @@ class DynamicFilterLookupExpressionTest(TestCase):
 
     def test_location_name_negation(self):
         params = {"name__n": ["Location 1"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
             dcim_models.Location.objects.exclude(name="Location 1"),
         )
 
     def test_location_name_icontains(self):
         params = {"name__ic": ["-1"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
             dcim_models.Location.objects.filter(name__icontains="-1"),
         )
 
     def test_location_name_icontains_negation(self):
         params = {"name__nic": ["-1"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
             dcim_models.Location.objects.exclude(name__icontains="-1"),
         )
@@ -940,7 +940,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
     def test_location_name_startswith(self):
         startswith = dcim_models.Location.objects.first().name[:3]
         params = {"name__isw": [startswith]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
             dcim_models.Location.objects.filter(name__istartswith=startswith),
         )
@@ -948,7 +948,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
     def test_location_name_startswith_negation(self):
         startswith = dcim_models.Location.objects.first().name[:3]
         params = {"name__nisw": [startswith]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
             dcim_models.Location.objects.exclude(name__icontains=startswith),
         )
@@ -956,7 +956,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
     def test_location_name_endswith(self):
         endswith = dcim_models.Location.objects.first().name[-2:]
         params = {"name__iew": [endswith]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
             dcim_models.Location.objects.filter(name__iendswith=endswith),
         )
@@ -964,35 +964,35 @@ class DynamicFilterLookupExpressionTest(TestCase):
     def test_location_name_endswith_negation(self):
         endswith = dcim_models.Location.objects.first().name[-2:]
         params = {"name__niew": [endswith]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
             dcim_models.Location.objects.exclude(name__iendswith=endswith),
         )
 
     def test_location_name_regex(self):
         params = {"name__re": ["-1$"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
             dcim_models.Location.objects.filter(name__regex="-1$"),
         )
 
     def test_location_name_regex_negation(self):
         params = {"name__nre": ["-1$"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
             dcim_models.Location.objects.exclude(name__regex="-1$"),
         )
 
     def test_location_name_iregex(self):
         params = {"name__ire": ["location"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
             dcim_models.Location.objects.filter(name__iregex="location"),
         )
 
     def test_location_name_iregex_negation(self):
         params = {"name__nire": ["location"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
             dcim_models.Location.objects.exclude(name__iregex="location"),
         )
@@ -1000,7 +1000,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
     def test_location_asn_lt(self):
         asn = dcim_models.Location.objects.filter(asn__isnull=False).first().asn
         params = {"asn__lt": [asn]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
             dcim_models.Location.objects.filter(asn__lt=asn),
         )
@@ -1008,7 +1008,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
     def test_location_asn_lte(self):
         asn = dcim_models.Location.objects.filter(asn__isnull=False).first().asn
         params = {"asn__lte": [asn]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
             dcim_models.Location.objects.filter(asn__lte=asn),
         )
@@ -1016,7 +1016,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
     def test_location_asn_gt(self):
         asn = dcim_models.Location.objects.filter(asn__isnull=False).first().asn
         params = {"asn__gt": [asn]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
             dcim_models.Location.objects.filter(asn__gt=asn),
         )
@@ -1024,77 +1024,77 @@ class DynamicFilterLookupExpressionTest(TestCase):
     def test_location_asn_gte(self):
         asn = dcim_models.Location.objects.filter(asn__isnull=False).first().asn
         params = {"asn__gte": [asn]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
             dcim_models.Location.objects.filter(asn__gte=asn),
         )
 
     def test_location_parent_negation(self):
         params = {"parent__n": [self.locations[0].parent.name]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
             dcim_models.Location.objects.exclude(parent__name__in=[self.locations[0].parent.name]),
         )
 
     def test_location_parent_id_negation(self):
         params = {"parent__n": [self.locations[0].parent.pk]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
             dcim_models.Location.objects.exclude(parent__in=[self.locations[0].parent.pk]),
         )
 
     def test_device_name_eq(self):
         params = {"name": ["Device 1"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             dcim_filters.DeviceFilterSet(params, self.device_queryset).qs,
             dcim_models.Device.objects.filter(name="Device 1"),
         )
 
     def test_device_name_negation(self):
         params = {"name__n": ["Device 1"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             dcim_filters.DeviceFilterSet(params, self.device_queryset).qs,
             dcim_models.Device.objects.exclude(name="Device 1"),
         )
 
     def test_device_name_startswith(self):
         params = {"name__isw": ["Device"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             dcim_filters.DeviceFilterSet(params, self.device_queryset).qs,
             dcim_models.Device.objects.filter(name__istartswith="Device"),
         )
 
     def test_device_name_startswith_negation(self):
         params = {"name__nisw": ["Device 1"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             dcim_filters.DeviceFilterSet(params, self.device_queryset).qs,
             dcim_models.Device.objects.exclude(name__istartswith="Device 1"),
         )
 
     def test_device_name_endswith(self):
         params = {"name__iew": [" 1"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             dcim_filters.DeviceFilterSet(params, self.device_queryset).qs,
             dcim_models.Device.objects.filter(name__iendswith=" 1"),
         )
 
     def test_device_name_endswith_negation(self):
         params = {"name__niew": [" 1"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             dcim_filters.DeviceFilterSet(params, self.device_queryset).qs,
             dcim_models.Device.objects.exclude(name__iendswith=" 1"),
         )
 
     def test_device_name_icontains(self):
         params = {"name__ic": [" 2"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             dcim_filters.DeviceFilterSet(params, self.device_queryset).qs,
             dcim_models.Device.objects.filter(name__icontains=" 2"),
         )
 
     def test_device_name_icontains_negation(self):
         params = {"name__nic": [" "]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             dcim_filters.DeviceFilterSet(params, self.device_queryset).qs,
             dcim_models.Device.objects.exclude(name__icontains=" "),
         )
@@ -1145,17 +1145,17 @@ class DynamicFilterLookupExpressionTest(TestCase):
 
     def test_device_comments_multiple_value_charfield(self):
         params = {"comments": ["Device 1 comments"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.DeviceFilterSetWithComments(params, self.device_queryset).qs,
             dcim_models.Device.objects.filter(comments="Device 1 comments"),
         )
         params = {"comments": ["Device 1 comments", "Device 2 comments"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.DeviceFilterSetWithComments(params, self.device_queryset).qs,
             dcim_models.Device.objects.filter(comments__in=["Device 1 comments", "Device 2 comments"]),
         )
         params = {"comments": ["Device 1 comments", "Device 2 comments", "Device 3 comments"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.DeviceFilterSetWithComments(params, self.device_queryset).qs,
             dcim_models.Device.objects.filter(
                 comments__in=["Device 1 comments", "Device 2 comments", "Device 3 comments"]
@@ -1164,28 +1164,28 @@ class DynamicFilterLookupExpressionTest(TestCase):
 
     def test_device_comments_multiple_value_charfield_regex(self):
         params = {"comments__re": ["^Device"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.DeviceFilterSetWithComments(params, self.device_queryset).qs,
             dcim_models.Device.objects.filter(comments__regex="^Device"),
         )
 
     def test_device_comments_multiple_value_charfield_regex_negation(self):
         params = {"comments__nre": ["^Device"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.DeviceFilterSetWithComments(params, self.device_queryset).qs,
             dcim_models.Device.objects.exclude(comments__regex="^Device"),
         )
 
     def test_device_comments_multiple_value_charfield_iregex(self):
         params = {"comments__ire": ["^device"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.DeviceFilterSetWithComments(params, self.device_queryset).qs,
             dcim_models.Device.objects.filter(comments__iregex="^device"),
         )
 
     def test_device_comments_multiple_value_charfield_iregex_negation(self):
         params = {"comments__nire": ["^device"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.DeviceFilterSetWithComments(params, self.device_queryset).qs,
             dcim_models.Device.objects.exclude(comments__iregex="^device"),
         )
@@ -1302,24 +1302,24 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
     def test_default_icontains(self):
         """Test a default search for an "icontains" value."""
         params = {"q": "Test Child Location"}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset_class(params, self.queryset).qs, self.queryset.filter(name__icontains="Test Child Location")
         )
         params = {"q": "Test Child Location 3"}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset_class(params, self.queryset).qs,
             self.queryset.filter(name__icontains="Test Child Location 3"),
         )
         # Trailing space should only match the first 3.
         params = {"q": "Test Child Location "}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset_class(params, self.queryset).qs, self.queryset.filter(name__icontains="Test Child Location ")
         )
 
     def test_default_exact(self):
         """Test a default search for an "exact" value."""
         params = {"q": "12345"}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset_class(params, self.queryset).qs, self.queryset.filter(asn__exact=12345)
         )
         asn = 1111111
@@ -1330,7 +1330,7 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
         last_location.asn = 1111111
         last_location.save()
         params = {"q": str(asn)}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset_class(params, self.queryset).qs, self.queryset.filter(asn__exact=asn)
         )
 
@@ -1339,11 +1339,11 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
         # Search is iexact so UUID search for lower/upper return the same result.
         obj_pk = str(self.child_location_1.pk)
         params = {"q": obj_pk.lower()}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset_class(params, self.queryset).qs, self.queryset.filter(id__iexact=obj_pk.lower())
         )
         params = {"q": obj_pk.upper()}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset_class(params, self.queryset).qs, self.queryset.filter(id__iexact=obj_pk.upper())
         )
 
@@ -1356,12 +1356,12 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
             q = filters.SearchFilter(filter_predicates={"asn": {"lookup_expr": "exact", "preprocessor": int}})
 
         params = {"q": "12345"}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             MyLocationFilterSet(params, self.queryset).qs, self.queryset.filter(asn__exact="12345")
         )
         params = {"q": "123"}
-        # Both querysets are empty so we dont use assertQuerysetEqualAndNotEmpty here.
-        self.assertQuerysetEqual(MyLocationFilterSet(params, self.queryset).qs, self.queryset.filter(asn__exact="123"))
+        # Both querysets are empty so we dont use assertQuerySetEqualAndNotEmpty here.
+        self.assertQuerySetEqual(MyLocationFilterSet(params, self.queryset).qs, self.queryset.filter(asn__exact="123"))
 
         # Further an invalid type (e.g. dict) will just result in the predicate for ASN to be skipped
         class MyLocationFilterSet2(dcim_filters.LocationFilterSet):
@@ -1370,7 +1370,7 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
             q = filters.SearchFilter(filter_predicates={"asn": {"lookup_expr": "exact", "preprocessor": dict}})
 
         params = {"q": "12345"}
-        # Both querysets are empty so we dont use assertQuerysetEqualAndNotEmpty here.
+        # Both querysets are empty so we dont use assertQuerySetEqualAndNotEmpty here.
         self.assertEqual(self.get_filterset_count(params, MyLocationFilterSet2), 0)
 
     def test_typed_icontains(self):
@@ -1385,11 +1385,11 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
 
         # Both searches should return the same results.
         params = {"q": "Test Child Location"}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             MyLocationFilterSet(params, self.queryset).qs, self.queryset.filter(name__icontains="Test Child Location")
         )
         params = {"q": "Test Child Location "}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             MyLocationFilterSet(params, self.queryset).qs, self.queryset.filter(name__icontains="Test Child Location")
         )
 
@@ -1492,12 +1492,12 @@ class LookupIsNullTest(TestCase, testing.NautobotTestCaseMixin):
     def test_isnull_on_fk(self):
         """Test that the `isnull` filter is applied for True and False queries on foreign key fields."""
         params = {"manufacturer__isnull": True}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             dcim_filters.PlatformFilterSet(params, self.platform_queryset).qs,
             dcim_models.Platform.objects.filter(manufacturer__isnull=True),
         )
         params = {"manufacturer__isnull": False}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             dcim_filters.PlatformFilterSet(params, self.platform_queryset).qs,
             dcim_models.Platform.objects.filter(manufacturer__isnull=False),
         )
@@ -1505,12 +1505,12 @@ class LookupIsNullTest(TestCase, testing.NautobotTestCaseMixin):
     def test_isnull_on_integer(self):
         """Test that the `isnull` filter is applied for True and False queries on integer fields."""
         params = {"commit_rate__isnull": True}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             CircuitFilterSet(params, self.circuit_queryset).qs,
             Circuit.objects.filter(commit_rate__isnull=True),
         )
         params = {"commit_rate__isnull": False}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             CircuitFilterSet(params, self.circuit_queryset).qs,
             Circuit.objects.filter(commit_rate__isnull=False),
         )
@@ -1518,12 +1518,12 @@ class LookupIsNullTest(TestCase, testing.NautobotTestCaseMixin):
     def test_isnull_on_date(self):
         """Test that the `isnull` filter is applied for True and False queries on datetime fields."""
         params = {"install_date__isnull": True}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             CircuitFilterSet(params, self.circuit_queryset).qs,
             Circuit.objects.filter(install_date__isnull=True),
         )
         params = {"install_date__isnull": False}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             CircuitFilterSet(params, self.circuit_queryset).qs,
             Circuit.objects.filter(install_date__isnull=False),
         )
@@ -1531,12 +1531,12 @@ class LookupIsNullTest(TestCase, testing.NautobotTestCaseMixin):
     def test_isnull_on_char(self):
         """Test that the `isnull` filter is applied for True and False queries on char fields."""
         params = {"name__isnull": True}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             dcim_filters.DeviceFilterSet(params, self.device_queryset).qs,
             dcim_models.Device.objects.filter(name__isnull=True),
         )
         params = {"name__isnull": False}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             dcim_filters.DeviceFilterSet(params, self.device_queryset).qs,
             dcim_models.Device.objects.filter(name__isnull=False),
         )

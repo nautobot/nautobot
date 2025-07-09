@@ -41,13 +41,13 @@ celery = "~5.5.3"
 # Added as an explicit dependency to protect against various CVEs in older versions.
 cryptography = "~44.0.3"
 # Fundamental web framework for Nautobot
-Django = "~4.2.22"
+Django = "~5.2.4"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
 django-auth-ldap = {version = "~5.1.0", optional = true}
 # Base functionality for task scheduling with Celery
-django-celery-beat = "~2.6.0"
+django-celery-beat = "~2.8.1"
 # Provides a database backend & models for Celery task results
 django-celery-results = "~2.5.1"
 # Management of app configuration via the Django admin UI

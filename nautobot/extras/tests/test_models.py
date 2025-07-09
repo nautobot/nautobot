@@ -2327,7 +2327,7 @@ class RoleTest(ModelTestCases.BaseModelTestCase):
         ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
 
         roles = Role.objects.filter(content_types__in=[device_ct, ipaddress_ct])
-        self.assertQuerysetEqualAndNotEmpty(Role.objects.get_for_models([Device, IPAddress]), roles)
+        self.assertQuerySetEqualAndNotEmpty(Role.objects.get_for_models([Device, IPAddress]), roles)
 
 
 class SavedViewTest(ModelTestCases.BaseModelTestCase):

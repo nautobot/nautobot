@@ -1514,9 +1514,9 @@ class DynamicGroupTestCase(
         new_group = DynamicGroup.objects.get(name="Root Locations")
         self.assertEqual(new_group.content_type, location_ct)
         self.assertEqual(new_group.group_type, DynamicGroupTypeChoices.TYPE_STATIC)
-        self.assertQuerysetEqualAndNotEmpty(Location.objects.filter(parent__isnull=True), new_group.members)
-        self.assertQuerysetEqualAndNotEmpty(Location.objects.filter(parent__isnull=True), group_1.members)
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(Location.objects.filter(parent__isnull=True), new_group.members)
+        self.assertQuerySetEqualAndNotEmpty(Location.objects.filter(parent__isnull=True), group_1.members)
+        self.assertQuerySetEqualAndNotEmpty(
             Location.objects.filter(name__startswith="Root").exclude(parent__isnull=True), group_2.members
         )
 

@@ -9,10 +9,11 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms import SimpleArrayField
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist, ValidationError
 from django.db.models import Q
-from django.forms.fields import BoundField, CallableChoiceIterator, InvalidJSONInput, JSONField as _JSONField
+from django.forms.fields import BoundField, InvalidJSONInput, JSONField as _JSONField
 from django.templatetags.static import static
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
+from django.utils.choices import CallableChoiceIterator
 from django.utils.html import format_html
 import django_filters
 from netaddr import EUI

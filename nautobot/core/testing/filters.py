@@ -107,14 +107,14 @@ class FilterTestCases:
                 expected_queryset = self.queryset.filter(id__in=params["id"])
                 filterset = self.filterset(params, self.queryset)  # pylint: disable=not-callable  # see assertion above
                 self.assertTrue(filterset.is_valid())
-                self.assertQuerysetEqualAndNotEmpty(filterset.qs.order_by("id"), expected_queryset.order_by("id"))
+                self.assertQuerySetEqualAndNotEmpty(filterset.qs.order_by("id"), expected_queryset.order_by("id"))
 
             with self.subTest("Assert negate lookup"):
                 params = {"id__n": list(self.queryset.values_list("pk", flat=True)[:2])}
                 expected_queryset = self.queryset.exclude(id__in=params["id__n"])
                 filterset = self.filterset(params, self.queryset)  # pylint: disable=not-callable  # see assertion above
                 self.assertTrue(filterset.is_valid())
-                self.assertQuerysetEqualAndNotEmpty(filterset.qs.order_by("id"), expected_queryset.order_by("id"))
+                self.assertQuerySetEqualAndNotEmpty(filterset.qs.order_by("id"), expected_queryset.order_by("id"))
 
             with self.subTest("Assert invalid lookup"):
                 params = {"id__in": list(self.queryset.values_list("pk", flat=True)[:2])}
@@ -205,7 +205,7 @@ class FilterTestCases:
                     params = {filter_name: test_data}
                     filterset_result = self.filterset(params, self.queryset).qs  # pylint: disable=not-callable
                     qs_result = self.queryset.filter(**{f"{field_name}__in": test_data}).distinct()
-                    self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result, ordered=False)
+                    self.assertQuerySetEqualAndNotEmpty(filterset_result, qs_result, ordered=False)
 
         def test_boolean_filters_generic(self):
             """Test all `RelatedMembershipBooleanFilter` filters found in `self.filterset.get_filters()`
@@ -224,11 +224,11 @@ class FilterTestCases:
                 with self.subTest(f"{self.filterset.__name__} RelatedMembershipBooleanFilter {filter_name} (True)"):
                     filterset_result = self.filterset({filter_name: True}, self.queryset).qs  # pylint: disable=not-callable
                     qs_result = self.queryset.filter(**{f"{field_name}__isnull": filter_object.exclude}).distinct()
-                    self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
+                    self.assertQuerySetEqualAndNotEmpty(filterset_result, qs_result)
                 with self.subTest(f"{self.filterset.__name__} RelatedMembershipBooleanFilter {filter_name} (False)"):
                     filterset_result = self.filterset({filter_name: False}, self.queryset).qs  # pylint: disable=not-callable
                     qs_result = self.queryset.exclude(**{f"{field_name}__isnull": filter_object.exclude}).distinct()
-                    self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
+                    self.assertQuerySetEqualAndNotEmpty(filterset_result, qs_result)
 
         def test_tags_filter(self):
             """Test the `tags` filter which should be present on all PrimaryModel filtersets."""
@@ -256,7 +256,7 @@ class FilterTestCases:
             filterset_result = self.filterset(params, self.queryset).qs  # pylint: disable=not-callable
             # Tags is an AND filter not an OR filter
             qs_result = self.queryset.filter(tags=tags[0]).filter(tags=tags[1]).distinct()
-            self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
+            self.assertQuerySetEqualAndNotEmpty(filterset_result, qs_result)
 
         def _assert_valid_filter_predicates(self, obj, field_name):
             self.assertTrue(
@@ -328,7 +328,7 @@ class FilterTestCases:
             filterset_result = self.filterset(params, self.queryset)  # pylint: disable=not-callable
 
             self.assertTrue(filterset_result.is_valid())
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 filterset_result.qs,
                 model_queryset,
                 ordered=False,
@@ -430,11 +430,11 @@ class FilterTestCases:
         def test_tenant(self):
             tenants = list(models.Tenant.objects.filter(**{f"{self.tenancy_related_name}__isnull": False}))[:2]
             params = {"tenant_id": [tenants[0].pk, tenants[1].pk]}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(tenant__in=tenants), ordered=False
             )
             params = {"tenant": [tenants[0].name, tenants[1].name]}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(tenant__in=tenants), ordered=False
             )
 
@@ -449,14 +449,14 @@ class FilterTestCases:
                 tenant_groups_including_children += tenant_group.descendants(include_self=True)
 
             params = {"tenant_group": [tenant_groups[0].pk, tenant_groups[1].pk]}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(tenant__tenant_group__in=tenant_groups_including_children),
                 ordered=False,
             )
 
             params = {"tenant_group": [tenant_groups[0].name, tenant_groups[1].name]}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(tenant__tenant_group__in=tenant_groups_including_children),
                 ordered=False,

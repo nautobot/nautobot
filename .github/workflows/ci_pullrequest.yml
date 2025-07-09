@@ -83,7 +83,7 @@ jobs:
       NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.postgresql"
     services:
       postgres:
-        image: "postgres:13-alpine"
+        image: "postgres:14-alpine"
         env:
           POSTGRES_USER: "nautobot"
           POSTGRES_PASSWORD: "decinablesprewad"
@@ -112,7 +112,7 @@ jobs:
       NAUTOBOT_CONFIG: "nautobot/core/tests/nautobot_config.py"
     services:
       postgres:
-        image: "postgres:13-alpine"
+        image: "postgres:14-alpine"
         env:
           POSTGRES_USER: "nautobot"
           POSTGRES_PASSWORD: "decinablesprewad"
@@ -141,7 +141,7 @@ jobs:
       NAUTOBOT_CONFIG: "nautobot/core/tests/nautobot_config.py"
     services:
       postgres:
-        image: "postgres:13-alpine"
+        image: "postgres:14-alpine"
         env:
           POSTGRES_USER: "nautobot"
           POSTGRES_PASSWORD: "decinablesprewad"
@@ -169,7 +169,7 @@ jobs:
       NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.postgresql"
     services:
       postgres:
-        image: "postgres:13-alpine"
+        image: "postgres:14-alpine"
         env:
           POSTGRES_USER: "nautobot"
           POSTGRES_PASSWORD: "decinablesprewad"
@@ -295,7 +295,7 @@ jobs:
       PGPASSWORD: "decinablesprewad"
     services:
       postgres:
-        image: "postgres:13-alpine"
+        image: "postgres:14-alpine"
         env:
           POSTGRES_USER: "nautobot"
           POSTGRES_PASSWORD: "decinablesprewad"
@@ -330,7 +330,7 @@ jobs:
       NAUTOBOT_SELENIUM_URL: "http://localhost:4444/wd/hub"
     services:
       postgres:
-        image: "postgres:13-alpine"
+        image: "postgres:14-alpine"
         env:
           POSTGRES_USER: "nautobot"
           POSTGRES_PASSWORD: "decinablesprewad"

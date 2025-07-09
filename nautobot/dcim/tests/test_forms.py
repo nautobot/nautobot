@@ -425,7 +425,7 @@ class InterfaceTestCase(NautobotTestCaseMixin, TestCase):
             model=Interface,
             data={"pks": [interface.pk for interface in interfaces]},
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             edit_form.fields["untagged_vlan"].queryset,
             bulk_edit_form.fields["untagged_vlan"].queryset,
         )

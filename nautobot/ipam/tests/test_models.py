@@ -460,24 +460,24 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
                 pfx.locations.set(locations)
 
         with self.subTest("Assert filtering and excluding `location`"):
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 Prefix.objects.filter(location=locations[0]),
                 Prefix.objects.filter(locations__in=[locations[0]]),
             )
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 Prefix.objects.exclude(location=locations[0]),
                 Prefix.objects.exclude(locations__in=[locations[0]]),
             )
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 Prefix.objects.filter(location__in=[locations[0]]),
                 Prefix.objects.filter(locations__in=[locations[0]]),
             )
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 Prefix.objects.exclude(location__in=[locations[0]]),
                 Prefix.objects.exclude(locations__in=[locations[0]]),
             )
 
-        # We use `assertQuerysetEqualAndNotEmpty` for test validation. Including a nullable field could lead
+        # We use `assertQuerySetEqualAndNotEmpty` for test validation. Including a nullable field could lead
         # to flaky tests where querysets might return None, causing tests to fail. Therefore, we select
         # fields that consistently contain values to ensure reliable filtering.
         query_params = ["name", "location_type", "status"]
@@ -485,11 +485,11 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         for field_name in query_params:
             with self.subTest(f"Assert location__{field_name} query."):
                 value = getattr(locations[0], field_name)
-                self.assertQuerysetEqualAndNotEmpty(
+                self.assertQuerySetEqualAndNotEmpty(
                     Prefix.objects.filter(**{f"location__{field_name}": value}),
                     Prefix.objects.filter(**{f"locations__{field_name}": value}),
                 )
-                self.assertQuerysetEqualAndNotEmpty(
+                self.assertQuerySetEqualAndNotEmpty(
                     Prefix.objects.exclude(**{f"location__{field_name}": value}),
                     Prefix.objects.exclude(**{f"locations__{field_name}": value}),
                 )
@@ -721,8 +721,8 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             IPAddress.objects.create(address="10.0.2.1/24", status=self.status, namespace=self.namespace),
             IPAddress.objects.create(address="10.0.3.1/24", status=self.status, namespace=self.namespace),
         )
-        self.assertQuerysetEqualAndNotEmpty(parent_prefix.ip_addresses.all(), parent_prefix.get_child_ips())
-        self.assertQuerysetEqualAndNotEmpty(parent_prefix.ip_addresses.all(), parent_prefix.get_all_ips())
+        self.assertQuerySetEqualAndNotEmpty(parent_prefix.ip_addresses.all(), parent_prefix.get_child_ips())
+        self.assertQuerySetEqualAndNotEmpty(parent_prefix.ip_addresses.all(), parent_prefix.get_all_ips())
         child_ip_pks = {p.pk for p in parent_prefix.ip_addresses.all()}
         # Global container should return all children
         self.assertSetEqual(child_ip_pks, {ips[0].pk, ips[1].pk, ips[2].pk, ips[3].pk})
@@ -733,8 +733,8 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             IPAddress.objects.create(address="20.0.4.0/31", status=self.status, namespace=self.namespace),
             IPAddress.objects.create(address="20.0.4.1/31", status=self.status, namespace=self.namespace),
         )
-        self.assertQuerysetEqualAndNotEmpty(parent_prefix_31.ip_addresses.all(), parent_prefix_31.get_child_ips())
-        self.assertQuerysetEqualAndNotEmpty(parent_prefix_31.ip_addresses.all(), parent_prefix_31.get_all_ips())
+        self.assertQuerySetEqualAndNotEmpty(parent_prefix_31.ip_addresses.all(), parent_prefix_31.get_child_ips())
+        self.assertQuerySetEqualAndNotEmpty(parent_prefix_31.ip_addresses.all(), parent_prefix_31.get_all_ips())
         child_ip_pks = {p.pk for p in parent_prefix_31.ip_addresses.all()}
         self.assertSetEqual(child_ip_pks, {ips_31[0].pk, ips_31[1].pk})
 
@@ -838,10 +838,10 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         )
         IPAddress.objects.create(address="::0102:0304/128", status=self.status, namespace=self.namespace)
         IPAddress.objects.create(address="1.2.3.4/32", status=self.status, namespace=self.namespace)
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             prefix_v6.get_all_ips(), IPAddress.objects.filter(ip_version=6, parent__namespace=self.namespace)
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             prefix_v4.get_all_ips(), IPAddress.objects.filter(ip_version=4, parent__namespace=self.namespace)
         )
 
@@ -859,14 +859,14 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             IPAddress.objects.create(address=f"10.0.0.{i}/32", status=self.status, namespace=self.namespace)
 
         # Assert differing behavior of get_all_ips() versus get_child_ips() for the /24 and /26 prefixes
-        self.assertQuerysetEqual(prefix.get_child_ips(), IPAddress.objects.none())
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqual(prefix.get_child_ips(), IPAddress.objects.none())
+        self.assertQuerySetEqualAndNotEmpty(
             prefix.get_all_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24")
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             slash26.get_child_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24")
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             slash26.get_all_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24")
         )
 
@@ -880,14 +880,14 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         IPAddress.objects.create(address="10.0.0.0/32", status=self.status, namespace=self.namespace)
         IPAddress.objects.create(address="10.0.0.63/32", status=self.status, namespace=self.namespace)
 
-        self.assertQuerysetEqual(prefix.get_child_ips(), IPAddress.objects.none())
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqual(prefix.get_child_ips(), IPAddress.objects.none())
+        self.assertQuerySetEqualAndNotEmpty(
             prefix.get_all_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24")
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             slash26.get_child_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24")
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             slash26.get_all_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24")
         )
 
@@ -907,31 +907,31 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
 
         # Further distinguishing between get_child_ips() and get_all_ips():
         IPAddress.objects.create(address="10.0.0.64/32", status=self.status, namespace=self.namespace)
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             prefix.get_child_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.64/26")
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             prefix.get_all_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24")
         )
 
         slash27 = Prefix.objects.create(prefix="10.0.0.0/27", status=self.status, namespace=self.namespace)
         self.assertEqual(slash27.get_utilization(), (32, 32))
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             prefix.get_child_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.64/26")
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             prefix.get_all_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24")
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             slash26.get_child_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.32/27")
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             slash26.get_all_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/26")
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             slash27.get_child_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/27")
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             slash27.get_all_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/27")
         )
 
@@ -1645,24 +1645,24 @@ class TestVLAN(ModelTestCases.BaseModelTestCase):
         location = VLAN.objects.filter(locations__isnull=False).first().locations.first()
 
         with self.subTest("Assert filtering and excluding `location`"):
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 VLAN.objects.filter(location=location),
                 VLAN.objects.filter(locations__in=[location]),
             )
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 VLAN.objects.exclude(location=location),
                 VLAN.objects.exclude(locations__in=[location]),
             )
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 VLAN.objects.filter(location__in=[location]),
                 VLAN.objects.filter(locations__in=[location]),
             )
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 VLAN.objects.exclude(location__in=[location]),
                 VLAN.objects.exclude(locations__in=[location]),
             )
 
-        # We use `assertQuerysetEqualAndNotEmpty` for test validation. Including a nullable field could lead
+        # We use `assertQuerySetEqualAndNotEmpty` for test validation. Including a nullable field could lead
         # to flaky tests where querysets might return None, causing tests to fail. Therefore, we select
         # fields that consistently contain values to ensure reliable filtering.
         query_params = ["name", "location_type", "status"]
@@ -1670,11 +1670,11 @@ class TestVLAN(ModelTestCases.BaseModelTestCase):
         for field_name in query_params:
             with self.subTest(f"Assert location__{field_name} query."):
                 value = getattr(location, field_name)
-                self.assertQuerysetEqualAndNotEmpty(
+                self.assertQuerySetEqualAndNotEmpty(
                     VLAN.objects.filter(**{f"location__{field_name}": value}),
                     VLAN.objects.filter(**{f"locations__{field_name}": value}),
                 )
-                self.assertQuerysetEqualAndNotEmpty(
+                self.assertQuerySetEqualAndNotEmpty(
                     VLAN.objects.exclude(**{f"location__{field_name}": value}),
                     VLAN.objects.exclude(**{f"locations__{field_name}": value}),
                 )

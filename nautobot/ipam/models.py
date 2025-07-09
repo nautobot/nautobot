@@ -586,9 +586,9 @@ class Prefix(PrimaryModel):
             "network",
             "prefix_length",
         )
-        index_together = [
-            ["network", "broadcast", "prefix_length"],
-            ["namespace", "network", "broadcast", "prefix_length"],
+        indexes = [
+            models.Index(fields=("network", "broadcast", "prefix_length")),
+            models.Index(fields=("namespace", "network", "broadcast", "prefix_length")),
         ]
         unique_together = ["namespace", "network", "prefix_length"]
         verbose_name_plural = "prefixes"

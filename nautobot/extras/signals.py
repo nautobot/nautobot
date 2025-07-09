@@ -7,12 +7,12 @@ import traceback
 import uuid
 
 from db_file_storage.model_utils import delete_file
-from db_file_storage.storage import DatabaseFileStorage
-from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
-from django.core.files.storage import get_storage_class
+
+# TODO: removed in Django 5.1
+# from django.core.files.storage import get_storage_class
 from django.db import transaction
 from django.db.models.signals import m2m_changed, post_delete, post_migrate, post_save, pre_delete, pre_save
 from django.dispatch import receiver
@@ -575,7 +575,9 @@ post_save.connect(dynamic_group_update_cached_members, sender=DynamicGroupMember
 @receiver(pre_delete, sender=JobResult)
 def job_result_delete_associated_files(instance, **kwargs):
     """For each related FileProxy, make sure its file gets deleted correctly from disk or database."""
-    if get_storage_class(settings.JOB_FILE_IO_STORAGE) == DatabaseFileStorage:
+    # TODO: removed in Django 5.1
+    # if get_storage_class(settings.JOB_FILE_IO_STORAGE) == DatabaseFileStorage:
+    if True:
         for file_proxy in instance.files.all():
             delete_file(file_proxy, "file")
     else:

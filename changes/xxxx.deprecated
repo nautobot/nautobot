@@ -1,0 +1,1 @@
+Following upstream Django patterns, the test helper method `assertQuerysetEqualAndNotEmpty` has been renamed to `assertQuerySetEqualAndNotEmpty`. The old method name is still available but is deprecated and will be removed in a future release.

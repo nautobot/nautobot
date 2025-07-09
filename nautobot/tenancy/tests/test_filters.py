@@ -30,12 +30,12 @@ class TenantGroupTestCase(FilterTestCases.FilterTestCase):
     def test_parent(self):
         parent_groups = TenantGroup.objects.filter(children__isnull=False)
         params = {"parent": [parent_groups[0].pk, parent_groups[1].pk]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             TenantGroup.objects.filter(parent__in=[parent_groups[0], parent_groups[1]]),
         )
         params = {"parent": [parent_groups[0].name, parent_groups[1].name]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             TenantGroup.objects.filter(parent__in=[parent_groups[0], parent_groups[1]]),
         )
@@ -44,7 +44,7 @@ class TenantGroupTestCase(FilterTestCases.FilterTestCase):
         """Test the `children` filter."""
         child_groups = TenantGroup.objects.filter(parent__isnull=False)
         params = {"children": [child_groups[0].pk, child_groups[1].name]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             TenantGroup.objects.filter(children__in=[child_groups[0], child_groups[1]]).distinct(),
         )
@@ -129,19 +129,19 @@ class TenantTestCase(FilterTestCases.FilterTestCase):
         for group in groups:
             groups_including_children += group.descendants(include_self=True)
         params = {"tenant_group": [groups[0].pk, groups[1].pk]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(tenant_group__in=groups_including_children),
         )
         params = {"tenant_group": [groups[0].name, groups[1].name]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(tenant_group__in=groups_including_children),
         )
 
     def test_locations(self):
         params = {"locations": [self.locations[0].pk, self.locations[1].name]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(locations__in=[self.locations[0], self.locations[1]]).distinct(),
         )
@@ -150,7 +150,7 @@ class TenantTestCase(FilterTestCases.FilterTestCase):
         """Test filtering by prefix strings as an alternative to pk."""
         prefix = self.queryset.filter(prefixes__isnull=False).first().prefixes.first()
         params = {"prefixes": [prefix.prefix]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(prefixes__network=prefix.network, prefixes__prefix_length=prefix.prefix_length),
             ordered=False,

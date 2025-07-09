@@ -989,13 +989,13 @@ class PathEndpointModelTestMixin:
     def test_connected(self):
         with self.subTest():
             params = {"connected": True}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(_path__is_active=True),
             )
         with self.subTest():
             params = {"connected": False}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(Q(_path__isnull=True) | Q(_path__is_active=False)),
             )
@@ -1088,7 +1088,7 @@ class LocationFilterSetTestCase(FilterTestCases.FilterTestCase, FilterTestCases.
         params = {"subtree": [self.loc1.name, self.nested_loc.pk]}
         expected = Location.objects.get(name=self.loc1.name).descendants(include_self=True)
         expected |= Location.objects.get(name=self.nested_loc.name).descendants(include_self=True)
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected.distinct())
+        self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected.distinct())
 
     def test_child_location_type(self):
         params = {"child_location_type": ["Room", LocationType.objects.get(name="Floor").pk]}
@@ -1098,14 +1098,14 @@ class LocationFilterSetTestCase(FilterTestCases.FilterTestCase, FilterTestCases.
             location_type__in=[LocationType.objects.get(name="Room"), LocationType.objects.get(name="Floor")],
             location_type__nestable=True,
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, Location.objects.filter(query_params)
         )
 
     def test_content_type(self):
         params = {"content_type": ["dcim.device"]}
         ct = ContentType.objects.get_for_model(Device)
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             Location.objects.filter(location_type__content_types=ct),
         )
@@ -1189,7 +1189,7 @@ class RackGroupTestCase(FilterTestCases.FilterTestCase):
             params = Q(location__pk__in=pk_list)
             expected_queryset = RackGroup.objects.filter(params)
             params = {"ancestors": [self.loc3.pk]}
-            self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected_queryset)
+            self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected_queryset)
         with self.subTest():
             pk_list = []
             parent_locations = self.loc2.ancestors(include_self=True)
@@ -1197,7 +1197,7 @@ class RackGroupTestCase(FilterTestCases.FilterTestCase):
             params = Q(location__pk__in=pk_list)
             expected_queryset = RackGroup.objects.filter(params)
             params = {"ancestors": [self.loc2.pk]}
-            self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected_queryset)
+            self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected_queryset)
 
 
 class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
@@ -1380,13 +1380,13 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
         # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
         with self.subTest():
             params = {"is_full_depth": True}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(is_full_depth=True),
             )
         with self.subTest():
             params = {"is_full_depth": False}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(is_full_depth=False),
             )
@@ -1396,13 +1396,13 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
         # 2.0 TODO: Support filtering for multiple values
         with self.subTest():
             params = {"subdevice_role": [SubdeviceRoleChoices.ROLE_PARENT]}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(subdevice_role=SubdeviceRoleChoices.ROLE_PARENT),
             )
         with self.subTest():
             params = {"subdevice_role": [SubdeviceRoleChoices.ROLE_CHILD]}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(subdevice_role=SubdeviceRoleChoices.ROLE_CHILD),
             )
@@ -1411,13 +1411,13 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
         # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
         with self.subTest():
             params = {"console_ports": True}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.exclude(console_port_templates__isnull=True),
             )
         with self.subTest():
             params = {"console_ports": False}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.exclude(console_port_templates__isnull=False),
             )
@@ -1426,13 +1426,13 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
         # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
         with self.subTest():
             params = {"console_server_ports": True}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.exclude(console_server_port_templates__isnull=True),
             )
         with self.subTest():
             params = {"console_server_ports": False}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.exclude(console_server_port_templates__isnull=False),
             )
@@ -1441,13 +1441,13 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
         # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
         with self.subTest():
             params = {"power_ports": True}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.exclude(power_port_templates__isnull=True),
             )
         with self.subTest():
             params = {"power_ports": False}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.exclude(power_port_templates__isnull=False),
             )
@@ -1456,13 +1456,13 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
         # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
         with self.subTest():
             params = {"power_outlets": True}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.exclude(power_outlet_templates__isnull=True),
             )
         with self.subTest():
             params = {"power_outlets": False}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.exclude(power_outlet_templates__isnull=False),
             )
@@ -1471,13 +1471,13 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
         # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
         with self.subTest():
             params = {"interfaces": True}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.exclude(interface_templates__isnull=True),
             )
         with self.subTest():
             params = {"interfaces": False}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.exclude(interface_templates__isnull=False),
             )
@@ -1487,13 +1487,13 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
         query = Q(front_port_templates__isnull=False, rear_port_templates__isnull=False)
         with self.subTest():
             params = {"pass_through_ports": True}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(query).distinct(),
             )
         with self.subTest():
             params = {"pass_through_ports": False}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(~query).distinct(),
             )
@@ -1502,13 +1502,13 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
         # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
         with self.subTest():
             params = {"device_bays": True}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.exclude(device_bay_templates__isnull=True),
             )
         with self.subTest():
             params = {"device_bays": False}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.exclude(device_bay_templates__isnull=False),
             )
@@ -1586,13 +1586,13 @@ class InterfaceTemplateTestCase(ModularComponentTemplateTestMixin, FilterTestCas
         # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
         with self.subTest():
             params = {"mgmt_only": True}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(**params),
             )
         with self.subTest():
             params = {"mgmt_only": False}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(**params),
             )
@@ -1610,7 +1610,7 @@ class FrontPortTemplateTestCase(ModularComponentTemplateTestMixin, FilterTestCas
     def test_type(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
         params = {"type": [PortTypeChoices.TYPE_8P8C]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(type=PortTypeChoices.TYPE_8P8C),
         )
@@ -1641,7 +1641,7 @@ class RearPortTemplateTestCase(ModularComponentTemplateTestMixin, FilterTestCase
     def test_type(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
         params = {"type": [PortTypeChoices.TYPE_8P8C]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(type=PortTypeChoices.TYPE_8P8C),
         )
@@ -1649,7 +1649,7 @@ class RearPortTemplateTestCase(ModularComponentTemplateTestMixin, FilterTestCase
     def test_positions(self):
         positions = [1, 2]
         params = {"positions": positions}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(positions__in=positions),
         )
@@ -1688,7 +1688,7 @@ class PlatformTestCase(FilterTestCases.FilterTestCase):
     def test_network_driver(self):
         drivers = ["driver_1", "driver_3"]
         params = {"network_driver": drivers}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, Platform.objects.filter(network_driver__in=drivers)
         )
 
@@ -1871,7 +1871,7 @@ class DeviceTestCase(
     def test_face(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
         params = {"face": [DeviceFaceChoices.FACE_FRONT]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             Device.objects.filter(face=DeviceFaceChoices.FACE_FRONT),
         )
@@ -1880,13 +1880,13 @@ class DeviceTestCase(
         # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
         with self.subTest():
             params = {"is_full_depth": True}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 Device.objects.filter(device_type__is_full_depth=True),
             )
         with self.subTest():
             params = {"is_full_depth": False}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 Device.objects.filter(device_type__is_full_depth=False),
             )
@@ -1905,13 +1905,13 @@ class DeviceTestCase(
         # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
         with self.subTest():
             params = {"has_primary_ip": True}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 Device.objects.filter(Q(primary_ip4__isnull=False) | Q(primary_ip6__isnull=False)),
             )
         with self.subTest():
             params = {"has_primary_ip": False}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 Device.objects.filter(primary_ip4__isnull=True, primary_ip6__isnull=True),
             )
@@ -1919,7 +1919,7 @@ class DeviceTestCase(
     def test_ip_addresses(self):
         addresses = list(IPAddress.objects.filter(interfaces__isnull=False)[:2])
         params = {"ip_addresses": [addresses[0].address, addresses[1].id]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(interfaces__ip_addresses__in=addresses).distinct(),
         )
@@ -1928,13 +1928,13 @@ class DeviceTestCase(
         # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
         with self.subTest():
             params = {"virtual_chassis_member": True}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 Device.objects.filter(virtual_chassis__isnull=False),
             )
         with self.subTest():
             params = {"virtual_chassis_member": False}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 Device.objects.filter(virtual_chassis__isnull=True),
             )
@@ -1943,13 +1943,13 @@ class DeviceTestCase(
         # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
         with self.subTest():
             params = {"is_virtual_chassis_member": True}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 Device.objects.filter(virtual_chassis__isnull=False),
             )
         with self.subTest():
             params = {"is_virtual_chassis_member": False}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 Device.objects.filter(virtual_chassis__isnull=True),
             )
@@ -1958,13 +1958,13 @@ class DeviceTestCase(
         # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
         with self.subTest():
             params = {"local_config_context_data": True}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 Device.objects.filter(local_config_context_data__isnull=False),
             )
         with self.subTest():
             params = {"local_config_context_data": False}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 Device.objects.filter(local_config_context_data__isnull=True),
             )
@@ -2457,13 +2457,13 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
         # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
         with self.subTest():
             params = {"enabled": True}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(**params),
             )
         with self.subTest():
             params = {"enabled": False}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(**params),
             )
@@ -2472,13 +2472,13 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
         # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
         with self.subTest():
             params = {"mgmt_only": True}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(**params),
             )
         with self.subTest():
             params = {"mgmt_only": False}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(**params),
             )
@@ -2534,7 +2534,7 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
         # Capture the first device so that we can use it in the next test.
         device = Device.objects.get(pk=devices[0].pk)
         with self.subTest():
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 queryset,
                 self.queryset.filter(pk__in=device.common_vc_interfaces.values_list("pk", flat=True)),
             )
@@ -2689,7 +2689,7 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
     def test_ip_addresses(self):
         addresses = list(IPAddress.objects.filter(interfaces__isnull=False)[:2])
         params = {"ip_addresses": [addresses[0].address, addresses[1].id]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(ip_addresses__in=addresses).distinct(),
         )
@@ -2699,13 +2699,13 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
         # 2.0 TODO: Support filtering for multiple values
         with self.subTest():
             params = {"kind": "physical"}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.exclude(type__in=NONCONNECTABLE_IFACE_TYPES),
             )
         with self.subTest():
             params = {"kind": "virtual"}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(type__in=VIRTUAL_IFACE_TYPES),
             )
@@ -2717,7 +2717,7 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
             Q(interfaces_as_untagged__isnull=False) | Q(interfaces_as_tagged__isnull=False)
         ).first()
         params = {"vlan": vlan.vid}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs, self.queryset.filter(Q(untagged_vlan=vlan) | Q(tagged_vlans=vlan))
         )
 
@@ -2728,7 +2728,7 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
             Q(interfaces_as_untagged__isnull=False) | Q(interfaces_as_tagged__isnull=False)
         ).first()
         params = {"vlan_id": vlan.id}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs, self.queryset.filter(Q(untagged_vlan=vlan) | Q(tagged_vlans=vlan))
         )
 
@@ -3483,7 +3483,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
         tenants = list(Tenant.objects.filter(devices__isnull=False))[:2]
         with self.subTest():
             params = {"tenant_id": [tenants[0].pk, tenants[1].pk]}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(
                     Q(_termination_a_device__tenant__in=tenants) | Q(_termination_b_device__tenant__in=tenants)
@@ -3491,7 +3491,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             )
         with self.subTest():
             params = {"tenant": [tenants[0].name, tenants[1].name]}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(
                     Q(_termination_a_device__tenant__in=tenants) | Q(_termination_b_device__tenant__in=tenants)
@@ -3633,7 +3633,7 @@ class PowerFeedTestCase(PathEndpointModelTestMixin, FilterTestCases.FilterTestCa
     def test_type(self):
         # TODO: Not a generic_filter_test because this field only has 2 valid choices
         params = {"type": [PowerFeedTypeChoices.TYPE_PRIMARY]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(type=PowerFeedTypeChoices.TYPE_PRIMARY),
         )
@@ -3641,7 +3641,7 @@ class PowerFeedTestCase(PathEndpointModelTestMixin, FilterTestCases.FilterTestCa
     def test_supply(self):
         # TODO: Not a generic_filter_test because this field only has 2 valid choices
         params = {"supply": [PowerFeedSupplyChoices.SUPPLY_AC]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(supply=PowerFeedSupplyChoices.SUPPLY_AC),
         )
@@ -3649,7 +3649,7 @@ class PowerFeedTestCase(PathEndpointModelTestMixin, FilterTestCases.FilterTestCa
     def test_phase(self):
         # TODO: Not a generic_filter_test because this field only has 2 valid choices
         params = {"phase": [PowerFeedPhaseChoices.PHASE_3PHASE]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(phase=PowerFeedPhaseChoices.PHASE_3PHASE),
         )
@@ -3683,13 +3683,13 @@ class DeviceRedundancyGroupTestCase(FilterTestCases.FilterTestCase):
         # 2.0 TODO: Support filtering for multiple values
         with self.subTest():
             params = {"failover_strategy": ["active-active"]}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 DeviceRedundancyGroup.objects.filter(failover_strategy="active-active"),
             )
         with self.subTest():
             params = {"failover_strategy": ["active-passive"]}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 DeviceRedundancyGroup.objects.filter(failover_strategy="active-passive"),
             )
@@ -3763,13 +3763,13 @@ class InterfaceRedundancyGroupTestCase(FilterTestCases.FilterTestCase):
     def test_virtual_ip(self):
         with self.subTest():
             params = {"virtual_ip": [self.ips[0].pk, self.ips[1].pk]}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 InterfaceRedundancyGroup.objects.filter(virtual_ip__in=params["virtual_ip"]),
             )
         with self.subTest():
             params = {"virtual_ip": [str(self.ips[2].address), str(self.ips[3].address)]}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 InterfaceRedundancyGroup.objects.filter(virtual_ip__in=[self.ips[2], self.ips[3]]),
             )
@@ -3881,11 +3881,11 @@ class SoftwareImageFileFilterSetTestCase(FilterTestCases.FilterTestCase):
 
     def test_default_image(self):
         params = {"default_image": True}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, SoftwareImageFile.objects.filter(default_image=True)
         )
         params = {"default_image": False}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, SoftwareImageFile.objects.filter(default_image=False)
         )
 
@@ -3934,24 +3934,24 @@ class SoftwareVersionFilterSetTestCase(FilterTestCases.FilterTestCase):
 
     def test_long_term_support(self):
         params = {"long_term_support": True}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             SoftwareVersion.objects.filter(long_term_support=True),
         )
         params = {"long_term_support": False}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             SoftwareVersion.objects.filter(long_term_support=False),
         )
 
     def test_pre_release(self):
         params = {"pre_release": True}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             SoftwareVersion.objects.filter(pre_release=True),
         )
         params = {"pre_release": False}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             SoftwareVersion.objects.filter(pre_release=False),
         )
@@ -4190,26 +4190,26 @@ class VirtualDeviceContextTestCase(FilterTestCases.FilterTestCase, FilterTestCas
         # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
         with self.subTest():
             params = {"has_primary_ip": True}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 VirtualDeviceContext.objects.filter(Q(primary_ip4__isnull=False) | Q(primary_ip6__isnull=False)),
             )
         with self.subTest():
             params = {"has_primary_ip": False}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 VirtualDeviceContext.objects.filter(primary_ip4__isnull=True, primary_ip6__isnull=True),
             )
 
     def test_primary_ip4(self):
         params = {"primary_ip4": ["192.0.2.1/24", self.ips_v4[0].pk]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, VirtualDeviceContext.objects.filter(primary_ip4=self.ips_v4[0])
         )
 
     def test_primary_ip6(self):
         params = {"primary_ip6": ["fe80::8ef:3eff:fe4c:3895/24", self.ips_v6[1].pk]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, VirtualDeviceContext.objects.filter(primary_ip6=self.ips_v6[1])
         )
 

@@ -58,7 +58,7 @@ Nautobot v3.0.0 and later requires the following:
 | Dependency | Minimum Version |
 | ---------- | --------------- |
 | Python     | 3.10            |
-| PostgreSQL | 12.0            |
+| PostgreSQL | 14.0            |
 | Redis      | 4.0             |
 
 --- 2.1.0
@@ -68,7 +68,8 @@ Nautobot v3.0.0 and later requires the following:
     Support for Python 3.8 was removed.
 
 --- 3.0.0
-    Support for Python 3.9 was removed.
+    - Support for Python 3.9 was removed.
+    - Support for versions of PostgreSQL older than 14.0 was removed.
 
 Nautobot v1.1.0 and later can optionally support the following:
 
@@ -76,7 +77,10 @@ Nautobot v1.1.0 and later can optionally support the following:
 
 | Dependency | Minimum Version |
 | ---------- | --------------- |
-| MySQL      | 8.0             |
+| MySQL      | 8.0.11          |
+
+--- 3.0.0
+    - Support for versions of MySQL older than 8.0.11 was removed.
 
 !!! tip
     If you wish to migrate from PostgreSQL to MySQL, we recommend creating a new Nautobot installation based on MySQL and then [migrating the database contents to the new installation](../migration/migrating-from-postgresql.md), rather than attempting an in-place upgrade or migration.

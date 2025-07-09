@@ -8,7 +8,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.core.files.storage import get_storage_class
+
+# TODO: removed in Django 5.1
+# from django.core.files.storage import get_storage_class
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -598,7 +600,9 @@ def database_storage():
 
 
 def _job_storage():
-    return get_storage_class(settings.JOB_FILE_IO_STORAGE)()
+    # TODO: removed in Django 5.1
+    # return get_storage_class(settings.JOB_FILE_IO_STORAGE)()
+    return DatabaseFileStorage()
 
 
 def _upload_to(instance, filename):
@@ -608,7 +612,9 @@ def _upload_to(instance, filename):
     Because django-db-file-storage has specific requirements for this path to configure the FileAttachment model,
     this needs to inspect which storage backend is in use in order to make the right determination.
     """
-    if get_storage_class(settings.JOB_FILE_IO_STORAGE) == DatabaseFileStorage:
+    # TODO: removed in Django 5.1
+    # if get_storage_class(settings.JOB_FILE_IO_STORAGE) == DatabaseFileStorage:
+    if True:
         # must be a string of the form
         # "<app_label>.<ModelName>/<data field name>/<filename field name>/<mimetype field name>/filename"
         return f"extras.FileAttachment/bytes/filename/mimetype/{filename}"
