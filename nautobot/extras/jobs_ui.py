@@ -172,12 +172,12 @@ class JobKeyValueOverrideValueTablePanel(KeyValueTablePanel):
                         key=helpers.slugify(key),
                         value=value_display,
                     )
-            result += format_html(
-                "<tr><td>{}</td><td>{}</td><td>{}</td></tr>",
-                key_display,
-                value_tag,
-                override_value_display,
-            )
+                result += format_html(
+                    "<tr><td>{}</td><td>{}</td><td>{}</td></tr>",
+                    key_display,
+                    value_tag,
+                    override_value_display,
+                )
 
         return result
 
