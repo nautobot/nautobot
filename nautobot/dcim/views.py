@@ -16,10 +16,10 @@ from django.forms import (
     MultipleHiddenInput,
 )
 from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 from django.utils.encoding import iri_to_uri
 from django.utils.functional import cached_property
-from django.utils.html import format_html,format_html_join
+from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import View
 from django_tables2 import RequestConfig
@@ -54,10 +54,14 @@ from nautobot.core.views.mixins import (
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.views.utils import (
+    get_obj_from_context,
+)
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
+from nautobot.extras.tables import ImageAttachmentTable
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable, VRFTable
@@ -251,9 +255,6 @@ class LocationTypeUIViewSet(NautobotUIViewSet):
 # Locations
 #
 
-from nautobot.core.views.utils import (
-    get_obj_from_context,
-)
 
 class CustomLocationFieldsPanel(object_detail.ObjectFieldsPanel):
     def get_data(self, context):
@@ -270,21 +271,13 @@ class CustomLocationFieldsPanel(object_detail.ObjectFieldsPanel):
     def render_value(self, key, value, context):
         if key == "GPS Coordinates":
             if value != "Not available":
-                lat, lon = value.split(', ')
-                return format_html(
-                    '{}<span>{}</span>',
-                    helpers.render_map_button(f"{lat},{lon}"),
-                    value
-                )
+                lat, lon = value.split(", ")
+                return format_html("{}<span>{}</span>", helpers.render_map_button(f"{lat},{lon}"), value)
             return format_html('<span class="text-muted">&mdash;</span>')
 
         if key == "physical_address":
             if value:
-                return format_html(
-                    '{}<span>{}</span>',
-                    helpers.render_map_button(value),
-                    value.replace('\n', '<br>')
-                )
+                return format_html("{}<span>{}</span>", helpers.render_map_button(value), value.replace("\n", "<br>"))
             return format_html('<span class="text-muted">&mdash;</span>')
 
         return super().render_value(key, value, context)
@@ -303,13 +296,14 @@ class CustomContactInfoPanel(object_detail.ObjectFieldsPanel):
         button_html = helpers.render_footer_button(
             f"{reverse('dcim:location_migrate_data_to_contact', kwargs={'pk': obj.pk})}?return_url={return_url}",
             "mdi-account-edit",
-            "Convert to contact/team record"
+            "Convert to contact/team record",
         )
 
         if "</div>" in base_content:
             parts = base_content.rsplit("</div>", 1)
             return format_html(f"{parts[0]}{button_html}</div>")
         return base_content
+
 
 class CustomRackGroupsPanel(object_detail.ObjectFieldsPanel):  # ✅ Not ObjectFieldsPanel
     def render(self, context):
@@ -322,32 +316,57 @@ class CustomRackGroupsPanel(object_detail.ObjectFieldsPanel):  # ✅ Not ObjectF
 
         rows = []
         for rg in rack_groups:
-            rows.append(helpers.render_rack_row(
-                getattr(rg, "tree_depth", 0) * 8,
-                rg.get_absolute_url(),
-                str(rg),
-                rg.rack_count,
-                f"{reverse('dcim:rack_elevation_list')}?rack_group={rg.pk}"
-            ))
+            rows.append(
+                helpers.render_rack_row(
+                    getattr(rg, "tree_depth", 0) * 8,
+                    rg.get_absolute_url(),
+                    str(rg),
+                    rg.rack_count,
+                    f"{reverse('dcim:rack_elevation_list')}?rack_group={rg.pk}",
+                )
+            )
 
-        rows.append(helpers.render_rack_row(
-            10,
-            "#",
-            "All racks",
-            stats.get("rack_count", 0),
-            f"{reverse('dcim:rack_elevation_list')}?location={obj.pk}"
-        ))
+        rows.append(
+            helpers.render_rack_row(
+                10,
+                "#",
+                "All racks",
+                stats.get("rack_count", 0),
+                f"{reverse('dcim:rack_elevation_list')}?location={obj.pk}",
+            )
+        )
 
         return format_html(
-            '''
+            """
             <div class="panel panel-default">
                 <div class="panel-heading"><strong>Rack Groups</strong></div>
                 <table class="table table-hover panel-body">{}</table>
             </div>
-            ''',
-            format_html_join('', '{}', ((row,) for row in rows))
+            """,
+            format_html_join("", "{}", ((row,) for row in rows)),
         )
 
+
+class LocationImagesTablePanel(object_detail.ObjectsTablePanel):
+    """
+    Custom table panel for Location Images that correctly passes `object_id` to reverse().
+    """
+
+    def _get_table_add_url(self, context):
+        obj = get_obj_from_context(context)
+        request = context["request"]
+        return_url = context.get("return_url", obj.get_absolute_url())
+        if self.tab_id:
+            return_url += f"?tab={self.tab_id}"
+
+        if self.add_button_route and request.user.has_perms(self.add_permissions or []):
+            try:
+                add_route = reverse(self.add_button_route, kwargs={"object_id": str(obj.pk)})
+                return f"{add_route}?return_url={return_url}"
+            except NoReverseMatch:
+                logger.warning(f"Add route `{self.add_button_route}` could not be reversed with object_id={obj.pk}.")
+
+        return None
 
 
 class LocationUIViewSet(NautobotUIViewSet):
@@ -366,9 +385,14 @@ class LocationUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
                 exclude_fields=[
-                    "parent", "physical_address", "shipping_address",
-                    "latitude", "longitude",
-                    "contact_name", "contact_phone", "contact_email",
+                    "parent",
+                    "physical_address",
+                    "shipping_address",
+                    "latitude",
+                    "longitude",
+                    "contact_name",
+                    "contact_phone",
+                    "contact_email",
                 ],
             ),
             CustomLocationFieldsPanel(
@@ -415,8 +439,17 @@ class LocationUIViewSet(NautobotUIViewSet):
                 table_attribute="children",
                 related_field_name="parent",
                 order_by_fields=["name"],
-                
-            )
+            ),
+            LocationImagesTablePanel(
+                table_title="Images",
+                section=SectionChoices.RIGHT_HALF,
+                table_class=ImageAttachmentTable,
+                table_attribute="image_attachments",
+                related_field_name="object_id",
+                weight=300,
+                add_button_route="dcim:location_add_image",
+                add_permissions=["extras.add_imageattachment"],
+            ),
         )
     )
 
@@ -424,17 +457,18 @@ class LocationUIViewSet(NautobotUIViewSet):
         if not instance:
             return {}
 
-        related_locations = instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
+        related_locations = (
+            instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
+        )
 
         return {
-            "rack_groups": RackGroup.objects.annotate(
-                rack_count=count_related(Rack, "rack_group")
-            ).restrict(request.user, "view").filter(location__in=related_locations),
+            "rack_groups": RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group"))
+            .restrict(request.user, "view")
+            .filter(location__in=related_locations),
             "stats": {
                 "rack_count": Rack.objects.restrict(request.user, "view").filter(location__in=related_locations).count()
-            }
+            },
         }
-    
 
 
 class MigrateLocationDataToContactView(generic.ObjectEditView):

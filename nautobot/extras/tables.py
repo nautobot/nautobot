@@ -38,6 +38,7 @@ from .models import (
     ExternalIntegration,
     GitRepository,
     GraphQLQuery,
+    ImageAttachment,
     Job as JobModel,
     JobButton,
     JobHook,
@@ -704,6 +705,45 @@ def log_entry_color_css(record):
     if record.log_level.lower() in ("failure", "error", "critical"):
         return "danger"
     return record.log_level.lower()
+
+
+class ImageAttachmentTable(BaseTable):
+    pk = ToggleColumn()
+
+    name = tables.TemplateColumn(
+        template_code="""
+        <i class="mdi mdi-file-image"></i>
+        <a class="image-preview" href="{{ record.image.url }}" target="_blank">{{ record }}</a>
+        """,
+        verbose_name="Name",
+        orderable=False,
+    )
+
+    size = tables.Column(verbose_name="Size", accessor="image.size", empty_values=(), orderable=False)
+    created = tables.DateTimeColumn(verbose_name="Created")
+
+    actions = ButtonsColumn(
+        model=ImageAttachment,
+        buttons=("edit", "delete"),
+        verbose_name="",  # For empty header
+    )
+
+    class Meta(BaseTable.Meta):
+        model = ImageAttachment
+        fields = ("pk", "name", "size", "created", "actions")
+        default_columns = ("pk", "name", "size", "created", "actions")
+
+    def render_size(self, value, record):
+        try:
+            return f"{record.image.size / 1024:.1f} KB"
+        except Exception:
+            return format_html('<span class="text-danger">Unavailable</span>')
+
+    def row_attrs(self, record):
+        """Highlight row if image size is missing (like class='danger')"""
+        if record.size is None:
+            return {"class": "danger"}
+        return {}
 
 
 class JobTable(BaseTable):

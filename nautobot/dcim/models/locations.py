@@ -339,3 +339,11 @@ class Location(TreeModel, PrimaryModel):
             decimal_places = self._meta.get_field("latitude").decimal_places
             self.latitude = f"{self.latitude:.{decimal_places}f}"
         super().clean_fields(exclude)
+
+    @property
+    def image_attachments(self):
+        """
+        Get image attachments for this Location instance.
+        """
+        # Use the images GenericRelation to fetch related image attachments
+        return self.images.all()
