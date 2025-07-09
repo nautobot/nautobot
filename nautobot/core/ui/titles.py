@@ -29,15 +29,10 @@ class Titles:
         self.additional_template_plugins = additional_template_plugins or self.default_plugins
 
     def render(self, context: Context):
-        print("asd")
         with context.update(self.get_extra_context(context)):
-            print(context["view_action"])
             action = context.get("view_action", "list_action")
             template_str = self.titles.get(f"{action}_action", "")
-            print(template_str)
             template = Template(self.additional_template_plugins + template_str)
-            print(template)
-            print(template.render(context))
             return template.render(context)
 
     def get_extra_context(self, context: Context):
