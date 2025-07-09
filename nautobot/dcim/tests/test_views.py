@@ -4588,7 +4588,7 @@ class ControllerTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Controller
     filterset = ControllerFilterSet
     custom_action_required_permissions = {
-        "dcim:controller_wireless_networks": [
+        "dcim:controller_wirelessnetworks": [
             "dcim.view_controller",
             "wireless.view_controllermanageddevicegroupwirelessnetworkassignment",
         ],
