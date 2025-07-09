@@ -1,1 +1,1 @@
-Added `JobRunScheduleButton` class to `nautobot.extras.views`.
+Added `jobs_ui.py` to `nautobot.extras.views` with classes: `JobRunScheduleButton`, `JobKeyValueOverrideValueTablePanel` and `JobObjectFieldsPanel` and `render_job_queues_list` helpers method.

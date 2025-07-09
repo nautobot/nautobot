@@ -81,7 +81,7 @@ from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
 
-from . import filters, forms, tables
+from . import filters, forms, jobs_ui, tables
 from .api import serializers
 from .choices import (
     DynamicGroupTypeChoices,
@@ -1302,28 +1302,6 @@ class ImageAttachmentDeleteView(generic.ObjectDeleteView):
 #
 # Jobs
 #
-
-
-class JobRunScheduleButton(object_detail.Button):
-    """
-    A custom button for running or scheduling a job.
-
-    This button is rendered only if the user has the 'extras.run_job' permission.
-    It also disables itself (via HTML 'disabled' attribute) if the related object is not
-    installed or not enabled.
-    """
-
-    def get_extra_context(self, context):
-        """Inject dynamic attributes (e.g. 'disabled') based on object state into the rendering context."""
-        extra_context = super().get_extra_context(context)
-        obj = context.get("object")
-        if not obj.installed or not obj.enabled:
-            if extra_context["attributes"] is None:
-                extra_context["attributes"] = {}
-            extra_context["attributes"]["disabled"] = "disabled"
-        return extra_context
-
-
 class JobListView(generic.ObjectListView):
     """
     Retrieve all of the available jobs from disk and the recorded JobResult (if any) for each.
@@ -1590,7 +1568,7 @@ class JobView(generic.ObjectView):
                     "is_job_button_receiver",
                 ],
             ),
-            object_detail.ObjectFieldsPanel(
+            jobs_ui.JobObjectFieldsPanel(
                 weight=200,
                 section=SectionChoices.LEFT_HALF,
                 label="Job",
@@ -1603,7 +1581,7 @@ class JobView(generic.ObjectView):
                 table_title="JobResults",
                 table_filter=["job_model"],
             ),
-            object_detail.ObjectFieldsPanel(
+            jobs_ui.JobObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.RIGHT_HALF,
                 label="Properties",
@@ -1616,27 +1594,27 @@ class JobView(generic.ObjectView):
                     "has_sensitive_variables",
                     "is_singleton",
                     "soft_time_limit",
-                    "soft_time_limit_override",
                     "time_limit",
-                    "time_limit_override",
                     "job_queues",
-                    "job_queues_override",
                     "default_job_queue",
                 ],
                 value_transforms={
-                    "soft_time_limit": [lambda st: f"{st} seconds" if st is not None else helpers.placeholder(st)],
-                    "time_limit": [lambda tl: f"{tl} seconds" if tl is not None else helpers.placeholder(tl)],
-                    # Transform time from boolean to None to can hide it if it not set.
-                    "soft_time_limit_override": [lambda st: None if st is False else st],
-                    "time_limit_override": [lambda tl: None if tl is False else tl],
-                    # Transform job queues override from boolean to None to can hide it if it not set.
-                    "job_queues_override": [lambda jq: None if jq is False else jq],
-                    "job_queues": [helpers.render_job_queues_list],
+                    "soft_time_limit": [
+                        lambda st: f"{st} seconds"
+                        if st and st > 0
+                        else f"{helpers.settings_or_config('CELERY_TASK_SOFT_TIME_LIMIT')} seconds (system default)"
+                    ],
+                    "time_limit": [
+                        lambda tl: f"{tl} seconds"
+                        if tl and tl > 0
+                        else f"{helpers.settings_or_config('CELERY_TASK_TIME_LIMIT')} seconds (system default)"
+                    ],
+                    "job_queues": [jobs_ui.render_job_queues_list],
                 },
             ),
         ],
         extra_buttons=[
-            JobRunScheduleButton(
+            jobs_ui.JobRunScheduleButton(
                 weight=100,
                 link_name="extras:job_run",
                 label="Run/Schedule",

@@ -800,15 +800,6 @@ def render_job_run_link(value):
     return str(value)
 
 
-def render_job_queues_list(value):
-    """Renders a <ul> HTML list of job queues with hyperlinks, or a placeholder if none exist."""
-    if not value or not value.exists():
-        return placeholder(None)
-
-    items = format_html_join("\n", "<li>{}</li>", ((hyperlinked_object(q),) for q in value.all()))
-    return format_html("<ul>{}</ul>", items)
-
-
 @library.filter()
 @register.filter()
 def label_list(value, suffix=""):
