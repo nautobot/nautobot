@@ -18,7 +18,7 @@ Power panels can be categorized by type to better represent different components
 * **Uninterruptible Power Supply (UPS)** - Battery backup power systems
 * **Transfer Switch** - Automatic or manual switching between power sources
 * **Power Distribution Unit (PDU)** - Facility-level power distribution equipment (not rack-level PDUs)
-* **Panelboard** - Standard electrical distribution panel
+* **Panelboard** - Standard electrical distribution panels
 * **Mini Load Center (MLC)** - Smaller distribution panels
 * **Remote Power Panel (RPP)** - Distributed power panels in remote locations
 
