@@ -305,6 +305,20 @@ class VirtualMachineConfigContextView(ObjectConfigContextView):
         """
         return VirtualMachine.objects.annotate_config_context_data()
 
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        # Determine user's preferred output format
+        if request.GET.get("data_format") in ["json", "yaml"]:
+            context["data_format"] = request.GET.get("data_format")
+            if request.user.is_authenticated:
+                request.user.set_config("extras.configcontext.format", context["data_format"], commit=True)
+        elif request.user.is_authenticated:
+            context["data_format"] = request.user.get_config("extras.configcontext.format", "json")
+        else:
+            context["data_format"] = "json"
+
+        return context
+
 
 #
 # VM interfaces
