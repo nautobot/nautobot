@@ -41,6 +41,7 @@ from nautobot.core.forms import (
     restrict_form_fields,
 )
 from nautobot.core.jobs import BulkDeleteObjects, BulkEditObjects
+from nautobot.core.ui.breadcrumbs import Breadcrumbs
 from nautobot.core.ui.titles import DocumentTitles, PageHeadings
 from nautobot.core.utils import filtering, lookup, permissions
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params, normalize_querydict
@@ -244,21 +245,23 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     permission_classes = []
     document_titles = None
     page_headings = None
+    breadcrumbs = None
 
     def get_document_titles(self):
-        if self.document_titles is None:
-            return DocumentTitles()
-        if isinstance(self.document_titles, type):
-            return self.document_titles()
-        return self.document_titles
+        return self.instantiate_if_needed(self.document_titles, DocumentTitles)
 
     def get_page_headings(self):
-        if self.page_headings is None:
-            return PageHeadings()
-        elif isinstance(self.page_headings, type):
-            return self.page_headings()
-        else:
-            return self.page_headings
+        return self.instantiate_if_needed(self.page_headings, PageHeadings)
+
+    def get_breadcrumbs(self):
+        return self.instantiate_if_needed(self.breadcrumbs, Breadcrumbs)
+
+    def instantiate_if_needed(self, attr, default_cls):
+        if attr is None:
+            return default_cls()
+        if isinstance(attr, type):
+            return attr()
+        return attr
 
     def get_permissions_for_model(self, model, actions):
         """

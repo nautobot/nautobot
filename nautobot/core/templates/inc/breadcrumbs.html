@@ -1,0 +1,7 @@
+<nav aria-label="Breadcrumbs" class="mt-4">
+    <ol class="breadcrumb">
+        {% for url, title in breadcrumbs_items %}
+            <li class="breadcrumb-item"><a href="{{ url }}">{{ title }}</a></li>
+        {% endfor %}
+    </ol>
+</nav>

@@ -26,13 +26,5 @@
     </h1>
     {% endif %}
 
-    {% if crumbs %}
-        <nav aria-label="Breadcrumbs" class="mt-4">
-            <ol class="breadcrumb">
-                {% for url, title in crumbs %}
-                    <li class="breadcrumb-item"><a href="{{ url }}">{{ title }}</a></li>
-                {% endfor %}
-            </ol>
-        </nav>
-    {% endif %}
+    {% render_breadcrumbs %}
 </div>

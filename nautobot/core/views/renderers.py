@@ -290,15 +290,15 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "verbose_name": queryset.model._meta.verbose_name,
             "verbose_name_plural": queryset.model._meta.verbose_name_plural,
             "view_action": view.action,
-            "document_titles": view.get_document_titles(),
-            "page_headings": view.get_page_headings(),
         }
 
         try:
             context["document_titles"] = view.get_document_titles()
             context["page_headings"] = view.get_page_headings()
+            context["breadcrumbs"] = view.breadcrumbs()
         except AttributeError:
             context["document_titles"] = None
+            context["page_headings"] = None
             context["page_headings"] = None
 
         if view.detail:
