@@ -65,7 +65,8 @@ class LogsCleanup(Job):
                 related_model = related_object.related_model
                 related_field_name = related_object.field.name
                 cascade_queryset = related_model.objects.filter(**{f"{related_field_name}__id__in": queryset})
-                self.recursive_delete_with_cascade(cascade_queryset, deletion_summary)
+                if cascade_queryset.exists():
+                    self.recursive_delete_with_cascade(cascade_queryset, deletion_summary)
 
         genericrelation_related_fields = [
             field for field in queryset.model._meta.private_fields if hasattr(field, "bulk_related_objects")
@@ -76,7 +77,8 @@ class LogsCleanup(Job):
                 continue  # avoid infinite recursion  # TODO: this won't catch A<-B<-A<-B loops...
             related_field_name = gr_related_field.related_query_name()
             cascade_queryset = related_model.objects.filter(**{f"{related_field_name}__id__in": queryset})
-            self.recursive_delete_with_cascade(cascade_queryset, deletion_summary)
+            if cascade_queryset.exists():
+                self.recursive_delete_with_cascade(cascade_queryset, deletion_summary)
 
         deleted_count = queryset._raw_delete(using="default")
         if deleted_count:

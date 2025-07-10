@@ -206,7 +206,7 @@ class Migration(migrations.Migration):
                 ),
                 ("compliance_class_name", models.CharField(max_length=255)),
                 ("last_validation_date", models.DateTimeField(auto_now=True)),
-                ("object_id", models.CharField(max_length=255)),
+                ("object_id", models.UUIDField(blank=False, null=False)),
                 ("validated_object_str", models.CharField(blank=True, default="", max_length=255)),
                 ("validated_attribute", models.CharField(blank=True, default="", max_length=255)),
                 ("validated_attribute_value", models.CharField(blank=True, default="", max_length=255)),
