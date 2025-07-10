@@ -40,7 +40,7 @@ class JobRunScheduleButton(Button):
 class JobKeyValueOverrideValueTablePanel(KeyValueTablePanel):
     """A table panel for displaying key-value pairs of job-related attributes, along with any override values defined on the job object."""
 
-    def _render_overridden_text(self, text, prefix="default is"):
+    def _render_overridden_text(self, text):
         """
         Render a simple overridden value inside a muted <span>, with a customizable prefix.
 
@@ -48,7 +48,7 @@ class JobKeyValueOverrideValueTablePanel(KeyValueTablePanel):
             value (str): The content to display.
             prefix (str): The label shown before the value (default: 'default is').
         """
-        return format_html('<span class="text-muted">overridden; {} {}</span>', prefix, mark_safe(text))  # noqa: S308
+        return format_html('<span class="text-muted">overridden; default is {}</span>', mark_safe(text))  # noqa: S308
 
     def _render_overridden_block(self, content):
         """
@@ -103,8 +103,8 @@ class JobKeyValueOverrideValueTablePanel(KeyValueTablePanel):
         try:
             queue = obj.job_class.task_queues[0]
         except (AttributeError, IndexError, TypeError):
-            queue = helpers.placeholder("")
-        return self._render_overridden_text(queue, "default is:")
+            queue = helpers.placeholder("not specified")
+        return self._render_overridden_text(queue)
 
     def render_boolean_default(self, default_value):
         """Render a boolean default value using a standardized visual format."""
