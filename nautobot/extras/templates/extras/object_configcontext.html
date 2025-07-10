@@ -13,7 +13,7 @@
                     {% include 'extras/inc/json_format.html' %}
                 </div>
                 <div class="panel-body">
-                    {% include 'extras/inc/json_data.html' with data=rendered_context format=format %}
+                    {% include 'extras/inc/json_data.html' with data=rendered_context data_format=format %}
                 </div>
             </div>
         </div>
@@ -30,7 +30,7 @@
                         {% if object.local_config_context_data_owner %}
                             Owned by <strong>{{ object.local_config_context_data_owner|hyperlinked_object }}</strong>
                         {% endif %}
-                        {% include 'extras/inc/json_data.html' with data=object.local_config_context_data format=format %}
+                        {% include 'extras/inc/json_data.html' with data=object.local_config_context_data data_format=format %}
                     {% else %}
                         <span class="text-muted">None</span>
                     {% endif %}
@@ -55,7 +55,7 @@
                         {% if context.description %}
                             <br /><small>{{ context.description }}</small>
                         {% endif %}
-                        {% include 'extras/inc/json_data.html' with data=context.data format=format %}
+                        {% include 'extras/inc/json_data.html' with data=context.data data_format=format %}
                     </div>
                 {% empty %}
                     <div class="panel-body">
