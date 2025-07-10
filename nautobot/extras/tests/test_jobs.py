@@ -16,7 +16,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.test import override_settings, tag as test_tag
+from django.test import override_settings
 from django.test.client import RequestFactory
 from django.utils import timezone
 
@@ -358,7 +358,6 @@ class JobTransactionTest(TransactionTestCase):
         self.assertEqual(instance.description, job_description)
         self.assertEqual(instance.default_job_queue, default_job_queue)
 
-    @test_tag("doltdb_stuck")
     def test_job_bulk_edit_preserve_job_queues_after_one_field_update(self):
         self.add_permissions("extras.change_job", "extras.view_job")
         job_class_to_test = "TestPassJob"
