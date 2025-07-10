@@ -1,6 +1,7 @@
 from django.template import Context
 from django.template.loader import render_to_string
 from django.utils.html import format_html, format_html_join
+from django.utils.safestring import mark_safe
 
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui.object_detail import Button, KeyValueTablePanel, ObjectFieldsPanel
@@ -39,7 +40,24 @@ class JobRunScheduleButton(Button):
 class JobKeyValueOverrideValueTablePanel(KeyValueTablePanel):
     """A table panel for displaying key-value pairs of job-related attributes, along with any override values defined on the job object."""
 
-    def render_description(self, default_value):
+    def _render_overridden_text(self, text, prefix="default is"):
+        """
+        Render a simple overridden value inside a muted <span>, with a customizable prefix.
+
+        Args:
+            value (str): The content to display.
+            prefix (str): The label shown before the value (default: 'default is').
+        """
+        return format_html('<span class="text-muted">overridden; {} {}</span>', prefix, mark_safe(text))  # noqa: S308
+
+    def _render_overridden_block(self, content):
+        """
+        Render a more complex block of HTML content (like rendered markdown or JSON)
+        in a div with a muted label indicating it's an overridden value.
+        """
+        return format_html('<div class="text-muted">overridden; default is:<br>{}</div>', content)
+
+    def render_description_default(self, default_value):
         """
         Render a description field's default value as markdown.
 
@@ -51,21 +69,17 @@ class JobKeyValueOverrideValueTablePanel(KeyValueTablePanel):
             if isinstance(default_value, str)
             else helpers.placeholder(default_value)
         )
-        return format_html('<div class="text-muted">overridden; default is:<br>{}</div>', rendered)
+        return self._render_overridden_block(rendered)
 
-    def render_time_limit(self, default_value, system_default_value):
+    def render_time_limit_default(self, default_value, system_default_value):
         """
         Render a time limit value, falling back to the system default if needed.
         """
-        if default_value > 0:
-            return format_html('<span class="text-muted">overridden; default is {} seconds</span>', default_value)
-        else:
-            return format_html(
-                '<span class="text-muted">overridden; default is {} seconds (system default)</span>',
-                system_default_value,
-            )
+        message = "{} seconds" if default_value > 0 else "{} seconds (system default)"
+        value = default_value if default_value > 0 else system_default_value
+        return self._render_overridden_text(message.format(value))
 
-    def render_job_queues(self, obj):
+    def render_job_queues_default(self, obj):
         """
         Render the job's default task queues as JSON.
 
@@ -73,14 +87,13 @@ class JobKeyValueOverrideValueTablePanel(KeyValueTablePanel):
         it using a JSON template. Falls back to a placeholder on error.
         """
         try:
-            json_rendered = render_to_string(
-                "extras/inc/json_data.html", {"data": obj.job_class.task_queues, "format": "json"}
-            )
+            data = obj.job_class.task_queues
+            rendered = render_to_string("extras/inc/json_data.html", {"data": data, "format": "json"})
         except Exception:
-            json_rendered = helpers.placeholder(None)
-        return format_html('<span class="text-muted">overridden; default is:<br>{}</span>', json_rendered)
+            rendered = helpers.placeholder(None)
+        return self._render_overridden_block(rendered)
 
-    def render_default_job_queue(self, obj):
+    def render_default_job_queue_default(self, obj):
         """
         Render the default job queue name from the job class.
 
@@ -90,55 +103,47 @@ class JobKeyValueOverrideValueTablePanel(KeyValueTablePanel):
         try:
             queue = obj.job_class.task_queues[0]
         except (AttributeError, IndexError, TypeError):
-            queue = ""
-        return format_html(
-            '<span class="text-muted">overridden; default is: {}</span>',
-            queue if queue else helpers.placeholder(queue),
-        )
+            queue = helpers.placeholder("")
+        return self._render_overridden_text(queue, "default is:")
 
-    def render_boolean(self, default_value):
+    def render_boolean_default(self, default_value):
         """Render a boolean default value using a standardized visual format."""
-        return format_html(
-            '<span class="text-muted">overridden; default is {}</span>', helpers.render_boolean(default_value)
-        )
+        return self._render_overridden_text(helpers.render_boolean(default_value))
 
     def render_override_value(self, key, obj):
         """Render the override value for a given key on a job object."""
-
         override_attr = f"{key}_override"
-        default_value = None
-        if not hasattr(obj, override_attr) or not getattr(obj, override_attr):
+
+        if not getattr(obj, override_attr, None):
             return ""
 
         if not obj.installed:
-            return format_html(
-                '<span class="text-muted">overridden; default is unknown (not currently installed)</span>'
-            )
+            return self._render_overridden_text("default is unknown (not currently installed)")
 
         try:
             default_value = getattr(obj.job_class, key)
         except Exception:
             default_value = "unknown"
 
-        if key == "description":
-            return self.render_description(default_value)
+        renderers = {
+            "description": self.render_description_default,
+            "soft_time_limit": lambda v: self.render_time_limit_default(
+                v, helpers.settings_or_config("CELERY_TASK_SOFT_TIME_LIMIT")
+            ),
+            "time_limit": lambda v: self.render_time_limit_default(
+                v, helpers.settings_or_config("CELERY_TASK_TIME_LIMIT")
+            ),
+            "job_queues": lambda _: self.render_job_queues_default(obj),
+            "default_job_queue": lambda _: self.render_default_job_queue_default(obj),
+        }
 
-        if key == "soft_time_limit":
-            return self.render_time_limit(default_value, helpers.settings_or_config("CELERY_TASK_SOFT_TIME_LIMIT"))
-
-        if key == "time_limit":
-            return self.render_time_limit(default_value, helpers.settings_or_config("CELERY_TASK_TIME_LIMIT"))
-
-        if key == "job_queues":
-            return self.render_job_queues(obj)
-
-        if key == "default_job_queue":
-            return self.render_default_job_queue(obj)
+        if key in renderers:
+            return renderers[key](default_value)
 
         if isinstance(default_value, bool):
-            return self.render_boolean(default_value)
+            return self.render_boolean_default(default_value)
 
-        return format_html('<span class="text-muted">overridden; default is “{}”</span>', default_value)
+        return self._render_overridden_text(f'"{default_value}"')
 
     def render_body_content(self, context: Context):
         """Render the body content of the panel as a table of key-value rows, including any override information."""
