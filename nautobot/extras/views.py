@@ -1598,19 +1598,6 @@ class JobView(generic.ObjectView):
                     "job_queues",
                     "default_job_queue",
                 ],
-                value_transforms={
-                    "soft_time_limit": [
-                        lambda st: f"{st} seconds"
-                        if st and st > 0
-                        else f"{helpers.settings_or_config('CELERY_TASK_SOFT_TIME_LIMIT')} seconds (system default)"
-                    ],
-                    "time_limit": [
-                        lambda tl: f"{tl} seconds"
-                        if tl and tl > 0
-                        else f"{helpers.settings_or_config('CELERY_TASK_TIME_LIMIT')} seconds (system default)"
-                    ],
-                    "job_queues": [jobs_ui.render_job_queues_list],
-                },
             ),
         ],
         extra_buttons=[

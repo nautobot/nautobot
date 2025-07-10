@@ -8,15 +8,6 @@ from nautobot.core.ui.object_detail import Button, KeyValueTablePanel, ObjectFie
 from nautobot.core.views.utils import get_obj_from_context
 
 
-def render_job_queues_list(value):
-    """Renders a <ul> HTML list of job queues with hyperlinks, or a placeholder if none exist."""
-    if not value or not value.exists():
-        return helpers.placeholder(None)
-
-    items = format_html_join("\n", "<li>{}</li>", ((helpers.hyperlinked_object(q),) for q in value.all()))
-    return format_html("<ul>{}</ul>", items)
-
-
 class JobRunScheduleButton(Button):
     """
     A custom button for running or scheduling a job.
@@ -71,12 +62,14 @@ class JobKeyValueOverrideValueTablePanel(KeyValueTablePanel):
         )
         return self._render_overridden_block(rendered)
 
-    def render_time_limit_default(self, default_value, system_default_value):
+    def render_time_limit_default(self, default_value, system_default_value, override=True):
         """
         Render a time limit value, falling back to the system default if needed.
         """
         message = "{} seconds" if default_value > 0 else "{} seconds (system default)"
         value = default_value if default_value > 0 else system_default_value
+        if not override:
+            return message.format(value)
         return self._render_overridden_text(message.format(value))
 
     def render_job_queues_default(self, obj):
@@ -145,6 +138,14 @@ class JobKeyValueOverrideValueTablePanel(KeyValueTablePanel):
 
         return self._render_overridden_text(f'"{default_value}"')
 
+    def render_job_queues_list(self, value):
+        """Renders a <ul> HTML list of job queues with hyperlinks, or a placeholder if none exist."""
+        if not value or not value.exists():
+            return helpers.placeholder(None)
+
+        items = format_html_join("\n", "<li>{}</li>", ((helpers.hyperlinked_object(q),) for q in value.all()))
+        return format_html("<ul>{}</ul>", items)
+
     def render_body_content(self, context: Context):
         """Render the body content of the panel as a table of key-value rows, including any override information."""
         data = self.get_data(context)
@@ -192,3 +193,16 @@ class JobObjectFieldsPanel(ObjectFieldsPanel, JobKeyValueOverrideValueTablePanel
     ObjectFieldsPanel that renders its fields in a 3-column layout.
     Inherits behavior from ObjectFieldsPanel but overrides rendering with JobKeyValueOverrideValueTablePanel.
     """
+
+    def render_value(self, key, value, context: Context):
+        if key == "job_queues":
+            return self.render_job_queues_list(value)
+        if key == "soft_time_limit":
+            value = self.render_time_limit_default(
+                value, helpers.settings_or_config("CELERY_TASK_SOFT_TIME_LIMIT"), override=False
+            )
+        if key == "time_limit":
+            value = self.render_time_limit_default(
+                value, helpers.settings_or_config("CELERY_TASK_TIME_LIMIT"), override=False
+            )
+        return super().render_value(key, value, context)
