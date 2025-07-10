@@ -105,8 +105,8 @@ const initializeDynamicChoiceSelection = (context, dropdownParent = null) => {
         // Allow for controlling the depth setting from within APISelect.
         const depth = parseInt(element.getAttribute('data-depth'), 10) || 0;
 
-        // Attach contenttype to parameters.
-        const contenttype = element.getAttribute('data-contenttype');
+        // Attach content_type to parameters.
+        const content_type = element.getAttribute('data-contenttype');
 
         // Attach any extra query parameters
         const extra_query_parameters = Object.fromEntries(
@@ -176,7 +176,7 @@ const initializeDynamicChoiceSelection = (context, dropdownParent = null) => {
           limit: String(limit),
           offset: String(offset),
           ...(api_version ? { api_version } : undefined),
-          ...(contenttype ? { contenttype } : undefined),
+          ...(content_type ? { content_type } : undefined),
           ...(q ? { q } : undefined),
           ...extra_query_parameters,
         };
