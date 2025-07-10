@@ -25,7 +25,8 @@
 {% endblock %}
 
 {% block header %}
-    <ul id="tabs" class="nav nav-tabs" role="tablist">
+    <div data-nb-tests-id="object-details-header-tabs">
+    <ul class="nav nav-tabs" data-nb-tests-id="object-details-header-tabs-ul" role="tablist">
     {% block nav_tabs %}
       {% if object_detail_content %}
         {% render_tabs_labels object_detail_content.tabs %}
@@ -100,6 +101,7 @@
     {% endblock nav_tabs %}
     {% plugin_object_detail_tabs object %}
     </ul>
+    </div>
 {% endblock header %}
 
 {% block content %}
