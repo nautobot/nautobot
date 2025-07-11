@@ -224,7 +224,7 @@ class ConfigContextUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.FULL_WIDTH,
                 label="Data",
-                header_extra_content_template_path="extras/configcontext_format.html",
+                header_extra_content_template_path="extras/inc/configcontext_format.html",
                 body_content_template_path="extras/inc/configcontext_data.html",
             ),
             AssignmentObjectFieldsPanel(
