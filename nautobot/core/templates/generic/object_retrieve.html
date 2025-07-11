@@ -10,20 +10,6 @@
 {% load tz %}
 {% load ui_framework %}
 
-
-{% block breadcrumbs %}
-    {% with title=object.display|default:object %}
-        {% get_breadcrumbs as crumbs %}
-        {% include 'inc/breadcrumbs.html' with title=title copy_title=True crumbs=crumbs %}
-    {% endwith %}
-{% endblock breadcrumbs %}
-
-{% block title %}
-    {% with title=object.display|default:object %}
-        {{ title }}
-    {% endwith %}
-{% endblock %}
-
 {% block header %}
     <div data-nb-tests-id="object-details-header-tabs">
     <ul class="nav nav-tabs" data-nb-tests-id="object-details-header-tabs-ul" role="tablist">

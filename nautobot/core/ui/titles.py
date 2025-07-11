@@ -40,14 +40,14 @@ class Titles:
         **kwargs (dict): Action-to-template-string mappings that override or extend the defaults.
     """
 
-    def __init__(self, template_plugins: Optional[list] = None, **kwargs):
+    def __init__(self, template_plugins: Optional[list[str]] = None, **kwargs):
         """
         Keyword arguments passed can either add new action-title pair or override existing titles.
         """
-        self.titles = DEFAULT_TITLES.copy()
+        self.titles: dict[str, str] = DEFAULT_TITLES.copy()
         self.titles.update(kwargs)
 
-        self.template_plugins = template_plugins or self.DEFAULT_PLUGINS
+        self.template_plugins: list[str] = template_plugins or DEFAULT_PLUGINS
 
     def render(self, context: Context) -> str:
         """

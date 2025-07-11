@@ -5,16 +5,6 @@
 {% load plugins %}
 {% load static %}
 
-{% block breadcrumbs %}
-    {% format_title_with_saved_view title as formatted_title %}
-    {% include 'inc/breadcrumbs.html' with title=formatted_title %}
-{% endblock breadcrumbs %}
-
-{% block title %}
-    {% format_title_with_saved_view title as formatted_title %}
-    {{ formatted_title }}
-{% endblock %}
-
 {% block content %}
 <div class="align-items-center d-flex gap-8 justify-content-end mb-16 d-print-none">
     {% block buttons %}{% endblock %}

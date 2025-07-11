@@ -1,4 +1,5 @@
 import logging
+from contextlib import suppress
 
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
@@ -275,6 +276,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
         context = {
             "content_type": content_type,
+            "model": model,
             "form": form,
             "filter_form": filter_form,
             "dynamic_filter_form": self.get_dynamic_filter_form(view, request, filterset_class=view.filterset_class),
@@ -292,14 +294,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "view_action": view.action,
         }
 
-        try:
-            context["document_titles"] = view.get_document_titles()
-            context["page_headings"] = view.get_page_headings()
-            context["breadcrumbs"] = view.breadcrumbs()
-        except AttributeError:
-            context["document_titles"] = None
-            context["page_headings"] = None
-            context["page_headings"] = None
+        self._set_if_present(context, "document_titles", view.get_document_titles)
+        self._set_if_present(context, "page_headings", view.get_page_headings)
+        self._set_if_present(context, "breadcrumbs", view.get_breadcrumbs)
 
         if view.detail:
             # If we are in a retrieve related detail view (retrieve and custom actions).
@@ -333,7 +330,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             new_changes_not_applied = view_changes_not_saved(request, view, self.saved_view)
             context.update(
                 {
-                    "model": model,
                     "current_saved_view": self.saved_view,
                     "new_changes_not_applied": new_changes_not_applied,
                     "action_buttons": valid_actions,
@@ -361,6 +357,12 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         context.update(self.get_template_context(data, renderer_context))
 
         return context
+
+    def _set_if_present(self, context, context_key, view_function):
+        try:
+            context[context_key] = view_function()
+        except AttributeError:
+            context[context_key] = None
 
     def render(self, data, accepted_media_type=None, renderer_context=None):
         """

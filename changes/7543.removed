@@ -1,0 +1,1 @@
+Removed support for `{% block breadcrumbs %}` and `{% block title %}`.

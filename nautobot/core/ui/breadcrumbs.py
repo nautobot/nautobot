@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, Literal, Optional, Protocol, Type, Union
 
+from django.contrib.contenttypes.models import ContentType
 from django.db.models import Model
 from django.template import Context
 from django.urls import NoReverseMatch, reverse
@@ -17,6 +18,7 @@ class WithStr(Protocol):
 
 ModelLabelType = Literal["plural", "singular"]
 ModelType = Union[str, Model, Type[Model], None]
+BreadcrumbItemsType = dict[str, list["BreadcrumbItem"]]
 
 
 @dataclass
@@ -93,11 +95,11 @@ class BreadcrumbItem:
                 return reverse(self.viewname_str, args=self.reverse_args or [], kwargs=self.reverse_kwargs or {})
             if self.model:
                 viewname = lookup.get_route_for_model(self.model, "list")
-                return reverse(viewname, args=self.reverse_args or [], kwargs=self.reverse_kwargs or {})
+                return reverse(viewname)
             if self.model_key:
                 model = context.get(self.model_key)
                 viewname = lookup.get_route_for_model(model, self.model_url_action)
-                return reverse(viewname, args=self.reverse_args or [], kwargs=self.reverse_kwargs or {})
+                return reverse(viewname)
             if self.instance_key:
                 instance = context.get(self.instance_key)
                 return get_object_link(instance)
@@ -157,6 +159,8 @@ class BreadcrumbItem:
         if isinstance(model, str):
             model = get_model_from_name(model)
             return getattr(model._meta, name_arg)
+        if isinstance(model, ContentType):
+            return getattr(model.model_class()._meta, name_arg)
         return getattr(model._meta, name_arg)
 
     def as_pair(self, context) -> tuple[str, Optional[str]]:
@@ -175,25 +179,23 @@ class BreadcrumbItem:
         return self.get_url(context) or "", bettertitle(self.get_label(context))
 
 
-DEFAULT_LIST_BREADCRUMBS = [BreadcrumbItem(model_key="content_type")]
+DEFAULT_MODEL_BREADCRUMBS = [BreadcrumbItem(model_key="model")]
 DEFAULT_INSTANCE_BREADCRUMBS = [BreadcrumbItem(model_key="content_type"), BreadcrumbItem(instance_key="object")]
 
 DEFAULT_BREADCRUMBS = {
-    "list_action": DEFAULT_LIST_BREADCRUMBS,
-    "retrieve_action": [BreadcrumbItem(model_key="content_type"), BreadcrumbItem(instance_key="object")],
+    "list_action": [],
+    "retrieve_action": DEFAULT_MODEL_BREADCRUMBS,
     "destroy_action": DEFAULT_INSTANCE_BREADCRUMBS,
-    "create_action": DEFAULT_LIST_BREADCRUMBS,
+    "create_action": DEFAULT_MODEL_BREADCRUMBS,
     "update_action": DEFAULT_INSTANCE_BREADCRUMBS,
-    "bulk_destroy_action": DEFAULT_LIST_BREADCRUMBS,
-    "bulk_rename_action": DEFAULT_LIST_BREADCRUMBS,
-    "bulk_update_action": DEFAULT_LIST_BREADCRUMBS,
-    "changelog_action": DEFAULT_INSTANCE_BREADCRUMBS,
-    "notes_action": DEFAULT_INSTANCE_BREADCRUMBS,
+    "bulk_destroy_action": DEFAULT_MODEL_BREADCRUMBS,
+    "bulk_rename_action": DEFAULT_MODEL_BREADCRUMBS,
+    "bulk_update_action": DEFAULT_MODEL_BREADCRUMBS,
+    "changelog_action": DEFAULT_MODEL_BREADCRUMBS,
+    "notes_action": DEFAULT_MODEL_BREADCRUMBS,
     "approve_action": DEFAULT_INSTANCE_BREADCRUMBS,
     "deny_action": DEFAULT_INSTANCE_BREADCRUMBS,
 }
-
-BreadcrumbItemsType = dict[str, list[BreadcrumbItem]]
 
 
 class Breadcrumbs:
@@ -232,11 +234,11 @@ class Breadcrumbs:
             template (str): The template used to render the breadcrumbs.
         """
         self.template = template
-        self.items = DEFAULT_BREADCRUMBS.copy()
-        self.items.update(items)
-
-        self.prepend_items = prepend_items
-        self.append_items = append_items
+        self.items: BreadcrumbItemsType = DEFAULT_BREADCRUMBS.copy()
+        if items:
+            self.items.update(items)
+        self.prepend_items: BreadcrumbItemsType = prepend_items or {}
+        self.append_items: BreadcrumbItemsType = append_items or {}
 
     def get_breadcrumbs_items(self, context: Context):
         """
@@ -253,7 +255,7 @@ class Breadcrumbs:
         Returns:
             list[tuple[str, str]]: A list of (url, label) tuples representing breadcrumb entries.
         """
-        action = context.get("view_action", "list_action")
+        action = context.get("view_action", "list") + "_action"
         items = self.items.get(action, [])
         prepend_items = self.prepend_items.get(action, [])
         append_items = self.append_items.get(action, [])
@@ -272,6 +274,7 @@ class Breadcrumbs:
         Returns:
             str: Rendered HTML for the breadcrumb component.
         """
+        print(self.get_breadcrumbs_items(context))
         with context.update(
             {
                 "breadcrumbs_items": self.get_breadcrumbs_items(context),
