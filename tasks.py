@@ -83,8 +83,7 @@ namespace.configure(
             "compose_dir": os.path.join(BASE_DIR, "development/"),
             "compose_files": [
                 "docker-compose.yml",
-                # "docker-compose.postgres.yml",
-                "docker-compose.dolt.yml",
+                "docker-compose.postgres.yml",
                 "docker-compose.dev.yml",
             ],
             # Image names to use when building from "main" branch
