@@ -251,6 +251,8 @@ $table-hover-bg:        var(--#{$prefix}primary-bg-subtle);
 $table-border-factor: 1;
 
 /* Buttons + Forms */
+$input-btn-focus-color: var(--#{$prefix}focus-ring-color);
+
 $input-btn-padding-y:   map.get($spacers, 6)  - $border-width;
 $input-btn-padding-x:   map.get($spacers, 12) - $border-width;
 
@@ -517,9 +519,150 @@ $utilities: map-merge(
 
 /* 8. Include select2 and select2-bootstrap5-theme here */
 @import "select2/src/scss/core";
-// this is a workaround for select2-bootstrap5-theme issue https://github.com/apalfrey/select2-bootstrap-5-theme/issues/75
-$s2bs5-border-color: $border-color;
+
+$s2bs5-padding-y:       $form-select-padding-y;
+$s2bs5-padding-x:       $form-select-padding-x;
+
+/* Variables below cannot reference CSS custom properties because of Select2 processing error. We overwrite it later. */
+$s2bs5-item-active-bg:  $primary-bg-subtle;
+$s2bs5-item-hover-bg:   $primary-bg-subtle;
+$s2bs5-item-focus-bg:   $primary-bg-subtle;
+
+$s2bs5-clear-width:     0.75rem; /* 12px */
+$s2bs5-clear-height:    0.75rem; /* 12px */
+$s2bs5-clear-padding-x: $badge-padding-x;
+$s2bs5-clear-padding-y: $badge-padding-y;
+/* This is a workaround for select2-bootstrap5-theme issue: https://github.com/apalfrey/select2-bootstrap-5-theme/issues/75 */
+$s2bs5-clear-icon:      $btn-close-bg;
+$s2bs5-clear-bg:        transparent escape-svg($s2bs5-clear-icon) center / $s2bs5-clear-height auto no-repeat;
+$s2bs5-clear-hover-bg:  transparent escape-svg($s2bs5-clear-icon) center / $s2bs5-clear-height auto no-repeat;
+
 @import "select2-bootstrap-5-theme/src/include-all";
+
+@mixin select2-clear-icon($size: $s2bs5-clear-height) {
+  &:hover {
+    &::after {
+      opacity: 1;
+    }
+  }
+
+  /* Render background image within `::after` instead of base element to separate scope for `filter` color manipulation. */
+  &::after {
+    @include transition($transition-fade);
+    background: transparent escape-svg($s2bs5-clear-icon) center / $size auto no-repeat;
+    content: "";
+    filter: $btn-close-filter;
+    inset: map.get($spacers, 0);
+    opacity: $btn-close-opacity;
+    position: absolute;
+  }
+}
+
+@include color-mode(dark, true) {
+  .select2-container--bootstrap-5 {
+    .select2-selection--single,
+    .select2-selection--multiple {
+      .select2-selection__clear {
+        &::after {
+          filter: $btn-close-filter-dark;
+        }
+      }
+    }
+
+    .select2-selection--multiple {
+      .select2-selection__rendered {
+        .select2-selection__choice {
+          .select2-selection__choice__remove {
+            &::after {
+              filter: $btn-close-filter-dark;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+.select2-container--bootstrap-5 {
+  $select2-clear-width-lg: 1.25rem; /* 20px */
+
+  .select2-dropdown {
+    .select2-results__options {
+      .select2-results__option {
+        &.select2-results__option--highlighted {
+          color: $dropdown-link-hover-color;
+          background-color: $dropdown-link-hover-bg;
+        }
+
+        &.select2-results__option--selected,
+        &[aria-selected="true"]:not(.select2-results__option--highlighted) {
+          color: $dropdown-link-active-color;
+          background-color: $dropdown-link-active-bg;
+        }
+      }
+    }
+  }
+
+  .select2-selection--single {
+    .select2-selection__rendered {
+      padding-inline-end: $select2-clear-width-lg + map.get($spacers, 6);
+    }
+  }
+
+  .select2-selection--multiple {
+    .select2-selection__rendered {
+      // Do not add additional `6px` to padding as above - multi-select badges already have it as their own margin.
+      padding-inline-end: $select2-clear-width-lg;
+    }
+  }
+
+  .select2-selection--single,
+  .select2-selection--multiple {
+    .select2-selection__clear {
+      @include select2-clear-icon($select2-clear-width-lg);
+      @include transition($btn-transition);
+      background: transparent;
+      border-radius: $border-radius;
+      color: transparent; /* Hide "&times;" ("×") character. */
+      padding: map.get($spacers, 10);
+      top: $s2bs5-padding-y;
+      transform: none;
+
+      &:hover {
+        background: var(--#{$prefix}border-color);
+      }
+    }
+  }
+
+  .select2-selection--multiple {
+    .select2-selection__rendered {
+      .select2-selection__choice {
+        border-color: var(--#{$prefix}tertiary-color); /* Supposed to be the standard border color but on a special request it was darkened to improve contrast and readability. */
+        line-height: $line-height-sm;
+        overflow-x: hidden;
+
+        .select2-selection__choice__remove {
+          @include select2-clear-icon;
+          @include transition($btn-transition);
+          background: transparent;
+          color: transparent; /* Hide "&times;" ("×") character. */
+          cursor: pointer;
+          height: auto;
+          margin-block: -#{$s2bs5-clear-padding-y};
+          margin-inline-end: -#{$s2bs5-clear-padding-x};
+          margin-inline-start: map.get($spacers, 0);
+          order: 1000; /* Place "X" at the end of the badge. */
+          position: relative;
+          width: auto;
+
+          &:hover {
+            background: var(--#{$prefix}border-color);
+          }
+        }
+      }
+    }
+  }
+}
 
 /* 9. Add additional custom code here */
 @if $enable-dark-mode {
@@ -751,8 +894,38 @@ textarea {
   }
 }
 
+.form-check {
+  /* Bootstrap 5 uses floats as a workaround here. Nautobot makes it more manageable with `display: flex` instead. */
+  display: flex;
+
+  &:not(:last-child) {
+    margin-block-end: map.get($spacers, 10);
+  }
+
+  .form-check-input {
+    float: none;
+
+    ~ .form-check-label {
+      padding-inline-start: map.get($spacers, 10);
+    }
+  }
+}
+
+.form-check-reverse {
+  justify-content: flex-end;
+
+  .form-check-input {
+    order: 9999; /* In `reverse` configuration, make sure this element always goes to the right-hand side. */
+
+    ~ .form-check-label {
+      padding-inline-end: map.get($spacers, 10);
+    }
+  }
+}
+
 .form-check-input {
   @include transition($btn-transition);
+  margin-top: 0; /* Reset Bootstrap 5 who-knows-why top margin. */
 
   &:focus {
     background-color: var(--#{$prefix}primary-bg-subtle);
@@ -774,6 +947,18 @@ textarea {
     ~ .form-check-label {
       color: $input-disabled-color;
     }
+  }
+}
+
+.nb-form-group {
+  &:not(:last-child) {
+    margin-block-end: map.get($spacers, 10);
+  }
+
+  label {
+    font-size: $font-size-sm;
+    margin-block-end: map.get($spacers, 4);
+    margin-inline-start: map.get($spacers, 12);
   }
 }
 
@@ -944,6 +1129,43 @@ textarea {
     &:focus-visible {
       @include box-shadow(0 0 0 #{$focus-ring-width} var(--#{$prefix}tertiary-color));
       background-color: var(--#{$prefix}border-color);
+    }
+  }
+
+  &.nb-multi-badge {
+    $nb-multi-badge-button-height: 1.5rem /* 24px */;
+    $nb-multi-badge-button-width: 1.375rem /* 22px */;
+    $nb-multi-badge-padding-inline-end: map.get($spacers, 2);
+
+    align-items: baseline;
+    background-color: var(--#{$prefix}secondary-border-subtle);
+    display: inline-flex;
+    padding-inline-end: $nb-multi-badge-padding-inline-end;
+
+    > button {
+      height: $nb-multi-badge-button-height;
+      margin-block: -#{$badge-padding-y};
+      margin-inline-end: -#{$nb-multi-badge-padding-inline-end};
+      margin-inline-start: map.get($spacers, 0);
+      padding-inline-start: map.get($spacers, 6);
+      width: $nb-multi-badge-button-width;
+    }
+
+    .nb-multi-badge-items {
+      display: inline-flex;
+      gap: map.get($spacers, 4);
+      flex-wrap: wrap;
+      margin-inline-start: map.get($spacers, 4);
+
+      .badge {
+        background-color: var(--#{$prefix}body-bg);
+        border: $border-width solid var(--#{$prefix}body-bg);
+
+        button {
+          margin-inline-end: -#{map.get($spacers, 8) + $border-width};
+        }
+      }
+
     }
   }
 }
@@ -1864,108 +2086,4 @@ pre code.hljs {
       }
     }
   }
-}
-
-/* TODO(norbert-mieczkowski-codilime): filters overview should be gone from `object_list.html` in v3.0. */
-.filter-container {
-  box-sizing: border-box;
-  display: inline-block;
-  margin: 0;
-  position: relative;
-  vertical-align: middle;
-}
-
-.filter-container.display-inline {
-  display: inline-block;
-}
-
-.filter-container .filter-selection {
-  min-height: 34px;
-  padding: 5px;
-  height: auto;
-  box-sizing: border-box;
-  cursor: pointer;
-  display: block;
-  user-select: none;
-  -webkit-user-select: none;
-  margin: 0;
-  webkit-box-shadow: inset 0 1px 1px rgb(0 0 0 / 8%);
-  box-shadow: inset 0 1px 1px rgb(0 0 0 / 8%);
-  background-color: #fff;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  color: #555;
-  font-size: 14px;
-  outline: 0;
-}
-
-.remove-filter-param {
-  color: #999;
-  cursor: pointer;
-  float: right;
-  font-weight: 700;
-  margin-left: 10px;
-}
-
-.fitler-container .filter-selection .filter-selection-rendered {
-  webkit-box-sizing: border-box;
-  -moz-box-sizing: border-box;
-  box-sizing: border-box;
-  display: block;
-  line-height: 1.42857143;
-  list-style: none;
-  margin: 0;
-  overflow: hidden;
-  padding: 0;
-  width: 100%;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.filter-container .filter-selection .filter-selection-choice {
-  color: #555;
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  cursor: default;
-  float: left;
-  margin: 5px 3px 0 0;
-  padding: 0 6px;
-}
-
-.filter-container .filter-selection .filter-selection-rendered {
-  -webkit-box-sizing: border-box;
-  -moz-box-sizing: border-box;
-  box-sizing: border-box;
-  display: block;
-  line-height: 1.42857143;
-  list-style: none;
-  margin: 0;
-  overflow: hidden;
-  padding: 0;
-  width: 100%;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.filter-container .filter-selection .filter-selection-choice-remove {
-  display: inline-block;
-  margin-right: 3px;
-  margin-left: 0;
-  float: none;
-}
-
-.filter-container .filter-selection .filter-selection-rendered {
-  -webkit-box-sizing: border-box;
-  -moz-box-sizing: border-box;
-  box-sizing: border-box;
-  display: block;
-  line-height: 1.42857143;
-  list-style: none;
-  margin: 0;
-  overflow: hidden;
-  padding: 0;
-  width: 100%;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }

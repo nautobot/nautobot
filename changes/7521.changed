@@ -1,0 +1,2 @@
+Updated tabs injected via `{% block extra_tab_content %}` and tabs generated from plugin to match Bootstrap 5 design.
+Updated `switch_tab` function in integration tests to work with tabs hiding mechanism.

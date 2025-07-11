@@ -9,15 +9,15 @@
 {% block extra_nav_tabs %}
         {% with interface_count=object.interfaces.count %}
             {% if interface_count %}
-                <li role="presentation" {% if active_tab == 'interfaces' %} class="active"{% endif %}>
-                    <a href="{% url 'ipam:ipaddress_interfaces' pk=object.pk %}">Interfaces {% badge interface_count %}</a>
+                <li class="nav-item" role="presentation">
+                    <a href="{% url 'ipam:ipaddress_interfaces' pk=object.pk %}" class="nav-link{% if active_tab == 'interfaces' %} active{% endif %}">Interfaces {% badge interface_count %}</a>
                 </li>
             {% endif %}
         {% endwith %}
         {% with vm_interface_count=object.vm_interfaces.count %}
             {% if vm_interface_count %}
-                <li role="presentation" {% if active_tab == 'vm_interfaces' %} class="active"{% endif %}>
-                    <a href="{% url 'ipam:ipaddress_vm_interfaces' pk=object.pk %}">VM Interfaces {% badge vm_interface_count %}</a>
+                <li class="nav-item" role="presentation">
+                    <a href="{% url 'ipam:ipaddress_vm_interfaces' pk=object.pk %}" class="nav-link{% if active_tab == 'vm_interfaces' %} active{% endif %}">VM Interfaces {% badge vm_interface_count %}</a>
                 </li>
             {% endif %}
         {% endwith %}

@@ -412,9 +412,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         # This validates that both parent prefix and child prefix IPAddresses are present in parent prefix IPAddresses list
         self.assertIn("5.5.10.1/23", strip_tags(content))
         self.assertIn("5.5.10.4/23", strip_tags(content))
-        ip_address_tab = (
-            f'<li role="presentation" class="active"><a href="{url}">IP Addresses <span class="badge">2</span></a></li>'
-        )
+        ip_address_tab = f'<li role="presentation" class="nav-item"><a href="{url}" class="nav-link active">IP Addresses <span class="badge">2</span></a></li>'
         self.assertInHTML(ip_address_tab, content)
 
 

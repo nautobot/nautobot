@@ -300,7 +300,7 @@ class FilterFormsTestCase(TestCase):
         self.add_permissions("dcim.view_location", "circuits.view_circuit")
 
         filter_tabs = """
-        <ul class="nav nav-tabs" id="tabs">
+        <ul class="nav nav-tabs" id="filter-tabs">
             <li class="nav-item" role="presentation">
                 <a class="active nav-link" data-bs-toggle="tab" href="#default-filter" role="tab">
                     Default

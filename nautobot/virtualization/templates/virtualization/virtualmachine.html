@@ -19,8 +19,8 @@
 
 {% block extra_nav_tabs %}
         {% if perms.extras.view_configcontext %}
-            <li role="presentation"{% if active_tab == 'config-context' %} class="active"{% endif %}>
-                <a href="{% url 'virtualization:virtualmachine_configcontext' pk=object.pk %}">Config Context</a>
+            <li class="nav-item" role="presentation">
+                <a href="{% url 'virtualization:virtualmachine_configcontext' pk=object.pk %}" class="nav-link{% if active_tab == 'config-context' %} active{% endif %}">Config Context</a>
             </li>
         {% endif %}
 {% endblock extra_nav_tabs %}

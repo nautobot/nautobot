@@ -224,6 +224,155 @@
 <!-- End example of "object_create.html" -->
 <hr>
 
+<!-- Begin example of form controls -->
+<h1>Forms</h1>
+    <form class="row">
+        <div class="col-md-4">
+            <fieldset class="mb-16">
+                <legend>Textboxes</legend>
+                <div class="nb-form-group">
+                    <label class="form-label" for="example-form-control-name">Name</label>
+                    <input class="form-control" id="example-form-control-name" name="name" placeholder="Type..." type="text">
+                </div>
+                <div class="nb-form-group">
+                    <label class="form-label" for="example-form-control-description-prepopulated">Description [Prepopulated]</label>
+                    <input class="form-control" id="example-form-control-description-prepopulated" name="description" placeholder="Type..." type="text" value="Lorem ipsum dolor sit amet, consectetur adipiscing elit.">
+                </div>
+                <div class="nb-form-group">
+                    <label for="example-form-control-note" class="form-label">Note</label>
+                    <textarea class="form-control" cols="40" id="example-form-control-note" placeholder="Type..." rows="10"></textarea>
+                </div>
+            </fieldset>
+        </div>
+
+        <div class="col-md-4">
+            <fieldset class="mb-16">
+                <legend>Comboboxes</legend>
+                <div class="nb-form-group">
+                    <label for="example-form-control-status">Status</label>
+                    <select
+                        class="form-control nautobot-select2-api"
+                        data-depth="0"
+                        data-query-param-content_types="[&quot;dcim.device&quot;]"
+                        data-url="/api/extras/statuses/"
+                        display-field="display"
+                        id="example-form-control-status"
+                        name="status"
+                        placeholder="Select..."
+                        value-field="id"
+                    ></select>
+                </div>
+                <div class="nb-form-group">
+                    <label for="example-form-control-role-prepopulated">Role [Prepopulated]</label>
+                    <select
+                        class="form-control nautobot-select2-api"
+                        data-depth="0"
+                        data-query-param-content_types="[&quot;dcim.device&quot;]"
+                        data-query-param-exclude_m2m="[&quot;true&quot;]"
+                        data-url="/api/extras/roles/"
+                        display-field="display"
+                        id="example-form-control-role-prepopulated"
+                        name="role"
+                        placeholder="Select..."
+                        value-field="id"
+                    >
+                        <option value="ca47734b-4e50-4730-a2d7-6e7c768f9aaa" selected>My Role</option>
+                    </select>
+                </div>
+                <div class="nb-form-group">
+                    <label for="example-form-control-tags">Tags</label>
+                    <select
+                        class="form-control nautobot-select2-api"
+                        data-depth="0"
+                        data-query-param-content_types="[&quot;dcim.device&quot;]"
+                        data-url="/api/extras/tags/"
+                        display-field="display"
+                        id="example-form-control-tags"
+                        multiple="multiple"
+                        name="tags"
+                        placeholder="Select..."
+                        value-field="id"
+                    ></select>
+                </div>
+                <div class="nb-form-group">
+                    <label for="example-form-control-dynamic-groups-prepopulated">Dynamic Groups [Prepopulated]</label>
+                    <select
+                        class="nautobot-select2-api form-control"
+                        data-depth="0"
+                        data-multiple="1"
+                        data-query-param-content_type="[&quot;dcim.device&quot;]"
+                        data-query-param-exclude_m2m="[&quot;true&quot;]"
+                        data-query-param-group_type="[&quot;static&quot;]"
+                        data-url="/api/extras/dynamic-groups/"
+                        display-field="display"
+                        id="example-form-control-dynamic-groups-prepopulated"
+                        multiple="multiple"
+                        name="dynamic_groups"
+                        placeholder="Select..."
+                        value-field="name"
+                    >
+                        <option value="2f31a150-4b09-44dc-a2ad-90004367c943" selected>My Dynamic Group 1</option>
+                        <option value="5c2ed7ba-b823-44a0-aef9-44b01b2b92d9" selected>My Dynamic Group 2</option>
+                    </select>
+                </div>
+            </fieldset>
+        </div>
+
+        <div class="col-md-4">
+            <fieldset class="mb-16">
+                <legend>Checkboxes</legend>
+                <div class="form-check">
+                    <input class="form-check-input" id="example-form-control-checkbox-1" name="example-form-control-checkbox" type="checkbox" value="1">
+                    <label class="form-check-label" for="example-form-control-checkbox-1">
+                        Checkbox 1
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input checked class="form-check-input" id="example-form-control-checkbox-2-preselected" name="example-form-control-checkbox" type="checkbox" value="2">
+                    <label class="form-check-label" for="example-form-control-checkbox-2-preselected">
+                        Checkbox 2 [Preselected]
+                    </label>
+                </div>
+            </fieldset>
+
+            <fieldset class="mb-16">
+                <legend>Radios</legend>
+                <div class="form-check">
+                    <input class="form-check-input" id="example-form-control-radio-1" name="example-form-control-radio" type="radio" value="1">
+                    <label class="form-check-label" for="example-form-control-radio-1">
+                        Radio 1
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input checked class="form-check-input" id="example-form-control-radio-2-preselected" name="example-form-control-radio" type="radio" value="2">
+                    <label class="form-check-label" for="example-form-control-radio-2-preselected">
+                        Radio 2 [Preselected]
+                    </label>
+                </div>
+            </fieldset>
+
+            <fieldset class="mb-16">
+                <legend>Buttons</legend>
+                <div class="hstack gap-8">
+                    <button class="btn btn-primary" name="_apply" type="submit">
+                        <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+                        -->Apply
+                    </button>
+                    <button class="btn btn-danger" name="_confirm" type="submit">
+                        <span aria-hidden="true" class="mdi mdi-trash-can-outline me-4"></span><!--
+                        -->Delete
+                    </button>
+                    <a class="btn btn-secondary" href="#">
+                        <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+                        -->Cancel
+                    </a>
+                </div>
+            </fieldset>
+        </div>
+    </form>
+<!-- End example of form controls -->
+<hr>
+
 <div class="row">
     <div class="col-md-12">
         <!-- Begin example of home page panel -->
@@ -818,13 +967,49 @@ This:
     <div class="col-md-3">
         <h1>Badges</h1>
         <p>
-            <a href="#">Inbox <span class="badge">42</span></a>
+            <a href="#">Inbox <span class="badge bg-primary">42</span></a>
         </p>
-        <ul class="nav nav-pills" role="tablist">
-            <li role="presentation" class="active"><a href="#">Home <span class="badge">42</span></a></li>
-            <li role="presentation"><a href="#">Profile</a></li>
-            <li role="presentation"><a href="#">Messages <span class="badge">3</span></a></li>
-        </ul>
+        <p>
+            <ul class="nav nav-pills" role="tablist">
+                <li class="nav-item" role="presentation"><a class="nav-link active" href="#">Home <span class="badge bg-primary">42</span></a></li>
+                <li class="nav-item" role="presentation"><a class="nav-link" href="#">Profile</a></li>
+                <li class="nav-item" role="presentation"><a class="nav-link" href="#">Messages <span class="badge bg-primary">3</span></a></li>
+            </ul>
+        </p>
+        <p>
+            <span class="badge nb-multi-badge">
+                Multi-badge:
+                <span class="nb-multi-badge-items">
+                    <span class="badge">Badge</span>
+                    <span class="badge">Badge</span>
+                </span>
+            </span>
+        </p>
+        <p>
+            <span class="badge nb-multi-badge">
+                Multi-badge:
+                <span class="nb-multi-badge-items">
+                    <span class="badge"><!--
+                        -->Badge<!--
+                        --><button type="button">
+                            <span aria-hidden="true" class="mdi mdi-close"></span>
+                            <span class="visually-hidden">Remove</span>
+                        </button>
+                    </span>
+                    <span class="badge"><!--
+                        -->Badge<!--
+                        --><button type="button">
+                            <span aria-hidden="true" class="mdi mdi-close"></span>
+                            <span class="visually-hidden">Remove</span>
+                        </button>
+                    </span>
+                </span>
+                <button type="button">
+                    <span aria-hidden="true" class="mdi mdi-close"></span>
+                    <span class="visually-hidden">Remove All</span>
+                </button>
+            </span>
+        </p>
     </div>
     <div class="col-md-3">
         <h1>Dropdown menus</h1>
