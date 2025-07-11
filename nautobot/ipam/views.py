@@ -107,7 +107,12 @@ class NamespaceUIViewSet(NautobotUIViewSet):
         context.update({"object_detail_content": self.object_detail_content})
         return context
 
-    @action(detail=True, url_path="vrfs")
+    @action(
+        detail=True,
+        url_path="vrfs",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["ipam.view_vrf"],
+    )
     def vrfs(self, request, *args, **kwargs):
         instance = self.get_object()
         vrfs = instance.vrfs.restrict(request.user, "view")
@@ -129,7 +134,12 @@ class NamespaceUIViewSet(NautobotUIViewSet):
             }
         )
 
-    @action(detail=True, url_path="prefixes")
+    @action(
+        detail=True,
+        url_path="prefixes",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["ipam.view_prefix"],
+    )
     def prefixes(self, request, *args, **kwargs):
         instance = self.get_object()
         prefixes = instance.prefixes.restrict(request.user, "view").select_related("status")
@@ -147,7 +157,13 @@ class NamespaceUIViewSet(NautobotUIViewSet):
             }
         )
 
-    @action(detail=True, url_path="ip-addresses", url_name="ip_addresses")
+    @action(
+        detail=True,
+        url_path="ip-addresses",
+        url_name="ip_addresses",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["ipam.view_ipaddress"],
+    )
     def ip_addresses(self, request, *args, **kwargs):
         instance = self.get_object()
         ip_addresses = instance.ip_addresses.restrict(request.user, "view").select_related("role", "status", "tenant")

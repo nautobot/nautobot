@@ -192,7 +192,6 @@ class RadioProfileBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         nullable_fields = [
             "frequency",
             "allowed_channel_list",
-            "regulatory_domain",
             "tx_power_min",
             "tx_power_max",
             "rx_power_min",

@@ -889,7 +889,7 @@ class Prefix(PrimaryModel):
             prefix_length__lte=self.prefix_length,
             network__lte=self.network,
             broadcast__gte=self.broadcast,
-            namespace=self.namespace,
+            namespace_id=self.namespace_id,
         )
 
         return supernets
@@ -921,7 +921,7 @@ class Prefix(PrimaryModel):
             ip_version=self.ip_version,
             network__gte=self.network,
             broadcast__lte=self.broadcast,
-            namespace=self.namespace,
+            namespace_id=self.namespace_id,
         )
 
     def is_child_node(self):
@@ -1093,6 +1093,17 @@ class Prefix(PrimaryModel):
         For prefixes containing IP addresses and/or pools, pools are considered fully utilized while
         only IP addresses that are not contained within pools are added to the utilization.
 
+        It is recommended that when using this method you add the following prefetch to the queryset when dealing with
+        multiple prefixes to ensure good performance:
+
+        ```
+        prefetch_related(
+            Prefetch(
+                "children", queryset=Prefix.objects.only("network", "prefix_length", "parent_id").order_by()
+            )
+        )
+        ```
+
         Returns:
             UtilizationData (namedtuple): (numerator, denominator)
         """
@@ -1105,7 +1116,7 @@ class Prefix(PrimaryModel):
         # change this when that is the case, see #3873 for historical context.
         if self.type != choices.PrefixTypeChoices.TYPE_CONTAINER:
             pool_ips = IPAddress.objects.filter(
-                parent__namespace=self.namespace,
+                parent__namespace_id=self.namespace_id,
                 ip_version=self.ip_version,
                 host__gte=self.network,
                 host__lte=self.broadcast,
@@ -1113,7 +1124,11 @@ class Prefix(PrimaryModel):
             child_ips = netaddr.IPSet(pool_ips)
 
         if self.type != choices.PrefixTypeChoices.TYPE_POOL:
-            child_prefixes = netaddr.IPSet(p.prefix for p in self.children.only("network", "prefix_length").iterator())
+            # Using self.children.all over self.children.iterator (with chunk_size given or not) consistently shaves
+            # off around 200 extra SQL queries and shows better performance.
+            # Also note that this is meant to be used in conjunction with a Prefetch on an only query. This query is
+            # performed in nautobot.ipam.tables.PrefixDetailTable.
+            child_prefixes = netaddr.IPSet(p.prefix for p in self.children.all())
 
         numerator_set = child_ips | child_prefixes
 
