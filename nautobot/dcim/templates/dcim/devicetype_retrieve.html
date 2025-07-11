@@ -49,48 +49,48 @@
 {% block title %}{{ object.manufacturer }} {{ object.model }}{% endblock title %}
 
 {% block extra_nav_tabs %}
-        <li role="presentation" {% if request.GET.tab == 'interfaces' %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}#interfaces" onclick="switch_tab(this.href)" aria-controls="interfaces" role="tab" data-toggle="tab">
+        <li class="nav-item" role="presentation">
+            <a href="{{ object.get_absolute_url }}#interfaces" onclick="switch_tab(this.href)" aria-controls="interfaces" role="tab" data-toggle="tab" class="nav-link{% if request.GET.tab == 'interfaces' %} active{% endif %}">
                 Interfaces {% badge interface_table.rows|length %}
             </a>
         </li>
-        <li role="presentation" {% if request.GET.tab == 'frontports' %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}#frontports" onclick="switch_tab(this.href)" aria-controls="frontports" role="tab" data-toggle="tab">
+        <li class="nav-item" role="presentation">
+            <a href="{{ object.get_absolute_url }}#frontports" onclick="switch_tab(this.href)" aria-controls="frontports" role="tab" data-toggle="tab" class="nav-link{% if request.GET.tab == 'frontports' %} active{% endif %}">
                 Front Ports {% badge front_port_table.rows|length %}
             </a>
         </li>
-        <li role="presentation" {% if request.GET.tab == 'rearports' %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}#rearports" onclick="switch_tab(this.href)" aria-controls="rearports" role="tab" data-toggle="tab">
+        <li class="nav-item" role="presentation">
+            <a href="{{ object.get_absolute_url }}#rearports" onclick="switch_tab(this.href)" aria-controls="rearports" role="tab" data-toggle="tab" class="nav-link{% if request.GET.tab == 'rearports' %} active{% endif %}">
                 Rear Ports {% badge rear_port_table.rows|length %}
             </a>
         </li>
-        <li role="presentation" {% if request.GET.tab == 'consoleports' %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}#consoleports" onclick="switch_tab(this.href)" aria-controls="consoleports" role="tab" data-toggle="tab">
+        <li class="nav-item" role="presentation">
+            <a href="{{ object.get_absolute_url }}#consoleports" onclick="switch_tab(this.href)" aria-controls="consoleports" role="tab" data-toggle="tab" class="nav-link{% if request.GET.tab == 'consoleports' %} active{% endif %}">
                 Console Ports {% badge consoleport_table.rows|length %}
             </a>
         </li>
-        <li role="presentation" {% if request.GET.tab == 'consoleserverports' %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}#consoleserverports" onclick="switch_tab(this.href)" aria-controls="consoleserverports" role="tab" data-toggle="tab">
+        <li class="nav-item" role="presentation">
+            <a href="{{ object.get_absolute_url }}#consoleserverports" onclick="switch_tab(this.href)" aria-controls="consoleserverports" role="tab" data-toggle="tab" class="nav-link{% if request.GET.tab == 'consoleserverports' %} active{% endif %}">
                 Console Server Ports {% badge consoleserverport_table.rows|length %}
             </a>
         </li>
-        <li role="presentation" {% if request.GET.tab == 'powerports' %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}#powerports" onclick="switch_tab(this.href)" aria-controls="powerports" role="tab" data-toggle="tab">
+        <li class="nav-item" role="presentation">
+            <a href="{{ object.get_absolute_url }}#powerports" onclick="switch_tab(this.href)" aria-controls="powerports" role="tab" data-toggle="tab" class="nav-link{% if request.GET.tab == 'powerports' %} active{% endif %}">
                 Power Ports {% badge powerport_table.rows|length %}
             </a>
         </li>
-        <li role="presentation" {% if request.GET.tab == 'poweroutlets' %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}#poweroutlets" onclick="switch_tab(this.href)" aria-controls="poweroutlets" role="tab" data-toggle="tab">
+        <li class="nav-item" role="presentation">
+            <a href="{{ object.get_absolute_url }}#poweroutlets" onclick="switch_tab(this.href)" aria-controls="poweroutlets" role="tab" data-toggle="tab" class="nav-link{% if request.GET.tab == 'poweroutlets' %} active{% endif %}">
                 Power Outlets {% badge poweroutlet_table.rows|length %}
             </a>
         </li>
-        <li role="presentation"{% if request.GET.tab == 'devicebays' %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}#devicebays" onclick="switch_tab(this.href)" aria-controls="devicebays" role="tab" data-toggle="tab">
+        <li class="nav-item" role="presentation">
+            <a href="{{ object.get_absolute_url }}#devicebays" onclick="switch_tab(this.href)" aria-controls="devicebays" role="tab" data-toggle="tab" class="nav-link{% if request.GET.tab == 'devicebays' %} active{% endif %}">
                 Device Bays {% badge devicebay_table.rows|length %}
             </a>
         </li>
-        <li role="presentation"{% if request.GET.tab == 'modulebays' %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}#modulebays" onclick="switch_tab(this.href)" aria-controls="modulebays" role="tab" data-toggle="tab">
+        <li class="nav-item" role="presentation">
+            <a href="{{ object.get_absolute_url }}#modulebays" onclick="switch_tab(this.href)" aria-controls="modulebays" role="tab" data-toggle="tab" class="nav-link{% if request.GET.tab == 'modulebays' %} active{% endif %}">
                 Module Bays {% badge modulebay_table.rows|length %}
             </a>
         </li>
@@ -173,7 +173,7 @@
                 <div class="panel-heading">
                     <strong>Comments</strong>
                 </div>
-                <div class="panel-body rendered-markdown">
+                <div class="panel-body nb-rendered-markdown">
                     {% if object.comments %}
                         {{ object.comments|render_markdown }}
                     {% else %}

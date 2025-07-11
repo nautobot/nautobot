@@ -6,7 +6,7 @@
 
 {% block content %}
 <div class="h-100 vstack">
-    <div class="noprint">
+    <div class="d-print-none">
         <ol class="breadcrumb mb-16">
             <li class="breadcrumb-item"><a href="{% url 'extras:job_list' %}">Jobs</a></li>
             <li class="breadcrumb-item">{{ job_model.grouping | bettertitle }}</li>

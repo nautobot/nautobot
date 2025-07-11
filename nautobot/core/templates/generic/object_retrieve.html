@@ -25,7 +25,8 @@
 {% endblock %}
 
 {% block header %}
-    <ul id="tabs" class="nav nav-tabs" role="tablist">
+    <div data-nb-tests-id="object-details-header-tabs">
+    <ul class="nav nav-tabs" data-nb-tests-id="object-details-header-tabs-ul" role="tablist">
     {% block nav_tabs %}
       {% if object_detail_content %}
         {% render_tabs_labels object_detail_content.tabs %}
@@ -100,6 +101,7 @@
     {% endblock nav_tabs %}
     {% plugin_object_detail_tabs object %}
     </ul>
+    </div>
 {% endblock header %}
 
 {% block content %}
@@ -110,7 +112,7 @@
         <div id="main" role="tabpanel" class="tab-pane {% if active_tab == "main" or request.GET.tab == "main" or not request.GET.tab %}active{% else %}fade{% endif %}">
             <div class="align-items-center d-flex flex-wrap mb-16">
                 {% include 'inc/created_updated.html' %}
-                <div class="flex-grow-0 flex-shrink-0 noprint">
+                <div class="flex-grow-0 flex-shrink-0 d-print-none">
                     {% block buttons %}
                         {% plugin_buttons object %}
                         {% render_detail_view_extra_buttons %}
@@ -172,7 +174,7 @@
                                     {% render_table associated_contacts_table 'inc/table.html' %}
                                 </div>
                                 {% with request.path|add:"?tab=contacts"|urlencode as return_url %}
-                                    <div class="card-footer noprint">
+                                    <div class="card-footer d-print-none">
                                         {% if perms.extras.change_contactassociation %}
                                             <button type="submit" name="_edit" formaction="{% url 'extras:contactassociation_bulk_edit' %}?return_url={{return_url}}" class="btn btn-warning btn-xs">
                                                 <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
@@ -297,33 +299,5 @@
     }
 
     window.addEventListener('popstate', (event) => show_tab(event.state.id));
-
-    // Toggle v -. >
-    $(".accordion-toggle").click(function () {
-        $(this).toggleClass("mdi-chevron-down mdi-chevron-right");
-    });
-    // Dynamically collapse/expand all when clicking the "Collapse All" button, and then update the button text.
-    $('.accordion-toggle-all').click(function () {
-
-        if ($(this).data("lastState") === null || $(this).data("lastState") === 1) {
-            $($(this).data("target") + ' .collapse').collapse('show');
-            $(this).data("lastState", 0);
-
-            $($(this).data("target") + " .accordion-toggle").addClass("mdi-chevron-down").removeClass("mdi-chevron-right");
-
-            $(this).text("Collapse All");
-        }
-        else {
-            $($(this).data("target") + ' [class^=collapseme]').removeData('bs.collapse').collapse({parent: false, toggle: false})
-            .collapse('hide')
-            .removeData('bs.collapse')
-            .collapse({parent: $(this).data("target"), toggle: false});
-
-            $(this).data("lastState", 1);
-            $($(this).data("target") + " .accordion-toggle").addClass("mdi-chevron-right").removeClass("mdi-chevron-down");
-
-            $(this).text("Expand All");
-        }
-    });
 </script>
 {% endblock javascript %}

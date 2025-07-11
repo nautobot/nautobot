@@ -300,7 +300,7 @@ class FilterFormsTestCase(TestCase):
         self.add_permissions("dcim.view_location", "circuits.view_circuit")
 
         filter_tabs = """
-        <ul class="nav nav-tabs" id="tabs">
+        <ul class="nav nav-tabs" id="filter-tabs">
             <li class="nav-item" role="presentation">
                 <a class="active nav-link" data-bs-toggle="tab" href="#default-filter" role="tab">
                     Default
@@ -783,10 +783,11 @@ class TestObjectDetailView(TestCase):
 
         # Validate Copy btn on all rows excluding empty rows
         name_copy = f"""
-        <span class="hover_copy">
+        <span>
             <span id="_value_name">{provider.name}</span>
-            <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#_value_name">
-                <span class="mdi mdi-content-copy"></span>
+            <button class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#_value_name">
+                <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+                <span class="visually-hidden">Copy</span>
             </button>
         </span>"""
         self.assertInHTML(name_copy, response_data)

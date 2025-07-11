@@ -12,12 +12,12 @@
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Interfaces</strong>
-                <div class="pull-right col-md-2 noprint">
+                <div class="pull-right col-md-2 d-print-none">
                     <input class="form-control interface-filter" type="text" placeholder="Filter" title="Filter text (regular expressions supported)" style="height: 23px" />
                 </div>
             </div>
             {% include 'responsive_table.html' with table=interface_table %}
-            <div class="panel-footer noprint">
+            <div class="panel-footer d-print-none">
                 {% if perms.dcim.change_interface %}
                     <button type="submit" name="_rename" formaction="{% url 'dcim:interface_bulk_rename' %}?return_url={% url 'dcim:module_interfaces' pk=object.pk %}" class="btn btn-warning btn-xs">
                         <span class="mdi mdi-pencil" aria-hidden="true"></span> Rename

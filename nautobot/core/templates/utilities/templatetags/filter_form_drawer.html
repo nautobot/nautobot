@@ -7,7 +7,7 @@
         <button type="button" class="btn-close" data-nb-dismiss="drawer" aria-label="Close"></button>
     </div>
     <div class="nb-drawer-body">
-        <ul id="tabs" class="nav nav-tabs">
+        <ul id="filter-tabs" class="nav nav-tabs">
             {% if filter_form %}
             <li role="presentation" class="nav-item">
                 <a class="nav-link active"  href="#default-filter" role="tab" data-bs-toggle="tab">
@@ -56,7 +56,7 @@
                         </table>
                     </div>
 
-                    <div class="text-right noprint">
+                    <div class="text-right d-print-none">
                         <button type="submit" class="btn btn-primary">
                             <span class="mdi mdi-magnify" aria-hidden="true"></span> Apply
                         </button>

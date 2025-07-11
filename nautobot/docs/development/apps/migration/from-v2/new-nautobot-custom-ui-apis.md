@@ -6,6 +6,48 @@ Up until v3.x, Nautobot has been *"smuggling"* its own CSS classes along with ot
 
 From now on, all HTML data attributes and CSS classes which refer to Nautobot custom functionalities are prefixed with `nb-*`.
 
+Here's a list of what's changed:
+
+| v2.x                                  | v3.0                                                                                              |
+|---------------------------------------|---------------------------------------------------------------------------------------------------|
+| `accordion-toggle`                    | `nb-collapse-toggle`                                                                              |
+| `accordion-toggle-all`                | *removed*, refer to [Toggle All (Collapse All / Expand All)](#toggle-all-collapse-all-expand-all) |
+| `banner-bottom`                       | `nb-banner-bottom`                                                                                |
+| `btn-inline`                          | `nb-btn-inline-hover`, refer to [Hover Copy Buttons](#hover-copy-buttons)                         |
+| `hover_copy`                          | *removed*, refer to [Hover Copy Buttons](#hover-copy-buttons)                                     |
+| `hover_copy_button`                   | *removed*, refer to [Hover Copy Buttons](#hover-copy-buttons)                                     |
+| `cable-trace`                         | `nb-cable-trace`                                                                                  |
+| `active` (scoped to cable trace)      | `nb-active`                                                                                       |
+| `cable` (scoped to cable trace)       | `nb-cable`                                                                                        |
+| `node` (scoped to cable trace)        | `nb-node`                                                                                         |
+| `termination` (scoped to cable trace) | `nb-termination`                                                                                  |
+| `trace-end` (scoped to cable trace)   | `nb-trace-end`                                                                                    |
+| `color-block`                         | `nb-color-block`                                                                                  |
+| `inline-color-block`                  | *removed*                                                                                         |
+| `editor-container`                    | `nb-editor-container`                                                                             |
+| `filter-container`                    | *removed*, refer to [Multi-badge](#multi-badge)                                                   |
+| `display-inline` (scoped to filters)  | *removed*, refer to [Multi-badge](#multi-badge)                                                   |
+| `filter-selection`                    | *removed*, refer to [Multi-badge](#multi-badge)                                                   |
+| `filter-selection-choice`             | *removed*, refer to [Multi-badge](#multi-badge)                                                   |
+| `filter-selection-choice-remove`      | *removed*, refer to [Multi-badge](#multi-badge)                                                   |
+| `filter-selection-rendered`           | *removed*, refer to [Multi-badge](#multi-badge)                                                   |
+| `remove-filter-param`                 | *removed*, refer to [Multi-badge](#multi-badge)                                                   |
+| `loading` (scoped to AJAX loaders)    | `nb-loading`                                                                                      |
+| `required` (scoped to form labels)    | `nb-required`                                                                                     |
+| `noprint`                             | *removed*, use `d-print-none` instead                                                             |
+| `powered-by-nautobot`                 | *removed*                                                                                         |
+| `report-stats`                        | `nb-report-stats`                                                                                 |
+| `right-side-panel`                    | `nb-right-side-panel`                                                                             |
+| `software-image-hierarchy`            | `nb-software-image-hierarchy`                                                                     |
+| `tree-hierarchy`                      | `nb-tree-hierarchy`                                                                               |
+| `tiles`                               | `nb-tiles`                                                                                        |
+| `tile`                                | `nb-tile`                                                                                         |
+| `clickable` (scoped to tiles)         | `nb-clickable`                                                                                    |
+| `disabled` (scoped to tiles)          | `nb-disabled`                                                                                     |
+| `tile-description`                    | `nb-tile-description`                                                                             |
+| `tile-footer`                         | `nb-tile-footer`                                                                                  |
+| `tile-header`                         | `nb-tile-header`                                                                                  |
+
 ## Table configuration button
 
 Configurable table columns are no novelty for Nautobot. However, when we redesigned user interface in v3.x, we also changed the way table configuration buttons are rendered, and as result they are now more coupled with tables they manage. Table configuration buttons are no longer standalone buttons on the page, instead they are rendered in the top right header cell of any **configurable** table.
@@ -159,6 +201,102 @@ It is now recommended to use sticky footers to host action buttons in all Nautob
 </form>
 ```
 
+## Hover Copy Buttons
+
+Hover Copy Buttons work as before but they require little adjustments to their existing implementations. Here's what's changed:
+
+1. `btn-inline` CSS class has been renamed to `nb-btn-inline-hover` and it is now the sole indicator that a button is expected to be hidden when idle and only appear on hover.
+2. `hover_copy` CSS class has been removed and is no longer required for annotating Hover Copy Button parent elements. Instead, hover button now always appears while hovering over its immediate parent, regardless of set classes and data attributes.
+3. `hover_copy_button` CSS class has also been removed.
+
+Before:
+
+```html
+<span class="hover_copy">
+    <span id="uuid_copy">{{ object.id }}</span>
+    <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#uuid_copy">
+        <span class="mdi mdi-content-copy"></span>
+    </button>
+</span>
+```
+
+After:
+
+```html
+<span>
+    <span id="uuid_copy">{{ object.id }}</span>
+    <button class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#uuid_copy">
+        <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+        <span class="visually-hidden">Copy</span>
+    </button>
+</span>
+```
+
+## Toggle All (Collapse All / Expand All)
+
+To extend the basic Bootstrap 5 Accordion and Collapse components functionality, Nautobot delivers a Toggle All (Collapse all / Expand all) button implementation. Although Bootstrap 5 is shipped with a feature to toggle multiple collapsibles with a single button, it treats controlled elements individually rather than collectively, by inverting their current state and not by forcing them to collapse or expand, as we would expect. Depending on desired behavior, you are free to choose between the default Bootstrap 5 or custom Nautobot mechanisms.
+
+Most of the logic is already implemented in Nautobot by default and there are just two data attributes that control a Toggle All (Collapse All / Expand All) button:
+
+1. `data-nb-toggle="collapse-all"` - mandatory, indicates that given button is of Toggle All (Collapse All / Expand All) type.
+2. `data-nb-target="{collapse CSS selector}"` - optional, specifies which collapse elements does the button control; when not explicitly set, target collapse CSS selector falls back to `".collapse"`.
+
+```html
+<button
+    aria-expanded="true"
+    class="btn btn-secondary"
+    data-nb-toggle="collapse-all"
+    data-nb-target="#accordion .collapse"
+    type="button"
+>
+    Collapse All
+</button>
+```
+
+## Multi-badge
+
+In place of legacy `filter-container` and `filter-selection`, Nautobot 3.0 introduces a general purpose Multi-badge component to serve as a container for multiple badges.
+
+1. Use both `badge` and `nb-multi-badge` CSS classes on an element to make it a multi-badge container.
+2. Wrap `badge` child elements of a multi-badge container in an element of `nb-multi-badge-items` CSS class.
+3. Like basic badges, multi-badge and badges inside it support clear/remove buttons.
+
+```html
+<span class="badge nb-multi-badge">
+    Multi-badge:
+    <span class="nb-multi-badge-items">
+        <span class="badge">Badge</span>
+        <span class="badge">Badge</span>
+    </span>
+</span>
+```
+
+```html
+<span class="badge nb-multi-badge">
+    Multi-badge:
+    <span class="nb-multi-badge-items">
+        <span class="badge"><!--
+            -->Badge<!--
+            --><button type="button">
+                <span aria-hidden="true" class="mdi mdi-close"></span>
+                <span class="visually-hidden">Remove</span>
+            </button>
+        </span>
+        <span class="badge"><!--
+            -->Badge<!--
+            --><button type="button">
+                <span aria-hidden="true" class="mdi mdi-close"></span>
+                <span class="visually-hidden">Remove</span>
+            </button>
+        </span>
+    </span>
+    <button type="button">
+        <span aria-hidden="true" class="mdi mdi-close"></span>
+        <span class="visually-hidden">Remove All</span>
+    </button>
+</span>
+```
+
 ## Extended Bootstrap Utilities
 
 Nautobot extends Bootstrap utilities with its own subset of CSS classes, properties and values.
@@ -173,6 +311,7 @@ Nautobot extends Bootstrap utilities with its own subset of CSS classes, propert
 | `nb-text-none`            | `text-transform: none;`            |
 | `nb-transition-base`      | `transition: all .2s ease-in-out;` |
 | `nb-transition-fade`      | `transition: opacity .15s linear;` |
+| `nb-transition-none`      | `transition: none;`                |
 | `nb-w-0`                  | `width: 0;`                        |
 | `nb-w-0`                  | `width: 0;`                        |
 | `nb-z-dropdown`           | `z-index: 1000;`                   |
