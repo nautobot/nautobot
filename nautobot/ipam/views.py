@@ -1295,24 +1295,23 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
         ),
     )
 
-    def get_required_permission(self):
-        view_action = self.get_action()
-        if view_action == "device_interfaces":
-            return ["dcim.view_interface"]
-        if view_action == "vm_interfaces":
-            return ["virtualization.view_vminterface"]
-        return super().get_required_permission()
-
-    def get_queryset(self):
-        if self.action in ["device_interfaces", "vm_interfaces"]:
-            return self.queryset.restrict(self.request.user, "view")
-        return super().get_queryset()
-
-    @action(detail=True, url_path="device-interfaces", url_name="device_interfaces")
+    @action(
+        detail=True,
+        url_path="device-interfaces",
+        url_name="device_interfaces",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_interface"],
+    )
     def device_interfaces(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="vm-interfaces", url_name="vm_interfaces")
+    @action(
+        detail=True,
+        url_path="vm-interfaces",
+        url_name="vm_interfaces",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["virtualization.view_vminterface"],
+    )
     def vm_interfaces(self, request, *args, **kwargs):
         return Response({})
 
