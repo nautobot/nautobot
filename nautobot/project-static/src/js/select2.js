@@ -1,5 +1,4 @@
 import get from 'lodash.get';
-import { createElement } from './utils.js';
 
 /**
  * Get HTML `element`. This function accepts input as native `Document` and `Element` object and `jQuery` collection.
@@ -265,86 +264,16 @@ const initializeMultiValueChar = (context, dropdownParent = null) =>
 const initializeStaticChoiceSelection = (context, dropdownParent = null) =>
   initializeSelect2(context, '.nautobot-select2-static', { dropdownParent });
 
-const initializeTags = (context, dropdownParent = null) => {
-  const element = getElement(context);
-  const selector = '#id_tags.tagfield';
-
-  const field = element.querySelector(selector);
-  const data = (field?.value?.split(/,\s*/) ?? []).map((tag) => ({ id: tag, selected: true, text: tag }));
-
-  // Replace the Django-issued text input with a select element.
-  field?.replaceWith(
-    createElement('select', {
-      className: 'form-select tagfield',
-      id: 'id_tags',
-      name: 'tags',
-      placeholder: 'Select...',
-    }),
-  );
-
-  initializeSelect2(context, selector, {
-    ajax: {
-      delay: 250,
-      url: `${nautobot_api_path}extras/tags/`,
-      data: (params) => {
-        // Paging. Note that `params.page` indexes at 1.
-        const offset = (params.page - 1) * 50 || 0;
-
-        // Base query params.
-        const limit = 50;
-        const q = params.term;
-
-        const parameters = { limit: String(limit), offset: String(offset), ...(q ? { q } : undefined) };
-
-        return new URLSearchParams(parameters).toString();
-      },
-      processResults: function (data) {
-        const results = data.results.map((obj) => {
-          // If tag contains space add double quotes.
-          const name = /\s/.test(obj.name) ? `"${obj.name}"` : obj.name;
-          return { id: name, text: name };
-        });
-
-        // Check if there are more results to page.
-        const has_next_page = data.next !== null;
-        return { results, pagination: { more: has_next_page } };
-      },
-    },
-    data,
-    dropdownParent,
-    multiple: true,
-    tags: true,
-  });
-
-  const select = element.querySelector(selector);
-  select?.form?.addEventListener('submit', () => {
-    // django-taggit can only accept a single comma seperated string value
-    const value = getValue(select);
-
-    if (value.length > 0) {
-      select.value = '';
-      select.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
-
-      const final_tags = value.join(', ');
-      const option = createElement('option', { selected: 'true', value: final_tags }, final_tags);
-      select.appendChild(option);
-      select.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
-    }
-  });
-};
-
 export const initializeSelect2Fields = (context) => {
   initializeColorPicker(context);
   initializeDynamicChoiceSelection(context);
   initializeMultiValueChar(context);
   initializeStaticChoiceSelection(context);
-  initializeTags(context);
 
   [...getElement(context).querySelectorAll('.modal')].forEach((modal) => {
     initializeColorPicker(modal, modal);
     initializeDynamicChoiceSelection(modal, modal);
     initializeMultiValueChar(modal, modal);
     initializeStaticChoiceSelection(modal, modal);
-    initializeTags(modal, modal);
   });
 };
