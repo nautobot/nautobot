@@ -23,7 +23,6 @@ from nautobot.cloud.tables import CloudNetworkTable
 from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
 from nautobot.core.models.querysets import count_related
-from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.config import get_settings_or_config
@@ -33,6 +32,7 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import get_obj_from_context, handle_protectederror
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Device, Interface
+from nautobot.dcim.tables.locations import LocationTable
 from nautobot.extras.models import Role, SavedView, Status, Tag
 from nautobot.ipam import choices, constants
 from nautobot.ipam.api import serializers
@@ -1199,13 +1199,6 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
     table_class = tables.VLANTable
     queryset = VLAN.objects.all()
 
-    class VLANObjectFieldsPanel(object_detail.ObjectFieldsPanel):
-        def get_data(self, context):
-            instance = get_obj_from_context(context, self.context_object_key)
-            data = super().get_data(context)
-            data["locations"] = instance.locations.all()
-            return data
-
     class PrefixObjectsTablePanel(object_detail.ObjectsTablePanel):
         def _get_table_add_url(self, context):
             obj = get_obj_from_context(context)
@@ -1226,11 +1219,8 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            VLANObjectFieldsPanel(
-                weight=100,
-                section=SectionChoices.LEFT_HALF,
-                fields="__all__",
-                value_transforms={"locations": [helpers.render_m2m]},
+            object_detail.ObjectFieldsPanel(
+                weight=100, section=SectionChoices.LEFT_HALF, fields="__all__", exclude_fields=["locations"]
             ),
             PrefixObjectsTablePanel(
                 weight=100,
@@ -1240,6 +1230,13 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
                 table_filter="vlan_id",
                 exclude_columns=["vlan"],
                 hide_hierarchy_ui=True,
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=LocationTable,
+                table_filter="vlans",
+                add_button_route=None,
             ),
         ),
         extra_tabs=(
