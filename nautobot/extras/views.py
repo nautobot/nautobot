@@ -224,7 +224,7 @@ class ConfigContextUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.FULL_WIDTH,
                 label="Data",
-                header_extra_content_template_path="extras/inc/json_format.html",
+                header_extra_content_template_path="extras/configcontext_format.html",
                 body_content_template_path="extras/inc/configcontext_data.html",
             ),
             AssignmentObjectFieldsPanel(
@@ -270,8 +270,8 @@ class ObjectConfigContextView(generic.ObjectView):
         source_contexts = ConfigContext.objects.restrict(request.user, "view").get_for_object(instance)
 
         # Determine user's preferred output format
-        if request.GET.get("data_format") in ["json", "yaml"]:
-            format_ = request.GET.get("data_format")
+        if request.GET.get("format") in ["json", "yaml"]:
+            format_ = request.GET.get("format")
             if request.user.is_authenticated:
                 request.user.set_config("extras.configcontext.format", format_, commit=True)
         elif request.user.is_authenticated:

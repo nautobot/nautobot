@@ -39,10 +39,10 @@
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Data Schema</strong>
-                    {% include 'extras/inc/json_format.html' %}
+                    {% include 'extras/configcontext_format.html' %}
                 </div>
                 <div class="panel-body">
-                    {% include 'extras/inc/json_data.html' with data=object.data_schema format=format %}
+                    {% include 'extras/inc/json_data.html' with data=object.data_schema format=data_format %}
                 </div>
             </div>
 {% endblock content_right_page %}
