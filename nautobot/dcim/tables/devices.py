@@ -227,6 +227,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "device_type",
             "primary_ip",
             "actions",
+            "validation_state",
         )
 
     def render_capabilities(self, value):

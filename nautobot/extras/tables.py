@@ -239,7 +239,7 @@ class ConfigContextTable(BaseTable):
             "tenants",
             "dynamic_groups",
         )
-        default_columns = ("pk", "name", "weight", "is_active", "description")
+        default_columns = ("pk", "name", "weight", "is_active", "description", "validation_state", "actions")
 
 
 class ConfigContextSchemaTable(BaseTable):
