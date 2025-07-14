@@ -3,35 +3,35 @@
 
 <section class="nb-drawer" tabindex="-1" id="{{ filter_form_name }}_drawer">
     <div class="nb-drawer-header">
-        <h1>Filter {{ model_plural_name }}</h1>
+        <h1>Filters</h1>
         <button type="button" class="btn-close" data-nb-dismiss="drawer" aria-label="Close"></button>
     </div>
     <div class="nb-drawer-body">
         <ul id="filter-tabs" class="nav nav-tabs">
             {% if filter_form %}
-            <li role="presentation" class="nav-item">
-                <a class="nav-link active"  href="#default-filter" role="tab" data-bs-toggle="tab">
-                    Default
-                </a>
-            </li>
+                <li role="presentation" class="nav-item">
+                    <a class="nav-link{% if filter_form %} active{% endif %}"  href="#default-filter" role="tab" data-bs-toggle="tab">
+                        Basic
+                    </a>
+                </li>
             {% endif %}
             {% if dynamic_filter_form %}
-            <li role="presentation" class="nav-item">
-                <a class="nav-link{% if not filter_form %} active{% endif %}" href="#advanced-filter" role="tab" data-bs-toggle="tab">
-                    Advanced
-                </a>
-            </li>
+                <li role="presentation" class="nav-item">
+                    <a class="nav-link{% if not filter_form %} active{% endif %}" href="#advanced-filter" role="tab" data-bs-toggle="tab">
+                        Advanced
+                    </a>
+                </li>
             {% endif %}
         </ul>
-        <div class="tab-content">
+        <div class="tab-content h-100">
             {% if filter_form %}
-            <div id="default-filter" role="tabpanel" class="tab-pane active">
-                {% include 'inc/search_panel.html' %}
-            </div>
+                <div id="default-filter" role="tabpanel" class="tab-pane fade{% if filter_form %} show active{% endif %} h-100 p-20">
+                    {% include 'inc/search_panel.html' %}
+                </div>
             {% endif %}
             {% if dynamic_filter_form %}
-            <div id="advanced-filter" role="tabpanel" class="tab-pane {% if not filter_form %} active {% endif %}">
-                <form id="dynamic-filter-form" class="form-horizontal" method="get" action=".">
+            <div id="advanced-filter" role="tabpanel" class="tab-pane fade{% if not filter_form %} show active{% endif %}">
+                <form id="dynamic-filter-form">
                     <div class="">
                         <table class="table" id="filterform-table">
                             {{ dynamic_filter_form.management_form }}

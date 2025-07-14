@@ -34,6 +34,7 @@ import { initializeDraggable } from './draggable.js';
 import { initializeDrawers } from './drawer.js';
 import { observeFormStickyFooters } from './form.js';
 import { initializeSearch } from './search.js';
+import { initializeSelect2Fields } from './select2.js';
 import { observeCollapseTabs } from './tabs.js';
 import { initializeTheme } from './theme.js';
 
@@ -96,6 +97,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Search
   initializeSearch();
+
+  // Select2
+  // TODO(norbert-mieczkowski-codilime): clean up forms to prevent exporting functions to global scope like this.
+  window.initializeSelect2Fields = initializeSelect2Fields;
 
   // Tabs
   /*

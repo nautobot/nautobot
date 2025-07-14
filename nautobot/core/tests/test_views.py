@@ -303,7 +303,7 @@ class FilterFormsTestCase(TestCase):
         <ul class="nav nav-tabs" id="filter-tabs">
             <li class="nav-item" role="presentation">
                 <a class="active nav-link" data-bs-toggle="tab" href="#default-filter" role="tab">
-                    Default
+                    Basic
                 </a>
             </li>
             <li class="nav-item" role="presentation">
