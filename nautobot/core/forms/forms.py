@@ -148,7 +148,10 @@ class BulkEditForm(forms.Form):
         # Handle M2M Save
         for key in self.cleaned_data.keys():
             if key.startswith(("add_", "remove_")):
-                field_name = key.lstrip("add_")
+                if key.startswith("add_"):
+                    field_name = key.lstrip("add_")
+                else:
+                    field_name = key.lstrip("remove_")
                 if field_name in m2m_field_names:
                     continue
                 with contextlib.suppress(FieldDoesNotExist):

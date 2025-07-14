@@ -231,10 +231,8 @@ class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectVie
 
         cls.bulk_edit_data = {
             "weight": 800,
-            "name": "Updated approval workflow stage definition name",
             "min_approvers": 5,
             "denial_message": "updated denial message",
-            "approver_group": cls.updated_approver_group.pk,
         }
 
 
@@ -255,12 +253,12 @@ class ApprovalWorkflowViewTestCase(
         """Set up test data."""
         super().setUpTestData()
         cls.scheduledjob_ct = ContentType.objects.get_for_model(ScheduledJob)
-        job_model = Job.objects.get_for_class_path("pass.TestPassJob")
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
         user = User.objects.first()
         cls.scheduled_jobs = [
             ScheduledJob.objects.create(
                 name=f"TessPassJob Scheduled Job {i}",
-                task="pass.TestPassJob",
+                task="pass_job.TestPassJob",
                 job_model=job_model,
                 interval=JobExecutionType.TYPE_IMMEDIATELY,
                 user=user,
@@ -320,12 +318,12 @@ class ApprovalWorkflowStageViewTestCase(
         """Set up test data."""
         super().setUpTestData()
         cls.scheduledjob_ct = ContentType.objects.get_for_model(ScheduledJob)
-        job_model = Job.objects.get_for_class_path("pass.TestPassJob")
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
         user = User.objects.first()
         cls.scheduled_jobs = [
             ScheduledJob.objects.create(
                 name=f"TessPassJob Scheduled Job {i}",
-                task="pass.TestPassJob",
+                task="pass_job.TestPassJob",
                 job_model=job_model,
                 interval=JobExecutionType.TYPE_IMMEDIATELY,
                 user=user,
@@ -505,11 +503,11 @@ class ApprovalWorkflowStageResponseViewTestCase(
             for group in cls.approver_groups:
                 user.groups.add(group)
 
-        job_model = Job.objects.get_for_class_path("pass.TestPassJob")
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
         cls.scheduled_jobs = [
             ScheduledJob.objects.create(
                 name=f"TessPassJob Scheduled Job {i}",
-                task="pass.TestPassJob",
+                task="pass_job.TestPassJob",
                 job_model=job_model,
                 interval=JobExecutionType.TYPE_IMMEDIATELY,
                 user=cls.users[0],
@@ -1608,7 +1606,7 @@ class ExportTemplateTestCase(
 
 class ExternalIntegrationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = ExternalIntegration
-    bulk_edit_data = {"timeout": 10, "verify_ssl": True, "extra_config": r"{}", "headers": r"{}"}
+    bulk_edit_data = {"timeout": 10, "verify_ssl": True, "extra_config": '{"baz": "quux"}', "headers": '{"a": "b"}'}
     form_data = {
         "name": "Test External Integration",
         "remote_url": "https://example.com/test1/",
@@ -2427,21 +2425,21 @@ class ScheduledJobTestCase(
         user = User.objects.create(username="user1", is_active=True)
         ScheduledJob.objects.create(
             name="test1",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test2",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_DAILY,
             user=user,
             start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test3",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_CUSTOM,
             user=user,
             start_time=timezone.now(),
@@ -2455,7 +2453,7 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             enabled=False,
             name="test4",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             start_time=timezone.now(),
@@ -2474,7 +2472,7 @@ class ScheduledJobTestCase(
             approval_required=True,
             approved_at=None,
             name="test4",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             start_time=timezone.now(),
@@ -2483,7 +2481,7 @@ class ScheduledJobTestCase(
             enabled=True,
             approval_required=False,
             name="test5",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             start_time=timezone.now(),
@@ -2508,7 +2506,7 @@ class ScheduledJobTestCase(
             ScheduledJob.objects.create(
                 enabled=True,
                 name=name,
-                task="pass.TestPassJob",
+                task="pass_job.TestPassJob",
                 interval=JobExecutionType.TYPE_CUSTOM,
                 user=self.user,
                 start_time=timezone.now(),
@@ -2539,7 +2537,7 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             enabled=True,
             name="test11",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_CUSTOM,
             user=self.user,
             start_time=timezone.now(),
@@ -2599,7 +2597,7 @@ class ApprovalQueueTestCase(
 
         ScheduledJob.objects.create(
             name="test4",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
@@ -2990,7 +2988,7 @@ class JobResultTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        JobResult.objects.create(name="pass.TestPassJob")
+        JobResult.objects.create(name="pass_job.TestPassJob")
         JobResult.objects.create(name="fail.TestFailJob")
         JobLogEntry.objects.create(
             log_level=LogLevelChoices.LOG_INFO,
@@ -3603,14 +3601,13 @@ class JobTestCase(
 
         self.test_pass.approval_required = True
         self.test_pass.save()
-
         data = {
             "_schedule_type": "immediately",
         }
         for run_url in self.run_urls:
             response = self.client.post(run_url, data)
             scheduled_job = ScheduledJob.objects.last()
-            # Assert the redirect goes to that job's approval workflow view
+            self.assertEqual(scheduled_job.interval, JobExecutionType.TYPE_FUTURE)
             self.assertRedirects(
                 response,
                 reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk]),
@@ -4356,6 +4353,43 @@ class RelationshipAssociationTestCase(
         self.assertNotIn(instance2.source.name, content, msg=content)
         self.assertNotIn(instance2.destination.name, content, msg=content)
 
+    def test_get_object_with_advanced_relationships(self):
+        device_type = ContentType.objects.get_for_model(Device)
+        vlan_type = ContentType.objects.get_for_model(VLAN)
+        Relationship.objects.create(
+            label="Device VLANs 4",
+            key="device_vlans_4",
+            type="one-to-many",
+            source_type=device_type,
+            source_label="Device VLANs Advanced",
+            destination_type=vlan_type,
+            destination_label="VLANs",
+            advanced_ui=True,
+        )
+        Relationship.objects.create(
+            label="Device VLANs 5",
+            key="device_vlans_5",
+            type="one-to-many",
+            source_type=device_type,
+            source_label="Device VLANs Main",
+            destination_type=vlan_type,
+            destination_label="VLANs",
+            advanced_ui=False,
+        )
+
+        device = Device.objects.first()
+        # Add model-level permission
+        self.add_permissions(f"{Device._meta.app_label}.view_{Device._meta.model_name}")
+        # Try GET the main tab
+        response = self.client.get(device.get_absolute_url())
+        response_content = extract_page_body(response.content.decode(response.charset))
+        # The relationship's source label should be in the advanced tab since advance_ui=True
+        # a.k.a its index should be greater than the index of the advanced tab
+        self.assertGreater(response_content.find("Device VLANs Advanced"), response_content.find('id="advanced"'))
+        # The relationship's source label should not be in the advanced tab since advance_ui=False
+        # a.k.a its index should be smaller than the index of the advanced tab
+        self.assertGreater(response_content.find('id="advanced"'), response_content.find("Device VLANs Main"))
+
 
 class StaticGroupAssociationTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
@@ -4620,8 +4654,7 @@ class WebhookTestCase(
             "http_content_type": "application/json",
         }
         cls.bulk_edit_data = {
-            "name": "webhook-4",
-            "enabled": True,
+            "enabled": False,
             "type_create": True,
             "type_update": True,
             "type_delete": False,

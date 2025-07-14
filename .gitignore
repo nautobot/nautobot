@@ -37,3 +37,6 @@ development/pod.yaml
 node_modules
 .yarn
 .service_ports.json
+
+# Avoid accidental commit of analytics template override generated via ./docs/insert-analytics.sh
+docs/assets/overrides/main.html

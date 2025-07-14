@@ -183,6 +183,13 @@ class ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(BaseTable):
         )
 
 
+class DeviceGroupWirelessNetworkTable(ControllerManagedDeviceGroupWirelessNetworkAssignmentTable):
+    list_url = "wireless:wirelessnetwork_list"
+
+    class Meta(ControllerManagedDeviceGroupWirelessNetworkAssignmentTable.Meta):
+        pass
+
+
 class ControllerControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
     ControllerManagedDeviceGroupWirelessNetworkAssignmentTable
 ):

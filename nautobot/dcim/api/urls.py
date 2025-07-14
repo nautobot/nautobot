@@ -17,6 +17,7 @@ router.register("rack-reservations", views.RackReservationViewSet)
 router.register("manufacturers", views.ManufacturerViewSet)
 router.register("device-families", views.DeviceFamilyViewSet)
 router.register("device-types", views.DeviceTypeViewSet)
+router.register("module-families", views.ModuleFamilyViewSet)
 router.register("module-types", views.ModuleTypeViewSet)
 
 # Device type and Module type components

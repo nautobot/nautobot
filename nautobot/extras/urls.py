@@ -3,8 +3,6 @@ from django.urls import path
 from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras import views
 from nautobot.extras.models import (
-    ConfigContext,
-    ConfigContextSchema,
     CustomField,
     DynamicGroup,
     GitRepository,
@@ -14,7 +12,6 @@ from nautobot.extras.models import (
     Relationship,
     ScheduledJob,
     SecretsGroup,
-    Tag,
 )
 
 app_name = "extras"
@@ -26,6 +23,8 @@ router.register("approval-workflow-stages", views.ApprovalWorkflowStageUIViewSet
 router.register("approval-workflow-stage-definitions", views.ApprovalWorkflowStageDefinitionUIViewSet)
 router.register("approval-workflow-stage-responses", views.ApprovalWorkflowStageResponseUIViewSet)
 router.register("computed-fields", views.ComputedFieldUIViewSet)
+router.register("config-context-schemas", views.ConfigContextSchemaUIViewSet)
+router.register("config-contexts", views.ConfigContextUIViewSet)
 router.register("contacts", views.ContactUIViewSet)
 router.register("contact-associations", views.ContactAssociationUIViewSet)
 router.register("custom-links", views.CustomLinkUIViewSet)
@@ -36,12 +35,14 @@ router.register("job-hooks", views.JobHookUIViewSet)
 router.register("job-queues", views.JobQueueUIViewSet)
 router.register("metadata-types", views.MetadataTypeUIViewSet)
 router.register("object-metadata", views.ObjectMetadataUIViewSet)
+router.register("relationship-associations", views.RelationshipAssociationUIViewSet)
 router.register("relationships", views.RelationshipUIViewSet)
 router.register("roles", views.RoleUIViewSet)
 router.register("saved-views", views.SavedViewUIViewSet)
 router.register("secrets", views.SecretUIViewSet)
 router.register("static-group-associations", views.StaticGroupAssociationUIViewSet)
 router.register("statuses", views.StatusUIViewSet)
+router.register("tags", views.TagUIViewSet)
 router.register("teams", views.TeamUIViewSet)
 router.register("webhooks", views.WebhookUIViewSet)
 
@@ -53,106 +54,11 @@ urlpatterns = [
     # Change logging
     path("object-changes/", views.ObjectChangeListView.as_view(), name="objectchange_list"),
     path("object-changes/<uuid:pk>/", views.ObjectChangeView.as_view(), name="objectchange"),
-    # Config contexts
-    path(
-        "config-contexts/",
-        views.ConfigContextListView.as_view(),
-        name="configcontext_list",
-    ),
-    path(
-        "config-contexts/add/",
-        views.ConfigContextEditView.as_view(),
-        name="configcontext_add",
-    ),
-    path(
-        "config-contexts/edit/",
-        views.ConfigContextBulkEditView.as_view(),
-        name="configcontext_bulk_edit",
-    ),
-    path(
-        "config-contexts/delete/",
-        views.ConfigContextBulkDeleteView.as_view(),
-        name="configcontext_bulk_delete",
-    ),
-    path(
-        "config-contexts/<uuid:pk>/",
-        views.ConfigContextView.as_view(),
-        name="configcontext",
-    ),
-    path(
-        "config-contexts/<uuid:pk>/edit/",
-        views.ConfigContextEditView.as_view(),
-        name="configcontext_edit",
-    ),
-    path(
-        "config-contexts/<uuid:pk>/delete/",
-        views.ConfigContextDeleteView.as_view(),
-        name="configcontext_delete",
-    ),
-    path(
-        "config-contexts/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="configcontext_changelog",
-        kwargs={"model": ConfigContext},
-    ),
-    path(
-        "config-contexts/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="configcontext_notes",
-        kwargs={"model": ConfigContext},
-    ),
     # Config context schema
-    path(
-        "config-context-schemas/",
-        views.ConfigContextSchemaListView.as_view(),
-        name="configcontextschema_list",
-    ),
-    path(
-        "config-context-schemas/add/",
-        views.ConfigContextSchemaEditView.as_view(),
-        name="configcontextschema_add",
-    ),
-    path(
-        "config-context-schemas/edit/",
-        views.ConfigContextSchemaBulkEditView.as_view(),
-        name="configcontextschema_bulk_edit",
-    ),
-    path(
-        "config-context-schemas/delete/",
-        views.ConfigContextSchemaBulkDeleteView.as_view(),
-        name="configcontextschema_bulk_delete",
-    ),
-    path(
-        "config-context-schemas/<uuid:pk>/",
-        views.ConfigContextSchemaView.as_view(),
-        name="configcontextschema",
-    ),
     path(
         "config-context-schemas/<uuid:pk>/validation/",
         views.ConfigContextSchemaObjectValidationView.as_view(),
         name="configcontextschema_object_validation",
-    ),
-    path(
-        "config-context-schemas/<uuid:pk>/edit/",
-        views.ConfigContextSchemaEditView.as_view(),
-        name="configcontextschema_edit",
-    ),
-    path(
-        "config-context-schemas/<uuid:pk>/delete/",
-        views.ConfigContextSchemaDeleteView.as_view(),
-        name="configcontextschema_delete",
-    ),
-    path(
-        "config-context-schemas/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="configcontextschema_changelog",
-        kwargs={"model": ConfigContextSchema},
-    ),
-    path(
-        "config-context-schemas/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="configcontextschema_notes",
-        kwargs={"model": ConfigContextSchema},
     ),
     # contacts
     path("contact-associations/add-new-contact/", views.ObjectNewContactView.as_view(), name="object_contact_add"),
@@ -415,21 +321,6 @@ urlpatterns = [
         name="relationship_notes",
         kwargs={"model": Relationship},
     ),
-    path(
-        "relationship-associations/",
-        views.RelationshipAssociationListView.as_view(),
-        name="relationshipassociation_list",
-    ),
-    path(
-        "relationship-associations/delete/",
-        views.RelationshipAssociationBulkDeleteView.as_view(),
-        name="relationshipassociation_bulk_delete",
-    ),
-    path(
-        "relationship-associations/<uuid:pk>/delete/",
-        views.RelationshipAssociationDeleteView.as_view(),
-        name="relationshipassociation_delete",
-    ),
     # Secrets
     path(
         "secrets/provider/<str:provider_slug>/form/",
@@ -453,27 +344,6 @@ urlpatterns = [
         views.ObjectNotesView.as_view(),
         name="secretsgroup_notes",
         kwargs={"model": SecretsGroup},
-    ),
-    # Tags
-    path("tags/", views.TagListView.as_view(), name="tag_list"),
-    path("tags/add/", views.TagEditView.as_view(), name="tag_add"),
-    path("tags/import/", views.TagBulkImportView.as_view(), name="tag_import"),  # 3.0 TODO: remove, unused
-    path("tags/edit/", views.TagBulkEditView.as_view(), name="tag_bulk_edit"),
-    path("tags/delete/", views.TagBulkDeleteView.as_view(), name="tag_bulk_delete"),
-    path("tags/<uuid:pk>/", views.TagView.as_view(), name="tag"),
-    path("tags/<uuid:pk>/edit/", views.TagEditView.as_view(), name="tag_edit"),
-    path("tags/<uuid:pk>/delete/", views.TagDeleteView.as_view(), name="tag_delete"),
-    path(
-        "tags/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="tag_changelog",
-        kwargs={"model": Tag},
-    ),
-    path(
-        "tags/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="tag_notes",
-        kwargs={"model": Tag},
     ),
 ]
 

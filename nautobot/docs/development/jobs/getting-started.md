@@ -57,6 +57,9 @@ class HelloWorldJob(jobs.Job):
 jobs.register_jobs(HelloWorldJob) # <- required in Nautobot 2.x
 ```
 
+!!! tip
+    Python files and packages created in `$JOBS_ROOT` are treated as Python modules by Nautobot. Nautobot will not import files from `$JOBS_ROOT` that conflict with an installed Python package or are invalid as a module name. This means that, for example, a file named `nautobot.py` will not be imported since it conflicts with the `nautobot` package.
+
 ### Visual Guide
 
 ![Edit Job](../../media/development/jobs/edit-job.png)  

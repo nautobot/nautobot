@@ -241,6 +241,9 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     table_class = None
     notes_form_class = NoteForm
     permission_classes = []
+    # custom view attributes used for permission checks and handling
+    custom_view_base_action = None
+    custom_view_additional_permissions = None
 
     def get_permissions_for_model(self, model, actions):
         """
@@ -251,6 +254,10 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         model_permissions = []
         for action in actions:
+            # Append additional object permissions if specified.
+            if self.custom_view_additional_permissions:
+                model_permissions.append(*self.custom_view_additional_permissions)
+            # Append the model-level permissions for the action.
             model_permissions.append(f"{model._meta.app_label}.{action}_{model._meta.model_name}")
         return model_permissions
 
@@ -503,7 +510,13 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
 
     def get_action(self):
         """Helper method for retrieving action and if action not set defaulting to action name."""
-        return PERMISSIONS_ACTION_MAP.get(self.action, self.action)
+        if self.custom_view_base_action:
+            return self.custom_view_base_action
+        if self.action in PERMISSIONS_ACTION_MAP:
+            # If the action is in the action_map, return the mapped permission
+            return PERMISSIONS_ACTION_MAP[self.action]
+
+        return self.action
 
     def get_extra_context(self, request, instance=None):
         """
@@ -513,7 +526,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         if instance is not None:
             return {
-                "object_detail_content": self.object_detail_content,
+                "object_detail_content": getattr(self, "object_detail_content", None),
                 "active_tab": request.GET.get("tab", "main"),
             }
         return {}
@@ -1034,6 +1047,11 @@ class BulkEditAndBulkDeleteModelMixin:
                 self.logger.debug(f"Query parameter `{key}` not found in `{filterset_class}`, discarding it")
 
         filter_query_params = new_filter_query_params
+
+        if nullified_fields := request.POST.getlist("_nullify"):
+            form_data["_nullify"] = nullified_fields
+        else:
+            form_data["_nullify"] = []
 
         job_form = BulkEditObjects.as_form(
             data={

@@ -1416,6 +1416,11 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         if job_model.time_limit > 0:
             celery_kwargs["time_limit"] = job_model.time_limit
 
+        # We do this because when a job creates an approval workflow, a scheduled job is also created.
+        # If the scheduled job has an "immediate" interval, the scheduler will not send this task.
+        # since TYPE_IMMEDIATELY is not a valid value in JobExecutionType.SCHEDULE_CHOICES
+        if interval == JobExecutionType.TYPE_IMMEDIATELY:
+            interval = JobExecutionType.TYPE_FUTURE
         # 2.0 TODO: To revisit this as part of a larger Jobs cleanup in 2.0.
         #
         # We pass in task and job_model here partly for forward/backward compatibility logic, and

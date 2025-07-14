@@ -53,6 +53,7 @@ from nautobot.core.views.utils import (
     check_filter_for_display,
     common_detail_view_context,
     get_csv_form_fields_from_serializer_class,
+    get_saved_views_for_user,
     handle_protectederror,
     import_csv_helper,
     prepare_cloned_fields,
@@ -315,18 +316,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         table_config_form = None
         current_saved_view = None
         current_saved_view_pk = self.request.GET.get("saved_view", None)
-        # We are not using .restrict(request.user, "view") here
-        # User should be able to see any saved view that he has the list view access to.
-        if user.has_perms(["extras.view_savedview"]):
-            saved_views = SavedView.objects.filter(view=list_url).order_by("name").only("pk", "name")
-        else:
-            shared_saved_views = (
-                SavedView.objects.filter(view=list_url, is_shared=True).order_by("name").only("pk", "name")
-            )
-            user_owned_saved_views = (
-                SavedView.objects.filter(view=list_url, owner=user).order_by("name").only("pk", "name")
-            )
-            saved_views = shared_saved_views | user_owned_saved_views
+        saved_views = get_saved_views_for_user(user, list_url)
 
         if current_saved_view_pk:
             try:

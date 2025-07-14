@@ -93,7 +93,9 @@ LINKED_RECORD_COUNT = """
 
 TREE_LINK = """
 {% load helpers %}
+{% if not table.hide_hierarchy_ui %}
 {% tree_hierarchy_ui_representation record.tree_depth|as_range table.hide_hierarchy_ui %}
+{% endif %}
 <a href="{{ record.get_absolute_url }}">{{ record.name }}</a>
 """
 

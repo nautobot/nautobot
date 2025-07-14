@@ -17,7 +17,7 @@
 {% endif %}
 {% if perms.dcim.delete_cable %}
     <li>
-        <a href="{% url 'dcim:cable_delete' pk=cable.pk %}?return_url={{ object.get_absolute_url }}" class="dropdown-item text-danger">
+        <a href="{% url 'dcim:cable_delete' pk=cable.pk %}?return_url={{ request.path }}" class="dropdown-item text-danger">
             <span class="mdi mdi-ethernet-cable-off" aria-hidden="true"></span>
             Remove cable
         </a>
