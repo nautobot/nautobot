@@ -8,7 +8,7 @@ from nautobot.core.apps import (
 menu_items = (
     NavMenuTab(
         name="Cloud",
-        weight=130,
+        weight=150,
         groups=(
             NavMenuGroup(
                 name="Cloud",

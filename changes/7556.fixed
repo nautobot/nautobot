@@ -1,1 +1,1 @@
-Fixed Cloud, Devices, and Wireless NavMenuTabs all have the same weight of 200.
+Fixed Cloud, Devices, and Wireless NavMenuTabs all had the same weight of 200. Updated the Cloud weight to 150 and the Wireless weight to 250.
