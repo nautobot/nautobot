@@ -4397,6 +4397,7 @@ class StaticGroupAssociationTestCase(
         self.assertBodyContains(response, sga1.get_absolute_url())
 
 
+@tag("doltdb_stuck")
 class StatusTestCase(
     # TODO? ViewTestCases.BulkDeleteObjectsViewTestCase,
     ViewTestCases.CreateObjectViewTestCase,
