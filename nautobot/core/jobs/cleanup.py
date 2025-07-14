@@ -73,8 +73,6 @@ class LogsCleanup(Job):
         ]
         for gr_related_field in genericrelation_related_fields:
             related_model = gr_related_field.related_model
-            if related_model == queryset.model:
-                continue  # avoid infinite recursion  # TODO: this won't catch A<-B<-A<-B loops...
             related_field_name = gr_related_field.related_query_name()
             cascade_queryset = related_model.objects.filter(**{f"{related_field_name}__id__in": queryset})
             if cascade_queryset.exists():
