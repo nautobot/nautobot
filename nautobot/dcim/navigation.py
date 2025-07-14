@@ -115,11 +115,11 @@ menu_items = (
     ),
     NavMenuTab(
         name="Devices",
-        weight=160,
+        weight=200,
         groups=(
             NavMenuGroup(
                 name="Devices",
-                weight=200,
+                weight=100,
                 items=(
                     NavMenuItem(
                         link="dcim:device_list",
