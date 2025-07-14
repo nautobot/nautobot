@@ -764,11 +764,11 @@ class TestObjectDetailView(TestCase):
         url = reverse("circuits:provider", args=(provider.pk,))
         response = self.client.get(f"{url}?tab=main")
         self.assertHttpStatus(response, 200)
-        response_data = response.content.decode(response.charset)
+        response_data = extract_page_body(response.content.decode(response.charset))
         view_move_url = reverse("circuits:circuit_list") + f"?provider={provider.id}"
 
         # Assert Badge Count in table panel header
-        panel_header = f"""<div class="panel-heading"><strong>Circuits</strong> <a href="{view_move_url}" class="badge badge-primary">10</a></div>"""
+        panel_header = f"""<strong>Circuits</strong> <a href="{view_move_url}" class="badge badge-primary">10</a>"""
         self.assertInHTML(panel_header, response_data)
 
         # Assert view X more btn

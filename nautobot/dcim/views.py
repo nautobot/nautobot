@@ -75,8 +75,8 @@ from nautobot.wireless.models import (
     ControllerManagedDeviceGroupWirelessNetworkAssignment,
 )
 from nautobot.wireless.tables import (
+    BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
     ControllerManagedDeviceGroupRadioProfileAssignmentTable,
-    ControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
     DeviceGroupWirelessNetworkTable,
     RadioProfileTable,
 )
@@ -2390,7 +2390,7 @@ class DeviceWirelessView(generic.ObjectView):
         wireless_networks = ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
             controller_managed_device_group=controller_managed_device_group
         ).select_related("wireless_network", "controller_managed_device_group", "vlan")
-        wireless_networks_table = ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
+        wireless_networks_table = BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
             data=wireless_networks, user=request.user, orderable=False
         )
         wireless_networks_table.columns.hide("controller_managed_device_group")
@@ -4839,25 +4839,69 @@ class ControllerUIViewSet(NautobotUIViewSet):
     table_class = tables.ControllerTable
     template_name = "dcim/controller_create.html"
 
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-
-        if self.action == "retrieve" and instance:
-            devices = Device.objects.restrict(request.user).filter(controller_managed_device_group__controller=instance)
-            devices_table = tables.DeviceTable(devices)
-            devices_table.columns.show("controller_managed_device_group")
-            devices_table.columns.show("capabilities")
-            devices_table.sequence = ("name", "controller_managed_device_group", "capabilities", "...")
-
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(devices_table)
-
-            context["devices_table"] = devices_table
-
-        return context
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+                value_transforms={
+                    "capabilities": [helpers.label_list],
+                },
+                exclude_fields=[
+                    "external_integration",
+                    "controller_device",
+                    "controller_device_redundancy_group",
+                ],
+            ),
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                label="Integration",
+                fields=[
+                    "external_integration",
+                    "controller_device",
+                    "controller_device_redundancy_group",
+                ],
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=100,
+                table_class=tables.DeviceTable,
+                table_title="Managed Devices",
+                table_filter="controller_managed_device_group__controller",
+                include_columns=[
+                    "capabilities",
+                    "controller_managed_device_group",
+                    "manufacturer",
+                ],
+                related_field_name="controller",
+                add_button_route=None,
+            ),
+        ),
+        extra_tabs=(
+            object_detail.DistinctViewTab(
+                weight=700,
+                tab_id="wireless_networks",
+                url_name="dcim:controller_wirelessnetworks",
+                label="Wireless Networks",
+                related_object_attribute="wireless_network_assignments",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Wireless Networks",
+                        table_class=BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
+                        table_filter="controller_managed_device_group__controller",
+                        tab_id="wireless_networks",
+                        add_button_route=None,
+                        select_related_fields=["wireless_network"],
+                        exclude_columns=["controller"],
+                    ),
+                ),
+            ),
+        ),
+    )
 
     @action(
         detail=True,
@@ -4868,28 +4912,7 @@ class ControllerUIViewSet(NautobotUIViewSet):
         custom_view_additional_permissions=["wireless.view_controllermanageddevicegroupwirelessnetworkassignment"],
     )
     def wirelessnetworks(self, request, *args, **kwargs):
-        instance = self.get_object()
-        controller_managed_device_groups = instance.controller_managed_device_groups.restrict(
-            request.user, "view"
-        ).values_list("pk", flat=True)
-        wireless_networks = ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
-            controller_managed_device_group__in=list(controller_managed_device_groups)
-        ).select_related("wireless_network")
-        wireless_networks_table = ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
-            data=wireless_networks, user=request.user, orderable=False
-        )
-        wireless_networks_table.columns.hide("controller")
-
-        RequestConfig(
-            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-        ).configure(wireless_networks_table)
-
-        return Response(
-            {
-                "wireless_networks_table": wireless_networks_table,
-                "active_tab": "wireless-networks",
-            }
-        )
+        return Response({})
 
 
 class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
