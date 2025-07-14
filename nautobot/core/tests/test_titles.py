@@ -5,7 +5,7 @@ Unit tests for titles.py following Nautobot testing conventions.
 from django.template import Context
 
 from nautobot.core.testing import TestCase
-from nautobot.core.ui.titles import Titles, DEFAULT_TITLES, DocumentTitles, PageHeadings
+from nautobot.core.ui.titles import DEFAULT_TITLES, DocumentTitles, PageHeadings, Titles
 from nautobot.dcim.models import LocationType
 from nautobot.extras.models import SavedView
 from nautobot.users.models import User

@@ -2,7 +2,7 @@
 
 from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.ui.base import PermissionsMixin
-from nautobot.core.ui.breadcrumbs import Breadcrumbs, BreadcrumbItem
+from nautobot.core.ui.breadcrumbs import BreadcrumbItem, Breadcrumbs
 from nautobot.core.ui.choices import LayoutChoices, SectionChoices
 from nautobot.core.ui.homepage import (
     HomePageBase,
@@ -46,10 +46,10 @@ __all__ = (
     "Banner",
     "BannerClassChoices",
     "BaseTextPanel",
-    "Button",
-    "ButtonColorChoices",
     "BreadcrumbItem",
     "Breadcrumbs",
+    "Button",
+    "ButtonColorChoices",
     "Component",
     "DataTablePanel",
     "DistinctViewTab",
@@ -81,6 +81,6 @@ __all__ = (
     "Tab",
     "TemplateExtension",
     "TextPanel",
-    "render_component_template",
     "Titles",
+    "render_component_template",
 )

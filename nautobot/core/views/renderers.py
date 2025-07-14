@@ -1,5 +1,4 @@
 import logging
-from contextlib import suppress
 
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
