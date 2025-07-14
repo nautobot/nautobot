@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 from urllib.parse import parse_qs
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -15,7 +16,7 @@ from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils import timezone
 from django.utils.encoding import iri_to_uri
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.timezone import get_current_timezone
 from django.views.generic import View
@@ -25,6 +26,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 
 from nautobot.apps.ui import BaseTextPanel
+from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.events import publish_event
 from nautobot.core.exceptions import FilterSetFieldNotFound
@@ -79,7 +81,7 @@ from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
 
-from . import filters, forms, tables
+from . import filters, forms, jobs_ui, tables
 from .api import serializers
 from .choices import (
     DynamicGroupTypeChoices,
@@ -187,6 +189,65 @@ class ConfigContextUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.ConfigContextSerializer
     table_class = tables.ConfigContextTable
 
+    class AssignmentObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+        def render_value(self, key, value, context):
+            if key == "dynamic_groups" and not settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
+                return None
+            if not value:
+                return helpers.HTML_NONE
+
+            items = []
+            for val in value.all():
+                rendered_val = helpers.hyperlinked_object(val)
+                items.append(rendered_val)
+
+            if not items:
+                return helpers.HTML_NONE
+
+            return format_html("<ul>{}</ul>", format_html_join("", "<li>{}</li>", ((item,) for item in items)))
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                exclude_fields=[
+                    "data",
+                    "owner_content_type",
+                    "owner_object_id",
+                ],
+                hide_if_unset=[
+                    "owner",
+                ],
+            ),
+            object_detail.Panel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                label="Data",
+                header_extra_content_template_path="extras/inc/json_format.html",
+                body_content_template_path="extras/inc/configcontext_data.html",
+            ),
+            AssignmentObjectFieldsPanel(
+                weight=200,
+                section=SectionChoices.RIGHT_HALF,
+                label="Assignment",
+                fields=[
+                    "locations",
+                    "roles",
+                    "device_types",
+                    "platforms",
+                    "cluster_groups",
+                    "clusters",
+                    "tenant_groups",
+                    "tenants",
+                    "device_redundancy_groups",
+                    "dynamic_groups",
+                ],
+            ),
+        )
+    )
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         # Determine user's preferred output format
@@ -236,28 +297,26 @@ class ObjectConfigContextView(generic.ObjectView):
 # have an associated owner, such as a Git repository
 
 
-class ConfigContextSchemaListView(generic.ObjectListView):
+class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ConfigContextSchemaBulkEditForm
+    filterset_class = filters.ConfigContextSchemaFilterSet
+    filterset_form_class = forms.ConfigContextSchemaFilterForm
+    form_class = forms.ConfigContextSchemaForm
     queryset = ConfigContextSchema.objects.all()
-    filterset = filters.ConfigContextSchemaFilterSet
-    filterset_form = forms.ConfigContextSchemaFilterForm
-    table = tables.ConfigContextSchemaTable
-    action_buttons = ("add",)
-
-
-class ConfigContextSchemaView(generic.ObjectView):
-    queryset = ConfigContextSchema.objects.all()
+    serializer_class = serializers.ConfigContextSchemaSerializer
+    table_class = tables.ConfigContextSchemaTable
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         # Determine user's preferred output format
-        if request.GET.get("format") in ["json", "yaml"]:
-            context["format"] = request.GET.get("format")
+        if request.GET.get("data_format") in ["json", "yaml"]:
+            context["data_format"] = request.GET.get("data_format")
             if request.user.is_authenticated:
-                request.user.set_config("extras.configcontextschema.format", context["format"], commit=True)
+                request.user.set_config("extras.configcontextschema.format", context["data_format"], commit=True)
         elif request.user.is_authenticated:
-            context["format"] = request.user.get_config("extras.configcontextschema.format", "json")
+            context["data_format"] = request.user.get_config("extras.configcontextschema.format", "json")
         else:
-            context["format"] = "json"
+            context["data_format"] = "json"
 
         return context
 
@@ -343,29 +402,6 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
             "virtual_machine_table": virtual_machine_table,
             "active_tab": "validation",
         }
-
-
-class ConfigContextSchemaEditView(generic.ObjectEditView):
-    queryset = ConfigContextSchema.objects.all()
-    model_form = forms.ConfigContextSchemaForm
-    template_name = "extras/configcontextschema_edit.html"
-
-
-class ConfigContextSchemaBulkEditView(generic.BulkEditView):
-    queryset = ConfigContextSchema.objects.all()
-    filterset = filters.ConfigContextSchemaFilterSet
-    table = tables.ConfigContextSchemaTable
-    form = forms.ConfigContextSchemaBulkEditForm
-
-
-class ConfigContextSchemaDeleteView(generic.ObjectDeleteView):
-    queryset = ConfigContextSchema.objects.all()
-
-
-class ConfigContextSchemaBulkDeleteView(generic.BulkDeleteView):
-    queryset = ConfigContextSchema.objects.all()
-    table = tables.ConfigContextSchemaTable
-    filterset = filters.ConfigContextSchemaFilterSet
 
 
 #
@@ -1266,8 +1302,6 @@ class ImageAttachmentDeleteView(generic.ObjectDeleteView):
 #
 # Jobs
 #
-
-
 class JobListView(generic.ObjectListView):
     """
     Retrieve all of the available jobs from disk and the recorded JobResult (if any) for each.
@@ -1519,6 +1553,64 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 class JobView(generic.ObjectView):
     queryset = JobModel.objects.all()
     template_name = "extras/job_detail.html"
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                label="Source Code",
+                fields=[
+                    "module_name",
+                    "job_class_name",
+                    "class_path",
+                    "installed",
+                    "is_job_hook_receiver",
+                    "is_job_button_receiver",
+                ],
+            ),
+            jobs_ui.JobObjectFieldsPanel(
+                weight=200,
+                section=SectionChoices.LEFT_HALF,
+                label="Job",
+                fields=["grouping", "name", "description", "enabled"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.JobResultTable,
+                table_title="JobResults",
+                table_filter=["job_model"],
+            ),
+            jobs_ui.JobObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                label="Properties",
+                fields=[
+                    "approval_required",
+                    "supports_dryrun",
+                    "dryrun_default",
+                    "read_only",
+                    "hidden",
+                    "has_sensitive_variables",
+                    "is_singleton",
+                    "soft_time_limit",
+                    "time_limit",
+                    "job_queues",
+                    "default_job_queue",
+                ],
+            ),
+        ],
+        extra_buttons=[
+            jobs_ui.JobRunScheduleButton(
+                weight=100,
+                link_name="extras:job_run",
+                label="Run/Schedule",
+                icon="mdi-play",
+                color=ButtonActionColorChoices.SUBMIT,
+                required_permissions=["extras.job_run"],
+            ),
+        ],
+    )
 
 
 class JobEditView(generic.ObjectEditView):
@@ -2951,6 +3043,25 @@ class TagUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.TagSerializer
     table_class = tables.TagTable
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                table_class=tables.TaggedItemTable,
+                table_title="Tagged Objects",
+                table_filter="tag",
+                select_related_fields=["content_type"],
+                prefetch_related_fields=["content_object"],
+            ),
+        ),
+    )
+
     def alter_queryset(self, request):
         queryset = super().alter_queryset(request)
 
@@ -2959,29 +3070,6 @@ class TagUIViewSet(NautobotUIViewSet):
             queryset = queryset.annotate(items=count_related(TaggedItem, "tag"))
 
         return queryset
-
-    def get_extra_context(self, request, instance):
-        # Only run this logic when retrieving a single object
-        if instance is None or self.action != "retrieve":
-            return super().get_extra_context(request, instance)
-        tagged_items = (
-            TaggedItem.objects.filter(tag=instance).select_related("content_type").prefetch_related("content_object")
-        )
-
-        # Generate a table of all items tagged with this Tag
-        items_table = tables.TaggedItemTable(tagged_items)
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(items_table)
-
-        return {
-            "items_count": tagged_items.count(),
-            "items_table": items_table,
-            "content_types": instance.content_types.order_by("app_label", "model"),
-            **super().get_extra_context(request, instance),
-        }
 
 
 #
