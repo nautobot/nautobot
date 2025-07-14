@@ -720,13 +720,18 @@ class ImageAttachmentTable(BaseTable):
     )
 
     size = tables.Column(verbose_name="Size", accessor="image.size", empty_values=(), orderable=False)
+
     created = tables.DateTimeColumn(verbose_name="Created")
 
     actions = ButtonsColumn(
         model=ImageAttachment,
         buttons=("edit", "delete"),
-        verbose_name="",  # For empty header
+        verbose_name="",
     )
+
+    row_attrs = {
+        "class": lambda record: "table-danger" if not getattr(record.image, "size", None) else "",
+    }
 
     class Meta(BaseTable.Meta):
         model = ImageAttachment
@@ -738,12 +743,6 @@ class ImageAttachmentTable(BaseTable):
             return f"{record.image.size / 1024:.1f} KB"
         except Exception:
             return format_html('<span class="text-danger">Unavailable</span>')
-
-    def row_attrs(self, record):
-        """Highlight row if image size is missing (like class='danger')"""
-        if record.size is None:
-            return {"class": "danger"}
-        return {}
 
 
 class JobTable(BaseTable):
