@@ -167,7 +167,7 @@ class Location(TreeModel, PrimaryModel):
     asn = ASNField(
         blank=True,
         null=True,
-        verbose_name="AS Number",
+        verbose_name="ASN",
         help_text="32-bit autonomous system number",
     )
     time_zone = TimeZoneField(blank=True)
