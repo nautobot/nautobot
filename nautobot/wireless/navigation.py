@@ -8,7 +8,7 @@ from nautobot.core.apps import (
 menu_items = (
     NavMenuTab(
         name="Wireless",
-        weight=200,
+        weight=250,
         groups=(
             NavMenuGroup(
                 name="Wireless",
