@@ -115,7 +115,7 @@ menu_items = (
     ),
     NavMenuTab(
         name="Devices",
-        weight=200,
+        weight=160,
         groups=(
             NavMenuGroup(
                 name="Devices",
