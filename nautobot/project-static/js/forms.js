@@ -17,52 +17,9 @@ function slugify(s, num_chars) {
     return s.substring(0, num_chars);           // Trim to first num_chars chars
 }
 
-// Parse URLs which may contain variable references to other field values
-function parseURL(url) {
-    var filter_regex = /\{\{([a-z_]+)\}\}/g;
-    var match;
-    var rendered_url = url;
-    var filter_field;
-    while (match = filter_regex.exec(url)) {
-        filter_field = $('#id_' + match[1]);
-        var custom_attr = $('option:selected', filter_field).attr('api-value');
-        if (custom_attr) {
-            rendered_url = rendered_url.replace(match[0], custom_attr);
-        } else if (filter_field.val()) {
-            rendered_url = rendered_url.replace(match[0], filter_field.val());
-        } else if (filter_field.attr('data-null-option')) {
-            rendered_url = rendered_url.replace(match[0], 'null');
-        }
-    }
-    return rendered_url
-}
-
-// Assign color picker selection classes
-function colorPickerClassCopy(data, container) {
-    if (data.element) {
-        // Swap the style
-        $(container).attr('style', $(data.element).attr("style"));
-    }
-    return data.text;
-}
-
-
 /* ===========================
 *  JS-ify Inputs
 */
-
-// Static choice selection
-function initializeStaticChoiceSelection(context, dropdownParent=null){
-    this_context = $(context);
-    this_context.find('.nautobot-select2-static').select2({
-        allowClear: true,
-        placeholder: "---------",
-        theme: "bootstrap-5",
-        selectionCssClass: "select2--small",
-        width: "off",
-        dropdownParent: dropdownParent
-    });
-}
 
 // Static choice selection
 function initializeCheckboxes(context){
@@ -208,237 +165,6 @@ function initializeBulkEditNullification(context){
     });
 }
 
-// Color Picker
-function initializeColorPicker(context, dropdownParent=null){
-    this_context = $(context);
-    this_context.find('.nautobot-select2-color-picker').select2({
-        allowClear: true,
-        placeholder: "---------",
-        theme: "bootstrap-5",
-        selectionCssClass: "select2--small",
-        templateResult: colorPickerClassCopy,
-        templateSelection: colorPickerClassCopy,
-        width: "off",
-        dropdownParent: dropdownParent
-    });
-}
-
-/**
- * Retrieves the value of a property from a nested object using a string path.
- *
- * This method supports accessing deeply nested properties within an object.
- * It is created to support extraction of nested values in the display-field
- * and value-field for DynamicChoiceField.
- *
- * @param {Object} response - The object from which to retrieve the value.
- * @param {string} fieldPath - The string representing the path to the desired property.
- * @returns {*} The value of the specified property, or null if the path is invalid or the object is not found.
- *
- * @example
- * let response = {
- *   "id": 1234,
- *   "vlan": {
- *     "name": "myvlan"
- *   },
- *   "interfaces": [
- *     { "name": "eth0", "status": "up" },
- *     { "name": "eth1", "status": "down" }
- *   ]
- * }
- * // returns "myvlan"
- * resolvePath(response, "vlan.name")
- *
- * // returns "eth0"
- * resolvePath(response, "interfaces[0].name")
- *
- * // returns "eth0"
- * resolvePath(response, "interfaces.0.name")
- */
-function resolvePath(response, fieldPath) {
-    if (!fieldPath)
-        return null;
-
-    if (typeof response !== 'object' || response === null || !response) {
-        console.error('Invalid response object');
-        return null;
-    }
-
-    return fieldPath
-           .replace(/\[|\]\.?/g, '.')
-           .split('.')
-           .filter(value => value)
-           .reduce((memo, value) => memo && memo[value], response);
-}
-
-// Dynamic Choice Selection
-function initializeDynamicChoiceSelection(context, dropdownParent=null){
-    this_context = $(context);
-    this_context.find('.nautobot-select2-api').each(function(){
-        thisobj = $(this);
-        placeholder = "---------";
-        thisobj.select2({
-            allowClear: true,
-            placeholder: placeholder,
-            theme: "bootstrap-5",
-            selectionCssClass: "select2--small",
-            width: "off",
-            dropdownParent: dropdownParent,
-            ajax: {
-                delay: 500,
-
-                url: function(params) {
-                    var element = this[0];
-                    var url = parseURL(element.getAttribute("data-url"));
-
-                    if (url.includes("{{")) {
-                        // URL is not fully rendered yet, abort the request
-                        return false;
-                    }
-                    return url;
-                },
-
-                data: function(params) {
-                    var element = this[0];
-                    // Paging. Note that `params.page` indexes at 1
-                    var offset = (params.page - 1) * 50 || 0;
-                    // Base query params
-                    var parameters = {
-                        q: params.term,
-                        limit: 50,
-                        offset: offset,
-                    };
-
-                    // Set api_version
-                    api_version = $(element).attr("data-api-version");
-                    if(api_version){
-                        parameters["api_version"] = api_version;
-                    }
-
-
-                    // Allow for controlling the depth setting from within APISelect
-                    parameters.depth = parseInt($(element).attr('data-depth'))
-
-                    // Attach any extra query parameters
-                    $.each(element.attributes, function(index, attr){
-                        if (attr.name.includes("data-query-param-")){
-                            var param_name = attr.name.split("data-query-param-")[1];
-
-                            $.each($.parseJSON(attr.value), function(index, value) {
-                                // Referencing the value of another form field
-                                if (value.startsWith('$')) {
-                                    let element_id = $(element).attr("id");
-                                    let ref_field;
-
-                                    if(element_id.includes("id_form-")){
-                                        let id_prefix = element_id.match(/id_form-[0-9]+-/i, "")[0];
-                                        ref_field = $("#" + id_prefix + value.slice(1));
-                                    }
-                                    // If the element is in a table row with a class containing "dynamic-formset"
-                                    // We need to find the reference field in the same row
-                                    else if ($(element).closest("tr") && $(element).closest("tr").attr("class") && $(element).closest("tr").attr("class").includes("dynamic-formset")){
-                                        ref_field = $(element).closest("tr").find("select[id*=" + value.slice(1) + "]");
-                                    }
-                                    else {
-                                        ref_field = $('#id_' + value.slice(1));
-                                    }
-
-                                    if (ref_field.val() && ref_field.is(":visible")) {
-                                        value = ref_field.val();
-                                    } else if (ref_field.attr("required") && ref_field.attr("data-null-option")) {
-                                        value = "null";
-                                    } else {
-                                        return true;  // Skip if ref_field has no value
-                                    }
-                                }
-                                if (param_name in parameters) {
-                                    if (Array.isArray(parameters[param_name])) {
-                                        parameters[param_name].push(value);
-                                    } else {
-                                        parameters[param_name] = [parameters[param_name], value];
-                                    }
-                                } else {
-                                    parameters[param_name] = value;
-                                }
-                            });
-                        }
-                    });
-
-                    // Attach contenttype to parameters
-                    contenttype = $(element).attr("data-contenttype");
-                    if(contenttype){
-                        parameters["content_type"] = contenttype;
-                    }
-
-                    // This will handle params with multiple values (i.e. for list filter forms)
-                    return $.param(parameters, true);
-                },
-
-                processResults: function (data) {
-                    var element = this.$element[0];
-                    $(element).children('option').attr('disabled', false);
-                    var results = data.results;
-
-                    results = results.reduce((results,record,idx) => {
-                        record.text = resolvePath(record, element.getAttribute('display-field')) || record.name;
-                        record.id = resolvePath(record, element.getAttribute('value-field')) || record.id;
-                        if(element.getAttribute('disabled-indicator') && record[element.getAttribute('disabled-indicator')]) {
-                            // The disabled-indicator equated to true, so we disable this option
-                            record.disabled = true;
-                        }
-
-                        if( record.group !== undefined && record.group !== null && record.site !== undefined && record.site !== null ) {
-                            results[record.site.name + ":" + record.group.name] = results[record.site.name + ":" + record.group.name] || { text: record.site.name + " / " + record.group.name, children: [] };
-                            results[record.site.name + ":" + record.group.name].children.push(record);
-                        }
-                        else if( record.group !== undefined && record.group !== null ) {
-                            results[record.group.name] = results[record.group.name] || { text: record.group.name, children: [] };
-                            results[record.group.name].children.push(record);
-                        }
-                        else if( record.site !== undefined && record.site !== null ) {
-                            results[record.site.name] = results[record.site.name] || { text: record.site.name, children: [] };
-                            results[record.site.name].children.push(record);
-                        }
-                        else if ( (record.group !== undefined || record.group == null) && (record.site !== undefined || record.site === null) ) {
-                            results['global'] = results['global'] || { text: 'Global', children: [] };
-                            results['global'].children.push(record);
-                        }
-                        else {
-                            results[idx] = record;
-                        }
-                        // DynamicGroupSerializer has a `children` field which fits an inappropriate if condition
-                        // in select2.min.js, which will result in the incorrect rendering of DynamicGroup DynamicChoiceField.
-                        // So we nullify the field here since we do not need this field.
-                        if (record?.url ? record.url.includes("dynamic-groups") : false){
-                            record.children = undefined;
-                        }
-
-                        return results;
-                    },Object.create(null));
-
-                    results = Object.values(results);
-
-                    // Handle the null option, but only add it once
-                    if (element.getAttribute('data-null-option') && data.previous === null) {
-                        results.unshift({
-                            id: 'null',
-                            text: element.getAttribute('data-null-option')
-                        });
-                    }
-
-                    // Check if there are more results to page
-                    var page = data.next !== null;
-                    return {
-                        results: results,
-                        pagination: {
-                            more: page
-                        }
-                    };
-                }
-            }
-        });
-    });
-}
-
 // Flatpickr selectors
 function initializeDateTimePicker(context){
     flatpickr('.date-picker', {
@@ -456,84 +182,6 @@ function initializeDateTimePicker(context){
         enableTime: true,
         noCalendar: true,
         time_24hr: true
-    });
-}
-
-function initializeTags(context, dropdownParent=null){
-    this_context = $(context);
-    this_tag_field = this_context.find('#id_tags.tagfield')
-    var tags = this_tag_field;
-    if (tags.length > 0 && tags.val().length > 0){
-        tags = this_tag_field.val().split(/,\s*/);
-    } else {
-        tags = [];
-    }
-    tag_objs = $.map(tags, function (tag) {
-        return {
-            id: tag,
-            text: tag,
-            selected: true
-        }
-    });
-    // Replace the django issued text input with a select element
-    this_tag_field.replaceWith('<select name="tags" id="id_tags" class="form-control tagfield"></select>');
-    this_tag_field.select2({
-        tags: true,
-        data: tag_objs,
-        multiple: true,
-        allowClear: true,
-        placeholder: "Tags",
-        theme: "bootstrap",
-        width: "off",
-        dropdownParent: dropdownParent,
-        ajax: {
-            delay: 250,
-            url: nautobot_api_path + "extras/tags/",
-
-            data: function(params) {
-                // Paging. Note that `params.page` indexes at 1
-                var offset = (params.page - 1) * 50 || 0;
-                var parameters = {
-                    q: params.term,
-                    limit: 50,
-                    offset: offset,
-                };
-                return parameters;
-            },
-
-            processResults: function (data) {
-                var results = $.map(data.results, function (obj) {
-                    // If tag contains space add double quotes
-                    if (/\s/.test(obj.name))
-                    obj.name = '"' + obj.name + '"'
-
-                    return {
-                        id: obj.name,
-                        text: obj.name
-                    }
-                });
-
-                // Check if there are more results to page
-                var page = data.next !== null;
-                return {
-                    results: results,
-                    pagination: {
-                        more: page
-                    }
-                };
-            }
-        }
-    });
-    this_tag_field.closest('form').submit(function(event){
-        // django-taggit can only accept a single comma seperated string value
-        // TODO(bryan): the element find here should just be event.target
-        var value = $('#id_tags.tagfield').val();
-        if (value.length > 0){
-            var final_tags = value.join(', ');
-            $('#id_tags.tagfield').val(null).trigger('change');
-            var option = new Option(final_tags, final_tags, true, true);
-            $('#id_tags.tagfield').append(option).trigger('change');
-        }
     });
 }
 
@@ -568,25 +216,6 @@ function initializeVLANModeSelection(context){
         });
         this_context.find('select#id_mode').trigger('change');
     }
-}
-
-function initializeMultiValueChar(context, dropdownParent=null){
-    this_context = $(context);
-    this_context.find('.nautobot-select2-multi-value-char').select2({
-        allowClear: true,
-        tags: true,
-        theme: "bootstrap-5",
-        selectionCssClass: "select2--small",
-        placeholder: "---------",
-        multiple: true,
-        dropdownParent: dropdownParent,
-        width: "off",
-        "language": {
-            "noResults": function(){
-                return "Type something to add it as an option";
-            }
-        },
-    });
 }
 
 function initializeDynamicFilterForm(context){
@@ -960,31 +589,19 @@ function replaceEl(replaced_el, replacing_el) {
 
 function initializeInputs(context) {
     const this_context = $(context);
-    initializeStaticChoiceSelection(this_context)
     initializeCheckboxes(this_context)
     initializeSlugField(this_context)
     initializeAutoPopulateField(this_context)
     initializeFormActionClick(this_context)
     initializeBulkEditNullification(this_context)
-    initializeColorPicker(this_context)
-    initializeDynamicChoiceSelection(this_context)
     initializeDateTimePicker(this_context)
-    initializeTags(this_context)
     initializeVLANModeSelection(this_context)
     initializeSortableList(this_context)
     initializeImagePreview(this_context)
     initializeDynamicFilterForm(this_context)
     initializeSelectAllForm(this_context)
-    initializeMultiValueChar(this_context)
 
-    $(this_context).find(".modal").each(function() {
-        const this_modal = $(this)
-        initializeStaticChoiceSelection(this_modal, this_modal)
-        initializeColorPicker(this_modal, this_modal)
-        initializeDynamicChoiceSelection(this_modal, this_modal)
-        initializeTags(this_modal, this_modal)
-        initializeMultiValueChar(this_modal, this_modal)
-    })
+    initializeSelect2Fields(this_context)
 }
 
 function jsify_form(context) {

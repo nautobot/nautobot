@@ -1,0 +1,279 @@
+import get from 'lodash.get';
+
+/**
+ * Get HTML `element`. This function accepts input as native `Document` and `Element` object and `jQuery` collection.
+ * It should no longer be required after migrating away from jQuery.
+ * @param {Document|Element|jQuery} `element` - `element` in question.
+ * @returns {Document|Element} Native `element` object.
+ */
+const getElement = (element) => (element instanceof Document || element instanceof Element ? element : element[0]);
+
+/**
+ * Get `select` element value.
+ * @param {HTMLSelectElement} select - `select` element in question.
+ * @returns {string|string[]} `string` value for single combobox, an array of `string` values for multiple combobox.
+ */
+const getValue = (select) =>
+  select?.getAttribute('multiple') ? [...select.selectedOptions].map((option) => option.value) : select?.value;
+
+/**
+ * Parse URLs which may contain variable references to other field values.
+ * @param {string} url - URL template string.
+ * @returns {string} URL with interpolated dynamic values.
+ */
+const parseURL = (url) => {
+  const filter_regex = /\{\{([a-z_]+)}}/g;
+
+  let match;
+  let rendered_url = url;
+
+  while ((match = filter_regex.exec(url))) {
+    const filter_field = document.querySelector(`#id_${match[1]}`);
+    const custom_attribute = filter_field?.selectedOptions?.[0]?.getAttribute('api-value');
+    const replace =
+      custom_attribute || filter_field.value || (filter_field.getAttribute('data-null-option') ? 'null' : undefined);
+
+    rendered_url = replace ? rendered_url.replace(match[0], replace) : rendered_url;
+  }
+
+  return rendered_url;
+};
+
+/**
+ * Initialize given Select2 components in passed `context` by `selector`, optionally with `options`.
+ * @param {Document|Element|jQuery} context - Context root element.
+ * @param {string} selector - CSS query selector of `select` elements to be initialized as Select2 components.
+ * @param {object} [options] - Optional Select2 components initialization options.
+ * @returns {void} Do not return any value, just initialize given Select2 components.
+ */
+const initializeSelect2 = (context, selector, options) =>
+  [...getElement(context).querySelectorAll(selector)].forEach((element) =>
+    $(element).select2({
+      allowClear: true,
+      placeholder: element.getAttribute('placeholder') || '---------',
+      theme: 'bootstrap-5',
+      selectionCssClass: 'select2--small',
+      width: 'off',
+      ...options,
+    }),
+  );
+
+const initializeColorPicker = (context, dropdownParent = null) => {
+  // Assign color picker selection classes.
+  const colorPickerClassCopy = (data, container) => {
+    if (data.element) {
+      // Swap the style.
+      const containerElement = getElement(container);
+      containerElement.setAttribute('style', data.element.getAttribute('style'));
+    }
+
+    return data.text;
+  };
+
+  initializeSelect2(context, '.nautobot-select2-color-picker', {
+    dropdownParent,
+    templateResult: colorPickerClassCopy,
+    templateSelection: colorPickerClassCopy,
+  });
+};
+
+const initializeDynamicChoiceSelection = (context, dropdownParent = null) => {
+  initializeSelect2(context, '.nautobot-select2-api', {
+    ajax: {
+      delay: 500,
+      url: function () {
+        const element = this[0];
+        const url = parseURL(element.getAttribute('data-url'));
+
+        // If URL is not fully rendered yet, abort the request.
+        return !url.includes('{{') && url;
+      },
+      data: function (params) {
+        const element = this[0];
+
+        // Paging. Note that `params.page` indexes at 1.
+        const offset = (params.page - 1) * 50 || 0;
+
+        // Base query params.
+        const limit = 50;
+        const q = params.term;
+
+        // Set api_version.
+        const api_version = element.getAttribute('data-api-version');
+
+        // Allow for controlling the depth setting from within APISelect.
+        const depth = parseInt(element.getAttribute('data-depth'), 10) || 0;
+
+        // Attach content_type to parameters.
+        const content_type = element.getAttribute('data-contenttype');
+
+        // Attach any extra query parameters
+        const extra_query_parameters = Object.fromEntries(
+          [...element.attributes]
+            .filter((attribute) => attribute.name.includes('data-query-param-'))
+            .flatMap((attribute) => {
+              const [, param_name] = attribute.name.split('data-query-param-');
+
+              const values = (() => {
+                try {
+                  return JSON.parse(attribute.value);
+                } catch (exception) {
+                  return [];
+                }
+              })();
+
+              return values.flatMap((value) => {
+                const has_ref_field = value.startsWith('$');
+
+                // Referencing the value of another form field.
+                const ref_field = has_ref_field
+                  ? (() => {
+                      const name = value.slice(1);
+
+                      if (element.id.includes('id_form-')) {
+                        const id_prefix = element.id.match(/id_form-[0-9]+-/i, '')[0];
+                        return document.querySelector(`#${id_prefix}${name}`);
+                      }
+
+                      /*
+                       * If the element is in a table row with a class containing "dynamic-formset" we need to find the
+                       * reference field in the same row.
+                       */
+                      if (element.closest('tr')?.classList.contains('dynamic-formset')) {
+                        return element.closest('tr').querySelector(`select[id*="${name}"]`);
+                      }
+
+                      return document.querySelector(`#id_${name}`);
+                    })()
+                  : null;
+
+                const ref_field_value = ref_field
+                  ? (() => {
+                      const field_value = getValue(ref_field);
+                      const style = window.getComputedStyle(ref_field);
+
+                      if (field_value && style.opacity !== '0' && style.visibility !== 'hidden') {
+                        return field_value;
+                      }
+
+                      if (ref_field.getAttribute('required') && ref_field.getAttribute('data-null-option')) {
+                        return 'null';
+                      }
+                    })()
+                  : null;
+
+                const param_value = has_ref_field ? ref_field_value : value;
+                return param_value !== null && param_value !== undefined
+                  ? [[param_name, ref_field_value || value]]
+                  : [];
+              });
+            }),
+        );
+
+        const parameters = {
+          depth: String(depth),
+          limit: String(limit),
+          offset: String(offset),
+          ...(api_version ? { api_version } : undefined),
+          ...(content_type ? { content_type } : undefined),
+          ...(q ? { q } : undefined),
+          ...extra_query_parameters,
+        };
+
+        // This will handle params with multiple values (i.e. for list filter forms).
+        return new URLSearchParams(parameters).toString();
+      },
+      processResults: function (data) {
+        const element = this.$element[0];
+        [...element.querySelectorAll('option')].forEach((child) => child.removeAttribute('disabled'));
+
+        const results = [
+          // Handle the null option, but only add it once.
+          ...(element.getAttribute('data-null-option') && data.previous === null
+            ? [{ id: 'null', text: element.getAttribute('data-null-option') }]
+            : []),
+          ...Object.values(
+            data.results.reduce((results, record, index) => {
+              // The disabled-indicator equated to true, so we disable this option.
+              const disabled = Boolean(record?.[element.getAttribute('disabled-indicator')]);
+              const id = get(record, element.getAttribute('value-field')) || record.id;
+              const text = get(record, element.getAttribute('display-field')) || record.name;
+
+              const item = { ...record, disabled, id, text };
+              const { group, site, url } = item;
+
+              // DynamicGroupSerializer has a `children` field which fits an inappropriate if condition
+              // in select2.min.js, which will result in the incorrect rendering of DynamicGroup DynamicChoiceField.
+              // So we nullify the field here since we do not need this field.
+              const should_nullify_children = Boolean(url?.includes('dynamic-groups'));
+
+              const collection = (() => {
+                switch (true) {
+                  case group !== undefined && group !== null && site !== undefined && site !== null:
+                    return { property: `${site.name}:${group.name}`, text: `${site.name} / ${group.name}` };
+
+                  case group !== undefined && group !== null:
+                    return { property: group.name, text: group.name };
+
+                  case site !== undefined && site !== null:
+                    return { property: site.name, text: site.name };
+
+                  case group === null && site === null:
+                    return { property: 'global', text: 'Global' };
+
+                  default:
+                    return undefined;
+                }
+              })();
+
+              return {
+                ...results,
+                ...(collection
+                  ? {
+                      [collection.property]: {
+                        ...results[collection.property],
+                        ...(!results[collection.property] ? { text: collection.text } : undefined),
+                        children: should_nullify_children
+                          ? undefined
+                          : [...(results[collection.property]?.children ?? []), item],
+                      },
+                    }
+                  : { [index]: item }),
+              };
+            }, {}),
+          ),
+        ];
+
+        // Check if there are more results to page.
+        const has_next_page = data.next !== null;
+        return { results, pagination: { more: has_next_page } };
+      },
+    },
+    dropdownParent,
+  });
+};
+
+const initializeMultiValueChar = (context, dropdownParent = null) =>
+  initializeSelect2(context, '.nautobot-select2-multi-value-char', {
+    dropdownParent,
+    language: { noResults: () => 'Type something to add it as an option' },
+    multiple: true,
+    tags: true,
+  });
+
+const initializeStaticChoiceSelection = (context, dropdownParent = null) =>
+  initializeSelect2(context, '.nautobot-select2-static', { dropdownParent });
+
+export const initializeSelect2Fields = (context) => {
+  initializeColorPicker(context);
+  initializeDynamicChoiceSelection(context);
+  initializeMultiValueChar(context);
+  initializeStaticChoiceSelection(context);
+
+  [...getElement(context).querySelectorAll('.modal')].forEach((modal) => {
+    initializeColorPicker(modal, modal);
+    initializeDynamicChoiceSelection(modal, modal);
+    initializeMultiValueChar(modal, modal);
+    initializeStaticChoiceSelection(modal, modal);
+  });
+};
