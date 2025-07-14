@@ -1,3 +1,4 @@
+import copy
 from dataclasses import dataclass
 from typing import Any, Literal, Optional, Protocol, Type, Union
 
@@ -64,7 +65,7 @@ class BreadcrumbItem:
     # 1. Raw viewname mode
     viewname_str: Optional[str] = None
     reverse_kwargs: Optional[dict[str, Any]] = None
-    reverse_args: Optional[dict[str, Any]] = None
+    reverse_args: Optional[list[Any]] = None
     # 2. Object instance from context mode
     instance_key: Optional[str] = "object"
     # 3. Model/dotted model name passed directly or taken from context
@@ -163,7 +164,7 @@ class BreadcrumbItem:
             return getattr(model.model_class()._meta, name_arg)
         return getattr(model._meta, name_arg)
 
-    def as_pair(self, context) -> tuple[str, Optional[str]]:
+    def as_pair(self, context) -> tuple[str, str]:
         """
         Construct the (URL, label) pair for the breadcrumb.
 
@@ -234,7 +235,7 @@ class Breadcrumbs:
             template (str): The template used to render the breadcrumbs.
         """
         self.template = template
-        self.items: BreadcrumbItemsType = DEFAULT_BREADCRUMBS.copy()
+        self.items: BreadcrumbItemsType = copy.deepcopy(DEFAULT_BREADCRUMBS)
         if items:
             self.items.update(items)
         self.prepend_items: BreadcrumbItemsType = prepend_items or {}
@@ -274,7 +275,6 @@ class Breadcrumbs:
         Returns:
             str: Rendered HTML for the breadcrumb component.
         """
-        print(self.get_breadcrumbs_items(context))
         with context.update(
             {
                 "breadcrumbs_items": self.get_breadcrumbs_items(context),

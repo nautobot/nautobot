@@ -2,6 +2,7 @@
 
 from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.ui.base import PermissionsMixin
+from nautobot.core.ui.breadcrumbs import Breadcrumbs, BreadcrumbItem
 from nautobot.core.ui.choices import LayoutChoices, SectionChoices
 from nautobot.core.ui.homepage import (
     HomePageBase,
@@ -36,6 +37,7 @@ from nautobot.core.ui.object_detail import (
     Tab,
     TextPanel,
 )
+from nautobot.core.ui.titles import DocumentTitles, PageHeadings, Titles
 from nautobot.core.ui.utils import render_component_template
 from nautobot.extras.choices import BannerClassChoices
 from nautobot.extras.plugins import Banner, TemplateExtension
@@ -46,9 +48,12 @@ __all__ = (
     "BaseTextPanel",
     "Button",
     "ButtonColorChoices",
+    "BreadcrumbItem",
+    "Breadcrumbs",
     "Component",
     "DataTablePanel",
     "DistinctViewTab",
+    "DocumentTitles",
     "DropdownButton",
     "GroupedKeyValueTablePanel",
     "HomePageBase",
@@ -68,6 +73,7 @@ __all__ = (
     "ObjectFieldsPanel",
     "ObjectTextPanel",
     "ObjectsTablePanel",
+    "PageHeadings",
     "Panel",
     "PermissionsMixin",
     "SectionChoices",
@@ -76,4 +82,5 @@ __all__ = (
     "TemplateExtension",
     "TextPanel",
     "render_component_template",
+    "Titles",
 )
