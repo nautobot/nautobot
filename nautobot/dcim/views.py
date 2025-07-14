@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from copy import deepcopy
+from functools import partial
 import logging
 import re
 import uuid
@@ -273,12 +274,12 @@ class CustomLocationFieldsPanel(object_detail.ObjectFieldsPanel):
             if value != "Not available":
                 lat, lon = value.split(", ")
                 return format_html("{}<span>{}</span>", helpers.render_map_button(f"{lat},{lon}"), value)
-            return format_html('<span class="text-muted">&mdash;</span>')
+            return helpers.HTML_NONE
 
         if key == "physical_address":
             if value:
                 return format_html("{}<span>{}</span>", helpers.render_map_button(value), value.replace("\n", "<br>"))
-            return format_html('<span class="text-muted">&mdash;</span>')
+            return helpers.HTML_NONE
 
         return super().render_value(key, value, context)
 
@@ -293,7 +294,7 @@ class CustomContactInfoPanel(object_detail.ObjectFieldsPanel):
             return base_content
 
         return_url = f"{request.path}?tab=contacts"
-        button_html = helpers.render_footer_button(
+        button_html = helpers.render_contact_team_button(
             f"{reverse('dcim:location_migrate_data_to_contact', kwargs={'pk': obj.pk})}?return_url={return_url}",
             "mdi-account-edit",
             "Convert to contact/team record",
@@ -394,6 +395,10 @@ class LocationUIViewSet(NautobotUIViewSet):
                     "contact_phone",
                     "contact_email",
                 ],
+                value_transforms={
+                    "location_type": [partial(helpers.hyperlinked_object, field="name")],
+                    "time_zone": [helpers.format_timezone],
+                },
             ),
             CustomLocationFieldsPanel(
                 weight=100,
@@ -434,7 +439,7 @@ class LocationUIViewSet(NautobotUIViewSet):
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.FULL_WIDTH,
                 weight=100,
-                label="Children",
+                table_title="Children",
                 table_class=tables.LocationTable,
                 table_attribute="children",
                 related_field_name="parent",
