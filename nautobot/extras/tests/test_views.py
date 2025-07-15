@@ -1956,7 +1956,8 @@ class SecretsGroupTestCase(
             "secrets_group_associations-0-secret_type": "",  # invalid
         }
 
-        response = self.client.post(url, data=form_data)
+        response = self.client.post(url, data=form_data, follow=True)
+
         self.assertEqual(response.status_code, 200)
 
         # Checks that no new SecretsGroup was created
