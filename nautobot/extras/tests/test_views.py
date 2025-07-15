@@ -1952,11 +1952,11 @@ class SecretsGroupTestCase(
             "secrets_group_associations-MIN_NUM_FORMS": "0",
             "secrets_group_associations-MAX_NUM_FORMS": "1000",
             "secrets_group_associations-0-secret": "",  # invalid
-            "secrets_group_associations-0-access_type": "",  # invalid
+            "secrets_group_associations-0-access_type": SecretsGroupAccessTypeChoices.TYPE_HTTP,
             "secrets_group_associations-0-secret_type": "",  # invalid
         }
 
-        response = self.client.post(url, data=form_data, follow=True)
+        response = self.client.post(url, data=form_data)
 
         self.assertEqual(response.status_code, 200)
 
