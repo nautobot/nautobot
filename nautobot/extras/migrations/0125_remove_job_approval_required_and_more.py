@@ -4,18 +4,17 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('extras', '0124_approval_workflow_models'),
+        ("extras", "0124_approval_workflow_models"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='job',
-            name='approval_required',
+            model_name="job",
+            name="approval_required",
         ),
         migrations.RemoveField(
-            model_name='job',
-            name='approval_required_override',
+            model_name="job",
+            name="approval_required_override",
         ),
     ]
