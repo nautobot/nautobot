@@ -21,7 +21,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.timezone import get_current_timezone
 from django.views.generic import View
 from django_tables2 import RequestConfig
-from jsonschema.validators import Draft7Validator
+from jsonschema import Draft7Validator, SchemaError
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -33,7 +33,6 @@ from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.forms import restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query, serialize_object_v2
-from nautobot.core.tables import ButtonsColumn
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
@@ -303,19 +302,10 @@ class ValidationObjectsTablePanel(object_detail.ObjectsTablePanel):
         super().__init__(**kwargs)
 
     def get_extra_context(self, context: Dict[str, Any]):
-        context_data = super().get_extra_context(context)
-        table = context_data["body_content_table"]
-
-        # Add extra columns BEFORE binding to the request
         for name, column in self.extra_columns:
-            table.base_columns[name] = column  # Only modify base_columns
+            self.table_class.base_columns[name] = column
 
-        # Reconfigure the table (pagination, etc.)
-        RequestConfig(
-            context["request"],
-            {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(context["request"])},
-        ).configure(table)
-
+        context_data = super().get_extra_context(context)
         return context_data
 
 
@@ -330,10 +320,35 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
 
     def get_object_detail_content(self, instance: ConfigContextSchema):
         """Dynamically construct panels with validation logic using the instance's data_schema."""
-        if instance is None:
-            return None
+        if instance is None or not isinstance(instance.data_schema, dict):
+            # If the schema is missing or invalid, return only basic detail panels
+            return object_detail.ObjectDetailContent(
+                panels=(
+                    object_detail.ObjectFieldsPanel(
+                        weight=100,
+                        section=SectionChoices.LEFT_HALF,
+                        fields="__all__",
+                        exclude_fields=[
+                            "data_schema",
+                            "owner_content_type",
+                            "owner_object_id",
+                        ],
+                        hide_if_unset=["owner"],
+                    ),
+                    object_detail.Panel(
+                        weight=100,
+                        section=SectionChoices.RIGHT_HALF,
+                        label="Data Schema",
+                        header_extra_content_template_path="extras/inc/json_format.html",
+                        body_content_template_path="extras/inc/configcontextschema_data.html",
+                    ),
+                )
+            )
 
-        validator = Draft7Validator(instance.data_schema)
+        try:
+            validator = Draft7Validator(instance.data_schema)
+        except SchemaError:
+            validator = None  # Handle schema validation error gracefully
 
         return object_detail.ObjectDetailContent(
             panels=(
@@ -362,13 +377,16 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
                     tab_id="validation",
                     label="Validation",
                     url_name="extras:configcontextschema_validation",
-                    panels=(
+                    panels=()
+                    if not validator
+                    else (
                         ValidationObjectsTablePanel(
                             section=SectionChoices.FULL_WIDTH,
                             weight=100,
                             table_title="Config Contexts",
                             table_class=tables.ConfigContextTable,
                             table_filter="config_context_schema",
+                            related_field_name="schema",
                             tab_id="validation",
                             add_button_route=None,
                             extra_columns=[
@@ -376,8 +394,8 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
                                     "validation_state",
                                     tables.ConfigContextSchemaValidationStateColumn(validator, "data", empty_values=()),
                                 ),
-                                ("actions", ButtonsColumn(model=ConfigContext, buttons=["edit"])),
                             ],
+                            include_columns=["validation_state", "actions"],
                         ),
                         ValidationObjectsTablePanel(
                             section=SectionChoices.FULL_WIDTH,
@@ -394,8 +412,8 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
                                         validator, "local_config_context_data", empty_values=()
                                     ),
                                 ),
-                                ("actions", ButtonsColumn(model=Device, buttons=["edit"])),
                             ],
+                            include_columns=["validation_state"],
                         ),
                         ValidationObjectsTablePanel(
                             section=SectionChoices.FULL_WIDTH,
@@ -412,8 +430,8 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
                                         validator, "local_config_context_data", empty_values=()
                                     ),
                                 ),
-                                ("actions", ButtonsColumn(model=VirtualMachine, buttons=["edit"])),
                             ],
+                            include_columns=["validation_state"],
                         ),
                     ),
                 ),
