@@ -1654,16 +1654,13 @@ class VLAN(PrimaryModel):
     def display(self):
         return f"{self.name} ({self.vid})"
 
-    def _interface_queryset(self, model):
-        return model.objects.filter(Q(untagged_vlan_id=self.pk) | Q(tagged_vlans=self.pk)).distinct()
-
     def get_interfaces(self):
         # Return all device interfaces assigned to this VLAN
-        return self._interface_queryset(Interface)
+        return Interface.objects.filter(Q(untagged_vlan_id=self.pk) | Q(tagged_vlans=self.pk)).distinct()
 
     def get_vminterfaces(self):
         # Return all VM interfaces assigned to this VLAN
-        return self._interface_queryset(VMInterface)
+        return VMInterface.objects.filter(Q(untagged_vlan_id=self.pk) | Q(tagged_vlans=self.pk)).distinct()
 
     @property
     def interfaces(self):
