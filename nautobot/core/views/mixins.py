@@ -1421,7 +1421,6 @@ class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
             # Check that the new object conforms with any assigned object-level permissions
             queryset.get(pk=obj.pk)
 
-
             msg = f'{"Created" if object_created else "Modified"} {queryset.model._meta.verbose_name}'
             self.logger.info(f"{msg} {obj} (PK: {obj.pk})")
             try:
@@ -1457,7 +1456,6 @@ class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
         if request.method == "POST":
             return self.perform_create(request, *args, **kwargs)
         return Response(context)
-
 
     def perform_create(self, request, *args, **kwargs):  # pylint: disable=arguments-differ
         """
