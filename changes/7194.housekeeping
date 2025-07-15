@@ -1,0 +1,2 @@
+Refactored Jobs detail view to use `UI component framework`.
+Added `jobs_ui.py` to `nautobot.extras.views` with classes: `JobRunScheduleButton`, `JobKeyValueOverrideValueTablePanel` and `JobObjectFieldsPanel`.

@@ -961,6 +961,12 @@ class DeviceFilterSet(
         field_name="controller_managed_device_group__wireless_networks",
         label="Has wireless networks",
     )
+    controller = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="controller_managed_device_group__controller",
+        queryset=Controller.objects.all(),
+        to_field_name="name",
+        label="Controller (name or ID)",
+    )
 
     def filter_ip_addresses(self, queryset, name, value):
         pk_values = set(item for item in value if is_uuid(item))
