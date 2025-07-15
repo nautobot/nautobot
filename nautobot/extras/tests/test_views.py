@@ -1856,7 +1856,12 @@ class SecretsGroupTestCase(
 ):
     model = SecretsGroup
 
-    user_permissions = ["extras.add_secretsgroup"]
+    user_permissions = [
+        "extras.add_secretsgroup",
+        "extras.change_secretsgroup",
+        "extras.add_secretsgroupassociation",
+        "extras.change_secretsgroupassociation",
+    ]
 
     @classmethod
     def setUpTestData(cls):
