@@ -1,0 +1,1 @@
+Refactored VirtualChassis model related UI views to use `NautobotUIViewSet`.
