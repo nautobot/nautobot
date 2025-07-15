@@ -1856,6 +1856,8 @@ class SecretsGroupTestCase(
 ):
     model = SecretsGroup
 
+    user_permissions = ["extras.add_secretsgroup"]
+
     @classmethod
     def setUpTestData(cls):
         secrets_groups = (
@@ -1975,8 +1977,6 @@ class GraphQLQueriesTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = GraphQLQuery
-
-    user_permissions = ["extras.add_secretsgroup"]
 
     @classmethod
     def setUpTestData(cls):
