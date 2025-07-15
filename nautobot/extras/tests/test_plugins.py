@@ -567,7 +567,10 @@ class ExampleModelCustomActionViewTest(TestCase):
     def test_custom_action_view_anonymous(self):
         self.client.logout()
         response = self.client.get(self.custom_view_url)
-        self.assertHttpStatus(response, 302)
+        self.assertHttpStatus(response, 200)
+        # TODO: all this is doing is checking that a login link appears somewhere on the page (i.e. in the nav).
+        response_body = response.content.decode(response.charset)
+        self.assertIn("/login/?next=", response_body, msg=response_body)
 
     def test_custom_action_view_without_permission(self):
         with disable_warnings("django.request"):
@@ -577,7 +580,7 @@ class ExampleModelCustomActionViewTest(TestCase):
             self.assertNotIn("/login/", response_body, msg=response_body)
 
     def test_custom_action_view_with_permission(self):
-        self.add_permissions(f"{self.model._meta.app_label}.all_names_{self.model._meta.model_name}")
+        self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
 
         response = self.client.get(self.custom_view_url)
         self.assertHttpStatus(response, 200)
@@ -593,7 +596,7 @@ class ExampleModelCustomActionViewTest(TestCase):
         obj_perm = ObjectPermission(
             name="Test permission",
             constraints={"pk": instance1.pk},
-            actions=["all_names"],
+            actions=["view"],
         )
         obj_perm.save()
         obj_perm.users.add(self.user)

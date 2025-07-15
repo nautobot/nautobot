@@ -85,6 +85,7 @@ from nautobot.dcim.models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     Platform,
     PowerFeed,
@@ -2007,6 +2008,7 @@ class ModuleBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
     def setUpTestData(cls):
         device_type = DeviceType.objects.first()
         module_type = ModuleType.objects.first()
+        module_family = ModuleFamily.objects.create(name="Test Module Family")
 
         cls.form_data = {
             "device_type": device_type.pk,
@@ -2015,6 +2017,7 @@ class ModuleBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "position": "Test modulebaytemplate position",
             "description": "Test modulebaytemplate description",
             "label": "Test modulebaytemplate label",
+            "module_family": module_family.pk,
         }
 
         cls.bulk_create_data = {
@@ -2023,10 +2026,12 @@ class ModuleBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "position_pattern": "Test Module Bay Template Position [10-12]",
             "label_pattern": "Test modulebaytemplate label [1-3]",
             "description": "Test modulebaytemplate description",
+            "module_family": module_family.pk,
         }
 
         cls.bulk_edit_data = {
             "description": "Description changed",
+            "module_family": module_family.pk,
         }
 
         test_instance = cls.model.objects.first()
@@ -2037,6 +2042,7 @@ class ModuleBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "position": "new test position",
             "label": "new test label",
             "description": "new test description",
+            "module_family": module_family.pk,
         }
 
 
@@ -2560,6 +2566,16 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Module
+    custom_action_required_permissions = {
+        "dcim:module_consoleports": ["dcim.view_module", "dcim.view_consoleport"],
+        "dcim:module_consoleserverports": ["dcim.view_module", "dcim.view_consoleserverport"],
+        "dcim:module_powerports": ["dcim.view_module", "dcim.view_powerport"],
+        "dcim:module_poweroutlets": ["dcim.view_module", "dcim.view_poweroutlet"],
+        "dcim:module_interfaces": ["dcim.view_module", "dcim.view_interface"],
+        "dcim:module_rearports": ["dcim.view_module", "dcim.view_rearport"],
+        "dcim:module_frontports": ["dcim.view_module", "dcim.view_frontport"],
+        "dcim:module_modulebays": ["dcim.view_module", "dcim.view_modulebay"],
+    }
 
     @classmethod
     def setUpTestData(cls):
@@ -2669,50 +2685,6 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_module_consoleports(self):
-        module = Module.objects.first()
-
-        ConsolePort.objects.create(module=module, name="Console Port 1")
-        ConsolePort.objects.create(module=module, name="Console Port 2")
-        ConsolePort.objects.create(module=module, name="Console Port 3")
-
-        url = reverse("dcim:module_consoleports", kwargs={"pk": module.pk})
-        self.assertHttpStatus(self.client.get(url), 200)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_module_consoleserverports(self):
-        module = Module.objects.first()
-
-        ConsoleServerPort.objects.create(module=module, name="Console Server Port 1")
-        ConsoleServerPort.objects.create(module=module, name="Console Server Port 2")
-        ConsoleServerPort.objects.create(module=module, name="Console Server Port 3")
-
-        url = reverse("dcim:module_consoleserverports", kwargs={"pk": module.pk})
-        self.assertHttpStatus(self.client.get(url), 200)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_module_powerports(self):
-        module = Module.objects.first()
-
-        PowerPort.objects.create(module=module, name="Power Port 1")
-        PowerPort.objects.create(module=module, name="Power Port 2")
-        PowerPort.objects.create(module=module, name="Power Port 3")
-
-        url = reverse("dcim:module_powerports", kwargs={"pk": module.pk})
-        self.assertHttpStatus(self.client.get(url), 200)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_module_poweroutlets(self):
-        module = Module.objects.first()
-
-        PowerOutlet.objects.create(module=module, name="Power Outlet 1")
-        PowerOutlet.objects.create(module=module, name="Power Outlet 2")
-        PowerOutlet.objects.create(module=module, name="Power Outlet 3")
-
-        url = reverse("dcim:module_poweroutlets", kwargs={"pk": module.pk})
-        self.assertHttpStatus(self.client.get(url), 200)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_module_interfaces(self):
         module = Module.objects.filter(interfaces__isnull=False).first()
         self.add_permissions("ipam.add_ipaddress", "dcim.change_interface")
@@ -2792,59 +2764,6 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 sorted(ipaddresses),
                 sorted(interface_ips),
             )
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_module_rearports(self):
-        module = Module.objects.first()
-
-        RearPort.objects.create(module=module, name="Rear Port 1")
-        RearPort.objects.create(module=module, name="Rear Port 2")
-        RearPort.objects.create(module=module, name="Rear Port 3")
-
-        url = reverse("dcim:module_rearports", kwargs={"pk": module.pk})
-        self.assertHttpStatus(self.client.get(url), 200)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_module_frontports(self):
-        module = Module.objects.first()
-        rear_ports = (
-            RearPort.objects.create(module=module, name="Rear Port 1"),
-            RearPort.objects.create(module=module, name="Rear Port 2"),
-            RearPort.objects.create(module=module, name="Rear Port 3"),
-        )
-
-        FrontPort.objects.create(
-            module=module,
-            name="Front Port 1",
-            rear_port=rear_ports[0],
-            rear_port_position=1,
-        )
-        FrontPort.objects.create(
-            module=module,
-            name="Front Port 2",
-            rear_port=rear_ports[1],
-            rear_port_position=1,
-        )
-        FrontPort.objects.create(
-            module=module,
-            name="Front Port 3",
-            rear_port=rear_ports[2],
-            rear_port_position=1,
-        )
-
-        url = reverse("dcim:module_frontports", kwargs={"pk": module.pk})
-        self.assertHttpStatus(self.client.get(url), 200)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_module_modulebays(self):
-        module = Module.objects.first()
-
-        ModuleBay.objects.create(parent_module=module, name="Test View Module Bay 1")
-        ModuleBay.objects.create(parent_module=module, name="Test View Module Bay 2")
-        ModuleBay.objects.create(parent_module=module, name="Test View Module Bay 3")
-
-        url = reverse("dcim:module_modulebays", kwargs={"pk": module.pk})
-        self.assertHttpStatus(self.client.get(url), 200)
 
 
 class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
@@ -4587,6 +4506,15 @@ class InterfaceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 class SoftwareImageFileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = SoftwareImageFile
     filterset = SoftwareImageFileFilterSet
+    custom_action_required_permissions = {
+        "dcim:softwareimagefile_devices": ["dcim.view_softwareimagefile", "dcim.view_device"],
+        "dcim:softwareimagefile_device_types": ["dcim.view_softwareimagefile", "dcim.view_devicetype"],
+        "dcim:softwareimagefile_virtual_machines": [
+            "dcim.view_softwareimagefile",
+            "virtualization.view_virtualmachine",
+        ],
+        "dcim:softwareimagefile_inventory_items": ["dcim.view_softwareimagefile", "dcim.view_inventoryitem"],
+    }
 
     @classmethod
     def setUpTestData(cls):
@@ -4659,6 +4587,12 @@ class SoftwareVersionTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 class ControllerTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Controller
     filterset = ControllerFilterSet
+    custom_action_required_permissions = {
+        "dcim:controller_wirelessnetworks": [
+            "dcim.view_controller",
+            "wireless.view_controllermanageddevicegroupwirelessnetworkassignment",
+        ],
+    }
 
     @classmethod
     def setUpTestData(cls):
@@ -4695,6 +4629,16 @@ class ControllerTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 class ControllerManagedDeviceGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = ControllerManagedDeviceGroup
     filterset = ControllerManagedDeviceGroupFilterSet
+    custom_action_required_permissions = {
+        "dcim:controllermanageddevicegroup_wireless_networks": [
+            "dcim.view_controllermanageddevicegroup",
+            "wireless.view_controllermanageddevicegroupwirelessnetworkassignment",
+        ],
+        "dcim:controllermanageddevicegroup_radio_profiles": [
+            "dcim.view_controllermanageddevicegroup",
+            "wireless.view_radioprofile",
+        ],
+    }
 
     @classmethod
     def setUpTestData(cls):
@@ -4781,3 +4725,32 @@ class VirtualDeviceContextTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         vdc.refresh_from_db()
         self.assertEqual(vdc.primary_ip6, ip_v6)
         self.assertEqual(vdc.primary_ip4, ip_v4)
+
+
+class ModuleFamilyTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    """Test cases for ModuleFamily views."""
+
+    model = ModuleFamily
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create test data for ModuleFamily views."""
+        ModuleFamily.objects.create(name="Module Family 1", description="First Module Family")
+        ModuleFamily.objects.create(name="Module Family 2", description="Second Module Family")
+        ModuleFamily.objects.create(name="Module Family 3", description="Third Module Family")
+
+        cls.form_data = {
+            "name": "Module Family X",
+            "description": "A new module family",
+        }
+
+        cls.csv_data = (
+            "name,description",
+            "Module Family 4,Fourth Module Family",
+            "Module Family 5,Fifth Module Family",
+            "Module Family 6,Sixth Module Family",
+        )
+
+        cls.bulk_edit_data = {
+            "description": "Modified description",
+        }
