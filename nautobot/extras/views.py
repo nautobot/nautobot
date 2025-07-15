@@ -311,11 +311,11 @@ class ValidationObjectsTablePanel(object_detail.ObjectsTablePanel):
 
 
 class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
-    queryset = ConfigContextSchema.objects.all()
-    form_class = forms.ConfigContextSchemaForm
+    bulk_update_form_class = forms.ConfigContextSchemaBulkEditForm
     filterset_class = filters.ConfigContextSchemaFilterSet
     filterset_form_class = forms.ConfigContextSchemaFilterForm
-    bulk_update_form_class = forms.ConfigContextSchemaBulkEditForm
+    form_class = forms.ConfigContextSchemaForm
+    queryset = ConfigContextSchema.objects.all()
     serializer_class = serializers.ConfigContextSchemaSerializer
     table_class = tables.ConfigContextSchemaTable
 
@@ -425,10 +425,9 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
-
-        # Set user's preferred data format
+        # Determine user's preferred output format
         if request.GET.get("data_format") in ["json", "yaml"]:
-            context["data_format"] = request.GET["data_format"]
+            context["data_format"] = request.GET.get("data_format")
             if request.user.is_authenticated:
                 request.user.set_config("extras.configcontextschema.format", context["data_format"], commit=True)
         elif request.user.is_authenticated:
