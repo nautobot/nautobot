@@ -56,10 +56,16 @@ class BreadcrumbItem:
     Examples:
         >>> BreadcrumbItem(model=Device)
         ("/dcim/devices/", "Devices")
-        >>> BreadcrumbItem(instance_key="obj")
-
+        >>> BreadcrumbItem(instance_key="object")
+        ("/dcim/devices/1234", "My Device")  # Assuming that under "object" there is an Device instance
         >>> BreadcrumbItem(viewname_str="dcim:device_list")
+        ("/dcim/devices/", "")
         >>> BreadcrumbItem(viewname_str="dcim:device_list", viewname_kwargs={"filter": "some_value"}, label="Link")
+        ("/dcim/devices?filter=some_value", "Link")
+        >>> BreadcrumbItem(model="dcim.device")
+        ("/dcim/devices/", "Devices")
+        >>> BreadcrumbItem(model="dcim.device", model_label_type="singular", model_url_action="list")
+        ("/dcim/devices/", "Device")
     """
 
     # 1. Raw viewname mode
@@ -91,23 +97,27 @@ class BreadcrumbItem:
         Returns:
             Optional[str]: The resolved URL, or `None` if the resolution fails.
         """
-        try:
-            if self.viewname_str:
-                return reverse(self.viewname_str, args=self.reverse_args or [], kwargs=self.reverse_kwargs or {})
-            if self.model:
-                viewname = lookup.get_route_for_model(self.model, "list")
-                return reverse(viewname)
-            if self.model_key:
-                model = context.get(self.model_key)
-                viewname = lookup.get_route_for_model(model, self.model_url_action)
-                return reverse(viewname)
-            if self.instance_key:
-                instance = context.get(self.instance_key)
-                return get_object_link(instance)
-        except NoReverseMatch:
-            return None
+
+        if self.viewname_str:
+            return self.reverse_viewname(self.viewname_str)
+        if self.model:
+            viewname = lookup.get_route_for_model(self.model, "list")
+            return self.reverse_viewname(viewname)
+        if self.model_key:
+            model = context.get(self.model_key)
+            viewname = lookup.get_route_for_model(model, self.model_url_action)
+            return self.reverse_viewname(viewname)
+        if self.instance_key:
+            instance = context.get(self.instance_key)
+            return get_object_link(instance)
 
         return None
+
+    def reverse_viewname(self, viewname: str) -> Optional[str]:
+        try:
+            reverse(viewname, args=self.reverse_args or [], kwargs=self.reverse_kwargs or {})
+        except NoReverseMatch:
+            return None
 
     def get_label(self, context: Context) -> str:
         """
