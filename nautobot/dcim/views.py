@@ -558,7 +558,7 @@ class RackUIViewSet(NautobotUIViewSet):
     queryset = Rack.objects.select_related("location", "tenant__tenant_group", "rack_group", "role")
 
     def get_extra_context(self, request, instance):
-        if not getattr(instance, "location", None):
+        if instance is None:
             return super().get_extra_context(request, instance)
 
         context = super().get_extra_context(request, instance)
