@@ -1205,6 +1205,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         help_text="User that approved the schedule",
     )
     # todoindex:
+    approval_required = models.BooleanField(default=False)
     approved_at = models.DateTimeField(
         editable=False,
         blank=True,
@@ -1270,6 +1271,8 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
 
     def on_workflow_initiated(self, approval_workflow):
         """When initiated, set enabled to False."""
+        self.approval_required = True
+        self.save()
 
     def on_workflow_approved(self, approval_workflow):
         """When approved, set enabled to True."""
@@ -1284,12 +1287,6 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         if self.approved_at:
             self.approved_at = None
             self.save()
-
-    @property
-    def approval_required(self) -> bool:
-        from nautobot.extras.models.approvals import ApprovalWorkflowDefinition
-
-        return ApprovalWorkflowDefinition.objects.find_for_model(self) is not None
 
     @property
     def schedule(self):

@@ -1,6 +1,5 @@
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.db import OperationalError, ProgrammingError
 from django.db.models import F, Model, OuterRef, ProtectedError, Q, Subquery
 from django.db.models.functions import JSONObject
 
@@ -254,40 +253,18 @@ class ScheduledJobExtendedQuerySet(RestrictedQuerySet):
         """
         Return only ScheduledJob instances that are enabled and approved (if approval required)
         """
-        enabled_scheduled_jobs = self.filter(enabled=True).only("pk", "approved_at")
-
-        try:
-            scheduled_job_ids = [
-                scheduled_job.pk
-                for scheduled_job in enabled_scheduled_jobs
-                if not scheduled_job.approval_required or scheduled_job.approved_at
-            ]
-        except (ProgrammingError, OperationalError):
-            # Catch error to avoid errors during migrate operation if the table doesn't exists
-            return self.none()
-
-        return self.filter(pk__in=scheduled_job_ids)
+        return self.filter(
+            Q(enabled=True) & Q(Q(approval_required=True, approved_at__isnull=False) | Q(approval_required=False))
+        )
 
     def approved(self):
         """
         Return only ScheduledJob instances that require approval and are approved
         """
-        # probably we don't need to check approval required it's enough to check that job was approved
-        return self.filter(approved_at__isnull=False)
+        return self.filter(approval_required=True, approved_at__isnull=False)
 
     def needs_approved(self):
         """
         Return only ScheduledJob instances that require approval and are not approved
         """
-        scheduled_jobs = self.only("pk", "approved_at")
-        try:
-            result_job_ids = [
-                schedule_job.pk
-                for schedule_job in scheduled_jobs
-                if schedule_job.approval_required and not schedule_job.approved_at
-            ]
-        except (ProgrammingError, OperationalError):
-            # Catch error to avoid errors during migrate operation if the table doesn't exists
-            return self.none()
-
-        return self.filter(pk__in=result_job_ids)
+        return self.filter(approval_required=True, approved_at__isnull=True).order_by("start_time")
