@@ -1858,7 +1858,6 @@ class SecretsGroupTestCase(
 
     user_permissions = [
         "extras.add_secretsgroup",
-        "extras.change_secretsgroup",
         "extras.add_secretsgroupassociation",
         "extras.change_secretsgroupassociation",
     ]
