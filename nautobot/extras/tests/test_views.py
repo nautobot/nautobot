@@ -1976,6 +1976,8 @@ class GraphQLQueriesTestCase(
 ):
     model = GraphQLQuery
 
+    user_permissions = ["extras.add_secretsgroup"]
+
     @classmethod
     def setUpTestData(cls):
         graphqlqueries = (
