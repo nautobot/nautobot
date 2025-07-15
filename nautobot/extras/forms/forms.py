@@ -1333,8 +1333,6 @@ class JobEditForm(NautobotModelForm):
             "dryrun_default",
             "hidden_override",
             "hidden",
-            "approval_required_override",
-            "approval_required",
             "soft_time_limit_override",
             "soft_time_limit",
             "time_limit_override",
@@ -1407,11 +1405,6 @@ class JobBulkEditForm(NautobotBulkEditForm):
     has_sensitive_variables = forms.NullBooleanField(
         required=False, widget=BulkEditNullBooleanSelect, help_text="Whether this job contains sensitive variables"
     )
-    approval_required = forms.NullBooleanField(
-        required=False,
-        widget=BulkEditNullBooleanSelect,
-        help_text="Whether the job requires approval from another user before running",
-    )
     hidden = forms.NullBooleanField(
         required=False,
         widget=BulkEditNullBooleanSelect,
@@ -1478,10 +1471,6 @@ class JobBulkEditForm(NautobotBulkEditForm):
         help_text="If checked, the default job queue will be reverted to the first value of task_queues defined in each Job's source code",
     )
     # Boolean overrides
-    clear_approval_required_override = forms.BooleanField(
-        required=False,
-        help_text="If checked, the values of approval required will be reverted to the default values defined in each Job's source code",
-    )
     clear_dryrun_default_override = forms.BooleanField(
         required=False,
         help_text="If checked, the values of dryrun default will be reverted to the default values defined in each Job's source code",
@@ -1570,7 +1559,6 @@ class JobFilterForm(BootstrapMixin, forms.Form):
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     read_only = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
-    approval_required = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     is_job_hook_receiver = forms.NullBooleanField(
         initial=False,
         required=False,

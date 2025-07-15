@@ -2018,6 +2018,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             and request.POST.get("_schedule_type") != JobExecutionType.TYPE_IMMEDIATELY
         ):
             messages.error(request, "Unable to schedule job: Job may have sensitive input variables.")
+        # check approval_required pointer
         elif job_model.has_sensitive_variables and job_model.approval_required:
             messages.error(
                 request,
@@ -2053,7 +2054,6 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     start_time=schedule_form.cleaned_data.get("_schedule_start_time"),
                     interval=schedule_type,
                     crontab=schedule_form.cleaned_data.get("_recurrence_custom_time"),
-                    approval_required=job_model.approval_required,
                     job_queue=job_queue,
                     profile=profile,
                     ignore_singleton_lock=ignore_singleton_lock,
@@ -2061,6 +2061,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     **job_class.serialize_data(job_form.cleaned_data),
                 )
                 # Step 1: Check if approval is required
+                # chekc approval_required pointer
                 if job_model.approval_required:
                     # Step 2: Check if approval workflow is defined
                     if not ApprovalWorkflowDefinition.objects.find_for_model(scheduled_job):

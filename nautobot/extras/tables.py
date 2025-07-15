@@ -1063,7 +1063,6 @@ class JobTable(BaseTable):
     dryrun_default = BooleanColumn()
     hidden = BooleanColumn()
     read_only = BooleanColumn()
-    approval_required = BooleanColumn()
     is_job_hook_receiver = BooleanColumn()
     is_job_button_receiver = BooleanColumn()
     supports_dryrun = BooleanColumn()
@@ -1115,7 +1114,6 @@ class JobTable(BaseTable):
             "read_only",
             "is_job_hook_receiver",
             "is_job_button_receiver",
-            "approval_required",
             "supports_dryrun",
             "soft_time_limit",
             "time_limit",

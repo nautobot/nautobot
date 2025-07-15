@@ -653,7 +653,7 @@ class JobSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         if self.instance:
             has_sensitive_variables = attrs.get("has_sensitive_variables", self.instance.has_sensitive_variables)
             approval_required = attrs.get("approval_required", self.instance.approval_required)
-
+            # check approval_required pointer
             if approval_required and has_sensitive_variables:
                 error_message = "A job with sensitive variables cannot also be marked as requiring approval"
                 errors = {}

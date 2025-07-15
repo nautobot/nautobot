@@ -155,9 +155,6 @@ class Job(PrimaryModel):
 
     # Additional properties, potentially inherited from the source code
     # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.
-    approval_required = models.BooleanField(
-        default=False, help_text="Whether the job requires approval from another user before running"
-    )
     hidden = models.BooleanField(
         default=False,
         db_index=True,
@@ -215,10 +212,6 @@ class Job(PrimaryModel):
     description_override = models.BooleanField(
         default=False,
         help_text="If set, the configured description will remain even if the underlying Job source code changes",
-    )
-    approval_required_override = models.BooleanField(
-        default=False,
-        help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
     dryrun_default_override = models.BooleanField(
         default=False,
@@ -316,6 +309,7 @@ class Job(PrimaryModel):
 
     @property
     def runnable(self):
+        # check approval_required pointer
         return self.enabled and self.installed and not (self.has_sensitive_variables and self.approval_required)
 
     @cached_property
@@ -325,6 +319,13 @@ class Job(PrimaryModel):
             return GitRepository.objects.get(slug=self.module_name.split(".")[0])
         except GitRepository.DoesNotExist:
             return None
+
+    @property
+    def approval_required(self) -> bool:
+        approval_required = False
+        for schedule_job in self.scheduled_jobs.all():
+            approval_required = schedule_job.approval_required
+        return approval_required
 
     @property
     def job_task(self):
@@ -391,6 +392,7 @@ class Job(PrimaryModel):
         if len(self.name) > JOB_MAX_NAME_LENGTH:
             raise ValidationError(f"Name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
 
+        # check approval_required pointer
         if self.has_sensitive_variables is True and self.approval_required is True:
             raise ValidationError(
                 {"approval_required": "A job that may have sensitive variables cannot be marked as requiring approval"}
@@ -1203,7 +1205,6 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         help_text="User that approved the schedule",
     )
     # todoindex:
-    approval_required = models.BooleanField(default=False)
     approved_at = models.DateTimeField(
         editable=False,
         blank=True,
@@ -1269,8 +1270,6 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
 
     def on_workflow_initiated(self, approval_workflow):
         """When initiated, set enabled to False."""
-        self.approval_required = True
-        self.save()
 
     def on_workflow_approved(self, approval_workflow):
         """When approved, set enabled to True."""
@@ -1285,6 +1284,12 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         if self.approved_at:
             self.approved_at = None
             self.save()
+
+    @property
+    def approval_required(self) -> bool:
+        from nautobot.extras.models.approvals import ApprovalWorkflowDefinition
+
+        return ApprovalWorkflowDefinition.objects.find_for_model(self) is not None
 
     @property
     def schedule(self):
@@ -1348,7 +1353,6 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         interval: str = JobExecutionType.TYPE_IMMEDIATELY,
         crontab: str = "",
         profile: bool = False,
-        approval_required: bool = False,
         job_queue: Optional[JobQueue] = None,
         task_queue: Optional[str] = None,  # deprecated!
         ignore_singleton_lock: bool = False,
@@ -1371,7 +1375,6 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
                 Defaults to JobExecutionType.TYPE_IMMEDIATELY.
             crontab (str): The crontab string for the schedule. Defaults to "".
             profile (bool): Flag indicating whether to profile the job. Defaults to False.
-            approval_required (bool): Flag indicating if approval is required. Defaults to False.
             job_queue (JobQueue): The Job queue to use. If unset, use the configured default celery queue.
             task_queue (str): The queue name to use. **Deprecated, prefer `job_queue`.**
             ignore_singleton_lock (bool): Whether to ignore singleton locks. Defaults to False.
@@ -1440,7 +1443,6 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
             interval=interval,
             one_off=(interval == JobExecutionType.TYPE_FUTURE),
             user=user,
-            approval_required=approval_required,
             crontab=crontab,
             job_queue=job_queue,
         )

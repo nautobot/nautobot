@@ -649,6 +649,7 @@ class JobViewSetBase(
                 raise ValidationError(
                     {"schedule": {"interval": ["Unable to schedule job: Job may have sensitive input variables"]}}
                 )
+            # check approval_required pointer
             if job_model.approval_required:
                 raise ValidationError(
                     "Unable to run or schedule job: "
@@ -770,6 +771,7 @@ class JobViewSetBase(
         # Approval is not required for dryrun
         if job_class.supports_dryrun:
             dryrun = data.get("dryrun", False)
+            # check approval_required pointer
             approval_required = not dryrun and job_model.approval_required
         else:
             approval_required = job_model.approval_required
@@ -785,7 +787,6 @@ class JobViewSetBase(
             start_time=schedule_data.get("start_time"),
             interval=schedule_data.get("interval"),
             crontab=schedule_data.get("crontab", ""),
-            approval_required=approval_required,
             job_queue=job_queue,
             validated_save=False,
             **job_class.serialize_data(cleaned_data),
