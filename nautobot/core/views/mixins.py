@@ -1494,23 +1494,35 @@ class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
             initial=normalize_querydict(request.GET, form_class=form_class),
             instance=self.obj,
         )
-        data = deepcopy(request.POST)
-        names = form.cleaned_data["name_pattern"]
-        labels = form.cleaned_data.get("label_pattern")
-        for i, name in enumerate(names):
-            label = labels[i] if labels else None
-            # Initialize the individual component form
-            data["name"] = name
-            data["label"] = label
-            if hasattr(form, "get_iterative_data"):
-                data.update(form.get_iterative_data(i))
-        form = form_class(
-            data=data,
-            initial=normalize_querydict(request.GET, form_class=form_class),
-            instance=self.obj,
-        )
-        restrict_form_fields(form, request.user)
-        if form.is_valid():
-            return self.form_valid(form)
-        else:
+        if not form.is_valid():
             return self.form_invalid(form)
+        else:
+            names = form.cleaned_data.get("name_pattern") or []
+            labels = form.cleaned_data.get("label_pattern") or []
+
+            if names:
+                data = deepcopy(request.POST)
+                for i, name in enumerate(names):
+                    data["name"] = name
+                    data["label"] = labels[i] if labels else None
+
+                    if hasattr(form, "get_iterative_data"):
+                        data.update(form.get_iterative_data(i))
+                form = form_class(
+                    data=data,
+                    files=request.FILES,
+                    initial=normalize_querydict(request.GET, form_class=form_class),
+                    instance=self.obj,
+                )
+                if not form.is_valid():
+                    for field, errors in form.errors.as_data().items():
+                        # Assign errors on the child form's name/label field to name_pattern/label_pattern on the parent form
+                        if field == "name":
+                            field = "name_pattern"
+                        elif field == "label":
+                            field = "label_pattern"
+                        for e in errors:
+                            err_str = ", ".join(e)
+                            form.add_error(field, f"{name}: {err_str}")
+            restrict_form_fields(form, request.user)
+            return self.form_valid(form)
