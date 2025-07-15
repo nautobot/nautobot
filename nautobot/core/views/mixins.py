@@ -1,3 +1,4 @@
+from copy import deepcopy
 import logging
 from typing import ClassVar, Optional
 
@@ -1387,3 +1388,106 @@ class ObjectNotesViewMixin(NautobotViewSetMixin):
             "active_tab": "notes",
         }
         return Response(data)
+
+
+class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
+    """
+    UI mixin to create a model instance.
+    """
+
+    def extra_message_context(self, obj):
+        """
+        Context variables for this extra message.
+        """
+        return {}
+
+    def extra_message(self, **kwargs):
+        """
+        Append extra message at the end of create or update success message.
+        """
+        return ""
+
+    def _process_create_or_update_form(self, form):
+        """
+        Helper method to create or update an object after the form is validated successfully.
+        """
+        request = self.request
+        queryset = self.get_queryset()
+
+        with transaction.atomic():
+            object_created = not form.instance.present_in_database
+            obj = self.form_save(form)
+
+            # Check that the new object conforms with any assigned object-level permissions
+            queryset.get(pk=obj.pk)
+
+
+            msg = f'{"Created" if object_created else "Modified"} {queryset.model._meta.verbose_name}'
+            self.logger.info(f"{msg} {obj} (PK: {obj.pk})")
+            try:
+                msg = format_html(
+                    '{} <a href="{}">{}</a>' + self.extra_message(**self.extra_message_context(obj)),
+                    msg,
+                    obj.get_absolute_url(),
+                    obj,
+                )
+            except AttributeError:
+                msg = format_html("{} {}" + self.extra_message(**self.extra_message_context(obj)), msg, obj)
+            messages.success(request, msg)
+            if "_addanother" in request.POST:
+                # If the object has clone_fields, pre-populate a new instance of the form
+                if hasattr(obj, "clone_fields"):
+                    url = f"{request.path}?{prepare_cloned_fields(obj)}"
+                    self.success_url = url
+                self.success_url = request.get_full_path()
+            else:
+                return_url = form.cleaned_data.get("return_url")
+                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                    self.success_url = iri_to_uri(return_url)
+                else:
+                    self.success_url = self.get_return_url(request, obj)
+
+    def create(self, request, *args, **kwargs):
+        """
+        request.GET: render the ObjectForm which is passed to NautobotHTMLRenderer as Response.
+        request.POST: call perform_create() which validates the form and perform the action of create.
+        Override to add more variables to Response.
+        """
+        context = {}
+        if request.method == "POST":
+            return self.perform_create(request, *args, **kwargs)
+        return Response(context)
+
+
+    def perform_create(self, request, *args, **kwargs):  # pylint: disable=arguments-differ
+        """
+        Function to validate the ObjectForm and to create a new object.
+        """
+        self.obj = self.get_object()
+        form_class = self.get_form_class()
+        form = form_class(
+            data=request.POST,
+            files=request.FILES,
+            initial=normalize_querydict(request.GET, form_class=form_class),
+            instance=self.obj,
+        )
+        data = deepcopy(request.POST)
+        names = form.cleaned_data["name_pattern"]
+        labels = form.cleaned_data.get("label_pattern")
+        for i, name in enumerate(names):
+            label = labels[i] if labels else None
+            # Initialize the individual component form
+            data["name"] = name
+            data["label"] = label
+            if hasattr(form, "get_iterative_data"):
+                data.update(form.get_iterative_data(i))
+        form = form_class(
+            data=data,
+            initial=normalize_querydict(request.GET, form_class=form_class),
+            instance=self.obj,
+        )
+        restrict_form_fields(form, request.user)
+        if form.is_valid():
+            return self.form_valid(form)
+        else:
+            return self.form_invalid(form)

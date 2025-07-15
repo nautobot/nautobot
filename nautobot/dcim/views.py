@@ -43,6 +43,7 @@ from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic
 from nautobot.core.views.mixins import (
+    ComponentCreateViewMixin,
     GetReturnURLMixin,
     ObjectBulkDestroyViewMixin,
     ObjectBulkUpdateViewMixin,
@@ -1107,14 +1108,10 @@ class ModuleTypeUIViewSet(
 #
 # Console port templates
 #
-class ConsolePortTemplateCreateView(generic.ComponentCreateView):
-    queryset = ConsolePortTemplate.objects.all()
-    form = forms.ConsolePortTemplateCreateForm
-    model_form = forms.ConsolePortTemplateForm
-    template_name = "dcim/device_component_add.html"
 
 
 class ConsolePortTemplateUIViewSet(
+    ComponentCreateViewMixin,
     ObjectEditViewMixin,
     ObjectDestroyViewMixin,
     ObjectBulkDestroyViewMixin,
