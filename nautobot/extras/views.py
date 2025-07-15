@@ -311,76 +311,56 @@ class ValidationObjectsTablePanel(object_detail.ObjectsTablePanel):
 
 
 class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
-    bulk_update_form_class = forms.ConfigContextSchemaBulkEditForm
+    queryset = ConfigContextSchema.objects.all()
+    form_class = forms.ConfigContextSchemaForm
     filterset_class = filters.ConfigContextSchemaFilterSet
     filterset_form_class = forms.ConfigContextSchemaFilterForm
-    form_class = forms.ConfigContextSchemaForm
-    queryset = ConfigContextSchema.objects.all()
+    bulk_update_form_class = forms.ConfigContextSchemaBulkEditForm
     serializer_class = serializers.ConfigContextSchemaSerializer
     table_class = tables.ConfigContextSchemaTable
 
     def get_object_detail_content(self, instance: ConfigContextSchema):
         """Dynamically construct panels with validation logic using the instance's data_schema."""
+
+        # Shared panels used in both cases
+        panels_common = (
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                exclude_fields=[
+                    "data_schema",
+                    "owner_content_type",
+                    "owner_object_id",
+                ],
+                hide_if_unset=["owner"],
+            ),
+            object_detail.Panel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                label="Data Schema",
+                header_extra_content_template_path="extras/inc/configcontext_format.html",
+                body_content_template_path="extras/inc/configcontextschema_data.html",
+            ),
+        )
+
         if instance is None or not isinstance(instance.data_schema, dict):
-            # If the schema is missing or invalid, return only basic detail panels
-            return object_detail.ObjectDetailContent(
-                panels=(
-                    object_detail.ObjectFieldsPanel(
-                        weight=100,
-                        section=SectionChoices.LEFT_HALF,
-                        fields="__all__",
-                        exclude_fields=[
-                            "data_schema",
-                            "owner_content_type",
-                            "owner_object_id",
-                        ],
-                        hide_if_unset=["owner"],
-                    ),
-                    object_detail.Panel(
-                        weight=100,
-                        section=SectionChoices.RIGHT_HALF,
-                        label="Data Schema",
-                        header_extra_content_template_path="extras/inc/json_format.html",
-                        body_content_template_path="extras/inc/configcontextschema_data.html",
-                    ),
-                )
-            )
+            return object_detail.ObjectDetailContent(panels=panels_common)
 
         try:
             validator = Draft7Validator(instance.data_schema)
         except SchemaError:
-            validator = None  # Handle schema validation error gracefully
+            validator = None
 
-        return object_detail.ObjectDetailContent(
-            panels=(
-                object_detail.ObjectFieldsPanel(
-                    weight=100,
-                    section=SectionChoices.LEFT_HALF,
-                    fields="__all__",
-                    exclude_fields=[
-                        "data_schema",
-                        "owner_content_type",
-                        "owner_object_id",
-                    ],
-                    hide_if_unset=["owner"],
-                ),
-                object_detail.Panel(
-                    weight=100,
-                    section=SectionChoices.RIGHT_HALF,
-                    label="Data Schema",
-                    header_extra_content_template_path="extras/inc/json_format.html",
-                    body_content_template_path="extras/inc/configcontextschema_data.html",
-                ),
-            ),
-            extra_tabs=(
+        extra_tabs = ()
+        if validator:
+            extra_tabs = (
                 object_detail.DistinctViewTab(
                     weight=300,
                     tab_id="validation",
                     label="Validation",
                     url_name="extras:configcontextschema_validation",
-                    panels=()
-                    if not validator
-                    else (
+                    panels=(
                         ValidationObjectsTablePanel(
                             section=SectionChoices.FULL_WIDTH,
                             weight=100,
@@ -436,7 +416,11 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
                         ),
                     ),
                 ),
-            ),
+            )
+
+        return object_detail.ObjectDetailContent(
+            panels=panels_common,
+            extra_tabs=extra_tabs,
         )
 
     def get_extra_context(self, request, instance):
@@ -444,7 +428,7 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
 
         # Set user's preferred data format
         if request.GET.get("data_format") in ["json", "yaml"]:
-            context["data_format"] = request.GET.get("data_format")
+            context["data_format"] = request.GET["data_format"]
             if request.user.is_authenticated:
                 request.user.set_config("extras.configcontextschema.format", context["data_format"], commit=True)
         elif request.user.is_authenticated:
@@ -452,7 +436,6 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
         else:
             context["data_format"] = "json"
 
-        # Add object_detail_content only if instance exists
         if instance:
             context["object_detail_content"] = self.get_object_detail_content(instance)
 
