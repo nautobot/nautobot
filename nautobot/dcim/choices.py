@@ -582,7 +582,7 @@ class PowerOutletTypeChoices(ChoiceSet):
     # Direct current (DC)
     TYPE_DC = "dc-terminal"
     # Proprietary
-    TYPE_EATON_C39 = 'eaton-c39'
+    TYPE_EATON_C39 = "eaton-c39"
     TYPE_HDOT_CX = "hdot-cx"
     TYPE_SAF_D_GRID = "saf-d-grid"
     TYPE_NEUTRIK_POWERCON_20A = "neutrik-powercon-20a"
@@ -722,7 +722,7 @@ class PowerOutletTypeChoices(ChoiceSet):
         (
             "Proprietary",
             (
-                (TYPE_EATON_C39, 'Eaton C39'),
+                (TYPE_EATON_C39, "Eaton C39"),
                 (TYPE_HDOT_CX, "HDOT Cx"),
                 (TYPE_SAF_D_GRID, "Saf-D-Grid"),
                 (TYPE_NEUTRIK_POWERCON_20A, "Neutrik powerCON (20A)"),
