@@ -1706,7 +1706,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
             "description": "Overridden Description",
             "dryrun_default": not self.job_containing_sensitive_variables.dryrun_default,
             "hidden": not self.job_containing_sensitive_variables.hidden,
-            "approval_required": not self.job_containing_sensitive_variables.approval_required,
             "has_sensitive_variables": not self.job_containing_sensitive_variables.has_sensitive_variables,
             "soft_time_limit": 350,
             "time_limit": 650,

@@ -1898,11 +1898,6 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 
     def _handle_scheduled_job_response(self, request, scheduled_job, return_url):
         """Handle response for successfully scheduled jobs."""
-        if scheduled_job.associated_approval_workflows.filter(
-            current_state=ApprovalWorkflowStateChoices.PENDING
-        ).exists():
-            return self._handle_approval_workflow_response(request, scheduled_job, return_url)
-
         messages.success(request, f"Job {scheduled_job.name} successfully scheduled")
         return redirect(return_url or "extras:scheduledjob_list")
 
@@ -2018,14 +2013,6 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             and request.POST.get("_schedule_type") != JobExecutionType.TYPE_IMMEDIATELY
         ):
             messages.error(request, "Unable to schedule job: Job may have sensitive input variables.")
-        # check approval_required pointer
-        elif job_model.has_sensitive_variables and job_model.approval_required:
-            messages.error(
-                request,
-                "Unable to run or schedule job: "
-                "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
-                "One of these two flags must be removed before this job can be scheduled or run.",
-            )
         elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
             job_queue = job_form.cleaned_data.pop("_job_queue", None)
             if job_queue is None:
@@ -2046,30 +2033,31 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             ignore_singleton_lock = job_form.cleaned_data.pop("_ignore_singleton_lock", False)
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
-            if not dryrun:
-                scheduled_job = ScheduledJob.create_schedule(
-                    job_model,
-                    request.user,
-                    name=schedule_form.cleaned_data.get("_schedule_name"),
-                    start_time=schedule_form.cleaned_data.get("_schedule_start_time"),
-                    interval=schedule_type,
-                    crontab=schedule_form.cleaned_data.get("_recurrence_custom_time"),
-                    job_queue=job_queue,
-                    profile=profile,
-                    ignore_singleton_lock=ignore_singleton_lock,
-                    validated_save=False,
-                    **job_class.serialize_data(job_form.cleaned_data),
+            scheduled_job = ScheduledJob.create_schedule(
+                job_model,
+                request.user,
+                name=schedule_form.cleaned_data.get("_schedule_name"),
+                start_time=schedule_form.cleaned_data.get("_schedule_start_time"),
+                interval=schedule_type,
+                crontab=schedule_form.cleaned_data.get("_recurrence_custom_time"),
+                job_queue=job_queue,
+                profile=profile,
+                ignore_singleton_lock=ignore_singleton_lock,
+                validated_save=False,
+                **job_class.serialize_data(job_form.cleaned_data),
+            )
+            scheduled_job_has_approval_workflow = scheduled_job.has_approval_workflow_definition
+
+            if job_model.has_sensitive_variables and scheduled_job_has_approval_workflow:
+                messages.error(
+                    request,
+                    "Unable to run or schedule job: "
+                    "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
+                    "One of these two flags must be removed before this job can be scheduled or run.",
                 )
+            if not dryrun:
                 # Step 1: Check if approval is required
-                # chekc approval_required pointer
-                if job_model.approval_required:
-                    # Step 2: Check if approval workflow is defined
-                    if not ApprovalWorkflowDefinition.objects.find_for_model(scheduled_job):
-                        messages.error(
-                            request,
-                            "Job was not successfully submitted for approval. No approval workflow definition is defined for it.",
-                        )
-                        return redirect(return_url or request.path)
+                if scheduled_job_has_approval_workflow:
                     scheduled_job.validated_save()
                     return self._handle_approval_workflow_response(request, scheduled_job, return_url)
 
@@ -2203,7 +2191,7 @@ class JobApprovalRequestView(generic.ObjectView):
             # To dry-run a job, a user needs the same permissions that would be needed to run the job directly
             if job_model is None:
                 messages.error(request, "There is no job associated with this request? Cannot run it!")
-            elif not job_model.runnable:
+            elif not scheduled_job.runnable:
                 messages.error(request, "This job cannot be run at this time")
             elif not JobModel.objects.check_perms(self.request.user, instance=job_model, action="run"):
                 messages.error(request, "You do not have permission to run this job")

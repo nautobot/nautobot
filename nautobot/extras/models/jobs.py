@@ -307,11 +307,6 @@ class Job(PrimaryModel):
     def description_first_line(self):
         return self.description.splitlines()[0]
 
-    @property
-    def runnable(self):
-        # check approval_required pointer
-        return self.enabled and self.installed and not (self.has_sensitive_variables and self.approval_required)
-
     @cached_property
     def git_repository(self):
         """GitRepository record, if any, that owns this Job."""
@@ -319,13 +314,6 @@ class Job(PrimaryModel):
             return GitRepository.objects.get(slug=self.module_name.split(".")[0])
         except GitRepository.DoesNotExist:
             return None
-
-    @property
-    def approval_required(self) -> bool:
-        approval_required = False
-        for schedule_job in self.scheduled_jobs.all():
-            approval_required = schedule_job.approval_required
-        return approval_required
 
     @property
     def job_task(self):
@@ -391,11 +379,12 @@ class Job(PrimaryModel):
             raise ValidationError(f"Grouping may not exceed {CHARFIELD_MAX_LENGTH} characters in length")
         if len(self.name) > JOB_MAX_NAME_LENGTH:
             raise ValidationError(f"Name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
-
+        approval_required = False
+        # should I also create in memory schedule job here to check approval workflow definition?
         # check approval_required pointer
-        if self.has_sensitive_variables is True and self.approval_required is True:
+        if self.has_sensitive_variables is True and approval_required is True:
             raise ValidationError(
-                {"approval_required": "A job that may have sensitive variables cannot be marked as requiring approval"}
+                {"has_sensitive_variables": "A job that require approval cannot has sensitive variables"}
             )
 
     def save(self, *args, **kwargs):
@@ -1270,12 +1259,12 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
             raise ValidationError("Approval by user and approval time must either both be set or both be undefined")
 
     def on_workflow_initiated(self, approval_workflow):
-        """When initiated, set enabled to False."""
+        """When initiated, set approval required to True."""
         self.approval_required = True
         self.save()
 
     def on_workflow_approved(self, approval_workflow):
-        """When approved, set enabled to True."""
+        """When approved, set approved_at to decision_date from approval workflow."""
         self.approved_at = approval_workflow.decision_date
         self.save()
 
@@ -1283,7 +1272,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         publish_event(topic="nautobot.jobs.approval.approved", payload=publish_event_payload)
 
     def on_workflow_denied(self, approval_workflow):
-        """When denied, set enabled to False."""
+        """When denied, set approved_at to None."""
         if self.approved_at:
             self.approved_at = None
             self.save()
@@ -1300,6 +1289,20 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
     def queue(self) -> str:
         """Deprecated backward-compatibility property for the queue name this job is scheduled for."""
         return self.job_queue.name if self.job_queue else ""
+
+    @property
+    def has_approval_workflow_definition(self) -> bool:
+        from nautobot.extras.models.approvals import ApprovalWorkflowDefinition
+
+        return ApprovalWorkflowDefinition.objects.find_for_model(self) is not None
+
+    @property
+    def runnable(self):
+        return (
+            self.job_model.enabled
+            and self.job_model.installed
+            and not (self.job_model.has_sensitive_variables and self.approval_required)
+        )
 
     @queue.setter
     def queue(self, value: str):
