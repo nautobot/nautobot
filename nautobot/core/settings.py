@@ -448,8 +448,10 @@ DATABASES = {
 }
 
 # Ensure proper Unicode handling for MySQL
-if DATABASES["default"]["ENGINE"] == "django.db.backends.mysql":
-    DATABASES["default"]["OPTIONS"] = {"charset": "utf8mb4"}
+if "mysql" in DATABASES["default"]["ENGINE"]:
+    DATABASES["default"].setdefault("OPTIONS", {})["charset"] = "utf8mb4"
+    DATABASES["default"].setdefault("TEST", {})["CHARSET"] = "utf8mb4"
+    DATABASES["default"]["TEST"]["COLLATION"] = "utf8mb4_0900_ai_ci"
 
 # The secret key is used to encrypt session keys and salt passwords.
 SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "")
