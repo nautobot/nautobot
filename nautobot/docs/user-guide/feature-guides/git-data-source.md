@@ -44,9 +44,6 @@ This table defines repository parameters that are required to establish a reposi
 |Secrets Group|(Optional) Grouping containing a *HTTP token* and/or *HTTP username* as needed to access the repository.|
 |Provides|Resource type(s) provided by this Git repo.|
 
-!!! tip
-    The `slug` cannot be changed without removing and recreating the Git Repository record. Also, because a repository can potentially provide Jobs, Nautobot requires you to provide a `slug` that could be used as a Python module name and will not conflict with any existing Python module or package installed in Nautobot. For example, you can't create a repository with the slug `nautobot`.
-
 ## Token Requirements
 
 The token in the `Secrets Group` field above should be generated on the provider side, usually on their website. These links will help with some of the common platforms:
@@ -185,15 +182,16 @@ Jobs need to be defined in a `/jobs/` directory or `jobs.py` at the root of a Gi
 An example tree for `/jobs/`.
 
 ```no-highlight
-▶ tree .
-__init__.py
+▶ tree jobs
 jobs
 ├── __init__.py
-└── get_device_connection.py
+└── get-device-connection.py
+
+1 directory, 2 files
 ```
 
 !!! note
-    As shown in the above example, the repository root must contain a file called `__init__.py` **and** the `/jobs/` directory must contain a file called `__init__.py`.
+    As shown in the above example, the `/jobs/` directory must contain a file called `__init__.py`.
 
 Once the repository is created in Nautobot.
 

@@ -1404,7 +1404,7 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.app_job.job_class, ExampleJob)
 
     def test_class_path(self):
-        self.assertEqual(self.local_job.class_path, "pass_job.TestPassJob")
+        self.assertEqual(self.local_job.class_path, "pass.TestPassJob")
         self.assertIsNotNone(self.local_job.job_class)
         self.assertEqual(self.local_job.class_path, self.local_job.job_class.class_path)
 
@@ -2145,7 +2145,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
 
         self.daily_utc_job = ScheduledJob.objects.create(
             name="Daily UTC Job",
-            task="pass_job.TestPassJob",
+            task="pass.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_DAILY,
             start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
@@ -2153,7 +2153,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         )
         self.daily_est_job = ScheduledJob.objects.create(
             name="Daily EST Job",
-            task="pass_job.TestPassJob",
+            task="pass.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_DAILY,
             start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=ZoneInfo("America/New_York")),
@@ -2168,7 +2168,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         )
         self.crontab_est_job = ScheduledJob.objects.create(
             name="Crontab EST Job",
-            task="pass_job.TestPassJob",
+            task="pass.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_CUSTOM,
             start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=ZoneInfo("America/New_York")),
@@ -2177,7 +2177,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         )
         self.one_off_utc_job = ScheduledJob.objects.create(
             name="One-off UTC Job",
-            task="pass_job.TestPassJob",
+            task="pass.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,
             start_time=datetime(year=2050, month=1, day=22, hour=0, minute=0, tzinfo=ZoneInfo("UTC")),
@@ -2335,7 +2335,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         """Test that TYPE_CUSTOM behavior around DST is as expected."""
         cronjob = ScheduledJob.objects.create(
             name="DST Aware Cronjob",
-            task="pass_job.TestPassJob",
+            task="pass.TestPassJob",
             job_model=self.job_model,
             enabled=False,
             interval=JobExecutionType.TYPE_CUSTOM,
@@ -2390,7 +2390,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         """Test the interaction of TYPE_DAILY around DST."""
         daily = ScheduledJob.objects.create(
             name="Daily Job",
-            task="pass_job.TestPassJob",
+            task="pass.TestPassJob",
             job_model=self.job_model,
             enabled=False,
             interval=JobExecutionType.TYPE_DAILY,
@@ -2963,7 +2963,7 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
     """
 
     def setUp(self):
-        module = "pass_job"
+        module = "pass"
         name = "TestPassJob"
         job_class = get_job(f"{module}.{name}")
 

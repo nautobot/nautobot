@@ -17,7 +17,7 @@ from git import InvalidGitRepositoryError, Repo
 import yaml
 
 from nautobot.core.utils.git import GitRepo
-from nautobot.core.utils.module_loading import check_name_safe_to_import_privately, import_modules_privately
+from nautobot.core.utils.module_loading import import_modules_privately
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     LogLevelChoices,
@@ -720,19 +720,11 @@ def refresh_job_code_from_repository(repository_slug, skip_reimport=False, ignor
     After cloning/updating/deleting a GitRepository on disk, call this function to reload and reregister its Python.
 
     Args:
-        repository_slug (str): Repository slug (directory in GIT_ROOT) that was populated, updated, or deleted.
-        skip_reimport (bool): If True, unload existing jobs from this repository but do not re-import them.
+        repository_slug (str): Repository directory in GIT_ROOT that was updated or deleted.
+        skip_reimport (bool): If True, unload existing code from this repository but do not re-import it.
         ignore_import_errors (bool): If True, any exceptions raised in the import will be caught and logged.
             If False, exceptions will be re-raised after logging.
     """
-    # Enforced during GitRepository.clean() but just in case someone created a bad record without cleaning:
-    permitted, reason = check_name_safe_to_import_privately(repository_slug)
-    if not permitted:
-        logger.error("The repository_slug %r is invalid as it is %s", repository_slug, reason)
-        if ignore_import_errors:
-            return
-        raise ValueError(f"The repository_slug {repository_slug!r} is invalid as it is {reason}")
-
     # Unload any previous version of this module and its submodules if present
     for job_class_path in list(registry["jobs"]):
         if job_class_path.startswith(f"{repository_slug}."):
