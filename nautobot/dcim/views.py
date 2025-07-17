@@ -1369,39 +1369,93 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
         ),
     )
 
-    @action(detail=True, url_path="interfaces")
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="interfaces",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_interfacetemplate"],
+    )
     def interfaces(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="frontports")
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="frontports",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_frontporttemplate"],
+    )
     def frontports(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="rearports")
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="rearports",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_rearporttemplate"],
+    )
     def rearports(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="consoleports")
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="consoleports",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_consoleporttemplate"],
+    )
     def consoleports(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="consoleserverports")
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="consoleserverports",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_consoleserverporttemplate"],
+    )
     def consoleserverports(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="powerports")
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="powerports",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_powerporttemplate"],
+    )
     def powerports(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="poweroutlets")
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="poweroutlets",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_poweroutlettemplate"],
+    )
     def poweroutlets(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="devicebays")
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="devicebays",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_devicebaytemplate"],
+    )
     def devicebays(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="modulebays")
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="modulebays",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_modulebaytemplate"],
+    )
     def modulebays(self, request, *args, **kwargs):
         return Response({})
 
