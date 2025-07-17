@@ -26,6 +26,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 
 from nautobot.apps.ui import BaseTextPanel
+from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.events import publish_event
 from nautobot.core.exceptions import FilterSetFieldNotFound
@@ -80,7 +81,7 @@ from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
 
-from . import filters, forms, tables
+from . import filters, forms, jobs_ui, tables
 from .api import serializers
 from .choices import (
     DynamicGroupTypeChoices,
@@ -224,7 +225,7 @@ class ConfigContextUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.FULL_WIDTH,
                 label="Data",
-                header_extra_content_template_path="extras/inc/json_format.html",
+                header_extra_content_template_path="extras/inc/configcontext_format.html",
                 body_content_template_path="extras/inc/configcontext_data.html",
             ),
             AssignmentObjectFieldsPanel(
@@ -1301,8 +1302,6 @@ class ImageAttachmentDeleteView(generic.ObjectDeleteView):
 #
 # Jobs
 #
-
-
 class JobListView(generic.ObjectListView):
     """
     Retrieve all of the available jobs from disk and the recorded JobResult (if any) for each.
@@ -1554,6 +1553,64 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 class JobView(generic.ObjectView):
     queryset = JobModel.objects.all()
     template_name = "extras/job_detail.html"
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                label="Source Code",
+                fields=[
+                    "module_name",
+                    "job_class_name",
+                    "class_path",
+                    "installed",
+                    "is_job_hook_receiver",
+                    "is_job_button_receiver",
+                ],
+            ),
+            jobs_ui.JobObjectFieldsPanel(
+                weight=200,
+                section=SectionChoices.LEFT_HALF,
+                label="Job",
+                fields=["grouping", "name", "description", "enabled"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.JobResultTable,
+                table_title="JobResults",
+                table_filter=["job_model"],
+            ),
+            jobs_ui.JobObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                label="Properties",
+                fields=[
+                    "approval_required",
+                    "supports_dryrun",
+                    "dryrun_default",
+                    "read_only",
+                    "hidden",
+                    "has_sensitive_variables",
+                    "is_singleton",
+                    "soft_time_limit",
+                    "time_limit",
+                    "job_queues",
+                    "default_job_queue",
+                ],
+            ),
+        ],
+        extra_buttons=[
+            jobs_ui.JobRunScheduleButton(
+                weight=100,
+                link_name="extras:job_run",
+                label="Run/Schedule",
+                icon="mdi-play",
+                color=ButtonActionColorChoices.SUBMIT,
+                required_permissions=["extras.job_run"],
+            ),
+        ],
+    )
 
 
 class JobEditView(generic.ObjectEditView):
@@ -2986,6 +3043,25 @@ class TagUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.TagSerializer
     table_class = tables.TagTable
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                table_class=tables.TaggedItemTable,
+                table_title="Tagged Objects",
+                table_filter="tag",
+                select_related_fields=["content_type"],
+                prefetch_related_fields=["content_object"],
+            ),
+        ),
+    )
+
     def alter_queryset(self, request):
         queryset = super().alter_queryset(request)
 
@@ -2994,29 +3070,6 @@ class TagUIViewSet(NautobotUIViewSet):
             queryset = queryset.annotate(items=count_related(TaggedItem, "tag"))
 
         return queryset
-
-    def get_extra_context(self, request, instance):
-        # Only run this logic when retrieving a single object
-        if instance is None or self.action != "retrieve":
-            return super().get_extra_context(request, instance)
-        tagged_items = (
-            TaggedItem.objects.filter(tag=instance).select_related("content_type").prefetch_related("content_object")
-        )
-
-        # Generate a table of all items tagged with this Tag
-        items_table = tables.TaggedItemTable(tagged_items)
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(items_table)
-
-        return {
-            "items_count": tagged_items.count(),
-            "items_table": items_table,
-            "content_types": instance.content_types.order_by("app_label", "model"),
-            **super().get_extra_context(request, instance),
-        }
 
 
 #
