@@ -482,14 +482,19 @@ class SecretsGroupAccessTypeChoices(ChoiceSet):
     )
 
 
+
 class SecretsGroupSecretTypeChoices(ChoiceSet):
     TYPE_KEY = "key"
     TYPE_PASSWORD = "password"  # noqa: S105  # hardcoded-password-string -- false positive
     TYPE_SECRET = "secret"  # noqa: S105  # hardcoded-password-string -- false positive
     TYPE_TOKEN = "token"  # noqa: S105  # hardcoded-password-string -- false positive
+    TYPE_PRIVKEY = "privkey"  # noqa: S105  # hardcoded-password-string -- false positive
+    TYPE_AUTHKEY = "authkey"  # noqa: S105  # hardcoded-password-string -- false positive
     TYPE_USERNAME = "username"
     TYPE_URL = "url"
     TYPE_NOTES = "notes"
+    TYPE_AUTHPROTOCOL = "authprotocol"
+    TYPE_PRIVALGORITHM = "privalgorithm"
 
     CHOICES = (
         (TYPE_KEY, "Key"),
@@ -499,8 +504,11 @@ class SecretsGroupSecretTypeChoices(ChoiceSet):
         (TYPE_USERNAME, "Username"),
         (TYPE_URL, "URL"),
         (TYPE_NOTES, "Notes"),
+        (TYPE_AUTHKEY, "Authentication Key"),
+        (TYPE_AUTHPROTOCOL, "Authentication Protocol"),
+        (TYPE_PRIVKEY, "Private Key"),
+        (TYPE_PRIVALGORITHM, "Private Algorithm"),
     )
-
 
 #
 # Webhooks
