@@ -1857,7 +1857,9 @@ class SecretsGroupTestCase(
     model = SecretsGroup
 
     user_permissions = [
+        "extras.view_secret",
         "extras.add_secretsgroup",
+        "extras.view_secretsgroup",
         "extras.add_secretsgroupassociation",
         "extras.change_secretsgroupassociation",
     ]
