@@ -160,22 +160,6 @@
         </div>
         <table class="table table-hover panel-body attr-table">
             <tr>
-                <td>Approval Required to Execute</td>
-                <td>{{ object.approval_required | render_boolean }}</td>
-                <td>
-                    {% if object.approval_required_override %}
-                        <span class="text-muted">
-                            overridden; default is
-                            {% if object.installed %}
-                                {{ object.job_class.approval_required | render_boolean }}
-                            {% else %}
-                                unknown (not currently installed)
-                            {% endif %}
-                        </span>
-                    {% endif %}
-                </td>
-            </tr>
-            <tr>
                 <td>Supports Dryrun</td>
                 <td colspan="2">{{ object.supports_dryrun | render_boolean }}</td>
             </tr>

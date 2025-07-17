@@ -1772,20 +1772,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
             ).clean()
         self.assertIn("Name", str(handler.exception))
 
-        with self.assertRaises(ValidationError) as handler:
-            JobModel(
-                module_name="module_name",
-                job_class_name="JobClassName",
-                grouping="grouping",
-                has_sensitive_variables=True,
-                approval_required=True,
-                name="Job Class Name",
-            ).clean()
-        self.assertEqual(
-            handler.exception.message_dict["approval_required"][0],
-            "A job that may have sensitive variables cannot be marked as requiring approval",
-        )
-
     def test_default_job_queue_always_included_in_job_queues(self):
         default_job_queue = JobQueue.objects.first()
         job_queues = list(JobQueue.objects.exclude(pk=default_job_queue.pk))[:3]

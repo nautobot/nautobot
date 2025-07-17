@@ -379,13 +379,6 @@ class Job(PrimaryModel):
             raise ValidationError(f"Grouping may not exceed {CHARFIELD_MAX_LENGTH} characters in length")
         if len(self.name) > JOB_MAX_NAME_LENGTH:
             raise ValidationError(f"Name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
-        approval_required = False
-        # should I also create in memory schedule job here to check approval workflow definition?
-        # check approval_required pointer
-        if self.has_sensitive_variables is True and approval_required is True:
-            raise ValidationError(
-                {"has_sensitive_variables": "A job that require approval cannot has sensitive variables"}
-            )
 
     def save(self, *args, **kwargs):
         """When a Job is uninstalled, auto-disable all associated JobButtons, JobHooks, and ScheduledJobs."""

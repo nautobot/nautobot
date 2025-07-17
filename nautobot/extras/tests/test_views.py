@@ -2579,7 +2579,7 @@ class ApprovalQueueTestCase(
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
-            approval_required=True,
+            approval_required=False,
             start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
@@ -2588,7 +2588,7 @@ class ApprovalQueueTestCase(
             job_model=self.job_model_2,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
-            approval_required=True,
+            approval_required=False,
             start_time=timezone.now(),
         )
 
@@ -3524,7 +3524,13 @@ class JobTestCase(
             )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_run_job_with_sensitive_variables_and_requires_approval(self, _):
+    def test_run_job_with_sensitive_variables_and_approval_workflow_defined(self, _):
+        ApprovalWorkflowDefinition.objects.create(
+            name="Test Approval Workflow Definition 1",
+            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+            priority=0,
+        )
+
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
 
@@ -3535,13 +3541,7 @@ class JobTestCase(
             "_schedule_type": "immediately",
         }
         for run_url in self.run_urls:
-            # Assert warning message shows in get
             response = self.client.get(run_url)
-            self.assertBodyContains(
-                response,
-                "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval.",
-            )
-
             # Assert run button is disabled
             self.assertBodyContains(
                 response,
@@ -3558,8 +3558,8 @@ class JobTestCase(
             self.assertBodyContains(
                 response,
                 "Unable to run or schedule job: "
-                "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
-                "One of these two flags must be removed before this job can be scheduled or run.",
+                "This job is flagged as possibly having sensitive variables but has also approval worklfow definition."
+                "Remove approval workflow definition or set `has_sensitive_variables` to False.",
             )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)

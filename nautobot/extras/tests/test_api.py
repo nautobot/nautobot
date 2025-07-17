@@ -1466,26 +1466,6 @@ class JobTest(
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_update_approval_required_job_set_has_sensitive_variables_to_true(self):
-        job_model = Job.objects.get_for_class_path("api_test_job.APITestJob")
-        job_model.validated_save()
-
-        url = self._get_detail_url(job_model)
-        data = {
-            "has_sensitive_variables": True,
-            "has_sensitive_variables_override": True,
-        }
-
-        self.add_permissions("extras.change_job")
-
-        response = self.client.patch(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.data["has_sensitive_variables"][0],
-            "A job with sensitive variables cannot also be marked as requiring approval",
-        )
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_run_job_anonymous_not_permitted(self):
         """The run_job endpoint should NOT allow anonymous users to submit jobs."""
         url = self.get_run_url()
@@ -1924,7 +1904,13 @@ class JobTest(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
-    def test_run_a_job_with_sensitive_variables_and_requires_approval(self, mock_get_worker_count):
+    def test_run_a_job_with_sensitive_variables_when_approval_workflow_defined(self, mock_get_worker_count):
+        ApprovalWorkflowDefinition.objects.create(
+            name="Test Approval Workflow Definition 1",
+            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+            priority=0,
+        )
+
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
 
@@ -1935,7 +1921,7 @@ class JobTest(
 
         url = reverse("extras-api:job-run", kwargs={"pk": job_model.pk})
         data = {
-            "data": {},
+            "data": {"some_json_data": {"var1": "x"}},
             "schedule": {
                 "interval": "immediately",
                 "name": "test",
@@ -1947,8 +1933,8 @@ class JobTest(
         self.assertEqual(
             response.data[0],
             "Unable to run or schedule job: "
-            "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
-            "One of these two flags must be removed before this job can be scheduled or run.",
+            "This job is flagged as possibly having sensitive variables but has also approval worklfow definition."
+            "Remove approval workflow definition or set `has_sensitive_variables` to False.",
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -2775,7 +2761,7 @@ class JobApprovalTest(APITestCase):
             kwargs={"value": 1},
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=cls.additional_user,
-            approval_required=True,
+            approval_required=False,
             start_time=now(),
         )
 

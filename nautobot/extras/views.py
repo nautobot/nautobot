@@ -2052,10 +2052,10 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                 messages.error(
                     request,
                     "Unable to run or schedule job: "
-                    "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
-                    "One of these two flags must be removed before this job can be scheduled or run.",
+                    "This job is flagged as possibly having sensitive variables but has also approval worklfow definition."
+                    "Remove approval workflow definition or set `has_sensitive_variables` to False.",
                 )
-            if not dryrun:
+            elif not dryrun:
                 # Step 1: Check if approval is required
                 if scheduled_job_has_approval_workflow:
                     scheduled_job.validated_save()

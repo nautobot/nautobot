@@ -782,8 +782,8 @@ class JobViewSetBase(
             if scheduled_job_has_approval_workflow:
                 raise ValidationError(
                     "Unable to run or schedule job: "
-                    "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
-                    "One of these two flags must be removed before this job can be scheduled or run."
+                    "This job is flagged as possibly having sensitive variables but has also approval worklfow definition."
+                    "Remove approval workflow definition or set `has_sensitive_variables` to False."
                 )
 
         # Approval is not required for dryrun

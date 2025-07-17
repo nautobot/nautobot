@@ -648,24 +648,6 @@ class JobSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         model = Job
         fields = "__all__"
 
-    def validate(self, attrs):
-        # note no validation for on creation of jobs because we do not support user creation of Job records via API
-        if self.instance:
-            has_sensitive_variables = attrs.get("has_sensitive_variables", self.instance.has_sensitive_variables)
-            # check approval_required pointer
-            # should I also create in memory schedule job here to check approval workflow definition?
-            approval_required = False
-            if approval_required and has_sensitive_variables:
-                error_message = "A job that requires approval cannot has sensitive variables"
-                errors = {}
-
-                if "has_sensitive_variables" in attrs:
-                    errors["has_sensitive_variables"] = [error_message]
-
-                raise serializers.ValidationError(errors)
-
-        return super().validate(attrs)
-
 
 class JobQueueSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
