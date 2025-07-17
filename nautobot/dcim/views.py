@@ -59,7 +59,7 @@ from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
-from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
+from nautobot.extras.views import ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable, VRFTable
 from nautobot.virtualization.models import VirtualMachine
@@ -1673,33 +1673,33 @@ class PlatformUIViewSet(NautobotUIViewSet):
 #
 
 
-class DeviceListView(generic.ObjectListView):
+class DeviceUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.DeviceBulkEditForm
+    filterset_class = filters.DeviceFilterSet
+    filterset_form_class = forms.DeviceFilterForm
+    form_class = forms.DeviceForm
     queryset = Device.objects.select_related(
-        "device_type__manufacturer",  # Needed for __str__() on device_type
-    )
-    filterset = filters.DeviceFilterSet
-    filterset_form = forms.DeviceFilterForm
-    table = tables.DeviceTable
-    template_name = "dcim/device_list.html"
-
-
-class DeviceView(generic.ObjectView):
-    queryset = Device.objects.select_related(
+        "device_type__manufacturer",
+        "device_type__device_family",
         "cluster__cluster_group",
         "controller_managed_device_group__controller",
         "device_redundancy_group",
-        "device_type__device_family",
         "location",
         "platform",
         "primary_ip4",
         "primary_ip6",
         "rack__rack_group",
+        "rack",
         "role",
         "secrets_group",
         "software_version",
         "status",
         "tenant__tenant_group",
+        "tenant",
+        "controller_managed_device_group",
     ).prefetch_related("images", "software_image_files")
+    serializer_class = serializers.DeviceSerializer
+    table_class = tables.DeviceTable
 
     object_detail_content = object_detail.ObjectDetailContent(
         extra_buttons=(
@@ -1846,6 +1846,8 @@ class DeviceView(generic.ObjectView):
     )
 
     def get_extra_context(self, request, instance):
+        if instance is None or self.action != "retrieve":
+            return super().get_extra_context(request, instance)
         # VirtualChassis members
         if instance.virtual_chassis is not None:
             vc_members = (
@@ -2184,49 +2186,8 @@ class DeviceConfigContextView(ObjectConfigContextView):
         return Device.objects.annotate_config_context_data()
 
 
-class DeviceChangeLogView(ObjectChangeLogView):
-    base_template = "dcim/device/base.html"
-
-
 class DeviceDynamicGroupsView(ObjectDynamicGroupsView):  # 3.0 TODO: remove, deprecated in 2.3
     base_template = "dcim/device/base.html"
-
-
-class DeviceEditView(generic.ObjectEditView):
-    queryset = Device.objects.all()
-    model_form = forms.DeviceForm
-    template_name = "dcim/device_edit.html"
-
-
-class DeviceDeleteView(generic.ObjectDeleteView):
-    queryset = Device.objects.all()
-
-
-class DeviceBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Device.objects.all()
-    table = tables.DeviceImportTable
-
-
-class DeviceBulkEditView(generic.BulkEditView):
-    queryset = Device.objects.select_related(
-        "tenant",
-        "location",
-        "rack",
-        "role",
-        "device_type__manufacturer",
-        "secrets_group",
-        "device_redundancy_group",
-        "controller_managed_device_group",
-    )
-    filterset = filters.DeviceFilterSet
-    table = tables.DeviceTable
-    form = forms.DeviceBulkEditForm
-
-
-class DeviceBulkDeleteView(generic.BulkDeleteView):
-    queryset = Device.objects.select_related("tenant", "location", "rack", "role", "device_type__manufacturer")
-    filterset = filters.DeviceFilterSet
-    table = tables.DeviceTable
 
 
 class DeviceWirelessView(generic.ObjectView):

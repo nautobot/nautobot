@@ -1,0 +1,458 @@
+{% extends 'dcim/device/base.html' %}
+{% load helpers %}
+{% load plugins %}
+{% load render_table from django_tables2 %}
+
+{% block content %}
+<div class="tab-content">
+  <div id="main" role="tabpanel" class="tab-pane {% if active_tab == 'device' and not request.GET.tab or request.GET.tab == 'main' %}active{% else %}fade{% endif %}">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="tab-content">
+                <div role="tabpanel" class="tab-pane active" id="details">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="panel panel-default">
+                                <div class="panel-heading">
+                                    <strong>Device</strong>
+                                </div>
+                                <table class="table table-hover panel-body attr-table">
+                                    <tr>
+                                        <td>Location</td>
+                                        <td>
+                                            {% include 'dcim/inc/location_hierarchy.html' with location=object.location %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Rack</td>
+                                        <td>
+                                            {% if object.rack and object.rack.rack_group %}
+                                                {{ object.rack.rack_group|hyperlinked_object }} /
+                                            {% endif %}
+                                            {{ object.rack|hyperlinked_object }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Position</td>
+                                        <td>
+                                            {% if object.parent_bay %}
+                                                {% with object.parent_bay.device as parent %}
+                                                    {{ parent|hyperlinked_object }} / {{ object.parent_bay }}
+                                                    {% if parent.position %}
+                                                        (U{{ parent.position }} / {{ parent.get_face_display }})
+                                                    {% endif %}
+                                                {% endwith %}
+                                            {% elif object.rack and object.position %}
+                                                <span>U{{ object.position }} / {{ object.get_face_display }}</span>
+                                            {% elif object.rack and object.device_type.u_height %}
+                                                <span class="label label-warning">Not racked</span>
+                                            {% else %}
+                                                <span class="text-muted">&mdash;</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% include 'inc/tenant_table_row.html' %}
+                                    <tr>
+                                        <td>Device Family</td>
+                                        <td>{{ object.device_type.device_family|hyperlinked_object }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Device Type</td>
+                                        <td>
+                                            <span><a href="{% url 'dcim:devicetype' pk=object.device_type.pk %}">{{ object.device_type.display }}</a> ({{ object.device_type.u_height }}U)</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Serial Number</td>
+                                        <td>
+                                            <span class="hover_copy">
+                                                <span id="serial_number">{{ object.serial|placeholder }}</span>
+                                                {% if object.serial %}
+                                                    <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#serial_number">
+                                                        <span class="mdi mdi-content-copy"></span>
+                                                    </button>
+                                                {% endif %}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Asset Tag</td>
+                                        <td><span>{{ object.asset_tag|placeholder }}</span></td>
+                                    </tr>
+                                </table>
+                            </div>
+                            {% if vc_members %}
+                                <div class="panel panel-default">
+                                    <div class="panel-heading">
+                                        <strong>Virtual Chassis</strong>
+                                    </div>
+                                    <table class="table table-hover panel-body attr-table">
+                                        <tr>
+                                            <th>Device</th>
+                                            <th>Position</th>
+                                            <th>Master</th>
+                                            <th>Priority</th>
+                                        </tr>
+                                        {% for vc_member in vc_members %}
+                                            <tr{% if vc_member == object %} class="info"{% endif %}>
+                                                <td>{{ vc_member|hyperlinked_object }}</td>
+                                                <td><span class="badge badge-default">{{ vc_member.vc_position }}</span></td>
+                                                <td>{% if object.virtual_chassis.master == vc_member %}<i class="mdi mdi-check-bold"></i>{% endif %}</td>
+                                                <td>{{ vc_member.vc_priority|default:"" }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </table>
+                                    <div class="panel-footer text-right noprint">
+                                        <a href="{{ object.virtual_chassis.get_absolute_url }}" class="btn btn-primary btn-xs">
+                                            <span class="mdi mdi-arrow-right-bold" aria-hidden="true"></span> View Virtual Chassis
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            <div class="panel panel-default">
+                                <div class="panel-heading">
+                                    <strong>Management</strong>
+                                </div>
+                                <table class="table table-hover panel-body attr-table">
+                                    <tr>
+                                        <td>Role</td>
+                                        <td>
+                                            {{ object.role | hyperlinked_object_with_color }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Platform</td>
+                                        <td>{{ object.platform|hyperlinked_object }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Status</td>
+                                        <td>
+                                            {{ object.status| hyperlinked_object_with_color }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Primary IPv4</td>
+                                        <td>
+                                            {% if object.primary_ip4 %}
+                                                <span class="hover_copy">
+                                                    {{ object.primary_ip4|hyperlinked_object|add_html_id:"ipv4" }} ({{ object.primary_ip4.parent.namespace|hyperlinked_object }})
+                                                    {% if object.primary_ip4.nat_inside %}
+                                                        <span>(NAT for {{ object.primary_ip4.nat_inside.address.ip }})</span>
+                                                    {% elif object.primary_ip4.nat_outside_list.exists %}
+                                                        <br /><span>NAT: </span>
+                                                        <ul>
+                                                            {% for nat in object.primary_ip4.nat_outside_list.all %}
+                                                                <li>{{ nat|hyperlinked_object }}</li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    {% endif %}
+                                                    <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#ipv4">
+                                                        <span class="mdi mdi-content-copy"></span>
+                                                    </button>
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">&mdash;</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Primary IPv6</td>
+                                        <td>
+                                            {% if object.primary_ip6 %}
+                                                <span class="hover_copy">
+                                                    {{ object.primary_ip6|hyperlinked_object|add_html_id:"ipv6" }} ({{ object.primary_ip6.parent.namespace|hyperlinked_object }})
+                                                    {% if object.primary_ip6.nat_inside %}
+                                                        <span>(NAT for {{ object.primary_ip6.nat_inside.address.ip }})</span>
+                                                    {% elif object.primary_ip6.nat_outside_list.exists %}
+                                                        <br /><span>NAT: </span>
+                                                        <ul>
+                                                            {% for nat in object.primary_ip6.nat_outside_list.all %}
+                                                                <li>{{ nat|hyperlinked_object }}</li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    {% endif %}
+                                                    <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#ipv6">
+                                                        <span class="mdi mdi-content-copy"></span>
+                                                    </button>
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">&mdash;</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Secrets Group</td>
+                                        <td>
+                                            {{ object.secrets_group|hyperlinked_object }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Device Redundancy Group</td>
+                                        <td>
+                                            {% if object.device_redundancy_group %}
+                                                {{ object.device_redundancy_group|hyperlinked_object }} <span class="badge badge-default">Priority: {{ object.device_redundancy_group_priority }}</span>
+                                            {% else %}
+                                                <span class="text-muted">&mdash;</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Controller Managed Device Group</td>
+                                        <td>
+                                            {{ object.controller_managed_device_group|hyperlinked_object }}
+                                        </td>
+                                    </tr>
+                                    {% if object.controller_managed_device_group %}
+                                        <tr>
+                                            <td>Managed by Controller</td>
+                                            <td>
+                                                {{ object.controller_managed_device_group.controller|hyperlinked_object }}
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                    {% if object.cluster %}
+                                        <tr>
+                                            <td>Cluster</td>
+                                            <td>
+                                                {% if object.cluster.cluster_group %}
+                                                    {{ object.cluster.cluster_group|hyperlinked_object }} /
+                                                {% endif %}
+                                                {{ object.cluster|hyperlinked_object }}
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                    {% include 'dcim/inc/detail_softwareversion_softwareimagefile_rows.html' %}
+                                </table>
+                            </div>
+                            {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_field_groupings_basic computed_fields=object.get_computed_fields_grouping_basic computed_fields_advanced_ui=False %}
+                            {% include 'inc/relationships/panel_override.html' with relationships_fields_override=object.get_relationships_data_basic_fields %}
+                            {% include 'extras/inc/tags_panel.html' with tags=object.tags.all url='dcim:device_list' %}
+                            <div class="panel panel-default">
+                                <div class="panel-heading">
+                                    <strong>Comments</strong>
+                                </div>
+                                <div class="panel-body rendered-markdown">
+                                    {% if object.comments %}
+                                        {{ object.comments|render_markdown }}
+                                    {% else %}
+                                        <span class="text-muted">None</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% plugin_left_page object %}
+                        </div>
+                        <div class="col-md-6">
+                            {% if object.powerports.exists and object.poweroutlets.exists %}
+                                <div class="panel panel-default">
+                                    <div class="panel-heading">
+                                        <strong>Power Utilization</strong>
+                                    </div>
+                                    <table class="table table-hover panel-body">
+                                        <tr>
+                                            <th>Input</th>
+                                            <th>Outlets</th>
+                                            <th>Allocated</th>
+                                            <th>Available</th>
+                                            <th>Utilization</th>
+                                        </tr>
+                                        {% for powerport in object.powerports.all %}
+                                            {% with utilization=powerport.get_power_draw powerfeed=powerport.connected_endpoint %}
+                                                <tr>
+                                                    <td>{{ powerport }}</td>
+                                                    <td>{{ utilization.outlet_count }}</td>
+                                                    <td>{{ utilization.allocated }}VA</td>
+                                                    {% if powerfeed.available_power %}
+                                                        <td>{{ powerfeed.available_power }}VA</td>
+                                                        <td>{% utilization_graph_raw_data utilization.allocated powerfeed.available_power %}</td>
+                                                    {% else %}
+                                                        <td class="text-muted">&mdash;</td>
+                                                        <td class="text-muted">&mdash;</td>
+                                                    {% endif %}
+                                                </tr>
+                                                {% for leg in utilization.legs %}
+                                                    <tr>
+                                                        <td style="padding-left: 20px">Leg {{ leg.name }}</td>
+                                                        <td>{{ leg.outlet_count }}</td>
+                                                        <td>{{ leg.allocated }}</td>
+                                                        <td>{{ powerfeed.available_power|divide:3 }}VA</td>
+                                                        {% with phase_available=powerfeed.available_power|divide:3 %}
+                                                            <td>{% utilization_graph_raw_data leg.allocated phase_available %}</td>
+                                                        {% endwith %}
+                                                    </tr>
+                                                {% endfor %}
+                                            {% endwith %}
+                                        {% endfor %}
+                                    </table>
+                                </div>
+                            {% endif %}
+                            {% include 'panel_table.html' with table=vrf_table heading="Assigned VRFs" %}
+                            <div class="panel panel-default">
+                                <div class="panel-heading">
+                                    <strong>Services</strong>
+                                </div>
+                                {% if services %}
+                                    <table class="table table-hover panel-body">
+                                        {% for service in services %}
+                                            {% include 'ipam/inc/service.html' %}
+                                        {% endfor %}
+                                    </table>
+                                {% else %}
+                                    <div class="panel-body text-muted">
+                                        None
+                                    </div>
+                                {% endif %}
+                                {% if perms.ipam.add_service %}
+                                    <div class="panel-footer text-right noprint">
+                                        <a href="{% url 'dcim:device_service_assign' device=object.pk %}" class="btn btn-xs btn-primary">
+                                            <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Assign service
+                                        </a>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="panel panel-default">
+                                <div class="panel-heading">
+                                    <strong>Images</strong>
+                                </div>
+                                {% include 'inc/image_attachments.html' with images=object.images.all %}
+                                {% if perms.extras.add_imageattachment %}
+                                    <div class="panel-footer text-right noprint">
+                                        <a href="{% url 'dcim:device_add_image' object_id=object.pk %}" class="btn btn-primary btn-xs">
+                                            <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
+                                            Attach an image
+                                        </a>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            {% plugin_right_page object %}
+                        </div>
+                    </div>
+                    {% block content_full_width_page %}
+                        {% include 'panel_table.html' with table=vdcs_table heading="Virtual Device Contexts" add_obj_url=vdcs_table_add_url %}
+                    {% endblock content_full_width_page %}
+                    <div class="row">
+                        <div class="col-md-12">
+                            {% plugin_full_width_page object %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+  </div>
+  <div id="advanced" role="tabpanel" class="tab-pane {% if active_tab == 'device' and request.GET.tab == 'advanced' %}active{% else %}fade{% endif %}">
+    <div class="row">
+        <div class="col-md-6">
+            {% include 'inc/object_details_advanced_panel.html' %}
+        </div>
+        <div class="col-md-6">
+            {% block advanced_content_right_page %}{% endblock advanced_content_right_page %}
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            {% block advanced_content_full_width_page %}{% endblock advanced_content_full_width_page %}
+        </div>
+    </div>
+  </div>
+{% if object.is_contact_associable_model %}
+    <div id="contacts" role="tabpanel" class="tab-pane {% if request.GET.tab == 'contacts' %}active{% else %}fade{% endif %}">
+        <div class="row">
+            <div class="col-md-12">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <strong>Contact Associations</strong>
+                        </div>
+                        <div class="pull-right noprint">
+                            <!-- Insert table config button here -->
+                        </div>
+                        <div class="table-responsive">
+                            {% render_table associated_contacts_table 'inc/table.html' %}
+                        </div>
+                        {% with request.path|add:"?tab=contacts"|urlencode as return_url %}
+                            <div class="panel-footer noprint">
+                                {% if perms.extras.change_contactassociation %}
+                                    <button type="submit" name="_edit" formaction="{% url 'extras:contactassociation_bulk_edit' %}?return_url={{return_url}}" class="btn btn-warning btn-xs">
+                                        <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
+                                    </button>
+                                {% endif %}
+                                {% if perms.extras.delete_contactassociation %}
+                                    <button type="submit" formaction="{% url 'extras:contactassociation_bulk_delete' %}?return_url={{return_url}}" class="btn btn-danger btn-xs">
+                                        <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete
+                                    </button>
+                                {% endif %}
+                                    {% if perms.extras.add_contactassociation %}
+                                        <div class="pull-right">
+                                        <a href="{% url 'extras:object_contact_team_assign' %}?return_url={{return_url}}&associated_object_id={{object.id}}&associated_object_type={{content_type.id}}" class="btn btn-primary btn-xs">
+                                            <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Contact
+                                        </a>
+                                    </div>
+                                {% endif %}
+                                <div class="clearfix"></div>
+                            </div>
+                        {% endwith %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% if object.is_dynamic_group_associable_model and perms.extras.view_dynamicgroup %}
+    <div id="dynamic_groups" role="tabpanel" class="tab-pane {% if request.GET.tab == 'dynamic_groups' %}active{% else %}fade{% endif %}">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="alert alert-warning">
+                    Dynamic group membership is cached for performance reasons,
+                    therefore this table may not always be up-to-date.
+                    <br>You can refresh the membership of any specific group by navigating to it from the list below
+                    or from the <a href="{% url 'extras:dynamicgroup_list' %}">Dynamic Groups list view</a>.
+                    <br>You can also refresh the membership of all groups by running the
+                    <a href="{% url 'extras:job_run_by_class_path' class_path='nautobot.core.jobs.groups.RefreshDynamicGroupCaches' %}">Refresh Dynamic Group Caches job</a>.
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <strong>Dynamic Groups</strong>
+                            <div class="pull-right noprint">
+                                <!-- Insert table config button here -->
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            {% render_table associated_dynamic_groups_table 'inc/table.html' %}
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% if object.is_metadata_associable_model and perms.extras.view_objectmetadata %}
+    <div id="object_metadata" role="tabpanel" class="tab-pane {% if request.GET.tab == 'object_metadata' %}active{% else %}fade{% endif %}">
+        <div class="row">
+            <div class="col-md-12">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <strong>Object Metadata</strong>
+                            <div class="pull-right noprint">
+                                <!-- Insert table config button here -->
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            {% render_table associated_object_metadata_table 'inc/table.html' %}
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endif %}
+</div>
+{% endblock content %}

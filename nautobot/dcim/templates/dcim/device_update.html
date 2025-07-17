@@ -1,0 +1,227 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+{% load helpers %}
+{% load static %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Device</strong></div>
+        <div class="panel-body">
+            {% render_field form.name %}
+            {% render_field form.role %}
+            {% render_field form.status %}
+            {% render_field form.secrets_group %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Location</strong></div>
+        <div class="panel-body">
+            {% render_field form.location %}
+            {% render_field form.rack_group %}
+            {% render_field form.rack %}
+            {% if obj.device_type.is_child_device and obj.parent_bay %}
+                <div class="form-group">
+                    <label class="col-md-3 control-label">Parent device</label>
+                    <div class="col-md-9">
+                        <p class="form-control-static">
+                            {{ obj.parent_bay.device|hyperlinked_object }}
+                        </p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-md-3 control-label">Parent bay</label>
+                    <div class="col-md-9">
+                        <p class="form-control-static">
+                            {{ obj.parent_bay.name }}
+                            {% if perms.dcim.change_devicebay %}
+                                <a href="{% url 'dcim:devicebay_depopulate' pk=obj.parent_bay.pk %}" class="btn btn-danger btn-xs">
+                                    <i class="mdi mdi-close-thick" aria-hidden="true" title="Remove device"></i> Remove
+                                </a>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            {% else %}
+                {% render_field form.face %}
+                {% render_field form.position %}
+            {% endif %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Hardware</strong></div>
+        <div class="panel-body">
+            {% render_field form.manufacturer %}
+            {% render_field form.device_type %}
+            {% render_field form.serial %}
+            {% render_field form.asset_tag %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Software</strong></div>
+        <div class="panel-body">
+            {% render_field form.platform %}
+            {% render_field form.software_version %}
+            <div class="form-group" id="software_version_image_container" style="display:none">
+                <div class="col-md-3"></div>
+                <div class="col-md-9">
+                    <span class="help-block">
+                        <span id="software_version_image_description"><img src="{% static 'img/ajax-loader.gif' %}"></span>
+                        <ul id="software_version_image_list">
+                            <li> Software images for the selected software version will appear here </li>
+                        </ul>
+                    </span>
+                </div>
+            </div>
+            {% render_field form.software_image_files %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>VRF Assignment</strong></div>
+        <div class="panel-body">
+            {% render_field form.vrfs %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Management</strong></div>
+        <div class="panel-body">
+            {% if editing %}
+                {% render_field form.primary_ip4 %}
+                {% render_field form.primary_ip6 %}
+            {% endif %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Topology</strong></div>
+        <div class="panel-body">
+            {% render_field form.device_redundancy_group %}
+            {% render_field form.device_redundancy_group_priority %}
+            {% render_field form.controller_managed_device_group %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Virtualization</strong></div>
+        <div class="panel-body">
+            {% render_field form.cluster_group %}
+            {% render_field form.cluster %}
+        </div>
+    </div>
+    {% include 'inc/tenancy_form_panel.html' %}
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Local Config Context Data</strong></div>
+        <div class="panel-body">
+            {% render_field form.local_config_context_schema %}
+            {% render_field form.local_config_context_data %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Comments</strong></div>
+        <div class="panel-body">
+            {% render_field form.comments %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascript %}
+<script type="text/javascript">
+
+    const software_version_image_container = document.querySelector('div#software_version_image_container');
+    const software_version_image_description = document.querySelector('span#software_version_image_description');
+    const software_version_image_list = document.querySelector('ul#software_version_image_list');
+    const software_image_url = '{% url 'dcim-api:softwareimagefile-list' %}';
+
+    function retrieve_software_images(software_version_id, device_type_id) {
+        $.when(
+            $.ajax({url: software_image_url, method: "GET", data: {'software_version': software_version_id, 'device_types': device_type_id}}),
+            $.ajax({url: software_image_url, method: "GET", data: {'software_version': software_version_id, 'default_image': 'true'}})
+        ).then(
+            (device_type_images, default_image) => {
+                if (default_image[0].count == 0 && device_type_images[0].count == 0) {
+                    software_version_image_description.innerHTML = `
+                        No software images found for device type <b class="text-nowrap">${$('select#id_device_type').find(':selected')[0].text}</b>
+                    `;
+
+                } else if (device_type_images[0].count == 0) {
+                    software_version_image_description.innerHTML = `
+                        Software version <b class="text-nowrap">${$('select#id_software_version').find(':selected')[0].text}</b> provides no software images
+                        for device type <b class="text-nowrap">${$('select#id_device_type').find(':selected')[0].text}</b>. The default image is:
+                    `;
+
+                    let li = document.createElement('li');
+                    let a = document.createElement('a');
+                    let linkText = document.createTextNode(default_image[0].results[0].image_file_name);
+                    a.title = default_image[0].results[0].image_file_name;
+                    a.href = default_image[0].results[0].url.replace('api/', '');
+                    li.appendChild(a);
+                    a.appendChild(linkText);
+                    software_version_image_list.appendChild(li);
+
+                } else {
+                    software_version_image_description.innerHTML = `
+                        Software version <b class="text-nowrap">${$('select#id_software_version').find(':selected')[0].text}</b> provides the following software images
+                        for device type <b class="text-nowrap">${$('select#id_device_type').find(':selected')[0].text}</b>:
+                    `;
+
+                    for (result of device_type_images[0].results) {
+                        let li = document.createElement('li');
+                        let a = document.createElement('a');
+                        let linkText = document.createTextNode(result.image_file_name);
+                        a.title = result.image_file_name;
+                        a.href = result.url.replace('api/', '');
+                        li.appendChild(a);
+                        a.appendChild(linkText);
+                        software_version_image_list.appendChild(li);
+                    }
+                }
+            },
+            err => {
+                software_version_image_description.innerHTML = '<b>Error retrieving software image list</b>';
+            }
+        );
+    }
+
+    function clear_software_image_list() {
+        software_version_image_list.innerHTML = '';
+    }
+
+    function hide_software_image_container(){
+        software_version_image_container.style.display = 'none';
+        software_version_image_description.innerHTML = '';
+        clear_software_image_list();
+    }
+
+    function populate_software_image_list(software_version_id) {
+        clear_software_image_list();
+        software_version_image_description.innerHTML = '<img src="{% static 'img/ajax-loader.gif' %}">';
+        software_version_image_list.style.visibility = 'hidden'; // prevent flicker when changing values
+        software_version_image_container.style.display = 'block';
+        let device_type_id = $('select#id_device_type').find(':selected')[0].value;
+        if (!device_type_id) {
+            software_version_image_description.innerHTML = '<b>Unable to display software image list. Select a device type first.</b>';
+        } else {
+            retrieve_software_images(software_version_id, device_type_id);
+            software_version_image_list.style.visibility = 'visible';
+        }
+    }
+
+    // on select
+    // jQuery required for triggering on select2 jQuery events
+    $('select#id_software_version').on('select2:select', function (e) {
+        populate_software_image_list(e.params.data.id);
+    });
+
+    // on unselect
+    // jQuery required for triggering on select2 jQuery events
+    $('select#id_software_version').on('select2:unselect', hide_software_image_container);
+
+    // initialize on document load
+    document.addEventListener("DOMContentLoaded", function() {
+        $('select#id_software_version').select2();
+        var selected_version = $('select#id_software_version').select2('data')[0].id;
+        if (selected_version) {
+            populate_software_image_list(selected_version);
+        }
+    });
+
+</script>
+{% endblock %}
