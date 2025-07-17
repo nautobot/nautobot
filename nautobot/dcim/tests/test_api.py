@@ -33,6 +33,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceClusterAssignment,
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
@@ -1468,6 +1469,7 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
 class DeviceTest(APIViewTestCases.APIViewTestCase):
     model = Device
     choices_fields = ["face"]
+    validation_excluded_fields = ["cluster"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1488,6 +1490,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         clusters = (
             Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type),
             Cluster.objects.create(name="Cluster 2", cluster_type=cluster_type),
+            Cluster.objects.create(name="Cluster 3", cluster_type=cluster_type),
         )
 
         secrets_groups = (
@@ -1514,7 +1517,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         for software_image_file in software_image_files:
             software_image_file.device_types.add(device_type)
 
-        Device.objects.create(
+        device1 = Device.objects.create(
             device_type=device_type,
             role=device_role,
             status=device_statuses[0],
@@ -1526,7 +1529,8 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             local_config_context_data={"A": 1},
             software_version=software_version,
         )
-        Device.objects.create(
+        device1.clusters.add(clusters[1])
+        device2 = Device.objects.create(
             device_type=device_type,
             role=device_role,
             status=device_statuses[0],
@@ -1538,7 +1542,8 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             local_config_context_data={"B": 2},
             software_version=software_version,
         )
-        Device.objects.create(
+        device2.clusters.add(clusters[1])
+        device3 = Device.objects.create(
             device_type=device_type,
             role=device_role,
             status=device_statuses[0],
@@ -1549,6 +1554,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             secrets_group=secrets_groups[0],
             local_config_context_data={"C": 3},
         )
+        device3.clusters.add(clusters[1])
 
         cls.create_data = [
             {
@@ -1559,7 +1565,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "name": "Test Device 4",
                 "location": locations[1].pk,
                 "rack": racks[1].pk,
-                "cluster": clusters[1].pk,
+                "cluster": clusters[0].pk,
                 "secrets_group": secrets_groups[1].pk,
                 "software_version": software_version.pk,
                 "software_image_files": [software_image_files[0].pk, software_image_files[1].pk],
@@ -1585,7 +1591,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "name": "Test Device 6",
                 "location": locations[1].pk,
                 "rack": racks[1].pk,
-                "cluster": clusters[1].pk,
+                "cluster": clusters[0].pk,
                 "secrets_group": secrets_groups[1].pk,
             },
         ]
@@ -3796,6 +3802,76 @@ class InterfaceVDCAssignmentTestCase(APIViewTestCases.APIViewTestCase):
     def test_docs(self):
         """Skip: InterfaceVDCAssignment has no docs yet"""
         # TODO(timizuo): Add docs for Interface VDC Assignment
+
+
+class DeviceClusterAssignmentTestCase(APIViewTestCases.APIViewTestCase):
+    model = DeviceClusterAssignment
+
+    @classmethod
+    def setUpTestData(cls):
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(
+            manufacturer=manufacturer,
+            model="Test Device Type 1",
+        )
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        devices = (
+            Device.objects.create(
+                device_type=device_type,
+                role=device_role,
+                name="Test Device API 1",
+                location=location,
+                status=device_status,
+            ),
+            Device.objects.create(
+                device_type=device_type,
+                role=device_role,
+                name="Test Device API 2",
+                location=location,
+                status=device_status,
+            ),
+            Device.objects.create(
+                device_type=device_type,
+                role=device_role,
+                name="Test Device API 3",
+                location=location,
+                status=device_status,
+            ),
+        )
+        cluster_type = ClusterType.objects.create(name="Test Cluster Type API")
+        clusters = (
+            Cluster.objects.create(name="Test Cluster API 1", cluster_type=cluster_type),
+            Cluster.objects.create(name="Test Cluster API 2", cluster_type=cluster_type),
+            Cluster.objects.create(name="Test Cluster API 3", cluster_type=cluster_type),
+        )
+        DeviceClusterAssignment.objects.create(
+            device=devices[0],
+            cluster=clusters[0],
+        )
+        DeviceClusterAssignment.objects.create(
+            device=devices[0],
+            cluster=clusters[1],
+        )
+        DeviceClusterAssignment.objects.create(
+            device=devices[1],
+            cluster=clusters[0],
+        )
+        cls.create_data = [
+            {
+                "device": devices[1].pk,
+                "cluster": clusters[1].pk,
+            },
+            {
+                "device": devices[1].pk,
+                "cluster": clusters[2].pk,
+            },
+            {
+                "device": devices[2].pk,
+                "cluster": clusters[0].pk,
+            },
+        ]
 
 
 class ModuleFamilyTest(APIViewTestCases.APIViewTestCase):
