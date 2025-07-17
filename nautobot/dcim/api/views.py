@@ -853,6 +853,7 @@ class DeviceClusterAssignmentViewSet(ModelViewSet):
     serializer_class = serializers.DeviceClusterAssignmentSerializer
     filterset_class = filters.DeviceClusterAssignmentFilterSet
 
+
 class ModuleFamilyViewSet(NautobotModelViewSet):
     """API viewset for interacting with ModuleFamily objects."""
 

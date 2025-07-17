@@ -3873,6 +3873,7 @@ class DeviceClusterAssignmentTestCase(APIViewTestCases.APIViewTestCase):
             },
         ]
 
+
 class ModuleFamilyTest(APIViewTestCases.APIViewTestCase):
     """Test the ModuleFamily API."""
 

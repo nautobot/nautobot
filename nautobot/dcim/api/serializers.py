@@ -1144,6 +1144,7 @@ class DeviceClusterAssignmentSerializer(ValidatedModelSerializer):
     class Meta:
         model = DeviceClusterAssignment
 
+
 class ModuleFamilySerializer(NautobotModelSerializer):
     """API serializer for ModuleFamily objects."""
 
