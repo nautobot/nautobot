@@ -1,1 +1,0 @@
-Reverted some of the changes introduced in v2.4.11 to Job loading from `JOBS_ROOT` and Git repositories, due to reports of regressions in behavior.
