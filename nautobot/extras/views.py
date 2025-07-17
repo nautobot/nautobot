@@ -350,7 +350,7 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
         try:
             validator = Draft7Validator(instance.data_schema)
         except SchemaError:
-            validator = None
+            validator = {}
 
         extra_tabs = ()
         if validator:
