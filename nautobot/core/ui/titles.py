@@ -38,7 +38,7 @@ class Titles:
 
     Args:
         template_plugins (Optional[list[str]]): Template libraries to load into rendering.
-        **kwargs (dict): Action-to-template-string mappings that override or extend the defaults.
+        titles (dict): Action-to-template-string mappings that override or extend the defaults.
     """
 
     def __init__(self, template_plugins: Optional[list[str]] = None, titles: Optional[dict[str, str]] = None):

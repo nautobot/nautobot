@@ -276,7 +276,7 @@ class Breadcrumbs:
             context (Context): The view or template context that holds `view_action` and related state.
 
         Returns:
-            list[tuple[str, str]]: A list of (url, label) tuples representing breadcrumb entries.
+            (list[tuple[str, str]]): A list of (url, label) tuples representing breadcrumb entries.
         """
         action = context.get("view_action", "list")
         detail = context.get("detail", False)
@@ -307,7 +307,7 @@ class Breadcrumbs:
             context (Context): The current rendering context.
 
         Returns:
-            str: Rendered HTML for the breadcrumb component.
+            (str): Rendered HTML for the breadcrumb component.
         """
         with context.update(
             {
@@ -325,6 +325,6 @@ class Breadcrumbs:
             context (Context): The current context passed to `render()`.
 
         Returns:
-            dict: A dictionary of extra context variables.
+            (dict): A dictionary of extra context variables.
         """
         return {}
