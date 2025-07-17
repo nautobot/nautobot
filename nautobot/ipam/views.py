@@ -31,7 +31,7 @@ from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import handle_protectederror
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.dcim.models import Device, Interface, Location
+from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import Role, SavedView, Status, Tag
 from nautobot.ipam import choices, constants
 from nautobot.ipam.api import serializers
@@ -106,7 +106,12 @@ class NamespaceUIViewSet(NautobotUIViewSet):
         context.update({"object_detail_content": self.object_detail_content})
         return context
 
-    @action(detail=True, url_path="vrfs")
+    @action(
+        detail=True,
+        url_path="vrfs",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["ipam.view_vrf"],
+    )
     def vrfs(self, request, *args, **kwargs):
         instance = self.get_object()
         vrfs = instance.vrfs.restrict(request.user, "view")
@@ -128,7 +133,12 @@ class NamespaceUIViewSet(NautobotUIViewSet):
             }
         )
 
-    @action(detail=True, url_path="prefixes")
+    @action(
+        detail=True,
+        url_path="prefixes",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["ipam.view_prefix"],
+    )
     def prefixes(self, request, *args, **kwargs):
         instance = self.get_object()
         prefixes = instance.prefixes.restrict(request.user, "view").select_related("status")
@@ -146,7 +156,13 @@ class NamespaceUIViewSet(NautobotUIViewSet):
             }
         )
 
-    @action(detail=True, url_path="ip-addresses", url_name="ip_addresses")
+    @action(
+        detail=True,
+        url_path="ip-addresses",
+        url_name="ip_addresses",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["ipam.view_ipaddress"],
+    )
     def ip_addresses(self, request, *args, **kwargs):
         instance = self.get_object()
         ip_addresses = instance.ip_addresses.restrict(request.user, "view").select_related("role", "status", "tenant")
@@ -1189,40 +1205,37 @@ class VLANGroupUIViewSet(NautobotUIViewSet):
 #
 
 
-class VLANListView(generic.ObjectListView):
+class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportView
+    bulk_update_form_class = forms.VLANBulkEditForm
+    filterset_class = filters.VLANFilterSet
+    filterset_form_class = forms.VLANFilterForm
+    form_class = forms.VLANForm
+    serializer_class = serializers.VLANSerializer
+    table_class = tables.VLANTable
     queryset = VLAN.objects.all()
-    filterset = filters.VLANFilterSet
-    filterset_form = forms.VLANFilterForm
-    table = tables.VLANDetailTable
-
-
-class VLANView(generic.ObjectView):
-    queryset = VLAN.objects.annotate(location_count=count_related(Location, "vlans")).select_related(
-        "role",
-        "status",
-        "tenant__tenant_group",
-    )
 
     def get_extra_context(self, request, instance):
-        prefixes = (
-            Prefix.objects.restrict(request.user, "view")
-            .filter(vlan=instance)
-            .select_related(
-                "status",
-                "role",
-                # "vrf",
-                "namespace",
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            prefixes = (
+                Prefix.objects.restrict(request.user, "view")
+                .filter(vlan=instance)
+                .select_related(
+                    "status",
+                    "role",
+                    "namespace",
+                )
             )
-        )
-        prefix_table = tables.PrefixTable(list(prefixes), hide_hierarchy_ui=True, exclude=["vlan"])
+            prefix_table = tables.PrefixTable(list(prefixes), hide_hierarchy_ui=True, exclude=["vlan"])
 
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(prefix_table)
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(prefix_table)
 
-        return {"prefix_table": prefix_table, **super().get_extra_context(request, instance)}
+            context["prefix_table"] = prefix_table
+        return context
 
 
 class VLANInterfacesView(generic.ObjectView):
@@ -1263,44 +1276,6 @@ class VLANVMInterfacesView(generic.ObjectView):
             "members_table": members_table,
             "active_tab": "vminterfaces",
         }
-
-
-class VLANEditView(generic.ObjectEditView):
-    queryset = VLAN.objects.all()
-    model_form = forms.VLANForm
-    template_name = "ipam/vlan_edit.html"
-
-
-class VLANDeleteView(generic.ObjectDeleteView):
-    queryset = VLAN.objects.all()
-
-
-class VLANBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = VLAN.objects.all()
-    table = tables.VLANTable
-
-
-class VLANBulkEditView(generic.BulkEditView):
-    queryset = VLAN.objects.select_related(
-        "vlan_group",
-        "status",
-        "tenant",
-        "role",
-    )
-    filterset = filters.VLANFilterSet
-    table = tables.VLANTable
-    form = forms.VLANBulkEditForm
-
-
-class VLANBulkDeleteView(generic.BulkDeleteView):
-    queryset = VLAN.objects.select_related(
-        "vlan_group",
-        "status",
-        "tenant",
-        "role",
-    )
-    filterset = filters.VLANFilterSet
-    table = tables.VLANTable
 
 
 #

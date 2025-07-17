@@ -1,0 +1,50 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Config Context</strong></div>
+        <div class="panel-body">
+            {% render_field form.name %}
+            {% render_field form.weight %}
+            {% render_field form.description %}
+            {% render_field form.config_context_schema %}
+            {% render_field form.is_active %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Assignment</strong></div>
+        <div class="panel-body">
+            {% render_field form.locations %}
+            {% render_field form.roles %}
+            {% render_field form.device_types %}
+            {% render_field form.platforms %}
+            {% render_field form.cluster_groups %}
+            {% render_field form.clusters %}
+            {% render_field form.tenant_groups %}
+            {% render_field form.tenants %}
+            {% render_field form.device_redundancy_groups %}
+            {% render_field form.tags %}
+            {% if settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED %}
+            {% render_field form.dynamic_groups %}
+            {% endif %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Data</strong></div>
+        <div class="panel-body">
+            {% render_field form.data %}
+        </div>
+    </div>
+    {% comment %}
+    We don't use 'inc/extras_features_edit_form_fields.html' because it would add a second,
+    and incorrect, "Tags" field to the form. Currently config-contexts don't support custom-fields or relationships,
+    but they do support notes.
+    {% endcomment %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Notes</strong></div>
+        <div class="panel-body">
+            {% render_field form.object_note %}
+        </div>
+    </div>
+{% endblock %}
