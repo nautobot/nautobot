@@ -16,6 +16,7 @@ from django.forms import (
     MultipleHiddenInput,
 )
 from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.encoding import iri_to_uri
 from django.utils.functional import cached_property
@@ -69,8 +70,8 @@ from nautobot.wireless.models import (
     ControllerManagedDeviceGroupWirelessNetworkAssignment,
 )
 from nautobot.wireless.tables import (
+    BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
     ControllerManagedDeviceGroupRadioProfileAssignmentTable,
-    ControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
     DeviceGroupWirelessNetworkTable,
     RadioProfileTable,
 )
@@ -108,6 +109,7 @@ from .models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     PathEndpoint,
     Platform,
@@ -1597,7 +1599,14 @@ class ModuleBayTemplateUIViewSet(
             return parent.display
         return ""
 
-    @action(detail=False, methods=["GET", "POST"], url_path="rename", url_name="bulk_rename")
+    @action(
+        detail=False,
+        methods=["GET", "POST"],
+        url_path="rename",
+        url_name="bulk_rename",
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.change_modulebaytemplate"],
+    )
     def bulk_rename(self, request, *args, **kwargs):
         return self._bulk_rename(request, *args, **kwargs)
 
@@ -2240,7 +2249,7 @@ class DeviceWirelessView(generic.ObjectView):
         wireless_networks = ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
             controller_managed_device_group=controller_managed_device_group
         ).select_related("wireless_network", "controller_managed_device_group", "vlan")
-        wireless_networks_table = ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
+        wireless_networks_table = BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
             data=wireless_networks, user=request.user, orderable=False
         )
         wireless_networks_table.columns.hide("controller_managed_device_group")
@@ -2377,35 +2386,6 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     table_class = tables.ModuleTable
     component_model = None
 
-    def get_action(self):
-        if self.component_model:
-            method = self.request.method.lower()
-            if method == "get":
-                return "view"
-            else:
-                return "change"
-
-        return super().get_action()
-
-    def get_required_permission(self):
-        # TODO: standardize a pattern for permissions enforcement on custom actions
-        if self.component_model:
-            model = self.component_model
-            method = self.request.method.lower()
-            if method == "get":
-                component_action = "view"
-                permissions = [*self.get_permissions_for_model(model, [component_action]), "dcim.view_module"]
-            elif self.action.startswith("bulk_add"):
-                component_action = "add"
-                permissions = [*self.get_permissions_for_model(model, [component_action]), "dcim.change_module"]
-            else:
-                component_action = "change"
-                permissions = [*self.get_permissions_for_model(model, [component_action]), "dcim.change_module"]
-
-            return permissions
-
-        return super().get_required_permission()
-
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         if instance:
@@ -2432,7 +2412,13 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
 
         return active_parent_tab
 
-    @action(detail=True, url_path="console-ports", component_model=ConsolePort)
+    @action(
+        detail=True,
+        url_path="console-ports",
+        component_model=ConsolePort,
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_consoleport"],
+    )
     def consoleports(self, request, *args, **kwargs):
         instance = self.get_object()
         consoleports = (
@@ -2451,7 +2437,13 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             }
         )
 
-    @action(detail=True, url_path="console-server-ports", component_model=ConsoleServerPort)
+    @action(
+        detail=True,
+        url_path="console-server-ports",
+        component_model=ConsoleServerPort,
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_consoleserverport"],
+    )
     def consoleserverports(self, request, *args, **kwargs):
         instance = self.get_object()
         consoleserverports = (
@@ -2474,7 +2466,13 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             }
         )
 
-    @action(detail=True, url_path="power-ports", component_model=PowerPort)
+    @action(
+        detail=True,
+        url_path="power-ports",
+        component_model=PowerPort,
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_powerport"],
+    )
     def powerports(self, request, *args, **kwargs):
         instance = self.get_object()
         powerports = (
@@ -2495,7 +2493,13 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             }
         )
 
-    @action(detail=True, url_path="power-outlets", component_model=PowerOutlet)
+    @action(
+        detail=True,
+        url_path="power-outlets",
+        component_model=PowerOutlet,
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_poweroutlet"],
+    )
     def poweroutlets(self, request, *args, **kwargs):
         instance = self.get_object()
         poweroutlets = (
@@ -2516,7 +2520,12 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             }
         )
 
-    @action(detail=True, component_model=Interface)
+    @action(
+        detail=True,
+        component_model=Interface,
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_interface"],
+    )
     def interfaces(self, request, *args, **kwargs):
         instance = self.get_object()
         interfaces = (
@@ -2542,7 +2551,13 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             }
         )
 
-    @action(detail=True, url_path="front-ports", component_model=FrontPort)
+    @action(
+        detail=True,
+        url_path="front-ports",
+        component_model=FrontPort,
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_frontport"],
+    )
     def frontports(self, request, *args, **kwargs):
         instance = self.get_object()
         frontports = instance.front_ports.restrict(request.user, "view").select_related("cable", "rear_port")
@@ -2559,7 +2574,13 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             },
         )
 
-    @action(detail=True, url_path="rear-ports", component_model=RearPort)
+    @action(
+        detail=True,
+        url_path="rear-ports",
+        component_model=RearPort,
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_rearport"],
+    )
     def rearports(self, request, *args, **kwargs):
         instance = self.get_object()
         rearports = instance.rear_ports.restrict(request.user, "view").select_related("cable")
@@ -2576,7 +2597,13 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             }
         )
 
-    @action(detail=True, url_path="module-bays", component_model=ModuleBay)
+    @action(
+        detail=True,
+        url_path="module-bays",
+        component_model=ModuleBay,
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_modulebay"],
+    )
     def modulebays(self, request, *args, **kwargs):
         instance = self.get_object()
         modulebays = instance.module_bays.restrict(request.user, "view").prefetch_related(
@@ -2599,6 +2626,8 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
         url_path="console-ports/add",
         url_name="bulk_add_consoleport",
         component_model=ConsolePort,
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.add_consoleport"],
     )
     def bulk_add_consoleport(self, request, *args, **kwargs):
         return self._bulk_component_create(
@@ -2613,6 +2642,8 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
         url_path="console-server-ports/add",
         url_name="bulk_add_consoleserverport",
         component_model=ConsoleServerPort,
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.add_consoleserverport"],
     )
     def bulk_add_consoleserverport(self, request, *args, **kwargs):
         return self._bulk_component_create(
@@ -2627,6 +2658,8 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
         url_path="power-ports/add",
         url_name="bulk_add_powerport",
         component_model=PowerPort,
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.add_powerport"],
     )
     def bulk_add_powerport(self, request, *args, **kwargs):
         return self._bulk_component_create(
@@ -2641,6 +2674,8 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
         url_path="power-outlets/add",
         url_name="bulk_add_poweroutlet",
         component_model=PowerOutlet,
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.add_poweroutlet"],
     )
     def bulk_add_poweroutlet(self, request, *args, **kwargs):
         return self._bulk_component_create(
@@ -2655,6 +2690,8 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
         url_path="interfaces/add",
         url_name="bulk_add_interface",
         component_model=Interface,
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.add_interface"],
     )
     def bulk_add_interface(self, request, *args, **kwargs):
         return self._bulk_component_create(
@@ -2669,6 +2706,8 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
         url_path="rear-ports/add",
         url_name="bulk_add_rearport",
         component_model=RearPort,
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.add_rearport"],
     )
     def bulk_add_rearport(self, request, *args, **kwargs):
         return self._bulk_component_create(
@@ -2683,6 +2722,8 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
         url_path="module-bays/add",
         url_name="bulk_add_modulebay",
         component_model=ModuleBay,
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.add_modulebay"],
     )
     def bulk_add_modulebay(self, request, *args, **kwargs):
         return self._bulk_component_create(
@@ -3378,7 +3419,6 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
     serializer_class = serializers.ModuleBaySerializer
     table_class = tables.ModuleBayTable
     create_template_name = "dcim/device_component_add.html"
-
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
@@ -3423,7 +3463,14 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
             return parent.display
         return ""
 
-    @action(detail=False, methods=["GET", "POST"], url_path="rename", url_name="bulk_rename")
+    @action(
+        detail=False,
+        methods=["GET", "POST"],
+        url_path="rename",
+        url_name="bulk_rename",
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.change_modulebay"],
+    )
     def bulk_rename(self, request, *args, **kwargs):
         return self._bulk_rename(request, *args, **kwargs)
 
@@ -3871,151 +3918,102 @@ class InterfaceConnectionsListView(ConnectionsListView):
 #
 
 
-class VirtualChassisListView(generic.ObjectListView):
-    queryset = VirtualChassis.objects.all()
-    table = tables.VirtualChassisTable
-    filterset = filters.VirtualChassisFilterSet
-    filterset_form = forms.VirtualChassisFilterForm
-
-
-class VirtualChassisView(generic.ObjectView):
+class VirtualChassisUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.VirtualChassisBulkEditForm
+    filterset_class = filters.VirtualChassisFilterSet
+    filterset_form_class = forms.VirtualChassisFilterForm
+    form_class = forms.VirtualChassisCreateForm
+    serializer_class = serializers.VirtualChassisSerializer
+    table_class = tables.VirtualChassisTable
     queryset = VirtualChassis.objects.all()
 
     def get_extra_context(self, request, instance):
-        members = Device.objects.restrict(request.user).filter(virtual_chassis=instance)
+        context = super().get_extra_context(request, instance)
 
-        return {"members": members, **super().get_extra_context(request, instance)}
+        if self.action == "update":
+            VCMemberFormSet = modelformset_factory(
+                model=Device,
+                form=forms.DeviceVCMembershipForm,
+                formset=forms.BaseVCMemberFormSet,
+                extra=0,
+            )
+            members_queryset = instance.members.select_related("rack").order_by("vc_position")
 
+            if request.method == "POST":
+                formset = VCMemberFormSet(request.POST, queryset=members_queryset)
+            else:
+                formset = VCMemberFormSet(queryset=members_queryset)
 
-class VirtualChassisCreateView(generic.ObjectEditView):
-    queryset = VirtualChassis.objects.all()
-    model_form = forms.VirtualChassisCreateForm
-    template_name = "dcim/virtualchassis_add.html"
+            vc_form = forms.VirtualChassisForm(instance=instance)
+            vc_form.fields["master"].queryset = members_queryset
 
+            context.update(
+                {
+                    "formset": formset,
+                    "vc_form": vc_form,
+                    "return_url": self.get_return_url(request, instance),
+                }
+            )
 
-class VirtualChassisEditView(ObjectPermissionRequiredMixin, GetReturnURLMixin, View):
-    queryset = VirtualChassis.objects.all()
+        elif self.action == "retrieve":
+            members = Device.objects.restrict(request.user).filter(virtual_chassis=instance)
+            context.update({"members": members})
 
-    def get_required_permission(self):
-        return "dcim.change_virtualchassis"
+        return context
 
-    def get(self, request, pk):
-        virtual_chassis = get_object_or_404(self.queryset, pk=pk)
-        VCMemberFormSet = modelformset_factory(
-            model=Device,
-            form=forms.DeviceVCMembershipForm,
-            formset=forms.BaseVCMemberFormSet,
-            extra=0,
-        )
-        members_queryset = virtual_chassis.members.select_related("rack").order_by("vc_position")
+    def form_save(self, form, **kwargs):
+        obj = super().form_save(form, **kwargs)
 
-        vc_form = forms.VirtualChassisForm(instance=virtual_chassis)
-        vc_form.fields["master"].queryset = members_queryset
-        formset = VCMemberFormSet(queryset=members_queryset)
+        if self.action == "update":
+            context = self.get_extra_context(self.request, obj)
+            formset = context.get("formset")
 
-        return render(
-            request,
-            "dcim/virtualchassis_edit.html",
-            {
-                "vc_form": vc_form,
-                "formset": formset,
-                "return_url": self.get_return_url(request, virtual_chassis),
-            },
-        )
+            if formset.is_valid():
+                with transaction.atomic():
+                    members = formset.save(commit=False)
+                    # Nullify the vc_position of each member first to allow reordering without raising an IntegrityError on
+                    # duplicate positions. Then save each member instance.
+                    Device.objects.filter(pk__in=[m.pk for m in members]).update(vc_position=None)
+                    for member in members:
+                        member.save()
+            else:
+                raise ValidationError(formset.errors)
 
-    def post(self, request, pk):
-        virtual_chassis = get_object_or_404(self.queryset, pk=pk)
-        VCMemberFormSet = modelformset_factory(
-            model=Device,
-            form=forms.DeviceVCMembershipForm,
-            formset=forms.BaseVCMemberFormSet,
-            extra=0,
-        )
-        members_queryset = virtual_chassis.members.select_related("rack").order_by("vc_position")
+        return obj
 
-        vc_form = forms.VirtualChassisForm(request.POST, instance=virtual_chassis)
-        vc_form.fields["master"].queryset = members_queryset
-        formset = VCMemberFormSet(request.POST, queryset=members_queryset)
+    @action(
+        detail=True,
+        methods=["get", "post"],
+        url_path="add-member",
+        url_name="add_member",
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.change_virtualchassis"],
+    )
+    def add_member(self, request, pk=None):
+        virtual_chassis = self.get_object()
 
-        if vc_form.is_valid() and formset.is_valid():
-            with transaction.atomic():
-                # Save the VirtualChassis
-                vc_form.save()
+        if request.method == "POST":
+            member_select_form = forms.VCMemberSelectForm(request.POST)
+            if member_select_form.is_valid():
+                device = member_select_form.cleaned_data["device"]
+                device.virtual_chassis = virtual_chassis
+                data = {k: request.POST[k] for k in ["vc_position", "vc_priority"]}
+                membership_form = forms.DeviceVCMembershipForm(data=data, validate_vc_position=True, instance=device)
 
-                # Nullify the vc_position of each member first to allow reordering without raising an IntegrityError on
-                # duplicate positions. Then save each member instance.
-                members = formset.save(commit=False)
-                devices = Device.objects.filter(pk__in=[m.pk for m in members])
-                for device in devices:
-                    device.vc_position = None
-                    device.save()
-                for member in members:
-                    member.save()
+                if membership_form.is_valid():
+                    membership_form.save()
+                    msg = format_html('Added member <a href="{}">{}</a>', device.get_absolute_url(), device)
+                    messages.success(request, msg)
 
-            return redirect(virtual_chassis.get_absolute_url())
-
-        return render(
-            request,
-            "dcim/virtualchassis_edit.html",
-            {
-                "vc_form": vc_form,
-                "formset": formset,
-                "return_url": self.get_return_url(request, virtual_chassis),
-            },
-        )
-
-
-class VirtualChassisDeleteView(generic.ObjectDeleteView):
-    queryset = VirtualChassis.objects.all()
-
-
-class VirtualChassisAddMemberView(ObjectPermissionRequiredMixin, GetReturnURLMixin, View):
-    queryset = VirtualChassis.objects.all()
-
-    def get_required_permission(self):
-        return "dcim.change_virtualchassis"
-
-    def get(self, request, pk):
-        virtual_chassis = get_object_or_404(self.queryset, pk=pk)
-
-        initial_data = {k: request.GET[k] for k in request.GET}
-        member_select_form = forms.VCMemberSelectForm(initial=initial_data)
-        membership_form = forms.DeviceVCMembershipForm(initial=initial_data)
-
-        return render(
-            request,
-            "dcim/virtualchassis_add_member.html",
-            {
-                "virtual_chassis": virtual_chassis,
-                "member_select_form": member_select_form,
-                "membership_form": membership_form,
-                "return_url": self.get_return_url(request, virtual_chassis),
-            },
-        )
-
-    def post(self, request, pk):
-        virtual_chassis = get_object_or_404(self.queryset, pk=pk)
-
-        member_select_form = forms.VCMemberSelectForm(request.POST)
-
-        if member_select_form.is_valid():
-            device = member_select_form.cleaned_data["device"]
-            device.virtual_chassis = virtual_chassis
-            data = {k: request.POST[k] for k in ["vc_position", "vc_priority"]}
-            membership_form = forms.DeviceVCMembershipForm(data=data, validate_vc_position=True, instance=device)
-
-            if membership_form.is_valid():
-                membership_form.save()
-                msg = format_html('Added member <a href="{}">{}</a>', device.get_absolute_url(), device)
-                messages.success(request, msg)
-
-                if "_addanother" in request.POST:
-                    return redirect(request.get_full_path())
-
-                return redirect(self.get_return_url(request, device))
-
+                    if "_addanother" in request.POST:
+                        return redirect(request.get_full_path())
+                    return redirect(self.get_return_url(request, device))
+            else:
+                membership_form = forms.DeviceVCMembershipForm(data=request.POST)
         else:
-            membership_form = forms.DeviceVCMembershipForm(data=request.POST)
+            initial_data = {k: request.GET[k] for k in request.GET}
+            member_select_form = forms.VCMemberSelectForm(initial=initial_data)
+            membership_form = forms.DeviceVCMembershipForm(initial=initial_data)
 
         return render(
             request,
@@ -4084,24 +4082,6 @@ class VirtualChassisRemoveMemberView(ObjectPermissionRequiredMixin, GetReturnURL
         )
 
 
-class VirtualChassisBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = VirtualChassis.objects.all()
-    table = tables.VirtualChassisTable
-
-
-class VirtualChassisBulkEditView(generic.BulkEditView):
-    queryset = VirtualChassis.objects.all()
-    filterset = filters.VirtualChassisFilterSet
-    table = tables.VirtualChassisTable
-    form = forms.VirtualChassisBulkEditForm
-
-
-class VirtualChassisBulkDeleteView(generic.BulkDeleteView):
-    queryset = VirtualChassis.objects.all()
-    filterset = filters.VirtualChassisFilterSet
-    table = tables.VirtualChassisTable
-
-
 #
 # Power panels
 #
@@ -4143,6 +4123,28 @@ class PowerPanelUIViewSet(NautobotUIViewSet):
 #
 # Power feeds
 #
+
+
+class CustomPowerFeedKeyValueTablePanel(object_detail.KeyValueTablePanel):
+    """Custom panel to render PowerFeed utilization graph cleanly."""
+
+    def render_value(self, key, value, context):
+        if key == "Utilization (Allocated)":
+            if not value or not isinstance(value, tuple) or len(value) != 2:
+                return helpers.placeholder(None)
+            allocated, available = value
+            if available <= 0:
+                return f"{allocated}VA / {available}VA"
+            graph_html = render_to_string(
+                "utilities/templatetags/utilization_graph.html",
+                helpers.utilization_graph_raw_data(allocated, available),
+            )
+            return format_html("{}VA / {}VA {}", allocated, available, graph_html)
+
+        # Fall back to default behavior for everything else
+        return super().render_value(key, value, context)
+
+
 class PowerFeedUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.PowerFeedBulkEditForm
     filterset_class = filters.PowerFeedFilterSet
@@ -4151,6 +4153,137 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
     queryset = PowerFeed.objects.all()
     serializer_class = serializers.PowerFeedSerializer
     table_class = tables.PowerFeedTable
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            CustomPowerFeedKeyValueTablePanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                label="Power Feed",
+                context_data_key="powerfeed_data",
+            ),
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=200,
+                label="Electrical Characteristics",
+                fields=["supply", "voltage", "amperage", "phase", "max_utilization"],
+                value_transforms={
+                    "voltage": [lambda v: f"{v}V" if v is not None else helpers.placeholder(v)],
+                    "amperage": [lambda a: f"{a}A" if a is not None else helpers.placeholder(a)],
+                    "max_utilization": [lambda p: f"{p}%" if p is not None else helpers.placeholder(p)],
+                },
+            ),
+            object_detail.KeyValueTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=300,
+                label="Connection",
+                context_data_key="connection_data",
+            ),
+        )
+    )
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if not instance or self.action != "retrieve":
+            return context
+
+        context["powerfeed_data"] = {
+            "Power Panel": instance.power_panel,
+            "Rack": instance.rack,
+            "Type": self._get_type_html(instance),  # Render Type with HTML label
+            "Status": instance.status,
+            "Connected Device": self._get_connected_device_html(instance),
+            "Utilization (Allocated)": self._get_utilization_data(instance),
+        }
+
+        context["connection_data"] = self._get_connection_data(request, instance)
+        return context
+
+    def _get_type_html(self, instance):
+        """
+        Render the PowerFeed type as a label with the appropriate CSS class.
+        """
+
+        type_class = instance.get_type_class()
+        return format_html('<span class="label label-{}">{}</span>', type_class, instance.get_type_display())
+
+    def _get_connected_device_html(self, instance):
+        endpoint = getattr(instance, "connected_endpoint", None)
+        if endpoint and endpoint.parent:
+            parent = helpers.hyperlinked_object(endpoint.parent)
+            return format_html("{} ({})", parent, endpoint)
+        return None
+
+    def _get_utilization_data(self, instance):
+        endpoint = getattr(instance, "connected_endpoint", None)
+        if not endpoint or not hasattr(endpoint, "get_power_draw"):
+            return None
+        utilization = endpoint.get_power_draw()
+        if not utilization or "allocated" not in utilization:
+            return None
+        allocated = utilization["allocated"]
+        available = instance.available_power or 0
+        return (allocated, available)
+
+    def _get_connection_data(self, request, instance):
+        if not instance:
+            return {}
+
+        if instance.cable:
+            trace_url = reverse("dcim:powerfeed_trace", kwargs={"pk": instance.pk})
+            cable_html = format_html(
+                '{} <a href="{}" class="btn btn-primary btn-xs" title="Trace">'
+                '<i class="mdi mdi-transit-connection-variant"></i></a>',
+                helpers.hyperlinked_object(instance.cable),
+                trace_url,
+            )
+
+            endpoint = getattr(instance, "connected_endpoint", None)
+            endpoint_data = {}
+
+            if endpoint:
+                endpoint_obj = getattr(endpoint, "device", None) or getattr(endpoint, "module", None)
+                # Removed the unused 'path' variable
+                endpoint_data = {
+                    "Device" if getattr(endpoint, "device", None) else "Module": endpoint_obj,
+                    "Power Port": endpoint,
+                    "Type": endpoint.get_type_display() if hasattr(endpoint, "get_type_display") else None,
+                    "Description": endpoint.description,
+                    "Path Status": self._get_path_status_html(instance),  # Render Path Status dynamically
+                }
+
+            return {
+                "Cable": cable_html,
+                **endpoint_data,
+            }
+
+        if request.user.has_perm("dcim.add_cable"):
+            connect_url = (
+                reverse(
+                    "dcim:powerfeed_connect",
+                    kwargs={"termination_a_id": instance.pk, "termination_b_type": "power-port"},
+                )
+                + f"?return_url={instance.get_absolute_url()}"
+            )
+            connect_link = format_html(
+                '<a href="{}" class="btn btn-primary btn-sm pull-right">'
+                '<span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect</a>',
+                connect_url,
+            )
+            return {"Connection": format_html("Not connected {}", connect_link)}
+
+        return {"Connection": "Not connected"}
+
+    def _get_path_status_html(self, instance):
+        """
+        Render the Path Status as a label based on the path status (active or not).
+        """
+        path_status = (
+            '<span class="label label-success">Reachable</span>'
+            if getattr(instance, "path", None) and instance.path.is_active
+            else '<span class="label label-danger">Not Reachable</span>'
+        )
+        return format_html(path_status)  # Safely render HTML
 
 
 class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
@@ -4240,6 +4373,51 @@ class InterfaceRedundancyGroupAssociationUIViewSet(ObjectEditViewMixin, ObjectDe
     lookup_field = "pk"
 
 
+class ModuleFamilyUIViewSet(NautobotUIViewSet):
+    """ViewSet for the ModuleFamily model."""
+
+    filterset_class = filters.ModuleFamilyFilterSet
+    filterset_form_class = forms.ModuleFamilyFilterForm
+    form_class = forms.ModuleFamilyForm
+    bulk_update_form_class = forms.ModuleFamilyBulkEditForm
+    queryset = ModuleFamily.objects.all()
+    serializer_class = serializers.ModuleFamilySerializer
+    table_class = tables.ModuleFamilyTable
+    lookup_field = "pk"
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if not instance:
+            return context
+
+        if self.action == "retrieve":
+            module_types = (
+                ModuleType.objects.restrict(request.user, "view")
+                .filter(module_family=instance)
+                .select_related("manufacturer")
+            )
+            module_type_table = tables.ModuleTypeTable(module_types, orderable=False)
+
+            module_bays = (
+                ModuleBay.objects.restrict(request.user, "view")
+                .filter(module_family=instance)
+                .select_related("parent_device", "parent_module")
+            )
+            module_bay_table = tables.ModuleBayTable(module_bays, orderable=False)
+
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(module_type_table)
+            RequestConfig(request, paginate).configure(module_bay_table)
+
+            context["module_type_table"] = module_type_table
+            context["module_bay_table"] = module_bay_table
+
+        return context
+
+
 class DeviceFamilyUIViewSet(NautobotUIViewSet):
     filterset_class = filters.DeviceFamilyFilterSet
     filterset_form_class = forms.DeviceFamilyFilterForm
@@ -4289,7 +4467,6 @@ class SoftwareImageFileUIViewSet(NautobotUIViewSet):
     queryset = SoftwareImageFile.objects.all()
     serializer_class = serializers.SoftwareImageFileSerializer
     table_class = tables.SoftwareImageFileTable
-
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
@@ -4373,19 +4550,42 @@ class SoftwareImageFileUIViewSet(NautobotUIViewSet):
         ),
     )
 
-    @action(detail=True, url_path="device-types", url_name="device_types")
+    @action(
+        detail=True,
+        url_path="device-types",
+        url_name="device_types",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_devicetype"],
+    )
     def device_types(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="devices")
+    @action(
+        detail=True,
+        url_path="devices",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_device"],
+    )
     def devices(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="inventory-items", url_name="inventory_items")
+    @action(
+        detail=True,
+        url_path="inventory-items",
+        url_name="inventory_items",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_inventoryitem"],
+    )
     def inventory_items(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="virtual-machines", url_name="virtual_machines")
+    @action(
+        detail=True,
+        url_path="virtual-machines",
+        url_name="virtual_machines",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["virtualization.view_virtualmachine"],
+    )
     def virtual_machines(self, request, *args, **kwargs):
         return Response({})
 
@@ -4431,54 +4631,80 @@ class ControllerUIViewSet(NautobotUIViewSet):
     table_class = tables.ControllerTable
     template_name = "dcim/controller_create.html"
 
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+                value_transforms={
+                    "capabilities": [helpers.label_list],
+                },
+                exclude_fields=[
+                    "external_integration",
+                    "controller_device",
+                    "controller_device_redundancy_group",
+                ],
+            ),
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                label="Integration",
+                fields=[
+                    "external_integration",
+                    "controller_device",
+                    "controller_device_redundancy_group",
+                ],
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=100,
+                table_class=tables.DeviceTable,
+                table_title="Managed Devices",
+                table_filter="controller_managed_device_group__controller",
+                include_columns=[
+                    "capabilities",
+                    "controller_managed_device_group",
+                    "manufacturer",
+                ],
+                related_field_name="controller",
+                add_button_route=None,
+            ),
+        ),
+        extra_tabs=(
+            object_detail.DistinctViewTab(
+                weight=700,
+                tab_id="wireless_networks",
+                url_name="dcim:controller_wirelessnetworks",
+                label="Wireless Networks",
+                related_object_attribute="wireless_network_assignments",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Wireless Networks",
+                        table_class=BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
+                        table_filter="controller_managed_device_group__controller",
+                        tab_id="wireless_networks",
+                        add_button_route=None,
+                        select_related_fields=["wireless_network"],
+                        exclude_columns=["controller"],
+                    ),
+                ),
+            ),
+        ),
+    )
 
-        if self.action == "retrieve" and instance:
-            devices = Device.objects.restrict(request.user).filter(controller_managed_device_group__controller=instance)
-            devices_table = tables.DeviceTable(devices)
-            devices_table.columns.show("controller_managed_device_group")
-            devices_table.columns.show("capabilities")
-            devices_table.sequence = ("name", "controller_managed_device_group", "capabilities", "...")
-
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(devices_table)
-
-            context["devices_table"] = devices_table
-
-        return context
-
-    @action(detail=True, url_path="wireless-networks", url_name="wirelessnetworks", methods=["get"])
+    @action(
+        detail=True,
+        url_path="wireless-networks",
+        url_name="wirelessnetworks",
+        methods=["get"],
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["wireless.view_controllermanageddevicegroupwirelessnetworkassignment"],
+    )
     def wirelessnetworks(self, request, *args, **kwargs):
-        instance = self.get_object()
-        controller_managed_device_groups = instance.controller_managed_device_groups.restrict(
-            request.user, "view"
-        ).values_list("pk", flat=True)
-        wireless_networks = ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
-            controller_managed_device_group__in=list(controller_managed_device_groups)
-        ).select_related("wireless_network")
-        wireless_networks_table = ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
-            data=wireless_networks, user=request.user, orderable=False
-        )
-        wireless_networks_table.columns.hide("controller")
-
-        RequestConfig(
-            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-        ).configure(wireless_networks_table)
-
-        return Response(
-            {
-                "wireless_networks_table": wireless_networks_table,
-                "active_tab": "wireless-networks",
-            }
-        )
-
-    def get_action(self):
-        "Treat Wireless Networks as the same detail view for permission purposes."
-        return "view" if self.action == "wirelessnetworks" else super().get_action()
+        return Response({})
 
 
 class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
@@ -4490,7 +4716,6 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.ControllerManagedDeviceGroupSerializer
     table_class = tables.ControllerManagedDeviceGroupTable
     template_name = "dcim/controllermanageddevicegroup_create.html"
-
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
@@ -4551,16 +4776,23 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
         ),
     )
 
-    def get_queryset(self):
-        if self.action in ["wireless_networks", "radio_profiles"]:
-            return self.queryset.restrict(self.request.user, "view")
-        return super().get_queryset()
-
-    @action(detail=True, url_path="wireless-networks", url_name="wireless_networks")
+    @action(
+        detail=True,
+        url_path="wireless-networks",
+        url_name="wireless_networks",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["wireless.view_controllermanageddevicegroupwirelessnetworkassignment"],
+    )
     def wireless_networks(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="radio-profiles", url_name="radio_profiles")
+    @action(
+        detail=True,
+        url_path="radio-profiles",
+        url_name="radio_profiles",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["wireless.view_radioprofile"],
+    )
     def radio_profiles(self, request, *args, **kwargs):
         return Response({})
 
@@ -4585,14 +4817,6 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
             raise ValidationError(wireless_networks.errors)
 
         return obj
-
-    def get_required_permission(self):
-        view_action = self.get_action()
-        if view_action == "wireless_networks":
-            return ["wireless.view_controllermanageddevicegroupwirelessnetworkassignment"]
-        if view_action == "radio_profiles":
-            return ["wireless.view_radioprofile"]
-        return super().get_required_permission()
 
 
 #

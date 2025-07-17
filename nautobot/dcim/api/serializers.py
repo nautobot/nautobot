@@ -81,6 +81,7 @@ from nautobot.dcim.models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     PathEndpoint,
     Platform,
@@ -1142,4 +1143,14 @@ class DeviceClusterAssignmentSerializer(ValidatedModelSerializer):
 
     class Meta:
         model = DeviceClusterAssignment
+
+class ModuleFamilySerializer(NautobotModelSerializer):
+    """API serializer for ModuleFamily objects."""
+
+    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:modulefamily-detail")
+    module_type_count = serializers.IntegerField(read_only=True)
+    module_bay_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = ModuleFamily
         fields = "__all__"

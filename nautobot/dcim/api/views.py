@@ -55,6 +55,7 @@ from nautobot.dcim.models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     Platform,
     PowerFeed,
@@ -851,3 +852,13 @@ class DeviceClusterAssignmentViewSet(ModelViewSet):
     queryset = DeviceClusterAssignment.objects.all()
     serializer_class = serializers.DeviceClusterAssignmentSerializer
     filterset_class = filters.DeviceClusterAssignmentFilterSet
+
+class ModuleFamilyViewSet(NautobotModelViewSet):
+    """API viewset for interacting with ModuleFamily objects."""
+
+    queryset = ModuleFamily.objects.annotate(
+        module_type_count=count_related(ModuleType, "module_family"),
+        module_bay_count=count_related(ModuleBay, "module_family"),
+    )
+    serializer_class = serializers.ModuleFamilySerializer
+    filterset_class = filters.ModuleFamilyFilterSet

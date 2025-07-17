@@ -34,7 +34,6 @@ class CloudAccountTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "provider": providers[1].pk,
             "secrets_group": secrets_groups[1].pk,
             "description": "New description",
-            "comments": "New comments",
         }
 
     def test_post_without_secrets_group(self):
@@ -56,6 +55,12 @@ class CloudAccountTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class CloudNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = CloudNetwork
+    custom_action_required_permissions = {
+        "cloud:cloudnetwork_children": ["cloud.view_cloudnetwork"],
+        "cloud:cloudnetwork_prefixes": ["cloud.view_cloudnetwork", "ipam.view_prefix"],
+        "cloud:cloudnetwork_circuits": ["cloud.view_cloudnetwork", "circuits.view_circuit"],
+        "cloud:cloudnetwork_cloud_services": ["cloud.view_cloudnetwork", "cloud.view_cloudservice"],
+    }
 
     @classmethod
     def setUpTestData(cls):
@@ -104,6 +109,10 @@ class CloudNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class CloudResourceTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = CloudResourceType
+    custom_action_required_permissions = {
+        "cloud:cloudresourcetype_services": ["cloud.view_cloudresourcetype", "cloud.view_cloudservice"],
+        "cloud:cloudresourcetype_networks": ["cloud.view_cloudresourcetype", "cloud.view_cloudnetwork"],
+    }
 
     @classmethod
     def setUpTestData(cls):
@@ -133,6 +142,9 @@ class CloudResourceTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class CloudServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = CloudService
+    custom_action_required_permissions = {
+        "cloud:cloudservice_cloud_networks": ["cloud.view_cloudservice", "cloud.view_cloudnetwork"],
+    }
 
     @classmethod
     def setUpTestData(cls):

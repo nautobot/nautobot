@@ -867,7 +867,7 @@ class ObjectsTablePanel(Panel):
                 body_content_table_queryset = body_content_table_queryset.order_by(*self.order_by_fields)
             body_content_table_queryset = body_content_table_queryset.distinct()
             body_content_table = body_content_table_class(
-                body_content_table_queryset, hide_hierarchy_ui=self.hide_hierarchy_ui
+                body_content_table_queryset, hide_hierarchy_ui=self.hide_hierarchy_ui, user=request.user
             )
             if self.tab_id and "actions" in body_content_table.columns:
                 # Use the `self.tab_id`, if it exists, to determine the correct return URL for the table

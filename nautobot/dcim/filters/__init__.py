@@ -75,6 +75,7 @@ from nautobot.dcim.models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     Platform,
     PowerFeed,
@@ -140,6 +141,7 @@ __all__ = (
     "ManufacturerFilterSet",
     "ModuleBayFilterSet",
     "ModuleBayTemplateFilterSet",
+    "ModuleFamilyFilterSet",
     "ModuleFilterSet",
     "ModuleTypeFilterSet",
     "PathEndpointFilterSet",
@@ -970,6 +972,12 @@ class DeviceFilterSet(
     has_wireless_networks = RelatedMembershipBooleanFilter(
         field_name="controller_managed_device_group__wireless_networks",
         label="Has wireless networks",
+    )
+    controller = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="controller_managed_device_group__controller",
+        queryset=Controller.objects.all(),
+        to_field_name="name",
+        label="Controller (name or ID)",
     )
 
     def filter_ip_addresses(self, queryset, name, value):
@@ -2084,6 +2092,12 @@ class ModuleFilterSet(
         to_field_name="model",
         label="Module type (model or ID)",
     )
+    module_family = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="module_type__module_family",
+        queryset=ModuleFamily.objects.all(),
+        to_field_name="name",
+        label="Module family (name or ID)",
+    )
     parent_module_bay = django_filters.ModelMultipleChoiceFilter(
         queryset=ModuleBay.objects.all(),
         label="Parent Module Bay",
@@ -2093,6 +2107,13 @@ class ModuleFilterSet(
         to_field_name="name",
         label="Device (name or ID)",
         method="filter_device",
+    )
+    compatible_with_module_bay = extend_schema_field({"type": "string", "format": "uuid"})(
+        django_filters.ModelChoiceFilter(
+            queryset=ModuleBay.objects.all(),
+            method="filter_module_bay",
+            label="Compatible with module bay (ID)",
+        )
     )
 
     def _construct_device_filter_recursively(self, field_name, value):
@@ -2118,6 +2139,12 @@ class ModuleFilterSet(
             return queryset
         params = self.generate_query_filter_device(value)
         return queryset.filter(params)
+
+    def filter_module_bay(self, queryset, name, value):
+        """Filter modules based on a module bay's module family."""
+        if value and value.module_family:
+            return queryset.filter(module_type__module_family=value.module_family)
+        return queryset
 
     class Meta:
         model = Module
@@ -2145,6 +2172,23 @@ class ModuleTypeFilterSet(DeviceTypeModuleTypeCommonFiltersMixin, NautobotFilter
             },
         },
     )
+    manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Manufacturer.objects.all(),
+        to_field_name="name",
+        label="Manufacturer (name or ID)",
+    )
+    module_family = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ModuleFamily.objects.all(),
+        to_field_name="name",
+        label="Module family (name or ID)",
+    )
+    compatible_with_module_bay = extend_schema_field({"type": "string", "format": "uuid"})(
+        django_filters.ModelChoiceFilter(
+            queryset=ModuleBay.objects.all(),
+            method="filter_module_bay",
+            label="Installable in module bay (ID)",
+        )
+    )
     has_modules = RelatedMembershipBooleanFilter(
         field_name="modules",
         label="Has module instances",
@@ -2153,6 +2197,12 @@ class ModuleTypeFilterSet(DeviceTypeModuleTypeCommonFiltersMixin, NautobotFilter
     class Meta:
         model = ModuleType
         fields = "__all__"
+
+    def filter_module_bay(self, queryset, name, value):
+        """Filter module types based on a module bay's module family."""
+        if value and value.module_family:
+            return queryset.filter(module_family=value.module_family)
+        return queryset
 
 
 class ModuleBayTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetMixin, NautobotFilterSet):
@@ -2183,6 +2233,14 @@ class ModuleBayTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetMix
                 "preprocessor": str.strip,
             },
         }
+    )
+    module_family = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ModuleFamily.objects.all(),
+        to_field_name="name",
+        label="Module family (name or ID)",
+    )
+    requires_first_party_modules = django_filters.BooleanFilter(
+        label="Requires first-party modules",
     )
 
     class Meta:
@@ -2239,6 +2297,15 @@ class ModuleBayFilterSet(NautobotFilterSet):
     has_installed_module = RelatedMembershipBooleanFilter(
         field_name="installed_module",
         label="Has installed module",
+    )
+    module_family = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ModuleFamily.objects.all(),
+        to_field_name="name",
+        label="Module family (name or ID)",
+    )
+    requires_first_party_modules = django_filters.BooleanFilter(
+        field_name="requires_first_party_modules",
+        label="Requires first-party modules",
     )
 
     class Meta:
@@ -2413,3 +2480,52 @@ class DeviceClusterAssignmentFilterSet(NautobotFilterSet):
     class Meta:
         model = DeviceClusterAssignment
         fields = ["device", "cluster"]
+
+
+class ModuleFamilyFilterSet(NautobotFilterSet):
+    """FilterSet for ModuleFamily objects."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "description": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "module_types__model": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "module_types__manufacturer__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+        }
+    )
+
+    module_types = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ModuleType.objects.all(),
+        to_field_name="model",
+        label="Module types (model or ID)",
+    )
+
+    module_bay_id = extend_schema_field({"type": "array", "items": {"type": "string", "format": "uuid"}})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=ModuleBay.objects.all(),
+            label="Module bay (ID)",
+        )
+    )
+
+    class Meta:
+        model = ModuleFamily
+        fields = [
+            "id",
+            "name",
+            "description",
+            "module_types",
+            "module_bay_id",
+            "tags",
+        ]
