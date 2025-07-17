@@ -4,8 +4,6 @@
         "../development/docker-compose.yml",
         "../development/docker-compose.postgres.yml",
         "../development/docker-compose.dev.yml",
-        "../development/docker-compose.vscode-rdb.yml",
-        "../development/docker-compose.static-ports.yml"
     ],
     "features": {
         "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
@@ -61,28 +59,6 @@
                 "python.pythonPath": "/usr/local/bin/python",
                 "launch": {
                     "version": "0.2.0",
-                    "inputs": [
-                        {
-                            "id": "celeryport",
-                            "type": "command",
-                            "command": "extension.commandvariable.file.content",
-                            "args": {
-                                "fileName": "${workspaceFolder}/.service_ports.json",
-                                "json": "content.celery_worker['6898']",
-                                "default": "6898"
-                            }
-                        },
-                        {
-                            "id": "nautobotport",
-                            "type": "command",
-                            "command": "extension.commandvariable.file.content",
-                            "args": {
-                                "fileName": "${workspaceFolder}/.service_ports.json",
-                                "json": "content.nautobot['6899']",
-                                "default": "6899"
-                            }
-                        }
-                    ],
                     "configurations": [
                         {
                             "name": "Local: Nautobot",
@@ -110,26 +86,6 @@
                             "autoStartBrowser": false,
                             "program": "${workspaceFolder}/nautobot/core/cli/__main__.py",
                             "justMyCode": false
-                        },
-                        {
-                            "name": "Remote Attach: Nautobot",
-                            "type": "debugpy",
-                            "request": "attach",
-                            "connect": {
-                                "host": "127.0.0.1",
-                                "port": "${input:nautobotport}"
-                            },
-                            "django": true
-                        },
-                        {
-                            "name": "Remote Attach: Nautobot-Celery",
-                            "type": "debugpy",
-                            "request": "attach",
-                            "connect": {
-                                "host": "celery_worker",
-                                "port": "${input:celeryport}"
-                            },
-                            "django": true
                         }
                     ]
                 }
@@ -138,6 +94,5 @@
     },
     "workspaceFolder": "/source",
     "postCreateCommand": "bash .devcontainer/postCreateCommand.sh",
-    "postAttachCommand": "bash .devcontainer/postStartCommand.sh",
-    "overrideCommand": false
+    "overrideCommand": true
 }
