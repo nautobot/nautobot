@@ -279,6 +279,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
         context = {
             "content_type": content_type,
+            "model": model,
             "form": form,
             "filter_form": filter_form,
             "dynamic_filter_form": self.get_dynamic_filter_form(view, request, filterset_class=view.filterset_class),
@@ -294,7 +295,14 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "table_config_form": TableConfigForm(table=table) if table else None,
             "verbose_name": queryset.model._meta.verbose_name,
             "verbose_name_plural": queryset.model._meta.verbose_name_plural,
+            "view_action": view.action,
+            "detail": False,
         }
+
+        self._set_if_present(context, "document_titles", view.get_document_titles)
+        self._set_if_present(context, "page_headings", view.get_page_headings)
+        self._set_if_present(context, "breadcrumbs", view.get_breadcrumbs)
+
         if view.detail:
             # If we are in a retrieve related detail view (retrieve and custom actions).
             try:
@@ -316,7 +324,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             new_changes_not_applied = view_changes_not_saved(request, view, self.saved_view)
             context.update(
                 {
-                    "model": model,
                     "current_saved_view": self.saved_view,
                     "new_changes_not_applied": new_changes_not_applied,
                     "action_buttons": valid_actions,
@@ -364,3 +371,10 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         self.template = data.get("template", view.get_template_name())
 
         return super().render(data, accepted_media_type=accepted_media_type, renderer_context=renderer_context)
+
+    @staticmethod
+    def _set_if_present(context, context_key, view_function):
+        try:
+            context[context_key] = view_function()
+        except AttributeError:
+            context[context_key] = None

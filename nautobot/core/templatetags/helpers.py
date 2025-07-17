@@ -1225,6 +1225,25 @@ def hyperlinked_object_target_new_tab(value, field="display"):
     return _build_hyperlink(value, field, target="_blank", rel="noreferrer")
 
 
+@register.filter()
+def get_object_link(value):
+    """Function to retrieve just absolute url to the given model instance.
+
+    Args:
+        value (Union[django.db.models.Model, None]): Instance of a Django model or None.
+
+    Returns:
+        (str): url to the object if it defines get_absolute_url(), empty string otherwise.
+    """
+    if value is None:
+        return ""
+
+    if hasattr(value, "get_absolute_url"):
+        return value.get_absolute_url()
+
+    return ""
+
+
 def _build_hyperlink(value, field="", target="", rel=""):
     """Internal function used by filters to build hyperlinks.
 
@@ -1255,3 +1274,23 @@ def _build_hyperlink(value, field="", target="", rel=""):
         except AttributeError:
             pass
     return format_html("{}", display)
+
+
+@register.simple_tag(takes_context=True)
+def format_title_with_saved_view(context, title):
+    """
+    Creates a formatted title that includes saved view information.
+    Usage within a block: {% format_title_with_saved_view title as formatted_title %}
+    """
+    new_changes_not_applied = context.get("new_changes_not_applied", False)
+    current_saved_view = context.get("current_saved_view")
+
+    if not current_saved_view:
+        return title
+
+    if new_changes_not_applied:
+        new_title = format_html('{} — <i title="Pending changes not saved">{}</i>', title, current_saved_view.name)
+    else:
+        new_title = format_html("{} — {}", title, current_saved_view.name)
+
+    return new_title

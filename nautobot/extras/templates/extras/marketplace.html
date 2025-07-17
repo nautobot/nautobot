@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load helpers %}
 {% load static %}
+{% load ui_framework %}
 
 {% block extra_styles %}
 <style>
@@ -59,11 +60,9 @@
 {% block content %}
     <div class="row noprint">
         <div class="col-md-12">
-            <ol class="breadcrumb">
-                {% block breadcrumbs %}
-                    <li><a href="{% url 'apps:apps_marketplace' %}">Apps Marketplace</a></li>
-                {% endblock breadcrumbs %}
-            </ol>
+            {% block breadcrumbs %}
+                {% render_breadcrumbs %}
+            {% endblock breadcrumbs %}
         </div>
     </div>
 
