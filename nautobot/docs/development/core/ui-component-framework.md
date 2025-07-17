@@ -110,6 +110,59 @@ object_detail_content = ObjectDetailContent(
 
 </div>
 
+### Page headings and document titles
+
+The Titles component provides a flexible system for generating page titles and headings based on the current view action and context.
+
+- **DocumentTitles**: Strips HTML tags for browser title bars
+- **PageHeadings**: Preserves HTML for rich heading display
+
+```python
+from nautobot.core.ui.components import DocumentTitles, PageHeadings
+
+# Create a document title instance
+doc_titles = DocumentTitles(titles={"list": "{{obj_type_plural}}"})
+
+# Render title for a list view
+context = Context({
+    'view_action': 'list',
+    'obj_type_plural': 'devices'
+})
+title = doc_titles.render(context)  # Returns: "Devices"
+```
+
+## Breadcrumbs Component
+
+The Breadcrumbs component creates navigation trails that help users understand their location within the application hierarchy.
+
+```python
+from nautobot.core.ui.components import Breadcrumbs, BreadcrumbItem
+
+# Use default breadcrumbs
+breadcrumbs = Breadcrumbs(items={"detail": [
+    BreadcrumbItem(viewname_str="home", label="Home"),
+    BreadcrumbItem(model_key="object"),
+    BreadcrumbItem(), # Default breadcrumb item will generate link to the instance taken from context["object"]
+]})
+
+# Render for a device detail view
+context = Context({
+    'view_action': 'retrieve',
+    'detail': True,  # Indicates this is a detail view
+    'object': device,
+})
+html = breadcrumbs.render(context)
+```
+
+It will generate:
+```html
+<ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/dcim/devices">Devices</a></li>
+    <li><a href="/dcim/devices/<uuid>">Device name</a></li>
+</ol>
+```
+
 ## Panel Types
 
 ### Base Panel
@@ -567,6 +620,125 @@ class DeviceView(generic.ObjectView):
 - ![DropdownButton Example](../../media/development/core/ui-component-framework/dropdown-button-example.png){ .on-glb }
 
 </div>
+
+## Breadcrumbs
+
+### BreadcrumbItem Configuration
+
+BreadcrumbItem supports three modes of operation:
+
+#### Mode 1: Direct View Name
+
+```python
+# Link to a specific view
+home = BreadcrumbItem(
+    viewname_str="home",
+    label="Home"
+)
+
+# With URL parameters
+filtered_list = BreadcrumbItem(
+    viewname_str="dcim:device_list",
+    reverse_query_params={"status": "active"},  # Or some lambda returning the dict
+    label="Active Devices"
+)
+```
+
+#### Mode 2: Model-Based
+
+```python
+# List view for a model
+device_list = BreadcrumbItem(
+    model=Device,  # Can use model class
+    model_label_type="plural"  # "Devices"
+)
+
+# Or use dotted path
+device_list = BreadcrumbItem(
+    model="dcim.device",
+    model_label_type="singular"  # "Device"
+)
+
+# From context
+dynamic_model = BreadcrumbItem(
+    model_key="content_type",  # Get model from context
+    model_url_action="list"
+)
+```
+
+#### Mode 3: Instance-Based
+
+```python
+# Link to specific object (default: context['object'])
+current_object = BreadcrumbItem(
+    instance_key="object"  # Gets URL and label from object
+)
+
+# Custom instance key
+parent_object = BreadcrumbItem(
+    instance_key="parent_device",
+    label="Parent"  # Optional label override
+)
+```
+
+### Customizing Breadcrumbs
+
+By default `Breadcrumbs` class uses two actions: `list` and `detail`. However you can specify your custom action,
+or just pass to the items one built-in action to override default only for the chosen view actions.
+
+If there is no `view_action` in context it will use `list` by default.
+
+If there is no `detail` in context it will assume `False` by default.
+
+#### Example 1: Simple Override
+
+```python
+# Replace default breadcrumbs for create action
+custom_breadcrumbs = Breadcrumbs(
+    items={
+        'create': [
+            BreadcrumbItem(viewname_str="home", label="Home"),
+            BreadcrumbItem(model_key="model"),
+            BreadcrumbItem(label="Add New")  # Static text, no link
+        ]
+    }
+)
+```
+
+#### Example 2: Prepend/Append Items
+
+```python
+# Add organization context to all breadcrumbs
+org_aware_breadcrumbs = Breadcrumbs(
+    prepend_items={
+        'list': [
+            BreadcrumbItem(viewname_str="org:dashboard", label="Org Dashboard")
+        ],
+        'detail': [
+            BreadcrumbItem(viewname_str="org:dashboard", label="Org Dashboard")
+        ]
+    }
+)
+```
+
+#### Example 3: Complex Navigation
+
+```python
+# Multi-level hierarchy for nested objects
+nested_breadcrumbs = Breadcrumbs(
+    items={
+        'retrieve': [
+            BreadcrumbItem(model="dcim.site", model_label_type="plural"),
+            BreadcrumbItem(
+                instance_key="object.site",
+                label=lambda ctx: f"Site: {ctx['object'].site.name}"
+            ),
+            BreadcrumbItem(model="dcim.device", model_label_type="plural"),
+            BreadcrumbItem(instance_key="object")
+        ]
+    }
+)
+```
 
 ## Complete Example
 

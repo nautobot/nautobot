@@ -46,14 +46,14 @@ class BreadcrumbItem:
 
     Attributes:
         viewname_str (Optional[str]): Django view name to reverse. Used in raw viewname mode.
-        reverse_kwargs (Optional[dict[str, Any]]): Keyword arguments passed to `reverse()`.
-        reverse_query_params (Optional[dict[str, Any]]): Keyword arguments added to the url.
+        reverse_kwargs (nion[dict[str, Any], Callable[[Context], dict[str, Any]], None]): Keyword arguments passed to `reverse()`.
+        reverse_query_params (nion[dict[str, Any], Callable[[Context], dict[str, Any]], None]): Keyword arguments added to the url.
         instance_key (Optional[str]): Context key to fetch a Django model instance for building the breadcrumb.
         model (Union[str, Type[Model], None]): Django model class, instance, or dotted path string.
         model_key (Optional[str]): Context key to fetch a model class, instance or dotted path string.
         model_url_action (str): Action to use when resolving a model-based route (default: "list").
         model_label_type (Literal["singular", "plural"]): Whether to use `verbose_name` or `verbose_name_plural`.
-        label (Optional[str]): Optional override for the display label in the breadcrumb.
+        label (Union[Callable[[Context], str], WithStr, None]): Optional override for the display label in the breadcrumb.
 
     Examples:
         >>> BreadcrumbItem(model=Device)
@@ -82,7 +82,7 @@ class BreadcrumbItem:
     model_url_action: str = "list"
     model_label_type: ModelLabelType = "plural"
     # Option to override label
-    label: Optional[WithStr] = None
+    label: Union[Callable[[Context], str], WithStr, None] = None
 
     def get_url(self, context: Context) -> Optional[str]:
         """
@@ -136,7 +136,7 @@ class BreadcrumbItem:
         Determine the label (display text) for the breadcrumb.
 
         Resolution priority:
-        - If `label` is set explicitly, it's returned as-is.
+        - If `label` is set explicitly, it's returned as-is or called if callable.
         - If `model` or `model_key` is provided, it uses the model's `verbose_name` or `verbose_name_plural`.
         - If `instance_key` is provided, the object's `display` property or its string representation is used.
 
@@ -148,6 +148,8 @@ class BreadcrumbItem:
         """
 
         if self.label:
+            if callable(self.label):
+                return str(self.label(context))
             return str(self.label)
         if self.model:
             return self._label_from_model(self.model)
