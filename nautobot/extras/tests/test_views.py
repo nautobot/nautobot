@@ -1855,8 +1855,7 @@ class SecretsGroupTestCase(
     ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = SecretsGroup
-
-    user_permissions = [
+    custom_test_permissions = [
         "extras.view_secret",
         "extras.add_secretsgroup",
         "extras.view_secretsgroup",
@@ -1912,6 +1911,7 @@ class SecretsGroupTestCase(
 
     def test_create_group_with_valid_secret_association(self):
         """Test that a SecretsGroup with a valid Secret association saves correctly via the formset."""
+        self.add_permissions(*self.custom_test_permissions)
         # Create a secret to associate
         secret = Secret.objects.create(
             name="AWS_Secret",
@@ -1948,6 +1948,7 @@ class SecretsGroupTestCase(
 
     def test_create_group_with_invalid_secret_association(self):
         """Test that invalid Secret association formset raises validation error and does not save."""
+        self.add_permissions(*self.custom_test_permissions)
         url = reverse("extras:secretsgroup_add")
 
         form_data = {
