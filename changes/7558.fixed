@@ -1,0 +1,1 @@
+Improved logic in `LogsCleanup` system Job to avoid an infinite recursion possibility.
