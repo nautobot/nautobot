@@ -1435,13 +1435,18 @@ class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
     def _process_create_or_update_form(self, form):
         """
         Helper method to create or update an object after the form is validated successfully.
+        Handles:
+        - Saving the object
+        - Logging the event
+        - Displaying a success message
+        - Redirecting to the appropriate URL
         """
         request = self.request
         queryset = self.get_queryset()
 
         with transaction.atomic():
-            object_created = not form.instance.present_in_database
-            obj = self.form_save(form)
+            object_created = not form.instance.present_in_database  # Check if it's a new object
+            obj = self.form_save(form)  # Save the form and return the saved object
 
             # Check that the new object conforms with any assigned object-level permissions
             queryset.get(pk=obj.pk)
@@ -1449,6 +1454,7 @@ class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
             msg = f'{"Created" if object_created else "Modified"} {queryset.model._meta.verbose_name}'
             self.logger.info(f"{msg} {obj} (PK: {obj.pk})")
             try:
+                # Build a formatted HTML message with a link to the object
                 msg = format_html(
                     '{} <a href="{}">{}</a>' + self.extra_message(**self.extra_message_context(obj)),
                     msg,
@@ -1456,15 +1462,20 @@ class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
                     obj,
                 )
             except AttributeError:
+                # Fallback if the object doesn't have `get_absolute_url`
                 msg = format_html("{} {}" + self.extra_message(**self.extra_message_context(obj)), msg, obj)
             messages.success(request, msg)
+
+            # If the user clicked "Create and Add more"
             if "_addanother" in request.POST:
                 # If the object has clone_fields, pre-populate a new instance of the form
                 if hasattr(obj, "clone_fields"):
+                    # Pre-populate a new form with cloned values
                     url = f"{request.path}?{prepare_cloned_fields(obj)}"
                     self.success_url = url
                 self.success_url = request.get_full_path()
             else:
+                # Redirect to return_url
                 return_url = form.cleaned_data.get("return_url")
                 if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
                     self.success_url = iri_to_uri(return_url)
@@ -1494,35 +1505,41 @@ class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
             initial=normalize_querydict(request.GET, form_class=form_class),
             instance=self.obj,
         )
+
         if not form.is_valid():
             return self.form_invalid(form)
-        else:
-            names = form.cleaned_data.get("name_pattern") or []
-            labels = form.cleaned_data.get("label_pattern") or []
 
-            if names:
-                data = deepcopy(request.POST)
-                for i, name in enumerate(names):
-                    data["name"] = name
-                    data["label"] = labels[i] if labels else None
+        # Support for bulk creation using name_pattern and label_pattern
+        names = form.cleaned_data.get("name_pattern") or []
+        labels = form.cleaned_data.get("label_pattern") or []
 
-                    if hasattr(form, "get_iterative_data"):
-                        data.update(form.get_iterative_data(i))
-                    form = form_class(
-                        data=data,
-                        files=request.FILES,
-                        initial=normalize_querydict(request.GET, form_class=form_class),
-                        instance=self.obj,
-                    )
-                    if not form.is_valid():
-                        for field, errors in form.errors.as_data().items():
-                            # Assign errors on the child form's name/label field to name_pattern/label_pattern on the parent form
-                            if field == "name":
-                                field = "name_pattern"
-                            elif field == "label":
-                                field = "label_pattern"
-                            for e in errors:
-                                err_str = ", ".join(e)
-                            form.add_error(field, f"{name}: {err_str}")
+        if names:
+            # Create multiple objects based on the name_pattern
+            data = deepcopy(request.POST)
+            for i, name in enumerate(names):
+                data["name"] = name
+                data["label"] = labels[i] if labels else None
+
+                if hasattr(form, "get_iterative_data"):
+                    data.update(form.get_iterative_data(i))
+                # Recreate the form for each iteration with updated data
+                form = form_class(
+                    data=data,
+                    files=request.FILES,
+                    initial=normalize_querydict(request.GET, form_class=form_class),
+                    instance=self.obj,
+                )
+                if not form.is_valid():
+                    for field, errors in form.errors.as_data().items():
+                        # Assign errors on the child form's name/label field to name_pattern/label_pattern on the parent form
+                        if field == "name":
+                            field = "name_pattern"
+                        elif field == "label":
+                            field = "label_pattern"
+                        for e in errors:
+                            err_str = ", ".join(e)
+                        form.add_error(field, f"{name}: {err_str}")
+            # Restrict all form fields which reference a RestrictedQuerySet. This ensures that users see only permitted objects as available choices
             restrict_form_fields(form, request.user)
+            # Handle and process the valid form based on the current action
             return self.form_valid(form)
