@@ -1540,6 +1540,6 @@ class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
                             err_str = ", ".join(e)
                         form.add_error(field, f"{name}: {err_str}")
             # Restrict all form fields which reference a RestrictedQuerySet. This ensures that users see only permitted objects as available choices
-            restrict_form_fields(form, request.user)
-            # Handle and process the valid form based on the current action
-            return self.form_valid(form)
+        restrict_form_fields(form, request.user)
+        # Handle and process the valid form based on the current action
+        return self.form_valid(form)
