@@ -1,0 +1,1 @@
+Fixed `data_validation.0002` migration to handle a schema difference between the latest Data Validation Engine App and the version in Nautobot core.
