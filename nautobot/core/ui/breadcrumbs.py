@@ -1,5 +1,6 @@
 import copy
 from dataclasses import dataclass
+import logging
 from typing import Any, Callable, Literal, Optional, Protocol, Type, Union
 from urllib.parse import urlencode
 
@@ -8,10 +9,12 @@ from django.db.models import Model
 from django.template import Context
 from django.urls import NoReverseMatch, reverse
 
-from nautobot.core.templatetags.helpers import bettertitle, get_object_link
-from nautobot.core.ui.utils import render_component_template
+from nautobot.core.templatetags import helpers
+from nautobot.core.ui.utils import get_absolute_url, render_component_template
 from nautobot.core.utils import lookup
 from nautobot.core.utils.lookup import get_model_from_name
+
+logger = logging.getLogger(__name__)
 
 
 class WithStr(Protocol):
@@ -32,7 +35,7 @@ class BreadcrumbItem:
     This class provides 3 different modes of generating breadcrumbs:
     1. Viewname
     From raw viewname string that will be passed to the reverse method. You can pass reverse args or kwargs.
-    In this mode you need to pass a label.
+    In this mode label won't be generated automatically.
 
     2. Model
     Based on model class, content type or dotted model name passed directly or taken automatically from context.
@@ -40,12 +43,12 @@ class BreadcrumbItem:
     You can still override it by passing a label.
 
     3. Instance
-    Detail url for object instance taken from context. This is the default mode and instance will be get
-    from `context["object"]`
+    Detail url for object instance taken from context. By default, `instance_key` is set to `object` so if there is no other
+    variables set for different modes it will be generated automatically.
     In this mode label will be generated from object, but you can still override it.
 
     Attributes:
-        viewname_str (Optional[str]): Django view name to reverse. Used in raw viewname mode.
+        view_name (Optional[str]): Django view name to reverse. Used in raw viewname mode.
         reverse_kwargs (nion[dict[str, Any], Callable[[Context], dict[str, Any]], None]): Keyword arguments passed to `reverse()`.
         reverse_query_params (nion[dict[str, Any], Callable[[Context], dict[str, Any]], None]): Keyword arguments added to the url.
         instance_key (Optional[str]): Context key to fetch a Django model instance for building the breadcrumb.
@@ -60,9 +63,9 @@ class BreadcrumbItem:
         ("/dcim/devices/", "Devices")
         >>> BreadcrumbItem(instance_key="object")
         ("/dcim/devices/1234", "My Device")  # Assuming that under "object" there is an Device instance
-        >>> BreadcrumbItem(viewname_str="dcim:device_list")
-        ("/dcim/devices/", "")
-        >>> BreadcrumbItem(viewname_str="dcim:device_list", reverse_query_params={"filter": "some_value"}, label="Link")
+        >>> BreadcrumbItem(view_name="dcim:device_list")
+        ("/dcim/devices/", "")  # No label automatically generated
+        >>> BreadcrumbItem(view_name="dcim:device_list", reverse_query_params={"filter": "some_value"}, label="Link")
         ("/dcim/devices/?filter=some_value", "Link")
         >>> BreadcrumbItem(model="dcim.device")
         ("/dcim/devices/", "Devices")
@@ -71,7 +74,7 @@ class BreadcrumbItem:
     """
 
     # 1. Raw viewname mode
-    viewname_str: Optional[str] = None
+    view_name: Optional[str] = None
     reverse_kwargs: ReverseParams = None
     reverse_query_params: ReverseParams = None
     # 2. Object instance from context mode
@@ -89,9 +92,9 @@ class BreadcrumbItem:
         Resolve the URL for the breadcrumb item based on the configuration.
 
         The resolution strategy depends on the mode:
-        - If `viewname_str` is provided, it uses `reverse()` with optional args/kwargs.
+        - If `view_name` is provided, it uses `reverse()` with optional args/kwargs.
         - If `model` or `model_key` is set, it attempts to reverse a model-based view.
-        - If `instance_key` is used, it generates a detail URL for that object using `get_object_link()`.
+        - If `instance_key` is used, it generates a detail URL for that object using `get_absolute_url()`.
 
         Args:
             context (Context): The view or template context, used for resolving keys or models.
@@ -100,28 +103,30 @@ class BreadcrumbItem:
             Optional[str]: The resolved URL, or `None` if the resolution fails.
         """
 
-        if self.viewname_str:
-            return self.reverse_viewname(self.viewname_str, context)
+        if self.view_name:
+            return self.reverse_viewname(self.view_name, context)
         if self.model:
-            viewname = lookup.get_route_for_model(self.model, self.model_url_action)
-            return self.reverse_viewname(viewname, context)
+            view_name = lookup.get_route_for_model(self.model, self.model_url_action)
+            return self.reverse_viewname(view_name, context)
         if self.model_key:
             model = context.get(self.model_key)
-            viewname = lookup.get_route_for_model(model, self.model_url_action)
-            return self.reverse_viewname(viewname, context)
+            view_name = lookup.get_route_for_model(model, self.model_url_action)
+            return self.reverse_viewname(view_name, context)
         if self.instance_key:
             instance = context.get(self.instance_key)
-            return get_object_link(instance)
+            return get_absolute_url(instance)
 
         return None
 
-    def reverse_viewname(self, viewname: str, context: Context) -> Optional[str]:
+    def reverse_viewname(self, view_name: str, context: Context) -> Optional[str]:
         try:
-            url = reverse(viewname, kwargs=self.get_reverse_params(self.reverse_kwargs, context))
+            url = reverse(view_name, kwargs=self.get_reverse_params(self.reverse_kwargs, context))
             if query_params := self.get_reverse_params(self.reverse_query_params, context):
+                # TODO: refactor after Django 5.2 upgrade
                 return f"{url}?{urlencode(query_params)}"
             return url
-        except NoReverseMatch:
+        except NoReverseMatch as err:
+            logger.error('No reverse match for: "%s". Exc: %s', view_name, err)
             return None
 
     def get_reverse_params(self, params: ReverseParams, context: Context) -> dict[str, Any]:
@@ -204,7 +209,7 @@ class BreadcrumbItem:
             tuple[str, Optional[str]]: A tuple of (URL, label), where URL may be an empty string
             if unresolved, and label is title-cased.
         """
-        return self.get_url(context) or "", bettertitle(self.get_label(context))
+        return self.get_url(context) or "", helpers.bettertitle(self.get_label(context))
 
 
 DEFAULT_MODEL_BREADCRUMBS = [BreadcrumbItem(model_key="model")]
@@ -262,6 +267,7 @@ class Breadcrumbs:
         self.items: BreadcrumbItemsType = copy.deepcopy(DEFAULT_BREADCRUMBS)
         if items:
             self.items.update(items)
+        # TODO: after breadcrumbs implementation verify if we need append/prepend feature
         self.prepend_items: BreadcrumbItemsType = prepend_items or {}
         self.append_items: BreadcrumbItemsType = append_items or {}
 

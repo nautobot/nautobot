@@ -19,9 +19,9 @@ class BreadcrumbItemTestCase(TestCase):
         """Create test data."""
         cls.location_type = LocationType.objects.create(name="Test Location Type Breadcrumbs")
 
-    def test_viewname_mode(self):
-        """Test breadcrumb item with viewname mode."""
-        item = BreadcrumbItem(viewname_str="home", label="Home")
+    def test_view_name_mode(self):
+        """Test breadcrumb item with view_name mode."""
+        item = BreadcrumbItem(view_name="home", label="Home")
         context = Context({})
 
         url, label = item.as_pair(context)
@@ -29,10 +29,10 @@ class BreadcrumbItemTestCase(TestCase):
         self.assertEqual(url, "/")
         self.assertEqual(label, "Home")
 
-    def test_viewname_mode_with_kwargs_and_query_params(self):
-        """Test breadcrumb item in viewname mode and kwargs."""
+    def test_view_name_mode_with_kwargs_and_query_params(self):
+        """Test breadcrumb item in view_name mode and kwargs."""
         item = BreadcrumbItem(
-            viewname_str="dcim:locationtype",
+            view_name="dcim:locationtype",
             reverse_kwargs={"pk": self.location_type.pk},
             reverse_query_params={"name": "test"},
             label="Filtered Locations Types",
@@ -129,7 +129,7 @@ class BreadcrumbItemTestCase(TestCase):
 
     def test_no_reverse_match(self):
         """Test handling of NoReverseMatch exception."""
-        item = BreadcrumbItem(viewname_str="nonexistent")
+        item = BreadcrumbItem(view_name="nonexistent")
         context = Context({})
 
         url, label = item.as_pair(context)
@@ -168,9 +168,9 @@ class BreadcrumbsTestCase(TestCase):
 
     def test_custom_items(self):
         """Test Breadcrumbs with custom items."""
-        custom_list_item = BreadcrumbItem(viewname_str="home", label="Home")
+        custom_list_item = BreadcrumbItem(view_name="home", label="Home")
         custom_items = {
-            "list": [BreadcrumbItem(viewname_str="home", label="Home")],
+            "list": [BreadcrumbItem(view_name="home", label="Home")],
         }
         breadcrumbs = Breadcrumbs(items=custom_items)
 
@@ -182,7 +182,7 @@ class BreadcrumbsTestCase(TestCase):
 
     def test_prepend_append_items(self):
         """Test prepend and append functionality."""
-        prepend = {"list": [BreadcrumbItem(viewname_str="home", label="Home")]}
+        prepend = {"list": [BreadcrumbItem(view_name="home", label="Home")]}
         append = {"list": [BreadcrumbItem(label="End")]}
         expected_items = [
             ("/", "Home"),

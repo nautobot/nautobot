@@ -230,7 +230,7 @@ class MarketplaceView(GenericView):
     """
 
     breadcrumbs = Breadcrumbs(
-        items={"main": [BreadcrumbItem(viewname_str="apps:apps_marketplace", label="Apps Marketplace")]}
+        items={"main": [BreadcrumbItem(view_name="apps:apps_marketplace", label="Apps Marketplace")]}
     )
 
     def get(self, request):

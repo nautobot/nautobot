@@ -1225,25 +1225,6 @@ def hyperlinked_object_target_new_tab(value, field="display"):
     return _build_hyperlink(value, field, target="_blank", rel="noreferrer")
 
 
-@register.filter()
-def get_object_link(value):
-    """Function to retrieve just absolute url to the given model instance.
-
-    Args:
-        value (Union[django.db.models.Model, None]): Instance of a Django model or None.
-
-    Returns:
-        (str): url to the object if it defines get_absolute_url(), empty string otherwise.
-    """
-    if value is None:
-        return ""
-
-    if hasattr(value, "get_absolute_url"):
-        return value.get_absolute_url()
-
-    return ""
-
-
 def _build_hyperlink(value, field="", target="", rel=""):
     """Internal function used by filters to build hyperlinks.
 
