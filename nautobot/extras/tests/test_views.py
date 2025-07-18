@@ -2579,7 +2579,7 @@ class ApprovalQueueTestCase(
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
-            approval_required=False,
+            approval_required=True,
             start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
@@ -2588,7 +2588,7 @@ class ApprovalQueueTestCase(
             job_model=self.job_model_2,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
-            approval_required=False,
+            approval_required=True,
             start_time=timezone.now(),
         )
 
@@ -2697,6 +2697,7 @@ class ApprovalQueueTestCase(
         self.add_permissions("extras.view_scheduledjob")
         instance = self._get_queryset().first()
         instance.job_model.enabled = True
+        instance.job_model.has_sensitive_variables = False
         instance.job_model.save()
         data = {"_dry_run": True}
 
@@ -2716,8 +2717,10 @@ class ApprovalQueueTestCase(
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
         instance1.job_model.enabled = True
+        instance1.job_model.has_sensitive_variables = False
         instance1.job_model.save()
         instance2.job_model.enabled = True
+        instance2.job_model.has_sensitive_variables = False
         instance2.job_model.save()
 
         response = self.client.post(self._get_url("view", instance2), data)
@@ -2733,6 +2736,7 @@ class ApprovalQueueTestCase(
         self.add_permissions("extras.view_scheduledjob")
         instance = ScheduledJob.objects.filter(name="test2").first()
         instance.job_model.enabled = True
+        instance.job_model.has_sensitive_variables = False
         instance.job_model.save()
         obj_perm = ObjectPermission(name="Test permission", constraints={"pk": instance.job_model.pk}, actions=["run"])
         obj_perm.save()
@@ -2753,6 +2757,7 @@ class ApprovalQueueTestCase(
         self.add_permissions("extras.view_scheduledjob")
         instance = ScheduledJob.objects.filter(name="test1").first()
         instance.job_model.enabled = True
+        instance.job_model.has_sensitive_variables = False
         instance.job_model.save()
         obj_perm = ObjectPermission(name="Test permission", constraints={"pk": instance.job_model.pk}, actions=["run"])
         obj_perm.save()
@@ -3563,40 +3568,9 @@ class JobTestCase(
             )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    @mock.patch("nautobot.extras.models.mixins.ApprovableModelMixin.begin_approval_workflow")
-    def test_run_scheduled_job_with_approval_workflow_defined_triggers_approval_workflow(
-        self, mock_begin_approval_workflow, _
-    ):
-        ApprovalWorkflowDefinition.objects.create(
-            name="Test Approval Workflow Definition 1",
-            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
-            priority=0,
-        )
+    def test_run_immediate_job_triggers_approval_workflow_if_defined(self, _):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
-
-        data = {
-            "_schedule_type": "future",
-            "_schedule_name": "test",
-            "_schedule_start_time": str(timezone.now() + timedelta(minutes=1)),
-        }
-        for i, run_url in enumerate(self.run_urls):
-            data["_schedule_name"] = f"test {i}"
-            response = self.client.post(run_url, data)
-            scheduled_job = ScheduledJob.objects.last()
-            self.assertRedirects(
-                response,
-                reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk]),
-            )
-        mock_begin_approval_workflow.assert_called()
-
-    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    @mock.patch("nautobot.extras.models.mixins.ApprovableModelMixin.begin_approval_workflow")
-    def test_run_immediate_job_with_approval_workflow_defined_triggers_approval_workflow(
-        self, mock_begin_approval_workflow, _
-    ):
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.view_jobresult")
 
         ApprovalWorkflowDefinition.objects.create(
             name="Approval Definition",
@@ -3614,7 +3588,6 @@ class JobTestCase(
                 response,
                 reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk]),
             )
-        mock_begin_approval_workflow.assert_called()
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_scheduled_job_triggers_approval_workflow_if_defined(self, _):
