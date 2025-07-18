@@ -194,7 +194,14 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
 
         return context
 
-    @action(detail=False, name="All Names", methods=["get"], url_path="all-names", url_name="all_names")
+    @action(
+        detail=False,
+        name="All Names",
+        methods=["get"],
+        url_path="all-names",
+        url_name="all_names",
+        custom_view_base_action="view",
+    )
     def all_names(self, request):
         """
         Returns a list of all the example model names.
