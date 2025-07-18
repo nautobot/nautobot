@@ -53,6 +53,9 @@ const toggleDrawer = (drawer, force) => {
     const nextActiveElement = drawerToggles[0] || document.querySelector('main');
     nextActiveElement?.focus({ preventScroll: true });
   }
+
+  const event = isOpen ? 'nb-drawer:opened' : 'nb-drawer:closed';
+  drawer.dispatchEvent(new CustomEvent(event, { bubbles: true, cancelable: true }));
 };
 
 /**
@@ -61,14 +64,42 @@ const toggleDrawer = (drawer, force) => {
  */
 export const initializeDrawers = () => {
   // Using event delegation pattern here to avoid re-creating listeners each time DOM is modified.
+  document.addEventListener('nb-drawer:close', (event) => toggleDrawer(event.target, false));
+  document.addEventListener('nb-drawer:open', (event) => toggleDrawer(event.target, true));
+  document.addEventListener('nb-drawer:toggle', (event) => toggleDrawer(event.target));
+
+  document.addEventListener('nb-drawer:opened', (event) => {
+    if (event.target.id) {
+      const nextState = { ...window.history?.state, drawer: event.target.id };
+      const url = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      window.history?.replaceState(nextState, '', url);
+    }
+  });
+
+  document.addEventListener('nb-drawer:closed', (event) => {
+    const { drawer, ...restState } =
+      typeof window.history?.state === 'object' && window.history.state !== null ? window.history.state : {};
+    const nextState = Object.keys(restState).length > 0 ? restState : null;
+    const url = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    window.history?.replaceState(nextState, '', url);
+  });
+
   document.addEventListener('click', (event) => {
     const dismiss = event.target.closest('[data-nb-dismiss]');
     const toggle = event.target.closest('[data-nb-toggle]');
 
     if (dismiss?.dataset.nbDismiss === 'drawer') {
-      toggleDrawer(dismiss.closest(`.${DRAWER_CLASS}`), false);
+      const drawer = dismiss.closest(`.${DRAWER_CLASS}`);
+      drawer?.dispatchEvent(new CustomEvent(`nb-drawer:close`, { bubbles: true, cancelable: true }));
     } else if (toggle?.dataset.nbToggle === 'drawer') {
-      toggleDrawer(document.querySelector(toggle.dataset.nbTarget));
+      const drawer = document.querySelector(toggle.dataset.nbTarget);
+      drawer?.dispatchEvent(new CustomEvent(`nb-drawer:toggle`, { bubbles: true, cancelable: true }));
     }
   });
+
+  if (window.history?.state?.drawer) {
+    document
+      .getElementById(window.history.state.drawer)
+      ?.dispatchEvent(new CustomEvent('nb-drawer:open', { bubbles: true, cancelable: true }));
+  }
 };

@@ -14,7 +14,38 @@ const getElement = (element) => (element instanceof Document || element instance
  * @returns {string|string[]} `string` value for single combobox, an array of `string` values for multiple combobox.
  */
 const getValue = (select) =>
-  select?.getAttribute('multiple') ? [...select.selectedOptions].map((option) => option.value) : select?.value;
+  select?.getAttribute('multiple') !== null ? [...select.selectedOptions].map((option) => option.value) : select?.value;
+
+/**
+ * Set Select2 combobox value(s).
+ * @param {HTMLSelectElement} select2 - Select2 combobox HTML element.
+ * @param {{ text: string, value: string }[]|null} value - Array of objects containing `text` and `value` key-value
+ *   pairs; `null` to reset the field value.
+ */
+export const setSelect2Value = (select2, value) => {
+  $(select2).val(null);
+
+  (value ?? []).forEach(({ text, value }) => {
+    if (!select2.querySelector(`option[value="${value}"]`)) {
+      const option = document.createElement('option');
+      option.innerText = text;
+      option.setAttribute('selected', 'true');
+      option.setAttribute('value', value);
+      select2.appendChild(option);
+    }
+  });
+
+  const nextValue = (() => {
+    if (value.length > 0) {
+      const isMultiple = select2?.getAttribute('multiple') !== null;
+      return isMultiple ? value.map(({ value }) => value) : value?.[0]?.value;
+    }
+
+    return null;
+  })();
+
+  $(select2).val(nextValue).trigger('change');
+};
 
 /**
  * Parse URLs which may contain variable references to other field values.

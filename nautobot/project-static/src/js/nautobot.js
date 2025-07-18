@@ -33,12 +33,19 @@ import { initializeCollapseToggleAll } from './collapse.js';
 import { initializeDraggable } from './draggable.js';
 import { initializeDrawers } from './drawer.js';
 import { observeFormStickyFooters } from './form.js';
+import { loadState, saveState } from './history.js';
 import { initializeSearch } from './search.js';
-import { initializeSelect2Fields } from './select2.js';
+import { initializeSelect2Fields, setSelect2Value } from './select2.js';
 import { observeCollapseTabs } from './tabs.js';
 import { initializeTheme } from './theme.js';
 
 document.addEventListener('DOMContentLoaded', function () {
+  window.nb = window.nb ?? {};
+
+  // History
+  loadState();
+  window.nb.history = { saveState };
+
   // Tooltips
   // https://getbootstrap.com/docs/5.3/components/tooltips/#enable-tooltips
   [...document.querySelectorAll('[data-bs-toggle="tooltip"]')].forEach((tooltip) => new bootstrap.Tooltip(tooltip));
@@ -99,8 +106,7 @@ document.addEventListener('DOMContentLoaded', function () {
   initializeSearch();
 
   // Select2
-  // TODO(norbert-mieczkowski-codilime): clean up forms to prevent exporting functions to global scope like this.
-  window.initializeSelect2Fields = initializeSelect2Fields;
+  window.nb.select2 = { initializeSelect2Fields, setSelect2Value };
 
   // Tabs
   /*
