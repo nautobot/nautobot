@@ -3485,6 +3485,28 @@ class JobTestCase(
             )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    @mock.patch("nautobot.extras.models.mixins.ApprovableModelMixin.begin_approval_workflow")
+    def test_run_later_triggers_approval_workflow(self, mock_begin_approval_workflow, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        start_time = timezone.now() + timedelta(minutes=1)
+        data = {
+            "_schedule_type": "future",
+            "_schedule_name": "test",
+            "_schedule_start_time": str(start_time),
+        }
+
+        for i, run_url in enumerate(self.run_urls):
+            data["_schedule_name"] = f"test {i}"
+            response = self.client.post(run_url, data)
+            self.assertRedirects(response, reverse("extras:scheduledjob_list"))
+
+            scheduled = ScheduledJob.objects.get(name=f"test {i}")
+            self.assertEqual(scheduled.start_time, start_time)
+        mock_begin_approval_workflow.assert_called()
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_job_with_sensitive_variables_for_future(self, _):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
