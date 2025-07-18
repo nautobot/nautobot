@@ -493,7 +493,7 @@ urlpatterns = [
         name="device_notes",
         kwargs={"model": Device},
     ),
-    path(  # 3.0 TODO: remove, no longer needed/used since 2.3
+    path(
         "devices/<uuid:pk>/dynamic-groups/",
         views.DeviceDynamicGroupsView.as_view(),
         name="device_dynamicgroups",
