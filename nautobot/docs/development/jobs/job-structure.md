@@ -99,12 +99,6 @@ class ExampleJob(Job):
 
 If you code a multi-line description, the first line only will be used in the description column of the Jobs list, while the full description will be rendered in the Job detail view, submission, approval, and results pages.
 
-### `approval_required`
-
-Default: `False`
-
-A boolean that will mark this Job as requiring approval from another user to be run. For more details on approvals, [please refer to the section on scheduling and approvals](../../user-guide/platform-functionality/jobs/job-scheduling-and-approvals.md).
-
 ### `dryrun_default`
 
 +/- 2.0.0 "Replacement for `commit_default`"
@@ -693,7 +687,6 @@ As of Nautobot 2.4.0, the current list of reserved names (not including low-leve
 | Reserved Name             | Purpose                                                                 |
 |---------------------------|-------------------------------------------------------------------------|
 | `after_return`            | [special method](#the-after_return-method)                              |
-| `approval_required`       | [metadata property](#approval_required)                                 |
 | `as_form`                 | class method                                                            |
 | `as_form_class`           | class method                                                            |
 | `before_start`            | [special method](#the-before_start-method)                              |

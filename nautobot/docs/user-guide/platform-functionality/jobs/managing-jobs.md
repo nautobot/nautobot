@@ -38,7 +38,6 @@ Sometimes you need to change how a Job appears or behaves without touching its s
 | **grouping** | UI category the Job is listed under. | Organize third-party Jobs into "Compliance" or "Local Automations." |
 | **name** | Display name in the Jobs list. | Rename technical Job names to user-friendly descriptions. |
 | **description** | Markdown or HTML description shown on Job detail page. | Add instructions or documentation links. |
-| **approval_required** | Require an additional user approval before each execution. | Protect Jobs that perform bulk production changes. |
 | **dryrun_default** | Default state of **Dry-Run** checkbox. | Audit or reporting Jobs that rarely commit changes. |
 | **has_sensitive_variables** | Avoid storing sensitive input data. | Jobs that accept credentials or sensitive data. |
 | **hidden** | Hide Job from the main Job listings. | Helper Jobs executed only by buttons or hooks. |

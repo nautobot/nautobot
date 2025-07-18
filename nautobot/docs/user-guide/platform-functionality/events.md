@@ -170,7 +170,6 @@ The data payload associated with events of any of the above topics has the follo
                     "is_job_hook_receiver": false,
                     "is_job_button_receiver": false,
                     "has_sensitive_variables": true,
-                    "approval_required": false,
                     "hidden": false,
                     "dryrun_default": false,
                     "read_only": false,

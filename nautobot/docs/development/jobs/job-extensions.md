@@ -90,9 +90,6 @@ A Job Hook Receiver listens for database changes and runs automatically when an 
 
 Use Job Hooks to enforce policy, run audits, or trigger external actions in response to changes.
 
-!!! warning "No support for `approval_required` at this time"
-    Requiring approval for execution of Job Hooks by setting the `Meta.approval_required` attribute to `True` on your `JobHookReceiver` subclass is not supported. The value of this attribute will be ignored. Support for requiring approval of Job Hooks may be added in a future release.
-
 !!! important "No recursive JobHookReceivers"
     To prevent negatively impacting system performance through an infinite loop, a change that was made by a `JobHookReceiver` Job will not trigger another `JobHookReceiver` Job to run.
 
