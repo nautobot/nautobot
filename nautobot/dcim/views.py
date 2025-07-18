@@ -558,31 +558,29 @@ class RackUIViewSet(NautobotUIViewSet):
     queryset = Rack.objects.select_related("location", "tenant__tenant_group", "rack_group", "role")
 
     def get_extra_context(self, request, instance):
-        if instance is None:
-            return super().get_extra_context(request, instance)
-
         context = super().get_extra_context(request, instance)
 
-        # Get 0U and child devices located within the rack
-        context["nonracked_devices"] = Device.objects.filter(rack=instance, position__isnull=True).select_related(
-            "device_type__manufacturer"
-        )
+        if self.action == "retrieve":
+            # Get 0U and child devices located within the rack
+            context["nonracked_devices"] = Device.objects.filter(rack=instance, position__isnull=True).select_related(
+                "device_type__manufacturer"
+            )
 
-        peer_racks = Rack.objects.restrict(request.user, "view").filter(location=instance.location)
+            peer_racks = Rack.objects.restrict(request.user, "view").filter(location=instance.location)
 
-        if instance.rack_group:
-            peer_racks = peer_racks.filter(rack_group=instance.rack_group)
-        else:
-            peer_racks = peer_racks.filter(rack_group__isnull=True)
+            if instance.rack_group:
+                peer_racks = peer_racks.filter(rack_group=instance.rack_group)
+            else:
+                peer_racks = peer_racks.filter(rack_group__isnull=True)
 
-        context["next_rack"] = peer_racks.filter(name__gt=instance.name).order_by("name").first()
-        context["prev_rack"] = peer_racks.filter(name__lt=instance.name).order_by("-name").first()
+            context["next_rack"] = peer_racks.filter(name__gt=instance.name).order_by("name").first()
+            context["prev_rack"] = peer_racks.filter(name__lt=instance.name).order_by("-name").first()
 
-        context["reservations"] = RackReservation.objects.restrict(request.user, "view").filter(rack=instance)
-        context["power_feeds"] = (
-            PowerFeed.objects.restrict(request.user, "view").filter(rack=instance).select_related("power_panel")
-        )
-        context["device_count"] = Device.objects.restrict(request.user, "view").filter(rack=instance).count()
+            context["reservations"] = RackReservation.objects.restrict(request.user, "view").filter(rack=instance)
+            context["power_feeds"] = (
+                PowerFeed.objects.restrict(request.user, "view").filter(rack=instance).select_related("power_panel")
+            )
+            context["device_count"] = Device.objects.restrict(request.user, "view").filter(rack=instance).count()
 
         return context
 
