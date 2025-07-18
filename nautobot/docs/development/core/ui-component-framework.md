@@ -155,6 +155,7 @@ html = breadcrumbs.render(context)
 ```
 
 It will generate:
+
 ```html
 <ol class="breadcrumb">
     <li><a href="/">Home</a></li>
