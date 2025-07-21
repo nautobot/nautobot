@@ -356,15 +356,19 @@ class FilterFormsTestCase(TestCase):
         query_param = "?location_type=1 onmouseover=alert('hi') foo=bar"
         url = reverse("dcim:location_list") + query_param
         response = self.client.get(url)
-        # The important thing here is that the data-field-parent and data-field-value are correctly quoted
+        # The important thing here is that the data-nb-value and value are correctly quoted
         self.assertBodyContains(
             response,
             """
-<span class="filter-selection-choice-remove remove-filter-param"
-      data-field-type="child"
-      data-field-parent="location_type"
-      data-field-value="1 onmouseover=alert(&#x27;hi&#x27;) foo=bar"
->×</span>""",  # noqa: RUF001 - ambiguous-unicode-character-string
+            <span class="badge" data-nb-value="1 onmouseover=alert('hi') foo=bar"><!--
+                --><button class="nb-dynamic-filter-remove" type="button">
+                    <span aria-hidden="true" class="mdi mdi-close"></span>
+                    <span class="visually-hidden">Remove</span>
+                </button><!--
+                -->1 onmouseover=alert('hi') foo=bar<!--
+                --><input name="location_type" type="hidden" value="1 onmouseover=alert('hi') foo=bar">
+            </span>
+            """,
             html=True,
         )
 
