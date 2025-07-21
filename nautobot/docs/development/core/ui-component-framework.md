@@ -1,3 +1,5 @@
+from nautobot.core.ui.breadcrumbs import ModelBreadcrumbItemfrom nautobot.core.ui.breadcrumbs import InstanceBreadcrumbItemfrom nautobot.core.ui.breadcrumbs import ModelBreadcrumbItemfrom nautobot.core.ui.breadcrumbs import ModelBreadcrumbItemfrom nautobot.core.ui.breadcrumbs import ViewNameBreadcrumbItem
+
 # Nautobot UI Component Framework
 
 ## Table of Contents
@@ -135,14 +137,19 @@ title = doc_titles.render(context)  # Returns: "Devices"
 
 The Breadcrumbs component creates navigation trails that help users understand their location within the application hierarchy.
 
+There are 3 main breadcrumb items classes:
+- `ViewNameBreadcrumbItem` - Handles breadcrumbs that are generated from Django view names using URL reversing.
+- `ModelBreadcrumbItem` - Generates breadcrumbs from Django model metadata, automatically creating appropriate URLs and labels.
+- `InstanceBreadcrumbItem` - Creates detail breadcrumbs for specific object instances, generating URLs to the object's detail page.
+
 ```python
-from nautobot.core.ui.components import Breadcrumbs, BreadcrumbItem
+from nautobot.apps.ui import Breadcrumbs, ViewNameBreadcrumbItem, ModelBreadcrumbItem, InstanceBreadcrumbItem
 
 # Use default breadcrumbs
 breadcrumbs = Breadcrumbs(items={"detail": [
-    BreadcrumbItem(viewname_str="home", label="Home"),
-    BreadcrumbItem(model_key="object"),
-    BreadcrumbItem(), # Default breadcrumb item will generate link to the instance taken from context["object"]
+    ViewNameBreadcrumbItem(viewname_str="home", label="Home"),
+    ModelBreadcrumbItem(model_key="object"),
+    InstanceBreadcrumbItem(), # Default breadcrumb item will generate link to the instance taken from context["object"]
 ]})
 
 # Render for a device detail view
@@ -626,70 +633,112 @@ class DeviceView(generic.ObjectView):
 
 ### BreadcrumbItem Configuration
 
-BreadcrumbItem supports three modes of operation:
+Breadcrumb items has three main classes:
 
-#### Mode 1: Direct View Name
+#### `ViewNameBreadcrumbItem` Class
 
 ```python
-# Link to a specific view
-home = BreadcrumbItem(
-    viewname_str="home",
-    label="Home"
+# Basic view name breadcrumb
+item = ViewNameBreadcrumbItem(
+    view_name="dcim:device_list",
+    label="All Devices",
 )
+# Will generate: ("/dcim/devices/", "All Devices")
 
-# With URL parameters
-filtered_list = BreadcrumbItem(
-    viewname_str="dcim:device_list",
-    reverse_query_params={"status": "active"},  # Or some lambda returning the dict
-    label="Active Devices"
+# With reverse parameters
+item = ViewNameBreadcrumbItem(
+    view_name="dcim:device",
+    reverse_kwargs={"pk": 123},
+    label="Device Details",
+)
+# Will generate: ("/dcim/devices/123", "Device Details")
+
+# With query parameters
+item = ViewNameBreadcrumbItem(
+    view_name="dcim:device_list",
+    reverse_query_params={"status": "active"},
+    label="Active Devices",
+)
+# Will generate: ("/dcim/devices/?status=active", "Active Devices")
+
+# With dynamic parameters from context
+item = ViewNameBreadcrumbItem(
+    view_name="dcim:device_detail",
+    reverse_kwargs=lambda ctx: {"pk": ctx["object"].pk},
+    label=lambda ctx: f"Device: {ctx['object'].name}",
 )
 ```
 
-#### Mode 2: Model-Based
+[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.ViewNameBreadcrumbItem)
+
+#### `ModelBreadcrumbItem` Class
 
 ```python
-# List view for a model
-device_list = BreadcrumbItem(
-    model=Device,  # Can use model class
-    model_label_type="plural"  # "Devices"
+# Basic model breadcrumb (uses plural verbose_name)
+item = ModelBreadcrumbItem(model=Device)
+# Will generate: ("/dcim/devices/", "Devices")
+
+# Singular form
+item = ModelBreadcrumbItem(
+    model=Device,
+    model_label_type="singular",
+)
+# Will generate: ("/dcim/devices/", "Device")
+
+# Different URL action
+item = ModelBreadcrumbItem(
+    model=Device,
+    model_url_action="add",
+)
+# Will generate: ("/dcim/devices/add/", "Devices")
+
+item = ModelKeyBreadcrumbItem(
+    model_key="parent_model",
+    model_label_type="singular",
+)
+# Will generate: ("/dcim/devices/", "Device") - assuming that "parent model" is Device
+
+# Using dotted model path
+item = ModelBreadcrumbItem(model="dcim.device")
+# Will generate: ("/dcim/devices/", "Devices")
+```
+
+[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.ModelBreadcrumbItem)
+
+#### `InstanceBreadcrumbItem` Class
+
+```python
+# Basic usage - looks for instance in context["object"]
+item = InstanceBreadcrumbItem()
+# Uses default instance_key="object"
+
+# Custom context key
+item = InstanceBreadcrumbItem(instance_key="device")
+
+# Custom label
+item = InstanceBreadcrumbItem(
+    instance_key="object",
+    label="Current Item"
 )
 
-# Or use dotted path
-device_list = BreadcrumbItem(
-    model="dcim.device",
-    model_label_type="singular"  # "Device"
-)
-
-# From context
-dynamic_model = BreadcrumbItem(
-    model_key="content_type",  # Get model from context
-    model_url_action="list"
+# Dynamic label from context
+item = InstanceBreadcrumbItem(
+    label=lambda ctx: f"Editing {ctx['object'].name}"
 )
 ```
 
-#### Mode 3: Instance-Based
-
-```python
-# Link to specific object (default: context['object'])
-current_object = BreadcrumbItem(
-    instance_key="object"  # Gets URL and label from object
-)
-
-# Custom instance key
-parent_object = BreadcrumbItem(
-    instance_key="parent_device",
-    label="Parent"  # Optional label override
-)
-```
+[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.InstanceBreadcrumbItem)
 
 ### Customizing Breadcrumbs
 
-By default `Breadcrumbs` class uses two actions: `list` and `detail`. However you can specify your custom action,
+By default `Breadcrumbs` class uses two actions: `list` and `detail`. However, you can specify your custom action,
 or just pass to the items one built-in action to override default only for the chosen view actions.
 
 If there is no `view_action` in context it will use `list` by default.
 
 If there is no `detail` in context it will assume `False` by default.
+
+[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.Breadcrumbs)
 
 #### Example 1: Simple Override
 
@@ -698,9 +747,9 @@ If there is no `detail` in context it will assume `False` by default.
 custom_breadcrumbs = Breadcrumbs(
     items={
         'create': [
-            BreadcrumbItem(viewname_str="home", label="Home"),
-            BreadcrumbItem(model_key="model"),
-            BreadcrumbItem(label="Add New")  # Static text, no link
+            ViewNameBreadcrumbItem(view_name="home", label="Home"),
+            ModelBreadcrumbItem(model_key="model"),
+            ModelBreadcrumbItem(model_key="model", action="add", label="Add New")
         ]
     }
 )
@@ -713,10 +762,10 @@ custom_breadcrumbs = Breadcrumbs(
 org_aware_breadcrumbs = Breadcrumbs(
     prepend_items={
         'list': [
-            BreadcrumbItem(viewname_str="org:dashboard", label="Org Dashboard")
+            ViewNameBreadcrumbItem(viewname_str="org:dashboard", label="Org Dashboard")
         ],
         'detail': [
-            BreadcrumbItem(viewname_str="org:dashboard", label="Org Dashboard")
+            ViewNameBreadcrumbItem(viewname_str="org:dashboard", label="Org Dashboard")
         ]
     }
 )
@@ -729,13 +778,13 @@ org_aware_breadcrumbs = Breadcrumbs(
 nested_breadcrumbs = Breadcrumbs(
     items={
         'retrieve': [
-            BreadcrumbItem(model="dcim.site", model_label_type="plural"),
-            BreadcrumbItem(
+            ModelBreadcrumbItem(model="dcim.site", model_label_type="plural"),
+            InstanceBreadcrumbItem(
                 instance_key="object.site",
                 label=lambda ctx: f"Site: {ctx['object'].site.name}"
             ),
-            BreadcrumbItem(model="dcim.device", model_label_type="plural"),
-            BreadcrumbItem(instance_key="object")
+            ModelBreadcrumbItem(model="dcim.device", model_label_type="plural"),
+            InstanceBreadcrumbItem()
         ]
     }
 )

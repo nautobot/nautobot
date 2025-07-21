@@ -7,7 +7,13 @@ from unittest.mock import patch
 from django.template import Context
 
 from nautobot.core.testing import TestCase
-from nautobot.core.ui.breadcrumbs import BreadcrumbItem, Breadcrumbs, DEFAULT_BREADCRUMBS
+from nautobot.core.ui.breadcrumbs import (
+    Breadcrumbs,
+    DEFAULT_BREADCRUMBS,
+    InstanceBreadcrumbItem,
+    ModelBreadcrumbItem,
+    ViewNameBreadcrumbItem,
+)
 from nautobot.dcim.models import Device, LocationType
 
 
@@ -21,7 +27,7 @@ class BreadcrumbItemTestCase(TestCase):
 
     def test_view_name_mode(self):
         """Test breadcrumb item with view_name mode."""
-        item = BreadcrumbItem(view_name="home", label="Home")
+        item = ViewNameBreadcrumbItem(view_name="home", label="Home")
         context = Context({})
 
         url, label = item.as_pair(context)
@@ -31,7 +37,7 @@ class BreadcrumbItemTestCase(TestCase):
 
     def test_view_name_mode_with_kwargs_and_query_params(self):
         """Test breadcrumb item in view_name mode and kwargs."""
-        item = BreadcrumbItem(
+        item = ViewNameBreadcrumbItem(
             view_name="dcim:locationtype",
             reverse_kwargs={"pk": self.location_type.pk},
             reverse_query_params={"name": "test"},
@@ -67,7 +73,7 @@ class BreadcrumbItemTestCase(TestCase):
             },
             {
                 "name": "model_class_custom_url_action",
-                "kwargs": {"model": Device, "model_url_action": "add", "model_label_type": "singular"},
+                "kwargs": {"model": Device, "action": "add", "label_type": "singular"},
                 "expected_url": "/dcim/devices/add/",
                 "expected_label": "Device",
             },
@@ -75,8 +81,8 @@ class BreadcrumbItemTestCase(TestCase):
                 "name": "model_class_with_kwargs",
                 "kwargs": {
                     "model": Device,
-                    "model_url_action": "",
-                    "model_label_type": "singular",
+                    "action": "",
+                    "label_type": "singular",
                     "reverse_kwargs": {"pk": "947a8a80-9e62-5605-ab18-7a47c588f0ad"},
                 },
                 "expected_url": "/dcim/devices/947a8a80-9e62-5605-ab18-7a47c588f0ad/",
@@ -91,7 +97,7 @@ class BreadcrumbItemTestCase(TestCase):
         ]
         for test_case in test_cases:
             with self.subTest(action=test_case["name"]):
-                item = BreadcrumbItem(**test_case["kwargs"])
+                item = ModelBreadcrumbItem(**test_case["kwargs"])
                 context = Context({})
 
                 url, label = item.as_pair(context)
@@ -101,7 +107,7 @@ class BreadcrumbItemTestCase(TestCase):
 
     def test_model_mode_from_context(self):
         """Test breadcrumb item with model from context."""
-        item = BreadcrumbItem(model_key="location_type")
+        item = ModelBreadcrumbItem(model_key="location_type")
         context = Context({"location_type": self.location_type})
 
         url, label = item.as_pair(context)
@@ -111,7 +117,7 @@ class BreadcrumbItemTestCase(TestCase):
 
     def test_instance_mode(self):
         """Test breadcrumb item with instance from context."""
-        item = BreadcrumbItem(instance_key="object")
+        item = InstanceBreadcrumbItem(instance_key="object")
         context = Context({"object": self.location_type})
 
         url, label = item.as_pair(context)
@@ -121,15 +127,22 @@ class BreadcrumbItemTestCase(TestCase):
 
     def test_label_override(self):
         """Test that explicit label overrides automatic label generation."""
-        item = BreadcrumbItem(model=Device, label="Custom Label")
-        context = Context({})
+        items = [
+            ViewNameBreadcrumbItem(view_name="dcim:locationtype", label="Custom Label"),
+            ModelBreadcrumbItem(model=LocationType, label="Custom Label"),
+            InstanceBreadcrumbItem(label="Custom Label"),
+        ]
 
-        _, label = item.as_pair(context)
-        self.assertEqual(label, "Custom Label")
+        context = Context({"object": self.location_type})
+
+        for item in items:
+            with self.subTest():
+                _, label = item.as_pair(context)
+                self.assertEqual(label, "Custom Label")
 
     def test_no_reverse_match(self):
         """Test handling of NoReverseMatch exception."""
-        item = BreadcrumbItem(view_name="nonexistent")
+        item = ViewNameBreadcrumbItem(view_name="nonexistent")
         context = Context({})
 
         url, label = item.as_pair(context)
@@ -139,9 +152,14 @@ class BreadcrumbItemTestCase(TestCase):
 
     def test_empty_context_keys(self):
         """Test breadcrumb item when context keys are missing."""
-        item = BreadcrumbItem(instance_key="missing_key")
         context = Context({})
+        item = InstanceBreadcrumbItem(instance_key="missing_key")
 
+        url, label = item.as_pair(context)
+        self.assertEqual(url, "")
+        self.assertEqual(label, "")
+
+        item = ModelBreadcrumbItem(model_key="missing_key")
         url, label = item.as_pair(context)
         self.assertEqual(url, "")
         self.assertEqual(label, "")
@@ -168,9 +186,9 @@ class BreadcrumbsTestCase(TestCase):
 
     def test_custom_items(self):
         """Test Breadcrumbs with custom items."""
-        custom_list_item = BreadcrumbItem(view_name="home", label="Home")
+        custom_list_item = ViewNameBreadcrumbItem(view_name="home", label="Home")
         custom_items = {
-            "list": [BreadcrumbItem(view_name="home", label="Home")],
+            "list": [ViewNameBreadcrumbItem(view_name="home", label="Home")],
         }
         breadcrumbs = Breadcrumbs(items=custom_items)
 
@@ -182,8 +200,8 @@ class BreadcrumbsTestCase(TestCase):
 
     def test_prepend_append_items(self):
         """Test prepend and append functionality."""
-        prepend = {"list": [BreadcrumbItem(view_name="home", label="Home")]}
-        append = {"list": [BreadcrumbItem(label="End")]}
+        prepend = {"list": [ViewNameBreadcrumbItem(view_name="home", label="Home")]}
+        append = {"list": [ViewNameBreadcrumbItem(view_name="", label="End")]}
         expected_items = [
             ("/", "Home"),
             ("/dcim/location-types/", "Location Types"),
@@ -202,7 +220,10 @@ class BreadcrumbsTestCase(TestCase):
 
     def test_get_items_from_action_static_method(self):
         """Test the _get_items_from_action static method."""
-        test_items = {"list": [BreadcrumbItem(label="List Item")], "detail": [BreadcrumbItem(label="Detail Item")]}
+        test_items = {
+            "list": [ViewNameBreadcrumbItem(view_name="", label="List Item")],
+            "detail": [ViewNameBreadcrumbItem(view_name="", label="Detail Item")],
+        }
 
         # Test specific action found
         result = Breadcrumbs.get_items_for_action(test_items, "list", False)
@@ -221,7 +242,9 @@ class BreadcrumbsTestCase(TestCase):
 
     def test_detail_fallback_behavior(self):
         """Test that detail fallback works correctly in get_breadcrumbs_items."""
-        custom_items = {"detail": [BreadcrumbItem(model_key="model"), BreadcrumbItem(instance_key="object")]}
+        custom_items = {
+            "detail": [ModelBreadcrumbItem(model_key="model"), InstanceBreadcrumbItem(instance_key="object")]
+        }
         breadcrumbs = Breadcrumbs(items=custom_items)
         expected_items = [
             ("/dcim/location-types/", "Location Types"),
@@ -278,7 +301,7 @@ class BreadcrumbsTestCase(TestCase):
         breadcrumbs2 = Breadcrumbs()
 
         # Modify the first instance
-        breadcrumbs1.items["list"] = [BreadcrumbItem(label="Modified")]
+        breadcrumbs1.items["list"] = [ViewNameBreadcrumbItem(view_name="", label="Modified")]
 
         # Second instance should not be affected
         self.assertNotEqual(breadcrumbs1.items["list"], breadcrumbs2.items["list"])

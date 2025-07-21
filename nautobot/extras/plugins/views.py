@@ -16,7 +16,7 @@ import yaml
 
 from nautobot.core.api.views import AuthenticatedAPIRootView, NautobotAPIVersionMixin
 from nautobot.core.forms import TableConfigForm
-from nautobot.core.ui.breadcrumbs import BreadcrumbItem, Breadcrumbs
+from nautobot.core.ui.breadcrumbs import Breadcrumbs, ViewNameBreadcrumbItem
 from nautobot.core.views.generic import GenericView
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.plugins.tables import InstalledAppsTable
@@ -230,7 +230,7 @@ class MarketplaceView(GenericView):
     """
 
     breadcrumbs = Breadcrumbs(
-        items={"main": [BreadcrumbItem(view_name="apps:apps_marketplace", label="Apps Marketplace")]}
+        items={"main": [ViewNameBreadcrumbItem(view_name="apps:apps_marketplace", label="Apps Marketplace")]}
     )
 
     def get(self, request):
