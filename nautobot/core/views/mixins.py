@@ -1391,121 +1391,58 @@ class ObjectNotesViewMixin(NautobotViewSetMixin):
 
 
 class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
-    """
-    UI mixin to create a model instance.
-    """
-
-    def extra_message_context(self, obj):
-        """
-        Context variables for this extra message.
-        """
-        return {}
-
-    def extra_message(self, **kwargs):
-        """
-        Append extra message at the end of create or update success message.
-        """
-        return ""
-
-    def _process_create_or_update_form(self, form):
-        """
-        Helper method to create or update an object after the form is validated successfully.
-        Handles:
-        - Saving the object
-        - Logging the event
-        - Displaying a success message
-        - Redirecting to the appropriate URL
-        """
-        request = self.request
-        queryset = self.get_queryset()
-
-        with transaction.atomic():
-            object_created = not form.instance.present_in_database  # Check if it's a new object
-            obj = self.form_save(form)  # Save the form and return the saved object
-
-            # Check that the new object conforms with any assigned object-level permissions
-            queryset.get(pk=obj.pk)
-
-            msg = f'{"Created" if object_created else "Modified"} {queryset.model._meta.verbose_name}'
-            self.logger.info(f"{msg} {obj} (PK: {obj.pk})")
-            try:
-                # Build a formatted HTML message with a link to the object
-                msg = format_html(
-                    '{} <a href="{}">{}</a>' + self.extra_message(**self.extra_message_context(obj)),
-                    msg,
-                    obj.get_absolute_url(),
-                    obj,
-                )
-            except AttributeError:
-                # Fallback if the object doesn't have `get_absolute_url`
-                msg = format_html("{} {}" + self.extra_message(**self.extra_message_context(obj)), msg, obj)
-            messages.success(request, msg)
-
-            # If the user clicked "Create and Add more"
-            if "_addanother" in request.POST:
-                # If the object has clone_fields, pre-populate a new instance of the form
-                if hasattr(obj, "clone_fields"):
-                    # Pre-populate a new form with cloned values
-                    url = f"{request.path}?{prepare_cloned_fields(obj)}"
-                    self.success_url = url
-                self.success_url = request.get_full_path()
-            else:
-                # Redirect to return_url
-                return_url = form.cleaned_data.get("return_url")
-                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
-                    self.success_url = iri_to_uri(return_url)
-                else:
-                    self.success_url = self.get_return_url(request, obj)
-
     def create(self, request, *args, **kwargs):
-        """
-        request.GET: render the ObjectForm which is passed to NautobotHTMLRenderer as Response.
-        request.POST: call perform_create() which validates the form and perform the action of create.
-        Override to add more variables to Response.
-        """
-        context = {}
         if request.method == "POST":
             return self.perform_create(request, *args, **kwargs)
-        return Response(context)
 
-    def perform_create(self, request, *args, **kwargs):  # pylint: disable=arguments-differ
-        """
-        Function to validate the ObjectForm and to create a new object.
-        """
-        self.obj = self.get_object()
-        form_class = self.get_form_class()
-        form = form_class(
-            data=request.POST,
-            files=request.FILES,
-            initial=normalize_querydict(request.GET, form_class=form_class),
-            instance=self.obj,
+        create_form = self.create_form_class(initial=request.GET)
+        model_form = self.form_class(request.GET)
+
+        return Response(
+            {
+                "template": self.create_template_name,
+                "component_type": self.queryset.model._meta.verbose_name,
+                "model_form": model_form,
+                "form": create_form,
+                "return_url": self.get_return_url(request),
+            },
         )
 
-        if not form.is_valid():
-            return self.form_invalid(form)
-
-        # Support for bulk creation using name_pattern and label_pattern
-        names = form.cleaned_data.get("name_pattern") or []
-        labels = form.cleaned_data.get("label_pattern") or []
-
-        if names:
-            # Create multiple objects based on the name_pattern
+    def perform_create(self, request, *args, **kwargs):
+        create_form = self.create_form_class(
+            request.POST,
+            initial=normalize_querydict(request.GET, form_class=self.create_form_class),
+        )
+        model_form = self.form_class(
+            request.POST,
+            initial=normalize_querydict(request.GET, form_class=self.form_class),
+        )
+        if create_form.is_valid():
+            new_components = []
             data = deepcopy(request.POST)
-            for i, name in enumerate(names):
-                data["name"] = name
-                data["label"] = labels[i] if labels else None
 
-                if hasattr(form, "get_iterative_data"):
-                    data.update(form.get_iterative_data(i))
-                # Recreate the form for each iteration with updated data
-                form = form_class(
-                    data=data,
-                    files=request.FILES,
-                    initial=normalize_querydict(request.GET, form_class=form_class),
-                    instance=self.obj,
+            # Support for bulk creation using name_pattern and label_pattern
+            names = create_form.cleaned_data["name_pattern"]
+            labels = create_form.cleaned_data.get("label_pattern")
+
+            # Create multiple objects based on the name_pattern
+            for i, name in enumerate(names):
+                label = labels[i] if labels else None
+                # Initialize the individual component form
+                data["name"] = name
+                data["label"] = label
+                if hasattr(create_form, "get_iterative_data"):
+                    data.update(create_form.get_iterative_data(i))
+
+                 # Recreate the form for each iteration with updated data
+                component_form = self.form_class(
+                    data,
+                    initial=normalize_querydict(request.GET, form_class=self.form_class),
                 )
-                if not form.is_valid():
-                    for field, errors in form.errors.as_data().items():
+                if component_form.is_valid():
+                    new_components.append(component_form)
+                else:
+                    for field, errors in component_form.errors.as_data().items():
                         # Assign errors on the child form's name/label field to name_pattern/label_pattern on the parent form
                         if field == "name":
                             field = "name_pattern"
@@ -1513,8 +1450,40 @@ class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
                             field = "label_pattern"
                         for e in errors:
                             err_str = ", ".join(e)
-                        form.add_error(field, f"{name}: {err_str}")
-            # Restrict all form fields which reference a RestrictedQuerySet. This ensures that users see only permitted objects as available choices
-        restrict_form_fields(form, request.user)
-        # Handle and process the valid form based on the current action
-        return self.form_valid(form)
+                            create_form.add_error(field, f"{name}: {err_str}")
+
+            if not create_form.errors:
+                try:
+                    with transaction.atomic():
+                        # Create the new components
+                        new_objs = []
+                        for component_form in new_components:
+                            obj = component_form.save()
+                            new_objs.append(obj)
+
+                        # Enforce object-level permissions
+                        if self.get_queryset().filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):
+                            raise ObjectDoesNotExist
+
+                    messages.success(
+                        request,
+                        f"Added {len(new_components)} {self.queryset.model._meta.verbose_name_plural}",
+                    )
+                    if "_addanother" in request.POST:
+                        return redirect(request.get_full_path())
+                    else:
+                        return redirect(self.get_return_url(request))
+
+                except ObjectDoesNotExist:
+                    msg = "Component creation failed due to object-level permissions violation"
+                    create_form.add_error(None, msg)
+
+        return Response(
+            {
+                "template": self.create_template_name,
+                "component_type": self.queryset.model._meta.verbose_name,
+                "form": create_form,
+                "model_form": model_form,
+                "return_url": self.get_return_url(request),
+            },
+        )
