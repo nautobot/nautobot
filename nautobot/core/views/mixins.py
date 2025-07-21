@@ -1408,7 +1408,8 @@ class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
             },
         )
 
-    def perform_create(self, request):
+    # TODO: this conflicts with DRF's CreateModelMixin.perform_create(self, serializer) API
+    def perform_create(self, request, *args, **kwargs):  # pylint: disable=arguments-differ
         create_form = self.create_form_class(
             request.POST,
             initial=normalize_querydict(request.GET, form_class=self.create_form_class),
