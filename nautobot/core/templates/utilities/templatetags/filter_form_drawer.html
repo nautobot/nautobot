@@ -137,7 +137,7 @@
                     const value =
                         field?.tagName === 'SELECT' && field?.getAttribute('multiple') !== null
                             ? [...field.selectedOptions].map((option) => ({ text: option.innerText, value: option.value }))
-                            : { text: field?.value, value: field?.value };
+                            : [...(field?.value ? [{ text: field.value, value: field.value }] : [])];
 
                     manageDynamicFilter({ action: 'set', name, text, value });
                 };
@@ -272,7 +272,7 @@
                 };
 
                 document.addEventListener('click', (event) => {
-                    const { dynamicFilterForm } = getFilterForms();
+                    const { defaultFilterForm, dynamicFilterForm } = getFilterForms();
 
                     const add = event.target.closest('button.nb-dynamic-filter-add');
                     if (add) {
@@ -292,13 +292,19 @@
                         const name = type.selectedOptions[0].value;
                         const label = field.selectedOptions[0].innerText.trim();
                         const suffix = type.selectedOptions[0].innerText.trim();
-                        const text = suffix !== 'exact' ? `${label} ${suffix}` : label;
+                        const text = /\(\w+\)/.test(suffix) ? `${label} ${suffix}` : label;
                         const values =
                             value?.getAttribute('multiple') !== null
                                 ? [...value.selectedOptions].map((option) => ({ text: option.innerText.trim(), value: option.value }))
                                 : [{ text: value?.value, value: value?.value }];
 
-                        manageDynamicFilter({ action: 'add', name, text, value: values });
+                        // If field exists in default filter form and is a single value input, use `'set'` action.
+                        const action =
+                            defaultFilterForm.querySelector(`[name="${name}"]`) &&
+                            (value.tagName === 'INPUT' || value.tagName === 'TEXTAREA')
+                                ? 'set'
+                                : 'add';
+                        manageDynamicFilter({ action, name, text, value: values });
 
                         syncDynamicToDefault(name);
                     }
@@ -421,8 +427,8 @@
                         const { defaultFilterForm, dynamicFilterForm } = getFilterForms();
 
                         // Remove all field names which are not applied filters container descendants.
-                        [...dynamicFilterForm.querySelectorAll('input, select, textarea')].forEach(
-                            (field) => field.closest('.nb-dynamic-filter-items') ? undefined: field.removeAttribute('name'),
+                        [...dynamicFilterForm.querySelectorAll('input, select, textarea')].forEach((field) =>
+                            field.closest('.nb-dynamic-filter-items') ? undefined : field.removeAttribute('name'),
                         );
 
                         // Append search (`'q'`) field to dynamic filter form as hidden input.
