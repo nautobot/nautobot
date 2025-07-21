@@ -1,0 +1,1 @@
+Fixed worker-status page failing with a KeyError.

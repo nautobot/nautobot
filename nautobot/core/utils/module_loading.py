@@ -1,6 +1,7 @@
 from contextlib import contextmanager
 import importlib
 from importlib.util import find_spec, module_from_spec
+from keyword import iskeyword
 import logging
 import os
 import pkgutil
@@ -31,6 +32,28 @@ def clear_module_from_sys_modules(module_name):
     for name in list(sys.modules.keys()):
         if name == module_name or name.startswith(f"{module_name}."):
             del sys.modules[name]
+
+
+def check_name_safe_to_import_privately(name: str) -> tuple[bool, str]:
+    """
+    Make sure the given package/module name is "safe" to import from the filesystem.
+
+    In other words, make sure it's:
+    - a valid Python identifier and not a reserved keyword
+    - not the name of an existing "real" Python package or builtin
+
+    Returns:
+        (bool, str): Whether safe to load, and an explanatory string fragment for logging/exception messages.
+    """
+    if not name.isidentifier():
+        return False, "not a valid identifier"
+    if iskeyword(name):
+        return False, "a reserved keyword"
+    if name in sys.builtin_module_names:
+        return False, "a Python builtin"
+    if any(module_info.name == name for module_info in pkgutil.iter_modules()):
+        return False, "the name of an installed Python package"
+    return True, "a valid and non-conflicting module name"
 
 
 def import_modules_privately(path, module_path=None, ignore_import_errors=True):

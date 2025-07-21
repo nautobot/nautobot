@@ -96,12 +96,11 @@ class BulkEditObjects(Job):
                         model_field = None
 
                     # Handle nullification
-                    if nullified_fields:
-                        if field_name in form.nullable_fields and field_name in nullified_fields:
-                            if isinstance(model_field, ManyToManyField):
-                                getattr(obj, field_name).set([])
-                            else:
-                                setattr(obj, field_name, None if model_field is not None and model_field.null else "")
+                    if nullified_fields and field_name in nullified_fields and field_name in form.nullable_fields:
+                        if isinstance(model_field, ManyToManyField):
+                            getattr(obj, field_name).set([])
+                        else:
+                            setattr(obj, field_name, None if model_field is not None and model_field.null else "")
 
                     # ManyToManyFields
                     elif isinstance(model_field, ManyToManyField):
@@ -109,7 +108,8 @@ class BulkEditObjects(Job):
                             getattr(obj, field_name).set(form.cleaned_data[field_name])
                     # Normal fields
                     elif form.cleaned_data[field_name] not in (None, "", []):
-                        setattr(obj, field_name, form.cleaned_data[field_name])
+                        if hasattr(obj, field_name):
+                            setattr(obj, field_name, form.cleaned_data[field_name])
 
                 # Update custom fields
                 for field_name in form_custom_fields:
@@ -121,7 +121,7 @@ class BulkEditObjects(Job):
                 obj.full_clean()
                 obj.save()
                 updated_objects_pk.append(obj.pk)
-                form.post_save(obj)
+                form.post_save(obj)  # handles M2M add_* and remove_* form fields
 
                 if hasattr(form, "save_relationships") and callable(form.save_relationships):
                     # Add/remove relationship associations
