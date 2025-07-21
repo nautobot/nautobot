@@ -531,7 +531,7 @@ class ObjectAssignContactOrTeamView(generic.ObjectEditView):
 
 
 class CustomFieldUIViewSet(NautobotUIViewSet):
-    bulk_update_form_class = forms.CustomFieldBulkUpdateForm
+    bulk_update_form_class = forms.CustomFieldBulkEditForm
     queryset = CustomField.objects.all()
     serializer_class = serializers.CustomFieldSerializer
     filterset_class = filters.CustomFieldFilterSet

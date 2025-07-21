@@ -135,7 +135,7 @@ __all__ = (
     "ConfigContextSchemaForm",
     "CustomFieldBulkCreateForm",  # 2.0 TODO remove this deprecated class
     "CustomFieldBulkDeleteForm",
-    "CustomFieldBulkUpdateForm",
+    "CustomFieldBulkEditForm",
     "CustomFieldChoiceFormSet",
     "CustomFieldFilterForm",
     "CustomFieldForm",
@@ -466,8 +466,7 @@ class CustomFieldDescriptionField(CommentField):
         return "Also used as the help text when editing models using this custom field.<br>" + super().default_helptext
 
 
-class CustomFieldBulkUpdateForm(BootstrapMixin, NoteModelBulkEditFormMixin):
-    # Renamed to BulkUpdateForm to avoid conflict with existing BulkEditForm and preserve its functionality.
+class CustomFieldBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin):
     pk = forms.ModelMultipleChoiceField(queryset=CustomField.objects.all(), widget=forms.MultipleHiddenInput)
     grouping = forms.CharField(
         required=False,
