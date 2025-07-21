@@ -307,7 +307,7 @@ As seen in [Fill out Repository Details](#fill-out-repository-details), the stan
 - Intended Configs
 - Jinja Templates
 
-For more information for the Golden Configuration specific data sources, navigate to [Nautobot Golden Config Repo](https://github.com/nautobot/nautobot-app-golden-config/blob/develop/docs/navigating-golden.md#git-settings).
+For more information for the Golden Configuration specific data sources, navigate to [Nautobot Golden Config Docs](https://docs.nautobot.com/projects/golden-config/en/stable/user/app_use_cases/#git-settings).
 
 ## Common Issues and Troubleshooting
 

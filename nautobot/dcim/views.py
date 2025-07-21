@@ -64,6 +64,7 @@ from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
 from nautobot.extras.tables import ImageAttachmentTable
+from nautobot.extras.tables import DynamicGroupTable
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable, VRFTable
@@ -1853,7 +1854,39 @@ class DeviceView(generic.ObjectView):
         "tenant__tenant_group",
     ).prefetch_related("images", "software_image_files")
 
-    object_detail_content = object_detail.ObjectDetailContent(
+    class DeviceDetailContent(object_detail.ObjectDetailContent):
+        """
+        Override base ObjectDetailContent to render dynamic-groups table as a separate view/tab instead of inline.
+        """
+
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            # Remove inline tab definition
+            for tab in list(self._tabs):
+                if isinstance(tab, object_detail._ObjectDetailGroupsTab):
+                    self._tabs.remove(tab)
+            # Add distinct-view tab definition
+            self._tabs.append(
+                object_detail.DistinctViewTab(
+                    weight=object_detail.Tab.WEIGHT_GROUPS_TAB,
+                    tab_id="dynamic_groups",
+                    label="Dynamic Groups",
+                    url_name="dcim:device_dynamicgroups",
+                    related_object_attribute="dynamic_groups",
+                    panels=(
+                        object_detail.ObjectsTablePanel(
+                            weight=100,
+                            table_class=DynamicGroupTable,
+                            table_attribute="dynamic_groups",
+                            exclude_columns=["content_type"],
+                            add_button_route=None,
+                            related_field_name="member_id",
+                        ),
+                    ),
+                )
+            )
+
+    object_detail_content = DeviceDetailContent(
         extra_buttons=(
             object_detail.DropdownButton(
                 weight=100,
@@ -2340,7 +2373,7 @@ class DeviceChangeLogView(ObjectChangeLogView):
     base_template = "dcim/device/base.html"
 
 
-class DeviceDynamicGroupsView(ObjectDynamicGroupsView):  # 3.0 TODO: remove, deprecated in 2.3
+class DeviceDynamicGroupsView(ObjectDynamicGroupsView):
     base_template = "dcim/device/base.html"
 
 
