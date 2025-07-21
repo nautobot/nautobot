@@ -2431,33 +2431,19 @@ class ObjectMetadataUIViewSet(
 #
 
 
-class NoteView(generic.ObjectView):
+class NoteUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.NoteBulkEditForm
+    filterset_class = filters.NoteFilterSet
+    filterset_form_class = forms.NoteFilterForm
+    form_class = forms.NoteForm
     queryset = Note.objects.all()
-
-
-class NoteListView(generic.ObjectListView):
-    """
-    List Notes
-    """
-
-    queryset = Note.objects.all()
-    filterset = filters.NoteFilterSet
-    filterset_form = forms.NoteFilterForm
-    table = tables.NoteTable
-    action_buttons = ()
-
-
-class NoteEditView(generic.ObjectEditView):
-    queryset = Note.objects.all()
-    model_form = forms.NoteForm
+    serializer_class = serializers.NoteSerializer
+    table_class = tables.NoteTable
+    action_buttons = None
 
     def alter_obj(self, obj, request, url_args, url_kwargs):
         obj.user = request.user
         return obj
-
-
-class NoteDeleteView(generic.ObjectDeleteView):
-    queryset = Note.objects.all()
 
 
 class ObjectNotesView(generic.GenericView):

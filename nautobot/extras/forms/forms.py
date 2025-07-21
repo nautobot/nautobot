@@ -179,6 +179,7 @@ __all__ = (
     "MetadataTypeBulkEditForm",
     "MetadataTypeFilterForm",
     "MetadataTypeForm",
+    "NoteBulkEditForm",
     "NoteFilterForm",
     "NoteForm",
     "ObjectChangeFilterForm",
@@ -1823,6 +1824,16 @@ class NoteFilterForm(BootstrapMixin, forms.Form):
             api_url="/api/extras/content-types/",
         ),
     )
+
+
+class NoteBulkEditForm(NautobotBulkEditForm, BootstrapMixin):
+    pk = forms.ModelMultipleChoiceField(queryset=Note.objects.all(), widget=forms.MultipleHiddenInput)
+    note = CommentField(required=False)
+
+    class Meta:
+        model = Note
+        fields = ["note"]
+        nullable_fields = ["note"]
 
 
 #
