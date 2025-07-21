@@ -945,10 +945,12 @@ class DynamicGroupBulkDeleteView(generic.BulkDeleteView):
     filterset = filters.DynamicGroupFilterSet
 
 
-# 3.0 TODO: remove, deprecated since 2.3 (#5845)
 class ObjectDynamicGroupsView(generic.GenericView):
     """
     Present a list of dynamic groups associated to a particular object.
+
+    Note that this isn't currently widely used, as most object detail views currently render the table inline
+    rather than using this separate view. This may change in the future.
 
     base_template: Specify to explicitly identify the base object detail template to render.
         If not provided, "<app>/<model>.html", "<app>/<model>_retrieve.html", or "generic/object_retrieve.html"
@@ -969,7 +971,6 @@ class ObjectDynamicGroupsView(generic.GenericView):
             data=obj.dynamic_groups.restrict(request.user, "view"), orderable=False
         )
         dynamicgroups_table.columns.hide("content_type")
-        dynamicgroups_table.columns.hide("members")
 
         # Apply the request context
         paginate = {
