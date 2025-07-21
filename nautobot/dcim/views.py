@@ -1337,6 +1337,8 @@ class ConsolePortTemplateUIViewSet(
     serializer_class = serializers.ConsolePortTemplateSerializer
     table_class = tables.ConsolePortTemplateTable
     queryset = ConsolePortTemplate.objects.all()
+    create_form_class = forms.ConsolePortTemplateCreateForm
+    create_template_name = "dcim/device_component_add.html"
 
 
 class ConsolePortTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
