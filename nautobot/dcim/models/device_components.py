@@ -2,6 +2,7 @@ import re
 
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models, transaction
@@ -123,7 +124,7 @@ class ModularComponentModel(ComponentModel):
 
     class Meta:
         abstract = True
-        ordering = ("device", "module", "_name")
+        ordering = ("device", "module__id", "_name")  # Module.ordering is complex/expensive so don't order by module
         constraints = [
             models.UniqueConstraint(
                 fields=("device", "name"),
@@ -646,7 +647,7 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
     )
 
     class Meta(ModularComponentModel.Meta):
-        ordering = ("device", "module", CollateAsChar("_name"))
+        ordering = ("device", "module__id", CollateAsChar("_name"))  # Module.ordering is complex; don't order by module
 
     def clean(self):
         super().clean()
@@ -1311,3 +1312,10 @@ class ModuleBay(PrimaryModel):
             self.position = self.name
 
     clean.alters_data = True
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
+        if self.parent_device is not None:
+            # Set the has_module_bays cache key on the parent device - see Device.has_module_bays()
+            cache.set(f"nautobot.dcim.device.{self.parent_device.pk}.has_module_bays", True, timeout=5)
