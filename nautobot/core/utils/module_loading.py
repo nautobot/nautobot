@@ -77,6 +77,8 @@ def import_modules_privately(path, module_path=None, ignore_import_errors=True):
         module_prefix = None
     else:
         module_prefix = ".".join(module_path)
+
+    loaded_modules = []
     with _temporarily_add_to_sys_path(path):
         for finder, discovered_module_name, is_package in pkgutil.walk_packages([path], onerror=logger.error):
             if module_prefix and not (
@@ -114,7 +116,10 @@ def import_modules_privately(path, module_path=None, ignore_import_errors=True):
                 else:
                     module = importlib.import_module(discovered_module_name)
                 importlib.reload(module)
+                loaded_modules.append(module)
             except Exception as exc:
                 logger.error("Unable to load module %s from %s: %s", discovered_module_name, path, exc)
                 if not ignore_import_errors:
                     raise
+
+    return loaded_modules
