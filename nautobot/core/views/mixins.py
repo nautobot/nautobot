@@ -1433,7 +1433,7 @@ class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
             },
         )
 
-    def perform_create(self, request, *args, **kwargs):
+    def perform_create(self, request):
         create_form = self.create_form_class(
             request.POST,
             initial=normalize_querydict(request.GET, form_class=self.create_form_class),
@@ -1459,7 +1459,7 @@ class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
                 if hasattr(create_form, "get_iterative_data"):
                     data.update(create_form.get_iterative_data(i))
 
-                 # Recreate the form for each iteration with updated data
+                # Recreate the form for each iteration with updated data
                 component_form = self.form_class(
                     data,
                     initial=normalize_querydict(request.GET, form_class=self.form_class),
