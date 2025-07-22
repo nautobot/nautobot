@@ -1416,12 +1416,15 @@ class ObjectNotesViewMixin(NautobotViewSetMixin):
 
 
 class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
+    create_form_class: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
+    form_class: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
+
     def create(self, request, *args, **kwargs):
         if request.method == "POST":
             return self.perform_create(request, *args, **kwargs)
 
-        create_form = self.create_form_class(initial=request.GET)
-        model_form = self.form_class(request.GET)
+        create_form = self.create_form_class(initial=request.GET)  # pylint: disable=not-callable
+        model_form = self.form_class(request.GET)  # pylint: disable=not-callable
 
         return Response(
             {
@@ -1435,11 +1438,11 @@ class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
 
     # TODO: this conflicts with DRF's CreateModelMixin.perform_create(self, serializer) API
     def perform_create(self, request, *args, **kwargs):  # pylint: disable=arguments-differ
-        create_form = self.create_form_class(
+        create_form = self.create_form_class(  # pylint: disable=not-callable
             request.POST,
             initial=normalize_querydict(request.GET, form_class=self.create_form_class),
         )
-        model_form = self.form_class(
+        model_form = self.form_class(  # pylint: disable=not-callable
             request.POST,
             initial=normalize_querydict(request.GET, form_class=self.form_class),
         )
@@ -1461,7 +1464,7 @@ class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
                     data.update(create_form.get_iterative_data(i))
 
                 # Recreate the form for each iteration with updated data
-                component_form = self.form_class(
+                component_form = self.form_class(  # pylint: disable=not-callable
                     data,
                     initial=normalize_querydict(request.GET, form_class=self.form_class),
                 )
