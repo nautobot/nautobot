@@ -120,7 +120,7 @@ netaddr = "~1.3.0"
 # Library of network related utilities including network driver mappings and Jinja Filters
 # Note: netutils is limited in scope, dependencies, and observes semver, as such
 #       we permit a looser (^) version constraint here.
-netutils = "^1.6.0"
+netutils = "^1.14.0"
 # HTML sanitization
 nh3 = "~0.2.21"
 # Handling of version numbers

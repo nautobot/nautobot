@@ -97,22 +97,6 @@ COMPATIBLE_TERMINATION_TYPES = {
 }
 
 #
-# Platforms
-#
-
-NETUTILS_NETWORK_DRIVER_MAPPING_NAMES = {
-    "ansible",
-    "hier_config",
-    "napalm",
-    "netmiko",
-    "netutils_parser",
-    "ntc_templates",
-    "pyats",
-    "pyntc",
-    "scrapli",
-}
-
-#
 # Modules
 #
 
