@@ -278,11 +278,6 @@ class CustomLocationFieldsPanel(object_detail.ObjectFieldsPanel):
                 return format_html("{}<span>{}</span>", helpers.render_map_button(f"{lat},{lon}"), value)
             return helpers.HTML_NONE
 
-        if key == "physical_address":
-            if value:
-                return format_html("{}<span>{}</span>", helpers.render_map_button(value), value.replace("\n", "<br>"))
-            return helpers.HTML_NONE
-
         return super().render_value(key, value, context)
 
 
@@ -295,6 +290,9 @@ class CustomContactInfoPanel(object_detail.ObjectFieldsPanel):
         if not request or not obj or not request.user.has_perms(["dcim.contact_association"]):
             return base_content
 
+        if not (obj.contact_name or obj.contact_phone or obj.contact_email):
+            return base_content
+
         return_url = f"{request.path}?tab=contacts"
         button_html = helpers.render_contact_team_button(
             f"{reverse('dcim:location_migrate_data_to_contact', kwargs={'pk': obj.pk})}?return_url={return_url}",
@@ -305,6 +303,7 @@ class CustomContactInfoPanel(object_detail.ObjectFieldsPanel):
         if "</div>" in base_content:
             parts = base_content.rsplit("</div>", 1)
             return format_html(f"{parts[0]}{button_html}</div>")
+
         return base_content
 
 
@@ -403,13 +402,16 @@ class LocationUIViewSet(NautobotUIViewSet):
                 },
             ),
             CustomLocationFieldsPanel(
-                weight=100,
+                weight=110,
                 section=SectionChoices.LEFT_HALF,
                 label="Geographical Info",
                 fields=["physical_address", "shipping_address"],
+                value_transforms={
+                    "physical_address": [helpers.render_address],
+                },
             ),
             CustomContactInfoPanel(
-                weight=100,
+                weight=120,
                 section=SectionChoices.LEFT_HALF,
                 label="Contact Info",
                 fields=["contact_name", "contact_phone", "contact_email"],
@@ -417,12 +419,6 @@ class LocationUIViewSet(NautobotUIViewSet):
                     "contact_phone": [helpers.hyperlinked_phone_number],
                     "contact_email": [helpers.hyperlinked_email],
                 },
-            ),
-            CustomRackGroupsPanel(
-                label="Rack Groups",
-                section=SectionChoices.RIGHT_HALF,
-                weight=200,
-                context_object_key="object",
             ),
             object_detail.StatsPanel(
                 weight=100,
@@ -432,11 +428,17 @@ class LocationUIViewSet(NautobotUIViewSet):
                 related_models=[
                     Rack,
                     Device,
-                    (Prefix, "location__in"),
-                    (VLAN, "locations__in"),
+                    Prefix,
+                    VLAN,
                     (Circuit, "circuit_terminations__location__in"),
                     (VirtualMachine, "cluster__location__in"),
                 ],
+            ),
+            CustomRackGroupsPanel(
+                label="Rack Groups",
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                context_object_key="object",
             ),
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.FULL_WIDTH,
