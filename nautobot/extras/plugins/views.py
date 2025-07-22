@@ -17,6 +17,7 @@ import yaml
 from nautobot.core.api.views import AuthenticatedAPIRootView, NautobotAPIVersionMixin
 from nautobot.core.forms import TableConfigForm
 from nautobot.core.ui.breadcrumbs import Breadcrumbs, ViewNameBreadcrumbItem
+from nautobot.core.ui.titles import Titles
 from nautobot.core.views.generic import GenericView
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.plugins.tables import InstalledAppsTable
@@ -85,6 +86,10 @@ class InstalledAppsView(GenericView):
     """
 
     table = InstalledAppsTable
+    breadcrumbs = Breadcrumbs(
+        items={"generic": [ViewNameBreadcrumbItem(view_name="apps:apps_list", label="Installed Apps")]}
+    )
+    generic_titles = Titles(titles={"generic": "Installed Apps"})
 
     def get(self, request):
         marketplace_data = load_marketplace_data()
@@ -124,6 +129,9 @@ class InstalledAppsView(GenericView):
                 "filter_form": None,
                 "app_icons": app_icons,
                 "display": display,
+                "view_action": "generic",
+                "breadcrumbs": self.breadcrumbs,
+                "generic_titles": self.generic_titles,
             },
         )
 
@@ -230,8 +238,9 @@ class MarketplaceView(GenericView):
     """
 
     breadcrumbs = Breadcrumbs(
-        items={"main": [ViewNameBreadcrumbItem(view_name="apps:apps_marketplace", label="Apps Marketplace")]}
+        items={"generic": [ViewNameBreadcrumbItem(view_name="apps:apps_marketplace", label="Apps Marketplace")]}
     )
+    generic_titles = Titles(titles={"generic": "Apps Marketplace"})
 
     def get(self, request):
         marketplace_data = load_marketplace_data()
@@ -248,5 +257,5 @@ class MarketplaceView(GenericView):
         return render(
             request,
             "extras/marketplace.html",
-            {"apps": marketplace_data["apps"], "view_action": "main", "breadcrumbs": self.breadcrumbs},
+            {"apps": marketplace_data["apps"], "view_action": "generic", "breadcrumbs": self.breadcrumbs, "generic_titles": self.generic_titles},
         )
