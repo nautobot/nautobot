@@ -627,7 +627,17 @@ class DeviceView(generic.ObjectView):
 
 </div>
 
-## Breadcrumbs
+## Breadcrumbs and titles overview
+
+High-level data flow diagram:
+
+<!-- pyml disable-num-lines 5 no-inline-html -->
+<div class="grid cards example-images" markdown>
+
+- ![Breadcrumbs and titles data flow](../../media/development/core/ui-component-framework/breadcrumbs-titles-data-flow.png){ .on-glb }
+
+</div>
+
 
 ### BreadcrumbItem Configuration
 

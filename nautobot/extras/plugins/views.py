@@ -257,5 +257,10 @@ class MarketplaceView(GenericView):
         return render(
             request,
             "extras/marketplace.html",
-            {"apps": marketplace_data["apps"], "view_action": "generic", "breadcrumbs": self.breadcrumbs, "generic_titles": self.generic_titles},
+            {
+                "apps": marketplace_data["apps"],
+                "view_action": "generic",
+                "breadcrumbs": self.breadcrumbs,
+                "generic_titles": self.generic_titles,
+            },
         )
