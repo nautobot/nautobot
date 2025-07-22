@@ -99,6 +99,15 @@ class ExampleJob(Job):
 
 If you code a multi-line description, the first line only will be used in the description column of the Jobs list, while the full description will be rendered in the Job detail view, submission, approval, and results pages.
 
+### `approval_required`
+
+--- 3.0.0 "Field removed in favor of approval workflows"
+    The `approval_required` field was removed. Jobs no longer support approval requirements through this flag. For updated workflows and approval handling, [refer to the section on scheduling and approvals](../../user-guide/platform-functionality/jobs/job-scheduling-and-approvals.md#job-approvals).
+
+Default: `False`
+
+A boolean that will mark this Job as requiring approval from another user to be run. For more details on approvals, [please refer to the section on scheduling and approvals](../../user-guide/platform-functionality/jobs/job-scheduling-and-approvals.md).
+
 ### `dryrun_default`
 
 +/- 2.0.0 "Replacement for `commit_default`"

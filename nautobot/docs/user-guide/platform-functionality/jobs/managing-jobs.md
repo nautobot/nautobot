@@ -111,6 +111,10 @@ Use this procedure when permanently retiring a Job:
 - Existing **JobResults** and **ScheduledJobs** retain historical data but their foreign-key references to the Job become `NULL`.
 - Reinstalling the same Job does not automatically reconnect historical data.
 
+### Approval Workflow
+
+ScheduledJob can have approval workflow that requires additional user approval before each execution. To protect jobs that make massive production changes. For more information on approvals, [please refer to the section on scheduling and approvals](job-scheduling-and-approvals.md#job-approvals).
+
 ### Recommended deletion steps
 
 1. **Disable** the Job.
