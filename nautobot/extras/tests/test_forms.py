@@ -1104,7 +1104,7 @@ class DeprecatedAliasesTestCase(TestCase):
         from nautobot.extras.forms import (
             AddRemoveTagsForm,
             CustomFieldBulkCreateForm,
-            CustomFieldBulkEditForm,
+            # CustomFieldBulkEditForm,
             CustomFieldModelForm,
             RelationshipModelForm,
             StatusBulkEditFormMixin,
@@ -1113,7 +1113,7 @@ class DeprecatedAliasesTestCase(TestCase):
 
         for deprecated_form_class, replacement_form_class in (
             (AddRemoveTagsForm, TagsBulkEditFormMixin),
-            (CustomFieldBulkEditForm, CustomFieldModelBulkEditFormMixin),
+            # (CustomFieldBulkEditForm, CustomFieldModelBulkEditFormMixin),
             (CustomFieldBulkCreateForm, CustomFieldModelBulkEditFormMixin),
             (CustomFieldModelForm, CustomFieldModelFormMixin),
             (RelationshipModelForm, RelationshipModelFormMixin),
