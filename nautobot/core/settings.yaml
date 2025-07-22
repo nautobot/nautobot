@@ -1487,7 +1487,7 @@ properties:
       }
       ```
 
-      The default top-level keys consists of `ansible`, `hier_config`, `napalm`, etc, and comes from netutils, but 
+      The default top-level keys consists of `ansible`, `hier_config`, `napalm`, etc, and comes from netutils, but
       you can also add additional keys if you have an alternative network driver that you want your Nautobot instance
       to include.
     is_constance_config: true
