@@ -523,8 +523,6 @@ class CustomFieldBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin):
         nullable_fields = [
             "grouping",
             "description",
-            "filter_logic",
-            "weight",
         ]
 
 
