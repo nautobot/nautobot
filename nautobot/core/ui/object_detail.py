@@ -456,7 +456,7 @@ class DistinctViewTab(Tab):
             return format_html(
                 "{} {}",
                 self.label,
-                render_to_string("utilities/templatetags/badge.html", badge(related_obj_count)),
+                render_to_string("utilities/templatetags/badge.html", badge(related_obj_count, True)),
             )
         except AttributeError:
             logger.warning(
