@@ -300,14 +300,20 @@ class ObjectConfigContextView(generic.ObjectView):
 class ValidationObjectsTablePanel(object_detail.ObjectsTablePanel):
     def __init__(self, *, extra_columns=None, **kwargs):
         self.extra_columns = extra_columns or []
+
+        # Inject extra columns directly into the table_class.base_columns before initialization
+        table_class = kwargs.get("table_class")
+        if table_class:
+            for name, column in self.extra_columns:
+                # Add to base_columns only if not already present
+                if name not in table_class.base_columns:
+                    table_class.base_columns[name] = column
+
         super().__init__(**kwargs)
 
     def get_extra_context(self, context: Dict[str, Any]):
-        for name, column in self.extra_columns:
-            self.table_class.base_columns[name] = column
-
-        context_data = super().get_extra_context(context)
-        return context_data
+        # No need to mutate columns here anymore
+        return super().get_extra_context(context)
 
 
 class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
@@ -406,13 +412,33 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
                             add_button_route=None,
                             extra_columns=[
                                 (
+                                    "dynamic_group_count",
+                                    tables.LinkedCountColumn(
+                                        viewname="extras:dynamicgroup_list",
+                                        url_params={"member_id": "pk"},
+                                        verbose_name="Dynamic Groups",
+                                        reverse_lookup="static_group_associations__associated_object_id",
+                                    ),
+                                ),
+                                (
                                     "validation_state",
                                     tables.ConfigContextSchemaValidationStateColumn(
                                         validator, "local_config_context_data", empty_values=()
                                     ),
                                 ),
                             ],
-                            include_columns=["validation_state"],
+                            include_columns=[
+                                "name",
+                                "status",
+                                "cluster",
+                                "role",
+                                "tenant",
+                                "vcpus",
+                                "memory",
+                                "disk",
+                                "dynamic_group_count",
+                                "validation_state",
+                            ],
                         ),
                     ),
                 ),
