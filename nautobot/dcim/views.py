@@ -1669,7 +1669,6 @@ class PlatformUIViewSet(NautobotUIViewSet):
             context["network_driver_tool_names"] = instance.fetch_network_driver_mappings()
         if self.action in ["create", "update"]:
             context["network_driver_names"] = sorted(get_all_network_driver_mappings().keys())
-            print("network_driver_names", context["network_driver_names"])
         return context
 
 
