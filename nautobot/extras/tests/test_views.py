@@ -1305,7 +1305,6 @@ class NoteTestCase(
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
-    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = Note
 
@@ -1339,9 +1338,6 @@ class NoteTestCase(
             "note": "This is Location note.",
             "assigned_object_type": content_type.pk,
             "assigned_object_id": cls.location.pk,
-        }
-        cls.bulk_edit_data = {
-            "note": "Updated bulk note text.",
         }
         cls.expected_object_note = '<textarea name="object_note" cols="40" rows="10" class="form-control" placeholder="Note" id="id_object_note"></textarea>'
 

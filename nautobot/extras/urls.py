@@ -28,7 +28,6 @@ router.register("job-buttons", views.JobButtonUIViewSet)
 router.register("job-hooks", views.JobHookUIViewSet)
 router.register("job-queues", views.JobQueueUIViewSet)
 router.register("metadata-types", views.MetadataTypeUIViewSet)
-router.register("notes", views.NoteUIViewSet)
 router.register("object-metadata", views.ObjectMetadataUIViewSet)
 router.register("relationship-associations", views.RelationshipAssociationUIViewSet)
 router.register("relationships", views.RelationshipUIViewSet)
@@ -282,12 +281,17 @@ urlpatterns = [
         name="jobresult_delete",
     ),
     # Notes
+    path("notes/", views.NoteListView.as_view(), name="note_list"),
+    path("notes/add/", views.NoteEditView.as_view(), name="note_add"),
+    path("notes/<uuid:pk>/", views.NoteView.as_view(), name="note"),
     path(
         "notes/<uuid:pk>/changelog/",
         views.ObjectChangeLogView.as_view(),
         name="note_changelog",
         kwargs={"model": Note},
     ),
+    path("notes/<uuid:pk>/edit/", views.NoteEditView.as_view(), name="note_edit"),
+    path("notes/<uuid:pk>/delete/", views.NoteDeleteView.as_view(), name="note_delete"),
     # Custom relationships
     path(
         "relationships/<uuid:pk>/changelog/",
