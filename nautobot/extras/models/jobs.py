@@ -307,6 +307,10 @@ class Job(PrimaryModel):
     def description_first_line(self):
         return self.description.splitlines()[0]
 
+    @property
+    def runnable(self):
+        return self.enabled and self.installed
+
     @cached_property
     def git_repository(self):
         """GitRepository record, if any, that owns this Job."""
@@ -314,10 +318,6 @@ class Job(PrimaryModel):
             return GitRepository.objects.get(slug=self.module_name.split(".")[0])
         except GitRepository.DoesNotExist:
             return None
-
-    @property
-    def runnable(self):
-        return self.enabled and self.installed
 
     @property
     def job_task(self):
