@@ -1480,7 +1480,7 @@ body {
     &:hover {
       background-color: $navy-2;
 
-      > .sidenav-favorite {
+      > .nb-sidenav-favorite {
         @include fade-in;
       }
     }

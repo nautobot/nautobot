@@ -23,7 +23,7 @@
         {% if request.user.is_authenticated %}
             <li>
                 <button
-                    aria-controls="nb-sidenav-flyout-favorites"
+                    aria-controls="sidenav-flyout-favorites"
                     aria-expanded="false"
                     class="nb-sidenav-list-item"
                     type="button"
@@ -33,7 +33,7 @@
                     </svg>
                     <span>Favorites</span>
                 </button>
-                <div class="nb-sidenav-flyout" id="nb-sidenav-flyout-favorites" hx-swap-oob="true">
+                <div class="nb-sidenav-flyout" id="sidenav-flyout-favorites" hx-swap-oob="true">
                     {% include "inc/nav_favorites.html" %}
                 </div>
             </li>
@@ -44,7 +44,7 @@
                 {% for tab_name, tab_details in nav_menu.tabs.items %}
                     <li data-section-name="{{ tab_name }}">
                         <button
-                            aria-controls="nb-sidenav-flyout-{{ forloop.counter }}"
+                            aria-controls="sidenav-flyout-{{ forloop.counter }}"
                             aria-expanded="false"
                             class="nb-sidenav-list-item"
                             type="button"
