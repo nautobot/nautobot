@@ -1778,6 +1778,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         self.device.validated_save()
 
     def test_all_x_properties(self):
+        self.assertTrue(self.device.has_module_bays)
         self.assertEqual(self.device.all_modules.count(), 0)
         self.assertEqual(self.device.all_module_bays.count(), 1)
         self.assertEqual(self.device.all_console_server_ports.count(), 1)

@@ -166,6 +166,32 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.12 (2025-07-17)
+
+### Changed in v2.4.12
+
+- [#7194](https://github.com/nautobot/nautobot/issues/7194) - Moved `job_results` field from Job Panel to a separate `JobResults` table panel using ObjectsTablePanel from UI framework.
+
+### Fixed in v2.4.12
+
+- [#5056](https://github.com/nautobot/nautobot/issues/5056) - Fixed broken link pointing to Nautobot Golden Config Git Settings.
+- [#7143](https://github.com/nautobot/nautobot/issues/7143) - Fixed filtering on custom relationships for component models.
+- [#7547](https://github.com/nautobot/nautobot/issues/7547) - Fixed worker-status page failing with a KeyError.
+- [#7552](https://github.com/nautobot/nautobot/issues/7552) - Fixed formatting issue in rendering Config Context data.
+- [#7556](https://github.com/nautobot/nautobot/issues/7556) - Fixed Cloud, Devices, and Wireless NavMenuTabs all had the same weight of 200. Updated the Cloud weight to 150 and the Wireless weight to 250.
+- [#7558](https://github.com/nautobot/nautobot/issues/7558) - Improved logic in `LogsCleanup` system Job to avoid an infinite recursion possibility.
+- [#7559](https://github.com/nautobot/nautobot/issues/7559) - Reverted some of the changes introduced in v2.4.11 to Job loading from `JOBS_ROOT` and Git repositories, due to reports of regressions in behavior.
+
+### Housekeeping in v2.4.12
+
+- [#7194](https://github.com/nautobot/nautobot/issues/7194) - Refactored Jobs detail view to use `UI component framework`.
+- [#7194](https://github.com/nautobot/nautobot/issues/7194) - Added `jobs_ui.py` to `nautobot.extras.views` with classes: `JobRunScheduleButton`, `JobKeyValueOverrideValueTablePanel` and `JobObjectFieldsPanel`.
+- [#7217](https://github.com/nautobot/nautobot/issues/7217) - Refactored Controller model related UI views to use `UI component framework`.
+- [#7291](https://github.com/nautobot/nautobot/issues/7291) - Refactored VirtualChassis model related UI views to use `NautobotUIViewSet`.
+- [#7323](https://github.com/nautobot/nautobot/issues/7323) - Refactored CircuitTermination model related UI views to use `UI component framework`.
+- [#7490](https://github.com/nautobot/nautobot/issues/7490) - Refactored Tag model related UI views to use `UI component framework`.
+- [#7537](https://github.com/nautobot/nautobot/issues/7537) - Updated documentation dependency `mkdocs-material` to `~9.6.15`.
+
 ## v2.4.11 (2025-07-07)
 
 ### Security in v2.4.11

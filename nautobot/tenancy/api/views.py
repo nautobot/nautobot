@@ -5,7 +5,7 @@ from nautobot.extras.api.views import NautobotModelViewSet
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VRF
 from nautobot.tenancy import filters
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.virtualization.models import VirtualMachine
+from nautobot.virtualization.models import Cluster, VirtualMachine
 
 from . import serializers
 
@@ -28,6 +28,7 @@ class TenantGroupViewSet(NautobotModelViewSet):
 class TenantViewSet(NautobotModelViewSet):
     queryset = Tenant.objects.annotate(
         circuit_count=count_related(Circuit, "tenant"),
+        cluster_count=count_related(Cluster, "tenant"),
         device_count=count_related(Device, "tenant"),
         ipaddress_count=count_related(IPAddress, "tenant"),
         prefix_count=count_related(Prefix, "tenant"),
