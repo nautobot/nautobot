@@ -4,12 +4,12 @@
 
 {% block extra_styles %}
 <style>
-    .style-line {
+    .nb-style-line {
         overflow: hidden;
         text-align: center;
         margin-bottom: 20px;
     }
-    .style-line span {
+    .nb-style-line span {
         text-align: center;
         font-size: 15px;
         color: #acacac;
@@ -18,7 +18,7 @@
         padding: 0 25px;
         z-index: 1;
     }
-    .style-line span:before {
+    .nb-style-line span:before {
         display: inline-block;
         content: "";
         height: 2px;
@@ -32,7 +32,7 @@
         position: absolute;
         z-index: 1;
     }
-    .style-line span:after {
+    .nb-style-line span:after {
         display: inline-block;
         content: "";
         height: 2px;
@@ -82,7 +82,7 @@
             </div>
         </form>
         {% if SSO_AUTH_ENABLED %}
-        <div class="style-line">
+        <div class="nb-style-line">
             <span>Or</span>
         </div>
         <a href="{% url 'social:begin' backends.backends.0 %}?next={{ request.get_full_path | urlencode }}&{{ SAML_IDP }}" class="btn btn-primary btn-block">Continue with SSO</a>
