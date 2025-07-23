@@ -8,14 +8,14 @@
         aria-controls="sidenav"
         aria-expanded="true"
         aria-label="Collapse sidenav"
-        class="bg-warning btn btm-sm btn-warning overflow-hidden p-4 position-absolute sidenav-toggler"
+        class="bg-warning btn btm-sm btn-warning overflow-hidden p-4 position-absolute nb-sidenav-toggler"
         type="button"
     ></button>
 
-    <a class="sidenav-brand" href="{% url 'home' %}">
+    <a class="nb-sidenav-brand" href="{% url 'home' %}">
         <img src="{% custom_branding_or_static 'icon' 'img/nautobot_icon.svg' %}"/>
     </a>
-    <a class="position-absolute sidenav-brand" href="{% url 'home' %}">
+    <a class="position-absolute nb-sidenav-brand" href="{% url 'home' %}">
         <img src="{% custom_branding_or_static 'logo' 'img/nautobot_logo.svg' %}"/>
     </a>
 
@@ -23,9 +23,9 @@
         {% if request.user.is_authenticated %}
             <li>
                 <button
-                    aria-controls="sidenav-flyout-favorites"
+                    aria-controls="nb-sidenav-flyout-favorites"
                     aria-expanded="false"
-                    class="sidenav-list-item"
+                    class="nb-sidenav-list-item"
                     type="button"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -33,20 +33,20 @@
                     </svg>
                     <span>Favorites</span>
                 </button>
-                <div class="sidenav-flyout" id="sidenav-flyout-favorites" hx-swap-oob="true">
+                <div class="nb-sidenav-flyout" id="nb-sidenav-flyout-favorites" hx-swap-oob="true">
                     {% include "inc/nav_favorites.html" %}
                 </div>
             </li>
 
-            <li class="sidenav-list-divider"></li>
+            <li class="nb-sidenav-list-divider"></li>
 
             {% with request.user.navbar_favorites_link_list as navbar_favorites_link_list %}
                 {% for tab_name, tab_details in nav_menu.tabs.items %}
                     <li data-section-name="{{ tab_name }}">
                         <button
-                            aria-controls="sidenav-flyout-{{ forloop.counter }}"
+                            aria-controls="nb-sidenav-flyout-{{ forloop.counter }}"
                             aria-expanded="false"
-                            class="sidenav-list-item"
+                            class="nb-sidenav-list-item"
                             type="button"
                         >
                             <!-- TODO(norbert-mieczkowski-codilime): This is just a placeholder icon, replace it when new icons are ready to use. -->
@@ -57,25 +57,25 @@
                             <span>{{ tab_name }}</span>
                         </button>
 
-                        <div class="sidenav-flyout" id="sidenav-flyout-{{ forloop.counter }}"
+                        <div class="nb-sidenav-flyout" id="sidenav-flyout-{{ forloop.counter }}"
                              hx-vals='{"tab_name": "{{ tab_name }}"}'
                              hx-swap-oob="true"
                         >
                             {% for group_name, group_details in tab_details.groups.items %}
                                 <ul class="list-unstyled">
-                                    <li class="sidenav-link-group" data-group-weight="{{ group_details.weight }}">
+                                    <li class="nb-sidenav-link-group" data-group-weight="{{ group_details.weight }}">
                                         {{ group_name }}
                                     </li>
                                     {% for item_link, item_details in group_details.items.items %}
-                                        <li class="sidenav-link-wrapper{% if item_details.permissions and not request.user|has_perms:item_details.permissions %} disabled{% endif %}">
+                                        <li class="nb-sidenav-link-wrapper{% if item_details.permissions and not request.user|has_perms:item_details.permissions %} disabled{% endif %}">
                                             {% comment %}TODO(norbert-mieczkowski-codilime): Figure out more reliable way of mapping active nav_menu link to browser URL.{% endcomment %}
-                                            <a class="sidenav-link{% if item_link in request.path %} sidenav-link-active{% endif %}"
+                                            <a class="nb-sidenav-link{% if item_link in request.path %} nb-sidenav-link-active{% endif %}"
                                                data-item-weight="{{ item_details.weight }}"
                                                href="{{ item_link }}">
                                                 {{ item_details.name }}
                                             </a>
                                             <button
-                                                class="sidenav-favorite{% if item_link in navbar_favorites_link_list %} active{% endif %}"
+                                                class="nb-sidenav-favorite{% if item_link in navbar_favorites_link_list %} active{% endif %}"
                                                 type="button"
                                                 hx-post="{% if item_link in navbar_favorites_link_list %}{% url "user:navbar_favorites_delete" %}{% else %}{% url "user:navbar_favorites_add" %}{% endif %}"
                                                 hx-vals='{"name": "{{ item_details.name }}", "link": "{{ item_link }}"}'

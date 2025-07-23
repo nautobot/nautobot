@@ -277,7 +277,7 @@ class SidenavSection:
 
     @property
     def flyout(self):
-        return self.section.find_by_xpath(f"{self.section_xpath}/div[@class='sidenav-flyout']")
+        return self.section.find_by_xpath(f"{self.section_xpath}/div[@class='nb-sidenav-flyout']")
 
     @property
     def is_expanded(self):
@@ -289,7 +289,7 @@ class SidenavSection:
 
     def find_link(self, link_name):
         return self.section.find_by_xpath(
-            f"{self.section_xpath}/div[@class='sidenav-flyout']//a[@class='sidenav-link' and normalize-space()='{link_name}']"
+            f"{self.section_xpath}/div[@class='nb-sidenav-flyout']//a[@class='nb-sidenav-link' and normalize-space()='{link_name}']"
         )
 
     def click_link(self, link_name):
@@ -374,7 +374,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         sidenav_button = self.browser.find_by_xpath(f"{section_xpath}/button", wait_time=5)
         if not sidenav_button["aria-expanded"] == "true":
             sidenav_button.click()
-        child_menu_xpath = f"{section_xpath}/div[@class='sidenav-flyout']//a[@class='sidenav-link' and normalize-space()='{child_menu_name}']"
+        child_menu_xpath = f"{section_xpath}/div[@class='nb-sidenav-flyout']//a[@class='nb-sidenav-link' and normalize-space()='{child_menu_name}']"
         child_menu = self.browser.find_by_xpath(child_menu_xpath, wait_time=5)
         child_menu.click()
 
