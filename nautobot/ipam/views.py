@@ -1269,7 +1269,7 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
                         table_class=tables.VLANDevicesTable,
                         table_filter=["untagged_vlan", "tagged_vlans"],
                         related_field_name="vlan_id",
-                        add_button_route=None
+                        add_button_route=None,
                     ),
                 ),
             ),
@@ -1287,7 +1287,7 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
                         table_class=tables.VLANVirtualMachinesTable,
                         table_filter=["untagged_vlan", "tagged_vlans"],
                         related_field_name="vlan_id",
-                        add_button_route=None
+                        add_button_route=None,
                     ),
                 ),
             ),
