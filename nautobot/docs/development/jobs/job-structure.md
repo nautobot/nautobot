@@ -139,7 +139,7 @@ Unless set to False, it prevents the Job's input parameters from being saved to 
 Important notes about Jobs with sensitive variables:
 
 - Such Jobs cannot be scheduled to run in the future or on a recurring schedule (as Scheduled Jobs must by necessity store their variables in the database for future reference).
-- Jobs with sensitive variables cannot be marked as requiring approval (as Jobs pending approval must store their variables in the database until approved).
+- Jobs with sensitive variables cannot create an approval workflow for them at runtime, if one is defined (as Jobs pending approval must store their variables in the database until approved).
 
 ### `hidden`
 

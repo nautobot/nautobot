@@ -179,7 +179,6 @@ The data payload associated with events of any of the above topics has the follo
                     "grouping_override": false,
                     "name_override": false,
                     "description_override": false,
-                    "approval_required_override": false,
                     "dryrun_default_override": false,
                     "hidden_override": false,
                     "soft_time_limit_override": false,

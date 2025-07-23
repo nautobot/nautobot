@@ -38,7 +38,8 @@ To enable or disable Jobs, override metadata, or remove obsolete Job records, se
 !!! note
     To run any job, a user must be assigned the `extras.run_job` permission. This is achieved by assigning the user (or group) a permission on the `extras > job` object and specifying the `run` action in the admin UI as shown below.
 
-    Similarly, to [approve a job request by another user](./job-scheduling-and-approvals.md), a user must be assigned the `extras.approve_job` permission via the same process. Job approvers also need the `extras.change_scheduledjob` and/or `extras.delete_scheduledjob` permissions as job approvals are implemented via the `ScheduledJob` data model.
+    Is it true right now ?
+    Similarly, to [approve a job request by another user](./job-scheduling-and-approvals.md), a user must be assigned the `extras.change_approvalworkflowstage` and `extras.view_approvalworkflowstage` permission via the same process. Job approvers also need the `extras.change_scheduledjob` and/or `extras.delete_scheduledjob` permissions as job approvals are implemented via the `ScheduledJob` data model.
 
     ![Adding the run action to a permission](../../../media/admin_ui_run_permission.png)
     *Admin → Users → (Select user or group) → Object permissions → Add object permission*

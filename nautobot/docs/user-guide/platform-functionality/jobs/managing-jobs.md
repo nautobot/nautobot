@@ -132,4 +132,4 @@ ScheduledJob can have approval workflow that requires additional user approval b
 | Assign Job Queues         | `extras.change_job` + permissions on specific Job Queues |
 | Delete Job                | `extras.delete_job`                                      |
 | Run Job                   | `extras.run_job`                                         |
-| Approve scheduled Job     | `extras.approve_job` + (`extras.change_scheduledjob` or `extras.delete_scheduledjob`) |
+| Approve scheduled Job     | `extras.change_approvalworkflowstage` + `extras.view_approvalworkflowstage` + (`extras.change_scheduledjob` or `extras.delete_scheduledjob`) |

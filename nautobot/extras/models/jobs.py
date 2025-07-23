@@ -316,6 +316,10 @@ class Job(PrimaryModel):
             return None
 
     @property
+    def runnable(self):
+        return self.enabled and self.installed
+
+    @property
     def job_task(self):
         """Get an instance of the associated Job class, refreshing it if necessary."""
         from nautobot.extras.jobs import get_job

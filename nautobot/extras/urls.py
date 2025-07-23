@@ -244,20 +244,10 @@ urlpatterns = [
         name="scheduledjob_bulk_delete",
     ),
     path(
-        "jobs/scheduled-jobs/approval-queue/",
-        views.ScheduledJobApprovalQueueListView.as_view(),
-        name="scheduledjob_approval_queue_list",
-    ),
-    path(
         "jobs/scheduled-jobs/<uuid:pk>/approval-workflow/",
         views.ObjectApprovalWorkflowView.as_view(),
         name="scheduledjob_approvalworkflow",
         kwargs={"model": ScheduledJob},
-    ),
-    path(
-        "jobs/scheduled-jobs/approval-queue/<uuid:pk>/",
-        views.JobApprovalRequestView.as_view(),
-        name="scheduledjob_approval_request_view",
     ),
     path(
         "jobs/<uuid:pk>/",
