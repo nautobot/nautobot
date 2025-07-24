@@ -5,10 +5,8 @@ Unit tests for titles.py following Nautobot testing conventions.
 from django.template import Context
 
 from nautobot.core.testing import TestCase
-from nautobot.core.ui.titles import DEFAULT_TITLES, DocumentTitles, PageHeadings, Titles
+from nautobot.core.ui.titles import DEFAULT_TITLES, Titles
 from nautobot.dcim.models import LocationType
-from nautobot.extras.models import SavedView
-from nautobot.users.models import User
 
 
 class TitlesTestCase(TestCase):
@@ -43,7 +41,7 @@ class TitlesTestCase(TestCase):
         expected = "{% load helpers %}{% load plugin1 %}{% load plugin2 %}"
         self.assertEqual(titles.template_plugins_str, expected)
 
-    def test_render_various_actions(self):
+    def test_render_various_actions_html(self):
         """Test rendering with different action contexts."""
         location_type = LocationType.objects.create(name="Test Location Type Title")
         test_cases = [
@@ -143,6 +141,18 @@ class TitlesTestCase(TestCase):
                 result = self.titles.render(context)
                 self.assertEqual(result, test_case["expected"])
 
+    def test_render_various_actions_plain(self):
+        """Rendering with mode='plain' returns stripped (text-only) output."""
+        context = Context({"view_action": "list", "verbose_name_plural": "devices"})
+        self.titles.titles["list"] = "<strong>{{ verbose_name_plural|bettertitle }}</strong>"
+        result = self.titles.render(context, mode="plain")
+        self.assertEqual(result, "Devices")
+
+        # Also test complex HTML stripping
+        self.titles.titles["list"] = '<div class="title"><span>{{ verbose_name_plural|bettertitle }}</span></div>'
+        result = self.titles.render(context, mode="plain")
+        self.assertEqual(result, "Devices")
+
     def test_render_with_missing_action(self):
         """Test rendering with an action that doesn't exist in titles."""
         context = Context({"view_action": "nonexistent"})
@@ -161,7 +171,7 @@ class TitlesTestCase(TestCase):
         extra_context = self.titles.get_extra_context(context)
         self.assertEqual(extra_context, {})
 
-    def test_get_extra_context_is_being_used_during_render(self):
+    def test_get_extra_context_is_used_during_render(self):
         """Test that get_extra_context returns empty dict by default."""
         context = Context({})
 
@@ -171,75 +181,3 @@ class TitlesTestCase(TestCase):
 
         rendered_title = TitlesSubClass().render(context)
         self.assertEqual(rendered_title, "Devices")
-
-
-class DocumentTitlesTestCase(TestCase):
-    """Test cases for the DocumentTitles class."""
-
-    def setUp(self):
-        self.document_titles = DocumentTitles()
-
-    def test_render_strips_html_tags(self):
-        """Test that DocumentTitles strips HTML tags from rendered output."""
-        context = Context({"view_action": "list", "verbose_name_plural": "devices"})
-        self.document_titles.titles["list"] = "<strong>{{ verbose_name_plural|bettertitle }}</strong>"
-        result = self.document_titles.render(context)
-        self.assertEqual(result, "Devices")
-
-    def test_render_with_complex_html(self):
-        """Test stripping of complex HTML content."""
-        doc_titles = DocumentTitles(
-            titles={"list": '<div class="title"><span>{{ verbose_name_plural|bettertitle }}</span></div>'}
-        )
-        context = Context({"view_action": "list", "verbose_name_plural": "devices"})
-        result = doc_titles.render(context)
-        self.assertEqual(result, "Devices")
-
-
-class PageHeadingsTestCase(TestCase):
-    """Test cases for the PageHeadings class."""
-
-    def setUp(self):
-        self.user = User.objects.create_user(username="Saved View test user")
-        self.page_headings = PageHeadings()
-
-    def test_default_list_action_override(self):
-        """Test that PageHeadings overrides the default list_action."""
-        expected = "{% format_title_with_saved_view verbose_name_plural|bettertitle %}"
-        self.assertEqual(self.page_headings.titles["list"], expected)
-
-    def test_render_with_saved_view_formatting(self):
-        """Test rendering with the custom list action template."""
-        saved_view = SavedView.objects.create(name="My filters!", owner=self.user, view="dcim:location_list")
-        test_cases = [
-            {
-                "name": "no_saved_view",
-                "context": {
-                    "verbose_name_plural": "devices",
-                },
-                "expected": "Devices",
-            },
-            {
-                "name": "with_saved_view_saved",
-                "context": {
-                    "verbose_name_plural": "devices",
-                    "current_saved_view": saved_view,
-                },
-                "expected": "Devices — My filters!",
-            },
-            {
-                "name": "with_saved_view_not_saved",
-                "context": {
-                    "verbose_name_plural": "devices",
-                    "current_saved_view": saved_view,
-                    "new_changes_not_applied": True,
-                },
-                "expected": 'Devices — <i title="Pending changes not saved">My filters!</i>',
-            },
-        ]
-
-        for test_case in test_cases:
-            with self.subTest(action=test_case["name"]):
-                context = Context(test_case["context"])
-                result = self.page_headings.render(context)
-                self.assertEqual(result, test_case["expected"])

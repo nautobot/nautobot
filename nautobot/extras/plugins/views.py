@@ -89,7 +89,7 @@ class InstalledAppsView(GenericView):
     breadcrumbs = Breadcrumbs(
         items={"generic": [ViewNameBreadcrumbItem(view_name="apps:apps_list", label="Installed Apps")]}
     )
-    generic_titles = Titles(titles={"generic": "Installed Apps"})
+    view_titles = Titles(titles={"generic": "Installed Apps"})
 
     def get(self, request):
         marketplace_data = load_marketplace_data()
@@ -131,7 +131,7 @@ class InstalledAppsView(GenericView):
                 "display": display,
                 "view_action": "generic",
                 "breadcrumbs": self.breadcrumbs,
-                "generic_titles": self.generic_titles,
+                "view_titles": self.view_titles,
             },
         )
 
@@ -240,7 +240,7 @@ class MarketplaceView(GenericView):
     breadcrumbs = Breadcrumbs(
         items={"generic": [ViewNameBreadcrumbItem(view_name="apps:apps_marketplace", label="Apps Marketplace")]}
     )
-    generic_titles = Titles(titles={"generic": "Apps Marketplace"})
+    view_titles = Titles(titles={"generic": "Apps Marketplace"})
 
     def get(self, request):
         marketplace_data = load_marketplace_data()
@@ -261,6 +261,6 @@ class MarketplaceView(GenericView):
                 "apps": marketplace_data["apps"],
                 "view_action": "generic",
                 "breadcrumbs": self.breadcrumbs,
-                "generic_titles": self.generic_titles,
+                "view_titles": self.view_titles,
             },
         )

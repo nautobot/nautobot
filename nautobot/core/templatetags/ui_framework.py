@@ -30,9 +30,10 @@ def render_components(context, components):
 
 
 @register.simple_tag(takes_context=True)
-def render_title(context, title_obj):
+def render_title(context, mode="html"):
+    title_obj = context.get("view_titles")
     if title_obj is not None and isinstance(title_obj, Titles):
-        return title_obj.render(context)
+        return title_obj.render(context, mode=mode)
     return ""
 
 

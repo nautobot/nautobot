@@ -20,6 +20,7 @@ class WithStr(Protocol):
     def __str__(self) -> str: ...
 
 
+ViewNameType = Union[str, Callable[[Context], str], None]
 ModelLabelType = Literal["plural", "singular"]
 ModelType = Union[str, Model, Type[Model], None]
 LabelType = Union[Callable[[Context], str], WithStr, None]
@@ -27,10 +28,20 @@ BreadcrumbItemsType = dict[str, list["BaseBreadcrumbItem"]]
 ReverseParams = Union[dict[str, Any], Callable[[Context], dict[str, Any]], None]
 
 
+@dataclass
 class BaseBreadcrumbItem:
     """
     Base interface for breadcrumb items.
+
+    Attributes:
+        should_render (Callable[[Context], bool]): Callable to decide whether this item should be rendered or not.
+        label (Union[Callable[[Context], str], WithStr, None]): Optional override for the display label in the breadcrumb.
+        label_key (Optional[str]): Optional key to take label from the context.
     """
+
+    should_render: Callable[[Context], bool] = lambda context: True
+    label: LabelType = None
+    label_key: Optional[str] = None
 
     def get_url(self, context: Context) -> Optional[str]:
         """
@@ -42,7 +53,12 @@ class BaseBreadcrumbItem:
         """
         Get the label (display text) for the breadcrumb.
         """
-        raise NotImplementedError
+
+        if self.label:
+            return str(self.label(context)) if callable(self.label) else str(self.label)
+        if self.label_key:
+            return str(context.get(self.label_key, ""))
+        return ""
 
     def reverse_view_name(
         self,
@@ -51,6 +67,9 @@ class BaseBreadcrumbItem:
         reverse_kwargs: ReverseParams = None,
         reverse_query_params: ReverseParams = None,
     ) -> Optional[str]:
+        if view_name == "":
+            return None
+
         try:
             url = reverse(view_name, kwargs=self.resolve_reverse_params(reverse_kwargs, context))
             if query_params := self.resolve_reverse_params(reverse_query_params, context):
@@ -96,11 +115,14 @@ class ViewNameBreadcrumbItem(BaseBreadcrumbItem):
     Label won't be generated automatically.
 
     Attributes:
-        view_name (Optional[str]): Django view name to reverse. Used in raw viewname mode.
-        label (Union[Callable[[Context], str], WithStr, None]): Optional override for the display label in the breadcrumb.
+        view_name (Union[str, Callable[[Context], str], None]): Django view name to reverse or callable taking context.
+            Can be used as fallback if `view_name_key` won't be found in the context.
+        view_name_key: (Optional[str]): Key to get the `view_name` from the context.
         reverse_kwargs (Union[dict[str, Any], Callable[[Context], dict[str, Any]], None]): Keyword arguments passed to `reverse()`.
         reverse_query_params (Union[dict[str, Any], Callable[[Context], dict[str, Any]], None]): Keyword arguments added to the url.
-
+        should_render (Callable[[Context], bool]): Callable to decide whether this item should be rendered or not.
+        label (Union[Callable[[Context], str], WithStr, None]): Optional override for the display label in the breadcrumb.
+        label_key (Optional[str]): Optional key to take label from the context.
 
     Examples:
         >>> ViewNameBreadcrumbItem(view_name="dcim:device_list")
@@ -109,8 +131,8 @@ class ViewNameBreadcrumbItem(BaseBreadcrumbItem):
         ("/dcim/devices/?filter=some_value", "Link")
     """
 
-    view_name: str
-    label: LabelType = None
+    view_name: ViewNameType = None
+    view_name_key: Optional[str] = None
     reverse_kwargs: ReverseParams = None
     reverse_query_params: ReverseParams = None
 
@@ -118,15 +140,13 @@ class ViewNameBreadcrumbItem(BaseBreadcrumbItem):
         """
         Get the URL for the breadcrumb item based on the configuration: view name, context, reverse kwargs, query params.
         """
-        return self.reverse_view_name(self.view_name, context, self.reverse_kwargs, self.reverse_query_params)
+        view_name = self.view_name
+        if self.view_name_key:
+            view_name = context.get(self.view_name_key, self.view_name)
+        if not view_name:
+            return None
 
-    def get_label(self, context: Context) -> str:
-        """
-        Get the label (display text) for the breadcrumb.
-        """
-        if self.label:
-            return str(self.label(context)) if callable(self.label) else str(self.label)
-        return ""
+        return self.reverse_view_name(self.view_name, context, self.reverse_kwargs, self.reverse_query_params)
 
 
 @dataclass
@@ -143,9 +163,11 @@ class ModelBreadcrumbItem(BaseBreadcrumbItem):
         model_key (Optional[str]): Context key to fetch a model class, instance or dotted path string.
         action (str): Action to use when resolving a model-based route (default: "list").
         label_type (Literal["singular", "plural"]): Whether to use `verbose_name` or `verbose_name_plural`.
-        label (Union[Callable[[Context], str], WithStr, None]): Optional override for the display label in the breadcrumb.
         reverse_kwargs (nion[dict[str, Any], Callable[[Context], dict[str, Any]], None]): Keyword arguments passed to `reverse()`.
         reverse_query_params (nion[dict[str, Any], Callable[[Context], dict[str, Any]], None]): Keyword arguments added to the url.
+        should_render (Callable[[Context], bool]): Callable to decide whether this item should be rendered or not.
+        label (Union[Callable[[Context], str], WithStr, None]): Optional override for the display label in the breadcrumb.
+        label_key (Optional[str]): Optional key to take label from the context.
 
     Examples:
         >>> ModelBreadcrumbItem(model=Device)
@@ -159,7 +181,6 @@ class ModelBreadcrumbItem(BaseBreadcrumbItem):
     model: ModelType = None
     model_key: Optional[str] = None
     action: str = "list"
-    label: LabelType = None
     label_type: ModelLabelType = "plural"
     reverse_kwargs: ReverseParams = None
     reverse_query_params: ReverseParams = None
@@ -184,8 +205,9 @@ class ModelBreadcrumbItem(BaseBreadcrumbItem):
         Returns:
             str: The verbose name of the model class for use as a label.
         """
-        if self.label:
-            return str(self.label(context)) if callable(self.label) else str(self.label)
+        if self.label or self.label_key:
+            return super().get_label(context)
+
         model_obj = self.model or context.get(self.model_key)
         name_attr = "verbose_name" if self.label_type == "singular" else "verbose_name_plural"
 
@@ -207,7 +229,9 @@ class InstanceBreadcrumbItem(BaseBreadcrumbItem):
 
     Attributes:
         instance_key (Optional[str]): Context key to fetch a Django model instance for building the breadcrumb.
+        should_render (Callable[[Context], bool]): Callable to decide whether this item should be rendered or not.
         label (Union[Callable[[Context], str], WithStr, None]): Optional override for the display label in the breadcrumb.
+        label_key (Optional[str]): Optional key to take label from the context.
 
     Examples:
         >>> InstanceBreadcrumbItem()
@@ -230,16 +254,22 @@ class InstanceBreadcrumbItem(BaseBreadcrumbItem):
         """
         Get the label (display text) for the breadcrumb from instance.
         """
-        if self.label:
-            return str(self.label(context)) if callable(self.label) else str(self.label)
+        if self.label or self.label_key:
+            return super().get_label(context)
         instance = context.get(self.instance_key)
         if not instance:
             return ""
         return getattr(instance, "display", str(instance))
 
 
-DEFAULT_MODEL_BREADCRUMBS = [ModelBreadcrumbItem(model_key="model")]
-DEFAULT_INSTANCE_BREADCRUMBS = [ModelBreadcrumbItem(model_key="model"), InstanceBreadcrumbItem()]
+DEFAULT_MODEL_BREADCRUMBS = [
+    ViewNameBreadcrumbItem(
+        view_name_key="list_url", label_key="title", should_render=lambda context: context.get("list_url") is not None
+    ),  # Default breadcrumb if view defines `list_url` in the Context
+    ModelBreadcrumbItem(model_key="model", should_render=lambda context: context.get("list_url") is None),
+    # Fallback if there is no `list_url` in the Context
+]
+DEFAULT_INSTANCE_BREADCRUMBS = DEFAULT_MODEL_BREADCRUMBS + [InstanceBreadcrumbItem()]
 
 DEFAULT_BREADCRUMBS = {
     "list": DEFAULT_MODEL_BREADCRUMBS,
@@ -318,7 +348,7 @@ class Breadcrumbs:
         prepend_items = self.get_items_for_action(self.prepend_items, action, detail)
         append_items = self.get_items_for_action(self.append_items, action, detail)
         all_items = prepend_items + items + append_items
-        return [item.as_pair(context) for item in all_items]
+        return [item.as_pair(context) for item in all_items if item.should_render(context)]
 
     @staticmethod
     def get_items_for_action(items: BreadcrumbItemsType, action: str, detail: bool) -> list[BaseBreadcrumbItem]:
@@ -345,17 +375,20 @@ class Breadcrumbs:
         """
         with context.update(
             {
-                "breadcrumbs_items": self.get_breadcrumbs_items(context),
                 **self.get_extra_context(context),
             }
         ):
-            return render_component_template(self.template, context)
+            breadcrumbs_items = self.get_breadcrumbs_items(context)
+            return render_component_template(self.template, context, breadcrumbs_items=breadcrumbs_items)
 
     def get_extra_context(self, context: Context):
         """
         Provide additional data to include in the rendering context, based on the configuration of this component.
 
-         Args:
+        Context updated here will be applied to resolving url and labels.
+        Please ote that you can't override `breadcrumb_items` here because items are generated after this method call.
+
+        Args:
             context (Context): The current context passed to `render()`.
 
         Returns:

@@ -1,10 +1,10 @@
-from typing import Optional
+from typing import Literal, Optional
 
 from django.template import Context, Template
 from django.utils.html import strip_tags
 
 DEFAULT_TITLES: dict[str, str] = {
-    "list": "{{ verbose_name_plural|bettertitle }}",
+    "list": "{% format_title_with_saved_view verbose_name_plural|bettertitle %}",
     "detail": "{{ object.display|default:object }}",
     "retrieve": "{{ object.display|default:object }}",
     "destroy": "Delete {{ verbose_name }}?",
@@ -21,16 +21,18 @@ DEFAULT_TITLES: dict[str, str] = {
 
 DEFAULT_PLUGINS = ["helpers"]
 
+ModeType = Literal["html", "plain"]
+
 
 class Titles:
     """
     Base class for document titles and page headings.
 
     This class provides a mechanism to define per-action title templates.
-    Titles can dynamically render using context variables and template tags.
+    Titles can be dynamically rendered using context variables and template tags using the Django template engine and context.
+    Use the `render()` method to obtain either rich (HTML) or plain (stripped of HTML) output.
 
-    You can use this class directly or subclass it (e.g., `DocumentTitles`, `PageHeadings`)
-    to customize rendering behavior (e.g., stripping HTML).
+    There is a dedicated simple tag to render `Titles` passed in the `context['view_titles']`: `{% render_title mode="html" %}`
 
     Attributes:
         titles (dict[str, str]): Action-to-title-template mapping.
@@ -44,6 +46,10 @@ class Titles:
     def __init__(self, template_plugins: Optional[list[str]] = None, titles: Optional[dict[str, str]] = None):
         """
         Keyword arguments passed can either add new action-title pair or override existing titles.
+
+        Args:
+            template_plugins (Optional[list[str]]): Extra Django template libraries to load before rendering.
+            titles (Optional[dict[str, str]]): Custom or overriding mappings from action to template string.
         """
         self.titles: dict[str, str] = DEFAULT_TITLES.copy()
         if titles:
@@ -53,21 +59,39 @@ class Titles:
         if template_plugins:
             self.template_plugins.extend(template_plugins)
 
-    def render(self, context: Context) -> str:
+    def render(self, context: Context, mode: ModeType = "html") -> str:
         """
         Renders the title based on given context and current action.
 
+        If mode == "plain", the output will be stripped of HTML tags.
+
         Make sure that needed context variables are in context and needed plugins are loaded.
 
+        Args:
+            context (Context): Render context.
+            mode (ModeType): Rendering mode: "html" or "plain".
+
         Returns:
-            (str): HTML fragment.
+            (str): HTML fragment or plain text, depending on `mode`.
         """
         with context.update(self.get_extra_context(context)):
             template_str = self.get_template_str(context)
             template = Template(self.template_plugins_str + template_str)
-            return template.render(context)
+            rendered_title = template.render(context)
+            if mode == "plain":
+                return strip_tags(rendered_title)
+            return rendered_title
 
     def get_template_str(self, context: Context) -> str:
+        """
+        Determine the template string for the current action.
+
+        Args:
+            context (Context): Render context.
+
+        Returns:
+            str: The template string for the current action, or an empty string if not found.
+        """
         action = context.get("view_action", "list")
 
         template_str = self.titles.get(action)
@@ -82,35 +106,22 @@ class Titles:
 
     @property
     def template_plugins_str(self) -> str:
+        """
+        Return a concatenated string of Django {% load ... %} tags for all template plugins.
+
+        Returns:
+            str: String containing {% load ... %} tags for the required template libraries.
+        """
         return "".join(f"{{% load {plugin_name} %}}" for plugin_name in self.template_plugins)
 
     def get_extra_context(self, context: Context) -> dict:
         """
         Provide additional data to include in the rendering context, based on the configuration of this component.
 
+        Args:
+            context (Context): The current template context.
+
         Returns:
             (dict): Additional context data.
         """
         return {}
-
-
-class DocumentTitles(Titles):
-    """
-    Class for titles being used as document title in browser. Makes sure that output will be stripped of any html tags.
-    """
-
-    def render(self, context: Context) -> str:
-        rendered_template = super().render(context)
-        return strip_tags(rendered_template)
-
-
-class PageHeadings(Titles):
-    """
-    Class for titles being used as page heading.
-    """
-
-    def __init__(self, titles: Optional[dict[str, str]] = None, **kwargs):
-        custom_titles = {"list": "{% format_title_with_saved_view verbose_name_plural|bettertitle %}"}
-        if titles:
-            custom_titles.update(titles)
-        super().__init__(titles=custom_titles, **kwargs)

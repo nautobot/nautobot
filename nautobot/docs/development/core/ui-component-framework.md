@@ -638,7 +638,6 @@ High-level data flow diagram:
 
 </div>
 
-
 ### BreadcrumbItem Configuration
 
 Breadcrumb items has three main classes:
