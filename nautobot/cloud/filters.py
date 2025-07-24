@@ -25,12 +25,10 @@ class CloudAccountFilterSet(NautobotFilterSet):
         field_name="provider",
         queryset=Manufacturer.objects.all(),
         to_field_name="name",
-        label="Provider (name or ID)",
     )
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SecretsGroup.objects.all(),
         to_field_name="name",
-        label="Secrets group (name or ID)",
     )
 
     class Meta:
@@ -58,7 +56,6 @@ class CloudResourceTypeFilterSet(NautobotFilterSet):
         field_name="provider",
         queryset=Manufacturer.objects.all(),
         to_field_name="name",
-        label="Provider (name or ID)",
     )
     content_types = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("cloud_resource_types").get_choices)
 
@@ -82,15 +79,12 @@ class CloudNetworkFilterSet(NautobotFilterSet):
     )
     cloud_resource_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.CloudResourceType.objects.all(),
-        label="Cloud resource type (name or ID)",
     )
     cloud_account = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.CloudAccount.objects.all(),
-        label="Cloud account (name or ID)",
     )
     cloud_services = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.CloudService.objects.all(),
-        label="Cloud services (name or ID)",
     )
     parent = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.CloudNetwork.objects.all(),
@@ -113,7 +107,6 @@ class CloudNetworkPrefixAssignmentFilterSet(BaseFilterSet):
     )
     cloud_network = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.CloudNetwork.objects.all(),
-        label="Cloud network (name or ID)",
     )
     prefix = PrefixFilter()
 
@@ -137,15 +130,12 @@ class CloudServiceFilterSet(NautobotFilterSet):
     )
     cloud_account = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.CloudAccount.objects.all(),
-        label="Cloud account (name or ID)",
     )
     cloud_networks = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.CloudNetwork.objects.all(),
-        label="Cloud networks (name or ID)",
     )
     cloud_resource_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.CloudResourceType.objects.all(),
-        label="Cloud resource type (name or ID)",
     )
 
     class Meta:
@@ -172,11 +162,9 @@ class CloudServiceNetworkAssignmentFilterSet(BaseFilterSet):
     )
     cloud_network = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.CloudNetwork.objects.all(),
-        label="Cloud network (name or ID)",
     )
     cloud_service = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.CloudService.objects.all(),
-        label="Cloud service (name or ID)",
     )
 
     class Meta:

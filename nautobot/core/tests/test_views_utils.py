@@ -17,7 +17,7 @@ class CheckFilterForDisplayTest(TestCase):
     def test_check_filter_for_display(self):
         """Validate the operation of check_filter_for_display()."""
 
-        device_filter_set_filters = DeviceFilterSet().get_filters()
+        device_filter_set_filters = DeviceFilterSet().filters
 
         with self.subTest("Test invalid filter case (field_name not found)"):
             expected_output = {
@@ -72,7 +72,7 @@ class CheckFilterForDisplayTest(TestCase):
             example_obj = DeviceRedundancyGroup.objects.first()
             expected_output = {
                 "name": "device_redundancy_group",
-                "display": "Device Redundancy Groups (name or ID)",
+                "display": "Device Redundancy Group (name or ID)",
                 "values": [{"name": str(example_obj.pk), "display": str(example_obj)}],
             }
 

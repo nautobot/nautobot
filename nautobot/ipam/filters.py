@@ -8,6 +8,7 @@ import netaddr
 
 from nautobot.cloud.models import CloudNetwork
 from nautobot.core.filters import (
+    ModelMultipleChoiceFilter,
     MultiValueCharFilter,
     MultiValueNumberFilter,
     MultiValueUUIDFilter,
@@ -112,34 +113,28 @@ class VRFFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyModelFil
     import_targets = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RouteTarget.objects.all(),
         to_field_name="name",
-        label="Import target (ID or name)",
     )
     export_targets = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RouteTarget.objects.all(),
         to_field_name="name",
-        label="Export target (ID or name)",
     )
     device = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="devices",
         queryset=Device.objects.all(),
         to_field_name="name",
-        label="Device (ID or name)",
     )
     virtual_machines = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VirtualMachine.objects.all(),
         to_field_name="name",
-        label="Virtual Machine (ID or name)",
     )
     prefix = PrefixFilter(field_name="prefixes")
     namespace = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Namespace.objects.all(),
         to_field_name="name",
-        label="Namespace (name or ID)",
     )
     virtual_device_contexts = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VirtualDeviceContext.objects.all(),
         to_field_name="name",
-        label="Virtual Device Context (ID or name)",
     )
 
     class Meta:
@@ -161,22 +156,18 @@ class VRFDeviceAssignmentFilterSet(NautobotFilterSet):
     vrf = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VRF.objects.all(),
         to_field_name="name",
-        label="VRF (ID or name)",
     )
     device = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Device.objects.all(),
         to_field_name="name",
-        label="Device (ID or name)",
     )
     virtual_machine = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VirtualMachine.objects.all(),
         to_field_name="name",
-        label="Virtual Machine (ID or name)",
     )
     virtual_device_context = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VirtualDeviceContext.objects.all(),
         to_field_name="name",
-        label="Virtual Device Context (ID or name)",
     )
 
     class Meta:
@@ -195,7 +186,6 @@ class VRFPrefixAssignmentFilterSet(NautobotFilterSet):
     vrf = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VRF.objects.all(),
         to_field_name="name",
-        label="VRF (ID or name)",
     )
 
     class Meta:
@@ -278,12 +268,14 @@ class PrefixFilterSet(
         to_field_name="rd",
         label="Assigned VRF (ID or RD)",
     )
+    # TODO: change to a multiple-value filter as a breaking change for dynamic groups and permissions definition
     present_in_vrf_id = django_filters.ModelChoiceFilter(
         field_name="vrfs",
         queryset=VRF.objects.all(),
         method="filter_present_in_vrf",
         label="Present in VRF",
     )
+    # TODO: change to a multiple-value filter as a breaking change for dynamic groups and permissions definition
     present_in_vrf = django_filters.ModelChoiceFilter(
         field_name="vrfs__rd",
         queryset=VRF.objects.all(),
@@ -291,9 +283,8 @@ class PrefixFilterSet(
         to_field_name="rd",
         label="Present in VRF (RD)",
     )
-    vlan_id = django_filters.ModelMultipleChoiceFilter(
+    vlan_id = ModelMultipleChoiceFilter(
         queryset=VLAN.objects.all(),
-        label="VLAN (ID)",
     )
     vlan_vid = MultiValueNumberFilter(
         field_name="vlan__vid",
@@ -301,7 +292,6 @@ class PrefixFilterSet(
     )
     rir = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RIR.objects.all(),
-        label="RIR (name or ID)",
         to_field_name="name",
     )
     has_rir = RelatedMembershipBooleanFilter(
@@ -312,7 +302,6 @@ class PrefixFilterSet(
     namespace = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Namespace.objects.all(),
         to_field_name="name",
-        label="Namespace (name or ID)",
     )
     ip_version = django_filters.NumberFilter()
     location = TreeNodeMultipleChoiceFilter(
@@ -326,12 +315,10 @@ class PrefixFilterSet(
         prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
-        label="Locations (name or ID)",
     )
     cloud_networks = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=CloudNetwork.objects.all(),
         to_field_name="name",
-        label="Cloud Network (name or ID)",
     )
 
     class Meta:
@@ -419,7 +406,7 @@ class IPAddressFilterSet(
     StatusModelFilterSetMixin,
     RoleModelFilterSetMixin,
 ):
-    parent = django_filters.ModelMultipleChoiceFilter(
+    parent = ModelMultipleChoiceFilter(
         queryset=Prefix.objects.all(),
         label="Parent prefix",
     )
@@ -437,12 +424,14 @@ class IPAddressFilterSet(
         to_field_name="rd",
         label="VRF (ID or RD)",
     )
+    # TODO: change to a multiple-value filter as a breaking change for dynamic groups and permissions definition
     present_in_vrf_id = django_filters.ModelChoiceFilter(
         field_name="parent__vrfs",
         queryset=VRF.objects.all(),
         method="filter_present_in_vrf",
         label="VRF (ID)",
     )
+    # TODO: change to a multiple-value filter as a breaking change for dynamic groups and permissions definition
     present_in_vrf = django_filters.ModelChoiceFilter(
         field_name="parent__vrfs__rd",
         queryset=VRF.objects.all(),
@@ -473,25 +462,22 @@ class IPAddressFilterSet(
     interfaces = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Interface.objects.all(),
         to_field_name="name",
-        label="Interfaces (ID or name)",
     )
     vm_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VMInterface.objects.all(),
         to_field_name="name",
-        label="VM interfaces (ID or name)",
     )
     namespace = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Namespace.objects.all(),
         field_name="parent__namespace",
         to_field_name="name",
-        label="Namespace (name or ID)",
     )
     has_interface_assignments = RelatedMembershipBooleanFilter(
         field_name="interfaces",
         method="_has_interface_assignments",
         label="Has Interface Assignments",
     )
-    nat_inside = django_filters.ModelMultipleChoiceFilter(
+    nat_inside = ModelMultipleChoiceFilter(
         queryset=IPAddress.objects.all(),
         label="NAT (Inside)",
     )
@@ -569,15 +555,9 @@ class IPAddressToInterfaceFilterSet(NautobotFilterSet):
     )
     interface = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Interface.objects.all(),
-        label="Interface (name or ID)",
-    )
-    ip_address = django_filters.ModelMultipleChoiceFilter(
-        queryset=IPAddress.objects.all(),
-        label="IP Address (ID)",
     )
     vm_interface = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VMInterface.objects.all(),
-        label="VM Interface (name or ID)",
     )
 
     class Meta:
@@ -614,7 +594,6 @@ class VLANFilterSet(
     )
     vlan_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VLANGroup.objects.all(),
-        label="VLAN Group (name or ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
         prefers_id=True,
@@ -627,7 +606,6 @@ class VLANFilterSet(
         prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
-        label="Locations (name or ID)",
     )
 
     class Meta:
@@ -662,7 +640,6 @@ class VLANLocationAssignmentFilterSet(NautobotFilterSet):
         prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
-        label="Locations (name or ID)",
     )
 
     class Meta:
@@ -680,12 +657,10 @@ class ServiceFilterSet(NautobotFilterSet):
     device = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Device.objects.all(),
         to_field_name="name",
-        label="Device (ID or name)",
     )
     virtual_machine = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VirtualMachine.objects.all(),
         to_field_name="name",
-        label="Virtual machine (ID or name)",
     )
     ports = NumericArrayFilter(field_name="ports", lookup_expr="contains")
 

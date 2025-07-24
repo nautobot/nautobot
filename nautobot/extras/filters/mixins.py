@@ -10,6 +10,7 @@ from nautobot.core.constants import (
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
 )
 from nautobot.core.filters import (
+    ModelMultipleChoiceFilter,
     MultiValueDateTimeFilter,
     NaturalKeyOrPKMultipleChoiceFilter,
 )
@@ -152,7 +153,7 @@ class LocalContextModelFilterSetMixin(django_filters.FilterSet):
         method="_local_config_context_data",
         label="Has local config context data",
     )
-    local_config_context_schema_id = django_filters.ModelMultipleChoiceFilter(
+    local_config_context_schema_id = ModelMultipleChoiceFilter(
         queryset=ConfigContextSchema.objects.all(),
         label="Schema (ID) - Deprecated (use local_context_schema filter)",
     )
@@ -166,7 +167,7 @@ class LocalContextModelFilterSetMixin(django_filters.FilterSet):
         return queryset.exclude(local_config_context_data__isnull=value)
 
 
-class RelationshipFilter(django_filters.ModelMultipleChoiceFilter):
+class RelationshipFilter(ModelMultipleChoiceFilter):
     """
     Filter objects by the presence of associations on a given Relationship.
     """

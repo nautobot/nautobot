@@ -26,7 +26,7 @@ def check_filter_for_display(filters, field_name, values):
     Return any additional context data for the template.
 
     Args:
-        filters (OrderedDict): The output of `.get_filters()` of a desired FilterSet
+        filters (dict): The filters of a desired FilterSet
         field_name (str): The name of the filter to get a label for and lookup values
         values (list[str]): List of strings that may be PKs to look up
 
