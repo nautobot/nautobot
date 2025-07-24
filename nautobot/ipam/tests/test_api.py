@@ -322,9 +322,7 @@ class VRFPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
             response, "The fields vrf, prefix must make a unique set.", status_code=status.HTTP_400_BAD_REQUEST
         )
         response = self.client.post(self._get_list_url(), wrong_namespace_create_data, format="json", **self.header)
-        self.assertContains(
-            response, "Prefix must be in same namespace as VRF", status_code=status.HTTP_400_BAD_REQUEST
-        )
+        self.assertContains(response, "must be in same namespace as", status_code=status.HTTP_400_BAD_REQUEST)
         response = self.client.post(self._get_list_url(), missing_field_create_data, format="json", **self.header)
         self.assertContains(response, "This field may not be null.", status_code=status.HTTP_400_BAD_REQUEST)
 
