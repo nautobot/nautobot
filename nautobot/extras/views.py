@@ -1230,7 +1230,6 @@ class GitRepositoryResultView(generic.ObjectView):
 
 
 class GraphQLQueryUiViewSet(NautobotUIViewSet):
-    bulk_update_form_class = forms.GraphQLQueryBulkEditForm
     filterset_form_class = forms.GraphQLQueryFilterForm
     queryset = GraphQLQuery.objects.all()
     form_class = forms.GraphQLQueryForm

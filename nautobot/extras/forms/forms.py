@@ -154,7 +154,6 @@ __all__ = (
     "GitRepositoryBulkEditForm",
     "GitRepositoryFilterForm",
     "GitRepositoryForm",
-    "GraphQLQueryBulkEditForm",
     "GraphQLQueryFilterForm",
     "GraphQLQueryForm",
     "ImageAttachmentForm",
@@ -1043,13 +1042,6 @@ class GitRepositoryFilterForm(BootstrapMixin, forms.Form):
 #
 # GraphQL saved queries
 #
-
-
-class GraphQLQueryBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin):
-    pk = forms.ModelMultipleChoiceField(queryset=GraphQLQuery.objects.all(), widget=forms.MultipleHiddenInput)
-
-    class Meta:
-        model = GraphQLQuery
 
 
 class GraphQLQueryForm(BootstrapMixin, forms.ModelForm):
