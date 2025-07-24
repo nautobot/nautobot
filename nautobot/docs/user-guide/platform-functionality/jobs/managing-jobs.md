@@ -113,7 +113,7 @@ Use this procedure when permanently retiring a Job:
 
 ### Approval Workflow
 
-ScheduledJob can have approval workflow that requires additional user approval before each execution. To protect jobs that make massive production changes. For more information on approvals, [please refer to the section on scheduling and approvals](job-scheduling-and-approvals.md#job-approvals).
+When a Job is submitted for execution or scheduling, Nautobot checks for any relevant approval workflow that would require approval by relevant user(s) before the job can be run. For more information on approvals, [please refer to the section on scheduling and approvals](job-scheduling-and-approvals.md#job-approvals).
 
 ### Recommended deletion steps
 

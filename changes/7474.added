@@ -1,1 +1,1 @@
-Added the `runnable` and `has_approval_workflow_definition` property to the ScheduledJob model.
+Added the `runnable` and `has_approval_workflow_definition` properties to the ScheduledJob model.

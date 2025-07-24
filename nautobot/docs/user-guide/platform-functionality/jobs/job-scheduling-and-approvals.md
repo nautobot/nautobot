@@ -19,7 +19,7 @@ The UI allows you to select a scheduling type. Further fields will be displayed 
 
 If `Recurring custom` is chosen, you can schedule the recurrence in the `Crontab` field in [crontab](https://en.wikipedia.org/wiki/Cron#Overview) syntax.
 
-If the job requires no approval, it will then be added to the queue of scheduled jobs or run immediately. Otherwise, the job will be added to the approval dashboard where it can be approved by other users.
+If the job requires no approval, it will then be added to the queue of scheduled jobs or run immediately. Otherwise, the job will be added to the approval dashboard where it can be approved by users in the group(s) identified by the relevant approval workflow.
 
 ### Scheduling via the API
 
@@ -42,7 +42,7 @@ For custom interval, a `crontab` parameter must be added.
 
 ## Job Approvals
 
-Scheduled jobs that have `approval_required` set to `True` `Meta` class require approval from another user before execution. This field is automatically set on the backend during job running. If `ApprovalWorkflowDefinition` is associated with the specific `ScheduledJob`, `ApprovalWorkflow` is created automatically and `approval_required` is set accordingly. For more details, see the [approval workflow documentation](../approval-workflow.md).
+Scheduled jobs that have `approval_required` set to `True` require approval from another user(s) before execution. This field is automatically set on the backend during job submission. If an `ApprovalWorkflowDefinition` is applicable to the specific `ScheduledJob`, an `ApprovalWorkflow` is created automatically and `approval_required` is set accordingly. For more details, see the [approval workflow documentation](../approval-workflow.md).
 
 !!! warning
     Requiring approval for the execution of Job Hooks on a `JobHookReceiver` subclass is not currently supported. Support for approval of Job Hooks may be added in a future release.
