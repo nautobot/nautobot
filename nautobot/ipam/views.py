@@ -1212,7 +1212,7 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
     filterset_form_class = forms.VLANFilterForm
     form_class = forms.VLANForm
     serializer_class = serializers.VLANSerializer
-    table_class = tables.VLANTable
+    table_class = tables.VLANDetailTable
     queryset = VLAN.objects.all()
 
     class PrefixObjectsTablePanel(object_detail.ObjectsTablePanel):
