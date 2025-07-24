@@ -846,16 +846,6 @@ def format_timezone(value):
         return format_html("{}", value)
 
 
-def render_map_button(query, icon="mdi-map-marker"):
-    return format_html(
-        '<div class="pull-right noprint">'
-        '<a href="https://maps.google.com/?q={}" target="_blank" class="btn btn-primary btn-xs">'
-        '<i class="mdi {}"></i> Map it</a></div>',
-        query,
-        icon,
-    )
-
-
 def render_contact_team_button(url, icon, label):
     return format_html(
         '<div class="panel-footer text-right noprint">'

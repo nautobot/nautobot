@@ -274,8 +274,7 @@ class CustomLocationFieldsPanel(object_detail.ObjectFieldsPanel):
     def render_value(self, key, value, context):
         if key == "GPS Coordinates":
             if value != "Not available":
-                lat, lon = value.split(", ")
-                return format_html("{}<span>{}</span>", helpers.render_map_button(f"{lat},{lon}"), value)
+                return helpers.render_address(value)
             return helpers.HTML_NONE
 
         return super().render_value(key, value, context)
