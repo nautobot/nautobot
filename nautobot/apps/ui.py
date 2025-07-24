@@ -43,7 +43,7 @@ from nautobot.core.ui.object_detail import (
     Tab,
     TextPanel,
 )
-from nautobot.core.ui.titles import DocumentTitles, PageHeadings, Titles
+from nautobot.core.ui.titles import Titles
 from nautobot.core.ui.utils import render_component_template
 from nautobot.extras.choices import BannerClassChoices
 from nautobot.extras.plugins import Banner, TemplateExtension
@@ -59,7 +59,6 @@ __all__ = (
     "Component",
     "DataTablePanel",
     "DistinctViewTab",
-    "DocumentTitles",
     "DropdownButton",
     "GroupedKeyValueTablePanel",
     "HomePageBase",
@@ -81,7 +80,6 @@ __all__ = (
     "ObjectFieldsPanel",
     "ObjectTextPanel",
     "ObjectsTablePanel",
-    "PageHeadings",
     "Panel",
     "PermissionsMixin",
     "SectionChoices",

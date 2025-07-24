@@ -17,7 +17,7 @@ from nautobot.core.ui.breadcrumbs import (
 from nautobot.dcim.models import Device, LocationType
 
 
-class BreadcrumbItemTestCase(TestCase):
+class BreadcrumbItemsTestCase(TestCase):
     """Test cases for BreadcrumbItem class."""
 
     @classmethod
@@ -25,8 +25,8 @@ class BreadcrumbItemTestCase(TestCase):
         """Create test data."""
         cls.location_type = LocationType.objects.create(name="Test Location Type Breadcrumbs")
 
-    def test_view_name_mode(self):
-        """Test breadcrumb item with view_name mode."""
+    def test_view_name_item(self):
+        """Test breadcrumb view name item."""
         item = ViewNameBreadcrumbItem(view_name="home", label="Home")
         context = Context({})
 
@@ -35,8 +35,8 @@ class BreadcrumbItemTestCase(TestCase):
         self.assertEqual(url, "/")
         self.assertEqual(label, "Home")
 
-    def test_view_name_mode_with_kwargs_and_query_params(self):
-        """Test breadcrumb item in view_name mode and kwargs."""
+    def test_view_name_item_with_kwargs_and_query_params(self):
+        """Test breadcrumb view name item and kwargs."""
         item = ViewNameBreadcrumbItem(
             view_name="dcim:locationtype",
             reverse_kwargs={"pk": self.location_type.pk},
@@ -50,8 +50,19 @@ class BreadcrumbItemTestCase(TestCase):
         self.assertEqual(url, f"/dcim/location-types/{self.location_type.pk}/?name=test")
         self.assertEqual(label, "Filtered Locations Types")
 
-    def test_model_mode(self):
-        """Test breadcrumb item in model mode."""
+    def test_callable_label_and_view_name(self):
+        """Test label and view_name as callables."""
+        item = ViewNameBreadcrumbItem(
+            view_name=lambda _: "home",
+            label=lambda context: f"Hi, {context['user']}!",
+        )
+        context = Context({"user": "Frodo"})
+        url, label = item.as_pair(context)
+        self.assertEqual(url, "/")
+        self.assertEqual(label, "Hi, Frodo!")
+
+    def test_model_items(self):
+        """Test breadcrumb model items."""
         test_cases = [
             {
                 "name": "model_class",
@@ -105,7 +116,7 @@ class BreadcrumbItemTestCase(TestCase):
                 self.assertEqual(url, test_case["expected_url"])
                 self.assertEqual(label, test_case["expected_label"])
 
-    def test_model_mode_from_context(self):
+    def test_model_item_from_context(self):
         """Test breadcrumb item with model from context."""
         item = ModelBreadcrumbItem(model_key="location_type")
         context = Context({"location_type": self.location_type})
@@ -115,7 +126,7 @@ class BreadcrumbItemTestCase(TestCase):
         self.assertEqual(url, "/dcim/location-types/")
         self.assertEqual(label, "Location Types")
 
-    def test_instance_mode(self):
+    def test_instance_item(self):
         """Test breadcrumb item with instance from context."""
         item = InstanceBreadcrumbItem(instance_key="object")
         context = Context({"object": self.location_type})
@@ -281,7 +292,7 @@ class BreadcrumbsTestCase(TestCase):
 
         render_context = {}
 
-        def capture_context(template, context):
+        def capture_context(template, context, **kwargs):
             nonlocal render_context
             render_context = context.flatten()
             return ""
@@ -307,4 +318,41 @@ class BreadcrumbsTestCase(TestCase):
         self.assertNotEqual(breadcrumbs1.items["list"], breadcrumbs2.items["list"])
 
         # Original defaults should not be affected
-        self.assertEqual(DEFAULT_BREADCRUMBS.get("list")[0].model_key, "model")
+        self.assertEqual(DEFAULT_BREADCRUMBS.get("list")[0].view_name_key, "list_url")
+
+    def test_should_render_skips_items(self):
+        """Breadcrumbs should skip items where should_render(context) is False."""
+
+        item_visible = ViewNameBreadcrumbItem(view_name="home", label="Visible", should_render=lambda _: True)
+        item_hidden = ViewNameBreadcrumbItem(view_name="home", label="Hidden", should_render=lambda _: False)
+        breadcrumbs = Breadcrumbs(items={"list": [item_visible, item_hidden]})
+        context = Context({})
+
+        items = breadcrumbs.get_breadcrumbs_items(context)
+        self.assertEqual(len(items), 1)
+        self.assertIn(("/", "Visible"), items)
+        self.assertNotIn(("/", "Hidden"), items)
+
+    def test_filter_breadcrumbs_items_removes_empty_pairs(self):
+        """filter_breadcrumbs_items should remove items where both url and label are empty or None."""
+
+        breadcrumbs = Breadcrumbs()
+        # (url, label) pairs: only the last should remain
+        pairs = [
+            ("", ""),  # both empty
+            ("   ", "   "),  # both whitespace
+            ("", "\t"),  # label whitespace
+            (None, None),  # both None
+            ("", "Non-empty"),  # label not empty
+            ("/foo", ""),  # url not empty
+            (None, "Label"),  # label not None
+            ("/bar", None),  # url not None
+        ]
+        expected = [
+            ("", "Non-empty"),
+            ("/foo", ""),
+            (None, "Label"),
+            ("/bar", None),
+        ]
+        filtered = breadcrumbs.filter_breadcrumbs_items(pairs, Context({}))
+        self.assertEqual(filtered, expected)

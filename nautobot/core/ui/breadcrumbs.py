@@ -46,12 +46,24 @@ class BaseBreadcrumbItem:
     def get_url(self, context: Context) -> Optional[str]:
         """
         Get the URL for the breadcrumb item.
+
+        Args:
+            context (Context): The current template context.
+
+        Returns:
+            Optional[str]: The URL as a string, or None.
         """
         raise NotImplementedError
 
     def get_label(self, context: Context) -> str:
         """
         Get the label (display text) for the breadcrumb.
+
+        Args:
+            context (Context): The current template context.
+
+        Returns:
+            str: Label as a string.
         """
 
         if self.label:
@@ -67,6 +79,18 @@ class BaseBreadcrumbItem:
         reverse_kwargs: ReverseParams = None,
         reverse_query_params: ReverseParams = None,
     ) -> Optional[str]:
+        """
+        Reverse a Django view name into a URL, optionally adding query parameters.
+
+        Args:
+            view_name (str): Django view name to reverse.
+            context (Context): Template context, used to resolve params if needed.
+            reverse_kwargs (ReverseParams): URL kwargs for reversing.
+            reverse_query_params (ReverseParams): Query parameters to append.
+
+        Returns:
+            Optional[str]: The resolved URL as a string, or None if reversing fails.
+        """
         if view_name == "":
             return None
 
@@ -82,6 +106,16 @@ class BaseBreadcrumbItem:
 
     @staticmethod
     def resolve_reverse_params(params: ReverseParams, context: Context) -> dict[str, Any]:
+        """
+        Resolves parameters for URL reversing, calling if callable, or returning as-is.
+
+        Args:
+            params (ReverseParams): Dict or callable to resolve.
+            context (Context): Context for callables.
+
+        Returns:
+            dict[str, Any]: Dictionary of parameters for URL reversing.
+        """
         if callable(params):
             return params(context)
         if params:
@@ -139,14 +173,22 @@ class ViewNameBreadcrumbItem(BaseBreadcrumbItem):
     def get_url(self, context: Context) -> Optional[str]:
         """
         Get the URL for the breadcrumb item based on the configuration: view name, context, reverse kwargs, query params.
+
+        Args:
+            context (Context): The current template context.
+
+        Returns:
+            Optional[str]: The URL as a string, or None.
         """
         view_name = self.view_name
         if self.view_name_key:
             view_name = context.get(self.view_name_key, self.view_name)
+        if callable(view_name):
+            view_name = view_name(context)
         if not view_name:
             return None
 
-        return self.reverse_view_name(self.view_name, context, self.reverse_kwargs, self.reverse_query_params)
+        return self.reverse_view_name(view_name, context, self.reverse_kwargs, self.reverse_query_params)
 
 
 @dataclass
@@ -188,6 +230,12 @@ class ModelBreadcrumbItem(BaseBreadcrumbItem):
     def get_url(self, context: Context) -> Optional[str]:
         """
         Get the URL for the breadcrumb item based on the configuration: model, action, reverse kwargs, query params.
+
+        Args:
+            context (Context): The current template context.
+
+        Returns:
+            Optional[str]: The URL as a string, or None.
         """
         model_obj = self.model or context.get(self.model_key)
         if not model_obj:
@@ -201,6 +249,9 @@ class ModelBreadcrumbItem(BaseBreadcrumbItem):
 
         Depending on the `model_label_type`, either the `verbose_name` or `verbose_name_plural`
         will be returned. Accepts model class, instance or dotted path string.
+
+        Args:
+            context (Context): The current template context.
 
         Returns:
             str: The verbose name of the model class for use as a label.
@@ -246,6 +297,12 @@ class InstanceBreadcrumbItem(BaseBreadcrumbItem):
     def get_url(self, context: Context) -> Optional[str]:
         """
         Resolve the URL for the breadcrumb item based on the instance.
+
+        Args:
+            context (Context): The current template context.
+
+        Returns:
+            Optional[str]: The URL as a string, or None.
         """
         instance = context.get(self.instance_key)
         return get_absolute_url(instance) if instance else None
@@ -253,6 +310,12 @@ class InstanceBreadcrumbItem(BaseBreadcrumbItem):
     def get_label(self, context: Context) -> str:
         """
         Get the label (display text) for the breadcrumb from instance.
+
+        Args:
+            context (Context): The current template context.
+
+        Returns:
+            str: Label as a string.
         """
         if self.label or self.label_key:
             return super().get_label(context)
@@ -269,7 +332,7 @@ DEFAULT_MODEL_BREADCRUMBS = [
     ModelBreadcrumbItem(model_key="model", should_render=lambda context: context.get("list_url") is None),
     # Fallback if there is no `list_url` in the Context
 ]
-DEFAULT_INSTANCE_BREADCRUMBS = DEFAULT_MODEL_BREADCRUMBS + [InstanceBreadcrumbItem()]
+DEFAULT_INSTANCE_BREADCRUMBS = [*DEFAULT_MODEL_BREADCRUMBS, InstanceBreadcrumbItem()]
 
 DEFAULT_BREADCRUMBS = {
     "list": DEFAULT_MODEL_BREADCRUMBS,
@@ -350,8 +413,48 @@ class Breadcrumbs:
         all_items = prepend_items + items + append_items
         return [item.as_pair(context) for item in all_items if item.should_render(context)]
 
+    def filter_breadcrumbs_items(self, items: list[tuple[str, str]], context: Context) -> list[tuple[str, str]]:
+        """
+        Filters out all items that both label and url are None or empty str.
+
+        Args:
+            items (list[tuple[str, str]]): breadcrumb items pair.s
+            context (Context): The view or template context.
+
+        Returns:
+            (list[tuple[str, str]]): A list of filtered breadcrumb items pairs.
+        """
+        return [(url, label) for url, label in items if self.is_not_both_blank(url, label)]
+
+    @staticmethod
+    def is_not_both_blank(url: str, label: str) -> bool:
+        """
+        Check if both values are not empty / None.
+        We're still assuming that user intentionally would like to put some breadcrumbs
+        with just label or empty string / only whitespace with url.
+
+        Args:
+            url (str): The url to check.
+            label (str): The label to check.
+
+        Returns:
+            (bool): True if any item is filled (not empty), False if both items are empty str / None.
+        """
+        return (url and url.strip()) or (label and label.strip())
+
     @staticmethod
     def get_items_for_action(items: BreadcrumbItemsType, action: str, detail: bool) -> list[BaseBreadcrumbItem]:
+        """
+        Get the breadcrumb items for a specific action, with fallback to 'detail' if not found.
+
+        Args:
+            items (BreadcrumbItemsType): Dictionary mapping action names to breadcrumb item lists.
+            action (str): Current action name (e.g., "list", "detail").
+            detail (bool): Whether this is a detail view (for fallback).
+
+        Returns:
+            list[BaseBreadcrumbItem]: List of breadcrumb items for the action.
+        """
         breadcrumbs_list = items.get(action, [])
         if breadcrumbs_list:
             return breadcrumbs_list
