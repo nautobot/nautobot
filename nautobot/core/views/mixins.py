@@ -1391,15 +1391,17 @@ class ObjectNotesViewMixin(NautobotViewSetMixin):
 
 
 class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
-    create_form_class: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
-    form_class: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
+    create_form_class: type[Form]
+    form_class: type[Form]
 
     def create(self, request, *args, **kwargs):
         if request.method == "POST":
-            return self.perform_create(request, *args, **kwargs)
+            return self.process_form(request, *args, **kwargs)
 
-        create_form = self.create_form_class(initial=request.GET)  # pylint: disable=not-callable
-        model_form = self.form_class(request.GET)  # pylint: disable=not-callable
+        create_form = self.create_form_class(  # pylint: disable=not-callable
+            initial=normalize_querydict(request.GET, form_class=self.create_form_class)
+        )
+        model_form = self.form_class(initial=normalize_querydict(request.GET, form_class=self.form_class))  # pylint: disable=not-callable
 
         return Response(
             {
@@ -1411,15 +1413,10 @@ class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
             },
         )
 
-    # TODO: this conflicts with DRF's CreateModelMixin.perform_create(self, serializer) API
-    def perform_create(self, request, *args, **kwargs):  # pylint: disable=arguments-differ
+    def process_form(self, request, *args, **kwargs):
         create_form = self.create_form_class(  # pylint: disable=not-callable
             request.POST,
             initial=normalize_querydict(request.GET, form_class=self.create_form_class),
-        )
-        model_form = self.form_class(  # pylint: disable=not-callable
-            request.POST,
-            initial=normalize_querydict(request.GET, form_class=self.form_class),
         )
         if create_form.is_valid():
             new_components = []
@@ -1481,7 +1478,10 @@ class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
                 except ObjectDoesNotExist:
                     msg = "Component creation failed due to object-level permissions violation"
                     create_form.add_error(None, msg)
-
+        model_form = self.form_class(  # pylint: disable=not-callable
+            request.POST,
+            initial=normalize_querydict(request.GET, form_class=self.form_class),
+        )
         return Response(
             {
                 "template": self.create_template_name,
