@@ -2,7 +2,7 @@ from django.urls import path
 from django.views.generic.base import RedirectView
 
 from nautobot.core.views.routers import NautobotUIViewSetRouter
-from nautobot.extras.views import ImageAttachmentEditView, ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView
+from nautobot.extras.views import ImageAttachmentEditView, ObjectChangeLogView, ObjectNotesView
 from nautobot.ipam.views import ServiceEditView
 
 from . import views
@@ -45,6 +45,7 @@ router.register("modules", views.ModuleUIViewSet)
 router.register("platforms", views.PlatformUIViewSet)
 router.register("power-feeds", views.PowerFeedUIViewSet)
 router.register("power-panels", views.PowerPanelUIViewSet)
+router.register("racks", views.RackUIViewSet)
 router.register("rack-groups", views.RackGroupUIViewSet)
 router.register("rack-reservations", views.RackReservationUIViewSet)
 router.register("software-image-files", views.SoftwareImageFileUIViewSet)
@@ -66,36 +67,10 @@ urlpatterns = [
         kwargs={"model": Location},
     ),
     # Racks
-    path("racks/", views.RackListView.as_view(), name="rack_list"),
     path(
         "rack-elevations/",
         views.RackElevationListView.as_view(),
         name="rack_elevation_list",
-    ),
-    path("racks/add/", views.RackEditView.as_view(), name="rack_add"),
-    path("racks/import/", views.RackBulkImportView.as_view(), name="rack_import"),  # 3.0 TODO: remove, unused
-    path("racks/edit/", views.RackBulkEditView.as_view(), name="rack_bulk_edit"),
-    path("racks/delete/", views.RackBulkDeleteView.as_view(), name="rack_bulk_delete"),
-    path("racks/<uuid:pk>/", views.RackView.as_view(), name="rack"),
-    path("racks/<uuid:pk>/edit/", views.RackEditView.as_view(), name="rack_edit"),
-    path("racks/<uuid:pk>/delete/", views.RackDeleteView.as_view(), name="rack_delete"),
-    path(
-        "racks/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="rack_changelog",
-        kwargs={"model": Rack},
-    ),
-    path(
-        "racks/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="rack_notes",
-        kwargs={"model": Rack},
-    ),
-    path(  # 3.0 TODO: remove, no longer needed/used since 2.3
-        "racks/<uuid:pk>/dynamic-groups/",
-        ObjectDynamicGroupsView.as_view(),
-        name="rack_dynamicgroups",
-        kwargs={"model": Rack},
     ),
     path(
         "racks/<uuid:object_id>/images/add/",
@@ -469,7 +444,7 @@ urlpatterns = [
         name="device_notes",
         kwargs={"model": Device},
     ),
-    path(  # 3.0 TODO: remove, no longer needed/used since 2.3
+    path(
         "devices/<uuid:pk>/dynamic-groups/",
         views.DeviceDynamicGroupsView.as_view(),
         name="device_dynamicgroups",
