@@ -616,7 +616,7 @@ class RackFactory(PrimaryModelFactory):
     has_role = NautobotBoolIterator()
     role = factory.Maybe("has_role", random_instance(lambda: Role.objects.get_for_model(Rack)), None)
 
-    location = random_instance(lambda: Location.objects.get_for_model(VLANGroup), allow_null=False)
+    location = random_instance(lambda: Location.objects.get_for_model(Rack), allow_null=False)
 
     has_rack_group = NautobotBoolIterator()  # TODO there's no RackGroupFactory yet...
     rack_group = factory.Maybe("has_rack_group", random_instance(RackGroup), None)
