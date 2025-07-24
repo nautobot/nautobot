@@ -1975,6 +1975,39 @@ class SecretsGroupTestCase(
             response.context["secrets"], form_index=0, field="secret", errors=["This field is required."]
         )
 
+    def test_create_group_with_deleted_secret_fails_cleanly(self):
+        """
+        Creating a SecretsGroup with a deleted Secret should fail with a formset error.
+        """
+        self.add_permissions(*self.custom_test_permissions)
+
+        secret = Secret.objects.create(name="TempSecret", provider="text-file", parameters={"path": "/tmp"})  # noqa: S108  # hardcoded-temp-file -- false positive
+        secret_pk = secret.pk
+        secret.delete()
+
+        form_data = {
+            "name": "Test Group",
+            "description": "This should not be created",
+            "secrets_group_associations-TOTAL_FORMS": "1",
+            "secrets_group_associations-INITIAL_FORMS": "0",
+            "secrets_group_associations-MIN_NUM_FORMS": "0",
+            "secrets_group_associations-MAX_NUM_FORMS": "1000",
+            "secrets_group_associations-0-secret": secret_pk,
+            "secrets_group_associations-0-access_type": SecretsGroupAccessTypeChoices.TYPE_HTTP,
+            "secrets_group_associations-0-secret_type": SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
+        }
+
+        response = self.client.post(reverse("extras:secretsgroup_add"), data=form_data)
+        self.assertEqual(response.status_code, 200)
+
+        self.assertFormsetError(
+            response.context["secrets"],
+            form_index=0,
+            field="secret",
+            errors=["Select a valid choice. That choice is not one of the available choices."],
+        )
+        self.assertFalse(SecretsGroup.objects.filter(name="Test Group").exists())
+
 
 class GraphQLQueriesTestCase(
     ViewTestCases.CreateObjectViewTestCase,
