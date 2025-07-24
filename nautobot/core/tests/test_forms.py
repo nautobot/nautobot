@@ -864,3 +864,82 @@ class DynamicFilterFormTest(TestCase):
                 },
             )
             self.assertIsInstance(form.fields["lookup_value"], django_forms.IntegerField)
+
+
+class PrefetchInlineFormSetTest(TestCase):
+    def test_inline_formsets_with_prefetch_related(self):
+        from django.forms import inlineformset_factory
+
+        from nautobot.core.forms import APISelect, StaticSelect2
+        from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
+        from nautobot.extras.forms.forms import PrefetchInlineFormSet
+        from nautobot.extras.models import Secret, SecretsGroup, SecretsGroupAssociation
+
+        secrets_group = SecretsGroup.objects.create(name="Secrets Group 1")
+        secrets = (
+            Secret.objects.create(
+                name="secret-1", provider="environment-variable", parameters={"variable": "SOME_VAR"}
+            ),
+            Secret.objects.create(
+                name="secret-2", provider="environment-variable", parameters={"variable": "ANOTHER_VAR"}
+            ),
+            Secret.objects.create(
+                name="secret-3", provider="environment-variable", parameters={"variable": "ANOTHER_VAR3"}
+            ),
+        )
+
+        SecretsGroupAssociation.objects.create(
+            secret=secrets[0],
+            secrets_group=secrets_group,
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+        )
+        # Default formset will trigger a query
+        SecretsGroupAssociationFormSet = inlineformset_factory(
+            parent_model=SecretsGroup,
+            model=SecretsGroupAssociation,
+            fields=("access_type", "secret_type", "secret"),
+            extra=5,
+            widgets={
+                "access_type": StaticSelect2,
+                "secret_type": StaticSelect2,
+                "secret": APISelect(api_url="/api/extras/secrets/"),
+            },
+        )
+        with self.assertNumQueries(1):
+            formset = SecretsGroupAssociationFormSet(instance=secrets_group)
+            self.assertEqual(len(formset.forms), 6)
+
+        # Override to use prefetch_related query
+        SecretsGroupAssociationFormSet = inlineformset_factory(
+            parent_model=SecretsGroup,
+            model=SecretsGroupAssociation,
+            formset=PrefetchInlineFormSet,
+            fields=("access_type", "secret_type", "secret"),
+            extra=5,
+            widgets={
+                "access_type": StaticSelect2,
+                "secret_type": StaticSelect2,
+                "secret": APISelect(api_url="/api/extras/secrets/"),
+            },
+        )
+        # secrets_group_with_secrets = SecretsGroup.objects.prefetch_related("secrets_group_associations").get(
+        #     name="Secrets Group 1"
+        # )
+        from django.db.models import Prefetch
+
+        secrets_group_with_secrets = SecretsGroup.objects.prefetch_related(
+            Prefetch(
+                "secrets_group_associations",
+                queryset=SecretsGroupAssociation.objects.select_related("secret"),
+            )
+        ).get(name="Secrets Group 1")
+        # An instance with prefetch_related should not trigger a query
+        with self.assertNumQueries(0):
+            formset = SecretsGroupAssociationFormSet(instance=secrets_group_with_secrets)
+            self.assertEqual(len(formset.forms), 6)
+
+        # An instance without prefetch_related will trigger a query
+        with self.assertNumQueries(1):
+            formset = SecretsGroupAssociationFormSet(instance=secrets_group)
+            self.assertEqual(len(formset.forms), 6)

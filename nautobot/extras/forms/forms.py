@@ -31,6 +31,7 @@ from nautobot.core.forms import (
     JSONField,
     LaxURLField,
     MultipleContentTypeField,
+    PrefetchInlineFormSet,
     SlugField,
     StaticSelect2,
     StaticSelect2Multiple,
@@ -2121,6 +2122,7 @@ class SecretFilterForm(NautobotFilterForm):
 SecretsGroupAssociationFormSet = inlineformset_factory(
     parent_model=SecretsGroup,
     model=SecretsGroupAssociation,
+    formset=PrefetchInlineFormSet,
     fields=("access_type", "secret_type", "secret"),
     extra=5,
     widgets={
