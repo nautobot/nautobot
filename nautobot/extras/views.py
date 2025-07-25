@@ -1229,7 +1229,15 @@ class GitRepositoryResultView(generic.ObjectView):
 #
 
 
-class GraphQLQueryUiViewSet(NautobotUIViewSet):
+class GraphQLQueryUIViewSet(
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectEditViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectNotesViewMixin,
+):
     filterset_form_class = forms.GraphQLQueryFilterForm
     queryset = GraphQLQuery.objects.all()
     form_class = forms.GraphQLQueryForm
