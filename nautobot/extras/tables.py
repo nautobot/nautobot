@@ -1197,7 +1197,7 @@ class JobLogEntryTable(BaseTable):
             "class": log_entry_color_css,
         }
         attrs = {
-            "class": "table table-hover table-headings",
+            "class": "table table-hover nb-table-headings",
             "id": "logs",
         }
 

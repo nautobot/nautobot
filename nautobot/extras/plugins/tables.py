@@ -45,7 +45,7 @@ class InstalledAppsTable(tables.Table):
 
     class Meta:
         attrs = {
-            "class": "table table-hover table-headings",
+            "class": "table table-hover nb-table-headings",
         }
         default_columns = ("name", "headline", "version", "actions")
 
