@@ -73,11 +73,10 @@ class Command(_Command):
                         self.affected_models.add((self.migration.app_label, operation.name.lower()))
 
                 for app_label, model_name in sorted(self.affected_models):
-                    try:
+                    self.affected_models_count[f"{app_label}.{model_name}"] = 0
+                    with contextlib.suppress(Exception):
                         model = apps.get_model(app_label, model_name)
                         self.affected_models_count[model._meta.label_lower] = model.objects.count()
-                    except Exception:
-                        self.affected_models_count[model._meta.label_lower] = 0
 
             if action == "apply_start":
                 msg = f"  Applying {str(migration)[:50]}..."
@@ -94,8 +93,8 @@ class Command(_Command):
             self.stdout.write(self.style.SUCCESS(f" {outcome:<5} ({elapsed: 6.1f}s)"))
             if self.migration is not None:
                 for app_label, model_name in sorted(self.affected_models):
-                    with contextlib.suppress(Exception):
-                        if self.affected_models_count[model._meta.label_lower] == 0:
+                    if self.affected_models_count[f"{app_label}.{model_name}"] == 0:
+                        with contextlib.suppress(Exception):
                             model = apps.get_model(app_label, model_name)
                             self.affected_models_count[model._meta.label_lower] = model.objects.count()
 
