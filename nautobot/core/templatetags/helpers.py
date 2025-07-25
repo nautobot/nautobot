@@ -762,6 +762,19 @@ def render_address(address):
     return HTML_NONE
 
 
+@register.filter()
+def render_m2m(value, max_visible=5):
+    items = []
+    for val in value[:max_visible]:
+        rendered_val = hyperlinked_object(val)
+        items.append(rendered_val)
+
+    if len(value) > max_visible:
+        items.append("...")
+
+    return format_html_join("", "<div>{}</div>", ((item,) for item in items)) if items else HTML_NONE
+
+
 @library.filter()
 @register.filter()
 def render_button_class(value):
