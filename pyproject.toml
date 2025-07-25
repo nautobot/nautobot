@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.4.13b1"
+version = "2.4.14b1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -120,7 +120,7 @@ netaddr = "~1.3.0"
 # Library of network related utilities including network driver mappings and Jinja Filters
 # Note: netutils is limited in scope, dependencies, and observes semver, as such
 #       we permit a looser (^) version constraint here.
-netutils = "^1.6.0"
+netutils = "^1.14.0"
 # HTML sanitization
 nh3 = "~0.2.21"
 # Handling of version numbers
