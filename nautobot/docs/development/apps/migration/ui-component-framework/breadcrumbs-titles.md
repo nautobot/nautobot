@@ -4,6 +4,7 @@
 
 1. Check the default `Breadcrumbs`, `DocumentTitles` and `PageHeadings` classes if defaults values are sufficient for your needs.
 `breadcrumbs`, `document_titles` and `page_heading` will be attached automatically to the context and instatiate if needed.
+
 ```python
 
 class ExampleView:
@@ -12,9 +13,11 @@ class ExampleView:
     page_heading = PageHeadings(...)
     document_titles = DocumentTitles(...)
 ```
+
 Refer to the [Nautobot UI Framework Documentation](../../../core/ui-component-framework.md) if you need to update some of the default values.
 
-2. Remove custom html code from `{% block breadcrumbs %}` and `{% block title %}`. Use the built-in template tags to render the breadcrumbs and title.
+1. Remove custom html code from `{% block breadcrumbs %}` and `{% block title %}`. Use the built-in template tags to render the breadcrumbs and title.
+
 ```html
 {% load ui_framework %}
 
@@ -53,6 +56,7 @@ If you're not using the `NautobotUIViewSet` and the `NautobotHTMLRenderer` you n
 ### Example:
 
 #### Before
+
 ```python
 
 class SomeGenericView(GenericView):
