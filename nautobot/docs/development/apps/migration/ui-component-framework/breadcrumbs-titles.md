@@ -54,7 +54,7 @@ Complete example:
 ## Generic views
 
 If you're not using the `NautobotUIViewSet` and the `NautobotHTMLRenderer` you need to make sure that `context` will have:
-- `view_action` - based on that `Breadcrumbs` and `PageHeadings` / `DocumentTitles` will know what action they need to render.
+- `view_action` - based on that `Breadcrumbs` and `Titles` will know what action they need to render.
 - actual `Breadcrumbs` instance, under `context['breadcrumbs']` to be properly rendered by `{% render_breadcrumbs %}`
 - `Titles` instances, under `context['view_titles']` to be properly rendered by `{% render_title %}`
 

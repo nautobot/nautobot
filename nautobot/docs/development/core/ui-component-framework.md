@@ -640,7 +640,14 @@ High-level data flow diagram:
 
 ### BreadcrumbItem Configuration
 
-Breadcrumb items has three main classes:
+Breadcrumb items has three main type of items.
+
+- `ViewNameBreadcrumbItem`: Creates a breadcrumb from a Django view name (string or callable), with optional URL kwargs and query params. The label can be static or dynamic.
+- `ModelBreadcrumbItem`: Generates a breadcrumb based on a Django model class, instance, or dotted model string. Supports resolving list/detail URLs and model verbose names for the label.
+- `InstanceBreadcrumbItem`: Represents a breadcrumb for a specific object instance (fetched from context). The URL and label are resolved from the object’s absolute URL and display/name.
+
+All breadcrumb items accept a `should_render` callable to control visibility based on context, and are automatically filtered out if both their URL and label are empty.
+Labels can be rendered either by using simple str, passing object that has `__str__` method, passing callable that accepts context or by taking it from context via `label_key`.
 
 #### `ViewNameBreadcrumbItem` Class
 
@@ -651,6 +658,13 @@ item = ViewNameBreadcrumbItem(
     label="All Devices",
 )
 # Will generate: ("/dcim/devices/", "All Devices")
+
+# Basic view name from context breadcrumb
+item = ViewNameBreadcrumbItem(
+    view_name_key="list_url",
+    label="All Devices",
+)
+# Will generate: ("/dcim/devices/", "All Devices"); assuming there is "dcim:device_list" in context["list_url"]
 
 # With reverse parameters
 item = ViewNameBreadcrumbItem(
@@ -741,9 +755,9 @@ item = InstanceBreadcrumbItem(
 By default `Breadcrumbs` class uses two actions: `list` and `detail`. However, you can specify your custom action,
 or just pass to the items one built-in action to override default only for the chosen view actions.
 
-If there is no `view_action` in context it will use `list` by default.
+If there is no `view_action` in the context it will use `list` by default.
 
-If there is no `detail` in context it will assume `False` by default.
+If there is no `detail` in the context it will assume `detail=False` by default.
 
 [Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.Breadcrumbs)
 
@@ -791,7 +805,7 @@ nested_breadcrumbs = Breadcrumbs(
                 label=lambda ctx: f"Site: {ctx['object'].site.name}"
             ),
             ModelBreadcrumbItem(model="dcim.device", model_label_type="plural"),
-            InstanceBreadcrumbItem()
+            InstanceBreadcrumbItem(),
         ]
     }
 )
