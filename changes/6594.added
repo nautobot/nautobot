@@ -1,1 +1,0 @@
-Added additional database indices to `IPAddress`, `Prefix`, and `VRF` models to improve the default list view performance for these models.
