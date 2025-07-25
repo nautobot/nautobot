@@ -41,9 +41,8 @@ Complete example:
 {% block content %}
 <div class="row noprint">
     <div class="col-md-12">
-        {% block breadcrumbs %}<!-- you can remove the <ol> --->
-            {% render_breadcrumbs %}
-        {% endblock breadcrumbs %}
+        <!-- you can remove the <ol> and {% block breadcrumbs %} - it's moved to default breadcrumbs template --->
+        {% render_breadcrumbs %}
     </div>
 </div>
 
@@ -141,9 +140,8 @@ class SomeGenericView(GenericView):
 {% block content %}
     <div class="row noprint">
         <div class="col-md-12">
-            {% block breadcrumbs %}
-                {% render_breadcrumbs %}
-            {% endblock breadcrumbs %}
+            <!-- you can remove the <ol> and {% block breadcrumbs %} - it's moved to default breadcrumbs template --->
+            {% render_breadcrumbs %}
         </div>
     </div>
 
@@ -157,11 +155,8 @@ class SomeGenericView(GenericView):
 
 ## Important notes
 
-!!! note
-    Wrapper `<ol class="breadcrumb">` tag will be now rendered by `render_breadcrumbs`.
-
 !!! info
-    Default `{% render_breadcrumbs %}` template will still add the `{% block extra_breadcrumbs %}`.
+    Default `{% render_breadcrumbs %}` template will add the `<ol class="breadcrumbs">` tag, and both `{% block breadcrumbs %}` and `{% block extra_breadcrumbs %}` blocks.
 
 !!! warning
     You need to use `{% render_title "plain" %}` when rendering inside of `{% block title %}` to not cause browser issues.

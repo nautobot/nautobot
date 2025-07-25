@@ -12,9 +12,7 @@
     <div class="row noprint">
         <div class="{% if search_form %}col-sm-8 col-md-9 {% else %} col-md-12 {% endif %}">
             {% if breadcrumbs is not None %}
-                {% block breadcrumbs %}
-                    {% render_breadcrumbs %}
-                {% endblock breadcrumbs %}
+                {% render_breadcrumbs %}
             {% else %}
                 {# TODO: remove this fragment after breadcrumbs implementation in generic views like ConsoleConnectionsListView #}
                 <ol class="breadcrumb">

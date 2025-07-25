@@ -1,6 +1,8 @@
 <ol class="breadcrumb">
-    {% for url, title in breadcrumbs_items %}
-        <li><a href="{{ url }}">{{ title }}</a></li>
-    {% endfor %}
-    {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
+    {% block breadcrumbs %}
+        {% for url, title in breadcrumbs_items %}
+            <li><a href="{{ url }}">{{ title }}</a></li>
+        {% endfor %}
+        {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
+    {% endblock %}
 </ol>
