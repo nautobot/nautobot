@@ -1,61 +1,64 @@
 # Breadcrumbs and titles migration
 
+## Overview
+
+The new `Breadcrumbs` and `Titles` classes in Nautobot provide a flexible, declarative way to generate navigation
+breadcrumbs and dynamic page/document titles.
+Each breadcrumb or title item can use context variables and be automatically generated either by getting it from the context
+or using callables.
+There are new simple tags in `{% load ui_framework %}` that allows you to automatically render breadcrumbs and title:
+
+- `{% render_breadcrumbs %}` - expects `Breadcrumbs` instance in `context["breadcrumbs"]`
+- `{% render_title page_heading %}` - expects `Titles` instance in `context["view_titles"]`
+
 ## `NautobotUIViewSet` views
 
-1. Check the default `Breadcrumbs`, `DocumentTitles` and `PageHeadings` classes if defaults values are sufficient for your needs.
-`breadcrumbs`, `document_titles` and `page_heading` will be attached automatically to the context and instatiate if needed.
+- Check the default `Breadcrumbs` and `Titles` classes if defaults values are sufficient for your needs.
+`breadcrumbs` and `view_titles` will be attached automatically to the context and instantiate if needed.
 
 ```python
 
 class ExampleView:
 
     breadcrumbs = Breadcrumbs(...)  # Update defaults if needed
-    page_heading = PageHeadings(...)
-    document_titles = DocumentTitles(...)
+    view_titles = Titles(...)
 ```
 
 Refer to the [Nautobot UI Framework Documentation](../../../core/ui-component-framework.md) if you need to update some of the default values.
 
-1. Remove custom html code from `{% block breadcrumbs %}` and `{% block title %}`. Use the built-in template tags to render the breadcrumbs and title.
+- Remove custom html code from `{% block breadcrumbs %}` and `{% block title %}`. Use the built-in template tags to render the breadcrumbs and title.
+
+- Make sure that page heading and document title (`{% block title %}`) are separated. Move `{% block title %}` outside of `{% block content %}` and render this as plain text.
+
+Complete example:
 
 ```html
 {% load ui_framework %}
 
+<!-- rendered outside of context to properly put plaintext title only inside <head><title>...</title></head> HTML tags. -->
+{% block title %}{% render_title "plain" %}{% endblock %}
+
 {% block content %}
 <div class="row noprint">
     <div class="col-md-12">
-        {% block breadcrumbs %}
+        {% block breadcrumbs %}<!-- you can remove the <ol> --->
             {% render_breadcrumbs %}
         {% endblock breadcrumbs %}
     </div>
 </div>
 
-<h1>{% block title %}{% render_titles page_heading %}{% endblock %}</h1>
+<h1>{% render_title %}</h1>
 {% endblock %}
 ```
-
-!!! note
-    For most use cases, using `{% render_titles page_heading %}` within a `{% block title %}` will be sufficient.
-    But default `PageHeading` generates some html for list action and if you use it within a `{% block title %}` browser will output this html in document title as well.
-    If your custom titles uses some html code, make sure that you will use both `page_heading` and `document_titles` separately.
-
-    ```html
-    {% block title %}{% render_titles document_titles %}{% endblock %} <!-- block title moved outside of content to render only as document title / browser tab name. -->
-    {% block content %}
-        <h1>{% render_titles page_heading %}</h1> <!-- page heading is rendered within h1 -->
-    {% endblock %}
-    ```
 
 ## Generic views
 
 If you're not using the `NautobotUIViewSet` and the `NautobotHTMLRenderer` you need to make sure that `context` will have:
 - `view_action` - based on that `Breadcrumbs` and `PageHeadings` / `DocumentTitles` will know what action they need to render.
 - actual `Breadcrumbs` instance, under `context['breadcrumbs']` to be properly rendered by `{% render_breadcrumbs %}`
-- `PageHeadings` / `DocumentTitles` instances or just base `Titles` instance
+- `Titles` instances, under `context['view_titles']` to be properly rendered by `{% render_title %}`
 
-### Example:
-
-#### Before
+### Generic view "before" example
 
 ```python
 
@@ -100,7 +103,7 @@ class SomeGenericView(GenericView):
 {% endblock %}
 ```
 
-#### After
+#### Generic view "after" example
 
 ```python
 class SomeGenericView(GenericView):
@@ -111,7 +114,7 @@ class SomeGenericView(GenericView):
     breadcrumbs = Breadcrumbs(
         items={"generic": [ViewNameBreadcrumbItem(view_name="apps:custom_url", label="My Item")]}
     )
-    generic_titles = Titles(titles={"generic": "My Title"})
+    view_titles = Titles(titles={"generic": "My Title"})
 
     def get(self, request):
         my_data = get_some_data()
@@ -122,7 +125,7 @@ class SomeGenericView(GenericView):
                 "my_data": my_data,
                 "view_action": "generic",
                 "breadcrumbs": self.breadcrumbs,
-                "generic_titles": self.generic_titles,
+                "view_titles": self.view_titles,
             },
         )
 ```
@@ -133,6 +136,8 @@ class SomeGenericView(GenericView):
 {% load static %}
 {% load ui_framework %}
 
+{% block title %}{% render_title "plain" %}{% endblock %}
+
 {% block content %}
     <div class="row noprint">
         <div class="col-md-12">
@@ -142,7 +147,7 @@ class SomeGenericView(GenericView):
         </div>
     </div>
 
-    <h1>{% block title %}{% render_title generic_titles %}{% endblock %}</h1>
+    <h1>{% render_title %}</h1>
 
     <div class="row">
         Some data
@@ -150,5 +155,13 @@ class SomeGenericView(GenericView):
 {% endblock %}
 ```
 
+## Important notes
+
 !!! note
     Wrapper `<ol class="breadcrumb">` tag will be now rendered by `render_breadcrumbs`.
+
+!!! info
+    Default `{% render_breadcrumbs %}` template will still add the `{% block extra_breadcrumbs %}`.
+
+!!! warning
+    You need to use `{% render_title "plain" %}` when rendering inside of `{% block title %}` to not cause browser issues.
