@@ -768,7 +768,7 @@ class JobViewSetBase(
             **job_class.serialize_data(cleaned_data),
         )
 
-        scheduled_job_has_approval_workflow = schedule.has_approval_workflow_definition
+        scheduled_job_has_approval_workflow = schedule.has_approval_workflow_definition()
         if job_model.has_sensitive_variables:
             if (
                 "schedule" in request.data
@@ -787,6 +787,7 @@ class JobViewSetBase(
                 )
 
         # Approval is not required for dryrun
+        # TODO: remove this once we have the ability to configure an approval workflow to ignore jobs with specific parameters(including `dryrun`)
         dryrun = data.get("dryrun", False) if job_class.supports_dryrun else False
 
         if (not dryrun and scheduled_job_has_approval_workflow) or schedule_data[

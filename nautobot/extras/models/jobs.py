@@ -1288,18 +1288,8 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         return self.job_queue.name if self.job_queue else ""
 
     @property
-    def has_approval_workflow_definition(self) -> bool:
-        from nautobot.extras.models.approvals import ApprovalWorkflowDefinition
-
-        return ApprovalWorkflowDefinition.objects.find_for_model(self) is not None
-
-    @property
     def runnable(self):
-        return (
-            self.job_model.enabled
-            and self.job_model.installed
-            and not (self.job_model.has_sensitive_variables and self.approval_required)
-        )
+        return self.job_model.runnable and not (self.job_model.has_sensitive_variables and self.approval_required)
 
     @queue.setter
     def queue(self, value: str):
@@ -1308,6 +1298,11 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
                 self.job_queue = JobQueue.objects.get(name=value)
             except JobQueue.DoesNotExist:
                 raise ValidationError(f"Job Queue {value} does not exist in the database.")
+
+    def has_approval_workflow_definition(self) -> bool:
+        from nautobot.extras.models.approvals import ApprovalWorkflowDefinition
+
+        return ApprovalWorkflowDefinition.objects.find_for_model(self) is not None
 
     @staticmethod
     def earliest_possible_time():

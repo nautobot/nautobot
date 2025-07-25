@@ -3155,8 +3155,8 @@ class JobTestCase(
             self.assertBodyContains(
                 response,
                 "Unable to run or schedule job: "
-                "This job is flagged as possibly having sensitive variables but has also approval worklfow definition."
-                "Remove approval workflow definition or set `has_sensitive_variables` to False.",
+                "This job is flagged as possibly having sensitive variables but also has an applicable approval workflow definition."
+                "Modify or remove the approval workflow definition or modify the job to set `has_sensitive_variables` to False.",
             )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
