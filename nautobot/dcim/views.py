@@ -524,11 +524,41 @@ class RackGroupUIViewSet(NautobotUIViewSet):
 #
 
 
-class RackListView(generic.ObjectListView):
-    queryset = Rack.objects.all()
-    filterset = filters.RackFilterSet
-    filterset_form = forms.RackFilterForm
-    table = tables.RackDetailTable
+class RackUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.RackBulkEditForm
+    filterset_class = filters.RackFilterSet
+    filterset_form_class = forms.RackFilterForm
+    form_class = forms.RackForm
+    serializer_class = serializers.RackSerializer
+    table_class = tables.RackDetailTable
+    queryset = Rack.objects.select_related("location", "tenant__tenant_group", "rack_group", "role")
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+
+        if self.action == "retrieve":
+            # Get 0U and child devices located within the rack
+            context["nonracked_devices"] = Device.objects.filter(rack=instance, position__isnull=True).select_related(
+                "device_type__manufacturer"
+            )
+
+            peer_racks = Rack.objects.restrict(request.user, "view").filter(location=instance.location)
+
+            if instance.rack_group:
+                peer_racks = peer_racks.filter(rack_group=instance.rack_group)
+            else:
+                peer_racks = peer_racks.filter(rack_group__isnull=True)
+
+            context["next_rack"] = peer_racks.filter(name__gt=instance.name).order_by("name").first()
+            context["prev_rack"] = peer_racks.filter(name__lt=instance.name).order_by("-name").first()
+
+            context["reservations"] = RackReservation.objects.restrict(request.user, "view").filter(rack=instance)
+            context["power_feeds"] = (
+                PowerFeed.objects.restrict(request.user, "view").filter(rack=instance).select_related("power_panel")
+            )
+            context["device_count"] = Device.objects.restrict(request.user, "view").filter(rack=instance).count()
+
+        return context
 
 
 class RackElevationListView(generic.ObjectListView):
@@ -582,70 +612,6 @@ class RackElevationListView(generic.ObjectListView):
             "title": "Rack Elevation",
             "list_url": "dcim:rack_elevation_list",
         }
-
-
-class RackView(generic.ObjectView):
-    queryset = Rack.objects.select_related("location", "tenant__tenant_group", "rack_group", "role")
-
-    def get_extra_context(self, request, instance):
-        # Get 0U and child devices located within the rack
-        nonracked_devices = Device.objects.filter(rack=instance, position__isnull=True).select_related(
-            "device_type__manufacturer"
-        )
-
-        peer_racks = Rack.objects.restrict(request.user, "view").filter(location=instance.location)
-
-        if instance.rack_group:
-            peer_racks = peer_racks.filter(rack_group=instance.rack_group)
-        else:
-            peer_racks = peer_racks.filter(rack_group__isnull=True)
-        next_rack = peer_racks.filter(name__gt=instance.name).order_by("name").first()
-        prev_rack = peer_racks.filter(name__lt=instance.name).order_by("-name").first()
-
-        reservations = RackReservation.objects.restrict(request.user, "view").filter(rack=instance)
-        power_feeds = (
-            PowerFeed.objects.restrict(request.user, "view").filter(rack=instance).select_related("power_panel")
-        )
-
-        device_count = Device.objects.restrict(request.user, "view").filter(rack=instance).count()
-
-        return {
-            "device_count": device_count,
-            "reservations": reservations,
-            "power_feeds": power_feeds,
-            "nonracked_devices": nonracked_devices,
-            "next_rack": next_rack,
-            "prev_rack": prev_rack,
-            **super().get_extra_context(request, instance),
-        }
-
-
-class RackEditView(generic.ObjectEditView):
-    queryset = Rack.objects.all()
-    model_form = forms.RackForm
-    template_name = "dcim/rack_edit.html"
-
-
-class RackDeleteView(generic.ObjectDeleteView):
-    queryset = Rack.objects.all()
-
-
-class RackBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Rack.objects.all()
-    table = tables.RackTable
-
-
-class RackBulkEditView(generic.BulkEditView):
-    queryset = Rack.objects.all()
-    filterset = filters.RackFilterSet
-    table = tables.RackTable
-    form = forms.RackBulkEditForm
-
-
-class RackBulkDeleteView(generic.BulkDeleteView):
-    queryset = Rack.objects.all()
-    filterset = filters.RackFilterSet
-    table = tables.RackTable
 
 
 #
