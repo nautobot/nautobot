@@ -3242,6 +3242,40 @@ class JobTestCase(
             result = JobResult.objects.latest()
             self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
 
+    # @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    # def test_run_dryrun_immediate_job_with_approval_workflow_definded(self, _):
+    #     test_pass = Job.objects.get(job_class_name="TestDryRun")
+    #     default_job_queue = JobQueue.objects.get(name="default", queue_type=JobQueueTypeChoices.TYPE_CELERY)
+    #     test_pass.default_job_queue = default_job_queue
+    #     test_pass.enabled = True
+    #     test_pass.dryrun_default_override = True
+    #     test_pass.save()
+
+    #     run_urls = (
+    #         # Legacy URL (job class path based)
+    #         reverse("extras:job_run_by_class_path", kwargs={"class_path": test_pass.class_path}),
+    #         # Current URL (job model pk based)
+    #         reverse("extras:job_run", kwargs={"pk": test_pass.pk}),
+    #     )
+    #     self.add_permissions("extras.run_job")
+    #     self.add_permissions("extras.view_jobresult")
+
+    #     ApprovalWorkflowDefinition.objects.create(
+    #         name="Approval Definition",
+    #         model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+    #         priority=0,
+    #     )
+
+    #     data = {
+    #         "_schedule_type": "immediately",
+    #     }
+    #     for run_url in run_urls:
+    #         response = self.client.post(run_url, data)
+    #         scheduled_job = ScheduledJob.objects.last()
+    #         self.assertIsNone(scheduled_job)
+    #         result = JobResult.objects.latest()
+    #         self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
+
     def test_job_object_change_log_view(self):
         """Assert Job change log view displays appropriate header"""
         instance = self.test_pass

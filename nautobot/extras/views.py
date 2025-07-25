@@ -2053,23 +2053,36 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     "This job is flagged as possibly having sensitive variables but also has an applicable approval workflow definition."
                     "Modify or remove the approval workflow definition or modify the job to set `has_sensitive_variables` to False.",
                 )
-            elif not dryrun:
-                # Step 1: Check if approval is required
-                if scheduled_job_has_approval_workflow:
-                    scheduled_job.validated_save()
-                    return self._handle_approval_workflow_response(request, scheduled_job, return_url)
-
-                # Step 3: If approval is not required
-                elif schedule_type in JobExecutionType.SCHEDULE_CHOICES:
-                    scheduled_job.validated_save()
-                    return self._handle_scheduled_job_response(request, scheduled_job, return_url)
-
-                # Step 4: Immediate execution (no schedule, no approval)
-                else:
-                    # Enqueue job for immediate execution
+            else:
+                if dryrun and schedule_type not in JobExecutionType.SCHEDULE_CHOICES:
+                    # Enqueue job for immediate execution when dryrun and (no schedule, no has_sensitive_variables)
                     return self._handle_immediate_execution(
                         request, job_model, job_class, job_form, profile, ignore_singleton_lock, job_queue, return_url
                     )
+                else:
+                    # Step 1: Check if approval is required
+                    if scheduled_job_has_approval_workflow:
+                        scheduled_job.validated_save()
+                        return self._handle_approval_workflow_response(request, scheduled_job, return_url)
+
+                    # Step 3: If approval is not required
+                    elif schedule_type in JobExecutionType.SCHEDULE_CHOICES:
+                        scheduled_job.validated_save()
+                        return self._handle_scheduled_job_response(request, scheduled_job, return_url)
+
+                    # Step 4: Immediate execution (no schedule, no approval)
+                    else:
+                        # Enqueue job for immediate execution
+                        return self._handle_immediate_execution(
+                            request,
+                            job_model,
+                            job_class,
+                            job_form,
+                            profile,
+                            ignore_singleton_lock,
+                            job_queue,
+                            return_url,
+                        )
 
         if return_url:
             return redirect(return_url)
