@@ -413,7 +413,7 @@ class NavAppsUITestCase(TestCase):
         self.assertContains(
             response,
             f"""
-            <a class="sidenav-link"
+            <a class="nb-sidenav-link"
                 data-item-weight="{self.apps_marketplace_item_weight}"
                 href="{self.apps_marketplace_url}">
                 Apps Marketplace
@@ -428,7 +428,7 @@ class NavAppsUITestCase(TestCase):
         self.assertContains(
             response,
             f"""
-            <a class="sidenav-link"
+            <a class="nb-sidenav-link"
                 data-item-weight="{self.apps_list_item_weight}"
                 href="{self.apps_list_url}">
                 Installed Apps
