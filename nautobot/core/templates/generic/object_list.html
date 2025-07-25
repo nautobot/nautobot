@@ -11,9 +11,21 @@
 {% block header %}
     <div class="row noprint">
         <div class="{% if search_form %}col-sm-8 col-md-9 {% else %} col-md-12 {% endif %}">
-            {% block breadcrumbs %}
-                {% render_breadcrumbs %}
-            {% endblock breadcrumbs %}
+            {% if breadcrumbs is not None %}
+                {% block breadcrumbs %}
+                    {% render_breadcrumbs %}
+                {% endblock breadcrumbs %}
+            {% else %}
+                {# TODO: remove this fragment after breadcrumbs implementation in generic views like ConsoleConnectionsListView #}
+                <ol class="breadcrumb">
+                    {% block breadcrumbs %}
+                        {% if list_url %}
+                            <li><a href="{% url list_url %}">{{ title }}</a></li>
+                        {% endif %}
+                        {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
+                    {% endblock breadcrumbs %}
+                </ol>
+            {% endif %}
         </div>
         {% if search_form %}
         <div class="col-sm-4 col-md-3">
