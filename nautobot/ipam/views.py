@@ -1222,6 +1222,12 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
             data["locations"] = instance.locations.all()
             return data
 
+        def render_value(self, key, value, context):
+            instance = get_obj_from_context(context)
+            if key == "locations":
+                return helpers.render_m2m(value, f"/dcim/locations/?vlans={instance.pk}", instance._meta.model_name)
+            return super().render_value(key, value, context)
+
     class PrefixObjectsTablePanel(object_detail.ObjectsTablePanel):
         def _get_table_add_url(self, context):
             obj = get_obj_from_context(context)
@@ -1246,7 +1252,6 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
-                value_transforms={"locations": [helpers.render_m2m]},
             ),
             PrefixObjectsTablePanel(
                 weight=100,
