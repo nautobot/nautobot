@@ -47,6 +47,9 @@ Here's a list of what's changed:
 | `tile-description`                    | `nb-tile-description`                                                                             |
 | `tile-footer`                         | `nb-tile-footer`                                                                                  |
 | `tile-header`                         | `nb-tile-header`                                                                                  |
+| `table-headings`                      | `nb-table-headings`                                                                               |
+| `description`                         | `nb-description`                                                                                  |
+| `style-line`                          | `nb-style-line`                                                                                   |
 
 ## Table configuration button
 
