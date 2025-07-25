@@ -484,13 +484,13 @@ class SecretsGroupAccessTypeChoices(ChoiceSet):
 
 
 class SecretsGroupSecretTypeChoices(ChoiceSet):
-    TYPE_AUTHKEY = "authentication-key"  # noqa: S105  # hardcoded-password-string -- false positive
+    TYPE_AUTHKEY = "authentication-key"
     TYPE_AUTHPROTOCOL = "authentication-protocol"
     TYPE_KEY = "key"
     TYPE_NOTES = "notes"
     TYPE_PASSWORD = "password"  # noqa: S105  # hardcoded-password-string -- false positive
     TYPE_PRIVALGORITHM = "private-algorithm"
-    TYPE_PRIVKEY = "private-key"  # noqa: S105  # hardcoded-password-string -- false positive
+    TYPE_PRIVKEY = "private-key"
     TYPE_SECRET = "secret"  # noqa: S105  # hardcoded-password-string -- false positive
     TYPE_TOKEN = "token"  # noqa: S105  # hardcoded-password-string -- false positive
     TYPE_URL = "url"
