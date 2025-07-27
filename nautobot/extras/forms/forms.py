@@ -170,7 +170,6 @@ __all__ = (
     "JobQueueBulkEditForm",
     "JobQueueFilterForm",
     "JobQueueForm",
-    "JobResultBulkEditForm",
     "JobResultFilterForm",
     "JobScheduleForm",
     "LocalContextFilterForm",
@@ -1593,7 +1592,7 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
         ].help_text = (
             f"The scheduled time is relative to the Nautobot configured timezone: {get_current_timezone_name()}."
         )
-        
+
 
 class JobResultFilterForm(BootstrapMixin, forms.Form):
     model = JobResult
