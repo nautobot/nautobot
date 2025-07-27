@@ -1592,14 +1592,7 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
         ].help_text = (
             f"The scheduled time is relative to the Nautobot configured timezone: {get_current_timezone_name()}."
         )
-
-
-class JobResultBulkEditForm(NoteModelBulkEditFormMixin):
-    pk = forms.ModelMultipleChoiceField(queryset=JobResult.objects.all(), widget=forms.MultipleHiddenInput)
-
-    class Meta:
-        model = JobResult
-
+        
 
 class JobResultFilterForm(BootstrapMixin, forms.Form):
     model = JobResult
