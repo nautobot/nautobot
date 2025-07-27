@@ -2054,15 +2054,19 @@ class JobHookUIViewSet(NautobotUIViewSet):
 # JobResult
 #
 
-
-class JobResultUIViewSet(NautobotUIViewSet):
-    bulk_update_form_class = forms.JobResultBulkEditForm
+class JobResultUIViewSet(
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectNotesViewMixin,
+):
     filterset_class = filters.JobResultFilterSet
     filterset_form_class = forms.JobResultFilterForm
     form_class = None
     serializer_class = serializers.JobResultSerializer
     table_class = tables.JobResultTable
-    template_name = "extras/jobresult_retrieve.html"
     queryset = JobResult.objects.defer("result").select_related("job_model", "user")
     action_buttons = ()
 
