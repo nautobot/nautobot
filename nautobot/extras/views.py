@@ -2061,7 +2061,6 @@ class JobResultUIViewSet(
     ObjectDestroyViewMixin,
     ObjectBulkDestroyViewMixin,
     ObjectChangeLogViewMixin,
-    ObjectNotesViewMixin,
 ):
     filterset_class = filters.JobResultFilterSet
     filterset_form_class = forms.JobResultFilterForm
