@@ -4,7 +4,6 @@ from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras import views
 from nautobot.extras.models import (
     CustomField,
-    DynamicGroup,
     GitRepository,
     GraphQLQuery,
     Job,
@@ -22,6 +21,7 @@ router.register("config-contexts", views.ConfigContextUIViewSet)
 router.register("contacts", views.ContactUIViewSet)
 router.register("contact-associations", views.ContactAssociationUIViewSet)
 router.register("custom-links", views.CustomLinkUIViewSet)
+router.register("dynamic-groups", views.DynamicGroupUIViewSet)
 router.register("export-templates", views.ExportTemplateUIViewSet)
 router.register("external-integrations", views.ExternalIntegrationUIViewSet)
 router.register("job-buttons", views.JobButtonUIViewSet)
@@ -90,29 +90,7 @@ urlpatterns = [
         kwargs={"model": CustomField},
     ),
     # Dynamic Groups
-    path("dynamic-groups/", views.DynamicGroupListView.as_view(), name="dynamicgroup_list"),
-    path("dynamic-groups/add/", views.DynamicGroupEditView.as_view(), name="dynamicgroup_add"),
     path("dynamic-groups/assign-members/", views.DynamicGroupBulkAssignView.as_view(), name="dynamicgroup_bulk_assign"),
-    path(
-        "dynamic-groups/delete/",
-        views.DynamicGroupBulkDeleteView.as_view(),
-        name="dynamicgroup_bulk_delete",
-    ),
-    path("dynamic-groups/<uuid:pk>/", views.DynamicGroupView.as_view(), name="dynamicgroup"),
-    path("dynamic-groups/<uuid:pk>/edit/", views.DynamicGroupEditView.as_view(), name="dynamicgroup_edit"),
-    path("dynamic-groups/<uuid:pk>/delete/", views.DynamicGroupDeleteView.as_view(), name="dynamicgroup_delete"),
-    path(
-        "dynamic-groups/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="dynamicgroup_changelog",
-        kwargs={"model": DynamicGroup},
-    ),
-    path(
-        "dynamic-groups/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="dynamicgroup_notes",
-        kwargs={"model": DynamicGroup},
-    ),
     # Git repositories
     path(
         "git-repositories/",

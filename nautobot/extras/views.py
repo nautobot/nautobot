@@ -737,212 +737,120 @@ class CustomLinkUIViewSet(NautobotUIViewSet):
 #
 
 
-class DynamicGroupListView(generic.ObjectListView):
+class DynamicGroupUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.DynamicGroupBulkEditForm
+    filterset_class = filters.DynamicGroupFilterSet
+    filterset_form_class = forms.DynamicGroupFilterForm
+    form_class = forms.DynamicGroupForm
     queryset = DynamicGroup.objects.all()
-    table = tables.DynamicGroupTable
-    filterset = filters.DynamicGroupFilterSet
-    filterset_form = forms.DynamicGroupFilterForm
-    action_buttons = ("add",)
-
-
-class DynamicGroupView(generic.ObjectView):
-    queryset = DynamicGroup.objects.all()
+    serializer_class = serializers.DynamicGroupSerializer
+    table_class = tables.DynamicGroupTable
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
-        model = instance.model
-        table_class = get_table_for_model(model)
 
-        if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
-            # Ensure that members cache is up-to-date for this specific group
-            members = instance.update_cached_members()
-            messages.success(request, f"Refreshed cached members list for {instance}")
-        else:
-            members = instance.members
-
-        if table_class is not None:
-            # Members table (for display on Members nav tab)
-            if hasattr(members, "without_tree_fields"):
-                members = members.without_tree_fields()
-            members_table = table_class(
-                members.restrict(request.user, "view"),
-                orderable=False,
-                exclude=["dynamic_group_count"],
-                hide_hierarchy_ui=True,
-            )
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(members_table)
-
-            # Descendants table
-            descendants_memberships = instance.membership_tree()
-            descendants_table = tables.NestedDynamicGroupDescendantsTable(
-                descendants_memberships,
-                orderable=False,
-            )
-            descendants_tree = {m.pk: m.depth for m in descendants_memberships}
-
-            # Ancestors table
-            ancestors = instance.get_ancestors()
-            ancestors_table = tables.NestedDynamicGroupAncestorsTable(ancestors, orderable=False)
-            ancestors_tree = instance.flatten_ancestors_tree(instance.ancestors_tree())
-
-            if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
-                context["raw_query"] = pretty_print_query(instance.generate_query())
-                context["members_list_url"] = None
+        if self.action in ("create", "update"):
+            filterform_class = instance.generate_filter_form()
+            if filterform_class is None:
+                context["filter_form"] = None
+            elif request.POST:
+                context["filter_form"] = filterform_class(data=request.POST)
             else:
-                context["raw_query"] = None
-                try:
-                    context["members_list_url"] = reverse(get_route_for_model(instance.model, "list"))
-                except NoReverseMatch:
+                initial = instance.get_initial()
+                context["filter_form"] = filterform_class(initial=initial)
+
+            formset_kwargs = {"instance": instance}
+            if request.POST:
+                formset_kwargs["data"] = request.POST
+            context["children"] = forms.DynamicGroupMembershipFormSet(**formset_kwargs)
+
+        elif self.action == "retrieve":
+            model = instance.model
+            table_class = get_table_for_model(model)
+            if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
+                members = instance.update_cached_members()
+                messages.success(request, f"Refreshed cached members list for {instance}")
+            else:
+                members = instance.members
+            if table_class is not None:
+                if hasattr(members, "without_tree_fields"):
+                    members = members.without_tree_fields()
+
+                members_table = table_class(
+                    members.restrict(request.user, "view"),
+                    orderable=False,
+                    exclude=["dynamic_group_count"],
+                    hide_hierarchy_ui=True,
+                )
+                paginate = {
+                    "paginator_class": EnhancedPaginator,
+                    "per_page": get_paginate_count(request),
+                }
+                RequestConfig(request, paginate).configure(members_table)
+
+                # Descendants table
+                descendants_memberships = instance.membership_tree()
+                descendants_table = tables.NestedDynamicGroupDescendantsTable(
+                    descendants_memberships,
+                    orderable=False,
+                )
+                descendants_tree = {m.pk: m.depth for m in descendants_memberships}
+
+                # Ancestors table
+                ancestors = instance.get_ancestors()
+                ancestors_table = tables.NestedDynamicGroupAncestorsTable(
+                    ancestors,
+                    orderable=False,
+                )
+                ancestors_tree = instance.flatten_ancestors_tree(instance.ancestors_tree())
+                if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
+                    context["raw_query"] = pretty_print_query(instance.generate_query())
                     context["members_list_url"] = None
-            context["members_verbose_name_plural"] = instance.model._meta.verbose_name_plural
-            context["members_table"] = members_table
-            context["ancestors_table"] = ancestors_table
-            context["ancestors_tree"] = ancestors_tree
-            context["descendants_table"] = descendants_table
-            context["descendants_tree"] = descendants_tree
+                else:
+                    context["raw_query"] = None
+                    try:
+                        context["members_list_url"] = reverse(get_route_for_model(instance.model, "list"))
+                    except NoReverseMatch:
+                        context["members_list_url"] = None
+
+                context.update(
+                    {
+                        "members_verbose_name_plural": instance.model._meta.verbose_name_plural,
+                        "members_table": members_table,
+                        "ancestors_table": ancestors_table,
+                        "ancestors_tree": ancestors_tree,
+                        "descendants_table": descendants_table,
+                        "descendants_tree": descendants_tree,
+                    }
+                )
 
         return context
 
+    def form_save(self, form, **kwargs):
+        obj = form.save(commit=False)
+        context = self.get_extra_context(self.request, obj)
 
-class DynamicGroupEditView(generic.ObjectEditView):
-    queryset = DynamicGroup.objects.all()
-    model_form = forms.DynamicGroupForm
-    template_name = "extras/dynamicgroup_edit.html"
+        # Save filters
+        if obj.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
+            filter_form = context["filter_form"]
+            if filter_form.is_valid():
+                obj.set_filter(filter_form.cleaned_data)
+            else:
+                raise RuntimeError(filter_form.errors)
 
-    def get_extra_context(self, request, instance):
-        ctx = super().get_extra_context(request, instance)
+        # After filters have been set, now we save the object to the database.
+        obj.save()
+        # Save m2m fields, such as Tags https://docs.djangoproject.com/en/3.2/topics/forms/modelforms/#the-save-method
+        form.save_m2m()
 
-        filterform_class = instance.generate_filter_form()
-
-        if filterform_class is None:
-            filter_form = None
-        elif request.POST:
-            filter_form = filterform_class(data=request.POST)
+        # Process the formsets for children
+        children = context["children"]
+        if children.is_valid():
+            children.save()
         else:
-            initial = instance.get_initial()
-            filter_form = filterform_class(initial=initial)
+            raise RuntimeError(children.errors)
 
-        ctx["filter_form"] = filter_form
-
-        formset_kwargs = {"instance": instance}
-        if request.POST:
-            formset_kwargs["data"] = request.POST
-
-        ctx["children"] = forms.DynamicGroupMembershipFormSet(**formset_kwargs)
-
-        return ctx
-
-    def post(self, request, *args, **kwargs):
-        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
-        form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
-        restrict_form_fields(form, request.user)
-
-        if form.is_valid():
-            logger.debug("Form validation was successful")
-
-            try:
-                with transaction.atomic():
-                    object_created = not form.instance.present_in_database
-                    # Obtain the instance, but do not yet `save()` it to the database.
-                    obj = form.save(commit=False)
-
-                    ctx = self.get_extra_context(request, obj)
-                    if obj.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
-                        # Process the filter form and save the query filters to `obj.filter`.
-                        filter_form = ctx["filter_form"]
-                        if filter_form.is_valid():
-                            obj.set_filter(filter_form.cleaned_data)
-                        else:
-                            raise RuntimeError(filter_form.errors)
-
-                    # After filters have been set, now we save the object to the database.
-                    obj.save()
-                    # Save m2m fields, such as Tags https://docs.djangoproject.com/en/3.2/topics/forms/modelforms/#the-save-method
-                    form.save_m2m()
-                    # Check that the new object conforms with any assigned object-level permissions
-                    self.queryset.get(pk=obj.pk)
-
-                    # Process the formsets for children
-                    children = ctx["children"]
-                    if children.is_valid():
-                        children.save()
-                    else:
-                        raise RuntimeError(children.errors)
-                verb = "Created" if object_created else "Modified"
-                msg = f"{verb} {self.queryset.model._meta.verbose_name}"
-                logger.info(f"{msg} {obj} (PK: {obj.pk})")
-                try:
-                    msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
-                except AttributeError:
-                    msg = format_html("{} {}", msg, obj)
-                messages.success(request, msg)
-
-                if "_addanother" in request.POST:
-                    # If the object has clone_fields, pre-populate a new instance of the form
-                    if hasattr(obj, "clone_fields"):
-                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
-                        return redirect(url)
-
-                    return redirect(request.get_full_path())
-
-                return_url = form.cleaned_data.get("return_url")
-                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(iri_to_uri(return_url))
-                else:
-                    return redirect(self.get_return_url(request, obj))
-
-            except ObjectDoesNotExist:
-                msg = "Object save failed due to object-level permissions violation."
-                logger.debug(msg)
-                form.add_error(None, msg)
-            except RuntimeError:
-                msg = "Errors encountered when saving Dynamic Group associations. See below."
-                logger.debug(msg)
-                form.add_error(None, msg)
-            except ProtectedError as err:
-                # e.g. Trying to delete a something that is in use.
-                err_msg = err.args[0]
-                protected_obj = err.protected_objects[0]
-                msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
-                logger.debug(msg)
-                form.add_error(None, msg)
-            except ValidationError as err:
-                msg = "Invalid filter detected in existing DynamicGroup filter data."
-                logger.debug(msg)
-                err_messages = err.args[0].split("\n")
-                for message in err_messages:
-                    if message:
-                        form.add_error(None, message)
-
-        else:
-            logger.debug("Form validation failed")
-
-        return render(
-            request,
-            self.template_name,
-            {
-                "obj": obj,
-                "obj_type": self.queryset.model._meta.verbose_name,
-                "form": form,
-                "return_url": self.get_return_url(request, obj),
-                "editing": obj.present_in_database,
-                **self.get_extra_context(request, obj),
-            },
-        )
-
-
-class DynamicGroupDeleteView(generic.ObjectDeleteView):
-    queryset = DynamicGroup.objects.all()
-
-
-class DynamicGroupBulkDeleteView(generic.BulkDeleteView):
-    queryset = DynamicGroup.objects.all()
-    table = tables.DynamicGroupTable
-    filterset = filters.DynamicGroupFilterSet
+        return obj
 
 
 class ObjectDynamicGroupsView(generic.GenericView):
