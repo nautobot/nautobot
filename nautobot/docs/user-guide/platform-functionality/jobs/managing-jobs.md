@@ -38,7 +38,6 @@ Sometimes you need to change how a Job appears or behaves without touching its s
 | **grouping** | UI category the Job is listed under. | Organize third-party Jobs into "Compliance" or "Local Automations." |
 | **name** | Display name in the Jobs list. | Rename technical Job names to user-friendly descriptions. |
 | **description** | Markdown or HTML description shown on Job detail page. | Add instructions or documentation links. |
-| **approval_required** | Require an additional user approval before each execution. | Protect Jobs that perform bulk production changes. |
 | **dryrun_default** | Default state of **Dry-Run** checkbox. | Audit or reporting Jobs that rarely commit changes. |
 | **has_sensitive_variables** | Avoid storing sensitive input data. | Jobs that accept credentials or sensitive data. |
 | **hidden** | Hide Job from the main Job listings. | Helper Jobs executed only by buttons or hooks. |
@@ -112,6 +111,10 @@ Use this procedure when permanently retiring a Job:
 - Existing **JobResults** and **ScheduledJobs** retain historical data but their foreign-key references to the Job become `NULL`.
 - Reinstalling the same Job does not automatically reconnect historical data.
 
+### Approval Workflow
+
+When a Job is submitted for execution or scheduling, Nautobot checks for any relevant approval workflow that would require approval by relevant user(s) before the job can be run. For more information on approvals, [please refer to the section on scheduling and approvals](job-scheduling-and-approvals.md#job-approvals).
+
 ### Recommended deletion steps
 
 1. **Disable** the Job.
@@ -122,11 +125,12 @@ Use this procedure when permanently retiring a Job:
 
 ## Permissions checklist
 
-| Task                      | Required permission(s)                                   |
-|---------------------------|----------------------------------------------------------|
-| Enable/Disable Job        | `extras.change_job`                                      |
-| Override metadata         | `extras.change_job`                                      |
-| Assign Job Queues         | `extras.change_job` + permissions on specific Job Queues |
-| Delete Job                | `extras.delete_job`                                      |
-| Run Job                   | `extras.run_job`                                         |
-| Approve scheduled Job     | `extras.approve_job` + (`extras.change_scheduledjob` or `extras.delete_scheduledjob`) |
+| Task                       | Required permission(s)                                   |
+|----------------------------|----------------------------------------------------------|
+| Enable/Disable Job         | `extras.change_job`                                      |
+| Override metadata          | `extras.change_job`                                      |
+| Assign Job Queues          | `extras.change_job` + permissions on specific Job Queues |
+| Delete Job                 | `extras.delete_job`                                      |
+| Run Job                    | `extras.run_job`                                         |
+| Approve scheduled Job (UI) | `extras.change_approvalworkflowstage` + `extras.view_approvalworkflowstage` + (`extras.change_scheduledjob` or `extras.delete_scheduledjob`) |
+| Approve scheduled Job (API)| `extras.approve_job` + (`extras.change_scheduledjob` or `extras.delete_scheduledjob`) |

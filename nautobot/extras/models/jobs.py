@@ -155,9 +155,6 @@ class Job(PrimaryModel):
 
     # Additional properties, potentially inherited from the source code
     # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.
-    approval_required = models.BooleanField(
-        default=False, help_text="Whether the job requires approval from another user before running"
-    )
     hidden = models.BooleanField(
         default=False,
         db_index=True,
@@ -215,10 +212,6 @@ class Job(PrimaryModel):
     description_override = models.BooleanField(
         default=False,
         help_text="If set, the configured description will remain even if the underlying Job source code changes",
-    )
-    approval_required_override = models.BooleanField(
-        default=False,
-        help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
     dryrun_default_override = models.BooleanField(
         default=False,
@@ -316,7 +309,7 @@ class Job(PrimaryModel):
 
     @property
     def runnable(self):
-        return self.enabled and self.installed and not (self.has_sensitive_variables and self.approval_required)
+        return self.enabled and self.installed
 
     @cached_property
     def git_repository(self):
@@ -390,11 +383,6 @@ class Job(PrimaryModel):
             raise ValidationError(f"Grouping may not exceed {CHARFIELD_MAX_LENGTH} characters in length")
         if len(self.name) > JOB_MAX_NAME_LENGTH:
             raise ValidationError(f"Name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
-
-        if self.has_sensitive_variables is True and self.approval_required is True:
-            raise ValidationError(
-                {"approval_required": "A job that may have sensitive variables cannot be marked as requiring approval"}
-            )
 
     def save(self, *args, **kwargs):
         """When a Job is uninstalled, auto-disable all associated JobButtons, JobHooks, and ScheduledJobs."""
@@ -1268,12 +1256,12 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
             raise ValidationError("Approval by user and approval time must either both be set or both be undefined")
 
     def on_workflow_initiated(self, approval_workflow):
-        """When initiated, set enabled to False."""
+        """When initiated, set approval required to True."""
         self.approval_required = True
         self.save()
 
     def on_workflow_approved(self, approval_workflow):
-        """When approved, set enabled to True."""
+        """When approved, set approved_at to decision_date from approval workflow."""
         self.approved_at = approval_workflow.decision_date
         self.save()
 
@@ -1281,10 +1269,22 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         publish_event(topic="nautobot.jobs.approval.approved", payload=publish_event_payload)
 
     def on_workflow_denied(self, approval_workflow):
-        """When denied, set enabled to False."""
+        """When denied, set approved_at to None."""
         if self.approved_at:
             self.approved_at = None
             self.save()
+
+    def get_approval_template(self):
+        """
+        Return a custom template path to be used for the approval UI.
+
+        This allows the object to override the default approval template
+        when special logic or warnings are needed. If no override is
+        required, return None to use the standard approval form.
+        """
+        if self.one_off and self.start_time < timezone.now():
+            return "extras/job_approval_confirmation.html"
+        return None
 
     @property
     def schedule(self):
@@ -1299,6 +1299,10 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         """Deprecated backward-compatibility property for the queue name this job is scheduled for."""
         return self.job_queue.name if self.job_queue else ""
 
+    @property
+    def runnable(self):
+        return self.job_model.runnable and not (self.job_model.has_sensitive_variables and self.approval_required)
+
     @queue.setter
     def queue(self, value: str):
         if value:
@@ -1306,6 +1310,11 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
                 self.job_queue = JobQueue.objects.get(name=value)
             except JobQueue.DoesNotExist:
                 raise ValidationError(f"Job Queue {value} does not exist in the database.")
+
+    def has_approval_workflow_definition(self) -> bool:
+        from nautobot.extras.models.approvals import ApprovalWorkflowDefinition
+
+        return ApprovalWorkflowDefinition.objects.find_for_model(self) is not None
 
     @staticmethod
     def earliest_possible_time():
@@ -1348,7 +1357,6 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         interval: str = JobExecutionType.TYPE_IMMEDIATELY,
         crontab: str = "",
         profile: bool = False,
-        approval_required: bool = False,
         job_queue: Optional[JobQueue] = None,
         task_queue: Optional[str] = None,  # deprecated!
         ignore_singleton_lock: bool = False,
@@ -1371,7 +1379,6 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
                 Defaults to JobExecutionType.TYPE_IMMEDIATELY.
             crontab (str): The crontab string for the schedule. Defaults to "".
             profile (bool): Flag indicating whether to profile the job. Defaults to False.
-            approval_required (bool): Flag indicating if approval is required. Defaults to False.
             job_queue (JobQueue): The Job queue to use. If unset, use the configured default celery queue.
             task_queue (str): The queue name to use. **Deprecated, prefer `job_queue`.**
             ignore_singleton_lock (bool): Whether to ignore singleton locks. Defaults to False.
@@ -1440,7 +1447,6 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
             interval=interval,
             one_off=(interval == JobExecutionType.TYPE_FUTURE),
             user=user,
-            approval_required=approval_required,
             crontab=crontab,
             job_queue=job_queue,
         )

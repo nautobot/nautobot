@@ -1378,8 +1378,6 @@ class JobTest(
             "description_override": True,
             "description": "This is an overridden description.",
             "enabled": True,
-            "approval_required_override": True,
-            "approval_required": True,
             "dryrun_default_override": True,
             "dryrun_default": True,
             "hidden_override": True,
@@ -1393,8 +1391,6 @@ class JobTest(
         }
         cls.bulk_update_data = {
             "enabled": True,
-            "approval_required_override": True,
-            "approval_required": True,
             "has_sensitive_variables": False,
             "has_sensitive_variables_override": True,
         }
@@ -1467,50 +1463,6 @@ class JobTest(
         self.assertEqual(
             response.data[3],
             {"name": "var4", "type": "ObjectVar", "required": True, "model": "extras.role"},
-        )
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_update_job_with_sensitive_variables_set_approval_required_to_true(self):
-        job_model = Job.objects.get_for_class_path("api_test_job.APITestJob")
-        job_model.has_sensitive_variables = True
-        job_model.has_sensitive_variables_override = True
-        job_model.validated_save()
-
-        url = self._get_detail_url(job_model)
-        data = {
-            "approval_required_override": True,
-            "approval_required": True,
-        }
-
-        self.add_permissions("extras.change_job")
-
-        response = self.client.patch(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.data["approval_required"][0],
-            "A job with sensitive variables cannot also be marked as requiring approval",
-        )
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_update_approval_required_job_set_has_sensitive_variables_to_true(self):
-        job_model = Job.objects.get_for_class_path("api_test_job.APITestJob")
-        job_model.approval_required = True
-        job_model.approval_required_override = True
-        job_model.validated_save()
-
-        url = self._get_detail_url(job_model)
-        data = {
-            "has_sensitive_variables": True,
-            "has_sensitive_variables_override": True,
-        }
-
-        self.add_permissions("extras.change_job")
-
-        response = self.client.patch(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.data["has_sensitive_variables"][0],
-            "A job with sensitive variables cannot also be marked as requiring approval",
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1687,10 +1639,6 @@ class JobTest(
             priority=0,
         )
 
-        # Set approval_required=True
-        self.job_model.approval_required = True
-        self.job_model.save()
-
         # Do the stuff.
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
@@ -1718,7 +1666,7 @@ class JobTest(
         schedule = ScheduledJob.objects.last()
         self.assertIsNotNone(schedule)
         self.assertEqual(schedule.interval, JobExecutionType.TYPE_FUTURE)
-        self.assertEqual(schedule.approval_required, self.job_model.approval_required)
+        self.assertTrue(schedule.approval_required)
         self.assertEqual(schedule.kwargs["var4"], str(device_role.pk))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1956,19 +1904,24 @@ class JobTest(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
-    def test_run_a_job_with_sensitive_variables_and_requires_approval(self, mock_get_worker_count):
+    def test_run_a_job_with_sensitive_variables_when_approval_workflow_defined(self, mock_get_worker_count):
+        ApprovalWorkflowDefinition.objects.create(
+            name="Test Approval Workflow Definition 1",
+            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+            priority=0,
+        )
+
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
 
         job_model = Job.objects.get(job_class_name="ExampleJob")
         job_model.enabled = True
         job_model.has_sensitive_variables = True
-        job_model.approval_required = True
         job_model.save()
 
         url = reverse("extras-api:job-run", kwargs={"pk": job_model.pk})
         data = {
-            "data": {},
+            "data": {"some_json_data": {"var1": "x"}},
             "schedule": {
                 "interval": "immediately",
                 "name": "test",
@@ -1980,8 +1933,8 @@ class JobTest(
         self.assertEqual(
             response.data[0],
             "Unable to run or schedule job: "
-            "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
-            "One of these two flags must be removed before this job can be scheduled or run.",
+            "This job is flagged as possibly having sensitive variables but also has an applicable approval workflow definition."
+            "Modify or remove the approval workflow definition or modify the job to set `has_sensitive_variables` to False.",
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -2165,8 +2118,8 @@ class JobTest(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
-    def test_run_job_with_approval_required_triggers_approval_workflow(self, mock_get_worker_count):
-        """Test that jobs with approval_required trigger approval workflow for both immediate and scheduled execution."""
+    def test_run_job_with_approval_workflow_defined_triggers_approval_workflow(self, mock_get_worker_count):
+        """Test that jobs with approval workflow definition for both immediate and scheduled execution triggers approval workflow."""
         ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow Definition 1",
             model_content_type=ContentType.objects.get_for_model(ScheduledJob),
@@ -2176,9 +2129,6 @@ class JobTest(
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
-
-        self.job_model.approval_required = True
-        self.job_model.save()
 
         url = self.get_run_url()
 
@@ -2232,108 +2182,15 @@ class JobTest(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
-    def test_run_job_with_approval_required_fails_without_approval_workflow(self, mock_get_worker_count):
-        """Test that jobs with approval_required fail when no approval workflow is defined."""
-        mock_get_worker_count.return_value = 1
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.view_scheduledjob")
-
-        self.job_model.approval_required = True
-        self.job_model.save()
-
-        url = self.get_run_url()
-
-        # Test scenarios
-        test_cases = [
-            {
-                "name": "immediate_execution",
-                "data": {
-                    "data": self.job_proper_data,
-                    # schedule is omitted - should create immediate schedule
-                },
-            },
-            {
-                "name": "scheduled_execution",
-                "data": {
-                    "data": self.job_proper_data,
-                    "schedule": {
-                        "interval": JobExecutionType.TYPE_FUTURE,
-                        "name": "test_scheduled_job",
-                        "start_time": (now() + timedelta(minutes=1)).isoformat(),
-                    },
-                },
-            },
-        ]
-
-        for test_case in test_cases:
-            with self.subTest(execution_type=test_case["name"]):
-                # Get initial counts
-                count_job_result = JobResult.objects.count()
-                count_scheduled_job = ScheduledJob.objects.count()
-
-                response = self.client.post(url, test_case["data"], format="json", **self.header)
-
-                # Should return error status
-                self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-                # Assert no jobs were created
-                self.assertEqual(ScheduledJob.objects.count(), count_scheduled_job)
-                self.assertEqual(JobResult.objects.count(), count_job_result)
-
-                # Assert error message about approval workflow
-                self.assertIn("No approval workflow is defined for this job.", str(response.data))
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    @mock.patch("nautobot.extras.api.views.get_worker_count")
-    def test_run_immediate_job_skips_approval_workflow_if_not_required(self, mock_get_worker_count):
+    def test_run_immediate_job_with_no_approval_workflow_defined(self, mock_get_worker_count):
         """
-        Run an immediate job with approval_required=False.
-        Should skip approval workflow even if one is defined.
-        """
-        mock_get_worker_count.return_value = 1
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.view_jobresult")
-
-        self.job_model.approval_required = False
-        self.job_model.save()
-
-        ApprovalWorkflowDefinition.objects.create(
-            name="Approval Definition",
-            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
-            priority=0,
-        )
-
-        data = {
-            "data": self.job_proper_data,
-            # schedule is omitted - should create immediate schedule
-        }
-
-        count_scheduled_job = ScheduledJob.objects.count()
-
-        url = self.get_run_url()
-        response = self.client.post(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, self.run_success_response_status)
-
-        # Assert no ScheduledJob was created (job ran immediately)
-        self.assertEqual(ScheduledJob.objects.count(), count_scheduled_job)
-
-        # Assert JobResult was created
-        result = JobResult.objects.latest()
-        self.assertEqual(result.name, self.job_model.name)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    @mock.patch("nautobot.extras.api.views.get_worker_count")
-    def test_run_immediate_job_without_approval_required_and_no_approval_workflow_succeeds(self, mock_get_worker_count):
-        """
-        Run an immediate job with approval_required=False and no approval workflow defined.
+        Run an immediate job with no approval workflow defined.
         Should succeed and execute immediately.
         """
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_jobresult")
 
-        self.job_model.approval_required = False
-        self.job_model.save()
-
         data = {
             "data": self.job_proper_data,
             # schedule is omitted - should create immediate schedule
@@ -2354,19 +2211,14 @@ class JobTest(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
-    def test_scheduled_job_with_no_approval_flag_still_triggers_approval_workflow_if_defined(
-        self, mock_get_worker_count
-    ):
+    def test_scheduled_job_triggers_approval_workflow_if_defined(self, mock_get_worker_count):
         """
-        Run a scheduled job with approval_required=False but approval workflow defined.
-        Should still trigger approval workflow for scheduled jobs.
+        Run a scheduled job with approval workflow defined.
+        Should trigger approval workflow for scheduled jobs.
         """
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
-
-        self.job_model.approval_required = False
-        self.job_model.save()
 
         ApprovalWorkflowDefinition.objects.create(
             name="Approval Definition",
@@ -2397,17 +2249,14 @@ class JobTest(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
-    def test_run_scheduled_job_without_approval_required_and_no_approval_workflow_succeeds(self, mock_get_worker_count):
+    def test_run_scheduled_job_with_no_approval_workflow_defined(self, mock_get_worker_count):
         """
-        Run a scheduled job with approval_required=False and no approval workflow defined.
+        Run a scheduled job with no approval workflow defined.
         Should succeed and create scheduled job without approval workflow.
         """
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
-
-        self.job_model.approval_required = False
-        self.job_model.save()
 
         start_time = now() + timedelta(minutes=1)
         data = {
@@ -2912,7 +2761,7 @@ class JobApprovalTest(APITestCase):
             kwargs={"value": 1},
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=cls.additional_user,
-            approval_required=True,
+            approval_required=False,
             start_time=now(),
         )
 
