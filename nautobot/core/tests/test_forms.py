@@ -625,7 +625,6 @@ class DynamicFilterFormTest(TestCase):
 
         with self.subTest("Assert get_lookup_field_choices"):
             self.assertEqual(
-                form._get_lookup_field_choices(),
                 [
                     ("color", "Color"),
                     ("contacts", "Contacts (name or ID)"),
@@ -637,13 +636,13 @@ class DynamicFilterFormTest(TestCase):
                     ("name", "Name"),
                     ("teams", "Teams (name or ID)"),
                 ],
+                form._get_lookup_field_choices(),
             )
             self.assertEqual(
-                location_form._get_lookup_field_choices(),
                 [
                     ("asn", "ASN"),
                     ("child_location_type", "Child location type (name or ID)"),
-                    ("circuit_terminations", "Circuit terminations"),
+                    ("circuit_terminations", "Circuit terminations (ID)"),
                     ("clusters", "Clusters (name or ID)"),
                     ("comments", "Comments"),
                     ("contact_email", "Contact E-mail"),
@@ -676,9 +675,9 @@ class DynamicFilterFormTest(TestCase):
                     ("parent", "Parent location (name or ID)"),
                     ("physical_address", "Physical address"),
                     ("power_panels", "Power panels (name or ID)"),
-                    ("prefixes", "Prefixes"),
-                    ("racks", "Rack (name or ID)"),
+                    ("prefixes", "Prefixes (ID)"),
                     ("rack_groups", "Rack groups (name or ID)"),
+                    ("racks", "Racks (name or ID)"),
                     ("shipping_address", "Shipping address"),
                     ("status", "Status (name or ID)"),
                     ("vlans", "Tagged VLANs (VID or ID)"),
@@ -690,6 +689,7 @@ class DynamicFilterFormTest(TestCase):
                     ("time_zone", "Time zone"),
                     ("vlan_groups", "VLAN groups (name or ID)"),
                 ],
+                location_form._get_lookup_field_choices(),
             )
 
         with self.subTest(

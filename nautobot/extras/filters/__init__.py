@@ -2,7 +2,6 @@ from difflib import get_close_matches
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 import django_filters
@@ -15,6 +14,7 @@ from nautobot.core.filters import (
     BaseFilterSet,
     ContentTypeFilter,
     ContentTypeMultipleChoiceFilter,
+    ModelMultipleChoiceFilter,
     MultiValueDateTimeFilter,
     MultiValueUUIDFilter,
     NameSearchFilterSet,
@@ -213,10 +213,6 @@ class ApprovalWorkflowStageDefinitionFilterSet(BaseFilterSet):
         queryset=ApprovalWorkflowDefinition.objects.all(),
         to_field_name="name",
     )
-    approver_group = django_filters.ModelMultipleChoiceFilter(
-        queryset=Group.objects.all(),
-        label="Approver Group",
-    )
     approval_workflow = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=ApprovalWorkflow.objects.all(),
         to_field_name="pk",
@@ -284,14 +280,6 @@ class ApprovalWorkflowStageFilterSet(BaseFilterSet):
             "approval_workflow__approval_workflow_definition__name": "icontains",
         }
     )
-    approval_workflow = django_filters.ModelMultipleChoiceFilter(
-        queryset=ApprovalWorkflow.objects.all(),
-        label="Approval Workflow (ID)",
-    )
-    approval_workflow_stage_definition = django_filters.ModelMultipleChoiceFilter(
-        queryset=ApprovalWorkflowStageDefinition.objects.all(),
-        label="Approval Workflow Stage Definition (ID)",
-    )
     decision_date = MultiValueDateTimeFilter()
 
     class Meta:
@@ -309,10 +297,6 @@ class ApprovalWorkflowStageResponseFilterSet(BaseFilterSet):
             "comments": "icontains",
             "state": "icontains",
         }
-    )
-    approval_workflow_stage = django_filters.ModelMultipleChoiceFilter(
-        queryset=ApprovalWorkflowStage.objects.all(),
-        label="Approval Workflow Stage (ID)",
     )
     user = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=get_user_model().objects.all(),
@@ -377,7 +361,7 @@ class ConfigContextFilterSet(BaseFilterSet):
         to_field_name="name",
         label="Schema (name or PK)",
     )
-    location_id = django_filters.ModelMultipleChoiceFilter(
+    location_id = ModelMultipleChoiceFilter(
         field_name="locations",
         queryset=Location.objects.all(),
         label="Location (ID) - Deprecated (use location filter)",
@@ -388,7 +372,7 @@ class ConfigContextFilterSet(BaseFilterSet):
         to_field_name="name",
         label="Location (name or ID)",
     )
-    device_type_id = django_filters.ModelMultipleChoiceFilter(
+    device_type_id = ModelMultipleChoiceFilter(
         field_name="device_types",
         queryset=DeviceType.objects.all(),
         label="Device Type (ID) - Deprecated (use device_type filter)",
@@ -399,7 +383,7 @@ class ConfigContextFilterSet(BaseFilterSet):
         to_field_name="model",
         label="Device Type (model or ID)",
     )
-    platform_id = django_filters.ModelMultipleChoiceFilter(
+    platform_id = ModelMultipleChoiceFilter(
         field_name="platforms",
         queryset=Platform.objects.all(),
         label="Platform (ID) - Deprecated (use platform filter)",
@@ -410,7 +394,7 @@ class ConfigContextFilterSet(BaseFilterSet):
         to_field_name="name",
         label="Platform (ID or name)",
     )
-    cluster_group_id = django_filters.ModelMultipleChoiceFilter(
+    cluster_group_id = ModelMultipleChoiceFilter(
         field_name="cluster_groups",
         queryset=ClusterGroup.objects.all(),
         label="Cluster group (ID) - Deprecated (use cluster_group filter)",
@@ -421,12 +405,12 @@ class ConfigContextFilterSet(BaseFilterSet):
         to_field_name="name",
         label="Cluster group (ID or name)",
     )
-    cluster_id = django_filters.ModelMultipleChoiceFilter(
+    cluster_id = ModelMultipleChoiceFilter(
         field_name="clusters",
         queryset=Cluster.objects.all(),
         label="Cluster (ID)",
     )
-    tenant_group_id = django_filters.ModelMultipleChoiceFilter(
+    tenant_group_id = ModelMultipleChoiceFilter(
         field_name="tenant_groups",
         queryset=TenantGroup.objects.all(),
         label="Tenant group (ID) - Deprecated (use tenant_group filter)",
@@ -437,7 +421,7 @@ class ConfigContextFilterSet(BaseFilterSet):
         label="Tenant group (ID or name)",
         to_field_name="name",
     )
-    tenant_id = django_filters.ModelMultipleChoiceFilter(
+    tenant_id = ModelMultipleChoiceFilter(
         field_name="tenants",
         queryset=Tenant.objects.all(),
         label="Tenant (ID) - Deprecated (use tenant filter)",
@@ -454,7 +438,7 @@ class ConfigContextFilterSet(BaseFilterSet):
         to_field_name="name",
         label="Device Redundancy Group (name or PK)",
     )
-    tag = django_filters.ModelMultipleChoiceFilter(
+    tag = ModelMultipleChoiceFilter(
         field_name="tags",
         queryset=Tag.objects.all(),
         to_field_name="name",
@@ -961,7 +945,7 @@ class FileProxyFilterSet(BaseFilterSet):
         queryset=Job.objects.all(),
         label="Job (name or ID)",
     )
-    job_result_id = django_filters.ModelMultipleChoiceFilter(
+    job_result_id = ModelMultipleChoiceFilter(
         queryset=JobResult.objects.all(),
         label="Job Result (ID)",
     )
@@ -984,7 +968,7 @@ class GitRepositoryFilterSet(NautobotFilterSet):
             "branch": "icontains",
         },
     )
-    secrets_group_id = django_filters.ModelMultipleChoiceFilter(
+    secrets_group_id = ModelMultipleChoiceFilter(
         field_name="secrets_group",
         queryset=SecretsGroup.objects.all(),
         label="Secrets group (ID) - Deprecated (use secrets_group filter)",
@@ -1175,7 +1159,7 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
         queryset=Job.objects.all(),
         label="Job (name or ID)",
     )
-    job_model_id = django_filters.ModelMultipleChoiceFilter(
+    job_model_id = ModelMultipleChoiceFilter(
         queryset=Job.objects.all(),
         label="Job (ID) - Deprecated (use job_model filter)",
     )
@@ -1218,7 +1202,7 @@ class ScheduledJobFilterSet(BaseFilterSet):
         queryset=Job.objects.all(),
         label="Job (name or ID)",
     )
-    job_model_id = django_filters.ModelMultipleChoiceFilter(
+    job_model_id = ModelMultipleChoiceFilter(
         queryset=Job.objects.all(),
         label="Job (ID) - Deprecated (use job_model filter)",
     )
@@ -1399,7 +1383,7 @@ class ObjectChangeFilterSet(BaseFilterSet):
         },
     )
     changed_object_type = ContentTypeFilter()
-    user_id = django_filters.ModelMultipleChoiceFilter(
+    user_id = ModelMultipleChoiceFilter(
         queryset=get_user_model().objects.all(),
         label="User (ID) - Deprecated (use user filter)",
     )
@@ -1455,7 +1439,7 @@ class RelationshipAssociationFilterSet(BaseFilterSet):
         }
     )
 
-    relationship = django_filters.ModelMultipleChoiceFilter(
+    relationship = ModelMultipleChoiceFilter(
         field_name="relationship__key",
         queryset=Relationship.objects.all(),
         to_field_name="key",
@@ -1548,7 +1532,7 @@ class SecretsGroupAssociationFilterSet(BaseFilterSet):
         label="Secrets Group (ID or name)",
         to_field_name="name",
     )
-    secret_id = django_filters.ModelMultipleChoiceFilter(
+    secret_id = ModelMultipleChoiceFilter(
         queryset=Secret.objects.all(),
         label="Secret (ID) - Deprecated (use secret filter)",
     )

@@ -1682,7 +1682,7 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
         )
 
     def test_changed_object_type_id(self):
-        params = {"changed_object_type_id": ContentType.objects.get(app_label="dcim", model="location").pk}
+        params = {"changed_object_type_id": [ContentType.objects.get(app_label="dcim", model="location").pk]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(changed_object_type=ContentType.objects.get_for_model(Location)),
