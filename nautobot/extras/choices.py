@@ -482,7 +482,6 @@ class SecretsGroupAccessTypeChoices(ChoiceSet):
     )
 
 
-
 class SecretsGroupSecretTypeChoices(ChoiceSet):
     TYPE_AUTHKEY = "authentication-key"
     TYPE_AUTHPROTOCOL = "authentication-protocol"
