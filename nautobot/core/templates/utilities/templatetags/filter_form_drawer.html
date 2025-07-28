@@ -134,8 +134,17 @@
 
                     const field = defaultFilterForm.querySelector(`[name="${name}"]`);
                     const text = field?.closest('.nb-form-group')?.querySelector('label')?.innerText?.trim();
+                    /*
+                     * `manageDynamicFilter` takes an array of `{ text: string, value: string }` objects as `value`, so
+                     * regardless of field being a textbox, a single or multiple choice combobox, conversion is required:
+                     *   1. For combobox (i.e. `<select>`), iterate over selected options and map them to display `text`
+                     *     and underlying `value`.
+                     *   2. For textbox (i.e. `<input>` or `<textarea>`):
+                     *     1. Use entered value as both display `text` and underlying `value`.
+                     *     2. If field is empty, use an empty array.
+                     */
                     const value =
-                        field?.tagName === 'SELECT' && field?.getAttribute('multiple') !== null
+                        field?.tagName === 'SELECT'
                             ? [...field.selectedOptions].map((option) => ({ text: option.innerText, value: option.value }))
                             : [...(field?.value ? [{ text: field.value, value: field.value }] : [])];
 
