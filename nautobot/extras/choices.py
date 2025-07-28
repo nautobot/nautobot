@@ -508,8 +508,8 @@ class SecretsGroupSecretTypeChoices(ChoiceSet):
         (TYPE_TOKEN, "Token"),
         (TYPE_URL, "URL"),
         (TYPE_USERNAME, "Username"),
-
     )
+
 
 #
 # Webhooks
