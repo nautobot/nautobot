@@ -3,7 +3,6 @@ from django.urls import path
 from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras import views
 from nautobot.extras.models import (
-    ConfigContextSchema,
     CustomField,
     DynamicGroup,
     GitRepository,
@@ -18,6 +17,7 @@ app_name = "extras"
 
 router = NautobotUIViewSetRouter()
 router.register("computed-fields", views.ComputedFieldUIViewSet)
+router.register("config-context-schemas", views.ConfigContextSchemaUIViewSet)
 router.register("config-contexts", views.ConfigContextUIViewSet)
 router.register("contacts", views.ContactUIViewSet)
 router.register("contact-associations", views.ContactAssociationUIViewSet)
@@ -47,56 +47,9 @@ urlpatterns = [
     path("object-changes/<uuid:pk>/", views.ObjectChangeView.as_view(), name="objectchange"),
     # Config context schema
     path(
-        "config-context-schemas/",
-        views.ConfigContextSchemaListView.as_view(),
-        name="configcontextschema_list",
-    ),
-    path(
-        "config-context-schemas/add/",
-        views.ConfigContextSchemaEditView.as_view(),
-        name="configcontextschema_add",
-    ),
-    path(
-        "config-context-schemas/edit/",
-        views.ConfigContextSchemaBulkEditView.as_view(),
-        name="configcontextschema_bulk_edit",
-    ),
-    path(
-        "config-context-schemas/delete/",
-        views.ConfigContextSchemaBulkDeleteView.as_view(),
-        name="configcontextschema_bulk_delete",
-    ),
-    path(
-        "config-context-schemas/<uuid:pk>/",
-        views.ConfigContextSchemaView.as_view(),
-        name="configcontextschema",
-    ),
-    path(
         "config-context-schemas/<uuid:pk>/validation/",
         views.ConfigContextSchemaObjectValidationView.as_view(),
         name="configcontextschema_object_validation",
-    ),
-    path(
-        "config-context-schemas/<uuid:pk>/edit/",
-        views.ConfigContextSchemaEditView.as_view(),
-        name="configcontextschema_edit",
-    ),
-    path(
-        "config-context-schemas/<uuid:pk>/delete/",
-        views.ConfigContextSchemaDeleteView.as_view(),
-        name="configcontextschema_delete",
-    ),
-    path(
-        "config-context-schemas/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="configcontextschema_changelog",
-        kwargs={"model": ConfigContextSchema},
-    ),
-    path(
-        "config-context-schemas/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="configcontextschema_notes",
-        kwargs={"model": ConfigContextSchema},
     ),
     # contacts
     path("contact-associations/add-new-contact/", views.ObjectNewContactView.as_view(), name="object_contact_add"),

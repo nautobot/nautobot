@@ -2,7 +2,7 @@ from django.urls import path
 from django.views.generic.base import RedirectView
 
 from nautobot.core.views.routers import NautobotUIViewSetRouter
-from nautobot.extras.views import ImageAttachmentEditView, ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView
+from nautobot.extras.views import ImageAttachmentEditView, ObjectChangeLogView, ObjectNotesView
 from nautobot.ipam.views import ServiceEditView
 
 from . import views
@@ -21,7 +21,6 @@ from .models import (
     PowerPort,
     Rack,
     RearPort,
-    VirtualChassis,
 )
 
 app_name = "dcim"
@@ -37,17 +36,20 @@ router.register("interface-redundancy-groups-associations", views.InterfaceRedun
 router.register("locations", views.LocationUIViewSet)
 router.register("location-types", views.LocationTypeUIViewSet)
 router.register("manufacturers", views.ManufacturerUIViewSet)
-router.register("module-bays", views.ModuleBayUIViewSet)
 router.register("module-bay-templates", views.ModuleBayTemplateUIViewSet)
-router.register("modules", views.ModuleUIViewSet)
+router.register("module-bays", views.ModuleBayUIViewSet)
+router.register("module-families", views.ModuleFamilyUIViewSet)
 router.register("module-types", views.ModuleTypeUIViewSet)
+router.register("modules", views.ModuleUIViewSet)
 router.register("platforms", views.PlatformUIViewSet)
 router.register("power-feeds", views.PowerFeedUIViewSet)
 router.register("power-panels", views.PowerPanelUIViewSet)
+router.register("racks", views.RackUIViewSet)
 router.register("rack-groups", views.RackGroupUIViewSet)
 router.register("rack-reservations", views.RackReservationUIViewSet)
 router.register("software-image-files", views.SoftwareImageFileUIViewSet)
 router.register("software-versions", views.SoftwareVersionUIViewSet)
+router.register("virtual-chassis", views.VirtualChassisUIViewSet)
 router.register("virtual-device-contexts", views.VirtualDeviceContextUIViewSet)
 
 urlpatterns = [
@@ -64,36 +66,10 @@ urlpatterns = [
         kwargs={"model": Location},
     ),
     # Racks
-    path("racks/", views.RackListView.as_view(), name="rack_list"),
     path(
         "rack-elevations/",
         views.RackElevationListView.as_view(),
         name="rack_elevation_list",
-    ),
-    path("racks/add/", views.RackEditView.as_view(), name="rack_add"),
-    path("racks/import/", views.RackBulkImportView.as_view(), name="rack_import"),  # 3.0 TODO: remove, unused
-    path("racks/edit/", views.RackBulkEditView.as_view(), name="rack_bulk_edit"),
-    path("racks/delete/", views.RackBulkDeleteView.as_view(), name="rack_bulk_delete"),
-    path("racks/<uuid:pk>/", views.RackView.as_view(), name="rack"),
-    path("racks/<uuid:pk>/edit/", views.RackEditView.as_view(), name="rack_edit"),
-    path("racks/<uuid:pk>/delete/", views.RackDeleteView.as_view(), name="rack_delete"),
-    path(
-        "racks/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="rack_changelog",
-        kwargs={"model": Rack},
-    ),
-    path(
-        "racks/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="rack_notes",
-        kwargs={"model": Rack},
-    ),
-    path(  # 3.0 TODO: remove, no longer needed/used since 2.3
-        "racks/<uuid:pk>/dynamic-groups/",
-        ObjectDynamicGroupsView.as_view(),
-        name="rack_dynamicgroups",
-        kwargs={"model": Rack},
     ),
     path(
         "racks/<uuid:object_id>/images/add/",
@@ -492,7 +468,7 @@ urlpatterns = [
         name="device_notes",
         kwargs={"model": Device},
     ),
-    path(  # 3.0 TODO: remove, no longer needed/used since 2.3
+    path(
         "devices/<uuid:pk>/dynamic-groups/",
         views.DeviceDynamicGroupsView.as_view(),
         name="device_dynamicgroups",
@@ -1193,63 +1169,6 @@ urlpatterns = [
         name="interface_connections_list",
     ),
     # Virtual chassis
-    path(
-        "virtual-chassis/",
-        views.VirtualChassisListView.as_view(),
-        name="virtualchassis_list",
-    ),
-    path(
-        "virtual-chassis/add/",
-        views.VirtualChassisCreateView.as_view(),
-        name="virtualchassis_add",
-    ),
-    path(
-        "virtual-chassis/import/",
-        views.VirtualChassisBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="virtualchassis_import",
-    ),
-    path(
-        "virtual-chassis/edit/",
-        views.VirtualChassisBulkEditView.as_view(),
-        name="virtualchassis_bulk_edit",
-    ),
-    path(
-        "virtual-chassis/delete/",
-        views.VirtualChassisBulkDeleteView.as_view(),
-        name="virtualchassis_bulk_delete",
-    ),
-    path(
-        "virtual-chassis/<uuid:pk>/",
-        views.VirtualChassisView.as_view(),
-        name="virtualchassis",
-    ),
-    path(
-        "virtual-chassis/<uuid:pk>/edit/",
-        views.VirtualChassisEditView.as_view(),
-        name="virtualchassis_edit",
-    ),
-    path(
-        "virtual-chassis/<uuid:pk>/delete/",
-        views.VirtualChassisDeleteView.as_view(),
-        name="virtualchassis_delete",
-    ),
-    path(
-        "virtual-chassis/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="virtualchassis_changelog",
-        kwargs={"model": VirtualChassis},
-    ),
-    path(
-        "virtual-chassis/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="virtualchassis_notes",
-        kwargs={"model": VirtualChassis},
-    ),
-    path(
-        "virtual-chassis/<uuid:pk>/add-member/",
-        views.VirtualChassisAddMemberView.as_view(),
-        name="virtualchassis_add_member",
-    ),
     path(
         "virtual-chassis-members/<uuid:pk>/delete/",
         views.VirtualChassisRemoveMemberView.as_view(),
