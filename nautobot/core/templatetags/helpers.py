@@ -846,17 +846,6 @@ def format_timezone(value):
         return format_html("{}", value)
 
 
-def render_contact_team_button(url, icon, label):
-    return format_html(
-        '<div class="panel-footer text-right noprint">'
-        '<a href="{}" class="btn btn-primary btn-xs">'
-        '<span class="mdi {}" aria-hidden="true"></span> {}</a></div>',
-        url,
-        icon,
-        label,
-    )
-
-
 def render_rack_row(indent_px, url, name, count, elevation_url):
     return format_html(
         """

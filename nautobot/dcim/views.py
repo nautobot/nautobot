@@ -280,40 +280,6 @@ class CustomLocationFieldsPanel(object_detail.ObjectFieldsPanel):
         return super().render_value(key, value, context)
 
 
-class CustomContactInfoPanel(object_detail.ObjectFieldsPanel):
-    """
-    ObjectFieldsPanel subclass that supports rendering a footer button
-    when contact info exists and user has permissions.
-    """
-
-    def render(self, context):
-        base_content = super().render(context)
-        footer = self.footer_content(context)
-
-        # Inject footer content after closing div, if it exists
-        if footer and "</div>" in base_content:
-            parts = base_content.rsplit("</div>", 1)
-            return format_html(f"{parts[0]}{footer}</div>")
-
-        return base_content
-
-    def footer_content(self, context):
-        request = context.get("request")
-        obj = get_obj_from_context(context, self.context_object_key)
-
-        if not request or not obj or not request.user.has_perms(["dcim.contact_association"]):
-            return ""
-
-        if not (obj.contact_name or obj.contact_phone or obj.contact_email):
-            return ""
-
-        return_url = f"{request.path}?tab=contacts"
-        button_url = reverse("dcim:location_migrate_data_to_contact", kwargs={"pk": obj.pk})
-        full_url = f"{button_url}?return_url={return_url}"
-
-        return helpers.render_contact_team_button(full_url, "mdi-account-edit", "Convert to contact/team record")
-
-
 class CustomRackGroupsPanel(object_detail.ObjectFieldsPanel):
     def render(self, context):
         obj = get_obj_from_context(context, self.context_object_key or "object")
@@ -417,7 +383,7 @@ class LocationUIViewSet(NautobotUIViewSet):
                     "physical_address": [helpers.render_address],
                 },
             ),
-            CustomContactInfoPanel(
+            object_detail.ObjectFieldsPanel(
                 weight=120,
                 section=SectionChoices.LEFT_HALF,
                 label="Contact Info",
@@ -426,6 +392,7 @@ class LocationUIViewSet(NautobotUIViewSet):
                     "contact_phone": [helpers.hyperlinked_phone_number],
                     "contact_email": [helpers.hyperlinked_email],
                 },
+                footer_content_template_path="components/panel/footer_convert_to_contact_or_team_record.html",
             ),
             object_detail.StatsPanel(
                 weight=100,
