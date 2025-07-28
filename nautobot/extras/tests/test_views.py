@@ -2643,6 +2643,18 @@ class JobTestCase(
             reverse("extras:job_run", kwargs={"pk": cls.test_pass.pk}),
         )
 
+        cls.test_dryrun = Job.objects.get(job_class_name="TestDryRun")
+        cls.test_dryrun.enabled = True
+        cls.test_dryrun.has_sensitive_variables = False
+        cls.test_dryrun.save()
+
+        cls.run_urls_dryrun = (
+            # Legacy URL (job class path based)
+            reverse("extras:job_run_by_class_path", kwargs={"class_path": cls.test_dryrun.class_path}),
+            # Current URL (job model pk based)
+            reverse("extras:job_run", kwargs={"pk": cls.test_dryrun.pk}),
+        )
+
         cls.test_required_args = Job.objects.get(job_class_name="TestRequired")
         cls.test_required_args.enabled = True
         cls.test_pass.default_job_queue = default_job_queue
@@ -3242,39 +3254,103 @@ class JobTestCase(
             result = JobResult.objects.latest()
             self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
 
-    # @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    # def test_run_dryrun_immediate_job_with_approval_workflow_definded(self, _):
-    #     test_pass = Job.objects.get(job_class_name="TestDryRun")
-    #     default_job_queue = JobQueue.objects.get(name="default", queue_type=JobQueueTypeChoices.TYPE_CELERY)
-    #     test_pass.default_job_queue = default_job_queue
-    #     test_pass.enabled = True
-    #     test_pass.dryrun_default_override = True
-    #     test_pass.save()
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_dryrun_immediate_job_with_approval_workflow_definded(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
 
-    #     run_urls = (
-    #         # Legacy URL (job class path based)
-    #         reverse("extras:job_run_by_class_path", kwargs={"class_path": test_pass.class_path}),
-    #         # Current URL (job model pk based)
-    #         reverse("extras:job_run", kwargs={"pk": test_pass.pk}),
-    #     )
-    #     self.add_permissions("extras.run_job")
-    #     self.add_permissions("extras.view_jobresult")
+        ApprovalWorkflowDefinition.objects.create(
+            name="Approval Definition",
+            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+            priority=0,
+        )
 
-    #     ApprovalWorkflowDefinition.objects.create(
-    #         name="Approval Definition",
-    #         model_content_type=ContentType.objects.get_for_model(ScheduledJob),
-    #         priority=0,
-    #     )
+        data = {
+            "_schedule_type": "immediately",
+            "dryrun": True,
+        }
+        for run_url in self.run_urls_dryrun:
+            response = self.client.post(run_url, data)
+            scheduled_job = ScheduledJob.objects.last()
+            self.assertIsNone(scheduled_job)
+            result = JobResult.objects.latest()
+            self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
 
-    #     data = {
-    #         "_schedule_type": "immediately",
-    #     }
-    #     for run_url in run_urls:
-    #         response = self.client.post(run_url, data)
-    #         scheduled_job = ScheduledJob.objects.last()
-    #         self.assertIsNone(scheduled_job)
-    #         result = JobResult.objects.latest()
-    #         self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_dryrun_job_with_sensitive_variables_and_approval_workflow_defined(self, _):
+        self.test_dryrun.has_sensitive_variables = True
+        self.test_dryrun.save()
+
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
+
+        ApprovalWorkflowDefinition.objects.create(
+            name="Approval Definition",
+            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+            priority=0,
+        )
+
+        data = {
+            "_schedule_type": "immediately",
+            "dryrun": True,
+        }
+
+        for run_url in self.run_urls_dryrun:
+            # Assert error message shows after post
+            response = self.client.post(run_url, data)
+            self.assertBodyContains(
+                response,
+                "Unable to run or schedule job: "
+                "This job is flagged as possibly having sensitive variables but also has an applicable approval workflow definition."
+                "Modify or remove the approval workflow definition or modify the job to set `has_sensitive_variables` to False.",
+            )
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_dryrun_schedule_job_with_approval_workflow_definded(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        ApprovalWorkflowDefinition.objects.create(
+            name="Approval Definition",
+            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+            priority=0,
+        )
+        data = {
+            "_schedule_type": "future",
+            "_schedule_name": "test",
+            "_schedule_start_time": str(timezone.now() + timedelta(minutes=1)),
+            "dryrun": True,
+        }
+
+        for i, run_url in enumerate(self.run_urls_dryrun):
+            if "_schedule_name" in data:
+                data["_schedule_name"] = f"test {i}"
+            response = self.client.post(run_url, data)
+            scheduled_job = ScheduledJob.objects.last()
+            self.assertRedirects(
+                response,
+                reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk]),
+            )
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_dryrun_schedule_job_with_no_approval_workflow_definded(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        data = {
+            "_schedule_type": "future",
+            "_schedule_name": "test",
+            "_schedule_start_time": str(timezone.now() + timedelta(minutes=1)),
+            "dryrun": True,
+        }
+
+        for i, run_url in enumerate(self.run_urls_dryrun):
+            if "_schedule_name" in data:
+                data["_schedule_name"] = f"test {i}"
+            response = self.client.post(run_url, data)
+            scheduled_job = ScheduledJob.objects.last()
+            self.assertRedirects(response, reverse("extras:scheduledjob_list"))
+            self.assertFalse(scheduled_job.associated_approval_workflows.exists())
 
     def test_job_object_change_log_view(self):
         """Assert Job change log view displays appropriate header"""
