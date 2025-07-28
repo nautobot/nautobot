@@ -2141,7 +2141,6 @@ class JobView(generic.ObjectView):
                 section=SectionChoices.RIGHT_HALF,
                 label="Properties",
                 fields=[
-                    "approval_required",
                     "supports_dryrun",
                     "dryrun_default",
                     "read_only",
