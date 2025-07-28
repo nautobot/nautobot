@@ -35,7 +35,6 @@ class NavMenuTestCase(TestCase):
                                 "Interface Connections",
                                 "Console Connections",
                                 "Power Connections",
-                                "Job Approval Queue",
                                 "Wireless Controllers",
                             }:
                                 expected_name = get_expected_menu_item_name(view_model)

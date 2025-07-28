@@ -1,11 +1,28 @@
-from importlib.machinery import FileFinder, SOURCE_SUFFIXES, SourceFileLoader
-from importlib.util import module_from_spec
+from contextlib import contextmanager
+import importlib
+from importlib.util import find_spec, module_from_spec
 from keyword import iskeyword
 import logging
+import os
 import pkgutil
 import sys
 
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def _temporarily_add_to_sys_path(path):
+    """
+    Allow loading of modules and packages from within the provided directory by temporarily modifying `sys.path`.
+
+    On exit, it restores the original `sys.path` value.
+    """
+    old_sys_path = sys.path.copy()
+    sys.path.insert(0, path)
+    try:
+        yield
+    finally:
+        sys.path = old_sys_path
 
 
 def clear_module_from_sys_modules(module_name):
@@ -39,7 +56,7 @@ def check_name_safe_to_import_privately(name: str) -> tuple[bool, str]:
     return True, "a valid and non-conflicting module name"
 
 
-def import_modules_privately(path, module_path=None, module_prefix="", ignore_import_errors=True):
+def import_modules_privately(path, module_path=None, ignore_import_errors=True):
     """
     Import modules from the filesystem without adding the path permanently to `sys.path`.
 
@@ -55,71 +72,54 @@ def import_modules_privately(path, module_path=None, module_prefix="", ignore_im
         ignore_import_errors (bool): Exceptions raised while importing modules will be caught and logged.
             If this is set as False, they will then be re-raised to be handled by the caller of this function.
     """
-    loaded_modules = []
-    # We formerly used pkgutil.walk_packages() here to handle submodule loading with a multi-entry module_path,
-    # but that has the downside (and risk!) of automatically importing all packages that it finds in the given path,
-    # whether or not we actually want to do so. So instead, for the case where a module_path is provided, we need to
-    # iteratively import each submodule ourselves.
-    if module_path:
-        # Git repository case - e.g. import_modules_privately(settings.GIT_ROOT, module_path=[repository_slug, "jobs"])
-        # Here we want to ONLY auto-load the module sequence identified by module_path.
-        permitted, reason = check_name_safe_to_import_privately(module_path[0])
-        if not permitted:
-            logger.error("Unable to load module %r from %s as it is %s", module_path[0], path, reason)
-        else:
-            module = None
-            module_name = module_path.pop(0)
-            submodule_name = module_name
-            try:
-                while True:
-                    finder = FileFinder(path, (SourceFileLoader, SOURCE_SUFFIXES))
-                    finder.invalidate_caches()
-                    spec = finder.find_spec(module_name)
-                    if spec is None or spec.loader is None:
-                        logger.error("Unable to find module spec and/or loader for %r", submodule_name)
-                        break
-                    spec.name = submodule_name
-                    spec.loader.name = submodule_name
-                    submodule = module_from_spec(spec)
-                    sys.modules[submodule_name] = submodule
-                    spec.loader.exec_module(submodule)
-                    if module is not None:
-                        setattr(module, module_name, submodule)
-                    module = submodule
-                    loaded_modules.append(module)
-                    if module_path:
-                        submodule_name = f"{module_name}.{module_path[0]}"
-                        module_name = module_path.pop(0)
-                        path = module.__path__[0]
-                    else:
-                        break
-            except Exception as exc:
-                logger.error("Unable to load module %s from %s: %s", module_name, path, exc)
-                if not ignore_import_errors:
-                    raise
+    if module_path is None:
+        module_path = []
+        module_prefix = None
     else:
-        # JOBS_ROOT case - import ALL top-level modules/packages that we can find in the given path;
-        # they can implement and import submodules as desired by themselves, but we only autoimport top-level ones.
-        for finder, discovered_module_name, _ in pkgutil.iter_modules([path]):
-            permitted, reason = check_name_safe_to_import_privately(discovered_module_name)
-            if not permitted:
-                logger.error("Unable to load module %r from %s as it is %s", discovered_module_name, path, reason)
+        module_prefix = ".".join(module_path)
+
+    loaded_modules = []
+    with _temporarily_add_to_sys_path(path):
+        for finder, discovered_module_name, is_package in pkgutil.walk_packages([path], onerror=logger.error):
+            if module_prefix and not (
+                module_prefix.startswith(f"{discovered_module_name}.")  # my_repo/__init__.py
+                or discovered_module_name == module_prefix  # my_repo/jobs.py
+                or discovered_module_name.startswith(f"{module_prefix}.")  # my_repo/jobs/foobar.py
+            ):
                 continue
-            module_name = discovered_module_name
-            if module_name in sys.modules:
-                clear_module_from_sys_modules(module_name)
+            try:
+                existing_module = find_spec(discovered_module_name)
+            except (ModuleNotFoundError, ValueError):
+                existing_module = None
+            if existing_module is not None:
+                existing_module_path = os.path.realpath(existing_module.origin)
+                if not existing_module_path.startswith(path):
+                    logger.error(
+                        "Unable to load module %s from %s as it conflicts with existing module %s",
+                        discovered_module_name,
+                        path,
+                        existing_module_path,
+                    )
+                    continue
+
+            if discovered_module_name in sys.modules:
+                clear_module_from_sys_modules(discovered_module_name)
 
             try:
-                spec = finder.find_spec(discovered_module_name)
-                if spec is None or spec.loader is None:
-                    logger.error("Unable to find module spec and/or loader for %r", discovered_module_name)
-                    continue
-                module = module_from_spec(spec)
-                sys.modules[module_name] = module
-                spec.loader.exec_module(module)
+                if not is_package:
+                    spec = finder.find_spec(discovered_module_name)
+                    if spec is None:
+                        raise ValueError("Unable to find module spec")
+                    module = module_from_spec(spec)
+                    sys.modules[discovered_module_name] = module
+                    spec.loader.exec_module(module)
+                else:
+                    module = importlib.import_module(discovered_module_name)
+                importlib.reload(module)
                 loaded_modules.append(module)
             except Exception as exc:
                 logger.error("Unable to load module %s from %s: %s", discovered_module_name, path, exc)
                 if not ignore_import_errors:
                     raise
+
     return loaded_modules

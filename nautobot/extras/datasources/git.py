@@ -720,8 +720,8 @@ def refresh_job_code_from_repository(repository_slug, skip_reimport=False, ignor
     After cloning/updating/deleting a GitRepository on disk, call this function to reload and reregister its Python.
 
     Args:
-        repository_slug (str): Repository slug (directory in GIT_ROOT) that was populated, updated, or deleted.
-        skip_reimport (bool): If True, unload existing jobs from this repository but do not re-import them.
+        repository_slug (str): Repository directory in GIT_ROOT that was updated or deleted.
+        skip_reimport (bool): If True, unload existing code from this repository but do not re-import it.
         ignore_import_errors (bool): If True, any exceptions raised in the import will be caught and logged.
             If False, exceptions will be re-raised after logging.
     """

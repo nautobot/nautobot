@@ -19,7 +19,7 @@ The UI allows you to select a scheduling type. Further fields will be displayed 
 
 If `Recurring custom` is chosen, you can schedule the recurrence in the `Crontab` field in [crontab](https://en.wikipedia.org/wiki/Cron#Overview) syntax.
 
-If the job requires no approval, it will then be added to the queue of scheduled jobs or run immediately. Otherwise, the job will be added to the approval queue where it can be approved by other users.
+If the job requires no approval, it will then be added to the queue of scheduled jobs or run immediately. Otherwise, the job will be added to the approval dashboard where it can be approved by users in the group(s) identified by the relevant approval workflow.
 
 ### Scheduling via the API
 
@@ -42,21 +42,20 @@ For custom interval, a `crontab` parameter must be added.
 
 ## Job Approvals
 
-Jobs that have `approval_required` set to `True` on their `Meta` object require another user to approve a scheduled job.
+Scheduled jobs that have `approval_required` set to `True` require approval from another user(s) before execution. This field is automatically set on the backend during job submission. If an `ApprovalWorkflowDefinition` is applicable to the specific `ScheduledJob`, an `ApprovalWorkflow` is created automatically and `approval_required` is set accordingly. For more details, see the [approval workflow documentation](../approval-workflow.md).
 
 !!! warning
-    Requiring approval for execution of Job Hooks by setting the `Meta.approval_required` attribute to `True` on your `JobHookReceiver` subclass is not supported. The value of this attribute will be ignored. Support for requiring approval of Job Hooks will be added in a future release.
+    Requiring approval for the execution of Job Hooks on a `JobHookReceiver` subclass is not currently supported. Support for approval of Job Hooks may be added in a future release.
 
-Scheduled jobs can be approved or denied via the UI and API by any user that has the `extras.approve_job` permission for the job in question, as well as the appropriate `extras.change_scheduledjob` and/or `extras.delete_scheduledjob` permissions.
+Scheduled jobs can be approved or denied via the UI by user that has the `extras.change_approvalworkflowstage` and `extras.view_approvalworkflowstage` permission
+and API by any user that has the `extras.approve_job` permission for the job in question, as well as the appropriate `extras.change_scheduledjob` and/or `extras.delete_scheduledjob` permissions.
 
 !!! note
-    Jobs that are past their scheduled run date can still be approved, but the approver will be asked to confirm the operation.
+    Scheduled jobs that are past their scheduled run date can still be approved, but the approver will be asked to confirm the operation.
 
 ### Approval via the UI
 
-The queue of jobs that need approval can be found under `Jobs > Job Approval Queue`. This view lists all currently requested jobs that need approval before they are run. To approve a job, select it and click the button to approve. Please note that you will be  asked for confirmation if a job is being approved that is past its scheduled date and time.
-
-If the approver is unsure what a job would do, a dry run can also be started via that same view.
+The queue of jobs that need approval can be found under `Approvals > Approval Dashboard`. This view displays all current task approval requests that require approval before they can be run. This includes those associated with `ScheduledJob`. To approve workflow with a scheduled job, click the button to approve. Please note that you will be asked for confirmation if a job is being approved that is past its scheduled date and time.
 
 ### Approval via the API
 
@@ -70,4 +69,4 @@ curl -X POST \
 http://nautobot/api/extras/scheduled-jobs/$JOB_ID/approve?force=true
 ```
 
-The approval endpoint additionally provides a `force` query parameter that needs to be set if a job is past its scheduled datetime. This mimics the confirmation dialog in the UI.
+The approval endpoint additionally provides a `force` query parameter that needs to be set if a job is past its scheduled datetime.

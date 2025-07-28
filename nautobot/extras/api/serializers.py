@@ -648,25 +648,6 @@ class JobSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         model = Job
         fields = "__all__"
 
-    def validate(self, attrs):
-        # note no validation for on creation of jobs because we do not support user creation of Job records via API
-        if self.instance:
-            has_sensitive_variables = attrs.get("has_sensitive_variables", self.instance.has_sensitive_variables)
-            approval_required = attrs.get("approval_required", self.instance.approval_required)
-
-            if approval_required and has_sensitive_variables:
-                error_message = "A job with sensitive variables cannot also be marked as requiring approval"
-                errors = {}
-
-                if "approval_required" in attrs:
-                    errors["approval_required"] = [error_message]
-                if "has_sensitive_variables" in attrs:
-                    errors["has_sensitive_variables"] = [error_message]
-
-                raise serializers.ValidationError(errors)
-
-        return super().validate(attrs)
-
 
 class JobQueueSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:

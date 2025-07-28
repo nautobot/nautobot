@@ -1,5 +1,4 @@
 from datetime import timedelta
-import json
 from unittest import mock
 import urllib.parse
 import uuid
@@ -15,10 +14,8 @@ from django.utils import timezone
 from django.utils.html import escape, format_html
 
 from nautobot.circuits.models import Circuit
-from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
-from nautobot.core.models.utils import serialize_object_v2
 from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.testing import (
     extract_form_failures,
@@ -27,8 +24,7 @@ from nautobot.core.testing import (
     TestCase,
     ViewTestCases,
 )
-from nautobot.core.testing.context import load_event_broker_override_settings
-from nautobot.core.testing.utils import disable_warnings, get_deletable_objects, post_data
+from nautobot.core.testing.utils import get_deletable_objects, post_data
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.models import (
     ConsolePort,
@@ -2549,415 +2545,6 @@ class ScheduledJobTestCase(
         self.assertIn("test11", extract_page_body(response.content.decode(response.charset)))
 
 
-class ApprovalQueueTestCase(
-    # It would be nice to use ViewTestCases.GetObjectViewTestCase as well,
-    # but we can't directly use it as it uses instance.get_absolute_url() rather than self._get_url("view", instance)
-    ViewTestCases.ListObjectsViewTestCase,
-):
-    model = ScheduledJob
-    # Many interactions with a ScheduledJob also require permissions to view the associated Job
-    user_permissions = ("extras.view_job",)
-
-    def _get_url(self, action, instance=None):
-        if action == "list":
-            return reverse("extras:scheduledjob_approval_queue_list")
-        if action == "view" and instance is not None:
-            return reverse("extras:scheduledjob_approval_request_view", kwargs={"pk": instance.pk})
-        raise ValueError("This override is only valid for list and view test cases")
-
-    def get_list_url(self):
-        return reverse("extras:scheduledjob_approval_queue_list")
-
-    def setUp(self):
-        super().setUp()
-        self.job_model = Job.objects.get_for_class_path("dry_run.TestDryRun")
-        self.job_model_2 = Job.objects.get_for_class_path("fail.TestFailJob")
-
-        ScheduledJob.objects.create(
-            name="test1",
-            task="dry_run.TestDryRun",
-            job_model=self.job_model,
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=self.user,
-            approval_required=True,
-            start_time=timezone.now(),
-        )
-        ScheduledJob.objects.create(
-            name="test2",
-            task="fail.TestFailJob",
-            job_model=self.job_model_2,
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=self.user,
-            approval_required=True,
-            start_time=timezone.now(),
-        )
-
-    def test_only_approvable_is_listed(self):
-        self.add_permissions("extras.view_scheduledjob")
-
-        ScheduledJob.objects.create(
-            name="test4",
-            task="pass_job.TestPassJob",
-            job_model=self.job_model,
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=self.user,
-            approval_required=False,
-            start_time=timezone.now(),
-        )
-
-        response = self.client.get(self._get_url("list"))
-        self.assertHttpStatus(response, 200)
-        self.assertNotIn("test4", extract_page_body(response.content.decode(response.charset)))
-
-    #
-    # Reimplementations of ViewTestCases.GetObjectViewTestCase test functions.
-    # Needed because those use instance.get_absolute_url() instead of self._get_url("view", instance)...
-    #
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_get_object_anonymous(self):
-        self.client.logout()
-        response = self.client.get(self._get_url("view", self._get_queryset().first()))
-        self.assertHttpStatus(response, 200)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_get_object_without_permission(self):
-        instance = self._get_queryset().first()
-
-        with disable_warnings("django.request"):
-            self.assertHttpStatus(self.client.get(self._get_url("view", instance)), 403)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_get_object_with_permission(self):
-        instance = self._get_queryset().first()
-
-        # Add model-level permission
-        obj_perm = ObjectPermission(name="Test permission", actions=["view"])
-        obj_perm.save()
-        obj_perm.users.add(self.user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
-
-        # Try GET with model-level permission
-        response = self.client.get(self._get_url("view", instance))
-        # The object's display name or string representation should appear in the response
-        self.assertBodyContains(response, getattr(instance, "display", str(instance)))
-
-        # skip GetObjectViewTestCase checks for Relationships and Custom Fields since this isn't actually a detail view
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_get_object_with_constrained_permission(self):
-        instance1, instance2 = self._get_queryset().all()[:2]
-
-        # Add object-level permission
-        obj_perm = ObjectPermission(
-            name="Test permission",
-            constraints={"pk": instance1.pk},
-            # To get a different rendering flow than the "test_get_object_with_permission" test above,
-            # enable additional permissions for this object so that interaction buttons are rendered.
-            actions=["view", "add", "change", "delete"],
-        )
-        obj_perm.save()
-        obj_perm.users.add(self.user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
-
-        # Try GET to permitted object
-        self.assertHttpStatus(self.client.get(self._get_url("view", instance1)), 200)
-
-        # Try GET to non-permitted object
-        self.assertHttpStatus(self.client.get(self._get_url("view", instance2)), 404)
-
-    #
-    # Additional test cases specific to the job approval view
-    #
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_post_anonymous(self):
-        """Anonymous users may not take any action with regard to job approval requests."""
-        self.client.logout()
-        response = self.client.post(self._get_url("view", self._get_queryset().first()))
-        self.assertBodyContains(response, "You do not have permission to run jobs")
-        # No job was submitted
-        self.assertFalse(JobResult.objects.filter(name=self.job_model.name).exists())
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_post_dry_run_not_runnable(self):
-        """A non-enabled job cannot be dry-run."""
-        self.add_permissions("extras.view_scheduledjob")
-        instance = self._get_queryset().first()
-        data = {"_dry_run": True}
-
-        response = self.client.post(self._get_url("view", instance), data)
-        self.assertBodyContains(response, "This job cannot be run at this time")
-        # No job was submitted
-        self.assertFalse(JobResult.objects.filter(name=instance.job_model.name).exists())
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_post_dry_run_needs_job_run_permission(self):
-        """A user without run_job permission cannot dry-run a job."""
-        self.add_permissions("extras.view_scheduledjob")
-        instance = self._get_queryset().first()
-        instance.job_model.enabled = True
-        instance.job_model.save()
-        data = {"_dry_run": True}
-
-        response = self.client.post(self._get_url("view", instance), data)
-        self.assertBodyContains(response, "You do not have permission to run this job")
-        # No job was submitted
-        self.assertFalse(JobResult.objects.filter(name=instance.job_model.name).exists())
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_post_dry_run_needs_specific_job_run_permission(self):
-        """A user without run_job permission FOR THAT SPECIFIC JOB cannot dry-run a job."""
-        self.add_permissions("extras.view_scheduledjob")
-        instance1, instance2 = self._get_queryset().all()[:2]
-        data = {"_dry_run": True}
-        obj_perm = ObjectPermission(name="Test permission", constraints={"pk": instance1.job_model.pk}, actions=["run"])
-        obj_perm.save()
-        obj_perm.users.add(self.user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
-        instance1.job_model.enabled = True
-        instance1.job_model.save()
-        instance2.job_model.enabled = True
-        instance2.job_model.save()
-
-        response = self.client.post(self._get_url("view", instance2), data)
-        self.assertBodyContains(response, "You do not have permission to run this job")
-        # No job was submitted
-        job_names = [instance1.job_model.name, instance2.job_model.name]
-        self.assertFalse(JobResult.objects.filter(name__in=job_names).exists())
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_post_dry_run_not_supported(self, _):
-        """Request a dry run on a job that doesn't support dryrun."""
-        self.add_permissions("extras.view_scheduledjob")
-        instance = ScheduledJob.objects.filter(name="test2").first()
-        instance.job_model.enabled = True
-        instance.job_model.save()
-        obj_perm = ObjectPermission(name="Test permission", constraints={"pk": instance.job_model.pk}, actions=["run"])
-        obj_perm.save()
-        obj_perm.users.add(self.user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
-        data = {"_dry_run": True}
-
-        response = self.client.post(self._get_url("view", instance), data)
-        # Job was not submitted
-        self.assertFalse(JobResult.objects.filter(name=instance.job_model.class_path).exists())
-        self.assertContains(response, "This job does not support dryrun")
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    @mock.patch("nautobot.extras.models.jobs.JobResult.enqueue_job")
-    def test_post_dry_run_success(self, mock_enqueue_job, _):
-        """Successfully request a dry run based on object-based run_job permissions."""
-        self.add_permissions("extras.view_scheduledjob")
-        instance = ScheduledJob.objects.filter(name="test1").first()
-        instance.job_model.enabled = True
-        instance.job_model.save()
-        obj_perm = ObjectPermission(name="Test permission", constraints={"pk": instance.job_model.pk}, actions=["run"])
-        obj_perm.save()
-        obj_perm.users.add(self.user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
-        data = {"_dry_run": True}
-
-        mock_enqueue_job.side_effect = lambda job_model, *args, **kwargs: JobResult.objects.create(name=job_model.name)
-
-        response = self.client.post(self._get_url("view", instance), data)
-        # Job was submitted
-        mock_enqueue_job.assert_called_once()
-        job_result = JobResult.objects.get(name=instance.job_model.name)
-        self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": job_result.pk}))
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_post_deny_different_user_lacking_permissions(self):
-        """A user needs both delete_scheduledjob and approve_job permissions to deny a job request."""
-        user1 = User.objects.create_user(username="testuser1")
-        user2 = User.objects.create_user(username="testuser2")
-
-        # Give both users view_scheduledjob permission
-        obj_perm = ObjectPermission(name="View", actions=["view"])
-        obj_perm.save()
-        obj_perm.users.add(user1, user2)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(ScheduledJob))
-
-        # Give user1 delete_scheduledjob permission but not approve_job permission
-        obj_perm = ObjectPermission(name="Delete", actions=["delete"])
-        obj_perm.save()
-        obj_perm.users.add(user1)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(ScheduledJob))
-
-        # Give user2 approve_job permission but not delete_scheduledjob permission
-        obj_perm = ObjectPermission(name="Approve", actions=["approve"])
-        obj_perm.save()
-        obj_perm.users.add(user2)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
-
-        instance = self._get_queryset().first()
-        data = {"_deny": True}
-
-        for user in (user1, user2):
-            self.client.force_login(user)
-            response = self.client.post(self._get_url("view", instance), data)
-            self.assertBodyContains(response, "You do not have permission")
-            # Request was not deleted
-            self.assertEqual(1, len(ScheduledJob.objects.filter(pk=instance.pk)), msg=str(user))
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    @load_event_broker_override_settings(
-        EVENT_BROKERS={
-            "SyslogEventBroker": {
-                "CLASS": "nautobot.core.events.SyslogEventBroker",
-                "TOPICS": {
-                    "INCLUDE": ["*"],
-                },
-            }
-        }
-    )
-    def test_post_deny_different_user_permitted(self):
-        """A user with appropriate permissions can deny a job request."""
-        user = User.objects.create_user(username="testuser1")
-        instance = self._get_queryset().first()
-
-        # Give user view_scheduledjob and delete_scheduledjob permissions
-        obj_perm = ObjectPermission(name="View", actions=["view", "delete"], constraints={"pk": instance.pk})
-        obj_perm.save()
-        obj_perm.users.add(user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(ScheduledJob))
-
-        # Give user approve_job permission
-        obj_perm = ObjectPermission(name="Approve", actions=["approve"], constraints={"pk": instance.job_model.pk})
-        obj_perm.save()
-        obj_perm.users.add(user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
-
-        data = {"_deny": True}
-
-        self.client.force_login(user)
-        with self.assertLogs("nautobot.events") as cm:
-            response = self.client.post(self._get_url("view", instance), data)
-        self.assertRedirects(response, reverse("extras:scheduledjob_approval_queue_list"))
-        # Request was deleted
-        self.assertEqual(0, len(ScheduledJob.objects.filter(pk=instance.pk)))
-        # Event was published
-        expected_payload = {"data": serialize_object_v2(instance)}
-        self.assertEqual(
-            cm.output,
-            [
-                f"INFO:nautobot.events.nautobot.jobs.approval.denied:{json.dumps(expected_payload, cls=NautobotKombuJSONEncoder, indent=4)}"
-            ],
-        )
-
-        # Check object-based permissions are enforced for a different instance
-        instance = self._get_queryset().first()
-        response = self.client.post(self._get_url("view", instance), data)
-        self.assertBodyContains(response, "You do not have permission")
-        # Request was not deleted
-        self.assertEqual(1, len(ScheduledJob.objects.filter(pk=instance.pk)), msg=str(user))
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_post_approve_cannot_self_approve(self):
-        self.add_permissions("extras.change_scheduledjob")
-        self.add_permissions("extras.approve_job")
-        instance = self._get_queryset().first()
-        data = {"_approve": True}
-
-        response = self.client.post(self._get_url("view", instance), data)
-        self.assertBodyContains(response, "You cannot approve your own job request")
-        # Job was not approved
-        instance.refresh_from_db()
-        self.assertIsNone(instance.approved_by_user)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_post_approve_different_user_lacking_permissions(self):
-        """A user needs both change_scheduledjob and approve_job permissions to approve a job request."""
-        user1 = User.objects.create_user(username="testuser1")
-        user2 = User.objects.create_user(username="testuser2")
-
-        # Give both users view_scheduledjob permission
-        obj_perm = ObjectPermission(name="View", actions=["view"])
-        obj_perm.save()
-        obj_perm.users.add(user1, user2)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(ScheduledJob))
-
-        # Give user1 change_scheduledjob permission but not approve_job permission
-        obj_perm = ObjectPermission(name="Change", actions=["change"])
-        obj_perm.save()
-        obj_perm.users.add(user1)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(ScheduledJob))
-
-        # Give user2 approve_job permission but not change_scheduledjob permission
-        obj_perm = ObjectPermission(name="Approve", actions=["approve"])
-        obj_perm.save()
-        obj_perm.users.add(user2)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
-
-        instance = self._get_queryset().first()
-        data = {"_approve": True}
-
-        for user in (user1, user2):
-            self.client.force_login(user)
-            response = self.client.post(self._get_url("view", instance), data)
-            self.assertBodyContains(response, "You do not have permission")
-            # Job was not approved
-            instance.refresh_from_db()
-            self.assertIsNone(instance.approved_by_user)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    @load_event_broker_override_settings(
-        EVENT_BROKERS={
-            "SyslogEventBroker": {
-                "CLASS": "nautobot.core.events.SyslogEventBroker",
-                "TOPICS": {
-                    "INCLUDE": ["*"],
-                },
-            }
-        }
-    )
-    def test_post_approve_different_user_permitted(self):
-        """A user with appropriate permissions can approve a job request."""
-        user = User.objects.create_user(username="testuser1")
-        instance = self._get_queryset().first()
-
-        # Give user view_scheduledjob and change_scheduledjob permissions
-        obj_perm = ObjectPermission(name="View", actions=["view", "change"], constraints={"pk": instance.pk})
-        obj_perm.save()
-        obj_perm.users.add(user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(ScheduledJob))
-
-        # Give user approve_job permission
-        obj_perm = ObjectPermission(name="Approve", actions=["approve"], constraints={"pk": instance.job_model.pk})
-        obj_perm.save()
-        obj_perm.users.add(user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
-
-        data = {"_approve": True}
-
-        self.client.force_login(user)
-        with self.assertLogs("nautobot.events") as cm:
-            response = self.client.post(self._get_url("view", instance), data)
-
-        self.assertRedirects(response, reverse("extras:scheduledjob_approval_queue_list"))
-        # Job was scheduled
-        instance.refresh_from_db()
-        self.assertEqual(instance.approved_by_user, user)
-        # Event was published
-        expected_payload = {"data": serialize_object_v2(instance)}
-        self.assertEqual(
-            cm.output,
-            [
-                f"INFO:nautobot.events.nautobot.jobs.approval.approved:{json.dumps(expected_payload, cls=NautobotKombuJSONEncoder, indent=4)}"
-            ],
-        )
-
-        # Check object-based permissions are enforced for a different instance
-        instance = self._get_queryset().last()
-        response = self.client.post(self._get_url("view", instance), data)
-        self.assertBodyContains(response, "You do not have permission")
-        # Job was not scheduled
-        instance.refresh_from_db()
-        self.assertIsNone(instance.approved_by_user)
-
-
 class JobQueueTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = JobQueue
 
@@ -3056,6 +2643,18 @@ class JobTestCase(
             reverse("extras:job_run", kwargs={"pk": cls.test_pass.pk}),
         )
 
+        cls.test_dryrun = Job.objects.get(job_class_name="TestDryRun")
+        cls.test_dryrun.enabled = True
+        cls.test_dryrun.has_sensitive_variables = False
+        cls.test_dryrun.save()
+
+        cls.run_urls_dryrun = (
+            # Legacy URL (job class path based)
+            reverse("extras:job_run_by_class_path", kwargs={"class_path": cls.test_dryrun.class_path}),
+            # Current URL (job model pk based)
+            reverse("extras:job_run", kwargs={"pk": cls.test_dryrun.pk}),
+        )
+
         cls.test_required_args = Job.objects.get(job_class_name="TestRequired")
         cls.test_required_args.enabled = True
         cls.test_pass.default_job_queue = default_job_queue
@@ -3099,8 +2698,6 @@ class JobTestCase(
             "dryrun_default": True,
             "hidden_override": True,
             "hidden": False,
-            "approval_required_override": True,
-            "approval_required": True,
             "soft_time_limit_override": True,
             "soft_time_limit": 350,
             "time_limit_override": True,
@@ -3122,8 +2719,6 @@ class JobTestCase(
             "dryrun_default": "",
             "clear_hidden_override": True,
             "hidden": False,
-            "clear_approval_required_override": True,
-            "approval_required": True,
             "clear_soft_time_limit_override": False,
             "soft_time_limit": 350,
             "clear_time_limit_override": True,
@@ -3550,57 +3145,42 @@ class JobTestCase(
             )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_run_job_with_sensitive_variables_and_requires_approval(self, _):
+    def test_run_job_with_sensitive_variables_and_approval_workflow_defined(self, _):
+        ApprovalWorkflowDefinition.objects.create(
+            name="Test Approval Workflow Definition 1",
+            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+            priority=0,
+        )
+
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
 
         self.test_pass.has_sensitive_variables = True
-        self.test_pass.approval_required = True
         self.test_pass.save()
 
         data = {
             "_schedule_type": "immediately",
         }
         for run_url in self.run_urls:
-            # Assert warning message shows in get
-            response = self.client.get(run_url)
-            self.assertBodyContains(
-                response,
-                "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval.",
-            )
-
-            # Assert run button is disabled
-            self.assertBodyContains(
-                response,
-                """
-                <button class="btn btn-primary" id="id__run" name="_run" type="submit" disabled="disabled">
-                    <span aria-hidden="true" class="mdi mdi-play"></span><!--
-                    -->Run Job Now
-                </button>
-                """,
-                html=True,
-            )
             # Assert error message shows after post
             response = self.client.post(run_url, data)
             self.assertBodyContains(
                 response,
                 "Unable to run or schedule job: "
-                "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
-                "One of these two flags must be removed before this job can be scheduled or run.",
+                "This job is flagged as possibly having sensitive variables but also has an applicable approval workflow definition."
+                "Modify or remove the approval workflow definition or modify the job to set `has_sensitive_variables` to False.",
             )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_run_job_with_approval_required_triggers_approval_workflow(self, _):
-        ApprovalWorkflowDefinition.objects.create(
-            name="Test Approval Workflow Definition 1",
-            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
-            priority=0,
-        )
+    def test_run_immediate_job_triggers_approval_workflow_if_defined(self, _):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
 
-        self.test_pass.approval_required = True
-        self.test_pass.save()
+        ApprovalWorkflowDefinition.objects.create(
+            name="Approval Definition",
+            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+            priority=0,
+        )
         data = {
             "_schedule_type": "immediately",
         }
@@ -3614,97 +3194,9 @@ class JobTestCase(
             )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_run_scheduled_job_with_approval_required_triggers_approval_workflow(self, _):
-        ApprovalWorkflowDefinition.objects.create(
-            name="Test Approval Workflow Definition 1",
-            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
-            priority=0,
-        )
+    def test_scheduled_job_triggers_approval_workflow_if_defined(self, _):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
-
-        self.test_pass.approval_required = True
-        self.test_pass.save()
-        data = {
-            "_schedule_type": "future",
-            "_schedule_name": "test",
-            "_schedule_start_time": str(timezone.now() + timedelta(minutes=1)),
-        }
-        for i, run_url in enumerate(self.run_urls):
-            data["_schedule_name"] = f"test {i}"
-            response = self.client.post(run_url, data)
-            scheduled_job = ScheduledJob.objects.last()
-            self.assertRedirects(
-                response,
-                reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk]),
-            )
-
-    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_run_immediate_job_with_approval_required_fails_without_approval_workflow(self, _):
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.view_scheduledjob")
-
-        self.test_pass.approval_required = True
-        self.test_pass.save()
-        data = {
-            "_schedule_type": "immediately",
-        }
-        for run_url in self.run_urls:
-            count_job_result = JobResult.objects.count()
-            response = self.client.post(run_url, data, follow=True)
-            self.assertEqual(ScheduledJob.objects.count(), 0)
-            self.assertEqual(JobResult.objects.count(), count_job_result)
-            self.assertContains(response, "Job was not successfully submitted for approval")
-
-    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_run_scheduled_job_with_approval_required_fails_without_approval_workflow(self, _):
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.view_scheduledjob")
-
-        self.test_pass.approval_required = True
-        self.test_pass.save()
-        data = {
-            "_schedule_type": "future",
-            "_schedule_name": "test",
-            "_schedule_start_time": str(timezone.now() + timedelta(minutes=1)),
-        }
-
-        for i, run_url in enumerate(self.run_urls):
-            if "_schedule_name" in data:
-                data["_schedule_name"] = f"test {i}"
-            response = self.client.post(run_url, data, follow=True)
-            self.assertEqual(ScheduledJob.objects.count(), 0)
-            self.assertContains(response, "Job was not successfully submitted for approval")
-
-    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_run_immediate_job_skips_approval_workflow_if_not_required(self, _):
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.view_jobresult")
-
-        self.test_pass.approval_required = False
-        self.test_pass.save()
-
-        ApprovalWorkflowDefinition.objects.create(
-            name="Approval Definition",
-            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
-            priority=0,
-        )
-        data = {
-            "_schedule_type": "immediately",
-        }
-        for run_url in self.run_urls:
-            response = self.client.post(run_url, data)
-            self.assertEqual(ScheduledJob.objects.count(), 0)
-            result = JobResult.objects.latest()
-            self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
-
-    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_scheduled_job_with_no_approval_flag_still_triggers_approval_workflow_if_defined(self, _):
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.view_scheduledjob")
-
-        self.test_pass.approval_required = False
-        self.test_pass.save()
 
         ApprovalWorkflowDefinition.objects.create(
             name="Approval Definition",
@@ -3728,12 +3220,9 @@ class JobTestCase(
             )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_run_scheduled_job_without_approval_required_and_no_approval_workflow_succeeds(self, _):
+    def test_run_scheduled_job_with_no_approval_workflow_defined(self, _):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
-
-        self.test_pass.approval_required = False
-        self.test_pass.save()
 
         data = {
             "_schedule_type": "future",
@@ -3750,12 +3239,9 @@ class JobTestCase(
             self.assertFalse(scheduled_job.associated_approval_workflows.exists())
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_run_immediate_job_without_approval_required_and_no_approval_workflow_succeeds(self, _):
+    def test_run_immediate_job_with_no_approval_workflow_definded(self, _):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_jobresult")
-
-        self.test_pass.approval_required = False
-        self.test_pass.save()
 
         data = {
             "_schedule_type": "immediately",
@@ -3767,6 +3253,104 @@ class JobTestCase(
             self.assertIsNone(scheduled_job)
             result = JobResult.objects.latest()
             self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_dryrun_immediate_job_with_approval_workflow_definded(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
+
+        ApprovalWorkflowDefinition.objects.create(
+            name="Approval Definition",
+            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+            priority=0,
+        )
+
+        data = {
+            "_schedule_type": "immediately",
+            "dryrun": True,
+        }
+        for run_url in self.run_urls_dryrun:
+            response = self.client.post(run_url, data)
+            scheduled_job = ScheduledJob.objects.last()
+            self.assertIsNone(scheduled_job)
+            result = JobResult.objects.latest()
+            self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_dryrun_job_with_sensitive_variables_and_approval_workflow_defined(self, _):
+        self.test_dryrun.has_sensitive_variables = True
+        self.test_dryrun.save()
+
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
+
+        ApprovalWorkflowDefinition.objects.create(
+            name="Approval Definition",
+            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+            priority=0,
+        )
+
+        data = {
+            "_schedule_type": "immediately",
+            "dryrun": True,
+        }
+
+        for run_url in self.run_urls_dryrun:
+            # Assert error message shows after post
+            response = self.client.post(run_url, data)
+            self.assertBodyContains(
+                response,
+                "Unable to run or schedule job: "
+                "This job is flagged as possibly having sensitive variables but also has an applicable approval workflow definition."
+                "Modify or remove the approval workflow definition or modify the job to set `has_sensitive_variables` to False.",
+            )
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_dryrun_schedule_job_with_approval_workflow_definded(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        ApprovalWorkflowDefinition.objects.create(
+            name="Approval Definition",
+            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+            priority=0,
+        )
+        data = {
+            "_schedule_type": "future",
+            "_schedule_name": "test",
+            "_schedule_start_time": str(timezone.now() + timedelta(minutes=1)),
+            "dryrun": True,
+        }
+
+        for i, run_url in enumerate(self.run_urls_dryrun):
+            if "_schedule_name" in data:
+                data["_schedule_name"] = f"test {i}"
+            response = self.client.post(run_url, data)
+            scheduled_job = ScheduledJob.objects.last()
+            self.assertRedirects(
+                response,
+                reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk]),
+            )
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_dryrun_schedule_job_with_no_approval_workflow_definded(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        data = {
+            "_schedule_type": "future",
+            "_schedule_name": "test",
+            "_schedule_start_time": str(timezone.now() + timedelta(minutes=1)),
+            "dryrun": True,
+        }
+
+        for i, run_url in enumerate(self.run_urls_dryrun):
+            if "_schedule_name" in data:
+                data["_schedule_name"] = f"test {i}"
+            response = self.client.post(run_url, data)
+            scheduled_job = ScheduledJob.objects.last()
+            self.assertRedirects(response, reverse("extras:scheduledjob_list"))
+            self.assertFalse(scheduled_job.associated_approval_workflows.exists())
 
     def test_job_object_change_log_view(self):
         """Assert Job change log view displays appropriate header"""
@@ -4721,7 +4305,7 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases
                         )
                         # ContactAssociationTable related to this role instances should not be there.
                         self.assertNotIn(
-                            f'<strong>{result}</strong>\n            </div>\n            \n\n<table class="table table-hover table-headings">\n',
+                            f'<strong>{result}</strong>\n            </div>\n            \n\n<table class="table table-hover nb-table-headings">\n',
                             response_body,
                         )
                     else:

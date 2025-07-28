@@ -4,6 +4,7 @@
 {% block title %}Approve {{ obj_type }}?{% endblock %}
 
 {% block message %}
+    {% block message_extra %}{% endblock %}
     <p>Are you sure you want to approve <strong>{{ obj }}</strong> for <strong> {{ object_under_review }}</strong>?</p>
     <p>You can leave optional comments here.</p>
     {% render_field form.comments %}

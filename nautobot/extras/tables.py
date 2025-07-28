@@ -1063,7 +1063,6 @@ class JobTable(BaseTable):
     dryrun_default = BooleanColumn()
     hidden = BooleanColumn()
     read_only = BooleanColumn()
-    approval_required = BooleanColumn()
     is_job_hook_receiver = BooleanColumn()
     is_job_button_receiver = BooleanColumn()
     supports_dryrun = BooleanColumn()
@@ -1115,7 +1114,6 @@ class JobTable(BaseTable):
             "read_only",
             "is_job_hook_receiver",
             "is_job_button_receiver",
-            "approval_required",
             "supports_dryrun",
             "soft_time_limit",
             "time_limit",
@@ -1197,7 +1195,7 @@ class JobLogEntryTable(BaseTable):
             "class": log_entry_color_css,
         }
         attrs = {
-            "class": "table table-hover table-headings",
+            "class": "table table-hover nb-table-headings",
             "id": "logs",
         }
 
@@ -1250,7 +1248,7 @@ class JobResultTable(BaseTable):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Only calculate log counts for "summary" column if it's actually visible.
-        if self.columns["summary"].visible and isinstance(self.data.data, QuerySet):
+        if "summary" in self.columns and self.columns["summary"].visible and isinstance(self.data.data, QuerySet):
             self.data = TableData.from_data(
                 self.data.data.annotate(
                     debug_log_count=count_related(

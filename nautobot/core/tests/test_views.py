@@ -413,7 +413,7 @@ class NavAppsUITestCase(TestCase):
         self.assertContains(
             response,
             f"""
-            <a class="sidenav-link"
+            <a class="nb-sidenav-link"
                 data-item-weight="{self.apps_marketplace_item_weight}"
                 href="{self.apps_marketplace_url}">
                 Apps Marketplace
@@ -428,7 +428,7 @@ class NavAppsUITestCase(TestCase):
         self.assertContains(
             response,
             f"""
-            <a class="sidenav-link"
+            <a class="nb-sidenav-link"
                 data-item-weight="{self.apps_list_item_weight}"
                 href="{self.apps_list_url}">
                 Installed Apps
@@ -769,12 +769,11 @@ class TestObjectDetailView(TestCase):
         url = reverse("circuits:provider", args=(provider.pk,))
         response = self.client.get(f"{url}?tab=main")
         self.assertHttpStatus(response, 200)
-        response_data = response.content.decode(response.charset)
-        print(response_data)
+        response_data = extract_page_body(response.content.decode(response.charset))
         view_move_url = reverse("circuits:circuit_list") + f"?provider={provider.id}"
 
         # Assert Badge Count in table panel header
-        panel_header = f"""<div class="card-header"><strong>Circuits</strong> <a href="{view_move_url}" class="badge badge-primary">10</a></div>"""
+        panel_header = f"""<div class="card-header"><strong>Circuits</strong> <a href="{view_move_url}" class="badge bg-primary">10</a></div>"""
         self.assertInHTML(panel_header, response_data)
 
         # Assert view X more btn
