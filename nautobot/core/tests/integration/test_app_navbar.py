@@ -51,7 +51,7 @@ class AppNavBarTestCase(SeleniumTestCase):
         self.assertTrue(sidenav_section.is_expanded)
 
         group = sidenav_section.flyout.find_by_xpath(
-            "//li[@class='sidenav-link-group' and normalize-space()='Example Group 1']"
+            "//li[@class='nb-sidenav-link-group' and normalize-space()='Example Group 1']"
         )
         self.assertEqual(len(group), 1)
 
@@ -68,7 +68,7 @@ class AppNavBarTestCase(SeleniumTestCase):
 
         for group_name, items in self.navbar["Circuits"].items():
             group = sidenav_section.flyout.find_by_xpath(
-                f"//li[@class='sidenav-link-group' and normalize-space()='{group_name}']"
+                f"//li[@class='nb-sidenav-link-group' and normalize-space()='{group_name}']"
             )
             self.assertEqual(len(group), 1)
 
@@ -88,7 +88,7 @@ class AppNavBarTestCase(SeleniumTestCase):
 
         for group_name, items in self.navbar["Apps"].items():
             group = sidenav_section.flyout.find_by_xpath(
-                f"//li[@class='sidenav-link-group' and normalize-space()='{group_name}']"
+                f"//li[@class='nb-sidenav-link-group' and normalize-space()='{group_name}']"
             )
             self.assertEqual(len(group), 1)
 

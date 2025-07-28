@@ -60,11 +60,11 @@ class NavBarTestCase(SeleniumTestCase):
             for group_name, items in groups.items():
                 # Append onto tab xpath with group name search
                 group = sidenav_section.flyout.find_by_xpath(
-                    f"//li[@class='sidenav-link-group' and normalize-space()='{group_name}']"
+                    f"//li[@class='nb-sidenav-link-group' and normalize-space()='{group_name}']"
                 )
 
                 for item_name in items:
-                    item_xpath = f"//a[@class='sidenav-link' and normalize-space()='{item_name}']"
+                    item_xpath = f"//a[@class='nb-sidenav-link' and normalize-space()='{item_name}']"
                     group.find_by_xpath(item_xpath)
 
             sidenav_section.button.click()

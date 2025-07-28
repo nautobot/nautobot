@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', function () {
   [...document.querySelectorAll('[data-bs-toggle="tooltip"]')].forEach((tooltip) => new bootstrap.Tooltip(tooltip));
 
   // Sidenav
-  document.querySelector('.sidenav-toggler').addEventListener('click', (event) => {
+  document.querySelector('.nb-sidenav-toggler').addEventListener('click', (event) => {
     const toggler = event.currentTarget;
 
     const controls = toggler.getAttribute('aria-controls');
@@ -53,10 +53,10 @@ document.addEventListener('DOMContentLoaded', function () {
     toggler.setAttribute('aria-expanded', String(!expanded));
 
     const sidenav = document.getElementById(controls);
-    sidenav.classList.toggle('sidenav-collapsed', expanded);
+    sidenav.classList.toggle('nb-sidenav-collapsed', expanded);
   });
 
-  [...document.querySelectorAll('.sidenav-list-item')].forEach((sidenavListItem) => {
+  [...document.querySelectorAll('.nb-sidenav-list-item')].forEach((sidenavListItem) => {
     sidenavListItem.addEventListener('click', () => {
       const controls = sidenavListItem.getAttribute('aria-controls');
       const expanded = sidenavListItem.getAttribute('aria-expanded') === 'true';

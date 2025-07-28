@@ -25,6 +25,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 
 from nautobot.apps.ui import BaseTextPanel
+from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.forms import ApprovalForm, restrict_form_fields
@@ -84,7 +85,7 @@ from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
 
-from . import filters, forms, tables
+from . import filters, forms, jobs_ui, tables
 from .api import serializers
 from .choices import (
     ApprovalWorkflowStateChoices,
@@ -744,7 +745,7 @@ class ConfigContextUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.FULL_WIDTH,
                 label="Data",
-                header_extra_content_template_path="extras/inc/json_format.html",
+                header_extra_content_template_path="extras/inc/configcontext_format.html",
                 body_content_template_path="extras/inc/configcontext_data.html",
             ),
             AssignmentObjectFieldsPanel(
@@ -1465,10 +1466,12 @@ class DynamicGroupBulkDeleteView(generic.BulkDeleteView):
     filterset = filters.DynamicGroupFilterSet
 
 
-# 3.0 TODO: remove, deprecated since 2.3 (#5845)
 class ObjectDynamicGroupsView(generic.GenericView):
     """
     Present a list of dynamic groups associated to a particular object.
+
+    Note that this isn't currently widely used, as most object detail views currently render the table inline
+    rather than using this separate view. This may change in the future.
 
     base_template: Specify to explicitly identify the base object detail template to render.
         If not provided, "<app>/<model>.html", "<app>/<model>_retrieve.html", or "generic/object_retrieve.html"
@@ -1489,7 +1492,6 @@ class ObjectDynamicGroupsView(generic.GenericView):
             data=obj.dynamic_groups.restrict(request.user, "view"), orderable=False
         )
         dynamicgroups_table.columns.hide("content_type")
-        dynamicgroups_table.columns.hide("members")
 
         # Apply the request context
         paginate = {
@@ -1822,8 +1824,6 @@ class ImageAttachmentDeleteView(generic.ObjectDeleteView):
 #
 # Jobs
 #
-
-
 class JobListView(generic.ObjectListView):
     """
     Retrieve all of the available jobs from disk and the recorded JobResult (if any) for each.
@@ -2108,6 +2108,64 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 class JobView(generic.ObjectView):
     queryset = JobModel.objects.all()
     template_name = "extras/job_detail.html"
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                label="Source Code",
+                fields=[
+                    "module_name",
+                    "job_class_name",
+                    "class_path",
+                    "installed",
+                    "is_job_hook_receiver",
+                    "is_job_button_receiver",
+                ],
+            ),
+            jobs_ui.JobObjectFieldsPanel(
+                weight=200,
+                section=SectionChoices.LEFT_HALF,
+                label="Job",
+                fields=["grouping", "name", "description", "enabled"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.JobResultTable,
+                table_title="JobResults",
+                table_filter=["job_model"],
+            ),
+            jobs_ui.JobObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                label="Properties",
+                fields=[
+                    "approval_required",
+                    "supports_dryrun",
+                    "dryrun_default",
+                    "read_only",
+                    "hidden",
+                    "has_sensitive_variables",
+                    "is_singleton",
+                    "soft_time_limit",
+                    "time_limit",
+                    "job_queues",
+                    "default_job_queue",
+                ],
+            ),
+        ],
+        extra_buttons=[
+            jobs_ui.JobRunScheduleButton(
+                weight=100,
+                link_name="extras:job_run",
+                label="Run/Schedule",
+                icon="mdi-play",
+                color=ButtonActionColorChoices.SUBMIT,
+                required_permissions=["extras.job_run"],
+            ),
+        ],
+    )
 
 
 class JobEditView(generic.ObjectEditView):
