@@ -56,7 +56,7 @@ class JobResultTest(SeleniumTestCase):
         self.browser.visit(self.live_server_url)
         self.browser.links.find_by_partial_text("Jobs").first.click()
         self.browser.links.find_by_partial_text("Job Results").first.click()
-        self.browser.find_by_xpath("//table[@class='table table-hover table-headings']/tbody/tr[1]/td[2]/a").click()
+        self.browser.find_by_xpath("//table[@class='table table-hover nb-table-headings']/tbody/tr[1]/td[2]/a").click()
 
         filter_element = self.browser.find_by_xpath("//input[@id='log-filter']")
         visible_rows_xpath = "//table[@id='logs']/tbody/tr[not(contains(@style, 'display: none'))]"

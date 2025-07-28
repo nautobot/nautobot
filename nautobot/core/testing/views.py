@@ -1202,7 +1202,7 @@ class ViewTestCases:
             self.assertHttpStatus(response, 200)
             response_body = utils.extract_page_body(response.content.decode(response.charset))
             # Assert the table which shows all the selected objects is not part of the html body in edit all case
-            self.assertNotIn('<table class="table table-hover table-headings">', response_body)
+            self.assertNotIn('<table class="table table-hover nb-table-headings">', response_body)
             # Check if all the pks are passed into the BulkEditForm/BulkUpdateForm
             for pk in pk_list:
                 self.assertNotIn(str(pk), response_body)
@@ -1356,7 +1356,7 @@ class ViewTestCases:
             self.assertHttpStatus(response, 200)
             response_body = utils.extract_page_body(response.content.decode(response.charset))
             # Assert the table which shows all the selected objects is not part of the html body in delete all case
-            self.assertNotIn('<table class="table table-hover table-headings">', response_body)
+            self.assertNotIn('<table class="table table-hover nb-table-headings">', response_body)
             # Assert none of the hidden input fields for each of the pks that would be deleted is part of the html body
             for pk in self._get_queryset().values_list("pk", flat=True):
                 self.assertNotIn(str(pk), response_body)

@@ -781,8 +781,7 @@ button {
   }
 }
 
-/* TODO(norbert-mieczkowski-codilime): rename `.table-headings` to `.nb-table-headings`. */
-.table-headings th {
+.nb-table-headings th {
   background-color: var(--#{$prefix}tertiary-bg);
   white-space: nowrap;
 }
@@ -1342,11 +1341,11 @@ body {
   width: $sidenav-link-width;
   z-index: $zindex-fixed;
 
-  &.sidenav-collapsed {
+  &.nb-sidenav-collapsed {
     width: 4rem; /* 64px */
 
     /* Transition between brand logo and icon when navbar expands/collapses. */
-    .sidenav-brand {
+    .nb-sidenav-brand {
       &:first-of-type { /* Brand icon */
         @include fade-in;
       }
@@ -1356,13 +1355,13 @@ body {
       }
     }
 
-    .sidenav-list-item {
+    .nb-sidenav-list-item {
       > :last-child { /* Sidenav list item name and chevron icon wrapper */
         @include fade-out;
       }
     }
 
-    .sidenav-toggler::before { /* Sidenav toggler chevron icon */
+    .nb-sidenav-toggler::before { /* Sidenav toggler chevron icon */
       transform: rotate(180deg);
     }
   }
@@ -1375,7 +1374,7 @@ body {
     scrollbar-width: none;
   }
 
-  .sidenav-brand {
+  .nb-sidenav-brand {
     @include transition($transition-base);
     display: inline-block;
     margin-block-start: map.get($spacers, 10);
@@ -1394,7 +1393,7 @@ body {
     }
   }
 
-  .sidenav-flyout {
+  .nb-sidenav-flyout {
     @include box-shadow($box-shadow);
     @include fade-out;
     @include transition($transition-base);
@@ -1412,7 +1411,7 @@ body {
     min-width: $sidenav-link-width;
   }
 
-  .sidenav-link {
+  .nb-sidenav-link {
     align-items: center;
     color: inherit;
     display: flex;
@@ -1448,11 +1447,11 @@ body {
     }
   }
 
-  li:last-child > .sidenav-link::before { /* Last link segment icon */
+  li:last-child > .nb-sidenav-link::before { /* Last link segment icon */
     background-image: #{escape-svg(url("data:image/svg+xml,#{$sidenav-link-segment-icon-svg-last}"))};
   }
 
-  .sidenav-favorite {
+  .nb-sidenav-favorite {
     @include fade-out;
     @include transition($transition-base);
     background: no-repeat #{map.get($spacers, 10)} center/$sidenav-favorite-size #{escape-svg(url("data:image/svg+xml,#{$sidenav-favorite-icon-svg}"))};
@@ -1473,7 +1472,7 @@ body {
     }
   }
 
-  .sidenav-link-wrapper {
+  .nb-sidenav-link-wrapper {
     display: flex;
     width: $sidenav-link-width;
 
@@ -1486,13 +1485,13 @@ body {
     &:hover {
       background-color: $navy-2;
 
-      > .sidenav-favorite {
+      > .nb-sidenav-favorite {
         @include fade-in;
       }
     }
   }
 
-  .sidenav-link-group {
+  .nb-sidenav-link-group {
     color: $nav-gray-3;
     font-weight: $font-weight-medium;
     padding-block: 0.3125rem; /* 5px */
@@ -1501,12 +1500,12 @@ body {
     width: $sidenav-link-width;
   }
 
-  .sidenav-list-divider {
+  .nb-sidenav-list-divider {
     border-top: $border-width solid $navy-4;
     margin: #{map.get($spacers, 10)}  #{map.get($spacers, 20)};
   }
 
-  .sidenav-list-item {
+  .nb-sidenav-list-item {
     @include transition($btn-transition);
     align-items: center;
     background: transparent;
@@ -1526,7 +1525,7 @@ body {
         @include fade-in;
       }
 
-      & + .sidenav-flyout {
+      & + .nb-sidenav-flyout {
         @include fade-in;
         left: 100%;
       }
@@ -1549,7 +1548,7 @@ body {
       z-index: -1;
     }
 
-    &:has(+ .sidenav-flyout .sidenav-link-active) { /* When list item contains an active link */
+    &:has(+ .nb-sidenav-flyout .nb-sidenav-link-active) { /* When list item contains an active link */
       color: $orange-0;
 
       > :last-child::after { /* Chevron icon */
@@ -1579,7 +1578,7 @@ body {
     }
   }
 
-  .sidenav-toggler {
+  .nb-sidenav-toggler {
     @include fade-in;
     @include transition($transition-base);
     right: -0.8125rem; /* -13px */
@@ -1590,8 +1589,8 @@ body {
     }
   }
 
-  &:has(> ul .sidenav-list-item[aria-expanded="true"]) { /* When flyout is expanded */
-    .sidenav-toggler {
+  &:has(> ul .nb-sidenav-list-item[aria-expanded="true"]) { /* When flyout is expanded */
+    .nb-sidenav-toggler {
       @include fade-out;
     }
   }

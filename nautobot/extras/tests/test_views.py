@@ -4721,7 +4721,7 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases
                         )
                         # ContactAssociationTable related to this role instances should not be there.
                         self.assertNotIn(
-                            f'<strong>{result}</strong>\n            </div>\n            \n\n<table class="table table-hover table-headings">\n',
+                            f'<strong>{result}</strong>\n            </div>\n            \n\n<table class="table table-hover nb-table-headings">\n',
                             response_body,
                         )
                     else:
