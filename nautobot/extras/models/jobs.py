@@ -1274,6 +1274,18 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
             self.approved_at = None
             self.save()
 
+    def get_approval_template(self):
+        """
+        Return a custom template path to be used for the approval UI.
+
+        This allows the object to override the default approval template
+        when special logic or warnings are needed. If no override is
+        required, return None to use the standard approval form.
+        """
+        if self.one_off and self.start_time < timezone.now():
+            return "extras/job_approval_confirmation.html"
+        return None
+
     @property
     def schedule(self):
         if self.interval == JobExecutionType.TYPE_FUTURE:

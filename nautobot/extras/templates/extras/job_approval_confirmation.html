@@ -1,31 +1,6 @@
-{% extends 'base.html' %}
-{% load helpers %}
+{% extends 'extras/approval_workflow/approve.html' %}
+{% load form_helpers %}
 
-{% block title %}{{ scheduled_job }} - Confirm Approval{% endblock %}
-
-{% block content %}
-    <div class="row">
-        <div class="col-md-6 offset-md-3">
-            <form action="" method="post">
-                {% csrf_token %}
-                <div class="card border-danger">
-                    <div class="card-header bg-danger-subtle border-danger' fw-medium text-body"><strong>Confirm Approval</strong></div>
-                    <div class="card-body">
-                        <p><strong>Warning:</strong> You are approving a job that is past its scheduled date ({{ scheduled_job.start_time }}). It will run immediately after approval.</p>
-                        {% block message_extra %}{% endblock %}
-                        <div class="gap-8 hstack justify-content-end">
-                            <button type="submit" name="_force_approve" class="btn btn-danger">
-                                <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
-                                -->Confirm
-                            </button>
-                            <a href="{{ return_url }}" class="btn btn-secondary">
-                                <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
-                                -->Cancel
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
+{% block message_extra %}
+    <p><strong>Warning:</strong> You are approving a job that is past its scheduled date ({{ object_under_review.start_time }}). It will run immediately after approval.</p>
 {% endblock %}

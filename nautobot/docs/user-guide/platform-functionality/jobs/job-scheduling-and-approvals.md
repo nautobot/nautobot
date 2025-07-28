@@ -55,7 +55,7 @@ and API by any user that has the `extras.approve_job` permission for the job in 
 
 ### Approval via the UI
 
-The queue of jobs that need approval can be found under `Approvals > Approval Dashboard`. This view displays all current task approval requests that require approval before they can be run. This includes those associated with `ScheduledJob`. To approve workflow with a scheduled job, click the button to approve.
+The queue of jobs that need approval can be found under `Approvals > Approval Dashboard`. This view displays all current task approval requests that require approval before they can be run. This includes those associated with `ScheduledJob`. To approve workflow with a scheduled job, click the button to approve. Please note that you will be asked for confirmation if a job is being approved that is past its scheduled date and time.
 
 ### Approval via the API
 

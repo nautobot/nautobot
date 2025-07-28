@@ -430,9 +430,15 @@ class ApprovalWorkflowStageUIViewSet(
             obj = approval_workflow_stage_response
             form = ApprovalForm(initial={"comments": obj.comments})
 
+            object_under_review = instance.approval_workflow.object_under_review
+            template_name = getattr(object_under_review, "get_approval_template", lambda: None)()
+            print("template_name: ", template_name)
+            if not template_name:
+                template_name = "extras/approval_workflow/approve.html"
+
             return render(
                 request,
-                "extras/approval_workflow/approve.html",
+                template_name,
                 {
                     "obj": obj.approval_workflow_stage,
                     "object_under_review": obj.approval_workflow_stage.approval_workflow.object_under_review,
