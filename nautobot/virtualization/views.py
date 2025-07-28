@@ -336,77 +336,52 @@ class VirtualMachineBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class VMInterfaceListView(generic.ObjectListView):
+class VMInterfaceUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.VMInterfaceBulkEditForm
+    filterset_class = filters.VMInterfaceFilterSet
+    filterset_form_class = forms.VMInterfaceFilterForm
+    form_class = forms.VMInterfaceForm
+    serializer_class = serializers.VMInterfaceSerializer
+    table_class = tables.VMInterfaceTable
     queryset = VMInterface.objects.all()
-    filterset = filters.VMInterfaceFilterSet
-    filterset_form = forms.VMInterfaceFilterForm
-    table = tables.VMInterfaceTable
     action_buttons = ("export",)
 
-
-class VMInterfaceView(generic.ObjectView):
-    queryset = VMInterface.objects.all()
-
     def get_extra_context(self, request, instance):
-        # Get assigned IP addresses
-        ipaddress_table = InterfaceIPAddressTable(
-            data=instance.ip_addresses.restrict(request.user, "view").select_related("role", "status", "tenant"),
-            orderable=False,
-        )
+        context = super().get_extra_context(request, instance)
 
-        # Get child interfaces
-        child_interfaces = instance.child_interfaces.restrict(request.user, "view")
-        child_interfaces_tables = tables.VMInterfaceTable(
-            child_interfaces, orderable=False, exclude=("virtual_machine",)
-        )
+        if self.action == "retrieve":
+            # Get assigned IP addresses
+            ipaddress_table = InterfaceIPAddressTable(
+                data=instance.ip_addresses.restrict(request.user, "view").select_related("role", "status", "tenant"),
+                orderable=False,
+            )
 
-        # Get assigned VLANs and annotate whether each is tagged or untagged
-        vlans = []
-        if instance.untagged_vlan is not None:
-            vlans.append(instance.untagged_vlan)
-            vlans[0].tagged = False
+            # Get child interfaces
+            child_interfaces = instance.child_interfaces.restrict(request.user, "view")
+            child_interfaces_tables = tables.VMInterfaceTable(
+                child_interfaces, orderable=False, exclude=("virtual_machine",)
+            )
 
-        for vlan in instance.tagged_vlans.restrict(request.user).select_related("vlan_group", "tenant", "role"):
-            vlan.tagged = True
-            vlans.append(vlan)
-        vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
+            # Get assigned VLANs and annotate whether each is tagged or untagged
+            vlans = []
+            if instance.untagged_vlan is not None:
+                vlans.append(instance.untagged_vlan)
+                vlans[0].tagged = False
 
-        return {
-            "ipaddress_table": ipaddress_table,
-            "child_interfaces_table": child_interfaces_tables,
-            "vlan_table": vlan_table,
-            **super().get_extra_context(request, instance),
-        }
+            for vlan in instance.tagged_vlans.restrict(request.user).select_related("vlan_group", "tenant", "role"):
+                vlan.tagged = True
+                vlans.append(vlan)
+            vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
 
+            context.update(
+                {
+                    "ipaddress_table": ipaddress_table,
+                    "child_interfaces_table": child_interfaces_tables,
+                    "vlan_table": vlan_table,
+                }
+            )
 
-class VMInterfaceCreateView(generic.ComponentCreateView):
-    queryset = VMInterface.objects.all()
-    form = forms.VMInterfaceCreateForm
-    model_form = forms.VMInterfaceForm
-    template_name = "virtualization/virtualmachine_component_add.html"
-
-
-class VMInterfaceEditView(generic.ObjectEditView):
-    queryset = VMInterface.objects.all()
-    model_form = forms.VMInterfaceForm
-    template_name = "virtualization/vminterface_edit.html"
-
-
-class VMInterfaceDeleteView(generic.ObjectDeleteView):
-    queryset = VMInterface.objects.all()
-    template_name = "virtualization/virtual_machine_vminterface_delete.html"
-
-
-class VMInterfaceBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = VMInterface.objects.all()
-    table = tables.VMInterfaceTable
-
-
-class VMInterfaceBulkEditView(generic.BulkEditView):
-    queryset = VMInterface.objects.all()
-    table = tables.VMInterfaceTable
-    form = forms.VMInterfaceBulkEditForm
-    filterset = filters.VMInterfaceFilterSet
+        return context
 
 
 class VMInterfaceBulkRenameView(generic.BulkRenameView):
@@ -418,13 +393,6 @@ class VMInterfaceBulkRenameView(generic.BulkRenameView):
         if selected_object:
             return selected_object.virtual_machine.name
         return ""
-
-
-class VMInterfaceBulkDeleteView(generic.BulkDeleteView):
-    queryset = VMInterface.objects.all()
-    table = tables.VMInterfaceTable
-    template_name = "virtualization/vminterface_bulk_delete.html"
-    filterset = filters.VMInterfaceFilterSet
 
 
 #
