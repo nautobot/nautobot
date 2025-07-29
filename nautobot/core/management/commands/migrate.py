@@ -20,41 +20,33 @@ class Command(_Command):
         Enhanced version of Django's built-in callback.
 
         Differences in behavior:
-            - Measures and reports elapsed time whenever verbosity >= 1 instead of requiring verbosity >= 2.
-            - Measures and reports affected record counts and elapsed time per record where applicable
+            - Measures and reports elapsed time whenever verbosity >= 1 (default value)
+            - Measures and reports affected record counts and elapsed time per record where applicable at verbosity >= 2.
             - Aligns output to 80-character terminal width in most cases
 
         Examples:
-            # nautobot-server migrate --verbosity=1
+            # nautobot-server migrate
             Running migrations:
-              Applying dcim.0065_controller_capabilities_and_more...         OK    (   0.1s)
-                Affected dcim.controller                              11 rows  0.007s/record
-                Affected dcim.controllermanageddevicegroup            35 rows  0.002s/record
-              Applying wireless.0001_initial...                              OK    (   0.3s)
-                Affected wireless.controllermanageddevicegroupradioprofileassignment        0 rows
-                Affected wireless.controllermanageddevicegroupwirelessnetworkassignment        0 rows
-                Affected wireless.radioprofile                         0 rows
-                Affected wireless.supporteddatarate                    0 rows
-                Affected wireless.wirelessnetwork                      0 rows
-              Applying dcim.0066_controllermanageddevicegroup_radio_profi... OK    (   0.1s)
-                Affected dcim.controllermanageddevicegroup            35 rows  0.002s/record
+              Applying dcim.0065_controller_capabilities_and_more...         OK        0.10s
+              Applying wireless.0001_initial...                              OK        0.31s
+              Applying dcim.0066_controllermanageddevicegroup_radio_profi... OK        0.12s
 
-            # nautobot-server migrate -v=1 extras 0100
+            # nautobot-server migrate -v=2 extras 0100
             Operations to perform:
               Target specific migration: 0100_fileproxy_job_result, from extras
             Running migrations:
-              Rendering model states...                                      DONE  (  19.1s)
-              Unapplying ipam.0052_alter_ipaddress_index_together_and_mor... OK    (   0.1s)
+              Rendering model states...                                      DONE     19.10s
+              Unapplying ipam.0052_alter_ipaddress_index_together_and_mor... OK        0.10s
                 Affected ipam.ipaddress                               75 rows  0.001s/record
                 Affected ipam.prefix                                 184 rows  0.000s/record
                 Affected ipam.vrf                                     20 rows  0.004s/record
-              Unapplying ipam.0051_added_optional_vrf_relationship_to_vdc... OK    (   0.1s)
+              Unapplying ipam.0051_added_optional_vrf_relationship_to_vdc... OK        0.10s
                 Affected ipam.vrf                                     20 rows  0.006s/record
                 Affected ipam.vrfdeviceassignment                    140 rows  0.001s/record
-              Unapplying virtualization.0030_alter_virtualmachine_local_c... OK    (   0.3s)
+              Unapplying virtualization.0030_alter_virtualmachine_local_c... OK        0.30s
                 Affected virtualization.virtualmachine                 0 rows
                 Affected virtualization.vminterface                    0 rows
-              Unapplying virtualization.0029_add_role_field_to_interface_... OK    (   0.1s)
+              Unapplying virtualization.0029_add_role_field_to_interface_... OK        0.10s
                 Affected virtualization.vminterface                    0 rows
         """
         if self.verbosity < 1:
@@ -65,7 +57,7 @@ class Command(_Command):
             self.affected_models = set()
             self.affected_models_count = {}
             self.migration = migration
-            if self.migration is not None:
+            if self.verbosity >= 2 and self.migration is not None:
                 for operation in self.migration.operations:
                     if isinstance(operation, FieldOperation):
                         self.affected_models.add((self.migration.app_label, operation.model_name.lower()))
@@ -90,8 +82,8 @@ class Command(_Command):
         elif action in ["apply_success", "render_success", "unapply_success"]:
             elapsed = time.monotonic() - self.start
             outcome = "DONE" if action == "render_success" else "FAKED" if fake else "OK"
-            self.stdout.write(self.style.SUCCESS(f" {outcome:<5} ({elapsed: 6.1f}s)"))
-            if self.migration is not None:
+            self.stdout.write(self.style.SUCCESS(f" {outcome:<5} {elapsed: 8.2f}s"))
+            if self.verbosity >= 2 and self.migration is not None:
                 for app_label, model_name in sorted(self.affected_models):
                     if self.affected_models_count[f"{app_label}.{model_name}"] == 0:
                         with contextlib.suppress(Exception):
