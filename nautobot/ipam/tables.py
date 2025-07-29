@@ -1,4 +1,4 @@
-from django.db.models import Prefetch, QuerySet
+from django.db.models import Prefetch, QuerySet, F
 from django.utils.safestring import mark_safe
 import django_tables2 as tables
 from django_tables2.data import TableData
@@ -51,7 +51,7 @@ UTILIZATION_GRAPH = """
 PREFIX_COPY_LINK = """
 {% load helpers %}
 {% if not table.hide_hierarchy_ui %}
-{% tree_hierarchy_ui_representation record.ancestors.count|as_range table.hide_hierarchy_ui base_tree_depth|default:0 %}
+{% tree_hierarchy_ui_representation record.ancestors_count|as_range table.hide_hierarchy_ui base_tree_depth|default:0 %}
 {% endif %}
 <span class="hover_copy">
   <a href="\

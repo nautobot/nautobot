@@ -2,7 +2,7 @@ import re
 
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_ipv46_address
-from django.db.models import ProtectedError, Q
+from django.db.models import ProtectedError, Q, Subquery, OuterRef, Count, Func, F
 import netaddr
 
 from nautobot.core.models.querysets import RestrictedQuerySet
@@ -383,6 +383,61 @@ class PrefixQuerySet(LocationToLocationsQuerySetMixin, BaseNetworkQuerySet):
             return possible_ancestors[0]
         except IndexError:
             raise self.model.DoesNotExist(f"Could not determine parent Prefix for {cidr}")
+
+    def annotate_ip_address_children(self):
+        from nautobot.ipam.models import IPAddress
+
+        subquery = (
+            IPAddress.objects.filter(
+                parent__namespace_id=OuterRef("namespace_id"),
+                ip_version=OuterRef("ip_version"),
+                host__gte=OuterRef("network"),
+                host__lte=OuterRef("broadcast"),
+            )
+            .order_by()
+            .values_list("host", flat=True)
+        )
+        return self.annotate(_ip_address_children=Subquery(subquery))
+
+    def annotate_ancestors_count(self):
+        from nautobot.ipam.models import Prefix
+
+        class NonAggregateCount(Count):
+            contains_aggregate = False
+
+        subquery = (
+            Prefix.objects.filter(
+                ip_version=OuterRef("ip_version"),
+                network__lte=OuterRef("network"),
+                broadcast__gte=OuterRef("broadcast"),
+                namespace_id=OuterRef("namespace_id"),
+            )
+            .exclude(pk=OuterRef("pk"))
+            .order_by()
+            .annotate(count=NonAggregateCount("pk"))
+            .values("count")
+        )
+        return self.annotate(_ancestors_count=Subquery(subquery))
+
+    def annotate_descendants_count(self):
+        from nautobot.ipam.models import Prefix
+
+        class NonAggregateCount(Count):
+            contains_aggregate = False
+
+        subquery = (
+            Prefix.objects.filter(
+                ip_version=OuterRef("ip_version"),
+                network__gte=OuterRef("network"),
+                broadcast__lte=OuterRef("broadcast"),
+                namespace_id=OuterRef("namespace_id"),
+            )
+            .exclude(pk=OuterRef("pk"))
+            .order_by()
+            .annotate(count=NonAggregateCount("pk"))
+            .values("count")
+        )
+        return self.annotate(_descendants_count=Subquery(subquery))
 
 
 class IPAddressQuerySet(BaseNetworkQuerySet):

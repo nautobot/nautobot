@@ -323,7 +323,9 @@ class PrefixListView(generic.ObjectListView):
     filterset_form = forms.PrefixFilterForm
     table = tables.PrefixDetailTable
     template_name = "ipam/prefix_list.html"
-    queryset = Prefix.objects.all()
+    queryset = (
+        Prefix.objects.all().annotate_descendants_count().annotate_ancestors_count().annotate_ip_address_children()
+    )
 
 
 class PrefixView(generic.ObjectView):

@@ -964,6 +964,12 @@ class Prefix(PrimaryModel):
             query = query.reverse()
         return query
 
+    def ancestors_count(self):
+        """Display count of ancestors."""
+        if hasattr(self, "_ancestors_count"):
+            return self._ancestors_count
+        return self.ancestors().count()
+
     def descendants(self, include_self=False):
         """
         Return all of my children!
@@ -976,6 +982,8 @@ class Prefix(PrimaryModel):
     @cached_property
     def descendants_count(self):
         """Display count of descendants."""
+        if hasattr(self, "_descendants_count"):
+            return self._descendants_count
         return self.descendants().count()
 
     def root(self):
@@ -1124,12 +1132,15 @@ class Prefix(PrimaryModel):
         # and the addresses will instead be parented to the containing TYPE_NETWORK prefix. It should be possible to
         # change this when that is the case, see #3873 for historical context.
         if self.type != choices.PrefixTypeChoices.TYPE_CONTAINER:
-            pool_ips = IPAddress.objects.filter(
-                parent__namespace_id=self.namespace_id,
-                ip_version=self.ip_version,
-                host__gte=self.network,
-                host__lte=self.broadcast,
-            ).values_list("host", flat=True)
+            if hasattr(self, "_ip_address_children"):
+                pool_ips = self._ip_address_children
+            else:
+                pool_ips = IPAddress.objects.filter(
+                    parent__namespace_id=self.namespace_id,
+                    ip_version=self.ip_version,
+                    host__gte=self.network,
+                    host__lte=self.broadcast,
+                ).values_list("host", flat=True)
             child_ips = netaddr.IPSet(pool_ips)
 
         if self.type != choices.PrefixTypeChoices.TYPE_POOL:
