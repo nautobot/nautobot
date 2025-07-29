@@ -1195,13 +1195,9 @@ class ObjectChangeTable(BaseTable):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Conditionally prefetch the `changed_object` db column if the `object_repr` table column is visible.
         # The automatic prefetching mechanism in nautobot.core.tables.ObjectTable fails for `changed_object` because the
         # field is called `object_repr`.
-        if self.columns["object_repr"].visible and isinstance(self.data.data, QuerySet):
-            self.data = TableData.from_data(self.data.data.prefetch_related("changed_object"))
-            self.data.set_table(self)
-            self.rows = BoundRows(data=self.data, table=self, pinned_data=self.pinned_data)
+        self.add_conditional_prefetch("object_repr", "changed_object")
 
 
 #
