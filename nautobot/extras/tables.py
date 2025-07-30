@@ -280,8 +280,19 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
 
     def render(self, *, record):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
         data = getattr(record, self.data_field, None)
+        # don't do import here, just doing to demonstrate the fix
+        from jsonschema import Draft7Validator, SchemaError
+
+
         try:
-            self.validator.validate(data)
+            validator = Draft7Validator(record.config_context_schema.data_schema)
+        except SchemaError:
+            validator = {}
+
+        try:
+
+            validator.validate(data)
+
         except JSONSchemaValidationError as e:
             return render_boolean(False) + format_html('<span class="text-danger"> {}</span>', e.message)
         return render_boolean(True)

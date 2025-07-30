@@ -140,13 +140,13 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         # Navigate to ConfigContextSchema Validation tab
         self.browser.visit(f"{self.live_server_url}/extras/config-context-schemas/{schema.pk}/")
         self.browser.links.find_by_text("Validation").click()
-        xpathquery = "//div[@id[contains(., 'validation')]]//tbody/tr"
+        xpath_query = "//div[@id[contains(., 'validation')]]//tbody/tr"
 
         # Assert Validation states
         self.assertEqual(
-            len(self.browser.find_by_xpath(xpathquery)), 3
+            len(self.browser.find_by_xpath(xpath_query)), 3
         )  # 3 rows (config context, device, virtual machine)
-        for row in self.browser.find_by_xpath(xpathquery):
+        for row in self.browser.find_by_xpath(xpath_query):
             self.assertEqual(
                 row.find_by_tag("td")[-2].html,
                 '<span class="text-success"><i class="mdi mdi-check-bold" title="" data-original-title="Yes"></i></span>',
@@ -166,36 +166,36 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
 
         # Assert Validation states
         self.assertEqual(
-            len(self.browser.find_by_xpath(xpathquery)), 3
+            len(self.browser.find_by_xpath(xpath_query)), 3
         )  # 3 rows (config context, device, virtual machine)
-        for row in self.browser.find_by_xpath(xpathquery):
+        for row in self.browser.find_by_xpath(xpath_query):
             self.assertEqual(
                 row.find_by_tag("td")[-2].html,
                 '<span class="text-danger"><i class="mdi mdi-close-thick" title="" data-original-title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
             )
 
         # Edit the device local context data and redirect back to the validation tab
-        self.browser.find_by_xpath(xpathquery)[1].find_by_tag("td")[-1].find_by_tag("a").click()
+        self.browser.find_by_xpath(xpath_query)[1].find_by_tag("td")[-1].find_by_tag("a").click()
         # Update the property "a" to be a string
         self.browser.fill("local_config_context_data", '{"a": "foo", "b": 456, "c": 777}')
         self.browser.find_by_text("Update").click()
 
         # Assert Validation states
         self.assertEqual(
-            len(self.browser.find_by_xpath(xpathquery)), 3
+            len(self.browser.find_by_xpath(xpath_query)), 3
         )  # 3 rows (config context, device, virtual machine)
         # Config context still fails
         self.assertEqual(
-            self.browser.find_by_xpath(xpathquery)[0].find_by_tag("td")[-2].html,
+            self.browser.find_by_xpath(xpath_query)[0].find_by_tag("td")[-2].html,
             '<span class="text-danger"><i class="mdi mdi-close-thick" title="" data-original-title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
         )
         # Device now passes
         self.assertEqual(
-            self.browser.find_by_xpath(xpathquery)[1].find_by_tag("td")[-2].html,
+            self.browser.find_by_xpath(xpath_query)[1].find_by_tag("td")[-2].html,
             '<span class="text-success"><i class="mdi mdi-check-bold" title="" data-original-title="Yes"></i></span>',
         )
         # Virtual machine still fails
         self.assertEqual(
-            self.browser.find_by_xpath(xpathquery)[2].find_by_tag("td")[-2].html,
+            self.browser.find_by_xpath(xpath_query)[2].find_by_tag("td")[-2].html,
             '<span class="text-danger"><i class="mdi mdi-close-thick" title="" data-original-title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
         )
