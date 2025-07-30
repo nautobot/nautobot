@@ -57,7 +57,7 @@ from .devicetypes import (
     PowerPortTemplateTable,
     RearPortTemplateTable,
 )
-from .locations import FlatLocationTable,LocationTable, LocationTypeTable
+from .locations import FlatLocationTable, LocationTable, LocationTypeTable
 from .power import PowerFeedTable, PowerPanelTable
 from .racks import (
     RackDetailTable,
