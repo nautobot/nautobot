@@ -166,6 +166,23 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.13 (2025-07-21)
+
+### Added in v2.4.13
+
+- [#6594](https://github.com/nautobot/nautobot/issues/6594) - Added additional database indices to `IPAddress`, `Prefix`, and `VRF` models to improve the default list view performance for these models.
+
+### Changed in v2.4.13
+
+- [#6608](https://github.com/nautobot/nautobot/issues/6608) - Updated branding hyperlinks on bottom of UI to open in new tab.
+- [#7484](https://github.com/nautobot/nautobot/issues/7484) - Add the Show Device Full Name button to the `Elevations` list view.
+
+### Fixed in v2.4.13
+
+- [#6594](https://github.com/nautobot/nautobot/issues/6594) - Changed the default `ordering` of `Interface` (and similar device components) to a less expensive query to improve performance of default list views of these components.
+- [#6594](https://github.com/nautobot/nautobot/issues/6594) - Improved the performance of `Device.all_interfaces`, `.all_console_ports`, etc. in the case where the Device has no module bays.
+- [#7590](https://github.com/nautobot/nautobot/issues/7590) - Improved performance of Device detail view when many devices belong to many dynamic-groups.
+
 ## v2.4.12 (2025-07-17)
 
 ### Changed in v2.4.12
