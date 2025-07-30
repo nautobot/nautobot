@@ -2158,23 +2158,46 @@ class JobResultUIViewSet(
     filterset_form_class = forms.JobResultFilterForm
     serializer_class = serializers.JobResultSerializer
     table_class = tables.JobResultTable
-    queryset = JobResult.objects.defer("result").select_related("job_model", "user")
+    queryset = JobResult.objects.all()
     action_buttons = ()
 
     def get_extra_context(self, request, instance):
-        if instance is None:
-            return {}
-        associated_record = None
-        job_class = None
-        if instance.job_model is not None:
-            job_class = instance.job_model.job_class
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            job_class = None
+            if instance and instance.job_model:
+                job_class = instance.job_model.job_class
 
-        return {
-            "job": job_class,
-            "associated_record": associated_record,
-            "result": instance,
-            **super().get_extra_context(request, instance),
-        }
+            context.update(
+                {
+                    "job": job_class,
+                    "associated_record": None,
+                    "result": instance,
+                }
+            )
+
+        return context
+
+    def get_queryset(self):
+        queryset = super().get_queryset().select_related("job_model", "user")
+
+        if not self.detail:
+            queryset = queryset.defer("result", "task_args", "task_kwargs", "celery_kwargs", "traceback", "meta")
+
+        return queryset
+
+    def get_table_class(self):
+        if "delete" in self.request.path or "bulk_destroy" in self.request.path:
+            # Create a subclass of the table with the "actions" column removed
+            class JobResultTableWithoutActions(self.table_class):
+                class Meta(self.table_class.Meta):
+                    # Exclude the "actions" column from the field list
+                    all_default_columns = self.table_class.Meta.default_columns
+                    default_columns = tuple(column for column in all_default_columns if column != "actions")
+
+            return JobResultTableWithoutActions
+
+        return self.table_class
 
 
 class JobLogEntryTableView(generic.GenericView):
