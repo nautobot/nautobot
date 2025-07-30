@@ -9,10 +9,12 @@ This migration performs the following checks before proceeding:
    Users should define an approval workflow definition for such jobs going forward.
 
 Refer to documentation for migration to the new approval workflow system:
-https://next.demo.nautobot.com/static/docs/user-guide/platform-functionality/approval-workflow.html
+https://docs.nautobot.com/projects/core/en/next/user-guide/platform-functionality/approval-workflow/
 """
 
 from django.db import migrations
+
+from nautobot.extras.exceptions import ApprovalRequiredScheduledJobsError
 
 
 def _reverse_migrate_data(*_):
@@ -30,21 +32,21 @@ def _migrate_data(apps, *_):
             "Below list of effected scheduled jobs:",
         ]
         for schedule_job_id, scheduled_job_name in approval_required_scheduled_jobs:
-            message_lines.append(f"  - ID: {schedule_job_id}, Name: {scheduled_job_name}")
-        raise RuntimeError("\n".join(message_lines))
+            message_lines.append(f"    - ID: {schedule_job_id}, Name: {scheduled_job_name}")
+        raise ApprovalRequiredScheduledJobsError("\n".join(message_lines))
 
     Job = apps.get_model("extras", "Job")
-    approval_required_jobs = Job.objects.filter(approval_required=True).values_list("id", "name")
+    approval_required_jobs = Job.objects.filter(approval_required=True).values_list("name")
     if approval_required_jobs:
         message_lines = [
             "Migration passed, but the following jobs still have `approval_required=True`.",
             "These jobs will no longer trigger approval automatically.",
-            "To preserve this behavior, please define an approval workflow definition for each job.",
-            "Refer to the documentation: https://next.demo.nautobot.com/static/docs/user-guide/platform-functionality/approval-workflow.html",
-            "Affected jobs:",
+            "After upgrading to Nautobot 3.x, you should add an approval workflow definition(s) covering these jobs.",
+            "Refer to the documentation: https://docs.nautobot.com/projects/core/en/next/user-guide/platform-functionality/approval-workflow/",
+            "Affected jobs (Names):",
         ]
-        for job_id, job_name in approval_required_jobs:
-            message_lines.append(f"  - ID: {job_id}, Name: {job_name}")
+        for job_name in approval_required_jobs:
+            message_lines.append(f"    - {job_name}")
         print("\n".join(message_lines))
     else:
         print("Migration passed: No approval_required jobs or scheduled jobs found.")

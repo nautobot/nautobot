@@ -9,6 +9,7 @@ from django_test_migrations.migrator import Migrator
 
 from nautobot.core.testing.migrations import NautobotDataMigrationTest
 from nautobot.extras.choices import CustomFieldTypeChoices, JobExecutionType, JobQueueTypeChoices
+from nautobot.extras.exceptions import ApprovalRequiredScheduledJobsError
 
 
 # https://github.com/nautobot/nautobot/issues/3435
@@ -197,7 +198,7 @@ class TestFailingApprovalMigration(TestCase):
         )
 
     def test_migration_fails_if_scheduled_jobs_have_approval_required(self):
-        with self.assertRaises(RuntimeError) as cm:
+        with self.assertRaises(ApprovalRequiredScheduledJobsError) as cm:
             self.migrator.apply_tested_migration(("extras", "0126_remove_job_approval_required_and_more"))
 
         self.assertIn("Migration aborted", str(cm.exception))
