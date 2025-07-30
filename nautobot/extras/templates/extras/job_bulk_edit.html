@@ -5,7 +5,6 @@
     {% render_field form.enabled %}
     {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.grouping override_field=form.clear_grouping_override %}
     {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.description override_field=form.clear_description_override %}
-    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.approval_required override_field=form.clear_approval_required_override %}
     {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.dryrun_default override_field=form.clear_dryrun_default_override %}
     {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.hidden override_field=form.clear_hidden_override %}
     {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.soft_time_limit override_field=form.clear_soft_time_limit_override %}

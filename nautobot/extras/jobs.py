@@ -108,7 +108,6 @@ class BaseJob:
 
         - name (str)
         - description (str)
-        - approval_required (bool)
         - dryrun_default (bool)
         - field_order (list)
         - has_sensitive_variables (bool)
@@ -355,11 +354,6 @@ class BaseJob:
 
     @final
     @classproperty
-    def approval_required(cls) -> bool:  # pylint: disable=no-self-argument
-        return cls._get_meta_attr_and_assert_type("approval_required", False, expected_type=bool)
-
-    @final
-    @classproperty
     def soft_time_limit(cls) -> int:  # pylint: disable=no-self-argument
         return cls._get_meta_attr_and_assert_type("soft_time_limit", 0, expected_type=int)
 
@@ -400,7 +394,6 @@ class BaseJob:
             "name": cls.name,
             "grouping": cls.grouping,
             "description": cls.description,
-            "approval_required": cls.approval_required,
             "hidden": cls.hidden,
             "soft_time_limit": cls.soft_time_limit,
             "time_limit": cls.time_limit,

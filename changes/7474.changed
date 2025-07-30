@@ -1,0 +1,3 @@
+Simplified `runnable` property logic in the Job model: removed check for `has_sensitive_variable`s and `approval_required`. Now only depends on `enabled` and `installed` flags.
+Changed the `post` method in `JobRunView` and the `run` action in `JobViewSetBase` to check for an approval workflow on the scheduled job instead of using `approval_required`.
+Changed `extras/job_approval_confirmation.html` to override `extras/approval_workflow/approve.html` for ScheduledJob instances that meet specific conditions, displaying a warning when the job is past its scheduled start time.

@@ -1,5 +1,3 @@
-import django_filters
-
 from nautobot.cloud.models import CloudNetwork
 from nautobot.core.filters import (
     BaseFilterSet,
@@ -51,7 +49,6 @@ class ProviderFilterSet(NautobotFilterSet):
     provider_networks = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=ProviderNetwork.objects.all(),
         to_field_name="name",
-        label="Provider networks (name or ID)",
     )
     has_provider_networks = RelatedMembershipBooleanFilter(
         field_name="provider_networks",
@@ -88,10 +85,6 @@ class ProviderNetworkFilterSet(NautobotFilterSet):
             "comments": "icontains",
         },
     )
-    circuit_terminations = django_filters.ModelMultipleChoiceFilter(
-        queryset=CircuitTermination.objects.all(),
-        label="Circuit Terminations (ID)",
-    )
     has_circuit_terminations = RelatedMembershipBooleanFilter(
         field_name="circuit_terminations",
         label="Has circuit terminations",
@@ -100,12 +93,11 @@ class ProviderNetworkFilterSet(NautobotFilterSet):
         field_name="provider",
         queryset=Provider.objects.all(),
         to_field_name="name",
-        label="Provider (name or ID)",
     )
 
     class Meta:
         model = ProviderNetwork
-        fields = ["comments", "description", "id", "name", "tags"]
+        fields = ["circuit_terminations", "comments", "description", "id", "name", "tags"]
 
 
 class CircuitTypeFilterSet(NautobotFilterSet, NameSearchFilterSet):
@@ -128,7 +120,6 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
     provider = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Provider.objects.all(),
         to_field_name="name",
-        label="Provider (name or ID)",
     )
     provider_network = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="circuit_terminations__provider_network",
@@ -139,7 +130,6 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
     circuit_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=CircuitType.objects.all(),
         to_field_name="name",
-        label="Circuit type (name or ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
         prefers_id=True,
@@ -151,14 +141,6 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
     has_terminations = RelatedMembershipBooleanFilter(
         field_name="circuit_terminations",
         label="Has terminations",
-    )
-    circuit_termination_a = django_filters.ModelMultipleChoiceFilter(
-        queryset=CircuitTermination.objects.all(),
-        label="Termination A (ID)",
-    )
-    circuit_termination_z = django_filters.ModelMultipleChoiceFilter(
-        queryset=CircuitTermination.objects.all(),
-        label="Termination Z (ID)",
     )
 
     cloud_network = NaturalKeyOrPKMultipleChoiceFilter(
@@ -173,6 +155,8 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
         fields = [
             "cid",
             "circuit_terminations",
+            "circuit_termination_a",
+            "circuit_termination_z",
             "comments",
             "commit_rate",
             "description",
@@ -204,10 +188,10 @@ class CircuitTerminationFilterSet(
     provider_network = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=ProviderNetwork.objects.all(),
         to_field_name="name",
-        label="Provider Network (name or ID)",
     )
     cloud_network = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=CloudNetwork.objects.all(), to_field_name="name", label="Cloud Network (name or ID)"
+        queryset=CloudNetwork.objects.all(),
+        to_field_name="name",
     )
 
     class Meta:

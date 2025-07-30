@@ -203,19 +203,21 @@ class FilterTestCases:
                 with self.subTest(f"{self.filterset.__name__} filter {filter_name} ({field_name})"):
                     test_data = self.get_filterset_test_values(field_name)
                     params = {filter_name: test_data}
-                    filterset_result = self.filterset(params, self.queryset).qs  # pylint: disable=not-callable
+                    filterset = self.filterset(params, self.queryset)  # pylint: disable=not-callable
+                    self.assertIn(filter_name, list(filterset.filters.keys()))
+                    filterset_result = filterset.qs
                     qs_result = self.queryset.filter(**{f"{field_name}__in": test_data}).distinct()
                     self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result, ordered=False)
 
         def test_boolean_filters_generic(self):
-            """Test all `RelatedMembershipBooleanFilter` filters found in `self.filterset.get_filters()`
+            """Test all `RelatedMembershipBooleanFilter` filters found in `self.filterset.filters`
             except for the ones with custom filter logic defined in its `method` attribute.
 
             This test asserts that `filter=True` matches `self.queryset.filter(field__isnull=False)` and
             that `filter=False` matches `self.queryset.filter(field__isnull=True)`.
             """
             self.assertIsNotNone(self.filterset)
-            for filter_name, filter_object in self.filterset.get_filters().items():
+            for filter_name, filter_object in self.filterset().filters.items():  # pylint: disable=not-callable
                 if not isinstance(filter_object, RelatedMembershipBooleanFilter):
                     continue
                 if filter_object.method is not None:
@@ -380,6 +382,7 @@ class FilterTestCases:
                     self._assert_q_filter_predicate_validity(obj, obj_field_name, filter_field_name, lookup_method)
 
         def test_content_type_related_fields_uses_content_type_filter(self):
+            filterset = self.filterset()  # pylint: disable=not-callable
             for field in self.queryset.model._meta.fields:
                 related_model = getattr(field, "related_model", None)
                 if not related_model or related_model != ContentType:
@@ -387,7 +390,7 @@ class FilterTestCases:
                 with self.subTest(
                     f"Assert {self.filterset.__class__.__name__}.{field.name} implements ContentTypeFilter"
                 ):
-                    filter_field = self.filterset.get_filters().get(field.name)
+                    filter_field = filterset.filters.get(field.name)
                     if not filter_field:
                         # This field is not part of the Filterset.
                         continue

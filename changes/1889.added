@@ -1,0 +1,1 @@
+Added `nautobot.apps.filters.ModelMultipleChoiceFilter` filterset filter class, which is a subclass of `django_filters.ModelMultipleChoiceFilter` with a few enhancements. This is now the default filter class for foreign-key, many-to-many, and one-to-one fields when defining a FilterSet with `fields = '__all__'`.

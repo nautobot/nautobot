@@ -47,9 +47,6 @@ This is a Job that demonstrates as many Job features as it can.
 - All of the Meta attributes.
 - All of the ScriptVariable types as Job inputs.
 - Etc."""
-        approval_required = True  # Default: False
-        # Set to True to make it so that another user must approve any run of this Job
-        # before it can be executed.
         dryrun_default = False  # Default: False
         # Set to True to default Job execution to "dry-run" mode.
         # Exactly what that means is up to the Job implementation.
@@ -279,7 +276,6 @@ class ExampleDryRunJob(Job):
     dryrun = DryRunVar()
 
     class Meta:
-        approval_required = True
         has_sensitive_variables = False
         description = "Example job to remove serial number on all devices, supports dryrun mode."
 

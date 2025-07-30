@@ -1301,13 +1301,6 @@ class JobFilterSetTestCase(FilterTestCases.FilterTestCase):
             self.filterset(params, self.queryset).qs, self.queryset.filter(read_only=True)
         )
 
-    def test_approval_required(self):
-        params = {"approval_required": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(approval_required=True),
-        )
-
     def test_is_job_hook_receiver(self):
         params = {"is_job_hook_receiver": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
@@ -1689,7 +1682,7 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
         )
 
     def test_changed_object_type_id(self):
-        params = {"changed_object_type_id": ContentType.objects.get(app_label="dcim", model="location").pk}
+        params = {"changed_object_type_id": [ContentType.objects.get(app_label="dcim", model="location").pk]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(changed_object_type=ContentType.objects.get_for_model(Location)),

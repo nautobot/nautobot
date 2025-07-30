@@ -1706,7 +1706,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
             "description": "Overridden Description",
             "dryrun_default": not self.job_containing_sensitive_variables.dryrun_default,
             "hidden": not self.job_containing_sensitive_variables.hidden,
-            "approval_required": not self.job_containing_sensitive_variables.approval_required,
             "has_sensitive_variables": not self.job_containing_sensitive_variables.has_sensitive_variables,
             "soft_time_limit": 350,
             "time_limit": 650,
@@ -1772,20 +1771,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
                 name="Similarly, let us hope that no one really wants to specify a job name that is over 100 characters long, it would be a pain to type at the very least and it won't look good in the UI either",
             ).clean()
         self.assertIn("Name", str(handler.exception))
-
-        with self.assertRaises(ValidationError) as handler:
-            JobModel(
-                module_name="module_name",
-                job_class_name="JobClassName",
-                grouping="grouping",
-                has_sensitive_variables=True,
-                approval_required=True,
-                name="Job Class Name",
-            ).clean()
-        self.assertEqual(
-            handler.exception.message_dict["approval_required"][0],
-            "A job that may have sensitive variables cannot be marked as requiring approval",
-        )
 
     def test_default_job_queue_always_included_in_job_queues(self):
         default_job_queue = JobQueue.objects.first()

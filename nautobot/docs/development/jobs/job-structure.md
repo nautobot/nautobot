@@ -101,6 +101,9 @@ If you code a multi-line description, the first line only will be used in the de
 
 ### `approval_required`
 
+--- 3.0.0 "Field removed in favor of approval workflows"
+    The `approval_required` field was removed. Jobs no longer support approval requirements through this flag. For updated workflows and approval handling, [refer to the section on scheduling and approvals](../../user-guide/platform-functionality/jobs/job-scheduling-and-approvals.md#job-approvals).
+
 Default: `False`
 
 A boolean that will mark this Job as requiring approval from another user to be run. For more details on approvals, [please refer to the section on scheduling and approvals](../../user-guide/platform-functionality/jobs/job-scheduling-and-approvals.md).
@@ -136,7 +139,7 @@ Unless set to False, it prevents the Job's input parameters from being saved to 
 Important notes about Jobs with sensitive variables:
 
 - Such Jobs cannot be scheduled to run in the future or on a recurring schedule (as Scheduled Jobs must by necessity store their variables in the database for future reference).
-- Jobs with sensitive variables cannot be marked as requiring approval (as Jobs pending approval must store their variables in the database until approved).
+- Jobs with sensitive variables cannot create an approval workflow for them at runtime, if one is defined (as Jobs pending approval must store their variables in the database until approved).
 
 ### `hidden`
 
@@ -693,7 +696,6 @@ As of Nautobot 2.4.0, the current list of reserved names (not including low-leve
 | Reserved Name             | Purpose                                                                 |
 |---------------------------|-------------------------------------------------------------------------|
 | `after_return`            | [special method](#the-after_return-method)                              |
-| `approval_required`       | [metadata property](#approval_required)                                 |
 | `as_form`                 | class method                                                            |
 | `as_form_class`           | class method                                                            |
 | `before_start`            | [special method](#the-before_start-method)                              |
