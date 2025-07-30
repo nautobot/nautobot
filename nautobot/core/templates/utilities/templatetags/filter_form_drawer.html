@@ -34,18 +34,16 @@
                     <form class="h-100 vstack" id="dynamic-filter-form">
                         <div class="align-content-start flex-fill pb-20">
                             {{ dynamic_filter_form.management_form }}
-                            {% for form in dynamic_filter_form %}
-                                {% for field in form.visible_fields %}
-                                    <div class="nb-form-group">
-                                        <label for="{{ field.auto_id }}">{{ field.label|capfirst }}</label>
-                                        {{ field }}
-                                    </div>
-                                {% endfor %}
-                                <button class="nb-dynamic-filter-add btn btn-primary d-block ms-auto my-20" type="button">
-                                    <span aria-hidden="true" class="mdi mdi-plus me-4"></span><!--
-                                    -->Add Filter
-                                </button>
+                            {% for field in dynamic_filter_form.0.visible_fields %}
+                                <div class="nb-form-group">
+                                    <label for="{{ field.auto_id }}">{{ field.label|capfirst }}</label>
+                                    {{ field }}
+                                </div>
                             {% endfor %}
+                            <button class="nb-dynamic-filter-add btn btn-primary d-block ms-auto my-20" type="button">
+                                <span aria-hidden="true" class="mdi mdi-plus me-4"></span><!--
+                                -->Add Filter
+                            </button>
                             <hr class="border-top my-20">
                             <div class="nb-dynamic-filter-items d-flex flex-wrap gap-10">
                                 {% if filter_params %}
