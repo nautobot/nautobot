@@ -254,45 +254,48 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
     )
 
     def get_extra_context(self, request, instance):
-        if not instance:
-            return {}
+        context = super().get_extra_context(request, instance)
 
-        # Interfaces
-        vminterfaces = (
-            VMInterface.objects.restrict(request.user, "view")
-            .filter(virtual_machine=instance)
-            .prefetch_related(Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)))
-        )
-        vminterface_table = tables.VirtualMachineVMInterfaceTable(vminterfaces, user=request.user, orderable=False)
-        if request.user.has_perm("virtualization.change_vminterface") or request.user.has_perm(
-            "virtualization.delete_vminterface"
-        ):
-            vminterface_table.columns.show("pk")
+        if self.action == "retrieve":
+            # Interfaces
+            vminterfaces = (
+                VMInterface.objects.restrict(request.user, "view")
+                .filter(virtual_machine=instance)
+                .prefetch_related(Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)))
+            )
+            vminterface_table = tables.VirtualMachineVMInterfaceTable(vminterfaces, user=request.user, orderable=False)
+            if request.user.has_perm("virtualization.change_vminterface") or request.user.has_perm(
+                "virtualization.delete_vminterface"
+            ):
+                vminterface_table.columns.show("pk")
 
-        # Services
-        services = (
-            Service.objects.restrict(request.user, "view")
-            .filter(virtual_machine=instance)
-            .prefetch_related(Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)))
-        )
+            # Services
+            services = (
+                Service.objects.restrict(request.user, "view")
+                .filter(virtual_machine=instance)
+                .prefetch_related(Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)))
+            )
 
-        # VRF assignments
-        vrf_assignments = instance.vrf_assignments.restrict(request.user, "view")
-        vrf_table = VRFDeviceAssignmentTable(vrf_assignments)
+            # VRF assignments
+            vrf_assignments = instance.vrf_assignments.restrict(request.user, "view")
+            vrf_table = VRFDeviceAssignmentTable(vrf_assignments)
 
-        # Software images
-        if instance.software_version is not None:
-            software_version_images = instance.software_version.software_image_files.restrict(request.user, "view")
-        else:
-            software_version_images = []
+            # Software images
+            if instance.software_version is not None:
+                software_version_images = instance.software_version.software_image_files.restrict(request.user, "view")
+            else:
+                software_version_images = []
 
-        return {
-            "vminterface_table": vminterface_table,
-            "services": services,
-            "software_version_images": software_version_images,
-            "vrf_table": vrf_table,
-            **super().get_extra_context(request, instance),
-        }
+            context.update(
+                {
+                    "vminterface_table": vminterface_table,
+                    "services": services,
+                    "software_version_images": software_version_images,
+                    "vrf_table": vrf_table,
+                }
+            )
+
+        return context
 
 
 class VirtualMachineConfigContextView(ObjectConfigContextView):
