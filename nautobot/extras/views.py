@@ -2768,8 +2768,7 @@ class SecretsGroupUIViewSet(NautobotUIViewSet):
 
     def form_save(self, form, **kwargs):
         obj = super().form_save(form, **kwargs)
-        ctx = self.get_extra_context(self.request, obj)
-        secrets = ctx["secrets"]
+        secrets = forms.SecretsGroupAssociationFormSet(data=self.request.POST, instance=form.instance)
 
         if secrets.is_valid():
             secrets.save()
