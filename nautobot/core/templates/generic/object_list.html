@@ -81,7 +81,7 @@
         {% if filter_form or dynamic_filter_form %}
             <button
                 type="button"
-                class="btn text-secondary"
+                class="btn position-relative text-secondary"
                 data-nb-toggle="drawer"
                 data-nb-target="#FilterForm_drawer"
                 title="Add Filters"
@@ -91,48 +91,19 @@
             >
                 <span class="mdi mdi-filter" aria-hidden="true"></span>
                 <span class="visually-hidden">Add Filters</span>
+                {% if filter_params %}
+                    <span
+                        aria-hidden="true"
+                        class="bg-warning position-absolute rounded-circle"
+                        style="height: 0.5rem; right: 0.5rem; top: 0.125rem; width: 0.5rem;"
+                    ></span>
+                {% endif %}
             </button>
         {% endif %}
     </div>
 </div>
 
 {% block header_extra %}{% endblock %}
-{% if filter_params %}
-<div class="filters-applied">
-    <b>Filters:</b>
-    {% for field in filter_params %}
-    {% comment %} TODO(norbert-mieczkowski-codilime): filters overview should be gone from here in v3.0.{% endcomment %}
-    <span class="filter-container" dir="ltr">
-        <span
-                class="filter-selection">
-            <b>{{ field.display }}:</b>
-            <span
-                    class="remove-filter-param"
-                    title="Remove all items"
-                    data-field-type="parent"
-                    data-field-value="{{ field.name }}"
-            >×</span>
-            <ul class="filter-selection-rendered">
-                {% for value in field.values %}
-                <li
-                        class="filter-selection-choice"
-                        title="{{ value.name }}"
-                >
-                    <span
-                            class="filter-selection-choice-remove remove-filter-param"
-                            data-field-type="child"
-                            data-field-parent="{{ field.name }}"
-                            data-field-value="{{ value.name }}"
-                    >×</span>{{ value.display }}
-                </li>
-                {% endfor %}
-            </ul>
-        </span>
-    </span>
-    {% endfor %}
-</div>
-<hr>
-{% endif %}
 
 <div>
     {% block table %}
@@ -203,7 +174,7 @@
 {% endblock %}
 
 {% block drawer %}
-    {% filter_form_drawer filter_form dynamic_filter_form model_plural_name=title %}
+    {% filter_form_drawer filter_form dynamic_filter_form model_plural_name=title filter_params=filter_params %}
     {% if table %}
         {% table_config_form table %}
     {% endif %}
@@ -266,17 +237,6 @@
     clipboard.on('success', function (e) {});
 
     clipboard.on('error', function (e) {});
-
-    $('.formset_row-dynamic-filterform').formset({
-        addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Filter',
-        addCssClass: 'btn btn-primary add-row',
-        deleteText: '<span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>',
-        deleteCssClass: 'btn btn-danger delete-row',
-        prefix: 'form',
-        formCssClass: 'dynamic-filterform',
-        added: jsify_form,
-        removed: (row) => { row.remove(); }
-    });
 
     // TODO: move this to a JS file that is auto-included by dynamic_group_assignment_modal templatetag
     $("#dynamic_group_assignment_modal").on("show.bs.modal", function (event) {

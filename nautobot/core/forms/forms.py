@@ -391,14 +391,12 @@ def dynamic_formset_factory(filterset, data=None, **kwargs):
     filter_form.filterset = filterset
 
     params = {
-        "can_delete_extra": True,
-        "can_delete": True,
-        "extra": 3,
+        "can_delete_extra": False,
+        "can_delete": False,
+        "extra": 1,
     }
     kwargs.update(params)
     form = formset_factory(form=filter_form, **kwargs)
-    if data:
-        form = form(data=data)
 
     return form
 

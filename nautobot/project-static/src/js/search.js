@@ -58,7 +58,7 @@ export const initializeSearch = () => {
 
   // Focus search input on Cmd+K or Ctrl+K shortcut and close search popup on Escape.
   const onKeyDown = (event) => {
-    const isPressedCmd = event.getModifierState('Meta');
+    const isPressedCmd = event.getModifierState?.('Meta');
     const isPressedCtrl = event.ctrlKey;
 
     if ((isPressedCmd || isPressedCtrl) && event.key === 'k') {
