@@ -7,7 +7,7 @@
     </label>
     <div class="col-md-9">
         {{ field }}
-        {% if field.help_text %}<span class="help-block">{{ field.help_text|safe }}</span>{% endif %}
+        {% if field.help_text %}<span class="form-text">{{ field.help_text|safe }}</span>{% endif %}
         {% if field.errors %}
             <ul>
                 {% for error in field.errors %}
@@ -29,7 +29,7 @@
                 <i>Clear override</i>
             </label>
             {% if override_field.help_text %}
-                <span class="help-block">{{ override_field.help_text|safe }}</span>
+                <span class="form-text">{{ override_field.help_text|safe }}</span>
             {% endif %}
         </div>
     </div>

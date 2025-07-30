@@ -116,12 +116,10 @@
                 <div class="table-responsive">
                     <div id="select_all_box" class="visually-hidden card mb-16 d-print-none">
                         <div class="card-body column-gap-20 hstack row-gap-12 flex-wrap justify-content-end">
-                            <div class="checkbox-inline flex-grow-1">
-                                <label for="select_all" class="hstack gap-8">
-                                    <input type="checkbox" id="select_all" name="_all" />
-                                    <span>
-                                        Select <strong>all {{ table.rows|length }} {{ table.data.verbose_name_plural }}</strong> matching query
-                                    </span>
+                            <div class="form-check flex-grow-1 mb-0">
+                                <input class="form-check-input" id="select_all" name="_all" type="checkbox">
+                                <label class="form-check-label" for="select_all">
+                                    Select <strong>all {{ table.rows|length }} {{ table.data.verbose_name_plural }}</strong> matching query
                                 </label>
                             </div>
                             <div class="hstack gap-8">
@@ -133,18 +131,17 @@
                                             data-objects="all"
                                             class="btn btn-primary btn-sm"
                                             disabled="disabled">
-                                        <span class="mdi mdi-group" aria-hidden="true"></span>
-                                        Update Group Assignment for All
+                                        <span class="mdi mdi-group me-4" aria-hidden="true"></span>Update Group Assignment for All
                                     </button>
                                 {% endif %}
                                 {% if bulk_edit_url and permissions.change %}
                                     <button type="submit" name="_edit" formaction="{% url bulk_edit_url %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-warning btn-sm" disabled="disabled">
-                                        <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit All
+                                        <span class="mdi mdi-pencil me-4" aria-hidden="true"></span>Edit All
                                     </button>
                                 {% endif %}
                                 {% if bulk_delete_url and permissions.delete %}
                                     <button type="submit" name="_delete" formaction="{% url bulk_delete_url %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-danger btn-sm" disabled="disabled">
-                                        <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete All
+                                        <span class="mdi mdi-trash-can-outline me-4" aria-hidden="true"></span>Delete All
                                     </button>
                                 {% endif %}
                             </div>
@@ -184,43 +181,62 @@
             <button type="button" class="btn-close" data-nb-dismiss="drawer" aria-label="Close"></button>
         </div>
         <div class="nb-drawer-body pb-20 px-20">
-            <div class="align-items-start vstack gap-10">
-                {% for saved_view in saved_views %}
-                    {% if saved_view == current_saved_view %}
-                        <a class="btn btn-secondary" href="{% url list_url %}?clear_view=true">
-                            <i class="mdi mdi-check-bold text-bold" aria-hidden="true"></i>
-                            <strong>{{saved_view.name}}</strong>
-                        </a>
-                    {% else %}
-                        <a class="btn btn-secondary" href="{{ saved_view.get_absolute_url }}">
-                            <i class="mdi mdi-view-compact-outline" aria-hidden="true"></i>
-                            {{saved_view.name}}
-                        </a>
-                    {% endif %}
-                {% endfor %}
+            <div class="align-items-start vstack flex-grow-0 gap-10">
+                {% if saved_views|length > 0 %}
+                    <div class="dropdown w-100">
+                        <button
+                            class="btn btn-secondary dropdown-toggle align-items-center d-inline-flex justify-content-between w-100"
+                            type="button"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                        >
+                            {% if current_saved_view %}
+                                {{current_saved_view.name}}
+                            {% else %}
+                                <i>No saved view selected</i>
+                            {% endif %}
+                            <span class="mdi mdi-chevron-down"></span>
+                            <span class="visually-hidden">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu w-100">
+                            {% for saved_view in saved_views %}
+                                <li>
+                                    {% if saved_view == current_saved_view %}
+                                        <a class="dropdown-item text-primary" href="{% url list_url %}?clear_view=true">
+                                            <span class="mdi mdi-check" aria-hidden="true"></span>
+                                            {{saved_view.name}}
+                                        </a>
+                                    {% else %}
+                                        <a class="dropdown-item" href="{{ saved_view.get_absolute_url }}">
+                                            <span class="mdi mdi-view-compact-outline" aria-hidden="true"></span>
+                                            {{saved_view.name}}
+                                        </a>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
             </div>
             {% if saved_views %}
                 <hr class="border-top my-20" />
             {% endif %}
             <div class="align-items-start vstack gap-10">
+                Actions:
                 {% if current_saved_view %}
                     <a class="btn btn-secondary" href="{% url 'extras:savedview_update_config' pk=current_saved_view.pk %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
-                        <i class="mdi mdi-content-save-outline" aria-hidden="true"></i>
-                        Update Current Saved View
+                        <span class="mdi mdi-content-save-outline me-4" aria-hidden="true"></span>Update Current
                     </a>
                     <a class="btn btn-secondary" href="{% url 'extras:savedview_set_default' pk=current_saved_view.pk %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
-                        <i class="mdi mdi-star" aria-hidden="true"></i>
-                        Set As My Default
+                        <span class="mdi mdi-star me-4" aria-hidden="true"></span>Set As My Default
                     </a>
                 {% endif %}
-                <a class="btn btn-secondary" href="" data-bs-toggle="modal" data-bs-target="#saved_view_modal" title="Save Current View As">
-                    <i class="mdi mdi-content-save-plus-outline" aria-hidden="true"></i>
-                    <span>Save As New View</span>
+                <a class="btn btn-secondary" href="" data-bs-toggle="modal" data-bs-target="#saved_view_modal">
+                    <span class="mdi mdi-content-save-plus-outline me-4" aria-hidden="true"></span>Save As New
                 </a>
                 {% if current_saved_view %}
                     <a class="btn btn-danger" href="{% url 'extras:savedview_delete' pk=current_saved_view.pk %}">
-                        <i class="mdi mdi-trash-can-outline" aria-hidden="true"></i>
-                        Delete Current Saved View
+                        <span class="mdi mdi-trash-can-outline me-4" aria-hidden="true"></span>Delete Current
                     </a>
                 {% endif %}
             </div>
@@ -269,6 +285,26 @@
         $("#id_remove_from_groups").val(null).trigger("change");
     });
 
+    // Keep "Saved Views" drawer open when saved views are swapped, updated, set as default, created, deleted, etc.
+    (() => {
+        document.addEventListener('DOMContentLoaded', () => {
+            document.addEventListener('click', (event) => {
+                const anchor = event.target.closest('a');
+                const savedViewsDrawer = document.querySelector('#SavedViews_drawer');
 
+                if (anchor?.getAttribute('href') && savedViewsDrawer?.contains(anchor)) {
+                    window.nb.history.saveState()
+                }
+            });
+
+            document.addEventListener('submit', (event) => {
+                const savedViewModal = document.querySelector('#saved_view_modal');
+
+                if (savedViewModal?.contains(event.target)) {
+                    window.nb.history.saveState()
+                }
+            });
+        });
+    })();
 </script>
 {% endblock %}

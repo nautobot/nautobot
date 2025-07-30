@@ -3,45 +3,58 @@
 <div class="mb-10 d-flex justify-content-center{% if field.errors %} has-error{% endif %}">
     {% if field|widget_type == 'checkboxinput' %}
         <div class="col-md-9 offset-md-3">
-            <div class="checkbox{% if field.errors %} has-error{% endif %}">
-                <label for="{{ field.id_for_label }}">
-                    {{ field }} {{ field.label }}
+            <div class="form-check mt-6{% if field.errors %} has-error{% endif %}">
+                <input
+                    class="form-check-input"
+                    id="{{ field.id_for_label }}"
+                    name="{{ field.name }}"
+                    type="checkbox"
+                    {% if field.value == True %}checked=""{% endif %}
+                    {% for name, value in field.field.widget.attrs.items %}{% if value is not False %} {{ name }}{% if value is not True %}="{{ value|stringformat:'s' }}"{% endif %}{% endif %}{% endfor %}
+                >
+                <label class="form-check-label" for="{{ field.id_for_label }}">
+                    {{ field.label }}
+                    {% if field.help_text %}
+                        <span class="form-text">{{ field.help_text|safe }}</span>
+                    {% endif %}
                 </label>
-                {% if field.help_text %}
-                    <span class="help-block">{{ field.help_text|safe }}</span>
-                {% endif %}
             </div>
             {% if bulk_nullable %}
-                <label class="checkbox-inline">
-                    <input type="checkbox" name="_nullify" value="{{ field.name }}" /> Set null
-                </label>
+                <div class="form-check mt-6">
+                    <input class="form-check-input" id="{{ field.id_for_label }}_nullify" name="_nullify" type="checkbox" value="{{ field.name }}">
+                    <label class="form-check-label" for="{{ field.id_for_label }}_nullify">Set null</label>
+                </div>
             {% endif %}
     {% elif field|widget_type == 'textarea' and not field.label %}
         <div class="col-md-12">
             {{ field }}
             {% if bulk_nullable %}
-                <label class="checkbox-inline">
-                    <input type="checkbox" name="_nullify" value="{{ field.name }}" /> Set null
-                </label>
+                <div class="form-check mt-6">
+                    <input class="form-check-input" id="{{ field.id_for_label }}_nullify" name="_nullify" type="checkbox" value="{{ field.name }}">
+                    <label class="form-check-label" for="{{ field.id_for_label }}_nullify">Set null</label>
+                </div>
             {% endif %}
             {% if field.help_text %}
-                <span class="help-block">{{ field.help_text|safe }}</span>
+                <span class="form-text">{{ field.help_text|safe }}</span>
             {% endif %}
     {% else %}
-        <label class="col-md-3 col-form-label{% if field.field.required %} nb-required{% endif %}" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        <label class="col-md-3 col-form-label{% if field.field.required %} nb-required{% endif %}" for="{{ field.id_for_label }}">
+            {{ field.label }}
+            {% if field.help_text %}
+                <span class="form-text">{{ field.help_text|safe }}</span>
+            {% endif %}
+        </label>
         <div class="col-md-9">
             {{ field }}
             {% if bulk_nullable %}
-                <label class="checkbox-inline">
-                    <input type="checkbox" name="_nullify" value="{{ field.name }}" /> Set null
-                </label>
-            {% endif %}
-            {% if field.help_text %}
-                <span class="help-block">{{ field.help_text|safe }}</span>
+                <div class="form-check mt-6">
+                    <input class="form-check-input" id="{{ field.id_for_label }}_nullify" name="_nullify" type="checkbox" value="{{ field.name }}">
+                    <label class="form-check-label" for="{{ field.id_for_label }}_nullify">Set null</label>
+                </div>
             {% endif %}
     {% endif %}
     {% if field.errors %}
-        <ul>
+        <ul class="mb-0 mt-4">
             {% for error in field.errors %}
                 {# Embed an HTML comment indicating the error for extraction by tests #}
                 <!-- FORM-ERROR {{ field.name }}: {{ error }} -->
