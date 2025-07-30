@@ -346,6 +346,10 @@ class LocationImagesTablePanel(object_detail.ObjectsTablePanel):
 
 
 class LocationUIViewSet(NautobotUIViewSet):
+    # We aren't accessing tree fields anywhere so this is safe (note that `parent` itself is a normal foreign
+    # key, not a tree field). If we ever do access tree fields, this will perform worse, because django will
+    # automatically issue a second query (similar to behavior for
+    # https://docs.djangoproject.com/en/3.2/ref/models/querysets/#django.db.models.query.QuerySet.only)
     queryset = Location.objects.without_tree_fields().select_related("location_type", "parent", "tenant")
     filterset_class = filters.LocationFilterSet
     filterset_form_class = forms.LocationFilterForm
@@ -436,8 +440,8 @@ class LocationUIViewSet(NautobotUIViewSet):
     )
 
     def get_extra_context(self, request, instance):
-        if not instance:
-            return {}
+        if instance is None:
+            return super().get_extra_context(request, instance)
 
         related_locations = (
             instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
