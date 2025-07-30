@@ -360,13 +360,13 @@ class FilterFormsTestCase(TestCase):
         self.assertBodyContains(
             response,
             """
-            <span class="badge" data-nb-value="1 onmouseover=alert('hi') foo=bar"><!--
+            <span class="badge" data-nb-value="1 onmouseover=alert(&#x27;hi&#x27;) foo=bar"><!--
                 --><button class="nb-dynamic-filter-remove" type="button">
                     <span aria-hidden="true" class="mdi mdi-close"></span>
                     <span class="visually-hidden">Remove</span>
                 </button><!--
-                -->1 onmouseover=alert('hi') foo=bar<!--
-                --><input name="location_type" type="hidden" value="1 onmouseover=alert('hi') foo=bar">
+                -->1 onmouseover=alert(&#x27;hi&#x27;) foo=bar<!--
+                --><input name="location_type" type="hidden" value="1 onmouseover=alert(&#x27;hi&#x27;) foo=bar">
             </span>
             """,
             html=True,
