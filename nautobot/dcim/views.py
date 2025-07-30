@@ -358,16 +358,14 @@ class LocationUIViewSet(NautobotUIViewSet):
             object_detail.ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
-                fields="__all__",
-                exclude_fields=[
-                    "parent",
-                    "physical_address",
-                    "shipping_address",
-                    "latitude",
-                    "longitude",
-                    "contact_name",
-                    "contact_phone",
-                    "contact_email",
+                fields=[
+                    "location_type",
+                    "status",
+                    "tenant",
+                    "facility",
+                    "asn",
+                    "time_zone",
+                    "description",
                 ],
                 value_transforms={
                     "location_type": [partial(helpers.hyperlinked_object, field="name")],
@@ -418,7 +416,7 @@ class LocationUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.FULL_WIDTH,
                 weight=100,
                 table_title="Children",
-                table_class=tables.LocationTable,
+                table_class=tables.FlatLocationTable,
                 table_attribute="children",
                 related_field_name="parent",
                 order_by_fields=["name"],
