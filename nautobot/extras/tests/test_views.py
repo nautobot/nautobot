@@ -2042,7 +2042,11 @@ class SavedViewTest(ModelViewTestCase):
         )
         response = self.client.get(reverse(view_name), follow=True)
         # Assert that Location List View got redirected to Saved View set as global default
-        self.assertBodyContains(response, "<strong>Global Location Default View</strong>", html=True)
+        self.assertBodyContains(
+            response,
+            '<span aria-hidden="true" class="mdi mdi-check"></span>Global Location Default View<span class="mdi mdi-earth ms-auto" aria-hidden="true"></span>',
+            html=True,
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_user_default(self):
@@ -2056,7 +2060,11 @@ class SavedViewTest(ModelViewTestCase):
         UserSavedViewAssociation.objects.create(user=self.user, saved_view=sv, view_name=sv.view)
         response = self.client.get(reverse(view_name), follow=True)
         # Assert that Location List View got redirected to Saved View set as user default
-        self.assertBodyContains(response, "<strong>User Location Default View</strong>", html=True)
+        self.assertBodyContains(
+            response,
+            '<span aria-hidden="true" class="mdi mdi-check"></span>User Location Default View<span class="mdi mdi-star ms-auto" aria-hidden="true"></span>',
+            html=True,
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_user_default_precedes_global_default(self):
@@ -2075,7 +2083,11 @@ class SavedViewTest(ModelViewTestCase):
         UserSavedViewAssociation.objects.create(user=self.user, saved_view=sv, view_name=sv.view)
         response = self.client.get(reverse(view_name), follow=True)
         # Assert that Location List View got redirected to Saved View set as user default
-        self.assertBodyContains(response, "<strong>User Location Default View</strong>", html=True)
+        self.assertBodyContains(
+            response,
+            '<span aria-hidden="true" class="mdi mdi-check"></span>User Location Default View<span class="mdi mdi-star ms-auto" aria-hidden="true"></span>',
+            html=True,
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_filtered_view_precedes_global_default(self):
@@ -2096,7 +2108,7 @@ class SavedViewTest(ModelViewTestCase):
         # Assert that the user is not redirected to the global default view
         # But instead redirected to the filtered view
         self.assertNotIn(
-            "<strong>Global Location Default View</strong>",
+            '<span aria-hidden="true" class="mdi mdi-check"></span>Global Location Default View<span class="mdi mdi-earth ms-auto" aria-hidden="true"></span>',
             extract_page_body(response.content.decode(response.charset)),
         )
 
@@ -2125,7 +2137,8 @@ class SavedViewTest(ModelViewTestCase):
         # Assert that the user is not redirected to the user default view
         # But instead redirected to the filtered view
         self.assertNotIn(
-            "<strong>User Location Default View</strong>", extract_page_body(response.content.decode(response.charset))
+            '<span aria-hidden="true" class="mdi mdi-check"></span>User Location Default View<span class="mdi mdi-star ms-auto" aria-hidden="true"></span>',
+            extract_page_body(response.content.decode(response.charset)),
         )
         # Floor type locations (Floor-<number>) should not be visible in the response
         self.assertNotIn(
@@ -2188,7 +2201,9 @@ class SavedViewTest(ModelViewTestCase):
             self.assertHttpStatus(response, 200)
             response_body = extract_page_body(response.content.decode(response.charset))
             self.assertIn(str(instance.pk), response_body, msg=response_body)
-            self.assertBodyContains(response, f"<strong>{sv_name}</strong>", html=True)
+            self.assertBodyContains(
+                response, f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}', html=True
+            )
             # This is the description
             self.assertBodyContains(response, "I should not show in the UI!", html=True)
 
@@ -2218,7 +2233,9 @@ class SavedViewTest(ModelViewTestCase):
             self.assertHttpStatus(response, 200)
             response_body = extract_page_body(response.content.decode(response.charset))
             self.assertIn(str(instance.pk), response_body, msg=response_body)
-            self.assertBodyContains(response, f"<strong>{sv_name}</strong>", html=True)
+            self.assertBodyContains(
+                response, f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}', html=True
+            )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_update_saved_view_contain_boolean_filter_params(self):
@@ -2245,7 +2262,9 @@ class SavedViewTest(ModelViewTestCase):
             self.assertHttpStatus(response, 200)
             response_body = extract_page_body(response.content.decode(response.charset))
             self.assertNotIn("Example hidden job", response_body, msg=response_body)
-            self.assertBodyContains(response, f"<strong>{sv_name}</strong>", html=True)
+            self.assertBodyContains(
+                response, f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}', html=True
+            )
 
         with self.subTest("Update device Saved View with boolean filter parameters"):
             view_name = "dcim:device_list"
@@ -2269,7 +2288,9 @@ class SavedViewTest(ModelViewTestCase):
             # Assert that Job List View rendered with the boolean filter parameter without error
             self.assertHttpStatus(response, 200)
             response_body = extract_page_body(response.content.decode(response.charset))
-            self.assertBodyContains(response, f"<strong>{sv_name}</strong>", html=True)
+            self.assertBodyContains(
+                response, f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}', html=True
+            )
 
 
 # Not a full-fledged PrimaryObjectViewTestCase as there's no BulkEditView for Secrets
