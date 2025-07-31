@@ -1195,8 +1195,7 @@ class ObjectChangeTable(BaseTable):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # The automatic prefetching mechanism in nautobot.core.tables.ObjectTable fails for `changed_object` because the
-        # field is called `object_repr`.
+        # The `object_repr` column also uses the `changed_object` generic-foreign-key value
         self.add_conditional_prefetch("object_repr", "changed_object")
 
 
