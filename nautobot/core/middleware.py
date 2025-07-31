@@ -2,7 +2,7 @@ from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.contrib.auth.middleware import RemoteUserMiddleware as RemoteUserMiddleware_
-from django.db import ProgrammingError
+from django.db import ProgrammingError, transaction
 from django.http import Http404
 from django.urls import resolve
 from django.urls.exceptions import Resolver404
@@ -108,7 +108,8 @@ class ObjectChangeMiddleware:
             context=ObjectChangeEventContextChoices.CONTEXT_WEB,
             request=request,
         ):
-            response = self.get_response(request)
+            with transaction.atomic():
+                response = self.get_response(request)
 
         return response
 
