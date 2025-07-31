@@ -249,9 +249,7 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
     form_class = forms.VirtualMachineForm
     serializer_class = serializers.VirtualMachineSerializer
     table_class = tables.VirtualMachineDetailTable
-    queryset = VirtualMachine.objects.select_related(
-        "cluster", "role", "status", "tenant", "software_version", "tenant__tenant_group"
-    )
+    queryset = VirtualMachine.objects.select_related("tenant__tenant_group")
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
