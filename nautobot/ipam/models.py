@@ -170,6 +170,9 @@ class VRF(PrimaryModel):
             #       where multiple different-RD VRFs with the same name may already exist.
             # ["namespace", "name"],
         ]
+        index_together = [
+            ["namespace", "name", "rd"],
+        ]
         verbose_name = "VRF"
         verbose_name_plural = "VRFs"
 
@@ -409,7 +412,12 @@ class VRFPrefixAssignment(BaseModel):
         super().clean()
 
         if self.prefix.namespace != self.vrf.namespace:
-            raise ValidationError({"prefix": "Prefix must be in same namespace as VRF"})
+            raise ValidationError(
+                {
+                    "prefix": f"Prefix (namespace {self.prefix.namespace}) must be in same namespace as "
+                    "VRF (namespace {self.vrf.namespace})"
+                }
+            )
 
 
 @extras_features(
@@ -589,6 +597,7 @@ class Prefix(PrimaryModel):
         index_together = [
             ["network", "broadcast", "prefix_length"],
             ["namespace", "network", "broadcast", "prefix_length"],
+            ["namespace", "ip_version", "network", "prefix_length"],
         ]
         unique_together = ["namespace", "network", "prefix_length"]
         verbose_name_plural = "prefixes"
@@ -1250,6 +1259,9 @@ class IPAddress(PrimaryModel):
         verbose_name = "IP address"
         verbose_name_plural = "IP addresses"
         unique_together = ["parent", "host"]
+        index_together = [
+            ["ip_version", "host", "mask_length"],
+        ]
 
     def __init__(self, *args, address=None, namespace=None, **kwargs):
         super().__init__(*args, **kwargs)

@@ -1,0 +1,47 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Rack</strong></div>
+        <div class="panel-body">
+            {% render_field form.location %}
+            {% render_field form.rack_group %}
+            {% render_field form.name %}
+            {% render_field form.facility_id %}
+            {% render_field form.status %}
+            {% render_field form.role %}
+            {% render_field form.serial %}
+            {% render_field form.asset_tag %}
+        </div>
+    </div>
+    {% include 'inc/tenancy_form_panel.html' %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Dimensions</strong></div>
+        <div class="panel-body">
+            {% render_field form.type %}
+            {% render_field form.width %}
+            {% render_field form.u_height %}
+            <div class="form-group">
+                <label class="col-md-3 control-label">Outer dimensions</label>
+                <div class="col-md-3">
+                    {{ form.outer_width }}
+                </div>
+                <div class="col-md-3">
+                    {{ form.outer_depth }}
+                </div>
+                <div class="col-md-2">
+                    {{ form.outer_unit }}
+                </div>
+            </div>
+            {% render_field form.desc_units %}
+        </div>
+    </div>
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Comments</strong></div>
+        <div class="panel-body">
+            {% render_field form.comments %}
+        </div>
+    </div>
+{% endblock %}
