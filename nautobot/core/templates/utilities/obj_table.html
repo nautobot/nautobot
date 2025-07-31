@@ -3,7 +3,7 @@
     <form method="post" class="form form-horizontal">
         {% csrf_token %}
         <input type="hidden" name="return_url" value="{% if return_url %}{{ return_url }}{% else %}{{ request.path }}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}{% endif %}" />
-        {% if not table.paginator.num_pages > 1 %}
+        {% if table.paginator.num_pages > 1 %}
             <div id="select_all_box" class="visually-hidden card mb-16 d-print-none">
                 <div class="card-body column-gap-20 hstack row-gap-12 flex-wrap justify-content-end">
                     <div class="form-check flex-grow-1 mb-0">
