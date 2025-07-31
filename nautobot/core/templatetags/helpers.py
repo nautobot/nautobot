@@ -954,6 +954,7 @@ def filter_form_drawer(
     filter_form,
     dynamic_filter_form,
     model_plural_name,
+    filter_params,
     filter_form_name="FilterForm",
     dynamic_filter_form_name="DynamicFilterForm",
 ):
@@ -961,6 +962,7 @@ def filter_form_drawer(
         "model_plural_name": model_plural_name,
         "filter_form": filter_form,
         "filter_form_name": filter_form_name,
+        "filter_params": filter_params,
         "dynamic_filter_form": dynamic_filter_form,
         "dynamic_filter_form_name": dynamic_filter_form_name,
     }

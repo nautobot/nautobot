@@ -1134,37 +1134,42 @@ textarea {
   &.nb-multi-badge {
     $nb-multi-badge-button-height: 1.5rem /* 24px */;
     $nb-multi-badge-button-width: 1.375rem /* 22px */;
-    $nb-multi-badge-padding-inline-end: map.get($spacers, 2);
+    $nb-multi-badge-padding-block-start: 0.3125rem; /* 5px */
 
     align-items: baseline;
     background-color: var(--#{$prefix}secondary-border-subtle);
-    display: inline-flex;
-    padding-inline-end: $nb-multi-badge-padding-inline-end;
+    padding-block-start: $nb-multi-badge-padding-block-start;
+    text-align: left;
+    white-space: normal;
 
     > button {
+      float: right;
       height: $nb-multi-badge-button-height;
-      margin-block: -#{$badge-padding-y};
-      margin-inline-end: -#{$nb-multi-badge-padding-inline-end};
+      margin-block: -#{$nb-multi-badge-padding-block-start};
+      margin-inline-end: -#{$badge-padding-x};
       margin-inline-start: map.get($spacers, 0);
       padding-inline-start: map.get($spacers, 6);
       width: $nb-multi-badge-button-width;
     }
 
     .nb-multi-badge-items {
-      display: inline-flex;
+      display: flex;
       gap: map.get($spacers, 4);
       flex-wrap: wrap;
-      margin-inline-start: map.get($spacers, 4);
+      margin-block-start: 0.3125rem; /* 5px */
+      margin-inline: -#{map.get($spacers, 6)};
 
       .badge {
         background-color: var(--#{$prefix}body-bg);
         border: $border-width solid var(--#{$prefix}body-bg);
+        text-align: left;
+        white-space: normal;
 
         button {
+          float: right;
           margin-inline-end: -#{map.get($spacers, 8) + $border-width};
         }
       }
-
     }
   }
 }
