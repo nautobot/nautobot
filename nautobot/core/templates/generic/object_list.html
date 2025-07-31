@@ -67,7 +67,7 @@
         {% if model.is_saved_view_model %}
             <button
                 type="button"
-                class="btn text-secondary"
+                class="btn position-relative text-secondary"
                 data-nb-toggle="drawer"
                 data-nb-target="#SavedViews_drawer"
                 title="Saved Views"
@@ -76,6 +76,12 @@
             >
                 <span class="mdi mdi-view-compact-outline" aria-hidden="true"></span>
                 <span class="visually-hidden">Saved Views</span>
+                {% if current_saved_view %}
+                    <span
+                        aria-hidden="true"
+                        class="nb-btn-indicator{% if current_saved_view == user_default_saved_view %} mdi mdi-star{% elif current_saved_view == global_saved_view %} mdi mdi-earth{% endif %}"
+                    ></span>
+                {% endif %}
             </button>
         {% endif %}
         {% if filter_form or dynamic_filter_form %}
@@ -92,11 +98,7 @@
                 <span class="mdi mdi-filter" aria-hidden="true"></span>
                 <span class="visually-hidden">Add Filters</span>
                 {% if filter_params %}
-                    <span
-                        aria-hidden="true"
-                        class="bg-warning position-absolute rounded-circle"
-                        style="height: 0.5rem; right: 0.5rem; top: 0.125rem; width: 0.5rem;"
-                    ></span>
+                    <span aria-hidden="true" class="nb-btn-indicator"></span>
                 {% endif %}
             </button>
         {% endif %}
@@ -199,17 +201,40 @@
                             <span class="visually-hidden">Toggle Dropdown</span>
                         </button>
                         <ul class="dropdown-menu w-100">
+                            <li>
+                                {% if not current_saved_view %}
+                                    <button class="dropdown-item text-primary" type="button">
+                                        <span class="mdi mdi-check" aria-hidden="true"></span>
+                                        <i>None</i>
+                                    </button>
+                                {% else %}
+                                    <a class="dropdown-item" href="{% url list_url %}?clear_view=true">
+                                        <span class="mdi mdi-card-remove-outline" aria-hidden="true"></span>
+                                        <i>None</i>
+                                    </a>
+                                {% endif %}
+                            </li>
                             {% for saved_view in saved_views %}
                                 <li>
                                     {% if saved_view == current_saved_view %}
-                                        <a class="dropdown-item text-primary" href="{% url list_url %}?clear_view=true">
+                                        <button class="dropdown-item text-primary" type="button">
                                             <span class="mdi mdi-check" aria-hidden="true"></span>
                                             {{saved_view.name}}
-                                        </a>
+                                            {% if saved_view == user_default_saved_view %}
+                                                <span class="mdi mdi-star ms-auto" aria-hidden="true"></span>
+                                            {% elif saved_view == global_saved_view %}
+                                                <span class="mdi mdi-earth ms-auto" aria-hidden="true"></span>
+                                            {% endif %}
+                                        </button>
                                     {% else %}
                                         <a class="dropdown-item" href="{{ saved_view.get_absolute_url }}">
                                             <span class="mdi mdi-view-compact-outline" aria-hidden="true"></span>
                                             {{saved_view.name}}
+                                            {% if saved_view == user_default_saved_view %}
+                                                <span class="mdi mdi-star ms-auto" aria-hidden="true"></span>
+                                            {% elif saved_view == global_saved_view %}
+                                                <span class="mdi mdi-earth ms-auto" aria-hidden="true"></span>
+                                            {% endif %}
                                         </a>
                                     {% endif %}
                                 </li>

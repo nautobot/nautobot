@@ -878,6 +878,28 @@ $btn-variants: (
   @include button-size($btn-padding-y-sm, $btn-padding-x-sm, $btn-font-size-sm, $btn-border-radius-sm);
 }
 
+.nb-btn-indicator {
+  background: var(--#{$prefix}warning-text-emphasis);
+  border-radius: 50%;
+  height: 0.5rem; /* 8px */
+  position: absolute;
+  right: map.get($spacers, 8);
+  top: map.get($spacers, 2);
+  width: 0.5rem; /* 8px */
+
+  /* Additional support for button indicator as an MDI icon, not a simple circle. */
+  .btn &:is(i, span).mdi { /* It is required to bump selector specificity here with `.btn` and `:is(i, span)`. */
+    background: transparent;
+    color: var(--#{$prefix}warning-text-emphasis);
+
+    &::before {
+      font-size: $font-size-base;
+      top: -#{map.get($spacers, 4)};
+      right: map.get($spacers, 2);
+    }
+  }
+}
+
 /* Forms */
 label {
   &.col-form-label {
