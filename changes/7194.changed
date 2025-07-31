@@ -1,1 +1,0 @@
-Moved `job_results` field from Job Panel to a separate `JobResults` table panel using ObjectsTablePanel from UI framework.

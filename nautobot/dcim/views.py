@@ -58,7 +58,9 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
+from nautobot.dcim.utils import get_all_network_driver_mappings
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
+from nautobot.extras.tables import DynamicGroupTable
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable, VRFTable
@@ -523,11 +525,41 @@ class RackGroupUIViewSet(NautobotUIViewSet):
 #
 
 
-class RackListView(generic.ObjectListView):
-    queryset = Rack.objects.all()
-    filterset = filters.RackFilterSet
-    filterset_form = forms.RackFilterForm
-    table = tables.RackDetailTable
+class RackUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.RackBulkEditForm
+    filterset_class = filters.RackFilterSet
+    filterset_form_class = forms.RackFilterForm
+    form_class = forms.RackForm
+    serializer_class = serializers.RackSerializer
+    table_class = tables.RackDetailTable
+    queryset = Rack.objects.select_related("location", "tenant__tenant_group", "rack_group", "role")
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+
+        if self.action == "retrieve":
+            # Get 0U and child devices located within the rack
+            context["nonracked_devices"] = Device.objects.filter(rack=instance, position__isnull=True).select_related(
+                "device_type__manufacturer"
+            )
+
+            peer_racks = Rack.objects.restrict(request.user, "view").filter(location=instance.location)
+
+            if instance.rack_group:
+                peer_racks = peer_racks.filter(rack_group=instance.rack_group)
+            else:
+                peer_racks = peer_racks.filter(rack_group__isnull=True)
+
+            context["next_rack"] = peer_racks.filter(name__gt=instance.name).order_by("name").first()
+            context["prev_rack"] = peer_racks.filter(name__lt=instance.name).order_by("-name").first()
+
+            context["reservations"] = RackReservation.objects.restrict(request.user, "view").filter(rack=instance)
+            context["power_feeds"] = (
+                PowerFeed.objects.restrict(request.user, "view").filter(rack=instance).select_related("power_panel")
+            )
+            context["device_count"] = Device.objects.restrict(request.user, "view").filter(rack=instance).count()
+
+        return context
 
 
 class RackElevationListView(generic.ObjectListView):
@@ -581,70 +613,6 @@ class RackElevationListView(generic.ObjectListView):
             "title": "Rack Elevation",
             "list_url": "dcim:rack_elevation_list",
         }
-
-
-class RackView(generic.ObjectView):
-    queryset = Rack.objects.select_related("location", "tenant__tenant_group", "rack_group", "role")
-
-    def get_extra_context(self, request, instance):
-        # Get 0U and child devices located within the rack
-        nonracked_devices = Device.objects.filter(rack=instance, position__isnull=True).select_related(
-            "device_type__manufacturer"
-        )
-
-        peer_racks = Rack.objects.restrict(request.user, "view").filter(location=instance.location)
-
-        if instance.rack_group:
-            peer_racks = peer_racks.filter(rack_group=instance.rack_group)
-        else:
-            peer_racks = peer_racks.filter(rack_group__isnull=True)
-        next_rack = peer_racks.filter(name__gt=instance.name).order_by("name").first()
-        prev_rack = peer_racks.filter(name__lt=instance.name).order_by("-name").first()
-
-        reservations = RackReservation.objects.restrict(request.user, "view").filter(rack=instance)
-        power_feeds = (
-            PowerFeed.objects.restrict(request.user, "view").filter(rack=instance).select_related("power_panel")
-        )
-
-        device_count = Device.objects.restrict(request.user, "view").filter(rack=instance).count()
-
-        return {
-            "device_count": device_count,
-            "reservations": reservations,
-            "power_feeds": power_feeds,
-            "nonracked_devices": nonracked_devices,
-            "next_rack": next_rack,
-            "prev_rack": prev_rack,
-            **super().get_extra_context(request, instance),
-        }
-
-
-class RackEditView(generic.ObjectEditView):
-    queryset = Rack.objects.all()
-    model_form = forms.RackForm
-    template_name = "dcim/rack_edit.html"
-
-
-class RackDeleteView(generic.ObjectDeleteView):
-    queryset = Rack.objects.all()
-
-
-class RackBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Rack.objects.all()
-    table = tables.RackTable
-
-
-class RackBulkEditView(generic.BulkEditView):
-    queryset = Rack.objects.all()
-    filterset = filters.RackFilterSet
-    table = tables.RackTable
-    form = forms.RackBulkEditForm
-
-
-class RackBulkDeleteView(generic.BulkDeleteView):
-    queryset = Rack.objects.all()
-    filterset = filters.RackFilterSet
-    table = tables.RackTable
 
 
 #
@@ -1665,6 +1633,8 @@ class PlatformUIViewSet(NautobotUIViewSet):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
             context["network_driver_tool_names"] = instance.fetch_network_driver_mappings()
+        if self.action in ["create", "update"]:
+            context["network_driver_names"] = sorted(get_all_network_driver_mappings().keys())
         return context
 
 
@@ -1701,7 +1671,39 @@ class DeviceView(generic.ObjectView):
         "tenant__tenant_group",
     ).prefetch_related("images", "software_image_files")
 
-    object_detail_content = object_detail.ObjectDetailContent(
+    class DeviceDetailContent(object_detail.ObjectDetailContent):
+        """
+        Override base ObjectDetailContent to render dynamic-groups table as a separate view/tab instead of inline.
+        """
+
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            # Remove inline tab definition
+            for tab in list(self._tabs):
+                if isinstance(tab, object_detail._ObjectDetailGroupsTab):
+                    self._tabs.remove(tab)
+            # Add distinct-view tab definition
+            self._tabs.append(
+                object_detail.DistinctViewTab(
+                    weight=object_detail.Tab.WEIGHT_GROUPS_TAB,
+                    tab_id="dynamic_groups",
+                    label="Dynamic Groups",
+                    url_name="dcim:device_dynamicgroups",
+                    related_object_attribute="dynamic_groups",
+                    panels=(
+                        object_detail.ObjectsTablePanel(
+                            weight=100,
+                            table_class=DynamicGroupTable,
+                            table_attribute="dynamic_groups",
+                            exclude_columns=["content_type"],
+                            add_button_route=None,
+                            related_field_name="member_id",
+                        ),
+                    ),
+                )
+            )
+
+    object_detail_content = DeviceDetailContent(
         extra_buttons=(
             object_detail.DropdownButton(
                 weight=100,
@@ -2188,7 +2190,7 @@ class DeviceChangeLogView(ObjectChangeLogView):
     base_template = "dcim/device/base.html"
 
 
-class DeviceDynamicGroupsView(ObjectDynamicGroupsView):  # 3.0 TODO: remove, deprecated in 2.3
+class DeviceDynamicGroupsView(ObjectDynamicGroupsView):
     base_template = "dcim/device/base.html"
 
 
