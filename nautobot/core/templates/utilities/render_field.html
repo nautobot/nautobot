@@ -4,14 +4,7 @@
     {% if field|widget_type == 'checkboxinput' %}
         <div class="col-md-9 offset-md-3">
             <div class="form-check mt-6{% if field.errors %} has-error{% endif %}">
-                <input
-                    class="form-check-input"
-                    id="{{ field.id_for_label }}"
-                    name="{{ field.name }}"
-                    type="checkbox"
-                    {% if field.value == True %}checked{% endif %}
-                    {% for name, value in field.field.widget.attrs.items %}{% if value is not False %} {{ name }}{% if value is not True %}="{{ value|stringformat:'s' }}"{% endif %}{% endif %}{% endfor %}
-                >
+                {{ field }}
                 <label class="form-check-label" for="{{ field.id_for_label }}">
                     {{ field.label }}
                     {% if field.help_text %}
