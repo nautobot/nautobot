@@ -3036,7 +3036,8 @@ class JobTestCase(
         )
         self.assertInHTML('<input type="hidden" name="_profile" value="True" id="id__profile">', content)
         self.assertInHTML(
-            '<input type="checkbox" name="_ignore_singleton_lock" id="id__ignore_singleton_lock" checked>', content
+            '<input class="form-check-input" id="id__ignore_singleton_lock" name="_ignore_singleton_lock" type="checkbox" checked>',
+            content,
         )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)

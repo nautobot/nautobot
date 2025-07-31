@@ -9,7 +9,7 @@
                     id="{{ field.id_for_label }}"
                     name="{{ field.name }}"
                     type="checkbox"
-                    {% if field.value == True %}checked=""{% endif %}
+                    {% if field.value == True %}checked{% endif %}
                     {% for name, value in field.field.widget.attrs.items %}{% if value is not False %} {{ name }}{% if value is not True %}="{{ value|stringformat:'s' }}"{% endif %}{% endif %}{% endfor %}
                 >
                 <label class="form-check-label" for="{{ field.id_for_label }}">
