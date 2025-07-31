@@ -195,7 +195,7 @@
                             {% if current_saved_view %}
                                 {{current_saved_view.name}}
                             {% else %}
-                                <i>No saved view selected</i>
+                                <i>No saved view</i>
                             {% endif %}
                             <span class="mdi mdi-chevron-down"></span>
                             <span class="visually-hidden">Toggle Dropdown</span>
@@ -205,12 +205,12 @@
                                 {% if not current_saved_view %}
                                     <button class="dropdown-item text-primary" type="button">
                                         <span class="mdi mdi-check" aria-hidden="true"></span>
-                                        <i>None</i>
+                                        <i>No saved view</i>
                                     </button>
                                 {% else %}
                                     <a class="dropdown-item" href="{% url list_url %}?clear_view=true">
                                         <span class="mdi mdi-card-remove-outline" aria-hidden="true"></span>
-                                        <i>None</i>
+                                        <i>No saved view</i>
                                     </a>
                                 {% endif %}
                             </li>
@@ -224,6 +224,8 @@
                                                 <span class="mdi mdi-star ms-auto" aria-hidden="true"></span>
                                             {% elif saved_view == global_saved_view %}
                                                 <span class="mdi mdi-earth ms-auto" aria-hidden="true"></span>
+                                            {% elif saved_view.is_shared %}
+                                                <span class="mdi mdi-account-group ms-auto" aria-hidden="true"></span>
                                             {% endif %}
                                         </button>
                                     {% else %}
@@ -234,6 +236,8 @@
                                                 <span class="mdi mdi-star ms-auto" aria-hidden="true"></span>
                                             {% elif saved_view == global_saved_view %}
                                                 <span class="mdi mdi-earth ms-auto" aria-hidden="true"></span>
+                                            {% elif saved_view.is_shared %}
+                                                <span class="mdi mdi-account-group ms-auto" aria-hidden="true"></span>
                                             {% endif %}
                                         </a>
                                     {% endif %}
@@ -260,9 +264,17 @@
                     <span class="mdi mdi-content-save-plus-outline me-4" aria-hidden="true"></span>Save As New
                 </a>
                 {% if current_saved_view %}
-                    <a class="btn btn-danger" href="{% url 'extras:savedview_delete' pk=current_saved_view.pk %}">
-                        <span class="mdi mdi-trash-can-outline me-4" aria-hidden="true"></span>Delete Current
-                    </a>
+                    {% if current_saved_view.owner == user %}
+                        <a class="btn btn-danger" href="{% url 'extras:savedview_delete' pk=current_saved_view.pk %}">
+                            <span class="mdi mdi-trash-can-outline me-4" aria-hidden="true"></span>Delete Current
+                        </a>
+                    {% else %}
+                        <span data-bs-toggle="tooltip" data-bs-title="You cannot delete another user's saved view.">
+                            <button class="btn btn-danger" disabled type="button">
+                                <span class="mdi mdi-trash-can-outline me-4" aria-hidden="true"></span>Delete Current
+                            </button>
+                        </span>
+                    {% endif %}
                 {% endif %}
             </div>
         </div>
