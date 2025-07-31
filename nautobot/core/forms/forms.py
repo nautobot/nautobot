@@ -88,7 +88,7 @@ class BootstrapMixin(forms.BaseForm):
                 css_classes = field.widget.attrs.get("class", "")
                 if "form-control" not in css_classes:
                     field.widget.attrs["class"] = " ".join([css_classes, "form-control"]).strip()
-            if isinstance(field.widget, forms.CheckboxInput) or isinstance(field.widget, forms.RadioSelect):
+            if isinstance(field.widget, (forms.CheckboxInput, forms.RadioSelect)):
                 css_classes = field.widget.attrs.get("class", "")
                 if "form-check" not in css_classes:
                     field.widget.attrs["class"] = " ".join([css_classes, "form-check-input"]).strip()
