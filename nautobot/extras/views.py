@@ -1074,6 +1074,7 @@ class ExternalIntegrationUIViewSet(NautobotUIViewSet):
 # Git repositories
 #
 
+
 class GitRepositoryUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.GitRepositoryBulkEditForm
     filterset_form_class = forms.GitRepositoryFilterForm
@@ -1104,7 +1105,6 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
             context["job_results"] = results
 
         return context
-    
 
     # TODO(jathan): Align with changes for v2 where we're not stashing the user on the instance for
     # magical calls and instead discretely calling `repo.sync(user=user, dry_run=dry_run)`, but
@@ -1115,13 +1115,11 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
         # A GitRepository needs to know the originating request when it's saved so that it can enqueue using it
         obj.request = request
         return super().alter_obj(obj, request, url_args, url_kwargs)
-    
 
     def get_return_url(self, request, obj=None, default_return_url=None):
         if request.method == "POST":
             return reverse("extras:gitrepository_result", kwargs={"pk": obj.pk})
         return super().get_return_url(request, obj=obj, default_return_url=default_return_url)
-    
 
     def form_save(self, form, **kwargs):
         obj = form.instance
