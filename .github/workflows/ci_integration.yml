@@ -49,6 +49,38 @@ jobs:
       - name: "Run check-schema"
         # REST API schema generation currently includes GraphQL schema generation, which is dependent on the DB :-(
         run: "poetry run invoke migrate check-schema"
+  ui-build-check:
+    name: "Check UI src and dist files validity and integrity"
+    runs-on: "ubuntu-24.04"
+    defaults:
+      run:
+        working-directory: "nautobot/project-static"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v4"
+      - name: "Setup Node.js"
+        uses: "actions/setup-node@v4"
+        with:
+          node-version: "22"
+      - name: "Install npm dependencies"
+        run: "npm ci"
+      - name: "Calculate checksum of originally committed UI dist files"
+        run: |
+          echo "original_checksum=$(find dist -type f -exec md5sum {} + | sort -k 2 | md5sum)" >> "$GITHUB_ENV"
+      - name: "Build UI from source"
+        run: "npm run build"
+      - name: "Re-calculate checksum of UI dist files after the build"
+        run: |
+          echo "updated_checksum=$(find dist -type f -exec md5sum {} + | sort -k 2 | md5sum)" >> "$GITHUB_ENV"
+      - name: "Compare calculated checksums"
+        run: |
+          echo "Comparing UI dist files checksums: \"$original_checksum\" and \"$updated_checksum\"."
+          if [ "$original_checksum" = "$updated_checksum" ]; then
+            echo "Checksums match."
+          else
+            >&2 echo "ERROR: Checksums do not match. Please verify build."
+            exit 1
+          fi
   tests-postgres:
     name: "Unit tests (PostgreSQL and Python 3.13)"
     runs-on: "ubuntu-24.04"
@@ -232,6 +264,7 @@ jobs:
       - "migration-tests-postgres"
       - "tests-mysql"
       - "tests-postgres"
+      - "ui-build-check"
     strategy:
       fail-fast: true
       matrix:
