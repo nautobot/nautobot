@@ -79,7 +79,17 @@
                 {% if current_saved_view %}
                     <span
                         aria-hidden="true"
-                        class="nb-btn-indicator{% if current_saved_view == user_default_saved_view %} mdi mdi-star{% elif current_saved_view == global_saved_view %} mdi mdi-earth{% endif %}"
+                        {% if current_saved_view == user_default_saved_view %}
+                            class="nb-btn-indicator mdi mdi-star"
+                            data-bs-toggle="tooltip"
+                            data-bs-title="Your default saved view"
+                        {% elif current_saved_view == global_saved_view %}
+                            class="nb-btn-indicator mdi mdi-earth"
+                            data-bs-toggle="tooltip"
+                            data-bs-title="Global default saved view"
+                        {% else %}
+                            class="nb-btn-indicator"
+                        {% endif %}
                     ></span>
                 {% endif %}
             </button>
@@ -221,11 +231,11 @@
                                             <span class="mdi mdi-check" aria-hidden="true"></span>
                                             {{saved_view.name}}
                                             {% if saved_view == user_default_saved_view %}
-                                                <span class="mdi mdi-star ms-auto" aria-hidden="true"></span>
+                                                <span class="mdi mdi-star ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Your default" data-bs-fallback-placements="[&quot;top&quot;]"></span>
                                             {% elif saved_view == global_saved_view %}
-                                                <span class="mdi mdi-earth ms-auto" aria-hidden="true"></span>
+                                                <span class="mdi mdi-earth ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Global default" data-bs-fallback-placements="[&quot;top&quot;]"></span>
                                             {% elif saved_view.is_shared %}
-                                                <span class="mdi mdi-account-group ms-auto" aria-hidden="true"></span>
+                                                <span class="mdi mdi-account-group ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Shared" data-bs-fallback-placements="[&quot;top&quot;]"></span>
                                             {% endif %}
                                         </button>
                                     {% else %}
@@ -233,11 +243,11 @@
                                             <span class="mdi mdi-view-compact-outline" aria-hidden="true"></span>
                                             {{saved_view.name}}
                                             {% if saved_view == user_default_saved_view %}
-                                                <span class="mdi mdi-star ms-auto" aria-hidden="true"></span>
+                                                <span class="mdi mdi-star ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Your default" data-bs-fallback-placements="[&quot;top&quot;]"></span>
                                             {% elif saved_view == global_saved_view %}
-                                                <span class="mdi mdi-earth ms-auto" aria-hidden="true"></span>
+                                                <span class="mdi mdi-earth ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Global default" data-bs-fallback-placements="[&quot;top&quot;]"></span>
                                             {% elif saved_view.is_shared %}
-                                                <span class="mdi mdi-account-group ms-auto" aria-hidden="true"></span>
+                                                <span class="mdi mdi-account-group ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Shared" data-bs-fallback-placements="[&quot;top&quot;]"></span>
                                             {% endif %}
                                         </a>
                                     {% endif %}
