@@ -1,0 +1,3 @@
+Added support for optional `get_queryset` boolean parameter to `CustomField.objects.get_for_model()`, `ComputedField.objects.get_for_model()`, and `Relationship.objects.get_for_model()` APIs. If set to `False` these APIs will return a (potentially cached) list of records instead of a QuerySet.
+Added `populate_list_caches()` method to `CustomField.objects`, `ComputedField.objects`, and `Relationship.objects`, which can be called to efficiently populate the caches used by the `get_for_model()` methods when `get_queryset=False` for all content-types.
+Added `feature_models` dict to the Nautobot registry for more efficient GraphQL schema generation.

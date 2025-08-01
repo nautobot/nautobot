@@ -1,6 +1,6 @@
 """Schema module for GraphQL."""
 
-from collections import OrderedDict
+from collections import defaultdict, OrderedDict
 import logging
 
 from django.conf import settings
@@ -99,7 +99,7 @@ CUSTOM_FIELD_MAPPING = {
 }
 
 
-def extend_schema_type(schema_type):
+def extend_schema_type(schema_type, *, custom_fields=None, computed_fields=None, relationships=None):
     """Extend an existing schema type to add fields dynamically.
 
     The following type of dynamic fields/functions are currently supported:
@@ -124,7 +124,7 @@ def extend_schema_type(schema_type):
     #
     # Custom Fields
     #
-    schema_type = extend_schema_type_custom_field(schema_type, model)
+    schema_type = extend_schema_type_custom_field(schema_type, model, custom_fields=custom_fields)
 
     #
     # Tags
@@ -144,12 +144,12 @@ def extend_schema_type(schema_type):
     #
     # Relationships
     #
-    schema_type = extend_schema_type_relationships(schema_type, model)
+    schema_type = extend_schema_type_relationships(schema_type, model, relationships=relationships)
 
     #
     # Computed Fields
     #
-    schema_type = extend_schema_type_computed_field(schema_type, model)
+    schema_type = extend_schema_type_computed_field(schema_type, model, computed_fields=computed_fields)
 
     #
     # Add resolve_{field.name} that has null=False, blank=True, and choices defined to return null
@@ -231,29 +231,31 @@ def extend_schema_type_filter(schema_type, model):
     return schema_type
 
 
-def extend_schema_type_custom_field(schema_type, model):
+def extend_schema_type_custom_field(schema_type, model, *, custom_fields=None):
     """Extend schema_type object to had attribute and resolver around custom_fields.
     Each custom field will be defined as a first level attribute.
 
     Args:
         schema_type (DjangoObjectType): GraphQL Object type for a given model
         model (Model): Django model
+        custom_fields (list[dict]): Prepopulated list of all custom field key/type values applicable to this model.
 
     Returns:
         (DjangoObjectType): The extended schema_type object
     """
+    if custom_fields is None:
+        custom_fields = [{"key": cf.key, "type": cf.type} for cf in CustomField.objects.get_for_model(model)]
 
-    cfs = CustomField.objects.get_for_model(model)
     prefix = ""
     if settings.GRAPHQL_CUSTOM_FIELD_PREFIX and isinstance(settings.GRAPHQL_CUSTOM_FIELD_PREFIX, str):
         prefix = f"{settings.GRAPHQL_CUSTOM_FIELD_PREFIX}_"
 
-    for field in cfs:
+    for field in custom_fields:
         # Since we guaranteed cf.key's uniqueness in CustomField data migration
         # We can safely field_key this in our GraphQL without duplication
         # For new CustomField instances, we also make sure that duplicate key does not exist.
-        field_key = f"{prefix}{field.key}"
-        resolver_name = f"resolve_{field_key}"
+        field_key = f"{prefix}{field['key']}"
+        resolver_name = f"resolve_{field['key']}"
 
         if hasattr(schema_type, resolver_name):
             logger.warning(
@@ -268,38 +270,41 @@ def extend_schema_type_custom_field(schema_type, model):
         setattr(
             schema_type,
             resolver_name,
-            generate_custom_field_resolver(field.key, resolver_name),
+            generate_custom_field_resolver(field["key"], resolver_name),
         )
 
-        if field.type in CUSTOM_FIELD_MAPPING:
-            schema_type._meta.fields[field_key] = graphene.Field.mounted(CUSTOM_FIELD_MAPPING[field.type])
+        if field["type"] in CUSTOM_FIELD_MAPPING:
+            schema_type._meta.fields[field_key] = graphene.Field.mounted(CUSTOM_FIELD_MAPPING[field["type"]])
         else:
             schema_type._meta.fields[field_key] = graphene.Field.mounted(graphene.String())
 
     return schema_type
 
 
-def extend_schema_type_computed_field(schema_type, model):
+def extend_schema_type_computed_field(schema_type, model, *, computed_fields=None):
     """Extend schema_type object to had attribute and resolver around computed_fields.
+
     Each computed field will be defined as a first level attribute.
 
     Args:
         schema_type (DjangoObjectType): GraphQL Object type for a given model
         model (Model): Django model
+        computed_fields (list[dict]): Prepopulated list of all computed field keys applicable to this model.
 
     Returns:
         (DjangoObjectType): The extended schema_type object
     """
+    if computed_fields is None:
+        computed_fields = [{"key": cf.key} for cf in ComputedField.objects.get_for_model(model)]
 
-    cfs = ComputedField.objects.get_for_model(model)
     prefix = ""
     if settings.GRAPHQL_COMPUTED_FIELD_PREFIX and isinstance(settings.GRAPHQL_COMPUTED_FIELD_PREFIX, str):
         prefix = f"{settings.GRAPHQL_COMPUTED_FIELD_PREFIX}_"
 
-    for field in cfs:
-        field_name = f"{prefix}{field.key}"
+    for field in computed_fields:
+        field_name = f"{prefix}{field['key']}"
         try:
-            check_if_key_is_graphql_safe("Computed Field", field.key)
+            check_if_key_is_graphql_safe("Computed Field", field["key"])
         except ValidationError:
             logger.warning(
                 'Unable to add the computed field "%s" to %s because computed field key "%s" is not GraphQL safe',
@@ -324,7 +329,7 @@ def extend_schema_type_computed_field(schema_type, model):
         setattr(
             schema_type,
             resolver_name,
-            generate_computed_field_resolver(field.key, resolver_name),
+            generate_computed_field_resolver(field["key"], resolver_name),
         )
 
         schema_type._meta.fields[field_name] = graphene.Field.mounted(graphene.String())
@@ -395,21 +400,28 @@ def extend_schema_type_global_features(schema_type, model):
     return schema_type
 
 
-def extend_schema_type_relationships(schema_type, model):
-    """Extend the schema type with attributes and resolvers corresponding
-    to the relationships associated with this model."""
+def extend_schema_type_relationships(schema_type, model, *, relationships=None):
+    """
+    Extend the schema type with attributes and resolvers for the relationships associated with this model.
 
-    relationships_by_side = {
-        "source": Relationship.objects.get_for_model_source(model),
-        "destination": Relationship.objects.get_for_model_destination(model),
-    }
+    Args:
+        schema_type (DjangoObjectType): GraphQL Object type for a given model
+        model (Model): Django model
+        relationships (dict[list[dict]]): Prepopulated dict with "source" and "destination" keys,
+            each containing a list of all relationships applicable to this model.
+    """
+    if relationships is None:
+        relationships = {
+            "source": Relationship.objects.get_for_model_source(model),
+            "destination": Relationship.objects.get_for_model_destination(model),
+        }
 
     prefix = ""
     if settings.GRAPHQL_RELATIONSHIP_PREFIX and isinstance(settings.GRAPHQL_RELATIONSHIP_PREFIX, str):
         prefix = f"{settings.GRAPHQL_RELATIONSHIP_PREFIX}_"
 
-    for side, relationships in relationships_by_side.items():
-        for relationship in relationships:
+    for side, relationships_ in relationships.items():
+        for relationship in relationships_:
             peer_side = RelationshipSideChoices.OPPOSITE[side]
 
             # Generate the name of the attribute and the name of the resolver based on the key of the relationship
@@ -499,30 +511,16 @@ def generate_query_mixin():
 
     logger.debug("Generating dynamic schemas for all models in the models_features graphql registry")
     #  - Ensure an attribute/schematype with the same name doesn't already exist
-    registered_models = registry.get("model_features", {}).get("graphql", {})
-    for app_name, models in registered_models.items():
-        for model_name in models:
-            try:
-                # Find the model class based on the content type
-                ct = ContentType.objects.get(app_label=app_name, model=model_name)
-                model = ct.model_class()
-            except ContentType.DoesNotExist:
-                logger.warning(
-                    'Unable to generate a schema type for the model "%s.%s" in GraphQL, '
-                    "as this model doesn't have an associated ContentType. Please create the Object manually.",
-                    app_name,
-                    model_name,
-                )
-                continue
+    registered_models = registry.get("feature_models", {}).get("graphql", [])
+    for model in registered_models:
+        type_identifier = model._meta.label_lower
 
-            type_identifier = f"{app_name}.{model_name}"
+        if type_identifier in registry["graphql_types"].keys():
+            # Skip models that have been added statically
+            continue
 
-            if type_identifier in registry["graphql_types"].keys():
-                # Skip models that have been added statically
-                continue
-
-            schema_type = generate_schema_type(app_name=app_name, model=model)
-            registry["graphql_types"][type_identifier] = schema_type
+        schema_type = generate_schema_type(app_name=model._meta.app_label, model=model)
+        registry["graphql_types"][type_identifier] = schema_type
 
     logger.debug("Adding plugins' statically defined graphql schema types")
     # After checking for conflict
@@ -542,11 +540,54 @@ def generate_query_mixin():
             registry["graphql_types"][type_identifier] = schema_type
 
     logger.debug("Extending all registered schema types with dynamic attributes")
+
+    # Precache all content-types as we'll need them for filtering and the like
+    for content_type in ContentType.objects.all():
+        ContentType.objects._add_to_cache(ContentType.objects.db, content_type)
+
+    CustomField.objects.populate_list_caches()
+    custom_fields_list = list(
+        CustomField.objects.all()
+        .prefetch_related("content_types")
+        .values_list("key", "type", "content_types__app_label", "content_types__model")
+    )
+    custom_fields_dict = defaultdict(lambda: defaultdict(list))
+    for cf_key, cf_type, cf_app_label, cf_model_name in custom_fields_list:
+        custom_fields_dict[cf_app_label][cf_model_name].append({"key": cf_key, "type": cf_type})
+
+    ComputedField.objects.populate_list_caches()
+    computed_fields_list = list(
+        ComputedField.objects.all()
+        .select_related("content_type")
+        .values_list("key", "content_type__app_label", "content_type__model")
+    )
+    computed_fields_dict = defaultdict(lambda: defaultdict(list))
+    for cf_key, cf_app_label, cf_model_name in computed_fields_list:
+        computed_fields_dict[cf_app_label][cf_model_name].append({"key": cf_key})
+
+    Relationship.objects.populate_list_caches()
+    relationships_list = list(Relationship.objects.all().select_related("source_type", "destination_type"))
+    relationships_dict = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+    for relationship in relationships_list:
+        relationships_dict[relationship.source_type.app_label][relationship.source_type.model]["source"].append(
+            relationship
+        )
+        relationships_dict[relationship.destination_type.app_label][relationship.destination_type.model][
+            "destination"
+        ].append(relationship)
+
     for schema_type in registry["graphql_types"].values():
         if already_present(schema_type._meta.model):
             continue
 
-        schema_type = extend_schema_type(schema_type)
+        app_label = schema_type._meta.model._meta.app_label
+        model_name = schema_type._meta.model._meta.model_name
+        schema_type = extend_schema_type(
+            schema_type,
+            custom_fields=custom_fields_dict[app_label][model_name],
+            computed_fields=computed_fields_dict[app_label][model_name],
+            relationships=relationships_dict[app_label][model_name],
+        )
         class_attrs.update(generate_attrs_for_schema_type(schema_type))
 
     QueryMixin = type("QueryMixin", (object,), class_attrs)
