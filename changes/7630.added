@@ -1,0 +1,1 @@
+Added `ui-build-check` step to pull request CI workflow to check UI src and dist files validity and integrity.
