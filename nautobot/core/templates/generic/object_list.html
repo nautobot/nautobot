@@ -253,9 +253,17 @@
             <div class="align-items-start vstack gap-10">
                 Actions:
                 {% if current_saved_view %}
-                    <a class="btn btn-secondary" href="{% url 'extras:savedview_update_config' pk=current_saved_view.pk %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
-                        <span class="mdi mdi-content-save-outline me-4" aria-hidden="true"></span>Update Current
-                    </a>
+                    {% if current_saved_view.owner == user %}
+                        <a class="btn btn-secondary" href="{% url 'extras:savedview_update_config' pk=current_saved_view.pk %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
+                            <span class="mdi mdi-content-save-outline me-4" aria-hidden="true"></span>Update Current
+                        </a>
+                    {% else %}
+                        <span data-bs-toggle="tooltip" data-bs-title="You cannot update another user's saved view.">
+                            <button class="btn btn-secondary" disabled type="button">
+                                <span class="mdi mdi-content-save-outline me-4" aria-hidden="true"></span>Update Current
+                            </button>
+                        </span>
+                    {% endif %}
                     <a class="btn btn-secondary" href="{% url 'extras:savedview_set_default' pk=current_saved_view.pk %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
                         <span class="mdi mdi-star me-4" aria-hidden="true"></span>Set As My Default
                     </a>
