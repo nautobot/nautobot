@@ -166,6 +166,41 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.14 (2025-08-04)
+
+### Added in v2.4.14
+
+- [#7479](https://github.com/nautobot/nautobot/issues/7479) - Added Bulk Edit functionality for the SecretsGroup model.
+- [#7566](https://github.com/nautobot/nautobot/issues/7566) - Added Eaton and Raritan C39 power outlet type.
+- [#7574](https://github.com/nautobot/nautobot/issues/7574) - Added 4 new choices in the Secret Type category of Secret Groups: "Authentication Key", "Authentication Protocol", "Private Key" and "Private Algorithm".
+- [#7625](https://github.com/nautobot/nautobot/issues/7625) - Added an index to JobLogEntry to improve performance of Job Result logs.
+
+### Changed in v2.4.14
+
+- [#7601](https://github.com/nautobot/nautobot/issues/7601) - Made network driver mappings dynamically find network driver keys.
+- [#7611](https://github.com/nautobot/nautobot/issues/7611) - Added more verbose default output to `nautobot-server migrate` command.
+
+### Fixed in v2.4.14
+
+- [#3609](https://github.com/nautobot/nautobot/issues/3609) - Fixed `cluster_count` not showing up on the API of `/tenancy/tenants/`.
+- [#7577](https://github.com/nautobot/nautobot/issues/7577) - Fixed incorrect reference to Inventory Items under the Module documentation.
+- [#7616](https://github.com/nautobot/nautobot/issues/7616) - Fixed a data-loss bug in the v1.x-to-v2.0 migration `extras.0062_collect_roles_from_related_apps_roles` in which custom-field data on `dcim.DeviceRole`, `dcim.RackRole`, and `ipam.Role` records was not correctly copied to the corresponding created `extras.Role` records.
+
+### Dependencies in v2.4.14
+
+- [#7584](https://github.com/nautobot/nautobot/issues/7584) - Updated `GitPython` dependency to `~3.1.45`.
+- [#7584](https://github.com/nautobot/nautobot/issues/7584) - Updated `nh3` dependency to `~0.2.22`.
+- [#7584](https://github.com/nautobot/nautobot/issues/7584) - Updated `pyuwsgi` dependency to `2.0.30`.
+- [#7601](https://github.com/nautobot/nautobot/issues/7601) - Updated dependency `netutils` minimum version to support ability for dynamic network driver mappings.
+
+### Housekeeping in v2.4.14
+
+- [#7419](https://github.com/nautobot/nautobot/issues/7419) - Refactored GraphQLQuery model related UI views to use `NautobotUIViewSet`.
+- [#7479](https://github.com/nautobot/nautobot/issues/7479) - Refactored SecretsGroup model related UI views to use `NautobotUIViewSet`.
+- [#7500](https://github.com/nautobot/nautobot/issues/7500) - Refactored Rack model related UI views to use `NautobotUIViewSet`.
+- [#7584](https://github.com/nautobot/nautobot/issues/7584) - Updated development dependency `pymarkdownlnt` to `~0.9.31`.
+- [#7584](https://github.com/nautobot/nautobot/issues/7584) - Updated documentation dependency `mkdocs-material` to `~9.6.16`.
+
 ## v2.4.13 (2025-07-21)
 
 ### Added in v2.4.13
