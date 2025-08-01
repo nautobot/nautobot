@@ -28,6 +28,7 @@ router.register("job-buttons", views.JobButtonUIViewSet)
 router.register("job-hooks", views.JobHookUIViewSet)
 router.register("job-queues", views.JobQueueUIViewSet)
 router.register("metadata-types", views.MetadataTypeUIViewSet)
+router.register("object-changes", views.ObjectChangeUIViewSet)
 router.register("object-metadata", views.ObjectMetadataUIViewSet)
 router.register("relationship-associations", views.RelationshipAssociationUIViewSet)
 router.register("relationships", views.RelationshipUIViewSet)
@@ -41,9 +42,6 @@ router.register("teams", views.TeamUIViewSet)
 router.register("webhooks", views.WebhookUIViewSet)
 
 urlpatterns = [
-    # Change logging
-    path("object-changes/", views.ObjectChangeListView.as_view(), name="objectchange_list"),
-    path("object-changes/<uuid:pk>/", views.ObjectChangeView.as_view(), name="objectchange"),
     # Config context schema
     path(
         "config-context-schemas/<uuid:pk>/validation/",
