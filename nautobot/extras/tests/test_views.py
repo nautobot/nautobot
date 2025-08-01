@@ -2044,7 +2044,7 @@ class SavedViewTest(ModelViewTestCase):
         # Assert that Location List View got redirected to Saved View set as global default
         self.assertBodyContains(
             response,
-            '<span aria-hidden="true" class="mdi mdi-check"></span>Global Location Default View<span class="mdi mdi-earth ms-auto" aria-hidden="true"></span>',
+            '<span aria-hidden="true" class="mdi mdi-check"></span>Global Location Default View<span class="mdi mdi-earth ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Global default" data-bs-fallback-placements="[&quot;top&quot;]"></span>',
             html=True,
         )
 
@@ -2062,7 +2062,7 @@ class SavedViewTest(ModelViewTestCase):
         # Assert that Location List View got redirected to Saved View set as user default
         self.assertBodyContains(
             response,
-            '<span aria-hidden="true" class="mdi mdi-check"></span>User Location Default View<span class="mdi mdi-star ms-auto" aria-hidden="true"></span>',
+            '<span aria-hidden="true" class="mdi mdi-check"></span>User Location Default View<span class="mdi mdi-star ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Your default" data-bs-fallback-placements="[&quot;top&quot;]"></span>',
             html=True,
         )
 
@@ -2085,7 +2085,7 @@ class SavedViewTest(ModelViewTestCase):
         # Assert that Location List View got redirected to Saved View set as user default
         self.assertBodyContains(
             response,
-            '<span aria-hidden="true" class="mdi mdi-check"></span>User Location Default View<span class="mdi mdi-star ms-auto" aria-hidden="true"></span>',
+            '<span aria-hidden="true" class="mdi mdi-check"></span>User Location Default View<span class="mdi mdi-star ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Your default" data-bs-fallback-placements="[&quot;top&quot;]"></span>',
             html=True,
         )
 
@@ -2108,7 +2108,7 @@ class SavedViewTest(ModelViewTestCase):
         # Assert that the user is not redirected to the global default view
         # But instead redirected to the filtered view
         self.assertNotIn(
-            '<span aria-hidden="true" class="mdi mdi-check"></span>Global Location Default View<span class="mdi mdi-earth ms-auto" aria-hidden="true"></span>',
+            '<span aria-hidden="true" class="mdi mdi-check"></span>Global Location Default View<span class="mdi mdi-earth ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Global default" data-bs-fallback-placements="[&quot;top&quot;]"></span>',
             extract_page_body(response.content.decode(response.charset)),
         )
 
@@ -2137,7 +2137,7 @@ class SavedViewTest(ModelViewTestCase):
         # Assert that the user is not redirected to the user default view
         # But instead redirected to the filtered view
         self.assertNotIn(
-            '<span aria-hidden="true" class="mdi mdi-check"></span>User Location Default View<span class="mdi mdi-star ms-auto" aria-hidden="true"></span>',
+            '<span aria-hidden="true" class="mdi mdi-check"></span>User Location Default View<span class="mdi mdi-star ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Your default" data-bs-fallback-placements="[&quot;top&quot;]"></span>',
             extract_page_body(response.content.decode(response.charset)),
         )
         # Floor type locations (Floor-<number>) should not be visible in the response
@@ -2264,7 +2264,7 @@ class SavedViewTest(ModelViewTestCase):
             self.assertNotIn("Example hidden job", response_body, msg=response_body)
             self.assertBodyContains(
                 response,
-                f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}<span aria-hidden="true" class="mdi mdi-account-group ms-auto">',
+                f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}<span class="mdi mdi-account-group ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Shared" data-bs-fallback-placements="[&quot;top&quot;]"></span>',
                 html=True,
             )
 
@@ -2292,7 +2292,7 @@ class SavedViewTest(ModelViewTestCase):
             response_body = extract_page_body(response.content.decode(response.charset))
             self.assertBodyContains(
                 response,
-                f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}<span aria-hidden="true" class="mdi mdi-account-group ms-auto">',
+                f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}<span class="mdi mdi-account-group ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Shared" data-bs-fallback-placements="[&quot;top&quot;]"></span>',
                 html=True,
             )
 
