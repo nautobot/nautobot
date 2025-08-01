@@ -2263,7 +2263,9 @@ class SavedViewTest(ModelViewTestCase):
             response_body = extract_page_body(response.content.decode(response.charset))
             self.assertNotIn("Example hidden job", response_body, msg=response_body)
             self.assertBodyContains(
-                response, f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}', html=True
+                response,
+                f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}<span aria-hidden="true" class="mdi mdi-account-group ms-auto">',
+                html=True,
             )
 
         with self.subTest("Update device Saved View with boolean filter parameters"):
@@ -2289,7 +2291,9 @@ class SavedViewTest(ModelViewTestCase):
             self.assertHttpStatus(response, 200)
             response_body = extract_page_body(response.content.decode(response.charset))
             self.assertBodyContains(
-                response, f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}', html=True
+                response,
+                f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}<span aria-hidden="true" class="mdi mdi-account-group ms-auto">',
+                html=True,
             )
 
 
