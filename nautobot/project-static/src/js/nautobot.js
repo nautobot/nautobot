@@ -1,4 +1,4 @@
-import '../scss/nautobot.scss';
+mport '../scss/nautobot.scss';
 
 import * as bootstrap from 'bootstrap';
 window.bootstrap = bootstrap;
