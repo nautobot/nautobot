@@ -1,4 +1,4 @@
-mport '../scss/nautobot.scss';
+import '../scss/nautobot.scss';
 
 import * as bootstrap from 'bootstrap';
 window.bootstrap = bootstrap;
@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // History
   loadState();
-  window.nb.history = { saveState };
+  window.nb.history = { saveState, loadState };
 
   // Tooltips
   // https://getbootstrap.com/docs/5.3/components/tooltips/#enable-tooltips
