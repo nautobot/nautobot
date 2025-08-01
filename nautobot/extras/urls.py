@@ -23,6 +23,7 @@ router.register("contact-associations", views.ContactAssociationUIViewSet)
 router.register("custom-links", views.CustomLinkUIViewSet)
 router.register("export-templates", views.ExportTemplateUIViewSet)
 router.register("external-integrations", views.ExternalIntegrationUIViewSet)
+router.register("git-repositories", views.GitRepositoryUIViewSet)
 router.register("job-buttons", views.JobButtonUIViewSet)
 router.register("job-hooks", views.JobHookUIViewSet)
 router.register("job-queues", views.JobQueueUIViewSet)
@@ -114,58 +115,6 @@ urlpatterns = [
         kwargs={"model": DynamicGroup},
     ),
     # Git repositories
-    path(
-        "git-repositories/",
-        views.GitRepositoryListView.as_view(),
-        name="gitrepository_list",
-    ),
-    path(
-        "git-repositories/add/",
-        views.GitRepositoryEditView.as_view(),
-        name="gitrepository_add",
-    ),
-    path(
-        "git-repositories/delete/",
-        views.GitRepositoryBulkDeleteView.as_view(),
-        name="gitrepository_bulk_delete",
-    ),
-    path(
-        "git-repositories/edit/",
-        views.GitRepositoryBulkEditView.as_view(),
-        name="gitrepository_bulk_edit",
-    ),
-    path(
-        "git-repositories/import/",
-        views.GitRepositoryBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="gitrepository_import",
-    ),
-    path(
-        "git-repositories/<uuid:pk>/",
-        views.GitRepositoryView.as_view(),
-        name="gitrepository",
-    ),
-    path(
-        "git-repositories/<uuid:pk>/edit/",
-        views.GitRepositoryEditView.as_view(),
-        name="gitrepository_edit",
-    ),
-    path(
-        "git-repositories/<uuid:pk>/delete/",
-        views.GitRepositoryDeleteView.as_view(),
-        name="gitrepository_delete",
-    ),
-    path(
-        "git-repositories/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="gitrepository_changelog",
-        kwargs={"model": GitRepository},
-    ),
-    path(
-        "git-repositories/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="gitrepository_notes",
-        kwargs={"model": GitRepository},
-    ),
     path(
         "git-repositories/<uuid:pk>/result/",
         views.GitRepositoryResultView.as_view(),

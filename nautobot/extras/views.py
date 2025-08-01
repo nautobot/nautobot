@@ -1074,46 +1074,37 @@ class ExternalIntegrationUIViewSet(NautobotUIViewSet):
 # Git repositories
 #
 
-
-class GitRepositoryListView(generic.ObjectListView):
+class GitRepositoryUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.GitRepositoryBulkEditForm
+    filterset_form_class = forms.GitRepositoryFilterForm
     queryset = GitRepository.objects.all()
-    filterset = filters.GitRepositoryFilterSet
-    filterset_form = forms.GitRepositoryFilterForm
-    table = tables.GitRepositoryTable
-    template_name = "extras/gitrepository_list.html"
+    form_class = forms.GitRepositoryForm
+    filterset_class = filters.GitRepositoryFilterSet
+    serializer_class = serializers.GitRepositorySerializer
+    table_class = tables.GitRepositoryTable
 
-    def extra_context(self):
-        # Get the newest results for each repository name
-        results = {
-            r.task_kwargs["repository"]: r
-            for r in JobResult.objects.filter(
-                task_name__startswith="nautobot.core.jobs.GitRepository",
-                task_kwargs__repository__isnull=False,
-                status__in=JobResultStatusChoices.READY_STATES,
-            )
-            .order_by("date_done")
-            .defer("result")
-        }
-        return {
-            "job_results": results,
+    def get_extra_context(self, request, instance=None):
+        context = {
             "datasource_contents": get_datasource_contents("extras.gitrepository"),
         }
 
+        if self.action == "retrieve":
+            context.update(super().get_extra_context(request, instance))
+        elif self.action == "list":
+            results = {
+                r.task_kwargs["repository"]: r
+                for r in JobResult.objects.filter(
+                    task_name__startswith="nautobot.core.jobs.GitRepository",
+                    task_kwargs__repository__isnull=False,
+                    status__in=JobResultStatusChoices.READY_STATES,
+                )
+                .order_by("date_done")
+                .defer("result")
+            }
+            context["job_results"] = results
 
-class GitRepositoryView(generic.ObjectView):
-    queryset = GitRepository.objects.all()
-
-    def get_extra_context(self, request, instance):
-        return {
-            "datasource_contents": get_datasource_contents("extras.gitrepository"),
-            **super().get_extra_context(request, instance),
-        }
-
-
-class GitRepositoryEditView(generic.ObjectEditView):
-    queryset = GitRepository.objects.all()
-    model_form = forms.GitRepositoryForm
-    template_name = "extras/gitrepository_object_edit.html"
+        return context
+    
 
     # TODO(jathan): Align with changes for v2 where we're not stashing the user on the instance for
     # magical calls and instead discretely calling `repo.sync(user=user, dry_run=dry_run)`, but
@@ -1121,49 +1112,22 @@ class GitRepositoryEditView(generic.ObjectEditView):
     def alter_obj(self, obj, request, url_args, url_kwargs):
         # A GitRepository needs to know the originating request when it's saved so that it can enqueue using it
         obj.user = request.user
+        # A GitRepository needs to know the originating request when it's saved so that it can enqueue using it
+        obj.request = request
         return super().alter_obj(obj, request, url_args, url_kwargs)
+    
 
     def get_return_url(self, request, obj=None, default_return_url=None):
         if request.method == "POST":
             return reverse("extras:gitrepository_result", kwargs={"pk": obj.pk})
         return super().get_return_url(request, obj=obj, default_return_url=default_return_url)
+    
 
-
-class GitRepositoryDeleteView(generic.ObjectDeleteView):
-    queryset = GitRepository.objects.all()
-
-
-class GitRepositoryBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = GitRepository.objects.all()
-    table = tables.GitRepositoryBulkTable
-
-
-class GitRepositoryBulkEditView(generic.BulkEditView):
-    queryset = GitRepository.objects.select_related("secrets_group")
-    filterset = filters.GitRepositoryFilterSet
-    table = tables.GitRepositoryBulkTable
-    form = forms.GitRepositoryBulkEditForm
-
-    def alter_obj(self, obj, request, url_args, url_kwargs):
-        # A GitRepository needs to know the originating request when it's saved so that it can enqueue using it
-        obj.request = request
-        return super().alter_obj(obj, request, url_args, url_kwargs)
-
-    def extra_context(self):
-        return {
-            "datasource_contents": get_datasource_contents("extras.gitrepository"),
-        }
-
-
-class GitRepositoryBulkDeleteView(generic.BulkDeleteView):
-    queryset = GitRepository.objects.all()
-    table = tables.GitRepositoryBulkTable
-    filterset = filters.GitRepositoryFilterSet
-
-    def extra_context(self):
-        return {
-            "datasource_contents": get_datasource_contents("extras.gitrepository"),
-        }
+    def form_save(self, form, **kwargs):
+        obj = form.instance
+        obj.user = self.request.user
+        obj.request = self.request
+        return super().form_save(form, **kwargs)
 
 
 def check_and_call_git_repository_function(request, pk, func):
