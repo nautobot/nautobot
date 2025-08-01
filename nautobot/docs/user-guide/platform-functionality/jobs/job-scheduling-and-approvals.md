@@ -48,7 +48,7 @@ Scheduled jobs that have `approval_required` set to `True` require approval from
     Requiring approval for the execution of Job Hooks on a `JobHookReceiver` subclass is not currently supported. Support for approval of Job Hooks may be added in a future release.
 
 Scheduled jobs can be approved or denied via the UI by user that has the `extras.change_approvalworkflowstage` and `extras.view_approvalworkflowstage` permission
-and API by any user that has the `extras.approve_job` permission for the job in question, as well as the appropriate `extras.change_scheduledjob` and/or `extras.delete_scheduledjob` permissions.
+and API by any user that has the `extras.change_approvalworkflow` permission for the job in question, as well as the appropriate `extras.change_scheduledjob` permissions.
 
 !!! note
     Scheduled jobs that are past their scheduled run date can still be approved, but the approver will be asked to confirm the operation.
@@ -59,14 +59,14 @@ The queue of jobs that need approval can be found under `Approvals > Approval Da
 
 ### Approval via the API
 
-Approvals can also be given via the REST API. The endpoints to approve, deny, and dry run a scheduled job are found on the scheduled job endpoint under `approve`, `deny`, and `dry-run`, respectively.
+Approvals can also be given via the REST API. The endpoints to approve, deny, and dry run a scheduled job are found on the scheduled job endpoint under `approve`, `deny` respectively.
+You may also include a comment in the request data when approving or denying a workflow.
 
 ```no-highlight
 curl -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
 -H "Accept: application/json; version=1.3; indent=4" \
-http://nautobot/api/extras/scheduled-jobs/$JOB_ID/approve?force=true
+-d '{"comment": "Approved for deployment"}' \
+http://nautobot/api/extras/approval-workflows/$APPROVAL_WORKFLOW_ID/approve
 ```
-
-The approval endpoint additionally provides a `force` query parameter that needs to be set if a job is past its scheduled datetime.

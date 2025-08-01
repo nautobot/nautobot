@@ -1,0 +1,1 @@
+Added new API actions under `api/extras/approval-workflows/`: approve, deny, comment and pending-approvals

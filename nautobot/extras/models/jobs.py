@@ -1270,9 +1270,13 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
 
     def on_workflow_denied(self, approval_workflow):
         """When denied, set approved_at to None."""
+        # TBD: Should we change this name and also store date when scheduled job was denied ?
         if self.approved_at:
             self.approved_at = None
             self.save()
+
+        publish_event_payload = {"data": serialize_object_v2(self)}
+        publish_event(topic="nautobot.jobs.approval.denied", payload=publish_event_payload)
 
     def get_approval_template(self):
         """

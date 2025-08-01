@@ -432,7 +432,6 @@ class ApprovalWorkflowStageUIViewSet(
 
             object_under_review = instance.approval_workflow.object_under_review
             template_name = getattr(object_under_review, "get_approval_template", lambda: None)()
-            print("template_name: ", template_name)
             if not template_name:
                 template_name = "extras/approval_workflow/approve.html"
 

@@ -6,7 +6,7 @@ from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from graphene_django.views import GraphQLView
 from graphql import GraphQLError
 from rest_framework import mixins, status, viewsets
@@ -27,13 +27,11 @@ from nautobot.core.api.views import (
     NautobotAPIVersionMixin,
     ReadOnlyModelViewSet,
 )
-from nautobot.core.events import publish_event
 from nautobot.core.exceptions import CeleryWorkerNotRunningException
 from nautobot.core.graphql import execute_saved_query
 from nautobot.core.models.querysets import count_related
-from nautobot.core.models.utils import serialize_object_v2
 from nautobot.extras import filters
-from nautobot.extras.choices import JobExecutionType, JobQueueTypeChoices
+from nautobot.extras.choices import ApprovalWorkflowStateChoices, JobExecutionType, JobQueueTypeChoices
 from nautobot.extras.filters import RoleFilterSet
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
@@ -288,6 +286,195 @@ class ApprovalWorkflowViewSet(NautobotModelViewSet):
     queryset = ApprovalWorkflow.objects.all()
     serializer_class = serializers.ApprovalWorkflowSerializer
     filterset_class = filters.ApprovalWorkflowFilterSet
+
+    def _validate_stage(self, stage):
+        """Checks if a workflow has an active stage."""
+        return stage is not None
+
+    def _has_change_permission(self, user, workflow):
+        """Checks whether the user has 'change' permission on the model under review."""
+        ct = workflow.object_under_review_content_type
+        model_name = ct.model
+        app_label = ct.app_label
+        change_perm = f"{app_label}.change_{model_name}"
+        return user.has_perm(change_perm)
+
+    def _is_user_approver(self, user, stage):
+        """Checks if the user belongs to the group allowed to approve the current stage."""
+        approver_group = stage.approval_workflow_stage_definition.approver_group
+        return approver_group in user.groups.all()
+
+    def _user_already_responded(self, user, stage):
+        """Checks if the user has already responded to the current stage."""
+        return user in stage.users_that_already_approved
+
+    def _handle_response(self, request, action_type):
+        """Common logic for approve/deny actions."""
+        try:
+            workflow = self.get_object()
+            user = request.user
+            stage = workflow.active_stage
+            if not self._validate_stage(stage):
+                return Response(
+                    {"detail": "Workflow has no active stage."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if not self._has_change_permission(user, workflow):
+                ct = workflow.object_under_review_content_type
+                model_name = ct.model
+                app_label = ct.app_label
+                return Response(
+                    {"detail": f"You do not have 'change' permission on {app_label}.{model_name}."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            if not self._is_user_approver(user, stage):
+                return Response(
+                    {"detail": "You do not have permission to approve this stage."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            if self._user_already_responded(user, stage):
+                return Response(
+                    {"detail": "You have already responded to this stage."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            comment = request.data.get("comments", "")
+            ApprovalWorkflowStageResponse.objects.create(
+                approval_workflow_stage=stage,
+                user=user,
+                state=ApprovalWorkflowStateChoices.APPROVED
+                if action_type == "approve"
+                else ApprovalWorkflowStateChoices.DENIED,
+                comments=comment,
+            )
+            serializer = serializers.ApprovalWorkflowSerializer(workflow, context={"request": request})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except ApprovalWorkflow.DoesNotExist:
+            return Response(
+                {"detail": "ApprovalWorkflow not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+    def restrict_queryset(self, request, *args, **kwargs):
+        """
+        Apply special permissions as queryset filter on the /approve/, /deny/, and /comment/ endpoints.
+
+        Otherwise, same as ModelViewSetMixin.
+        """
+        action_to_method = {"approve": "change", "deny": "change", "comment": "change"}
+        if request.user.is_authenticated and self.action in action_to_method:
+            self.queryset = self.queryset.restrict(request.user, action_to_method[self.action])
+        else:
+            super().restrict_queryset(request, *args, **kwargs)
+
+    class ApprovalWorkflowStageChangePermission(TokenPermissions):
+        """Enforce `change_approvalworkflowstage` permission (instead of default `add_approvalworkflow` for POST)."""
+
+        perms_map = {
+            "POST": ["%(app_label)s.change_%(model_name)s"],
+        }
+
+    @extend_schema(
+        methods=["post"],
+        request=None,
+        responses={"200": serializers.ApprovalWorkflowSerializer},
+    )
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[ApprovalWorkflowStageChangePermission],
+    )
+    def approve(self, request, pk=None):
+        """Current user approves the active stage of this workflow."""
+        return self._handle_response(request, action_type="approve")
+
+    @extend_schema(
+        methods=["post"],
+        request=None,
+        responses={"200": serializers.ApprovalWorkflowSerializer},
+    )
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[ApprovalWorkflowStageChangePermission],
+    )
+    def deny(self, request, pk=None):
+        """Current user denies the active stage of this workflow."""
+        return self._handle_response(request, action_type="deny")
+
+    @action(detail=True, methods=["post"], url_path="comment")
+    def comment(self, request, pk=None):
+        """
+        Add/Update a neutral comment to the current active stage
+        (without approving or denying).
+        """
+        try:
+            workflow = self.get_object()
+            user = request.user
+            stage = workflow.active_stage
+            if not self._validate_stage(stage):
+                return Response(
+                    {"detail": "Workflow has no active stage."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if not self._is_user_approver(user, stage):
+                return Response(
+                    {"detail": "You do not have permission to comment this stage."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            comment = request.data.get("comments", "")
+            if not comment:
+                return Response(
+                    {"detail": "Comment cannot be empty."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.get_or_create(
+                approval_workflow_stage=stage,
+                user=user,
+                state=ApprovalWorkflowStateChoices.PENDING,
+            )
+            approval_workflow_stage_response.comments = comment
+            approval_workflow_stage_response.save()
+
+            serializer = serializers.ApprovalWorkflowSerializer(workflow, context={"request": request})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except ApprovalWorkflow.DoesNotExist:
+            return Response(
+                {"detail": "ApprovalWorkflow not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+    @extend_schema(
+        methods=["get"],
+        responses={200: serializers.ApprovalWorkflowSerializer(many=True)},
+    )
+    @action(detail=False, methods=["get"], url_path="pending-approvals")
+    def pending_approvals(self, request):
+        """List approval workflows pending current user's approval."""
+        user = request.user
+        pending_workflows = []
+
+        for workflow in self.queryset.filter(current_state=ApprovalWorkflowStateChoices.PENDING):
+            stage = workflow.active_stage
+            if not self._validate_stage(stage):
+                continue
+            if not self._is_user_approver(user, stage):
+                continue
+            if self._user_already_responded(user, stage):
+                continue
+            pending_workflows.append(workflow)
+
+        pending_workflows = self.paginate_queryset(pending_workflows)
+        serializer = self.get_serializer(pending_workflows, many=True)
+        return self.get_paginated_response(serializer.data)
 
 
 class ApprovalWorkflowStageViewSet(NautobotModelViewSet):
@@ -963,94 +1150,15 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
 
     def restrict_queryset(self, request, *args, **kwargs):
         """
-        Apply special permissions as queryset filter on the /approve/, /deny/, and /dry-run/ endpoints.
+        Apply special permissions as queryset filter on the /dry-run/ endpoints.
 
         Otherwise, same as ModelViewSetMixin.
         """
-        action_to_method = {"approve": "change", "deny": "delete", "dry-run": "view"}
+        action_to_method = {"dry-run": "view"}
         if request.user.is_authenticated and self.action in action_to_method:
             self.queryset = self.queryset.restrict(request.user, action_to_method[self.action])
         else:
             super().restrict_queryset(request, *args, **kwargs)
-
-    class ScheduledJobChangePermissions(TokenPermissions):
-        """
-        As nautobot.core.api.authentication.TokenPermissions, but enforcing change_scheduledjob not add_scheduledjob.
-        """
-
-        perms_map = {
-            "POST": ["%(app_label)s.change_%(model_name)s"],
-        }
-
-    @extend_schema(
-        methods=["post"],
-        responses={"200": serializers.ScheduledJobSerializer},
-        request=None,
-        parameters=[
-            OpenApiParameter(
-                "force",
-                location=OpenApiParameter.QUERY,
-                description="force execution even if start time has passed",
-                type=OpenApiTypes.BOOL,
-            )
-        ],
-    )
-    @action(detail=True, methods=["post"], permission_classes=[ScheduledJobChangePermissions])
-    def approve(self, request, pk):
-        scheduled_job = get_object_or_404(self.queryset, pk=pk)
-
-        if not Job.objects.check_perms(request.user, instance=scheduled_job.job_model, action="approve"):
-            raise PermissionDenied("You do not have permission to approve this request.")
-
-        # Mark the scheduled_job as approved, allowing the schedular to schedule the job execution task
-        if request.user == scheduled_job.user:
-            # The requestor *cannot* approve their own job
-            return Response("You cannot approve your own job request!", status=403)
-
-        if (
-            scheduled_job.one_off
-            and scheduled_job.start_time < timezone.now()
-            and not request.query_params.get("force")
-        ):
-            return Response(
-                "The job's start time is in the past. If you want to force a run anyway, add the `force` query parameter.",
-                status=400,
-            )
-
-        scheduled_job.approved_by_user = request.user
-        scheduled_job.approved_at = timezone.now()
-        scheduled_job.save()
-        publish_event_payload = {"data": serialize_object_v2(scheduled_job)}
-        publish_event(topic="nautobot.jobs.approval.approved", payload=publish_event_payload)
-        serializer = serializers.ScheduledJobSerializer(scheduled_job, context={"request": request})
-
-        return Response(serializer.data)
-
-    class ScheduledJobDeletePermissions(TokenPermissions):
-        """
-        As nautobot.core.api.authentication.TokenPermissions, but enforcing delete_scheduledjob not add_scheduledjob.
-        """
-
-        perms_map = {
-            "POST": ["%(app_label)s.delete_%(model_name)s"],
-        }
-
-    @extend_schema(
-        methods=["post"],
-        request=None,
-    )
-    @action(detail=True, methods=["post"], permission_classes=[ScheduledJobDeletePermissions])
-    def deny(self, request, pk):
-        scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
-
-        if not Job.objects.check_perms(request.user, instance=scheduled_job.job_model, action="approve"):
-            raise PermissionDenied("You do not have permission to deny this request.")
-
-        publish_event_payload = {"data": serialize_object_v2(scheduled_job)}
-        publish_event(topic="nautobot.jobs.approval.denied", payload=publish_event_payload)
-        scheduled_job.delete()
-
-        return Response(None)
 
     class ScheduledJobViewPermissions(TokenPermissions):
         """
