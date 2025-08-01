@@ -1192,30 +1192,22 @@ class GitRepositoryResultView(generic.ObjectView):
 #
 
 
-class GraphQLQueryListView(generic.ObjectListView):
+class GraphQLQueryUIViewSet(
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectEditViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectNotesViewMixin,
+):
+    filterset_form_class = forms.GraphQLQueryFilterForm
     queryset = GraphQLQuery.objects.all()
-    table = tables.GraphQLQueryTable
-    filterset = filters.GraphQLQueryFilterSet
-    filterset_form = forms.GraphQLQueryFilterForm
+    form_class = forms.GraphQLQueryForm
+    filterset_class = filters.GraphQLQueryFilterSet
+    serializer_class = serializers.GraphQLQuerySerializer
+    table_class = tables.GraphQLQueryTable
     action_buttons = ("add",)
-
-
-class GraphQLQueryView(generic.ObjectView):
-    queryset = GraphQLQuery.objects.all()
-
-
-class GraphQLQueryEditView(generic.ObjectEditView):
-    queryset = GraphQLQuery.objects.all()
-    model_form = forms.GraphQLQueryForm
-
-
-class GraphQLQueryDeleteView(generic.ObjectDeleteView):
-    queryset = GraphQLQuery.objects.all()
-
-
-class GraphQLQueryBulkDeleteView(generic.BulkDeleteView):
-    queryset = GraphQLQuery.objects.all()
-    table = tables.GraphQLQueryTable
 
 
 #
