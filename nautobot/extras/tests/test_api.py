@@ -178,7 +178,7 @@ class ApprovalWorkflowTest(
 
         cls.approval_workflow_content_type_cases = [
             {
-                "name": "ScheduledJob",
+                "content_type": "ScheduledJob",
                 "object": cls.scheduled_jobs[0],
                 "workflow": cls.approval_workflows[0],
                 "stage": cls.approval_workflow_stages[0],
@@ -187,7 +187,7 @@ class ApprovalWorkflowTest(
 
     def _test_workflow_action_anonymous(self, action):
         for case in self.approval_workflow_content_type_cases:
-            with self.subTest(case=case["name"], action=action):
+            with self.subTest(case=case["content_type"], action=action):
                 url = reverse(f"extras-api:approvalworkflow-{action}", kwargs={"pk": case["workflow"].pk})
                 response = self.client.post(url)
                 self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
@@ -203,7 +203,7 @@ class ApprovalWorkflowTest(
 
     def _test_approval_workflow_action_without_permission(self, action):
         for case in self.approval_workflow_content_type_cases:
-            with self.subTest(case=case["name"], action=action):
+            with self.subTest(case=case["content_type"], action=action):
                 url = reverse(f"extras-api:approvalworkflow-{action}", kwargs={"pk": case["workflow"].pk})
                 with disable_warnings("django.request"):
                     response = self.client.post(url, **self.header)
@@ -220,9 +220,10 @@ class ApprovalWorkflowTest(
 
     def _test_approval_workflow_action_without_approvalworkflow_permission(self, action):
         for case in self.approval_workflow_content_type_cases:
-            with self.subTest(case=case["name"], action=action):
+            content_type = case["content_type"]
+            with self.subTest(case=content_type, action=action):
                 url = reverse(f"extras-api:approvalworkflow-{action}", kwargs={"pk": case["workflow"].pk})
-                self.add_permissions(f"extras.change_{case["name"].lower()}")
+                self.add_permissions(f"extras.change_{content_type.lower()}")
                 response = self.client.post(url, **self.header)
                 self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
                 self.assertIn(response.data["detail"], "You do not have permission to perform this action.")
@@ -237,7 +238,7 @@ class ApprovalWorkflowTest(
 
     def _test_approval_workflow_action_without_change_content_type_permission(self, action):
         for case in self.approval_workflow_content_type_cases:
-            with self.subTest(case=case["name"], action=action):
+            with self.subTest(case=case["content_type"], action=action):
                 url = reverse(f"extras-api:approvalworkflow-{action}", kwargs={"pk": case["workflow"].pk})
                 self.add_permissions("extras.change_approvalworkflow")
                 self.user.groups.add(self.approver_group_1)
@@ -255,9 +256,10 @@ class ApprovalWorkflowTest(
 
     def _test_approval_workflow_action_without_approver_group_membership(self, action):
         for case in self.approval_workflow_content_type_cases:
-            with self.subTest(case=case["name"], action=action):
+            content_type = case["content_type"]
+            with self.subTest(case=content_type, action=action):
                 url = reverse(f"extras-api:approvalworkflow-{action}", kwargs={"pk": case["workflow"].pk})
-                self.add_permissions("extras.change_approvalworkflow", f"extras.change_{case["name"].lower()}")
+                self.add_permissions("extras.change_approvalworkflow", f"extras.change_{content_type.lower()}")
                 response = self.client.post(url, **self.header)
                 self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
                 self.assertIn(response.data["detail"], "You do not have permission to approve this stage.")
@@ -273,11 +275,12 @@ class ApprovalWorkflowTest(
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approve_approval_workflow_with_one_stage(self):
         for case in self.approval_workflow_content_type_cases:
-            with self.subTest(case=case["name"]):
+            content_type = case["content_type"]
+            with self.subTest(case=content_type):
                 approval_workflow = case["workflow"]
                 approval_workflow_stage = case["stage"]
                 url = reverse("extras-api:approvalworkflow-approve", kwargs={"pk": case["workflow"].pk})
-                self.add_permissions("extras.change_approvalworkflow", f"extras.change_{case["name"].lower()}")
+                self.add_permissions("extras.change_approvalworkflow", f"extras.change_{content_type.lower()}")
                 self.user.groups.add(self.approver_group_1)
 
                 response = self.client.post(url, **self.header)
@@ -296,11 +299,12 @@ class ApprovalWorkflowTest(
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approve_approval_workflow_with_more_than_one_stage(self):
         for case in self.approval_workflow_content_type_cases:
-            with self.subTest(case=case["name"]):
+            content_type = case["content_type"]
+            with self.subTest(case=content_type):
                 approval_workflow = case["workflow"]
                 approval_workflow_stage = case["stage"]
                 url = reverse("extras-api:approvalworkflow-approve", kwargs={"pk": case["workflow"].pk})
-                self.add_permissions("extras.change_approvalworkflow", f"extras.change_{case["name"].lower()}")
+                self.add_permissions("extras.change_approvalworkflow", f"extras.change_{content_type.lower()}")
                 self.user.groups.add(self.approver_group_1)
 
                 approval_workflow_stage_definition_2 = ApprovalWorkflowStageDefinition.objects.create(
@@ -336,11 +340,12 @@ class ApprovalWorkflowTest(
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_deny_approval_workflow_with_one_stage(self):
         for case in self.approval_workflow_content_type_cases:
-            with self.subTest(case=case["name"]):
+            content_type = case["content_type"]
+            with self.subTest(case=content_type):
                 approval_workflow = case["workflow"]
                 approval_workflow_stage = case["stage"]
                 url = reverse("extras-api:approvalworkflow-deny", kwargs={"pk": case["workflow"].pk})
-                self.add_permissions("extras.change_approvalworkflow", f"extras.change_{case["name"].lower()}")
+                self.add_permissions("extras.change_approvalworkflow", f"extras.change_{content_type.lower()}")
                 self.user.groups.add(self.approver_group_1)
                 response = self.client.post(url, **self.header)
                 self.assertHttpStatus(response, status.HTTP_200_OK)
@@ -358,11 +363,12 @@ class ApprovalWorkflowTest(
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_deny_approval_workflow_with_more_than_one_stage(self):
         for case in self.approval_workflow_content_type_cases:
-            with self.subTest(case=case["name"]):
+            content_type = case["content_type"]
+            with self.subTest(case=content_type):
                 approval_workflow = case["workflow"]
                 approval_workflow_stage = case["stage"]
                 url = reverse("extras-api:approvalworkflow-deny", kwargs={"pk": case["workflow"].pk})
-                self.add_permissions("extras.change_approvalworkflow", f"extras.change_{case["name"].lower()}")
+                self.add_permissions("extras.change_approvalworkflow", f"extras.change_{content_type.lower()}")
                 self.user.groups.add(self.approver_group_1)
 
                 approval_workflow_stage_definition_2 = ApprovalWorkflowStageDefinition.objects.create(
