@@ -2258,11 +2258,18 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
     table_class = tables.ObjectChangeTable
     action_buttons = ("export",)
 
+    # 2.0 TODO: Remove this remapping and solve it at the `BaseFilterSet` as it is addressing a breaking change.
     def get_queryset(self):
+        # Remappings below allow previous queries of time_before and time_after to use
+        # newer methods specifying the lookup method.
+
+        # They will only use the previous arguments if the newer ones are undefined
+
         """
         Temporary compatibility patch for old query parameters (`time_after`, `time_before`)
         mapped to the correct Django filter lookups (`time__gte`, `time__lte`).
         """
+
         queryset = super().get_queryset()
         request = self.request
 
