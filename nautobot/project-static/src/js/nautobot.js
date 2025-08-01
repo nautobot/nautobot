@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // History
   loadState();
-  window.nb.history = { saveState, loadState };
+  window.nb.history = { saveState };
 
   // Tooltips
   // https://getbootstrap.com/docs/5.3/components/tooltips/#enable-tooltips
