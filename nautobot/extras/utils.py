@@ -279,7 +279,7 @@ def extras_features(*features):
         if "model_features" not in registry:
             registry["model_features"] = {f: collections.defaultdict(list) for f in EXTRAS_FEATURES}
         if "feature_models" not in registry:
-            registry["feature_models"] = {f: list() for f in EXTRAS_FEATURES}
+            registry["feature_models"] = {f: [] for f in EXTRAS_FEATURES}
         for feature in features:
             if feature in EXTRAS_FEATURES:
                 registry["feature_models"][feature].append(model_class)
