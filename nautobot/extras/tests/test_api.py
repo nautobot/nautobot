@@ -409,8 +409,44 @@ class ApprovalWorkflowTest(
         )
         self.user.groups.add(self.approver_group_1)
 
+        # Create 1 approved stage for different approval workflow
+        approval_workflow_stage_definition_approver_group_1 = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=self.approval_workflow_definitions[1],
+            weight=100,
+            name="Test Approval Workflow Stage 1 Definition",
+            min_approvers=1,
+            denial_message="Stage Denial Message",
+            approver_group=self.approver_group_1,
+        )
+        ApprovalWorkflowStage.objects.create(
+            approval_workflow=self.approval_workflows[1],
+            approval_workflow_stage_definition=approval_workflow_stage_definition_approver_group_1,
+            state=ApprovalWorkflowStateChoices.APPROVED,
+        )
+        # Create 1 pending stage, but in different approver group
+        approver_group_2 = Group.objects.create(name="Approver Group 2")
+        approval_workflow_stage_definition_approver_group_2 = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=self.approval_workflow_definitions[2],
+            weight=100,
+            name="Test Approval Workflow Stage 1 Definition",
+            min_approvers=1,
+            denial_message="Stage Denial Message",
+            approver_group=approver_group_2,
+        )
+        ApprovalWorkflowStage.objects.create(
+            approval_workflow=self.approval_workflows[2],
+            approval_workflow_stage_definition=approval_workflow_stage_definition_approver_group_2,
+            state=ApprovalWorkflowStateChoices.PENDING,
+        )
+
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
+        # user is approver in 2 approval workflows, but second one is approved
+        self.assertTrue(approval_workflow_stage_definition_approver_group_1.approver_group in self.user.groups.all())
+        # user is not an approver
+        self.assertTrue(
+            approval_workflow_stage_definition_approver_group_2.approver_group not in self.user.groups.all()
+        )
         self.assertEqual(len(response.data["results"]), 1)
         self.assertEqual(response.data["results"][0]["id"], str(self.approval_workflows[0].id))
 

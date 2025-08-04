@@ -85,7 +85,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.secrets.exceptions import SecretError
-from nautobot.extras.utils import get_job_queue, get_worker_count
+from nautobot.extras.utils import get_job_queue, get_pending_approval_workflow_stages, get_worker_count
 
 from . import serializers
 
@@ -312,52 +312,51 @@ class ApprovalWorkflowViewSet(NautobotModelViewSet):
         """Common logic for approve/deny actions."""
         try:
             workflow = self.get_object()
-            user = request.user
-            stage = workflow.active_stage
-            if not self._validate_stage(stage):
-                return Response(
-                    {"detail": "Workflow has no active stage."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            if not self._has_change_permission(user, workflow):
-                ct = workflow.object_under_review_content_type
-                model_name = ct.model
-                app_label = ct.app_label
-                return Response(
-                    {"detail": f"You do not have 'change' permission on {app_label}.{model_name}."},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
-
-            if not self._is_user_approver(user, stage):
-                return Response(
-                    {"detail": "You do not have permission to approve this stage."},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
-
-            if self._user_already_responded(user, stage):
-                return Response(
-                    {"detail": "You have already responded to this stage."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            comment = request.data.get("comments", "")
-            ApprovalWorkflowStageResponse.objects.create(
-                approval_workflow_stage=stage,
-                user=user,
-                state=ApprovalWorkflowStateChoices.APPROVED
-                if action_type == "approve"
-                else ApprovalWorkflowStateChoices.DENIED,
-                comments=comment,
-            )
-            serializer = serializers.ApprovalWorkflowSerializer(workflow, context={"request": request})
-            return Response(serializer.data, status=status.HTTP_200_OK)
-
         except ApprovalWorkflow.DoesNotExist:
             return Response(
                 {"detail": "ApprovalWorkflow not found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
+        user = request.user
+        stage = workflow.active_stage
+        if not self._validate_stage(stage):
+            return Response(
+                {"detail": "Workflow has no active stage."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not self._has_change_permission(user, workflow):
+            ct = workflow.object_under_review_content_type
+            model_name = ct.model
+            app_label = ct.app_label
+            return Response(
+                {"detail": f"You do not have 'change' permission on {app_label}.{model_name}."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if not self._is_user_approver(user, stage):
+            return Response(
+                {"detail": "You do not have permission to approve this stage."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if self._user_already_responded(user, stage):
+            return Response(
+                {"detail": "You have already responded to this stage."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        comment = request.data.get("comments", "")
+        ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=stage,
+            user=user,
+            state=ApprovalWorkflowStateChoices.APPROVED
+            if action_type == "approve"
+            else ApprovalWorkflowStateChoices.DENIED,
+            comments=comment,
+        )
+        serializer = serializers.ApprovalWorkflowSerializer(workflow, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def restrict_queryset(self, request, *args, **kwargs):
         """
@@ -389,7 +388,7 @@ class ApprovalWorkflowViewSet(NautobotModelViewSet):
         permission_classes=[ApprovalWorkflowStageChangePermission],
     )
     def approve(self, request, pk=None):
-        """Current user approves the active stage of this workflow."""
+        """Approve the active stage of this workflow."""
         return self._handle_response(request, action_type="approve")
 
     @extend_schema(
@@ -403,9 +402,14 @@ class ApprovalWorkflowViewSet(NautobotModelViewSet):
         permission_classes=[ApprovalWorkflowStageChangePermission],
     )
     def deny(self, request, pk=None):
-        """Current user denies the active stage of this workflow."""
+        """Deny the active stage of this workflow."""
         return self._handle_response(request, action_type="deny")
 
+    @extend_schema(
+        methods=["post"],
+        request=None,
+        responses={"200": serializers.ApprovalWorkflowSerializer},
+    )
     @action(detail=True, methods=["post"], url_path="comment")
     def comment(self, request, pk=None):
         """
@@ -414,43 +418,42 @@ class ApprovalWorkflowViewSet(NautobotModelViewSet):
         """
         try:
             workflow = self.get_object()
-            user = request.user
-            stage = workflow.active_stage
-            if not self._validate_stage(stage):
-                return Response(
-                    {"detail": "Workflow has no active stage."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            if not self._is_user_approver(user, stage):
-                return Response(
-                    {"detail": "You do not have permission to comment this stage."},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
-
-            comment = request.data.get("comments", "")
-            if not comment:
-                return Response(
-                    {"detail": "Comment cannot be empty."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.get_or_create(
-                approval_workflow_stage=stage,
-                user=user,
-                state=ApprovalWorkflowStateChoices.PENDING,
-            )
-            approval_workflow_stage_response.comments = comment
-            approval_workflow_stage_response.save()
-
-            serializer = serializers.ApprovalWorkflowSerializer(workflow, context={"request": request})
-            return Response(serializer.data, status=status.HTTP_200_OK)
-
         except ApprovalWorkflow.DoesNotExist:
             return Response(
                 {"detail": "ApprovalWorkflow not found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
+        user = request.user
+        stage = workflow.active_stage
+        if not self._validate_stage(stage):
+            return Response(
+                {"detail": "Workflow has no active stage."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not self._is_user_approver(user, stage):
+            return Response(
+                {"detail": "You do not have permission to comment this stage."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        comment = request.data.get("comments", "")
+        if not comment:
+            return Response(
+                {"detail": "Comment cannot be empty."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.get_or_create(
+            approval_workflow_stage=stage,
+            user=user,
+            state=ApprovalWorkflowStateChoices.PENDING,
+        )
+        approval_workflow_stage_response.comments = comment
+        approval_workflow_stage_response.save()
+
+        serializer = serializers.ApprovalWorkflowSerializer(workflow, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @extend_schema(
         methods=["get"],
@@ -459,19 +462,10 @@ class ApprovalWorkflowViewSet(NautobotModelViewSet):
     @action(detail=False, methods=["get"], url_path="pending-approvals")
     def pending_approvals(self, request):
         """List approval workflows pending current user's approval."""
-        user = request.user
-        pending_workflows = []
-
-        for workflow in self.queryset.filter(current_state=ApprovalWorkflowStateChoices.PENDING):
-            stage = workflow.active_stage
-            if not self._validate_stage(stage):
-                continue
-            if not self._is_user_approver(user, stage):
-                continue
-            if self._user_already_responded(user, stage):
-                continue
-            pending_workflows.append(workflow)
-
+        pending_stages = get_pending_approval_workflow_stages(
+            request.user, ApprovalWorkflowStage.objects.select_related("approval_workflow")
+        )
+        pending_workflows = self.queryset.filter(id__in=pending_stages.values_list("approval_workflow", flat=True))
         pending_workflows = self.paginate_queryset(pending_workflows)
         serializer = self.get_serializer(pending_workflows, many=True)
         return self.get_paginated_response(serializer.data)

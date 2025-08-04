@@ -59,8 +59,9 @@ The queue of jobs that need approval can be found under `Approvals > Approval Da
 
 ### Approval via the API
 
-Approvals can also be given via the REST API. The endpoints to approve, deny, and dry run a scheduled job are found on the scheduled job endpoint under `approve`, `deny` respectively.
-You may also include a comment in the request data when approving or denying a workflow.
+Approvals can also be given via the REST API. The endpoints to approve, deny, comment and pending-approvals are found on the approval workflow endpoint under `approve`, `deny`, `comment` and `pending-workflows` respectively. You may also include a comment in the request data when approving or denying a workflow.
+
+#### Approve/Deny a Workflow
 
 ```no-highlight
 curl -X POST \
@@ -69,4 +70,24 @@ curl -X POST \
 -H "Accept: application/json; version=1.3; indent=4" \
 -d '{"comment": "Approved for deployment"}' \
 http://nautobot/api/extras/approval-workflows/$APPROVAL_WORKFLOW_ID/approve
+```
+
+```no-highlight
+curl -X POST \
+-H "Authorization: Token $TOKEN" \
+-H "Content-Type: application/json" \
+-H "Accept: application/json; version=1.3; indent=4" \
+-d '{"comment": "Deny reason"}' \
+http://nautobot/api/extras/approval-workflows/$APPROVAL_WORKFLOW_ID/deny
+```
+
+#### List Pending Approvals
+
+Retrieves a list of approval workflows that are pending approval for the current user. This can be done through the `pending-approvals` endpoint, which returns all workflows that are awaiting approval from the authenticated user.
+
+```no-highlight
+curl -X GET \
+-H "Authorization: Token $TOKEN" \
+-H "Accept: application/json; version=1.3; indent=4" \
+http://nautobot/api/extras/approval-workflows/pending-approvals
 ```
