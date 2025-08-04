@@ -1,0 +1,1 @@
+Added an index to JobLogEntry to improve performance of Job Result logs.
