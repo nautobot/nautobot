@@ -1625,7 +1625,7 @@ class PowerPanelFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet):
         choices=PowerPanelTypeChoices,
         null_value=None,
     )
-    circuit_positions = django_filters.NumberFilter()
+    breaker_position_count = django_filters.NumberFilter()
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     power_feeds = NaturalKeyOrPKMultipleChoiceFilter(
         prefers_id=True,
@@ -1644,7 +1644,7 @@ class PowerPanelFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet):
 
     class Meta:
         model = PowerPanel
-        fields = ["id", "name", "panel_type", "circuit_positions", "tags"]
+        fields = ["id", "name", "panel_type", "breaker_position_count", "tags"]
 
 
 class PowerFeedFilterSet(

@@ -13,15 +13,14 @@ The `type` field defines the operational type of the power feed in relation to o
 
 The interpretation of these types depends on the overall power design. For example, in an active-active (2N) configuration, a device might be served by two `Primary` feeds. In an active-passive (N+1) configuration, it would be served by one `Primary` and one `Redundant` feed.
 
-## Side
+## Power Path
 
-The `side` field defines the physical path or source of the power feed. It represents which power distribution train the circuit originates from, which is crucial for modeling fault tolerance:
+The `power_path` field defines the physical path or source of the power feed. It represents which power distribution path the circuit originates from, which is crucial for modeling fault tolerance:
 
-* **A-Side**: The power feed originates from the "A" power train
-* **B-Side**: The power feed originates from the "B" power train  
-* **C-Side**: For complex designs with a third redundant power train
+* **A-Side**: The power feed originates from the "A" power path
+* **B-Side**: The power feed originates from the "B" power path  
 
-If a power feed is part of a single, non-redundant power system (as in a Tier I or Tier II data center), the `side` field can be left blank.
+If a power feed is part of a single, non-redundant power system (as in a Tier I or Tier II data center), the `power_path` field can be left blank.
 
 ## Status
 
@@ -39,6 +38,14 @@ Power feeds can connect one power panel to another by specifying a `destination_
 !!! note
     The `destination_panel` field should only be used for panel-to-panel connections in the power distribution hierarchy. When connecting a power feed to a rack-level PDU, leave `destination_panel` blank since rack PDUs should be modeled as [devices](./device.md) with [power outlets](./poweroutlet.md), not as power panels.
 
+!!! warning "Cable Connection Exclusivity"
+    A power feed cannot specify both a `destination_panel` and be connected via cable to another endpoint simultaneously. Power feeds can either:
+
+    - Connect to a destination panel (panel-to-panel distribution), OR
+    - Be cabled to a device power port or other endpoint
+
+    But not both. This mutual exclusivity is enforced during validation to maintain data integrity.
+
 ## Electrical Characteristics
 
 Each power feed defines the electrical characteristics of the circuit:
@@ -54,19 +61,46 @@ Each power feed defines the electrical characteristics of the circuit:
 Power feeds can specify their breaker configuration within the source power panel:
 
 * **Breaker position**: The starting circuit position number in the panel
-* **Breaker poles**: The number of poles the breaker occupies (1, 2, or 3)
+* **Breaker pole count**: The number of poles the breaker occupies (1, 2, or 3)
 
-When breaker positions are specified, Nautobot validates that the configuration fits within the panel's circuit capacity and prevents conflicts with other power feeds.
+When breaker positions are specified, Nautobot validates that:
+
+1. **Panel capacity**: The breaker configuration fits within the panel's circuit capacity
+2. **Position conflicts**: No conflicts exist with other power feeds' breaker positions
+3. **Auto-defaulting**: If a breaker position is specified without a pole count, it defaults to a single-pole breaker
+
+The system calculates occupied positions based on standard electrical panel layouts where multi-pole breakers occupy consecutive positions with specific spacing requirements.
+
+### Phase Designation
+
+When breaker positions are configured, Nautobot automatically calculates the phase designation based on the occupied circuit positions. This follows standard electrical panel layouts where:
+
+* Positions 1,2 = Phase A
+* Positions 3,4 = Phase B  
+* Positions 5,6 = Phase C
+* Pattern repeats every 6 positions
+
+The calculated phase designation can be:
+
+* **Single-phase (1-pole)**: "A", "B", or "C" for single-pole breakers
+* **Single-phase (2-pole)**: "A-B", "B-C", etc. for two-pole breakers (e.g., 240V split-phase)
+* **Three-phase (3-pole)**: "A-B-C" for three-pole breakers
+
+This information is available through the `phase_designation` property and helps with load balancing and electrical planning.
+
+### Position Tracking
+
+The `occupied_positions` property provides a comma-separated string of all circuit positions occupied by the power feed. This is useful for understanding panel utilization and avoiding conflicts when adding new feeds.
 
 ## Modeling Power Redundancy
 
-By combining the `type` and `side` fields, you can model various industry-standard power redundancy configurations:
+By combining the `type` and `power_path` fields, you can model various industry-standard power redundancy configurations:
 
 | Uptime Tier | Design | Feed 1 | Feed 2 |
 | :--- | :--- | :--- | :--- |
-| Tier I/II | Single Path (N) | `type=Primary`, `side=` (blank) | (none) |
-| Tier III | Active/Passive (N+1) | `type=Primary`, `side=A-Side` | `type=Redundant`, `side=B-Side` |
-| Tier IV | Active/Active (2N) | `type=Primary`, `side=A-Side` | `type=Primary`, `side=B-Side` |
+| Tier I/II | Single Path (N) | `type=Primary`, `power_path=` (blank) | (none) |
+| Tier III | Active/Passive (N+1) | `type=Primary`, `power_path=A-Side` | `type=Redundant`, `power_path=B-Side` |
+| Tier IV | Active/Active (2N) | `type=Primary`, `power_path=A-Side` | `type=Primary`, `power_path=B-Side` |
 
 !!! info
     Cables can connect power feeds only to device power ports. Pass-through ports cannot be used to model power distribution. The power utilization of a rack is calculated when one or more power feeds are assigned to the rack and connected to devices that draw power.

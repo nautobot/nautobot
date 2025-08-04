@@ -22,9 +22,9 @@ Power panels can be categorized by type to better represent different components
 * **Mini Load Center (MLC)** - Smaller distribution panels
 * **Remote Power Panel (RPP)** - Distributed power panels in remote locations
 
-## Circuit Positions
+## Breaker Positions
 
-Power panels can optionally specify the total number of circuit positions available. This helps track breaker capacity and prevents overallocation when power feeds specify breaker positions. For example, a 42-position panelboard would have `circuit_positions` set to 42.
+Power panels can optionally specify the total number of breaker positions. This helps track breaker capacity and prevents overallocation when power feeds specify breaker positions. For example, a 42-position panelboard would have `breaker_position_count` set to 42.
 
 ## Panel-to-Panel Distribution
 

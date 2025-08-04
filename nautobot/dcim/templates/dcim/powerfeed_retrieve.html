@@ -29,6 +29,12 @@
                     <td>{{ object.occupied_positions }}</td>
                 </tr>
                 {% endif %}
+                {% if object.power_path %}
+                <tr>
+                    <td>Power Path</td>
+                    <td>{{ object.get_power_path_display }}</td>
+                </tr>
+                {% endif %}
                 <tr>
                     <td>Type</td>
                     <td>

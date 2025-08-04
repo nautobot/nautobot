@@ -54,8 +54,8 @@ class PowerPanel(PrimaryModel):
     )
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
     panel_type = models.CharField(max_length=30, choices=PowerPanelTypeChoices, blank=True)
-    circuit_positions = models.PositiveIntegerField(
-        null=True, blank=True, help_text="Total number of circuit positions in the panel (e.g., 42)"
+    breaker_position_count = models.PositiveIntegerField(
+        null=True, blank=True, help_text="Total number of breaker positions in the panel (e.g., 42)"
     )
 
     natural_key_field_names = ["name", "location"]
@@ -243,15 +243,15 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
             occupied_positions = self.get_occupied_positions()
 
             # Ensure breaker positions fit within panel capacity
-            if self.power_panel.circuit_positions is not None:
+            if self.power_panel.breaker_position_count is not None:
                 if occupied_positions:
                     max_occupied_position = max(occupied_positions)
-                    if max_occupied_position > self.power_panel.circuit_positions:
+                    if max_occupied_position > self.power_panel.breaker_position_count:
                         raise ValidationError(
                             {
                                 "breaker_position": f"Breaker configuration starting at position {self.breaker_position} "
                                 f"with {self.breaker_pole_count} poles would occupy positions {sorted(occupied_positions)}, "
-                                f"but panel only has {self.power_panel.circuit_positions} circuit positions"
+                                f"but panel only has {self.power_panel.breaker_position_count} breaker positions"
                             }
                         )
 

@@ -4142,7 +4142,7 @@ class PowerPanelUIViewSet(NautobotUIViewSet):
                     "location",
                     "rack_group",
                     "panel_type",
-                    "circuit_positions",
+                    "breaker_position_count",
                 ],
             ),
             object_detail.ObjectsTablePanel(

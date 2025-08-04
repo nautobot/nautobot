@@ -28,7 +28,7 @@ class PowerPanelTable(BaseTable):
     name = tables.LinkColumn()
     location = tables.Column(linkify=True)
     panel_type = tables.Column()
-    circuit_positions = tables.Column(verbose_name="Positions")
+    breaker_position_count = tables.Column(verbose_name="Positions")
     power_feed_count = LinkedCountColumn(
         viewname="dcim:powerfeed_list",
         url_params={"power_panel": "pk"},
@@ -44,7 +44,7 @@ class PowerPanelTable(BaseTable):
             "location",
             "rack_group",
             "panel_type",
-            "circuit_positions",
+            "breaker_position_count",
             "power_feed_count",
             "tags",
         )
@@ -72,7 +72,7 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
     destination_panel = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
     type = ChoiceFieldColumn()
-    side = ChoiceFieldColumn()
+    power_path = ChoiceFieldColumn()
     occupied_positions = tables.Column(accessor="occupied_positions", verbose_name="Position")
     phase_designation = tables.Column(accessor="phase_designation", verbose_name="Phase Designation")
     max_utilization = tables.TemplateColumn(template_code="{{ value }}%")

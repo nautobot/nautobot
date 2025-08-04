@@ -34,12 +34,12 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name="powerfeed",
-            name="side",
+            name="power_path",
             field=models.CharField(blank=True, max_length=20),
         ),
         migrations.AddField(
             model_name="powerpanel",
-            name="circuit_positions",
+            name="breaker_position_count",
             field=models.PositiveIntegerField(blank=True, null=True),
         ),
         migrations.AddField(

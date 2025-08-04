@@ -4511,7 +4511,7 @@ class PowerPanelForm(LocatableModelFormMixin, NautobotModelForm):
             "rack_group",
             "name",
             "panel_type",
-            "circuit_positions",
+            "breaker_position_count",
             "tags",
         ]
         widgets = {
@@ -4535,11 +4535,11 @@ class PowerPanelBulkEditForm(
         required=False,
         widget=StaticSelect2(),
     )
-    circuit_positions = forms.IntegerField(required=False, min_value=1)
+    breaker_position_count = forms.IntegerField(required=False, min_value=1)
 
     class Meta:
         model = PowerPanel
-        nullable_fields = ["location", "rack_group", "panel_type", "circuit_positions"]
+        nullable_fields = ["location", "rack_group", "panel_type", "breaker_position_count"]
 
 
 class PowerPanelFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
@@ -4557,7 +4557,7 @@ class PowerPanelFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
         required=False,
         widget=StaticSelect2Multiple(),
     )
-    circuit_positions = forms.IntegerField(required=False, min_value=1)
+    breaker_position_count = forms.IntegerField(required=False, min_value=1)
     tags = TagFilterField(model)
 
 

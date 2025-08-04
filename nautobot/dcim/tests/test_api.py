@@ -3233,14 +3233,14 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
                 rack_group=rackgroup,
                 name="Power Panel 1",
                 panel_type=PowerPanelTypeChoices.TYPE_UTILITY,
-                circuit_positions=42,
+                breaker_position_count=42,
             ),
             PowerPanel.objects.create(
                 location=location,
                 rack_group=rackgroup,
                 name="Power Panel 2",
                 panel_type=PowerPanelTypeChoices.TYPE_RPP,
-                circuit_positions=24,
+                breaker_position_count=24,
             ),
         )
 
