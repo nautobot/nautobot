@@ -62,7 +62,7 @@
                                             <div class="form-group{% if item.form_field.errors %} has-error{% endif %}">
                                                 <label class="col-md-3 control-label" for="{{ item.form_field.id_for_label }}">
                                                     {{ name | split:"_" | join:" " }}
-                                                    <span class="help-block">
+                                                    <span class="form-text">
                                                         (default: <code>{{ item.default }}</code>)
                                                     </span>
                                                 </label>
@@ -70,7 +70,7 @@
                                                     {{ item.form_field.errors }}
                                                     {% if item.is_file %}{% trans "Current file" %}: <a href="{% get_media_prefix as MEDIA_URL %}{{ MEDIA_URL }}{{ item.value }}" target="_blank">{{ item.value }}</a>{% endif %}
                                                         {{ item.form_field }}
-                                                    <span class="help-block">{{ item.help_text | linebreaksbr }}</span>
+                                                    <span class="form-text">{{ item.help_text | linebreaksbr }}</span>
                                                 </div>
                                             </div>
                                         {% endif %}
@@ -92,7 +92,7 @@
                                         <div class="form-group{% if item.form_field.errors %} has-error{% endif %}">
                                             <label class="col-md-3 control-label" for="{{ item.form_field.id_for_label }}">
                                                 {{ item.name | split:"_" | join:" " }}
-                                                <span class="help-block">
+                                                <span class="form-text">
                                                     (default: <code>{{ item.default }}</code>)
                                                 </span>
                                             </label>
@@ -100,7 +100,7 @@
                                                 {{ item.form_field.errors }}
                                                 {% if item.is_file %}{% trans "Current file" %}: <a href="{% get_media_prefix as MEDIA_URL %}{{ MEDIA_URL }}{{ item.value }}" target="_blank">{{ item.value }}</a>{% endif %}
                                                     {{ item.form_field }}
-                                                <span class="help-block">{{ item.help_text | linebreaksbr }}</span>
+                                                <span class="form-text">{{ item.help_text | linebreaksbr }}</span>
                                             </div>
                                         </div>
                                     {% endif %}
