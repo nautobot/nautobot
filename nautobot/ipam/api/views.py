@@ -1,7 +1,8 @@
 from django.conf import settings
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+import netaddr
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException
@@ -123,6 +124,26 @@ class PrefixViewSet(NautobotModelViewSet):
             return serializers.PrefixLegacySerializer
         return super().get_serializer_class()
 
+    @staticmethod
+    def get_ipaddress_param(request, name, default):
+        """Extract IP address parameter from request.
+        :param request: django-rest request object
+        :param name: name of the query parameter which contains the IP address string
+        :param default: fallback IP address string in case no value is present in the query parameter
+        :return: tuple of mutually exclusive (Response|None, netaddr.IPAddress object|None).
+                 Will return a Response in case the client sent incorrectly formatted IP Address in
+                 the parameter. It is up to the caller to return the Response.
+        """
+        response, result = None, None
+        try:
+            result = netaddr.IPAddress(request.query_params.get(name, default))
+        except (netaddr.core.AddrFormatError, ValueError, TypeError) as e:
+            response = Response(
+                {"detail": (f"Incorrectly formatted address in parameter {name}: {e}")},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return response, result
+
     class LocationIncompatibleLegacyBehavior(APIException):
         status_code = 412
         default_detail = (
@@ -225,6 +246,33 @@ class PrefixViewSet(NautobotModelViewSet):
 
             return Response(serializer.data)
 
+    @extend_schema(
+        methods=["get", "post"],
+        parameters=[
+            OpenApiParameter(
+                name="range_start",
+                location="query",
+                description="IP from which enumeration/allocation should start.",
+                type={
+                    "oneOf": [
+                        {"type": "string", "format": "ipv6"},
+                        {"type": "string", "format": "ipv4"},
+                    ]
+                },
+            ),
+            OpenApiParameter(
+                name="range_end",
+                location="query",
+                description="IP from which enumeration/allocation should stop.",
+                type={
+                    "oneOf": [
+                        {"type": "string", "format": "ipv6"},
+                        {"type": "string", "format": "ipv4"},
+                    ]
+                },
+            ),
+        ],
+    )
     @extend_schema(methods=["get"], responses={200: serializers.AvailableIPSerializer(many=True)})
     @extend_schema(
         methods=["post"],
@@ -251,6 +299,21 @@ class PrefixViewSet(NautobotModelViewSet):
         """
         prefix = get_object_or_404(Prefix.objects.restrict(request.user), pk=pk)
 
+        default_first, default_last = netaddr.IPAddress(prefix.prefix.first), netaddr.IPAddress(prefix.prefix.last)
+        ((error_response_start, range_start), (error_response_end, range_end)) = (
+            self.get_ipaddress_param(request, "range_start", default_first),
+            self.get_ipaddress_param(request, "range_end", default_last),
+        )
+        if response := error_response_start or error_response_end:
+            return response
+
+        available_ips = prefix.get_available_ips()
+        # range_start and range_end are inclusive
+        if range_start > default_first:
+            available_ips.remove(netaddr.IPRange(default_first, range_start - 1))
+        if range_end < default_last:
+            available_ips.remove(netaddr.IPRange(range_end + 1, default_last))
+
         # Create the next available IP within the prefix
         if request.method == "POST":
             with cache.lock(
@@ -260,23 +323,23 @@ class PrefixViewSet(NautobotModelViewSet):
                 requested_ips = request.data if isinstance(request.data, list) else [request.data]
 
                 # Determine if the requested number of IPs is available
-                available_ips = prefix.get_available_ips()
                 if available_ips.size < len(requested_ips):
                     return Response(
                         {
                             "detail": (
                                 f"An insufficient number of IP addresses are available within the prefix {prefix} "
-                                f"({len(requested_ips)} requested, {len(available_ips)} available)"
+                                f"({len(requested_ips)} requested, {available_ips.size} available between "
+                                f"{range_start} and {range_end})."
                             )
                         },
                         status=status.HTTP_204_NO_CONTENT,
                     )
 
                 # Assign addresses from the list of available IPs and copy Namespace assignment from the parent Prefix
-                available_ips = iter(available_ips)
                 prefix_length = prefix.prefix.prefixlen
+                available_ips_iter = iter(available_ips)
                 for requested_ip in requested_ips:
-                    requested_ip["address"] = f"{next(available_ips)}/{prefix_length}"
+                    requested_ip["address"] = f"{next(available_ips_iter)}/{prefix_length}"
                     requested_ip["namespace"] = prefix.namespace
 
                 # Initialize the serializer with a list or a single object depending on what was requested
@@ -307,7 +370,7 @@ class PrefixViewSet(NautobotModelViewSet):
 
             # Calculate available IPs within the prefix
             ip_list = []
-            for index, ip in enumerate(prefix.get_available_ips(), start=1):
+            for index, ip in enumerate(available_ips, start=1):
                 ip_list.append(ip)
                 if index == limit:
                     break
