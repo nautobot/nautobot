@@ -1138,12 +1138,8 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
         instance = self.get_object()
         job_result = instance.get_latest_sync()
 
-        if not job_result:
-            messages.info(request, "No synchronization job has been run yet for this repository.")
-            return redirect("extras:gitrepository", pk=pk)
-
         context = {
-            "result": job_result,
+            "result": job_result or {},
             "base_template": "extras/gitrepository.html",
             "object": instance,
             "active_tab": "result",
