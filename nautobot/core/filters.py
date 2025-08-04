@@ -797,7 +797,7 @@ class BaseFilterSet(django_filters.FilterSet):
                     to_field_name="name",
                     label="Contacts (name or ID)",
                 )
-                cls.declared_filters["contacts"] = filters["contacts"]
+                cls.declared_filters["contacts"] = filters["contacts"]  # pylint: disable=no-member
 
             if "teams" not in filters:
                 filters["teams"] = NaturalKeyOrPKMultipleChoiceFilter(
@@ -806,7 +806,7 @@ class BaseFilterSet(django_filters.FilterSet):
                     to_field_name="name",
                     label="Teams (name or ID)",
                 )
-                cls.declared_filters["teams"] = filters["teams"]
+                cls.declared_filters["teams"] = filters["teams"]  # pylint: disable=no-member
 
         if "dynamic_groups" not in filters and getattr(cls._meta.model, "is_dynamic_group_associable_model", False):  # pylint: disable=no-member
             if not hasattr(cls._meta.model, "static_group_association_set"):  # pylint: disable=no-member
@@ -827,7 +827,7 @@ class BaseFilterSet(django_filters.FilterSet):
                     query_params={"content_type": cls._meta.model._meta.label_lower},  # pylint: disable=no-member
                     label="Dynamic groups (name or ID)",
                 )
-                cls.declared_filters["dynamic_groups"] = filters["dynamic_groups"]
+                cls.declared_filters["dynamic_groups"] = filters["dynamic_groups"]  # pylint: disable=no-member
 
         # django-filters has no concept of "abstract" filtersets, so we have to fake it
         if cls._meta.model is not None:  # pylint: disable=no-member

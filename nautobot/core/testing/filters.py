@@ -210,7 +210,8 @@ class FilterTestCases:
 
         def test_automagic_filters(self):
             """https://github.com/nautobot/nautobot/issues/6656"""
-            fs = self.filterset()
+            self.assertIsNotNone(self.filterset)
+            fs = self.filterset()  # pylint: disable=not-callable
             if getattr(self.queryset.model, "is_contact_associable_model", False):
                 self.assertIsInstance(fs.filters["contacts"], NaturalKeyOrPKMultipleChoiceFilter)
                 self.assertIsInstance(fs.filters["contacts__n"], NaturalKeyOrPKMultipleChoiceFilter)
@@ -229,7 +230,7 @@ class FilterTestCases:
             that `filter=False` matches `self.queryset.filter(field__isnull=True)`.
             """
             self.assertIsNotNone(self.filterset)
-            for filter_name, filter_object in self.filterset().filters.items():
+            for filter_name, filter_object in self.filterset().filters.items():  # pylint: disable=not-callable
                 if not isinstance(filter_object, RelatedMembershipBooleanFilter):
                     continue
                 if filter_object.method is not None:
@@ -394,7 +395,8 @@ class FilterTestCases:
                     self._assert_q_filter_predicate_validity(obj, obj_field_name, filter_field_name, lookup_method)
 
         def test_content_type_related_fields_uses_content_type_filter(self):
-            fs = self.filterset()
+            self.assertIsNotNone(self.filterset)
+            fs = self.filterset()  # pylint: disable=not-callable
             for field in self.queryset.model._meta.fields:
                 related_model = getattr(field, "related_model", None)
                 if not related_model or related_model != ContentType:
