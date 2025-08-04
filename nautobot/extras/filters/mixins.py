@@ -309,6 +309,7 @@ class RoleModelFilterSetMixin(django_filters.FilterSet):
                 field_name="role",
                 query_params={"content_types": [cls._meta.model._meta.label_lower]},
             )
+            cls.declared_filters["role"] = filters["role"]
 
         return filters
 
@@ -338,5 +339,6 @@ class StatusModelFilterSetMixin(django_filters.FilterSet):
                 field_name="status",
                 query_params={"content_types": [cls._meta.model._meta.label_lower]},
             )
+            cls.declared_filters["status"] = filters["status"]
 
         return filters

@@ -120,6 +120,7 @@ from nautobot.dcim.models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
+from nautobot.extras.filters.mixins import RoleFilter, StatusFilter
 from nautobot.extras.models import ExternalIntegration, Role, SecretsGroup, Status, Tag
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, Service, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
@@ -1253,7 +1254,7 @@ class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
 
         rack_group = RackGroup.objects.get(name="Rack Group 3")
         tenant = Tenant.objects.filter(tenant_group__isnull=False).first()
-        rack_role = Role.objects.get_for_model(Rack).first()
+        cls.rack_role = Role.objects.get_for_model(Rack).first()
 
         Rack.objects.create(
             name="Rack 4",
@@ -1262,7 +1263,7 @@ class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             rack_group=rack_group,
             tenant=tenant,
             status=cls.rack_statuses[0],
-            role=rack_role,
+            role=cls.rack_role,
             serial="ABCDEF",
             asset_tag="1004",
             type=RackTypeChoices.TYPE_2POST,
@@ -1290,6 +1291,34 @@ class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         with self.subTest():
             params = {"outer_unit": [RackDimensionUnitChoices.UNIT_MILLIMETER]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_role_status_negation(self):
+        """https://github.com/nautobot/nautobot/issues/6456"""
+        self.assertIsInstance(self.filterset().filters["role"], RoleFilter)
+        self.assertIsInstance(self.filterset().filters["role__n"], RoleFilter)
+        with self.subTest("Negated role (id)"):
+            params = {"role__n": [self.rack_role.pk]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, Rack.objects.exclude(role=self.rack_role)
+            )
+        with self.subTest("Negated role (name)"):
+            params = {"role__n": [self.rack_role.name]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, Rack.objects.exclude(role=self.rack_role)
+            )
+
+        self.assertIsInstance(self.filterset().filters["status"], StatusFilter)
+        self.assertIsInstance(self.filterset().filters["status__n"], StatusFilter)
+        with self.subTest("Negated status (id)"):
+            params = {"status__n": [self.rack_statuses[0].pk]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, Rack.objects.exclude(status=self.rack_statuses[0])
+            )
+        with self.subTest("Negated status (name)"):
+            params = {"status__n": [self.rack_statuses[0].name]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, Rack.objects.exclude(status=self.rack_statuses[0])
+            )
 
 
 class RackReservationTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
