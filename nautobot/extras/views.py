@@ -1121,11 +1121,32 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
             return reverse("extras:gitrepository_result", kwargs={"pk": obj.pk})
         return super().get_return_url(request, obj=obj, default_return_url=default_return_url)
 
-    def form_save(self, form, **kwargs):
+    def form_valid(self, form):
         obj = form.instance
+        # Ensure GitRepository has `user` and `request` set before saving
         obj.user = self.request.user
         obj.request = self.request
-        return super().form_save(form, **kwargs)
+        return super().form_valid(form)
+
+    @action(
+        detail=True,
+        url_path="result",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["extras.view_jobresult"],
+    )
+    def result(self, request, pk=None):
+        instance = self.get_object()
+        job_result = instance.get_latest_sync()
+
+        context = {
+            "result": job_result or {},
+            "base_template": "extras/gitrepository.html",
+            "object": instance,
+            "active_tab": "result",
+            "verbose_name": instance._meta.verbose_name,
+        }
+
+        return render(request, "extras/gitrepository_result.html", context)
 
 
 def check_and_call_git_repository_function(request, pk, func):
@@ -1160,31 +1181,6 @@ class GitRepositorySyncView(generic.GenericView):
 class GitRepositoryDryRunView(generic.GenericView):
     def post(self, request, pk):
         return check_and_call_git_repository_function(request, pk, enqueue_git_repository_diff_origin_and_local)
-
-
-class GitRepositoryResultView(generic.ObjectView):
-    """
-    Display a JobResult and its Job data.
-    """
-
-    queryset = GitRepository.objects.all()
-    template_name = "extras/gitrepository_result.html"
-
-    def get_required_permission(self):
-        return "extras.view_gitrepository"
-
-    def get_extra_context(self, request, instance):
-        job_result = instance.get_latest_sync()
-
-        if job_result is None:
-            job_result = {}
-
-        return {
-            "result": job_result,
-            "base_template": "extras/gitrepository.html",
-            "object": instance,
-            "active_tab": "result",
-        }
 
 
 #

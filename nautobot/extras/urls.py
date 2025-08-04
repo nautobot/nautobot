@@ -115,11 +115,6 @@ urlpatterns = [
     ),
     # Git repositories
     path(
-        "git-repositories/<uuid:pk>/result/",
-        views.GitRepositoryResultView.as_view(),
-        name="gitrepository_result",
-    ),
-    path(
         "git-repositories/<uuid:pk>/sync/",
         views.GitRepositorySyncView.as_view(),
         name="gitrepository_sync",
