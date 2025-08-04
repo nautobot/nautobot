@@ -776,33 +776,17 @@ custom_breadcrumbs = Breadcrumbs(
 )
 ```
 
-#### Example 2: Prepend/Append Items
-
-```python
-# Add organization context to all breadcrumbs
-org_aware_breadcrumbs = Breadcrumbs(
-    prepend_items={
-        'list': [
-            ViewNameBreadcrumbItem(viewname_str="org:dashboard", label="Org Dashboard")
-        ],
-        'detail': [
-            ViewNameBreadcrumbItem(viewname_str="org:dashboard", label="Org Dashboard")
-        ]
-    }
-)
-```
-
-#### Example 3: Complex Navigation
+#### Example 2: Complex Navigation
 
 ```python
 # Multi-level hierarchy for nested objects
 nested_breadcrumbs = Breadcrumbs(
     items={
         'retrieve': [
-            ModelBreadcrumbItem(model="dcim.site", model_label_type="plural"),
+            ModelBreadcrumbItem(model="dcim.location", model_label_type="plural"),
             InstanceBreadcrumbItem(
-                instance_key="object.site",
-                label=lambda ctx: f"Site: {ctx['object'].site.name}"
+                instance_key="object.location",
+                label=lambda ctx: f"Site: {ctx['object'].location.name}"
             ),
             ModelBreadcrumbItem(model="dcim.device", model_label_type="plural"),
             InstanceBreadcrumbItem(),

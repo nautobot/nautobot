@@ -346,8 +346,6 @@ class Breadcrumbs:
 
     This class supports flexible breadcrumb configuration through:
     - `items`: Default breadcrumb items per view action.
-    - `prepend_items`: Items to prepend before the defaults.
-    - `append_items`: Items to append after the defaults.
 
     You can override all or parts of the breadcrumb trail by passing appropriate
     `BreadcrumbItem` objects grouped by view action (e.g., "list", "add", "edit").
@@ -356,21 +354,14 @@ class Breadcrumbs:
     In such case breadcrumbs logic will be using `context['detail']: bool` to determine whether to show
     `list` version of breadcrumbs or `detail`.
 
-    For example if you want to use standard `detail` breadcrumbs for almost all actions but change it only for
-    `approve` action you can use this class as following: `Breadcrumbs(append_items={"approve": [...]})`
-
     Attributes:
         template (str): Path to the template used to render the breadcrumb component.
         items (dict[str, list[BreadcrumbItem]]): Default breadcrumb items per view action.
-        prepend_items (dict[str, list[BreadcrumbItem]]): Items prepended to the breadcrumb trail.
-        append_items (dict[str, list[BreadcrumbItem]]): Items appended to the breadcrumb trail.
     """
 
     def __init__(
         self,
         items: BreadcrumbItemsType = None,
-        prepend_items: BreadcrumbItemsType = None,
-        append_items: BreadcrumbItemsType = None,
         template: str = "inc/breadcrumbs.html",
     ):
         """
@@ -378,26 +369,18 @@ class Breadcrumbs:
 
         Args:
             items (Optional[dict[str, list[BreadcrumbItem]]]): Default breadcrumb items for each action.
-            prepend_items (Optional[dict[str, list[BreadcrumbItem]]]): Items to prepend to action's breadcrumbs.
-            append_items (Optional[dict[str, list[BreadcrumbItem]]]): Items to append to action's breadcrumbs.
             template (str): The template used to render the breadcrumbs.
         """
         self.template = template
         self.items: BreadcrumbItemsType = copy.deepcopy(DEFAULT_BREADCRUMBS)
         if items:
             self.items.update(items)
-        # TODO: after breadcrumbs implementation verify if we need append/prepend feature
-        self.prepend_items: BreadcrumbItemsType = prepend_items or {}
-        self.append_items: BreadcrumbItemsType = append_items or {}
 
     def get_breadcrumbs_items(self, context: Context):
         """
         Compute the list of breadcrumb items for the given context.
 
-        Items are determined based on the `view_action` in context. This includes:
-        - Prepend items
-        - Default items
-        - Append items
+        Items are determined based on the `view_action` in context.
 
         Args:
             context (Context): The view or template context that holds `view_action` and related state.
@@ -408,10 +391,7 @@ class Breadcrumbs:
         action = context.get("view_action", "list")
         detail = context.get("detail", False)
         items = self.get_items_for_action(self.items, action, detail)
-        prepend_items = self.get_items_for_action(self.prepend_items, action, detail)
-        append_items = self.get_items_for_action(self.append_items, action, detail)
-        all_items = prepend_items + items + append_items
-        return [item.as_pair(context) for item in all_items if item.should_render(context)]
+        return [item.as_pair(context) for item in items if item.should_render(context)]
 
     def filter_breadcrumbs_items(self, items: list[tuple[str, str]], context: Context) -> list[tuple[str, str]]:
         """
@@ -424,23 +404,20 @@ class Breadcrumbs:
         Returns:
             (list[tuple[str, str]]): A list of filtered breadcrumb items pairs.
         """
-        return [(url, label) for url, label in items if self.is_not_both_blank(url, label)]
+        return [(url, label) for url, label in items if self.is_label_not_blank(label)]
 
     @staticmethod
-    def is_not_both_blank(url: str, label: str) -> bool:
+    def is_label_not_blank(label: str) -> bool:
         """
-        Check if both values are not empty / None.
-        We're still assuming that user intentionally would like to put some breadcrumbs
-        with just label or empty string / only whitespace with url.
+        Check if label is not empty (only whitespace) or None.
 
         Args:
-            url (str): The url to check.
             label (str): The label to check.
 
         Returns:
-            (bool): True if any item is filled (not empty), False if both items are empty str / None.
+            (bool): True if label is not None or empty (only whitespace), False otherwise.
         """
-        return (url and url.strip()) or (label and label.strip())
+        return label and label.strip()
 
     @staticmethod
     def get_items_for_action(items: BreadcrumbItemsType, action: str, detail: bool) -> list[BaseBreadcrumbItem]:

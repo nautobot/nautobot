@@ -209,26 +209,6 @@ class BreadcrumbsTestCase(TestCase):
         # Other defaults should still exist
         self.assertIn("detail", breadcrumbs.items)
 
-    def test_prepend_append_items(self):
-        """Test prepend and append functionality."""
-        prepend = {"list": [ViewNameBreadcrumbItem(view_name="home", label="Home")]}
-        append = {"list": [ViewNameBreadcrumbItem(view_name="", label="End")]}
-        expected_items = [
-            ("/", "Home"),
-            ("/dcim/location-types/", "Location Types"),
-            ("", "End"),
-        ]
-
-        breadcrumbs = Breadcrumbs(prepend_items=prepend, append_items=append)
-        context = Context({"model": LocationType})
-
-        items = breadcrumbs.get_breadcrumbs_items(context)
-
-        # Should have prepend + default + append
-        # Default list action has one item, so prepend + default + append = 2
-        self.assertEqual(len(items), 3)
-        self.assertEqual(items, expected_items)
-
     def test_get_items_from_action_static_method(self):
         """Test the _get_items_from_action static method."""
         test_items = {
@@ -334,25 +314,25 @@ class BreadcrumbsTestCase(TestCase):
         self.assertNotIn(("/", "Hidden"), items)
 
     def test_filter_breadcrumbs_items_removes_empty_pairs(self):
-        """filter_breadcrumbs_items should remove items where both url and label are empty or None."""
+        """filter_breadcrumbs_items should remove items where label is empty or None."""
 
         breadcrumbs = Breadcrumbs()
         # (url, label) pairs: only the last should remain
         pairs = [
-            ("", ""),  # both empty
-            ("   ", "   "),  # both whitespace
-            ("", "\t"),  # label whitespace
-            (None, None),  # both None
+            ("", ""),  # empty
+            ("", "   "),  # whitespace
+            ("", "\t"),  # whitespace
             ("", "Non-empty"),  # label not empty
             ("/foo", ""),  # url not empty
+            ("/foo", "Label"),  # url, label not empty
+            (None, None),  # both None
             (None, "Label"),  # label not None
             ("/bar", None),  # url not None
         ]
         expected = [
             ("", "Non-empty"),
-            ("/foo", ""),
+            ("/foo", "Label"),
             (None, "Label"),
-            ("/bar", None),
         ]
         filtered = breadcrumbs.filter_breadcrumbs_items(pairs, Context({}))
         self.assertEqual(filtered, expected)
