@@ -82,7 +82,7 @@ class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
             listings[f"{cf.content_type.app_label}.{cf.content_type.model}"].append(cf)
         for ct in ContentType.objects.all():
             label = f"{ct.app_label}.{ct.model}"
-            cache.set(f"{self.get_for_model.cache_key_prefix}.{label}", listings[label])
+            cache.set(f"{self.get_for_model.cache_key_prefix}.{label}.list", listings[label])
 
 
 @extras_features("graphql")
@@ -443,14 +443,15 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
         key_listings = defaultdict(list)
         for cf in queryset:
             for ct in cf.content_types.all():
-                cf_listings[f"{ct.app_label}.{ct.model}"]["False"].append(cf)
+                label = f"{ct.app_label}.{ct.model}"
+                cf_listings[label][False].append(cf)
                 if cf.filter_logic != CustomFieldFilterLogicChoices.FILTER_DISABLED:
-                    cf_listings[f"{ct.app_label}.{ct.model}"]["True"].append(cf)
-                key_listings[f"{ct.app_label}.{ct.model}"].append(cf.key)
+                    cf_listings[label][True].append(cf)
+                key_listings[label].append(cf.key)
         for ct in ContentType.objects.all():
             label = f"{ct.app_label}.{ct.model}"
-            cache.set(f"{self.get_for_model.cache_key_prefix}.{label}.True", cf_listings[label]["True"])
-            cache.set(f"{self.get_for_model.cache_key_prefix}.{label}.False", cf_listings[label]["False"])
+            cache.set(f"{self.get_for_model.cache_key_prefix}.{label}.True.list", cf_listings[label][True])
+            cache.set(f"{self.get_for_model.cache_key_prefix}.{label}.False.list", cf_listings[label][False])
             cache.set(f"{self.keys_for_model.cache_key_prefix}.{label}", key_listings[label])
 
 
