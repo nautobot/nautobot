@@ -170,10 +170,15 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 ### Added in v2.4.14
 
+- [#7278](https://github.com/nautobot/nautobot/issues/7278) - Added `range_start` and `range_end` parameters for `/api/ipam/prefixes/<id>/available-ips/`. This replaces the use of the `offset` parameter in this particular case.
 - [#7479](https://github.com/nautobot/nautobot/issues/7479) - Added Bulk Edit functionality for the SecretsGroup model.
 - [#7566](https://github.com/nautobot/nautobot/issues/7566) - Added Eaton and Raritan C39 power outlet type.
 - [#7574](https://github.com/nautobot/nautobot/issues/7574) - Added 4 new choices in the Secret Type category of Secret Groups: "Authentication Key", "Authentication Protocol", "Private Key" and "Private Algorithm".
 - [#7625](https://github.com/nautobot/nautobot/issues/7625) - Added an index to JobLogEntry to improve performance of Job Result logs.
+- [#7633](https://github.com/nautobot/nautobot/issues/7633) - Added support for optional `get_queryset` boolean parameter to `CustomField.objects.get_for_model()`, `ComputedField.objects.get_for_model()`, and `Relationship.objects.get_for_model()` APIs. If set to `False` these APIs will return a (potentially cached) list of records instead of a QuerySet.
+- [#7633](https://github.com/nautobot/nautobot/issues/7633) - Added `populate_list_caches()` method to `CustomField.objects`, `ComputedField.objects`, and `Relationship.objects`, which can be called to efficiently populate the caches used by the `get_for_model()` methods when `get_queryset=False` for all content-types.
+- [#7633](https://github.com/nautobot/nautobot/issues/7633) - Added `feature_models` dict to the Nautobot registry for more efficient GraphQL schema generation.
+- [#7633](https://github.com/nautobot/nautobot/issues/7633) - Added caching of generated search parameters for more efficient GraphQL schema generation.
 
 ### Changed in v2.4.14
 
@@ -185,6 +190,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#3609](https://github.com/nautobot/nautobot/issues/3609) - Fixed `cluster_count` not showing up on the API of `/tenancy/tenants/`.
 - [#7577](https://github.com/nautobot/nautobot/issues/7577) - Fixed incorrect reference to Inventory Items under the Module documentation.
 - [#7616](https://github.com/nautobot/nautobot/issues/7616) - Fixed a data-loss bug in the v1.x-to-v2.0 migration `extras.0062_collect_roles_from_related_apps_roles` in which custom-field data on `dcim.DeviceRole`, `dcim.RackRole`, and `ipam.Role` records was not correctly copied to the corresponding created `extras.Role` records.
+- [#7633](https://github.com/nautobot/nautobot/issues/7633) - Greatly reduced the number of database queries made when generating the GraphQL schema.
 
 ### Dependencies in v2.4.14
 
