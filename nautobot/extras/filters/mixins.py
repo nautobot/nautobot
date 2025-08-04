@@ -1,5 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Model, Q
+from django.utils.encoding import force_str
+from django.utils.text import capfirst
 import django_filters
 from django_filters.constants import EMPTY_VALUES
 from django_filters.utils import verbose_lookup_expr
@@ -131,11 +133,21 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
         # Create new filters for each lookup expression in the map
         for lookup_name, lookup_expr in lookup_map.items():
             new_filter_name = f"{filter_name}__{lookup_name}"
+
+            # Based on logic in BaseFilterSet._generate_lookup_expression_filters
+            verbose_expression = (
+                ["exclude", custom_field.label] if lookup_name.startswith("n") else [custom_field.label]
+            )
+            if isinstance(lookup_expr, str):
+                verbose_expression.append(verbose_lookup_expr(lookup_expr))
+            verbose_expression = [force_str(part) for part in verbose_expression if part]
+            label = capfirst(" ".join(verbose_expression))
+
             new_filter = filter_type(
                 field_name=custom_field.key,
                 lookup_expr=lookup_expr,
                 custom_field=custom_field,
-                label=f"{custom_field.label} ({verbose_lookup_expr(lookup_expr)})",
+                label=label,
                 exclude=lookup_name.startswith("n"),
             )
 
