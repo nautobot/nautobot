@@ -1114,7 +1114,7 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
         obj.user = request.user
         # A GitRepository needs to know the originating request when it's saved so that it can enqueue using it
         obj.request = request
-        return super().alter_obj(obj, request, url_args, url_kwargs)
+        return obj
 
     def form_valid(self, form):
         if hasattr(form, "instance") and form.instance is not None:
