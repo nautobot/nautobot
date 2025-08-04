@@ -299,7 +299,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "detail": False,
         }
 
-        self._set_if_present(view, "get_titles", context, "view_titles")
+        self._set_if_present(view, "get_view_titles", context, "view_titles")
         self._set_if_present(view, "get_breadcrumbs", context, "breadcrumbs")
 
         if view.detail:
