@@ -5,8 +5,6 @@ from nautobot.extras import views
 from nautobot.extras.models import (
     CustomField,
     DynamicGroup,
-    GitRepository,
-    GraphQLQuery,
     Job,
     Note,
     Relationship,

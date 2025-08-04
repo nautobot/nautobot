@@ -1116,17 +1116,17 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
         obj.request = request
         return super().alter_obj(obj, request, url_args, url_kwargs)
 
+    def form_valid(self, form):
+        if hasattr(form, "instance") and form.instance is not None:
+            form.instance.user = self.request.user
+            form.instance.request = self.request
+        return super().form_valid(form)
+
     def get_return_url(self, request, obj=None, default_return_url=None):
-        if request.method == "POST":
+        # Only redirect to result if object exists and action is not deletion
+        if request.method == "POST" and obj is not None and self.action != "destroy":
             return reverse("extras:gitrepository_result", kwargs={"pk": obj.pk})
         return super().get_return_url(request, obj=obj, default_return_url=default_return_url)
-
-    def form_valid(self, form):
-        obj = form.instance
-        # Ensure GitRepository has `user` and `request` set before saving
-        obj.user = self.request.user
-        obj.request = self.request
-        return super().form_valid(form)
 
     @action(
         detail=True,
@@ -1138,8 +1138,12 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
         instance = self.get_object()
         job_result = instance.get_latest_sync()
 
+        if not job_result:
+            messages.info(request, "No synchronization job has been run yet for this repository.")
+            return redirect("extras:gitrepository", pk=pk)
+
         context = {
-            "result": job_result or {},
+            "result": job_result,
             "base_template": "extras/gitrepository.html",
             "object": instance,
             "active_tab": "result",
