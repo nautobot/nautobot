@@ -1850,8 +1850,18 @@ class SecretTestCase(
         }
 
 
-class SecretsGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class SecretsGroupTestCase(
+    ViewTestCases.OrganizationalObjectViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
+):
     model = SecretsGroup
+    custom_test_permissions = [
+        "extras.view_secret",
+        "extras.add_secretsgroup",
+        "extras.view_secretsgroup",
+        "extras.add_secretsgroupassociation",
+        "extras.change_secretsgroupassociation",
+    ]
 
     @classmethod
     def setUpTestData(cls):
@@ -1895,6 +1905,108 @@ class SecretsGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "secrets_group_associations-MIN_NUM_FORMS": "0",
             "secrets_group_associations-MAX_NUM_FORMS": "1000",
         }
+        cls.bulk_edit_data = {
+            "description": "This is a very detailed new description",
+        }
+
+    def test_create_group_with_valid_secret_association(self):
+        """Test that a SecretsGroup with a valid Secret association saves correctly via the formset."""
+        self.add_permissions(*self.custom_test_permissions)
+        # Create a secret to associate
+        secret = Secret.objects.create(
+            name="AWS_Secret",
+            provider="text-file",
+            parameters={"path": "/tmp"},  # noqa: S108  # hardcoded-temp-file -- false positive
+        )
+
+        form_data = {
+            "name": "test",
+            "description": "test bulk edits",
+            "secrets_group_associations-TOTAL_FORMS": "1",
+            "secrets_group_associations-INITIAL_FORMS": "0",
+            "secrets_group_associations-MIN_NUM_FORMS": "0",
+            "secrets_group_associations-MAX_NUM_FORMS": "1000",
+            "secrets_group_associations-0-secret": secret.pk,
+            "secrets_group_associations-0-access_type": SecretsGroupAccessTypeChoices.TYPE_HTTP,
+            "secrets_group_associations-0-secret_type": SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
+        }
+
+        # Submit the form to the "add SecretsGroup" view
+        response = self.client.post(reverse("extras:secretsgroup_add"), data=form_data, follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(SecretsGroup.objects.filter(name="test").exists())
+
+        # Checks that the association was created correctly
+        group = SecretsGroup.objects.get(name="test")
+        self.assertEqual(group.secrets_group_associations.count(), 1)
+
+        association = group.secrets_group_associations.first()
+        self.assertEqual(association.secret, secret)
+        self.assertEqual(association.access_type, SecretsGroupAccessTypeChoices.TYPE_HTTP)
+        self.assertEqual(association.secret_type, SecretsGroupSecretTypeChoices.TYPE_PASSWORD)
+
+    def test_create_group_with_invalid_secret_association(self):
+        """Test that invalid Secret association formset raises validation error and does not save."""
+        self.add_permissions(*self.custom_test_permissions)
+        url = reverse("extras:secretsgroup_add")
+
+        form_data = {
+            "name": "Invalid Secrets Group",
+            "description": "Missing required fields",
+            "secrets_group_associations-TOTAL_FORMS": "1",
+            "secrets_group_associations-INITIAL_FORMS": "0",
+            "secrets_group_associations-MIN_NUM_FORMS": "0",
+            "secrets_group_associations-MAX_NUM_FORMS": "1000",
+            "secrets_group_associations-0-secret": "",  # invalid
+            "secrets_group_associations-0-access_type": SecretsGroupAccessTypeChoices.TYPE_HTTP,
+            "secrets_group_associations-0-secret_type": "",  # invalid
+        }
+
+        response = self.client.post(url, data=form_data)
+
+        self.assertEqual(response.status_code, 200)
+
+        # Checks that no new SecretsGroup was created
+        self.assertFalse(SecretsGroup.objects.filter(name="Invalid Secrets Group").exists())
+
+        # Checks that formset errors are raised in the context
+        self.assertFormsetError(
+            response.context["secrets"], form_index=0, field="secret", errors=["This field is required."]
+        )
+
+    def test_create_group_with_deleted_secret_fails_cleanly(self):
+        """
+        Creating a SecretsGroup with a deleted Secret should fail with a formset error.
+        """
+        self.add_permissions(*self.custom_test_permissions)
+
+        secret = Secret.objects.create(name="TempSecret", provider="text-file", parameters={"path": "/tmp"})  # noqa: S108  # hardcoded-temp-file -- false positive
+        secret_pk = secret.pk
+        secret.delete()
+
+        form_data = {
+            "name": "Test Group",
+            "description": "This should not be created",
+            "secrets_group_associations-TOTAL_FORMS": "1",
+            "secrets_group_associations-INITIAL_FORMS": "0",
+            "secrets_group_associations-MIN_NUM_FORMS": "0",
+            "secrets_group_associations-MAX_NUM_FORMS": "1000",
+            "secrets_group_associations-0-secret": secret_pk,
+            "secrets_group_associations-0-access_type": SecretsGroupAccessTypeChoices.TYPE_HTTP,
+            "secrets_group_associations-0-secret_type": SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
+        }
+
+        response = self.client.post(reverse("extras:secretsgroup_add"), data=form_data)
+        self.assertEqual(response.status_code, 200)
+
+        self.assertFormsetError(
+            response.context["secrets"],
+            form_index=0,
+            field="secret",
+            errors=["Select a valid choice. That choice is not one of the available choices."],
+        )
+        self.assertFalse(SecretsGroup.objects.filter(name="Test Group").exists())
 
 
 class GraphQLQueriesTestCase(
