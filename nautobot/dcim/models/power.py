@@ -301,7 +301,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
         else:
             return None
 
-    def get_occupied_positions(self):
+    def get_occupied_positions(self) -> set[int]:
         """Get set of circuit breaker positions occupied by this feed."""
         if not (self.breaker_position and self.breaker_poles):
             return set()
