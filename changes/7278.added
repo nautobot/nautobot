@@ -1,0 +1,1 @@
+Added `range_start` and `range_end` parameters for `/api/ipam/prefixes/<id>/available-ips/`. This replaces the use of the `offset` parameter in this particular case.
