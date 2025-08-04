@@ -402,9 +402,8 @@ class PowerPort(ModularComponentModel, CableTermination, PathEndpoint):
         max_digits=4,
         decimal_places=2,
         default="0.95",
-        blank=True,
         validators=[MinValueValidator(0.01), MaxValueValidator(1.00)],
-        help_text="Power factor (0.01-1.00) for converting between watts and VA. Defaults to 0.95.",
+        help_text="Power factor (0.01-1.00) for converting between watts (W) and volt-amps (VA). Defaults to 0.95.",
     )
 
     def clean(self):
@@ -432,8 +431,8 @@ class PowerPort(ModularComponentModel, CableTermination, PathEndpoint):
             )
 
             # Convert watts to VA for aggregated values
-            allocated_va = convert_watts_to_va(utilization["allocated_draw_total"] or 0, self.power_factor)
-            maximum_va = convert_watts_to_va(utilization["maximum_draw_total"] or 0, self.power_factor)
+            allocated_va = convert_watts_to_va(utilization["allocated_draw_total"], self.power_factor)
+            maximum_va = convert_watts_to_va(utilization["maximum_draw_total"], self.power_factor)
 
             ret = {
                 "allocated": allocated_va,
@@ -459,8 +458,8 @@ class PowerPort(ModularComponentModel, CableTermination, PathEndpoint):
                     )
 
                     # Convert watts to VA for leg values
-                    leg_allocated_va = convert_watts_to_va(utilization["allocated_draw_total"] or 0, self.power_factor)
-                    leg_maximum_va = convert_watts_to_va(utilization["maximum_draw_total"] or 0, self.power_factor)
+                    leg_allocated_va = convert_watts_to_va(utilization["allocated_draw_total"], self.power_factor)
+                    leg_maximum_va = convert_watts_to_va(utilization["maximum_draw_total"], self.power_factor)
 
                     ret["legs"].append(
                         {
@@ -479,8 +478,8 @@ class PowerPort(ModularComponentModel, CableTermination, PathEndpoint):
             denominator = 0
 
         # Convert administratively defined values from watts to VA
-        allocated_va = convert_watts_to_va(self.allocated_draw or 0, self.power_factor)
-        maximum_va = convert_watts_to_va(self.maximum_draw or 0, self.power_factor)
+        allocated_va = convert_watts_to_va(self.allocated_draw, self.power_factor)
+        maximum_va = convert_watts_to_va(self.maximum_draw, self.power_factor)
 
         return {
             "allocated": allocated_va,

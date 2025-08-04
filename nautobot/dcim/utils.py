@@ -164,6 +164,6 @@ def convert_watts_to_va(watts, power_factor):
     """
     Convert watts to VA using power factor.
     """
-    if watts is None:
-        return None
+    if not watts:
+        return 0
     return int(watts / power_factor)

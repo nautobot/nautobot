@@ -903,7 +903,6 @@ class PowerPortTemplateFactory(ModularDeviceComponentTemplateFactory):
 
     type = factory.Faker("random_element", elements=PowerPortTypeChoices.values())
     name = factory.Sequence(lambda n: f"PowerPort {n}")
-    power_factor = factory.LazyFunction(lambda: "0.95")
 
 
 class PowerOutletTemplateFactory(ModularDeviceComponentTemplateFactory):

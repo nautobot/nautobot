@@ -90,7 +90,7 @@ from .choices import (
     PortTypeChoices,
     PowerFeedBreakerPoleChoices,
     PowerFeedPhaseChoices,
-    PowerFeedSideChoices,
+    PowerFeedPowerPathChoices,
     PowerFeedSupplyChoices,
     PowerFeedTypeChoices,
     PowerOutletFeedLegChoices,
@@ -4592,23 +4592,23 @@ class PowerFeedForm(NautobotModelForm):
             "name",
             "status",
             "type",
-            "side",
+            "power_path",
             "supply",
             "phase",
             "voltage",
             "amperage",
             "max_utilization",
             "breaker_position",
-            "breaker_poles",
+            "breaker_pole_count",
             "comments",
             "tags",
         ]
         widgets = {
             "type": StaticSelect2(),
-            "side": StaticSelect2(),
+            "power_path": StaticSelect2(),
             "supply": StaticSelect2(),
             "phase": StaticSelect2(),
-            "breaker_poles": StaticSelect2(),
+            "breaker_pole_count": StaticSelect2(),
         }
 
 
@@ -4623,8 +4623,8 @@ class PowerFeedBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin,
         initial="",
         widget=StaticSelect2(),
     )
-    side = forms.ChoiceField(
-        choices=add_blank_choice(PowerFeedSideChoices),
+    power_path = forms.ChoiceField(
+        choices=add_blank_choice(PowerFeedPowerPathChoices),
         required=False,
         initial="",
         widget=StaticSelect2(),
@@ -4645,7 +4645,7 @@ class PowerFeedBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin,
     amperage = forms.IntegerField(required=False)
     max_utilization = forms.IntegerField(required=False)
     breaker_position = forms.IntegerField(required=False, min_value=1)
-    breaker_poles = forms.ChoiceField(
+    breaker_pole_count = forms.ChoiceField(
         choices=add_blank_choice(PowerFeedBreakerPoleChoices),
         required=False,
         widget=StaticSelect2(),
@@ -4654,9 +4654,9 @@ class PowerFeedBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin,
 
     class Meta:
         nullable_fields = [
-            "side",
+            "power_path",
             "breaker_position",
-            "breaker_poles",
+            "breaker_pole_count",
             "comments",
         ]
 
@@ -4689,8 +4689,8 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, Locata
         required=False,
         widget=StaticSelect2(),
     )
-    side = forms.ChoiceField(
-        choices=add_blank_choice(PowerFeedSideChoices),
+    power_path = forms.ChoiceField(
+        choices=add_blank_choice(PowerFeedPowerPathChoices),
         required=False,
         initial="",
         widget=StaticSelect2(),
@@ -4709,7 +4709,7 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, Locata
     amperage = forms.IntegerField(required=False)
     max_utilization = forms.IntegerField(required=False)
     breaker_position = forms.IntegerField(required=False, min_value=1)
-    breaker_poles = forms.ChoiceField(
+    breaker_pole_count = forms.ChoiceField(
         choices=add_blank_choice(PowerFeedBreakerPoleChoices),
         required=False,
         widget=StaticSelect2(),

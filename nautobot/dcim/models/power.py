@@ -9,7 +9,7 @@ from nautobot.core.models.validators import ExclusionValidator
 from nautobot.dcim.choices import (
     PowerFeedBreakerPoleChoices,
     PowerFeedPhaseChoices,
-    PowerFeedSideChoices,
+    PowerFeedPowerPathChoices,
     PowerFeedSupplyChoices,
     PowerFeedTypeChoices,
     PowerPanelTypeChoices,
@@ -121,7 +121,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
         blank=True,
         null=True,
         related_name="feeders",
-        help_text="Destination panel for panel-to-panel power distribution",
+        help_text="Destination panel that receives power from this feed",
     )
     rack = models.ForeignKey(to="Rack", on_delete=models.PROTECT, blank=True, null=True, related_name="power_feeds")
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
@@ -131,10 +131,10 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
         choices=PowerFeedTypeChoices,
         default=PowerFeedTypeChoices.TYPE_PRIMARY,
     )
-    side = models.CharField(
+    power_path = models.CharField(
         max_length=20,
-        choices=PowerFeedSideChoices,
-        help_text="Physical power distribution side/path",
+        choices=PowerFeedPowerPathChoices,
+        help_text="Physical power distribution redundancy path.",
         blank=True,
     )
     supply = models.CharField(
@@ -157,7 +157,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
     breaker_position = models.PositiveIntegerField(
         null=True, blank=True, help_text="Starting circuit breaker position in panel"
     )
-    breaker_poles = models.PositiveSmallIntegerField(
+    breaker_pole_count = models.PositiveSmallIntegerField(
         choices=PowerFeedBreakerPoleChoices, blank=True, null=True, help_text="Number of breaker poles"
     )
     available_power = models.PositiveIntegerField(default=0, editable=False)
@@ -175,7 +175,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
         "amperage",
         "max_utilization",
         "breaker_position",
-        "breaker_poles",
+        "breaker_pole_count",
         "available_power",
     ]
 
@@ -183,7 +183,6 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
         ordering = ["power_panel", "name"]
         unique_together = ["power_panel", "name"]
         indexes = [
-            models.Index(fields=["destination_panel"]),
             models.Index(fields=["power_panel", "breaker_position"]),
         ]
 
@@ -194,7 +193,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
         super().clean()
 
         # Rack must belong to same location hierarchy as PowerPanel
-        if self.rack and self.rack.location and self.power_panel.location:  # pylint: disable=no-member
+        if self.rack and self.power_panel.location:  # pylint: disable=no-member
             if self.rack.location not in self.power_panel.location.ancestors(  # pylint: disable=no-member
                 include_self=True
             ) and self.power_panel.location not in self.rack.location.ancestors(include_self=True):  # pylint: disable=no-member
@@ -215,36 +214,54 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
             # Cannot feed into the same panel
             if self.destination_panel == self.power_panel:
                 raise ValidationError({"destination_panel": "A power feed cannot connect a panel to itself"})
+            # TODO: add loop detection when graph structure is implemented for path tracing
+
+        # Enforce mutual exclusivity between cable connections and destination_panel
+        if self.destination_panel and self._path and self._path.destination:
+            raise ValidationError(
+                {
+                    "destination_panel": "Cannot specify a destination panel when the power feed is connected via cable. "
+                    "Power feeds can either connect to a panel OR be cabled to an endpoint, but not both."
+                }
+            )
+        
+        if self._path and self._path.destination and self.destination_panel:
+            raise ValidationError(
+                {
+                    "__all__": "This power feed cannot be connected via cable when a destination panel is specified. "
+                    "Power feeds can either connect to a panel OR be cabled to an endpoint, but not both."
+                }
+            )
 
         # Breaker position and pole validation
         if self.breaker_position is not None:
-            # Default to single pole breaker when breaker_position is specified but breaker_poles are not
-            if self.breaker_poles is None:
-                self.breaker_poles = PowerFeedBreakerPoleChoices.POLE_1
+            # Default to single pole breaker when breaker_position is specified but breaker_pole_count is not
+            if self.breaker_pole_count is None:
+                self.breaker_pole_count = PowerFeedBreakerPoleChoices.POLE_1
+
+            # Get occupied positions once for both validations
+            occupied_positions = self.get_occupied_positions()
 
             # Ensure breaker positions fit within panel capacity
             if self.power_panel.circuit_positions is not None:
-                occupied_positions = self.get_occupied_positions()
                 if occupied_positions:
                     max_occupied_position = max(occupied_positions)
                     if max_occupied_position > self.power_panel.circuit_positions:
                         raise ValidationError(
                             {
                                 "breaker_position": f"Breaker configuration starting at position {self.breaker_position} "
-                                f"with {self.breaker_poles} poles would occupy positions {sorted(occupied_positions)}, "
+                                f"with {self.breaker_pole_count} poles would occupy positions {sorted(occupied_positions)}, "
                                 f"but panel only has {self.power_panel.circuit_positions} circuit positions"
                             }
                         )
 
-        # Check for breaker position conflicts with other feeds
-        if self.breaker_position is not None and self.breaker_poles is not None:
-            new_positions = self.get_occupied_positions()
+            # Check for breaker position conflicts with other feeds
             conflicts = PowerFeed.objects.filter(
-                power_panel=self.power_panel, breaker_position__isnull=False, breaker_poles__isnull=False
+                power_panel=self.power_panel, breaker_position__isnull=False, breaker_pole_count__isnull=False
             ).exclude(pk=self.pk if self.pk else None)
 
             for feed in conflicts:
-                if new_positions.intersection(feed.get_occupied_positions()):
+                if occupied_positions.intersection(feed.get_occupied_positions()):
                     raise ValidationError(
                         {
                             "breaker_position": f"Breaker position {self.breaker_position} conflicts with "
@@ -253,6 +270,23 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
                     )
 
     def save(self, *args, **kwargs):
+        # Enforce breaker pole count default
+        if self.breaker_position is not None and self.breaker_pole_count is None:
+            self.breaker_pole_count = PowerFeedBreakerPoleChoices.POLE_1
+
+        # Enforce mutual exclusivity between cable connections and destination_panel
+        if self.destination_panel and self._path and self._path.destination:
+            raise ValidationError(
+                "Cannot specify a destination panel when the power feed is connected via cable. "
+                "Power feeds can either connect to a panel OR be cabled to an endpoint, but not both."
+            )
+        
+        if self._path and self._path.destination and self.destination_panel:
+            raise ValidationError(
+                "This power feed cannot be connected via cable when a destination panel is specified. "
+                "Power feeds can either connect to a panel OR be cabled to an endpoint, but not both."
+            )
+
         # Cache the available_power property on the instance
         kva = abs(self.voltage) * self.amperage * (self.max_utilization / 100)
         if self.phase == PowerFeedPhaseChoices.PHASE_3PHASE:
@@ -275,7 +309,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
     @property
     def phase_designation(self):
         """Calculate phase designation based on occupied circuit positions."""
-        if not (self.breaker_position and self.breaker_poles):
+        if not (self.breaker_position and self.breaker_pole_count):
             return None
 
         positions = self.get_occupied_positions()
@@ -303,10 +337,10 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
 
     def get_occupied_positions(self) -> set[int]:
         """Get set of circuit breaker positions occupied by this feed."""
-        if not (self.breaker_position and self.breaker_poles):
+        if not (self.breaker_position and self.breaker_pole_count):
             return set()
 
-        return set(self.breaker_position + (i * 2) for i in range(self.breaker_poles))
+        return set(self.breaker_position + (i * 2) for i in range(self.breaker_pole_count))
 
     def get_type_class(self):
         return PowerFeedTypeChoices.CSS_CLASSES.get(self.type)

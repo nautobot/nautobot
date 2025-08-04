@@ -1,1 +1,1 @@
-Fixed PowerPort.get_power_draw() and Rack.get_power_utilization() calculations to use power factor for watts to VA conversion.
+Fixed PowerPort.get_power_draw() and Rack.get_power_utilization() calculations to use power factor for Watts (W) to volt-amps (VA) conversion.

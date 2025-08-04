@@ -1390,13 +1390,13 @@ class PowerPanelTypeChoices(ChoiceSet):
         (TYPE_UTILITY, "Utility"),
         (TYPE_GENERATOR, "Generator"),
         (TYPE_SWITCHGEAR, "Switchgear"),
-        (TYPE_MDP, "Main Distribution Panel"),
-        (TYPE_UPS, "Uninterruptible Power Supply"),
-        (TYPE_TRANSFER_SWITCH, "Transfer Switch"),
-        (TYPE_PDU, "Power Distribution Unit"),
+        (TYPE_MDP, "Main Distribution Panel (MDP)"),
+        (TYPE_UPS, "Uninterruptible Power Supply (UPS)"),
+        (TYPE_TRANSFER_SWITCH, "Transfer Switch (TS)"),
+        (TYPE_PDU, "Power Distribution Unit (PDU)"),
         (TYPE_PANELBOARD, "Panelboard"),
-        (TYPE_MLC, "Mini Load Center"),
-        (TYPE_RPP, "Remote Power Panel"),
+        (TYPE_MLC, "Mini Load Center (MLC)"),
+        (TYPE_RPP, "Remote Power Panel (RPP)"),
     )
 
 
@@ -1434,15 +1434,13 @@ class PowerFeedTypeChoices(ChoiceSet):
     }
 
 
-class PowerFeedSideChoices(ChoiceSet):
+class PowerFeedPowerPathChoices(ChoiceSet):
     SIDE_A = "a-side"
     SIDE_B = "b-side"
-    SIDE_C = "c-side"  # For complex 3-path designs
 
     CHOICES = (
         (SIDE_A, "A-Side"),
         (SIDE_B, "B-Side"),
-        (SIDE_C, "C-Side"),
     )
 
 

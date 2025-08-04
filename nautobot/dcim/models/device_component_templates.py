@@ -253,7 +253,6 @@ class PowerPortTemplate(ModularComponentTemplateModel):
         max_digits=4,
         decimal_places=2,
         default="0.95",
-        blank=True,
         validators=[MinValueValidator(0.01), MaxValueValidator(1.00)],
         help_text="Power factor (0.01-1.00) for converting between watts (W) and volt-amps (VA). Defaults to 0.95.",
     )

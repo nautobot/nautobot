@@ -2450,7 +2450,7 @@ class PowerFeedTestCase(ModelTestCases.BaseModelTestCase):
             power_panel=self.source_panel,
             status=self.status,
             breaker_position=1,
-            breaker_poles=PowerFeedBreakerPoleChoices.POLE_2,
+            breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_2,
         )
 
         # Try to create conflicting feed at position 3
@@ -2459,7 +2459,7 @@ class PowerFeedTestCase(ModelTestCases.BaseModelTestCase):
             power_panel=self.source_panel,
             status=self.status,
             breaker_position=3,
-            breaker_poles=PowerFeedBreakerPoleChoices.POLE_1,
+            breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_1,
         )
 
         with self.assertRaises(ValidationError) as cm:
@@ -2500,7 +2500,7 @@ class PowerFeedTestCase(ModelTestCases.BaseModelTestCase):
             power_panel=self.source_panel,
             status=self.status,
             breaker_position=1,
-            breaker_poles=PowerFeedBreakerPoleChoices.POLE_1,
+            breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_1,
         )
 
         self.assertEqual(feed.phase_designation, "A")
@@ -2512,11 +2512,30 @@ class PowerFeedTestCase(ModelTestCases.BaseModelTestCase):
             power_panel=self.source_panel,
             status=self.status,
             breaker_position=5,
-            breaker_poles=PowerFeedBreakerPoleChoices.POLE_2,
+            breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_2,
         )
 
         self.assertEqual(feed.get_occupied_positions(), {5, 7})
         self.assertEqual(feed.occupied_positions, "5, 7")
+
+    def test_breaker_pole_count_enforcement_in_save(self):
+        """Test that breaker_pole_count defaults to POLE_1 when breaker_position is set during save."""
+        # Create feed with breaker_position but no breaker_pole_count
+        feed = PowerFeed(
+            name="Test Save Enforcement",
+            power_panel=self.source_panel,
+            status=self.status,
+            breaker_position=10,
+        )
+        
+        # Verify breaker_pole_count is None before save
+        self.assertIsNone(feed.breaker_pole_count)
+        
+        # Save without calling clean() to bypass form validation
+        feed.save()
+        
+        # Verify breaker_pole_count was set to POLE_1 during save
+        self.assertEqual(feed.breaker_pole_count, PowerFeedBreakerPoleChoices.POLE_1)
 
 
 class PowerPanelTestCase(TestCase):  # TODO: change to BaseModelTestCase once we have a PowerPanelFactory
