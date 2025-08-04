@@ -543,6 +543,12 @@ class JobLogEntry(BaseModel):
         ordering = ["created"]
         get_latest_by = "created"
         verbose_name_plural = "job log entries"
+        indexes = [
+            models.Index(
+                name="extras_joblog_jr_created_idx",
+                fields=["job_result", "created"],
+            )
+        ]
 
 
 #
