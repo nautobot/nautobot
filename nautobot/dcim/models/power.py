@@ -267,7 +267,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
         return self.power_panel
 
     @property
-    def occupied_positions(self):
+    def occupied_positions(self) -> str:
         """All circuit positions occupied by this feed as comma-separated string."""
         positions = self.get_occupied_positions()
         return ", ".join(map(str, sorted(positions))) if positions else ""
