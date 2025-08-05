@@ -2744,8 +2744,26 @@ class SecretsGroupUIViewSet(NautobotUIViewSet):
     form_class = forms.SecretsGroupForm
     serializer_class = serializers.SecretsGroupSerializer
     table_class = tables.SecretsGroupTable
-    template_name = "extras/secretsgroup_update.html"
     queryset = SecretsGroup.objects.all()
+
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                label="Secrets Group Details",
+                fields=["description"],
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+            ),
+            object_detail.ObjectsTablePanel(
+                table_class=tables.SecretsGroupAssociationTable,
+                table_filter="secrets_group",
+                related_field_name="secrets_group",
+                table_title="Secrets",
+                section=SectionChoices.LEFT_HALF,
+                weight=200,
+            ),
+        )
+    )
 
     def get_extra_context(self, request, instance=None):
         context = super().get_extra_context(request, instance)
