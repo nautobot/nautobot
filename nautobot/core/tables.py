@@ -391,7 +391,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
             <span class="mdi mdi-dots-vertical" aria-hidden="true"></span>
             <span class="visually-hidden">Toggle Dropdown</span>
         </button>
-        <ul class="dropdown-menu">
+        <ul class="dropdown-menu dropdown-menu-end">
             {prepend_template}
             {{% if "changelog" in buttons %}}
                 <li>

@@ -11,7 +11,7 @@
                 <i>Override default value</i>
             </label>
             {% if override_field.help_text %}
-                <span class="help-block">{{ override_field.help_text|safe }}</span>
+                <span class="form-text">{{ override_field.help_text|safe }}</span>
             {% endif %}
         </div>
     </div>
@@ -21,11 +21,11 @@
                 <label for="{{ field.id_for_label }}">
                     {{ field }} {{ field.label }}
                 </label>
-                {% if field.help_text %}<span class="help-block">{{ field.help_text|safe }}</span>{% endif %}
+                {% if field.help_text %}<span class="form-text">{{ field.help_text|safe }}</span>{% endif %}
             </div>
         {% else %}
             {{ field }}
-            {% if field.help_text %}<span class="help-block">{{ field.help_text|safe }}</span>{% endif %}
+            {% if field.help_text %}<span class="form-text">{{ field.help_text|safe }}</span>{% endif %}
         {% endif %}
         {% if field.errors %}
             <ul>

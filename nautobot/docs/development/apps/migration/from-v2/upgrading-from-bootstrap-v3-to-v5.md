@@ -163,6 +163,11 @@ Bootstrap v5.x:
 <button class="btn-close" data-bs-dismiss="alert"></button>
 ```
 
+## Forms
+
+- `help-block` is replaced by `form-text`.
+- `checkbox` and `checkbox-inline` are removed; use `form-check` and `form-check-input` instead: [https://getbootstrap.com/docs/5.3/forms/checks-radios/#checks](https://getbootstrap.com/docs/5.3/forms/checks-radios/#checks).
+
 ## Dropdowns
 
 Complete Bootstrap 5.x dropdowns documentation can be found at: [https://getbootstrap.com/docs/5.3/components/dropdowns/](https://getbootstrap.com/docs/5.3/components/dropdowns/).

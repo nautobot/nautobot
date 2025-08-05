@@ -386,6 +386,9 @@ $badge-color:       $body-color;
 $badge-padding-y:   map.get($spacers, 2);
 $badge-padding-x:   map.get($spacers, 8);
 
+/* Modals */
+$modal-title-line-height: $line-height-base;
+
 /* List group */
 $list-group-item-padding-y: $table-cell-padding-y;
 $list-group-item-padding-x: $table-cell-padding-x;
@@ -665,6 +668,8 @@ $s2bs5-clear-hover-bg:  transparent escape-svg($s2bs5-clear-icon) center / $s2bs
 }
 
 /* 9. Add additional custom code here */
+$nautobot-chevron-svg: "<svg viewBox='0 0 17 20' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M0.277304 13C0.181925 13 0.102443 12.9571 0.054754 12.8856C-0.0247279 12.7711 0.022961 12.6281 0.150132 12.5566L4.96673 9.99603L0.134236 7.4498C0.00706488 7.37828 -0.040624 7.23523 0.0388579 7.12079C0.11834 7.00636 0.277303 6.96344 0.404474 7.03497L6 9.99603L0.404474 12.9714C0.372681 13 0.324993 13 0.277304 13Z' fill='#FF8400'/><path d='M6.26141 13C6.16603 13 6.08655 12.9571 6.03886 12.8856C5.95938 12.7711 6.00706 12.6281 6.13424 12.5566L10.9508 9.99603L6.13424 7.4498C6.00706 7.37828 5.95938 7.23523 6.03886 7.12079C6.11834 7.00636 6.2773 6.96344 6.40447 7.03497L12 9.99603L6.40447 12.9714C6.35679 13 6.3091 13 6.26141 13Z' fill='#FF8400'/><path d='M12.2311 13C12.1516 13 12.0854 12.9571 12.0456 12.8856C11.9794 12.7711 12.0191 12.6281 12.1251 12.5566L16.1389 9.99603L12.1119 7.4498C12.0059 7.37828 11.9661 7.23523 12.0324 7.12079C12.0986 7.00636 12.2311 6.96344 12.3371 7.03497L17 9.99603L12.3371 12.9714C12.3106 13 12.2708 13 12.2311 13Z' fill='#FF8400'/></svg>";
+
 @if $enable-dark-mode {
   @include color-mode(dark, true) {
     /* Colors */
@@ -873,9 +878,51 @@ $btn-variants: (
   @include button-size($btn-padding-y-sm, $btn-padding-x-sm, $btn-font-size-sm, $btn-border-radius-sm);
 }
 
+.nb-btn-indicator {
+  background: var(--#{$prefix}warning-text-emphasis);
+  border-radius: 50%;
+  height: 0.5rem; /* 8px */
+  position: absolute;
+  right: map.get($spacers, 8);
+  top: map.get($spacers, 2);
+  width: 0.5rem; /* 8px */
+
+  /* Additional support for button indicator as an MDI icon, not a simple circle. */
+  .btn &:is(i, span).mdi { /* It is required to bump selector specificity here with `.btn` and `:is(i, span)`. */
+    background: transparent;
+    color: var(--#{$prefix}warning-text-emphasis);
+
+    &::before {
+      font-size: $font-size-base;
+      top: -#{map.get($spacers, 4)};
+      right: map.get($spacers, 2);
+    }
+  }
+}
+
 /* Forms */
-label.nb-required {
-  font-weight: $font-weight-medium;
+label {
+  &.col-form-label {
+    color: var(--#{$prefix}secondary-color);
+    padding-inline-end: map.get($spacers, 10);
+    text-align: end;
+  }
+
+  .form-text ul {
+    float: right;
+    text-align: start;
+  }
+
+  &.nb-required {
+    font-weight: $font-weight-medium;
+
+    &::before {
+      color: var(--#{$prefix}danger-text-emphasis);
+      content: "*";
+      float: right;
+      margin-inline-start: map.get($spacers, 4);
+    }
+  }
 }
 
 textarea {
@@ -947,6 +994,11 @@ textarea {
       color: $input-disabled-color;
     }
   }
+}
+
+.form-text {
+  display: block;
+  font-weight: $font-weight-normal;
 }
 
 .nb-form-group {
@@ -1181,6 +1233,26 @@ textarea {
   overflow-y: scroll;
 }
 
+.modal-footer {
+  justify-content: center;
+}
+
+.modal-title {
+  $modal-title-font-size: $h1-font-size;
+
+  font-size: $modal-title-font-size;
+
+  &::before {
+    background: center no-repeat #{escape-svg(url("data:image/svg+xml,#{$nautobot-chevron-svg}"))};
+    content: "";
+    display: inline-block;
+    height: $modal-title-font-size * $modal-title-line-height;
+    margin-inline-end: map.get($spacers, 8);
+    vertical-align: top;
+    width: 1.5rem; /* 24px */
+  }
+}
+
 /* Progress bars */
 .progress {
   td & {
@@ -1255,10 +1327,6 @@ $sidenav-width-expanded: 15rem; /* 240px */
   margin: 0;
 }
 
-html {
-  overflow-y: scroll;
-}
-
 html, body {
   height: 100%;
 }
@@ -1273,6 +1341,7 @@ body {
     "sidenav footer       drawer";
   grid-template-columns: fit-content(0) minmax(0, 1fr) fit-content(0);
   grid-template-rows: fit-content(0) 1fr fit-content(0);
+  overflow-y: scroll;
 
   #sidenav {
     grid-area: sidenav;
