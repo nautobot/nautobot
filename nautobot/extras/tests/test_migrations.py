@@ -166,7 +166,7 @@ class CustomFieldDataMigrationTest(NautobotDataMigrationTest):
 class TestFailingApprovalMigration(TestCase):
     def setUp(self):
         self.migrator = Migrator(database="default")
-        old_state = self.migrator.apply_initial_migration(("extras", "0124_approval_workflow_models"))
+        old_state = self.migrator.apply_initial_migration(("extras", "0123_alter_joblogentry_created"))
 
         Job = old_state.apps.get_model("extras", "Job")
         ScheduledJob = old_state.apps.get_model("extras", "ScheduledJob")

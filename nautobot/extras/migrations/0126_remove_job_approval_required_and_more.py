@@ -5,7 +5,7 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0125_remove_job_approval_required_pre_check"),
+        ("extras", "0125_approval_workflow_models"),
     ]
 
     operations = [

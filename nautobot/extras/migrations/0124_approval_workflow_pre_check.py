@@ -17,10 +17,6 @@ from django.db import migrations
 from nautobot.extras.exceptions import ApprovalRequiredScheduledJobsError
 
 
-def _reverse_migrate_data(*_):
-    pass
-
-
 def _migrate_data(apps, *_):
     ScheduledJob = apps.get_model("extras", "ScheduledJob")
     approval_required_scheduled_jobs = ScheduledJob.objects.filter(approval_required=True).values_list("id", "name")
@@ -54,9 +50,9 @@ def _migrate_data(apps, *_):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0124_approval_workflow_models"),
+        ("extras", "0123_alter_joblogentry_created"),
     ]
 
     operations = [
-        migrations.RunPython(code=_migrate_data, reverse_code=_reverse_migrate_data),
+        migrations.RunPython(code=_migrate_data, reverse_code=migrations.RunPython.noop),
     ]
