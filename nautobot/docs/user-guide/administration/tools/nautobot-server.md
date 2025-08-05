@@ -407,14 +407,17 @@ Wrapping model clean methods for custom validators failed because the ContentTyp
 Operations to perform:
   Apply all migrations: admin, auth, circuits, contenttypes, dcim, extras, ipam, sessions, taggit, tenancy, users, virtualization
 Running migrations:
-  Applying contenttypes.0001_initial... OK
-  Applying auth.0001_initial... OK
-  Applying admin.0001_initial... OK
+  Applying ipam.0050_vlangroup_range...                          OK    (   0.1s)
+    Affected ipam.vlangroup                               20 rows  0.003s/record
+  Applying dcim.0063_interfacevdcassignment_virtualdevicecont... OK    (   0.2s)
+    Affected dcim.interfacevdcassignment                   0 rows
+    Affected dcim.virtualdevicecontext                     0 rows
+  Applying dcim.0064_virtualdevicecontext_status_data_migrati...
 ... (truncated for brevity of documentation) ...
 ```
 
 !!! note
-    This is a built-in Django command. Please see the [official documentation on `migrate`](https://docs.djangoproject.com/en/stable/ref/django-admin/#migrate) for more information.
+    This is a built-in Django command, although Nautobot has enhanced it to provide additional output when run. Please see the [official documentation on `migrate`](https://docs.djangoproject.com/en/stable/ref/django-admin/#migrate) for more information.
 
 ### `nbshell`
 

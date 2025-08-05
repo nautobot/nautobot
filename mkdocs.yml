@@ -465,7 +465,6 @@ nav:
                   - Console Server Port: "user-guide/core-data-model/dcim/consoleserverport.md"
                   - Front Port: "user-guide/core-data-model/dcim/frontport.md"
                   - Interface: "user-guide/core-data-model/dcim/interface.md"
-                  - Inventory Item: "user-guide/core-data-model/dcim/inventoryitem.md"
                   - Module Bay: "user-guide/core-data-model/dcim/modulebay.md"
                   - Power Port: "user-guide/core-data-model/dcim/powerport.md"
                   - Power Outlet: "user-guide/core-data-model/dcim/poweroutlet.md"

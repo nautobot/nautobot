@@ -8,6 +8,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import connections, DEFAULT_DB_ALIAS
 from django.db.models import ForeignKey, ManyToManyField, QuerySet
+from django.http import QueryDict
 from django.test import override_settings, tag
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
@@ -105,6 +106,12 @@ class APITestCase(views.ModelTestCase):
             if isinstance(field_instance, (serializers.ManyRelatedField, serializers.ListSerializer)):
                 m2m_fields.append(field_name)
         return m2m_fields
+
+    @staticmethod
+    def add_query_params_to_url(url: str, query_dict: dict) -> str:
+        query = QueryDict(mutable=True)
+        query.update(query_dict)
+        return f"{url}?{query.urlencode()}"
 
 
 @tag("unit")
