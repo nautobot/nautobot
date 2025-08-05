@@ -1116,6 +1116,7 @@ class TagSerializer(NautobotModelSerializer):
 
         return attrs
 
+    @extend_schema_field(serializers.IntegerField(read_only=True))
     def get_tagged_items(self, obj):
         return TaggedItem.objects.filter(tag=obj).count()
 
