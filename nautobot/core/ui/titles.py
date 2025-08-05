@@ -4,7 +4,7 @@ from django.template import Context, Template
 from django.utils.html import strip_tags
 
 DEFAULT_TITLES: dict[str, str] = {
-    "list": "{% format_title_with_saved_view verbose_name_plural|bettertitle %}",
+    "list": "{{ verbose_name_plural|bettertitle }}",
     "detail": "{{ object.display|default:object }}",
     "retrieve": "{{ object.display|default:object }}",
     "destroy": "Delete {{ verbose_name }}?",

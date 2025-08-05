@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import re
+from typing import Literal
 from urllib.parse import parse_qs, quote_plus
 
 from django import template
@@ -12,7 +13,7 @@ from django.contrib.staticfiles.finders import find
 from django.core.exceptions import ObjectDoesNotExist
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
-from django.utils.html import format_html, format_html_join
+from django.utils.html import format_html, format_html_join, strip_tags
 from django.utils.safestring import mark_safe
 from django.utils.text import slugify as django_slugify
 from django_jinja import library
@@ -1258,20 +1259,23 @@ def _build_hyperlink(value, field="", target="", rel=""):
 
 
 @register.simple_tag(takes_context=True)
-def format_title_with_saved_view(context, title):
+def saved_view_title(context, mode: Literal["html", "plain"] = "html"):
     """
     Creates a formatted title that includes saved view information.
-    Usage within a block: {% format_title_with_saved_view title as formatted_title %}
+    Usage: <h1>{{ title }}{% saved_view_title "html" %}</h1>
     """
     new_changes_not_applied = context.get("new_changes_not_applied", False)
     current_saved_view = context.get("current_saved_view")
 
     if not current_saved_view:
-        return title
+        return ""
 
     if new_changes_not_applied:
-        new_title = format_html('{} — <i title="Pending changes not saved">{}</i>', title, current_saved_view.name)
+        title = format_html(' — <i title="Pending changes not saved">{}</i>', current_saved_view.name)
     else:
-        new_title = format_html("{} — {}", title, current_saved_view.name)
+        title = format_html(" — {}", current_saved_view.name)
 
-    return new_title
+    if mode == "plain":
+        return strip_tags(title)
+
+    return title
