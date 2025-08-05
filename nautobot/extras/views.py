@@ -2186,19 +2186,6 @@ class JobResultUIViewSet(
 
         return queryset
 
-    def get_table_class(self):
-        if "delete" in self.request.path or "bulk_destroy" in self.request.path:
-            # Create a subclass of the table with the "actions" column removed
-            class JobResultTableWithoutActions(self.table_class):
-                class Meta(self.table_class.Meta):
-                    # Exclude the "actions" column from the field list
-                    all_default_columns = self.table_class.Meta.default_columns
-                    default_columns = tuple(column for column in all_default_columns if column != "actions")
-
-            return JobResultTableWithoutActions
-
-        return self.table_class
-
 
 class JobLogEntryTableView(generic.GenericView):
     """
