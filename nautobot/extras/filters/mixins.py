@@ -74,7 +74,9 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
             CustomFieldTypeChoices.TYPE_SELECT: CustomFieldSelectFilter,
         }
 
-        custom_fields = CustomField.objects.get_for_model(self._meta.model, exclude_filter_disabled=True)
+        custom_fields = CustomField.objects.get_for_model(
+            self._meta.model, exclude_filter_disabled=True, get_queryset=False
+        )
         for cf in custom_fields:
             # Determine filter class for this CustomField type, default to CustomFieldCharFilter
             new_filter_name = cf.add_prefix_to_cf_key()
@@ -220,13 +222,13 @@ class RelationshipModelFilterSetMixin(django_filters.FilterSet):
         """
         Append form fields for all Relationships assigned to this model.
         """
-        src_relationships, dst_relationships = Relationship.objects.get_for_model(model=model, hidden=False)
+        src_relationships, dst_relationships = Relationship.objects.get_for_model(
+            model=model, hidden=False, get_queryset=False
+        )
 
-        for rel in src_relationships:
-            self._append_relationships_side([rel], RelationshipSideChoices.SIDE_SOURCE, model)
+        self._append_relationships_side(src_relationships, RelationshipSideChoices.SIDE_SOURCE, model)
 
-        for rel in dst_relationships:
-            self._append_relationships_side([rel], RelationshipSideChoices.SIDE_DESTINATION, model)
+        self._append_relationships_side(dst_relationships, RelationshipSideChoices.SIDE_DESTINATION, model)
 
     def _append_relationships_side(self, relationships, initial_side, model):
         """

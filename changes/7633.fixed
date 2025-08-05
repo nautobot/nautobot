@@ -1,0 +1,1 @@
+Greatly reduced the number of database queries made when generating the GraphQL schema.
