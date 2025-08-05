@@ -1,6 +1,5 @@
 import logging
 
-from django.db.models import Count
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
