@@ -287,9 +287,17 @@ class ApprovalWorkflowViewSet(NautobotModelViewSet):
     serializer_class = serializers.ApprovalWorkflowSerializer
     filterset_class = filters.ApprovalWorkflowFilterSet
 
+
+class ApprovalWorkflowStageViewSet(NautobotModelViewSet):
+    """ApprovalWorkflowStage viewset."""
+
+    queryset = ApprovalWorkflowStage.objects.all()
+    serializer_class = serializers.ApprovalWorkflowStageSerializer
+    filterset_class = filters.ApprovalWorkflowStageFilterSet
+
     def _validate_stage(self, stage):
         """Checks if a workflow has an active stage."""
-        return stage is not None
+        return stage.state == ApprovalWorkflowStateChoices.PENDING
 
     def _has_change_permission(self, user, workflow):
         """Checks whether the user has 'change' permission on the model under review."""
@@ -311,20 +319,19 @@ class ApprovalWorkflowViewSet(NautobotModelViewSet):
     def _handle_response(self, request, action_type):
         """Common logic for approve/deny actions."""
         try:
-            workflow = self.get_object()
-        except ApprovalWorkflow.DoesNotExist:
+            stage = self.get_object()
+        except ApprovalWorkflowStage.DoesNotExist:
             return Response(
-                {"detail": "ApprovalWorkflow not found."},
+                {"detail": "ApprovalWorkflowStage not found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
         user = request.user
-        stage = workflow.active_stage
         if not self._validate_stage(stage):
             return Response(
-                {"detail": "Workflow has no active stage."},
+                {"detail": "Approval workflow stage in not active."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
+        workflow = stage.approval_workflow
         if not self._has_change_permission(user, workflow):
             ct = workflow.object_under_review_content_type
             model_name = ct.model
@@ -355,7 +362,7 @@ class ApprovalWorkflowViewSet(NautobotModelViewSet):
             else ApprovalWorkflowStateChoices.DENIED,
             comments=comment,
         )
-        serializer = serializers.ApprovalWorkflowSerializer(workflow, context={"request": request})
+        serializer = serializers.ApprovalWorkflowStageSerializer(stage, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def restrict_queryset(self, request, *args, **kwargs):
@@ -371,16 +378,18 @@ class ApprovalWorkflowViewSet(NautobotModelViewSet):
             super().restrict_queryset(request, *args, **kwargs)
 
     class ApprovalWorkflowStageChangePermission(TokenPermissions):
-        """Enforce `change_approvalworkflowstage` permission (instead of default `add_approvalworkflow` for POST)."""
+        """
+        Enforce `change_approvalworkflowstage` permission (instead of default `add_approvalworkflowstage` for POST).
+        """
 
         perms_map = {
-            "POST": ["%(app_label)s.change_%(model_name)s"],
+            "POST": ["%(app_label)s.change_approvalworkflowstage"],
         }
 
     @extend_schema(
         methods=["post"],
         request=None,
-        responses={"200": serializers.ApprovalWorkflowSerializer},
+        responses={"200": serializers.ApprovalWorkflowStageSerializer},
     )
     @action(
         detail=True,
@@ -388,13 +397,13 @@ class ApprovalWorkflowViewSet(NautobotModelViewSet):
         permission_classes=[ApprovalWorkflowStageChangePermission],
     )
     def approve(self, request, pk=None):
-        """Approve the active stage of this workflow."""
+        """Approve the approval workflow stage."""
         return self._handle_response(request, action_type="approve")
 
     @extend_schema(
         methods=["post"],
         request=None,
-        responses={"200": serializers.ApprovalWorkflowSerializer},
+        responses={"200": serializers.ApprovalWorkflowStageSerializer},
     )
     @action(
         detail=True,
@@ -402,39 +411,23 @@ class ApprovalWorkflowViewSet(NautobotModelViewSet):
         permission_classes=[ApprovalWorkflowStageChangePermission],
     )
     def deny(self, request, pk=None):
-        """Deny the active stage of this workflow."""
+        """Deny the approval workflow stage."""
         return self._handle_response(request, action_type="deny")
 
     @extend_schema(
         methods=["post"],
         request=None,
-        responses={"200": serializers.ApprovalWorkflowSerializer},
+        responses={"200": serializers.ApprovalWorkflowStageSerializer},
     )
-    @action(detail=True, methods=["post"], url_path="comment")
+    @action(detail=True, methods=["post"], permission_classes=[ApprovalWorkflowStageChangePermission])
     def comment(self, request, pk=None):
-        """
-        Add/Update a neutral comment to the current active stage
-        (without approving or denying).
-        """
+        """Add a comment to the specific stage (without approving or denying)."""
         try:
-            workflow = self.get_object()
-        except ApprovalWorkflow.DoesNotExist:
+            stage = self.get_object()
+        except ApprovalWorkflowStage.DoesNotExist:
             return Response(
-                {"detail": "ApprovalWorkflow not found."},
+                {"detail": "ApprovalWorkflowStage not found."},
                 status=status.HTTP_404_NOT_FOUND,
-            )
-        user = request.user
-        stage = workflow.active_stage
-        if not self._validate_stage(stage):
-            return Response(
-                {"detail": "Workflow has no active stage."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        if not self._is_user_approver(user, stage):
-            return Response(
-                {"detail": "You do not have permission to comment this stage."},
-                status=status.HTTP_403_FORBIDDEN,
             )
 
         comment = request.data.get("comments", "")
@@ -444,39 +437,26 @@ class ApprovalWorkflowViewSet(NautobotModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.get_or_create(
-            approval_workflow_stage=stage,
-            user=user,
-            state=ApprovalWorkflowStateChoices.PENDING,
+        ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=stage, user=request.user, state=stage.state, comments=comment
         )
-        approval_workflow_stage_response.comments = comment
-        approval_workflow_stage_response.save()
 
-        serializer = serializers.ApprovalWorkflowSerializer(workflow, context={"request": request})
+        serializer = serializers.ApprovalWorkflowStageSerializer(stage, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @extend_schema(
         methods=["get"],
-        responses={200: serializers.ApprovalWorkflowSerializer(many=True)},
+        responses={200: serializers.ApprovalWorkflowStageSerializer(many=True)},
     )
     @action(detail=False, methods=["get"], url_path="pending-approvals")
     def pending_approvals(self, request):
-        """List approval workflows pending current user's approval."""
+        """List approval workflow stages pending current user's approval."""
         pending_stages = get_pending_approval_workflow_stages(
             request.user, ApprovalWorkflowStage.objects.select_related("approval_workflow")
         )
-        pending_workflows = self.queryset.filter(id__in=pending_stages.values_list("approval_workflow", flat=True))
-        pending_workflows = self.paginate_queryset(pending_workflows)
-        serializer = self.get_serializer(pending_workflows, many=True)
+        pending_stages = self.paginate_queryset(pending_stages)
+        serializer = self.get_serializer(pending_stages, many=True)
         return self.get_paginated_response(serializer.data)
-
-
-class ApprovalWorkflowStageViewSet(NautobotModelViewSet):
-    """ApprovalWorkflowStage viewset."""
-
-    queryset = ApprovalWorkflowStage.objects.all()
-    serializer_class = serializers.ApprovalWorkflowStageSerializer
-    filterset_class = filters.ApprovalWorkflowStageFilterSet
 
 
 class ApprovalWorkflowStageResponseViewSet(ModelViewSet):

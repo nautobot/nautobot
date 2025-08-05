@@ -54,6 +54,7 @@ from nautobot.extras.models import (
     ApprovalWorkflowDefinition,
     ApprovalWorkflowStage,
     ApprovalWorkflowStageDefinition,
+    ApprovalWorkflowStageResponse,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -113,11 +114,11 @@ class AppTest(APITestCase):
         self.assertEqual(response.status_code, 200)
 
 
-class ApprovalWorkflowTest(
+class ApprovalWorkflowStageTest(
     APIViewTestCases.GetObjectViewTestCase,
     APIViewTestCases.ListObjectsViewTestCase,
 ):
-    model = ApprovalWorkflow
+    model = ApprovalWorkflowStage
 
     @classmethod
     def setUpTestData(cls):
@@ -136,7 +137,7 @@ class ApprovalWorkflowTest(
                 user=cls.user,
                 start_time=now(),
             )
-            for i in range(5)
+            for i in range(4)
         ]
         cls.scheduledjob_ct = ContentType.objects.get_for_model(ScheduledJob)
 
@@ -144,7 +145,7 @@ class ApprovalWorkflowTest(
             ApprovalWorkflowDefinition.objects.create(
                 name=f"Test Approval Workflow {i}", model_content_type=cls.scheduledjob_ct, priority=i
             )
-            for i in range(5)
+            for i in range(4)
         ]
         cls.approval_workflows = [
             ApprovalWorkflow.objects.create(
@@ -153,28 +154,27 @@ class ApprovalWorkflowTest(
                 object_under_review_object_id=cls.scheduled_jobs[i].pk,
                 current_state=ApprovalWorkflowStateChoices.PENDING,
             )
-            for i in range(5)
+            for i in range(4)
         ]
-        cls.approval_workflow_stage_definitions = []
-        cls.approval_workflow_stages = []
-        # First approval will have only 1 stage
-        cls.approval_workflow_stage_definitions.append(
+        cls.approval_workflow_stage_definitions = [
             ApprovalWorkflowStageDefinition.objects.create(
-                approval_workflow_definition=cls.approval_workflow_definitions[0],
-                weight=100,
-                name="Test Approval Workflow Stage 1 Definition",
+                approval_workflow_definition=cls.approval_workflow_definitions[i],
+                weight=i * 100,
+                name=f"Test Approval Workflow Stage {i} Definition",
                 min_approvers=1,
                 denial_message="Stage Denial Message",
                 approver_group=cls.approver_group_1,
             )
-        )
-        cls.approval_workflow_stages.append(
+            for i in range(3)
+        ]
+        cls.approval_workflow_stages = [
             ApprovalWorkflowStage.objects.create(
-                approval_workflow=cls.approval_workflows[0],
-                approval_workflow_stage_definition=cls.approval_workflow_stage_definitions[0],
+                approval_workflow=cls.approval_workflows[i],
+                approval_workflow_stage_definition=cls.approval_workflow_stage_definitions[i],
                 state=ApprovalWorkflowStateChoices.PENDING,
             )
-        )
+            for i in range(3)
+        ]
 
         cls.approval_workflow_content_type_cases = [
             {
@@ -185,102 +185,102 @@ class ApprovalWorkflowTest(
             }
         ]
 
-    def _test_workflow_action_anonymous(self, action):
+    def _test_workflow_stage_action_anonymous(self, action):
         for case in self.approval_workflow_content_type_cases:
             with self.subTest(case=case["content_type"], action=action):
-                url = reverse(f"extras-api:approvalworkflow-{action}", kwargs={"pk": case["workflow"].pk})
+                url = reverse(f"extras-api:approvalworkflowstage-{action}", kwargs={"pk": case["stage"].pk})
                 response = self.client.post(url)
                 self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
                 self.assertIn(response.data["detail"], "'Authentication credentials were not provided.'")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_approve_approval_workflow_anonymous(self):
-        self._test_workflow_action_anonymous("approve")
+    def test_approve_approval_workflow_stage_anonymous(self):
+        self._test_workflow_stage_action_anonymous("approve")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_deny_approval_workflow_anonymous(self):
-        self._test_workflow_action_anonymous("deny")
+    def test_deny_approval_workflow_stage_anonymous(self):
+        self._test_workflow_stage_action_anonymous("deny")
 
-    def _test_approval_workflow_action_without_permission(self, action):
+    def _test_approval_workflow_stage_action_without_permission(self, action):
         for case in self.approval_workflow_content_type_cases:
             with self.subTest(case=case["content_type"], action=action):
-                url = reverse(f"extras-api:approvalworkflow-{action}", kwargs={"pk": case["workflow"].pk})
+                url = reverse(f"extras-api:approvalworkflowstage-{action}", kwargs={"pk": case["stage"].pk})
                 with disable_warnings("django.request"):
                     response = self.client.post(url, **self.header)
                 self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
                 self.assertIn(response.data["detail"], "You do not have permission to perform this action.")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_approve_approval_workflow_without_permission(self):
-        self._test_approval_workflow_action_without_permission("approve")
+    def test_approve_approval_workflow_stage_without_permission(self):
+        self._test_approval_workflow_stage_action_without_permission("approve")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_deny_approval_workflow_without_permission(self):
-        self._test_approval_workflow_action_without_permission("deny")
+    def test_deny_approval_workflow_stage_without_permission(self):
+        self._test_approval_workflow_stage_action_without_permission("deny")
 
-    def _test_approval_workflow_action_without_approvalworkflow_permission(self, action):
+    def _test_approval_workflow_stage_action_without_approvalworkflow_permission(self, action):
         for case in self.approval_workflow_content_type_cases:
             content_type = case["content_type"]
             with self.subTest(case=content_type, action=action):
-                url = reverse(f"extras-api:approvalworkflow-{action}", kwargs={"pk": case["workflow"].pk})
+                url = reverse(f"extras-api:approvalworkflowstage-{action}", kwargs={"pk": case["stage"].pk})
                 self.add_permissions(f"extras.change_{content_type.lower()}")
                 response = self.client.post(url, **self.header)
                 self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
                 self.assertIn(response.data["detail"], "You do not have permission to perform this action.")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_approve_approval_workflow_without_approvalworkflow_permission(self):
-        self._test_approval_workflow_action_without_approvalworkflow_permission("approve")
+    def test_approve_approval_workflow_stage_without_approvalworkflow_permission(self):
+        self._test_approval_workflow_stage_action_without_approvalworkflow_permission("approve")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_deny_approval_workflow_without_approvalworkflow_permission(self):
-        self._test_approval_workflow_action_without_approvalworkflow_permission("deny")
+    def test_deny_approval_workflow_stage_without_approvalworkflow_permission(self):
+        self._test_approval_workflow_stage_action_without_approvalworkflow_permission("deny")
 
-    def _test_approval_workflow_action_without_change_content_type_permission(self, action):
+    def _test_approval_workflow_stage_action_without_change_content_type_permission(self, action):
         for case in self.approval_workflow_content_type_cases:
             with self.subTest(case=case["content_type"], action=action):
-                url = reverse(f"extras-api:approvalworkflow-{action}", kwargs={"pk": case["workflow"].pk})
-                self.add_permissions("extras.change_approvalworkflow")
+                url = reverse(f"extras-api:approvalworkflowstage-{action}", kwargs={"pk": case["stage"].pk})
+                self.add_permissions("extras.change_approvalworkflowstage")
                 self.user.groups.add(self.approver_group_1)
                 response = self.client.post(url, **self.header)
                 self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
                 self.assertIn(response.data["detail"], "You do not have 'change' permission on extras.scheduledjob.")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_approve_approval_workflow_without_change_content_type_permission(self):
-        self._test_approval_workflow_action_without_change_content_type_permission("approve")
+    def test_approve_approval_workflow_stage_without_change_content_type_permission(self):
+        self._test_approval_workflow_stage_action_without_change_content_type_permission("approve")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_deny_approval_workflow_without_change_content_type_permission(self):
-        self._test_approval_workflow_action_without_change_content_type_permission("deny")
+    def test_deny_approval_workflow_stage_without_change_content_type_permission(self):
+        self._test_approval_workflow_stage_action_without_change_content_type_permission("deny")
 
-    def _test_approval_workflow_action_without_approver_group_membership(self, action):
+    def _test_approval_workflow_stage_action_without_approver_group_membership(self, action):
         for case in self.approval_workflow_content_type_cases:
             content_type = case["content_type"]
             with self.subTest(case=content_type, action=action):
-                url = reverse(f"extras-api:approvalworkflow-{action}", kwargs={"pk": case["workflow"].pk})
-                self.add_permissions("extras.change_approvalworkflow", f"extras.change_{content_type.lower()}")
+                url = reverse(f"extras-api:approvalworkflowstage-{action}", kwargs={"pk": case["stage"].pk})
+                self.add_permissions("extras.change_approvalworkflowstage", f"extras.change_{content_type.lower()}")
                 response = self.client.post(url, **self.header)
                 self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
                 self.assertIn(response.data["detail"], "You do not have permission to approve this stage.")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_approve_approval_workflow_without_approver_group_membership(self):
-        self._test_approval_workflow_action_without_approver_group_membership("approve")
+    def test_approve_approval_workflow_stage_without_approver_group_membership(self):
+        self._test_approval_workflow_stage_action_without_approver_group_membership("approve")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_deny_approval_workflow_without_approver_group_membership(self):
-        self._test_approval_workflow_action_without_approver_group_membership("deny")
+    def test_deny_approval_workflow_stage_without_approver_group_membership(self):
+        self._test_approval_workflow_stage_action_without_approver_group_membership("deny")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_approve_approval_workflow_with_one_stage(self):
+    def test_approve_approval_workflow_stage_in_approval_workflow_with_one_stage(self):
         for case in self.approval_workflow_content_type_cases:
             content_type = case["content_type"]
             with self.subTest(case=content_type):
                 approval_workflow = case["workflow"]
                 approval_workflow_stage = case["stage"]
-                url = reverse("extras-api:approvalworkflow-approve", kwargs={"pk": case["workflow"].pk})
-                self.add_permissions("extras.change_approvalworkflow", f"extras.change_{content_type.lower()}")
+                url = reverse("extras-api:approvalworkflowstage-approve", kwargs={"pk": case["stage"].pk})
+                self.add_permissions("extras.change_approvalworkflowstage", f"extras.change_{content_type.lower()}")
                 self.user.groups.add(self.approver_group_1)
 
                 response = self.client.post(url, **self.header)
@@ -289,6 +289,7 @@ class ApprovalWorkflowTest(
                 approval_workflow.refresh_from_db()
                 approval_workflow_stage.refresh_from_db()
                 self.assertEqual(approval_workflow_stage.approval_workflow_stage_responses.count(), 1)
+                self.assertEqual(approval_workflow_stage.approval_workflow_stage_responses.first().comments, "")
                 self.assertEqual(approval_workflow_stage.state, ApprovalWorkflowStateChoices.APPROVED)
                 self.assertEqual(approval_workflow.current_state, ApprovalWorkflowStateChoices.APPROVED)
 
@@ -297,14 +298,14 @@ class ApprovalWorkflowTest(
                 self.assertEqual(scheduled_job.approved_at, approval_workflow.decision_date)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_approve_approval_workflow_with_more_than_one_stage(self):
+    def test_approve_approval_workflow_stage_in_approval_workflow_with_more_than_one_stage(self):
         for case in self.approval_workflow_content_type_cases:
             content_type = case["content_type"]
             with self.subTest(case=content_type):
                 approval_workflow = case["workflow"]
                 approval_workflow_stage = case["stage"]
-                url = reverse("extras-api:approvalworkflow-approve", kwargs={"pk": case["workflow"].pk})
-                self.add_permissions("extras.change_approvalworkflow", f"extras.change_{content_type.lower()}")
+                url = reverse("extras-api:approvalworkflowstage-approve", kwargs={"pk": case["stage"].pk})
+                self.add_permissions("extras.change_approvalworkflowstage", f"extras.change_{content_type.lower()}")
                 self.user.groups.add(self.approver_group_1)
 
                 approval_workflow_stage_definition_2 = ApprovalWorkflowStageDefinition.objects.create(
@@ -338,14 +339,42 @@ class ApprovalWorkflowTest(
                 self.assertIsNone(scheduled_job.approved_at)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_deny_approval_workflow_with_one_stage(self):
+    def test_approve_with_comment_approval_workflow_stage_in_approval_workflow_with_one_stage(self):
         for case in self.approval_workflow_content_type_cases:
             content_type = case["content_type"]
             with self.subTest(case=content_type):
                 approval_workflow = case["workflow"]
                 approval_workflow_stage = case["stage"]
-                url = reverse("extras-api:approvalworkflow-deny", kwargs={"pk": case["workflow"].pk})
-                self.add_permissions("extras.change_approvalworkflow", f"extras.change_{content_type.lower()}")
+                url = reverse("extras-api:approvalworkflowstage-approve", kwargs={"pk": case["stage"].pk})
+                self.add_permissions("extras.change_approvalworkflowstage", f"extras.change_{content_type.lower()}")
+                self.user.groups.add(self.approver_group_1)
+
+                data = {"comments": "LGTM"}
+                response = self.client.post(url, data=data, format="json", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+
+                approval_workflow.refresh_from_db()
+                approval_workflow_stage.refresh_from_db()
+                self.assertEqual(approval_workflow_stage.approval_workflow_stage_responses.count(), 1)
+                self.assertEqual(
+                    approval_workflow_stage.approval_workflow_stage_responses.first().comments, data["comments"]
+                )
+                self.assertEqual(approval_workflow_stage.state, ApprovalWorkflowStateChoices.APPROVED)
+                self.assertEqual(approval_workflow.current_state, ApprovalWorkflowStateChoices.APPROVED)
+
+                scheduled_job = case["object"]
+                scheduled_job.refresh_from_db()
+                self.assertEqual(scheduled_job.approved_at, approval_workflow.decision_date)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_deny_approval_workflow_stage_in_approval_workflow_with_one_stage(self):
+        for case in self.approval_workflow_content_type_cases:
+            content_type = case["content_type"]
+            with self.subTest(case=content_type):
+                approval_workflow = case["workflow"]
+                approval_workflow_stage = case["stage"]
+                url = reverse("extras-api:approvalworkflowstage-deny", kwargs={"pk": case["stage"].pk})
+                self.add_permissions("extras.change_approvalworkflowstage", f"extras.change_{content_type.lower()}")
                 self.user.groups.add(self.approver_group_1)
                 response = self.client.post(url, **self.header)
                 self.assertHttpStatus(response, status.HTTP_200_OK)
@@ -353,6 +382,7 @@ class ApprovalWorkflowTest(
                 approval_workflow.refresh_from_db()
                 approval_workflow_stage.refresh_from_db()
                 self.assertEqual(approval_workflow_stage.approval_workflow_stage_responses.count(), 1)
+                self.assertEqual(approval_workflow_stage.approval_workflow_stage_responses.first().comments, "")
                 self.assertEqual(approval_workflow_stage.state, ApprovalWorkflowStateChoices.DENIED)
                 self.assertEqual(approval_workflow.current_state, ApprovalWorkflowStateChoices.DENIED)
 
@@ -361,14 +391,14 @@ class ApprovalWorkflowTest(
                 self.assertIsNone(scheduled_job.approved_at)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_deny_approval_workflow_with_more_than_one_stage(self):
+    def test_deny_approval_workflow_stage_in_approval_workflow_with_more_than_one_stage(self):
         for case in self.approval_workflow_content_type_cases:
             content_type = case["content_type"]
             with self.subTest(case=content_type):
                 approval_workflow = case["workflow"]
                 approval_workflow_stage = case["stage"]
-                url = reverse("extras-api:approvalworkflow-deny", kwargs={"pk": case["workflow"].pk})
-                self.add_permissions("extras.change_approvalworkflow", f"extras.change_{content_type.lower()}")
+                url = reverse("extras-api:approvalworkflowstage-deny", kwargs={"pk": case["stage"].pk})
+                self.add_permissions("extras.change_approvalworkflowstage", f"extras.change_{content_type.lower()}")
                 self.user.groups.add(self.approver_group_1)
 
                 approval_workflow_stage_definition_2 = ApprovalWorkflowStageDefinition.objects.create(
@@ -402,31 +432,120 @@ class ApprovalWorkflowTest(
                 self.assertIsNone(scheduled_job.approved_at)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_pending_approvals(self):
-        url = reverse("extras-api:approvalworkflow-pending-approvals")
+    def test_deny_with_approval_workflow_stage_in_approval_workflow_with_one_stage(self):
+        for case in self.approval_workflow_content_type_cases:
+            content_type = case["content_type"]
+            with self.subTest(case=content_type):
+                approval_workflow = case["workflow"]
+                approval_workflow_stage = case["stage"]
+                url = reverse("extras-api:approvalworkflowstage-deny", kwargs={"pk": case["stage"].pk})
+                self.add_permissions("extras.change_approvalworkflowstage", f"extras.change_{content_type.lower()}")
+                self.user.groups.add(self.approver_group_1)
+                data = {"comments": "Denied comment"}
+                response = self.client.post(url, data=data, format="json", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+
+                approval_workflow.refresh_from_db()
+                approval_workflow_stage.refresh_from_db()
+                self.assertEqual(approval_workflow_stage.approval_workflow_stage_responses.count(), 1)
+                self.assertEqual(
+                    approval_workflow_stage.approval_workflow_stage_responses.first().comments, data["comments"]
+                )
+                self.assertEqual(approval_workflow_stage.state, ApprovalWorkflowStateChoices.DENIED)
+                self.assertEqual(approval_workflow.current_state, ApprovalWorkflowStateChoices.DENIED)
+
+                scheduled_job = case["object"]
+                scheduled_job.refresh_from_db()
+                self.assertIsNone(scheduled_job.approved_at)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approval_workflow_stage_comment_without_permission(self):
+        for case in self.approval_workflow_content_type_cases:
+            with self.subTest(case=case["content_type"]):
+                stage = case["stage"]
+                url = reverse("extras-api:approvalworkflowstage-comment", kwargs={"pk": stage.pk})
+                data = {"comments": "Test comment without permission."}
+                response = self.client.post(url, data=data, format="json", **self.header)
+                self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+                self.assertEqual(stage.approval_workflow_stage_responses.count(), 0)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approval_workflow_stage_add_comment_missing_or_empty(self):
+        for case in self.approval_workflow_content_type_cases:
+            with self.subTest(case=case["content_type"]):
+                stage = case["stage"]
+                url = reverse("extras-api:approvalworkflowstage-comment", kwargs={"pk": stage.pk})
+                self.add_permissions("extras.change_approvalworkflowstage")
+
+                # Try both missing and empty comment values
+                for payload in [{}, {"comments": ""}]:
+                    response = self.client.post(url, data=payload, format="json", **self.header)
+                    self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+                    self.assertIn("detail", response.data)
+                    self.assertEqual(response.data["detail"], "Comment cannot be empty.")
+                    self.assertEqual(stage.approval_workflow_stage_responses.count(), 0)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approval_workflow_stage_add_comment_to_stage(self):
+        for case in self.approval_workflow_content_type_cases:
+            content_type = case["content_type"]
+            with self.subTest(case=content_type):
+                stage = case["stage"]
+                url = reverse("extras-api:approvalworkflowstage-comment", kwargs={"pk": stage.pk})
+                self.add_permissions("extras.change_approvalworkflowstage")
+                # remove user from approver group
+                self.user.groups.remove(self.approver_group_1)
+
+                data = {"comments": "This is a test comment."}
+                response = self.client.post(url, data=data, format="json", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+
+                stage.refresh_from_db()
+                self.assertEqual(stage.approval_workflow_stage_responses.count(), 1)
+
+                response_obj = stage.approval_workflow_stage_responses.first()
+                self.assertEqual(response_obj.comments, "This is a test comment.")
+                self.assertEqual(response_obj.user, self.user)
+                self.assertEqual(response_obj.state, stage.state)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approval_workflow_stage_add_more_comment_to_stage(self):
+        for case in self.approval_workflow_content_type_cases:
+            content_type = case["content_type"]
+            with self.subTest(case=content_type):
+                stage = case["stage"]
+                url = reverse("extras-api:approvalworkflowstage-comment", kwargs={"pk": stage.pk})
+                self.add_permissions("extras.change_approvalworkflowstage")
+                # Ensure user is not in approver group (just commenting)
+                self.user.groups.remove(self.approver_group_1)
+                ApprovalWorkflowStageResponse.objects.create(
+                    approval_workflow_stage=stage, user=self.user, state=stage.state, comments="First comment"
+                )
+                data = {"comments": "This is a test comment."}
+                response = self.client.post(url, data=data, format="json", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+
+                stage.refresh_from_db()
+                self.assertEqual(stage.approval_workflow_stage_responses.count(), 2)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approval_workflow_stage_pending_approvals(self):
+        url = reverse("extras-api:approvalworkflowstage-pending-approvals")
         self.add_permissions(
-            "extras.view_approvalworkflow",
+            "extras.view_approvalworkflowstage",
         )
         self.user.groups.add(self.approver_group_1)
 
-        # Create 1 approved stage for different approval workflow
-        approval_workflow_stage_definition_approver_group_1 = ApprovalWorkflowStageDefinition.objects.create(
-            approval_workflow_definition=self.approval_workflow_definitions[1],
-            weight=100,
-            name="Test Approval Workflow Stage 1 Definition",
-            min_approvers=1,
-            denial_message="Stage Denial Message",
-            approver_group=self.approver_group_1,
-        )
-        ApprovalWorkflowStage.objects.create(
-            approval_workflow=self.approval_workflows[1],
-            approval_workflow_stage_definition=approval_workflow_stage_definition_approver_group_1,
-            state=ApprovalWorkflowStateChoices.APPROVED,
-        )
+        # Set stages to approved for different approval workflows
+        for stage in ApprovalWorkflowStage.objects.all():
+            if stage.approval_workflow != self.approval_workflows[0]:
+                stage.state = ApprovalWorkflowStateChoices.APPROVED
+                stage.save()
+
         # Create 1 pending stage, but in different approver group
         approver_group_2 = Group.objects.create(name="Approver Group 2")
         approval_workflow_stage_definition_approver_group_2 = ApprovalWorkflowStageDefinition.objects.create(
-            approval_workflow_definition=self.approval_workflow_definitions[2],
+            approval_workflow_definition=self.approval_workflow_definitions[3],
             weight=100,
             name="Test Approval Workflow Stage 1 Definition",
             min_approvers=1,
@@ -434,7 +553,7 @@ class ApprovalWorkflowTest(
             approver_group=approver_group_2,
         )
         ApprovalWorkflowStage.objects.create(
-            approval_workflow=self.approval_workflows[2],
+            approval_workflow=self.approval_workflows[3],
             approval_workflow_stage_definition=approval_workflow_stage_definition_approver_group_2,
             state=ApprovalWorkflowStateChoices.PENDING,
         )
@@ -442,13 +561,13 @@ class ApprovalWorkflowTest(
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         # user is approver in 2 approval workflows, but second one is approved
-        self.assertTrue(approval_workflow_stage_definition_approver_group_1.approver_group in self.user.groups.all())
+        self.assertTrue(self.approval_workflow_stage_definitions[1].approver_group in self.user.groups.all())
         # user is not an approver
         self.assertTrue(
             approval_workflow_stage_definition_approver_group_2.approver_group not in self.user.groups.all()
         )
         self.assertEqual(len(response.data["results"]), 1)
-        self.assertEqual(response.data["results"][0]["id"], str(self.approval_workflows[0].id))
+        self.assertEqual(response.data["results"][0]["id"], str(self.approval_workflow_stages[0].id))
 
 
 #

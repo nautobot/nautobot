@@ -6,7 +6,7 @@ This document describes all new features and changes in Nautobot 3.0.
 
 ### Administrators
 
-- Job approval permissions have been updated in the UI and API. Approvers via UI must now be granted the `extras.change_approvalworkflowstage` and `extras.view_approvalworkflowstage` permissions but Approvers via API `extras.change_approvalworkflow`, replacing the previous requirement for `extras.approve_job`. This change aligns with updates to the approval workflow implementation and permissions model.
+- Job approval permissions have been updated in the UI and API. Approvers must now be granted the `extras.change_approvalworkflowstage` and `extras.view_approvalworkflowstage` permissions, replacing the previous requirement for `extras.approve_job`. This change aligns with updates to the approval workflow implementation and permissions model.
 
 ### Job Authors & App Developers
 
