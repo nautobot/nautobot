@@ -217,15 +217,15 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
             # TODO: add loop detection when graph structure is implemented for path tracing
 
         # Enforce mutual exclusivity between cable connections and destination_panel
-        if self.destination_panel and self._path and self._path.destination:
+        if self.destination_panel and self._path and self._path.destination:  # pylint: disable=no-member
             raise ValidationError(
                 {
                     "destination_panel": "Cannot specify a destination panel when the power feed is connected via cable. "
                     "Power feeds can either connect to a panel OR be cabled to an endpoint, but not both."
                 }
             )
-        
-        if self._path and self._path.destination and self.destination_panel:
+
+        if self._path and self._path.destination and self.destination_panel:  # pylint: disable=no-member
             raise ValidationError(
                 {
                     "__all__": "This power feed cannot be connected via cable when a destination panel is specified. "
@@ -275,13 +275,13 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
             self.breaker_pole_count = PowerFeedBreakerPoleChoices.POLE_1
 
         # Enforce mutual exclusivity between cable connections and destination_panel
-        if self.destination_panel and self._path and self._path.destination:
+        if self.destination_panel and self._path and self._path.destination:  # pylint: disable=no-member
             raise ValidationError(
                 "Cannot specify a destination panel when the power feed is connected via cable. "
                 "Power feeds can either connect to a panel OR be cabled to an endpoint, but not both."
             )
-        
-        if self._path and self._path.destination and self.destination_panel:
+
+        if self._path and self._path.destination and self.destination_panel:  # pylint: disable=no-member
             raise ValidationError(
                 "This power feed cannot be connected via cable when a destination panel is specified. "
                 "Power feeds can either connect to a panel OR be cabled to an endpoint, but not both."

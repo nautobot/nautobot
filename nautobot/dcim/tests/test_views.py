@@ -1656,6 +1656,7 @@ class PowerPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "type": PowerPortTypeChoices.TYPE_IEC_C14,
             "maximum_draw": 100,
             "allocated_draw": 50,
+            "power_factor": Decimal("0.95"),
         }
 
         cls.bulk_create_data = {
@@ -1665,6 +1666,7 @@ class PowerPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "type": PowerPortTypeChoices.TYPE_IEC_C14,
             "maximum_draw": 100,
             "allocated_draw": 50,
+            "power_factor": Decimal("0.95"),
         }
 
         cls.bulk_edit_data = {
@@ -1678,6 +1680,7 @@ class PowerPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "name": test_instance.name,
             "device_type": getattr(getattr(test_instance, "device_type", None), "pk", None),
             "module_type": getattr(getattr(test_instance, "module_type", None), "pk", None),
+            "power_factor": Decimal("0.95"),
             "label": "new test label",
             "description": "new test description",
         }
@@ -2967,6 +2970,7 @@ class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "type": PowerPortTypeChoices.TYPE_IEC_C14,
             "maximum_draw": 100,
             "allocated_draw": 50,
+            "power_factor": Decimal("0.95"),
             "description": "A power port",
             "tags": [t.pk for t in Tag.objects.get_for_model(PowerPort)],
         }
@@ -2994,6 +2998,7 @@ class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "name": test_instance.name,
             "device": getattr(getattr(test_instance, "device", None), "pk", None),
             "module": getattr(getattr(test_instance, "module", None), "pk", None),
+            "power_factor": Decimal("0.95"),
             "label": "new test label",
             "description": "new test description",
         }

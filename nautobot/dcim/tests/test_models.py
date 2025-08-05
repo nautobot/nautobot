@@ -20,7 +20,9 @@ from nautobot.dcim.choices import (
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedBreakerPoleChoices,
+    PowerFeedPhaseChoices,
     PowerFeedSupplyChoices,
+    PowerFeedTypeChoices,
     PowerOutletFeedLegChoices,
     PowerOutletTypeChoices,
     PowerPortTypeChoices,
@@ -2493,17 +2495,126 @@ class PowerFeedTestCase(ModelTestCases.BaseModelTestCase):
             feed.full_clean()
         self.assertIn("voltage", cm.exception.message_dict)
 
-    def test_phase_designation(self):
-        """Test phase designation calculation."""
+    def test_phase_designation_single_pole(self):
+        """Test phase designation calculation for single-pole breakers."""
+        # Pattern: positions 1,2=A, 3,4=B, 5,6=C, 7,8=A, etc.
+        test_cases = [
+            (1, "A"),
+            (2, "A"),
+            (3, "B"),
+            (4, "B"),
+            (5, "C"),
+            (6, "C"),
+            (7, "A"),
+            (8, "A"),
+            (9, "B"),
+            (10, "B"),
+        ]
+
+        for position, expected_phase in test_cases:
+            with self.subTest(position=position):
+                feed = PowerFeed.objects.create(
+                    name=f"1P Test {position}",
+                    power_panel=self.source_panel,
+                    status=self.status,
+                    breaker_position=position,
+                    breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_1,
+                    # phase defaults to PHASE_SINGLE which is correct for all single-pole feeds
+                )
+                self.assertEqual(feed.phase_designation, expected_phase)
+
+    def test_phase_designation_two_pole_single_phase(self):
+        """Test phase designation for 2-pole breakers delivering single-phase power."""
+        # Common datacenter scenario: 2P breaker for 208V single-phase to rack PDU
+        # Uses two phase conductors but delivers single-phase power
+        test_cases = [
+            (1, "A-B"),  # occupies 1,3 → A,B → 208V single-phase
+            (2, "A-B"),  # occupies 2,4 → A,B → 208V single-phase
+            (3, "B-C"),  # occupies 3,5 → B,C → 208V single-phase
+            (4, "B-C"),  # occupies 4,6 → B,C → 208V single-phase
+            (5, "A-C"),  # occupies 5,7 → C,A → sorted to A-C → 208V single-phase
+            (6, "A-C"),  # occupies 6,8 → C,A → sorted to A-C → 208V single-phase
+            (7, "A-B"),  # occupies 7,9 → A,B → 208V single-phase (cycle continues)
+        ]
+
+        for position, expected_designation in test_cases:
+            with self.subTest(position=position):
+                feed = PowerFeed.objects.create(
+                    name=f"2P Single-Phase Test {position}",
+                    power_panel=self.source_panel,
+                    status=self.status,
+                    breaker_position=position,
+                    breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_2,
+                    # phase defaults to PHASE_SINGLE - correct for 208V single-phase feeds
+                )
+                self.assertEqual(feed.phase_designation, expected_designation)
+                # Verify it's still marked as single-phase power
+                self.assertEqual(feed.phase, PowerFeedPhaseChoices.PHASE_SINGLE)
+
+    def test_phase_designation_three_pole_three_phase(self):
+        """Test phase designation for 3-pole breakers delivering three-phase power."""
+        # True three-phase power using all three phases
+        test_cases = [1, 2, 3, 4, 5]
+
+        for position in test_cases:
+            with self.subTest(position=position):
+                feed = PowerFeed.objects.create(
+                    name=f"3P Three-Phase Test {position}",
+                    power_panel=self.source_panel,
+                    status=self.status,
+                    breaker_position=position,
+                    breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_3,
+                    phase=PowerFeedPhaseChoices.PHASE_3PHASE,  # Explicitly set to three-phase
+                )
+                self.assertEqual(feed.phase_designation, "A-B-C")
+                # Verify it's marked as three-phase power
+                self.assertEqual(feed.phase, PowerFeedPhaseChoices.PHASE_3PHASE)
+
+    def test_phase_designation_edge_cases(self):
+        """Test phase designation calculation for edge cases and None values."""
+        # Test missing breaker_position
         feed = PowerFeed.objects.create(
-            name="Test Feed",
+            name="No Position",
+            power_panel=self.source_panel,
+            status=self.status,
+            breaker_position=None,
+            breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_1,
+        )
+        self.assertIsNone(feed.phase_designation)
+
+        # Test missing breaker_pole_count (should default to single pole)
+        feed = PowerFeed.objects.create(
+            name="No Pole Count",
             power_panel=self.source_panel,
             status=self.status,
             breaker_position=1,
-            breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_1,
+            breaker_pole_count=None,
+        )
+        # Should default to single pole and have phase designation
+        self.assertEqual(feed.breaker_pole_count, PowerFeedBreakerPoleChoices.POLE_1)
+        self.assertEqual(feed.phase_designation, "A")
+
+        # Test both missing
+        feed = PowerFeed.objects.create(
+            name="No Position or Pole Count",
+            power_panel=self.source_panel,
+            status=self.status,
+            breaker_position=None,
+            breaker_pole_count=None,
+        )
+        self.assertIsNone(feed.phase_designation)
+
+    def test_phase_field_defaults(self):
+        """Test that phase field defaults correctly and type field defaults to primary."""
+        feed = PowerFeed.objects.create(
+            name="Default Fields Test",
+            power_panel=self.source_panel,
+            status=self.status,
         )
 
-        self.assertEqual(feed.phase_designation, "A")
+        # Verify defaults
+        self.assertEqual(feed.phase, PowerFeedPhaseChoices.PHASE_SINGLE)
+        self.assertEqual(feed.type, PowerFeedTypeChoices.TYPE_PRIMARY)
 
     def test_occupied_positions(self):
         """Test occupied positions calculation."""
@@ -2527,13 +2638,13 @@ class PowerFeedTestCase(ModelTestCases.BaseModelTestCase):
             status=self.status,
             breaker_position=10,
         )
-        
+
         # Verify breaker_pole_count is None before save
         self.assertIsNone(feed.breaker_pole_count)
-        
+
         # Save without calling clean() to bypass form validation
         feed.save()
-        
+
         # Verify breaker_pole_count was set to POLE_1 during save
         self.assertEqual(feed.breaker_pole_count, PowerFeedBreakerPoleChoices.POLE_1)
 
