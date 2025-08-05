@@ -1,1 +1,0 @@
-Fix `cluster_count` not showing up on the API of `/tenancy/tenants/`.
