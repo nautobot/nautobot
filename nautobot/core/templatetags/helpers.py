@@ -813,6 +813,13 @@ def label_list(value, suffix=""):
     )
 
 
+@library.filter()
+@register.filter()
+def pluck(list, key):
+    """Extract values of given key from a list of dictionaries or objects to a separate list."""
+    return [item.get(key) if isinstance(item, dict) else getattr(item, key) for item in list]
+
+
 #
 # Tags
 #

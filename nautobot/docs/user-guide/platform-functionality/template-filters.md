@@ -198,6 +198,14 @@ Render a muted placeholder (`<span class="text-muted">&mdash;</span>`) if value 
 {{ html | placeholder }}
 ```
 
+### pluck
+
+Extract values of given `key` from a `list` of dictionaries or objects to a separate list.
+
+```django
+{{ list|pluck:key }}
+```
+
 ### pre_tag
 
 Render a value within `<pre></pre>` tags to enable formatting.

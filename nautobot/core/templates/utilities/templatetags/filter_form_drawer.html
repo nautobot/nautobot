@@ -1,4 +1,5 @@
 {% load form_helpers %}
+{% load helpers %}
 {% load static %}
 
 <section class="nb-drawer" tabindex="-1" id="{{ filter_form_name }}_drawer">
@@ -17,8 +18,22 @@
             {% endif %}
             {% if dynamic_filter_form %}
                 <li role="presentation" class="nav-item">
-                    <a class="nav-link{% if not filter_form %} active{% endif %}" href="#advanced-filter" role="tab" data-bs-toggle="tab">
+                    <a class="nav-link position-relative{% if not filter_form %} active{% endif %}" href="#advanced-filter" role="tab" data-bs-toggle="tab">
                         Advanced
+                        {% if filter_form and filter_params %}
+                            {% with filter_form_field_names=filter_form.visible_fields|pluck:'name' %}
+                                {% for filter_param in filter_params %}
+                                    {% if filter_param.name not in filter_form_field_names or filter_param.name == 'q' %}
+                                        <span
+                                            aria-hidden="true"
+                                            class="end-0 me-2 mt-2 top-0 nb-btn-indicator"
+                                            data-bs-toggle="tooltip"
+                                            data-bs-title="Some of the applied filters can only be viewed in Advanced"
+                                        ></span>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endwith %}
+                        {% endif %}
                     </a>
                 </li>
             {% endif %}
@@ -437,18 +452,6 @@
                         [...dynamicFilterForm.querySelectorAll('input, select, textarea')].forEach((field) =>
                             field.closest('.nb-dynamic-filter-items') ? undefined : field.removeAttribute('name'),
                         );
-
-                        // Append search (`'q'`) field to dynamic filter form as hidden input.
-                        const q = document.querySelector('#header_search input[name="q"]');
-
-                        if (q) {
-                            const qInputHidden = document.createElement('input');
-                            qInputHidden.setAttribute('name', 'q');
-                            qInputHidden.setAttribute('type', 'hidden');
-                            qInputHidden.setAttribute('value', q.value);
-
-                            event.target.appendChild(qInputHidden);
-                        }
 
                         /*
                          * Get the serialized data from the forms and:

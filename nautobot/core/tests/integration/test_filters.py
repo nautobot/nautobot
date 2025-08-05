@@ -330,3 +330,7 @@ class ListViewFilterTestCase(SeleniumTestCase):
         self.browser.find_by_xpath(
             f"//span[@class='badge' and @data-nb-value='{tag_object.name}' and contains(text(),{tag_object.name})]"
         )
+        # Assert that proper Advanced tab badge is displayed
+        self.browser.find_by_xpath(
+            f"//a[@href='#advanced-filter']//span[contains(@class,'nb-btn-indicator') and contains(text(),'Some of the applied filters can only be viewed in Advanced')]"
+        )
