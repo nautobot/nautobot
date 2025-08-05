@@ -774,6 +774,299 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         response = self.client.get(url, **self.header)
         self.assertEqual(len(response.data), 6)  # 8 - 2 because prefix.type = network
 
+    def test_ipv4_prefix_list_available_ips_with_limit(self):
+        """
+        Test retrieval with a limit of all available IP addresses within a parent IPv4 prefix.
+        """
+        prefix = Prefix.objects.create(
+            prefix="192.0.3.0/29",
+            type=choices.PrefixTypeChoices.TYPE_POOL,
+            namespace=self.namespace,
+            status=self.status,
+        )
+        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
+        limit = 2
+        url = self.add_query_params_to_url(
+            url=reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk}),
+            query_dict={"limit": limit},
+        )
+        response = self.client.get(url, **self.header)
+        self.assertEqual(len(response.data), limit)
+
+    def test_ipv6_prefix_list_available_ips_with_limit(self):
+        """
+        Test retrieval with a limit of all available IP addresses within a parent IPv6 prefix.
+        """
+        prefix = Prefix.objects.create(
+            prefix="fdff:abcd:ffff:fc00::/54",
+            type=choices.PrefixTypeChoices.TYPE_POOL,
+            namespace=self.namespace,
+            status=self.status,
+        )
+        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
+        limit = 100
+        url = self.add_query_params_to_url(
+            url=reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk}),
+            query_dict={"limit": limit},
+        )
+        response = self.client.get(url, **self.header)
+        self.assertEqual(len(response.data), limit)
+
+    def test_range_parameters_validation(self):
+        """
+        Test detection of incorrect range_start or range_end parameters.
+        """
+        prefix = Prefix.objects.create(
+            prefix="fdff:abcd:ffff:fc00::/54",
+            type=choices.PrefixTypeChoices.TYPE_POOL,
+            namespace=self.namespace,
+            status=self.status,
+        )
+        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
+
+        range_start = "fdffZabcdZfffZfc01"  #  purposefully incorrect parameter
+        url = self.add_query_params_to_url(
+            url=reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk}),
+            query_dict={"range_start": range_start},
+        )
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("detail", response.data)
+
+        range_end = "fdffZabcdZfffZfcff"  #  purposefully incorrect parameter
+        url = self.add_query_params_to_url(
+            url=reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk}),
+            query_dict={"range_end": range_end},
+        )
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("detail", response.data)
+
+    def test_list_available_ips_with_range_start(self):
+        """
+        Test retrieval with range_start parameter of all available IP addresses within a parent prefix.
+        """
+        prefix = Prefix.objects.create(
+            prefix="192.0.3.0/29",
+            type=choices.PrefixTypeChoices.TYPE_POOL,
+            namespace=self.namespace,
+            status=self.status,
+        )
+        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
+        range_start = "192.0.3.2"
+        url = self.add_query_params_to_url(
+            url=reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk}),
+            query_dict={"range_start": range_start},
+        )
+        response = self.client.get(url, **self.header)
+        self.assertEqual(len(response.data), 6)  # because prefix type = pool
+        self.assertIn("address", response.data[0])
+        self.assertIn("192.0.3.2/29", response.data[0]["address"])
+
+    def test_list_available_ips_with_range_start_ipv6(self):
+        """
+        Test retrieval with range_start parameter of all available IPv6 addresses within a parent prefix.
+        """
+        prefix = Prefix.objects.create(
+            prefix="fdff:abcd:ffff:fc00::/54",
+            type=choices.PrefixTypeChoices.TYPE_POOL,
+            namespace=self.namespace,
+            status=self.status,
+        )
+        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
+        range_start = "fdff:abcd:ffff:ffff:ffff:ffff:ffff:fff0"
+        url = self.add_query_params_to_url(
+            url=reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk}),
+            query_dict={"range_start": range_start},
+        )
+        response = self.client.get(url, **self.header)
+        self.assertEqual(len(response.data), 16)
+        self.assertIn("address", response.data[0])
+        self.assertIn("fdff:abcd:ffff:ffff:ffff:ffff:ffff:fff0/54", response.data[0]["address"])
+
+    def test_list_available_ips_with_range_end(self):
+        """
+        Test retrieval with range_end parameter of all available IP addresses within a parent prefix.
+        """
+        prefix = Prefix.objects.create(
+            prefix="192.0.3.0/29",
+            type=choices.PrefixTypeChoices.TYPE_POOL,
+            namespace=self.namespace,
+            status=self.status,
+        )
+        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
+        range_end = "192.0.3.5"
+        url = self.add_query_params_to_url(
+            url=reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk}),
+            query_dict={"range_end": range_end},
+        )
+        response = self.client.get(url, **self.header)
+        self.assertEqual(len(response.data), 6)  # because prefix type = pool
+        self.assertIn("address", response.data[-1])
+        self.assertIn("192.0.3.5/29", response.data[-1]["address"])
+
+    def test_list_available_ips_with_range_end_ipv6(self):
+        """
+        Test retrieval with range_end parameter of all available IPv6 addresses within a parent prefix.
+        """
+        prefix = Prefix.objects.create(
+            prefix="fdff:abcd:ffff:fc00::/54",
+            type=choices.PrefixTypeChoices.TYPE_POOL,
+            namespace=self.namespace,
+            status=self.status,
+        )
+        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
+        range_end = "fdff:abcd:ffff:fc00::000f"
+        url = self.add_query_params_to_url(
+            url=reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk}),
+            query_dict={"range_end": range_end},
+        )
+        response = self.client.get(url, **self.header)
+        self.assertEqual(len(response.data), 16)  # because prefix type = pool
+        self.assertIn("address", response.data[-1])
+        self.assertIn("fdff:abcd:ffff:fc00::f/54", response.data[-1]["address"])
+
+    def test_list_available_ips_with_range_start_and_end(self):
+        """
+        Test retrieval with range_end parameter of all available IP addresses within a parent prefix.
+        """
+        prefix = Prefix.objects.create(
+            prefix="192.0.3.0/29",
+            type=choices.PrefixTypeChoices.TYPE_POOL,
+            namespace=self.namespace,
+            status=self.status,
+        )
+        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
+        range_start = "192.0.3.2"
+        range_end = "192.0.3.5"
+        url = self.add_query_params_to_url(
+            url=reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk}),
+            query_dict={"range_start": range_start, "range_end": range_end},
+        )
+        response = self.client.get(url, **self.header)
+        self.assertEqual(len(response.data), 4)
+        self.assertIn("address", response.data[0])
+        self.assertIn("address", response.data[-1])
+        self.assertIn("192.0.3.2/29", response.data[0]["address"])
+        self.assertIn("192.0.3.5/29", response.data[-1]["address"])
+
+    def test_list_available_ips_with_range_start_and_end_ipv6(self):
+        """
+        Test retrieval with range_end parameter of all available IPv6 addresses within a parent prefix.
+        """
+        prefix = Prefix.objects.create(
+            prefix="fdff:abcd:ffff:fc00::/54",
+            type=choices.PrefixTypeChoices.TYPE_POOL,
+            namespace=self.namespace,
+            status=self.status,
+        )
+        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
+        range_start = "fdff:abcd:ffff:fcff::"
+        range_end = "fdff:abcd:ffff:fcff::f"
+        url = self.add_query_params_to_url(
+            url=reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk}),
+            query_dict={"range_start": range_start, "range_end": range_end},
+        )
+        response = self.client.get(url, **self.header)
+        self.assertEqual(len(response.data), 16)
+        self.assertIn("address", response.data[0])
+        self.assertIn("address", response.data[-1])
+        self.assertIn("fdff:abcd:ffff:fcff::/54", response.data[0]["address"])
+        self.assertIn("fdff:abcd:ffff:fcff::f/54", response.data[-1]["address"])
+
+    def test_list_available_ips_with_range_start_and_limit(self):
+        """
+        Test retrieval with range_start and limit of all available IP addresses within a parent prefix.
+        """
+        prefix = Prefix.objects.create(
+            prefix="192.0.3.0/29",
+            type=choices.PrefixTypeChoices.TYPE_POOL,
+            namespace=self.namespace,
+            status=self.status,
+        )
+        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
+        range_start = "192.0.3.2"
+        limit = 2
+        url = self.add_query_params_to_url(
+            url=reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk}),
+            query_dict={"range_start": range_start, "limit": limit},
+        )
+        response = self.client.get(url, **self.header)
+        self.assertEqual(len(response.data), limit)
+        self.assertIn("address", response.data[0])
+        self.assertIn("192.0.3.2/29", response.data[0]["address"])
+
+    def test_list_available_ips_with_range_start_and_limit_ipv6(self):
+        """
+        Test retrieval with range_start and limit of all available IPv6 addresses within a parent prefix.
+        """
+        prefix = Prefix.objects.create(
+            prefix="fdff:abcd:ffff:fc00::/54",
+            type=choices.PrefixTypeChoices.TYPE_POOL,
+            namespace=self.namespace,
+            status=self.status,
+        )
+        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
+        range_start = "fdff:abcd:ffff:ffff:ffff:ffff:ffff:fff0"
+        limit = 2
+        url = self.add_query_params_to_url(
+            url=reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk}),
+            query_dict={"range_start": range_start, "limit": limit},
+        )
+        response = self.client.get(url, **self.header)
+        self.assertEqual(len(response.data), limit)
+        self.assertIn("fdff:abcd:ffff:ffff:ffff:ffff:ffff:fff0/54", response.data[0]["address"])
+
+    def test_list_available_ips_with_range_start_range_end_and_limit(self):
+        """
+        Test retrieval with range_start, range_end and limit of all available IP addresses within a parent prefix.
+        """
+        prefix = Prefix.objects.create(
+            prefix="192.0.3.0/29",
+            type=choices.PrefixTypeChoices.TYPE_POOL,
+            namespace=self.namespace,
+            status=self.status,
+        )
+        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
+        range_start = "192.0.3.2"
+        range_end = "192.0.3.5"
+        limit = 2
+        url = self.add_query_params_to_url(
+            url=reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk}),
+            query_dict={"range_start": range_start, "range_end": range_end, "limit": limit},
+        )
+        response = self.client.get(url, **self.header)
+        self.assertEqual(len(response.data), limit)
+        self.assertIn("address", response.data[0])
+        self.assertIn("address", response.data[-1])
+        self.assertIn("192.0.3.2/29", response.data[0]["address"])
+        self.assertIn("192.0.3.3/29", response.data[-1]["address"])  # .3 is the next one
+
+    def test_list_available_ips_with_range_start_range_end_and_limit_ipv6(self):
+        """
+        Test retrieval with range_start, range_end and limit of all available IPv6 addresses within a parent prefix.
+        """
+        prefix = Prefix.objects.create(
+            prefix="fdff:abcd:ffff:fc00::/54",
+            type=choices.PrefixTypeChoices.TYPE_POOL,
+            namespace=self.namespace,
+            status=self.status,
+        )
+        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
+        range_start = "fdff:abcd:ffff:fcff::"
+        range_end = "fdff:abcd:ffff:fcff::f"
+        limit = 2
+        url = self.add_query_params_to_url(
+            url=reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk}),
+            query_dict={"range_start": range_start, "range_end": range_end, "limit": limit},
+        )
+        response = self.client.get(url, **self.header)
+        self.assertEqual(len(response.data), limit)
+        self.assertIn("address", response.data[0])
+        self.assertIn("address", response.data[-1])
+        self.assertIn("fdff:abcd:ffff:fcff::/54", response.data[0]["address"])
+        self.assertIn("fdff:abcd:ffff:fcff::1/54", response.data[-1]["address"])
+
     def test_list_available_ips_calculate_child_ips(self):
         """
         Test retrieval of all available IP addresses when child IP's exists.
@@ -877,6 +1170,36 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
         self.assertIn("detail", response.data)
 
+    def test_create_single_available_ip_with_range_start(self):
+        prefix = Prefix.objects.create(
+            prefix="192.0.2.0/29",
+            namespace=self.namespace,
+            type=choices.PrefixTypeChoices.TYPE_NETWORK,
+            status=self.status,
+        )
+        self.add_permissions("ipam.view_prefix", "ipam.view_namespace", "ipam.add_ipaddress", "extras.view_status")
+
+        range_start = "192.0.2.3"
+        url = self.add_query_params_to_url(
+            reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk}),
+            {"range_start": range_start},
+        )
+        # Create available IPs with range start
+        for i in range(1, 5):
+            data = {
+                "description": f"Test IP {i}",
+                "status": self.status.pk,
+            }
+            response = self.client.post(url, data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_201_CREATED)
+            self.assertEqual(str(response.data["parent"]["url"]), self.absolute_api_url(prefix))
+            self.assertEqual(response.data["description"], data["description"])
+
+        # Next creation request with range start should be denied
+        response = self.client.post(url, {"status": self.status.pk}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
+        self.assertIn("detail", response.data)
+
     def test_create_multiple_available_ips(self):
         """
         Test the creation of available IP addresses within a parent prefix.
@@ -916,6 +1239,33 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         self.assertIn("custom_fields", response.data[0])
         self.assertIn("ipcf", response.data[0]["custom_fields"])
         self.assertEqual("1", response.data[0]["custom_fields"]["ipcf"])
+
+    def test_create_multiple_available_ips_with_range_start(self):
+        prefix = Prefix.objects.create(
+            prefix="192.0.2.0/29",
+            type=choices.PrefixTypeChoices.TYPE_NETWORK,
+            namespace=self.namespace,
+            status=self.status,
+        )
+        self.add_permissions("ipam.view_prefix", "ipam.add_ipaddress", "ipam.view_namespace", "extras.view_status")
+
+        range_start = "192.0.2.3"
+        url = self.add_query_params_to_url(
+            reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk}),
+            {"range_start": range_start},
+        )
+        # create all 5 available IPs in a single request
+        data = [
+            {"description": f"Test IP {i}", "status": self.status.pk, "custom_fields": {"ipcf": str(i)}}
+            for i in range(1, 5)
+        ]
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(len(response.data), 4)
+        # next attempt with only one IP requested should fail (prefix space exhausted)
+        data = data[0]
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
 
     def test_create_available_ips_with_permissions_constraint(self):
         # Prepare prefix and permissions
