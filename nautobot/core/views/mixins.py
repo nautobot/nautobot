@@ -1142,6 +1142,9 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Bu
                     f"No {queryset.model._meta.verbose_name_plural} were selected for deletion.",
                 )
                 return redirect(self.get_return_url(request))
+            # Hide actions column in the table for bulk destroy view
+            if "actions" in table.columns:
+                table.columns.hide("actions")
 
         data.update(
             {
@@ -1338,6 +1341,10 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
                     f"No {queryset.model._meta.verbose_name_plural} were selected to update.",
                 )
                 return redirect(self.get_return_url(request))
+
+            # Hide actions column in the table for bulk update view
+            if "actions" in table.columns:
+                table.columns.hide("actions")
         data.update(
             {
                 "table": table,
