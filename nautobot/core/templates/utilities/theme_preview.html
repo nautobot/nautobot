@@ -187,26 +187,28 @@
     <div class="row">
         <div class="col-md-6 col-md-offset-3">
             <h3>
-                <div class="pull-right">
+                <div class="float-end">
                     <a class="btn btn-link btn-xs"><i class="mdi mdi-help-circle"></i></a>
                 </div>
                 Add a new object
             </h3>
-            <div class="panel panel-default">
-                <div class="panel-heading"><strong>Object</strong></div>
-                <div class="panel-body">
-                    <div class="form-group">
-                        <label class="col-md-3 control-label" for="id_name">Name</label>
+            <div class="card">
+                <div class="card-header"><strong>Object</strong></div>
+                <div class="card-body">
+                    <div class="mb-10 d-flex justify-content-center">
+                        <label class="col-md-3 col-form-label" for="id_name">Name</label>
                         <div class="col-md-9">
                             <input type="text" name="name" class="form-control" placeholder="Name" id="id_name">
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label class="col-md-3 control-label nb-required" for="id_status">Status</label>
+                    <div class="mb-10 d-flex justify-content-center">
+                        <label class="col-md-3 col-form-label nb-required" for="id_status">
+                            Status
+                            <span class="form-text">Help text for this form field</span>
+                        </label>
                         <div class="col-md-9">
                             <select name="status" class="nautobot-select2-api form-control select2-hidden-accessible" data-query-param-content_types="[&quot;dcim.device&quot;]" display-field="display" value-field="id" data-depth="0" required="" placeholder="Status" data-url="/api/extras/statuses/" id="id_status">
                             </select>
-                            <span class="help-block">Help text for this form field</span>
                         </div>
                     </div>
                 </div>
@@ -987,27 +989,27 @@ This:
         </p>
         <p>
             <span class="badge nb-multi-badge">
-                Multi-badge:
-                <span class="nb-multi-badge-items">
-                    <span class="badge"><!--
-                        -->Badge<!--
-                        --><button type="button">
-                            <span aria-hidden="true" class="mdi mdi-close"></span>
-                            <span class="visually-hidden">Remove</span>
-                        </button>
-                    </span>
-                    <span class="badge"><!--
-                        -->Badge<!--
-                        --><button type="button">
-                            <span aria-hidden="true" class="mdi mdi-close"></span>
-                            <span class="visually-hidden">Remove</span>
-                        </button>
-                    </span>
-                </span>
                 <button type="button">
                     <span aria-hidden="true" class="mdi mdi-close"></span>
                     <span class="visually-hidden">Remove All</span>
                 </button>
+                Multi-badge:
+                <span class="nb-multi-badge-items">
+                    <span class="badge"><!--
+                        --><button type="button">
+                            <span aria-hidden="true" class="mdi mdi-close"></span>
+                            <span class="visually-hidden">Remove</span>
+                        </button><!--
+                        -->Badge
+                    </span>
+                    <span class="badge"><!--
+                        --><button type="button">
+                            <span aria-hidden="true" class="mdi mdi-close"></span>
+                            <span class="visually-hidden">Remove</span>
+                        </button><!--
+                        -->Badge
+                    </span>
+                </span>
             </span>
         </p>
     </div>

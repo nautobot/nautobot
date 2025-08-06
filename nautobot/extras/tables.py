@@ -206,7 +206,7 @@ SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS = """
         <span class="mdi mdi-dots-vertical" aria-hidden="true"></span>
         <span class="visually-hidden">Toggle Dropdown</span>
     </button>
-    <ul class="dropdown-menu">
+    <ul class="dropdown-menu dropdown-menu-end">
         <li>
             <button
                 type="button"

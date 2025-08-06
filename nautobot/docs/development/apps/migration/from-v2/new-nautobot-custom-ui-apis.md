@@ -276,27 +276,27 @@ In place of legacy `filter-container` and `filter-selection`, Nautobot 3.0 intro
 
 ```html
 <span class="badge nb-multi-badge">
-    Multi-badge:
-    <span class="nb-multi-badge-items">
-        <span class="badge"><!--
-            -->Badge<!--
-            --><button type="button">
-                <span aria-hidden="true" class="mdi mdi-close"></span>
-                <span class="visually-hidden">Remove</span>
-            </button>
-        </span>
-        <span class="badge"><!--
-            -->Badge<!--
-            --><button type="button">
-                <span aria-hidden="true" class="mdi mdi-close"></span>
-                <span class="visually-hidden">Remove</span>
-            </button>
-        </span>
-    </span>
     <button type="button">
         <span aria-hidden="true" class="mdi mdi-close"></span>
         <span class="visually-hidden">Remove All</span>
     </button>
+    Multi-badge:
+    <span class="nb-multi-badge-items">
+        <span class="badge"><!--
+            --><button type="button">
+                <span aria-hidden="true" class="mdi mdi-close"></span>
+                <span class="visually-hidden">Remove</span>
+            </button><!--
+            -->Badge
+        </span>
+        <span class="badge"><!--
+            --><button type="button">
+                <span aria-hidden="true" class="mdi mdi-close"></span>
+                <span class="visually-hidden">Remove</span>
+            </button><!--
+            -->Badge
+        </span>
+    </span>
 </span>
 ```
 

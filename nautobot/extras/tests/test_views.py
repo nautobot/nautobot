@@ -2042,7 +2042,11 @@ class SavedViewTest(ModelViewTestCase):
         )
         response = self.client.get(reverse(view_name), follow=True)
         # Assert that Location List View got redirected to Saved View set as global default
-        self.assertBodyContains(response, "<strong>Global Location Default View</strong>", html=True)
+        self.assertBodyContains(
+            response,
+            '<span aria-hidden="true" class="mdi mdi-check"></span>Global Location Default View<span class="mdi mdi-earth ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Global default" data-bs-fallback-placements="[&quot;top&quot;]"></span>',
+            html=True,
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_user_default(self):
@@ -2056,7 +2060,11 @@ class SavedViewTest(ModelViewTestCase):
         UserSavedViewAssociation.objects.create(user=self.user, saved_view=sv, view_name=sv.view)
         response = self.client.get(reverse(view_name), follow=True)
         # Assert that Location List View got redirected to Saved View set as user default
-        self.assertBodyContains(response, "<strong>User Location Default View</strong>", html=True)
+        self.assertBodyContains(
+            response,
+            '<span aria-hidden="true" class="mdi mdi-check"></span>User Location Default View<span class="mdi mdi-star ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Your default" data-bs-fallback-placements="[&quot;top&quot;]"></span>',
+            html=True,
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_user_default_precedes_global_default(self):
@@ -2075,7 +2083,11 @@ class SavedViewTest(ModelViewTestCase):
         UserSavedViewAssociation.objects.create(user=self.user, saved_view=sv, view_name=sv.view)
         response = self.client.get(reverse(view_name), follow=True)
         # Assert that Location List View got redirected to Saved View set as user default
-        self.assertBodyContains(response, "<strong>User Location Default View</strong>", html=True)
+        self.assertBodyContains(
+            response,
+            '<span aria-hidden="true" class="mdi mdi-check"></span>User Location Default View<span class="mdi mdi-star ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Your default" data-bs-fallback-placements="[&quot;top&quot;]"></span>',
+            html=True,
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_filtered_view_precedes_global_default(self):
@@ -2096,7 +2108,7 @@ class SavedViewTest(ModelViewTestCase):
         # Assert that the user is not redirected to the global default view
         # But instead redirected to the filtered view
         self.assertNotIn(
-            "<strong>Global Location Default View</strong>",
+            '<span aria-hidden="true" class="mdi mdi-check"></span>Global Location Default View<span class="mdi mdi-earth ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Global default" data-bs-fallback-placements="[&quot;top&quot;]"></span>',
             extract_page_body(response.content.decode(response.charset)),
         )
 
@@ -2125,7 +2137,8 @@ class SavedViewTest(ModelViewTestCase):
         # Assert that the user is not redirected to the user default view
         # But instead redirected to the filtered view
         self.assertNotIn(
-            "<strong>User Location Default View</strong>", extract_page_body(response.content.decode(response.charset))
+            '<span aria-hidden="true" class="mdi mdi-check"></span>User Location Default View<span class="mdi mdi-star ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Your default" data-bs-fallback-placements="[&quot;top&quot;]"></span>',
+            extract_page_body(response.content.decode(response.charset)),
         )
         # Floor type locations (Floor-<number>) should not be visible in the response
         self.assertNotIn(
@@ -2188,7 +2201,9 @@ class SavedViewTest(ModelViewTestCase):
             self.assertHttpStatus(response, 200)
             response_body = extract_page_body(response.content.decode(response.charset))
             self.assertIn(str(instance.pk), response_body, msg=response_body)
-            self.assertBodyContains(response, f"<strong>{sv_name}</strong>", html=True)
+            self.assertBodyContains(
+                response, f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}', html=True
+            )
             # This is the description
             self.assertBodyContains(response, "I should not show in the UI!", html=True)
 
@@ -2218,7 +2233,9 @@ class SavedViewTest(ModelViewTestCase):
             self.assertHttpStatus(response, 200)
             response_body = extract_page_body(response.content.decode(response.charset))
             self.assertIn(str(instance.pk), response_body, msg=response_body)
-            self.assertBodyContains(response, f"<strong>{sv_name}</strong>", html=True)
+            self.assertBodyContains(
+                response, f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}', html=True
+            )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_update_saved_view_contain_boolean_filter_params(self):
@@ -2245,7 +2262,11 @@ class SavedViewTest(ModelViewTestCase):
             self.assertHttpStatus(response, 200)
             response_body = extract_page_body(response.content.decode(response.charset))
             self.assertNotIn("Example hidden job", response_body, msg=response_body)
-            self.assertBodyContains(response, f"<strong>{sv_name}</strong>", html=True)
+            self.assertBodyContains(
+                response,
+                f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}<span class="mdi mdi-account-group ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Shared" data-bs-fallback-placements="[&quot;top&quot;]"></span>',
+                html=True,
+            )
 
         with self.subTest("Update device Saved View with boolean filter parameters"):
             view_name = "dcim:device_list"
@@ -2269,7 +2290,11 @@ class SavedViewTest(ModelViewTestCase):
             # Assert that Job List View rendered with the boolean filter parameter without error
             self.assertHttpStatus(response, 200)
             response_body = extract_page_body(response.content.decode(response.charset))
-            self.assertBodyContains(response, f"<strong>{sv_name}</strong>", html=True)
+            self.assertBodyContains(
+                response,
+                f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}<span class="mdi mdi-account-group ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Shared" data-bs-fallback-placements="[&quot;top&quot;]"></span>',
+                html=True,
+            )
 
 
 # Not a full-fledged PrimaryObjectViewTestCase as there's no BulkEditView for Secrets
@@ -2315,8 +2340,18 @@ class SecretTestCase(
         }
 
 
-class SecretsGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class SecretsGroupTestCase(
+    ViewTestCases.OrganizationalObjectViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
+):
     model = SecretsGroup
+    custom_test_permissions = [
+        "extras.view_secret",
+        "extras.add_secretsgroup",
+        "extras.view_secretsgroup",
+        "extras.add_secretsgroupassociation",
+        "extras.change_secretsgroupassociation",
+    ]
 
     @classmethod
     def setUpTestData(cls):
@@ -2360,6 +2395,108 @@ class SecretsGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "secrets_group_associations-MIN_NUM_FORMS": "0",
             "secrets_group_associations-MAX_NUM_FORMS": "1000",
         }
+        cls.bulk_edit_data = {
+            "description": "This is a very detailed new description",
+        }
+
+    def test_create_group_with_valid_secret_association(self):
+        """Test that a SecretsGroup with a valid Secret association saves correctly via the formset."""
+        self.add_permissions(*self.custom_test_permissions)
+        # Create a secret to associate
+        secret = Secret.objects.create(
+            name="AWS_Secret",
+            provider="text-file",
+            parameters={"path": "/tmp"},  # noqa: S108  # hardcoded-temp-file -- false positive
+        )
+
+        form_data = {
+            "name": "test",
+            "description": "test bulk edits",
+            "secrets_group_associations-TOTAL_FORMS": "1",
+            "secrets_group_associations-INITIAL_FORMS": "0",
+            "secrets_group_associations-MIN_NUM_FORMS": "0",
+            "secrets_group_associations-MAX_NUM_FORMS": "1000",
+            "secrets_group_associations-0-secret": secret.pk,
+            "secrets_group_associations-0-access_type": SecretsGroupAccessTypeChoices.TYPE_HTTP,
+            "secrets_group_associations-0-secret_type": SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
+        }
+
+        # Submit the form to the "add SecretsGroup" view
+        response = self.client.post(reverse("extras:secretsgroup_add"), data=form_data, follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(SecretsGroup.objects.filter(name="test").exists())
+
+        # Checks that the association was created correctly
+        group = SecretsGroup.objects.get(name="test")
+        self.assertEqual(group.secrets_group_associations.count(), 1)
+
+        association = group.secrets_group_associations.first()
+        self.assertEqual(association.secret, secret)
+        self.assertEqual(association.access_type, SecretsGroupAccessTypeChoices.TYPE_HTTP)
+        self.assertEqual(association.secret_type, SecretsGroupSecretTypeChoices.TYPE_PASSWORD)
+
+    def test_create_group_with_invalid_secret_association(self):
+        """Test that invalid Secret association formset raises validation error and does not save."""
+        self.add_permissions(*self.custom_test_permissions)
+        url = reverse("extras:secretsgroup_add")
+
+        form_data = {
+            "name": "Invalid Secrets Group",
+            "description": "Missing required fields",
+            "secrets_group_associations-TOTAL_FORMS": "1",
+            "secrets_group_associations-INITIAL_FORMS": "0",
+            "secrets_group_associations-MIN_NUM_FORMS": "0",
+            "secrets_group_associations-MAX_NUM_FORMS": "1000",
+            "secrets_group_associations-0-secret": "",  # invalid
+            "secrets_group_associations-0-access_type": SecretsGroupAccessTypeChoices.TYPE_HTTP,
+            "secrets_group_associations-0-secret_type": "",  # invalid
+        }
+
+        response = self.client.post(url, data=form_data)
+
+        self.assertEqual(response.status_code, 200)
+
+        # Checks that no new SecretsGroup was created
+        self.assertFalse(SecretsGroup.objects.filter(name="Invalid Secrets Group").exists())
+
+        # Checks that formset errors are raised in the context
+        self.assertFormsetError(
+            response.context["secrets"], form_index=0, field="secret", errors=["This field is required."]
+        )
+
+    def test_create_group_with_deleted_secret_fails_cleanly(self):
+        """
+        Creating a SecretsGroup with a deleted Secret should fail with a formset error.
+        """
+        self.add_permissions(*self.custom_test_permissions)
+
+        secret = Secret.objects.create(name="TempSecret", provider="text-file", parameters={"path": "/tmp"})  # noqa: S108  # hardcoded-temp-file -- false positive
+        secret_pk = secret.pk
+        secret.delete()
+
+        form_data = {
+            "name": "Test Group",
+            "description": "This should not be created",
+            "secrets_group_associations-TOTAL_FORMS": "1",
+            "secrets_group_associations-INITIAL_FORMS": "0",
+            "secrets_group_associations-MIN_NUM_FORMS": "0",
+            "secrets_group_associations-MAX_NUM_FORMS": "1000",
+            "secrets_group_associations-0-secret": secret_pk,
+            "secrets_group_associations-0-access_type": SecretsGroupAccessTypeChoices.TYPE_HTTP,
+            "secrets_group_associations-0-secret_type": SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
+        }
+
+        response = self.client.post(reverse("extras:secretsgroup_add"), data=form_data)
+        self.assertEqual(response.status_code, 200)
+
+        self.assertFormsetError(
+            response.context["secrets"],
+            form_index=0,
+            field="secret",
+            errors=["Select a valid choice. That choice is not one of the available choices."],
+        )
+        self.assertFalse(SecretsGroup.objects.filter(name="Test Group").exists())
 
 
 class GraphQLQueriesTestCase(

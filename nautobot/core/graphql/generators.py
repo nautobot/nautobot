@@ -17,6 +17,9 @@ logger = logging.getLogger(__name__)
 RESOLVER_PREFIX = "resolve_"
 
 
+LIST_SEARCH_PARAMS_BY_SCHEMA_TYPE = {}
+
+
 def generate_restricted_queryset():
     """
     Generate a function to return a restricted queryset compatible with the internal permissions system.
@@ -251,6 +254,9 @@ def generate_schema_type(app_name: str, model: object) -> OptimizedNautobotObjec
 def generate_list_search_parameters(schema_type):
     """Generate list of query parameters for the list resolver based on a filterset."""
 
+    if schema_type in LIST_SEARCH_PARAMS_BY_SCHEMA_TYPE:
+        return LIST_SEARCH_PARAMS_BY_SCHEMA_TYPE[schema_type]
+
     search_params = {
         "limit": graphene.Int(),
         "offset": graphene.Int(),
@@ -261,6 +267,8 @@ def generate_list_search_parameters(schema_type):
                 schema_type._meta.filterset_class,
             )
         )
+
+    LIST_SEARCH_PARAMS_BY_SCHEMA_TYPE[schema_type] = search_params
 
     return search_params
 

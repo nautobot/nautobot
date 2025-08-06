@@ -88,6 +88,10 @@ class BootstrapMixin(forms.BaseForm):
                 css_classes = field.widget.attrs.get("class", "")
                 if "form-control" not in css_classes:
                     field.widget.attrs["class"] = " ".join([css_classes, "form-control"]).strip()
+            if isinstance(field.widget, (forms.CheckboxInput, forms.RadioSelect)):
+                css_classes = field.widget.attrs.get("class", "")
+                if "form-check" not in css_classes:
+                    field.widget.attrs["class"] = " ".join([css_classes, "form-check-input"]).strip()
             if field.required and not isinstance(field.widget, forms.FileInput):
                 field.widget.attrs["required"] = "required"
             if "placeholder" not in field.widget.attrs:
@@ -391,14 +395,12 @@ def dynamic_formset_factory(filterset, data=None, **kwargs):
     filter_form.filterset = filterset
 
     params = {
-        "can_delete_extra": True,
-        "can_delete": True,
-        "extra": 3,
+        "can_delete_extra": False,
+        "can_delete": False,
+        "extra": 1,
     }
     kwargs.update(params)
     form = formset_factory(form=filter_form, **kwargs)
-    if data:
-        form = form(data=data)
 
     return form
 
