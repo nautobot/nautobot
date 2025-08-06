@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 from urllib.parse import parse_qs
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -15,7 +16,7 @@ from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils import timezone
 from django.utils.encoding import iri_to_uri
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.timezone import get_current_timezone
 from django.views.generic import View
@@ -25,6 +26,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 
 from nautobot.apps.ui import BaseTextPanel
+from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.events import publish_event
 from nautobot.core.exceptions import FilterSetFieldNotFound
@@ -79,7 +81,7 @@ from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
 
-from . import filters, forms, tables
+from . import filters, forms, jobs_ui, tables
 from .api import serializers
 from .choices import (
     DynamicGroupTypeChoices,
@@ -187,6 +189,65 @@ class ConfigContextUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.ConfigContextSerializer
     table_class = tables.ConfigContextTable
 
+    class AssignmentObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+        def render_value(self, key, value, context):
+            if key == "dynamic_groups" and not settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
+                return None
+            if not value:
+                return helpers.HTML_NONE
+
+            items = []
+            for val in value.all():
+                rendered_val = helpers.hyperlinked_object(val)
+                items.append(rendered_val)
+
+            if not items:
+                return helpers.HTML_NONE
+
+            return format_html("<ul>{}</ul>", format_html_join("", "<li>{}</li>", ((item,) for item in items)))
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                exclude_fields=[
+                    "data",
+                    "owner_content_type",
+                    "owner_object_id",
+                ],
+                hide_if_unset=[
+                    "owner",
+                ],
+            ),
+            object_detail.Panel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                label="Data",
+                header_extra_content_template_path="extras/inc/configcontext_format.html",
+                body_content_template_path="extras/inc/configcontext_data.html",
+            ),
+            AssignmentObjectFieldsPanel(
+                weight=200,
+                section=SectionChoices.RIGHT_HALF,
+                label="Assignment",
+                fields=[
+                    "locations",
+                    "roles",
+                    "device_types",
+                    "platforms",
+                    "cluster_groups",
+                    "clusters",
+                    "tenant_groups",
+                    "tenants",
+                    "device_redundancy_groups",
+                    "dynamic_groups",
+                ],
+            ),
+        )
+    )
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         # Determine user's preferred output format
@@ -236,28 +297,26 @@ class ObjectConfigContextView(generic.ObjectView):
 # have an associated owner, such as a Git repository
 
 
-class ConfigContextSchemaListView(generic.ObjectListView):
+class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ConfigContextSchemaBulkEditForm
+    filterset_class = filters.ConfigContextSchemaFilterSet
+    filterset_form_class = forms.ConfigContextSchemaFilterForm
+    form_class = forms.ConfigContextSchemaForm
     queryset = ConfigContextSchema.objects.all()
-    filterset = filters.ConfigContextSchemaFilterSet
-    filterset_form = forms.ConfigContextSchemaFilterForm
-    table = tables.ConfigContextSchemaTable
-    action_buttons = ("add",)
-
-
-class ConfigContextSchemaView(generic.ObjectView):
-    queryset = ConfigContextSchema.objects.all()
+    serializer_class = serializers.ConfigContextSchemaSerializer
+    table_class = tables.ConfigContextSchemaTable
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         # Determine user's preferred output format
-        if request.GET.get("format") in ["json", "yaml"]:
-            context["format"] = request.GET.get("format")
+        if request.GET.get("data_format") in ["json", "yaml"]:
+            context["data_format"] = request.GET.get("data_format")
             if request.user.is_authenticated:
-                request.user.set_config("extras.configcontextschema.format", context["format"], commit=True)
+                request.user.set_config("extras.configcontextschema.format", context["data_format"], commit=True)
         elif request.user.is_authenticated:
-            context["format"] = request.user.get_config("extras.configcontextschema.format", "json")
+            context["data_format"] = request.user.get_config("extras.configcontextschema.format", "json")
         else:
-            context["format"] = "json"
+            context["data_format"] = "json"
 
         return context
 
@@ -343,29 +402,6 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
             "virtual_machine_table": virtual_machine_table,
             "active_tab": "validation",
         }
-
-
-class ConfigContextSchemaEditView(generic.ObjectEditView):
-    queryset = ConfigContextSchema.objects.all()
-    model_form = forms.ConfigContextSchemaForm
-    template_name = "extras/configcontextschema_edit.html"
-
-
-class ConfigContextSchemaBulkEditView(generic.BulkEditView):
-    queryset = ConfigContextSchema.objects.all()
-    filterset = filters.ConfigContextSchemaFilterSet
-    table = tables.ConfigContextSchemaTable
-    form = forms.ConfigContextSchemaBulkEditForm
-
-
-class ConfigContextSchemaDeleteView(generic.ObjectDeleteView):
-    queryset = ConfigContextSchema.objects.all()
-
-
-class ConfigContextSchemaBulkDeleteView(generic.BulkDeleteView):
-    queryset = ConfigContextSchema.objects.all()
-    table = tables.ConfigContextSchemaTable
-    filterset = filters.ConfigContextSchemaFilterSet
 
 
 #
@@ -909,10 +945,12 @@ class DynamicGroupBulkDeleteView(generic.BulkDeleteView):
     filterset = filters.DynamicGroupFilterSet
 
 
-# 3.0 TODO: remove, deprecated since 2.3 (#5845)
 class ObjectDynamicGroupsView(generic.GenericView):
     """
     Present a list of dynamic groups associated to a particular object.
+
+    Note that this isn't currently widely used, as most object detail views currently render the table inline
+    rather than using this separate view. This may change in the future.
 
     base_template: Specify to explicitly identify the base object detail template to render.
         If not provided, "<app>/<model>.html", "<app>/<model>_retrieve.html", or "generic/object_retrieve.html"
@@ -933,7 +971,6 @@ class ObjectDynamicGroupsView(generic.GenericView):
             data=obj.dynamic_groups.restrict(request.user, "view"), orderable=False
         )
         dynamicgroups_table.columns.hide("content_type")
-        dynamicgroups_table.columns.hide("members")
 
         # Apply the request context
         paginate = {
@@ -1193,30 +1230,22 @@ class GitRepositoryResultView(generic.ObjectView):
 #
 
 
-class GraphQLQueryListView(generic.ObjectListView):
+class GraphQLQueryUIViewSet(
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectEditViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectNotesViewMixin,
+):
+    filterset_form_class = forms.GraphQLQueryFilterForm
     queryset = GraphQLQuery.objects.all()
-    table = tables.GraphQLQueryTable
-    filterset = filters.GraphQLQueryFilterSet
-    filterset_form = forms.GraphQLQueryFilterForm
+    form_class = forms.GraphQLQueryForm
+    filterset_class = filters.GraphQLQueryFilterSet
+    serializer_class = serializers.GraphQLQuerySerializer
+    table_class = tables.GraphQLQueryTable
     action_buttons = ("add",)
-
-
-class GraphQLQueryView(generic.ObjectView):
-    queryset = GraphQLQuery.objects.all()
-
-
-class GraphQLQueryEditView(generic.ObjectEditView):
-    queryset = GraphQLQuery.objects.all()
-    model_form = forms.GraphQLQueryForm
-
-
-class GraphQLQueryDeleteView(generic.ObjectDeleteView):
-    queryset = GraphQLQuery.objects.all()
-
-
-class GraphQLQueryBulkDeleteView(generic.BulkDeleteView):
-    queryset = GraphQLQuery.objects.all()
-    table = tables.GraphQLQueryTable
 
 
 #
@@ -1266,8 +1295,6 @@ class ImageAttachmentDeleteView(generic.ObjectDeleteView):
 #
 # Jobs
 #
-
-
 class JobListView(generic.ObjectListView):
     """
     Retrieve all of the available jobs from disk and the recorded JobResult (if any) for each.
@@ -1519,12 +1546,75 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 class JobView(generic.ObjectView):
     queryset = JobModel.objects.all()
     template_name = "extras/job_detail.html"
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                label="Source Code",
+                fields=[
+                    "module_name",
+                    "job_class_name",
+                    "class_path",
+                    "installed",
+                    "is_job_hook_receiver",
+                    "is_job_button_receiver",
+                ],
+            ),
+            jobs_ui.JobObjectFieldsPanel(
+                weight=200,
+                section=SectionChoices.LEFT_HALF,
+                label="Job",
+                fields=["grouping", "name", "description", "enabled"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.JobResultTable,
+                table_title="JobResults",
+                table_filter=["job_model"],
+            ),
+            jobs_ui.JobObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                label="Properties",
+                fields=[
+                    "approval_required",
+                    "supports_dryrun",
+                    "dryrun_default",
+                    "read_only",
+                    "hidden",
+                    "has_sensitive_variables",
+                    "is_singleton",
+                    "soft_time_limit",
+                    "time_limit",
+                    "job_queues",
+                    "default_job_queue",
+                ],
+            ),
+        ],
+        extra_buttons=[
+            jobs_ui.JobRunScheduleButton(
+                weight=100,
+                link_name="extras:job_run",
+                label="Run/Schedule",
+                icon="mdi-play",
+                color=ButtonActionColorChoices.SUBMIT,
+                required_permissions=["extras.job_run"],
+            ),
+        ],
+    )
 
 
 class JobEditView(generic.ObjectEditView):
     queryset = JobModel.objects.all()
     model_form = forms.JobEditForm
     template_name = "extras/job_edit.html"
+
+    def alter_obj(self, obj, request, url_args, url_kwargs):
+        # Reload the job class to ensure we have the latest version
+        get_job(obj.class_path, reload=True)
+        return obj
 
 
 class JobBulkEditView(generic.BulkEditView):
@@ -2647,123 +2737,37 @@ class SecretProviderParametersFormView(generic.GenericView):
         )
 
 
-class SecretsGroupListView(generic.ObjectListView):
+class SecretsGroupUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.SecretsGroupBulkEditForm
+    filterset_class = filters.SecretsGroupFilterSet
+    filterset_form_class = forms.SecretsGroupFilterForm
+    form_class = forms.SecretsGroupForm
+    serializer_class = serializers.SecretsGroupSerializer
+    table_class = tables.SecretsGroupTable
+    template_name = "extras/secretsgroup_update.html"
     queryset = SecretsGroup.objects.all()
-    filterset = filters.SecretsGroupFilterSet
-    filterset_form = forms.SecretsGroupFilterForm
-    table = tables.SecretsGroupTable
-    action_buttons = ("add",)
 
+    def get_extra_context(self, request, instance=None):
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve" and instance:
+            context["secrets_group_associations"] = SecretsGroupAssociation.objects.filter(secrets_group=instance)
+        if self.action in ("create", "update"):
+            if request.method == "POST":
+                context["secrets"] = forms.SecretsGroupAssociationFormSet(data=request.POST, instance=instance)
+            else:
+                context["secrets"] = forms.SecretsGroupAssociationFormSet(instance=instance)
+        return context
 
-class SecretsGroupView(generic.ObjectView):
-    queryset = SecretsGroup.objects.all()
+    def form_save(self, form, **kwargs):
+        obj = super().form_save(form, **kwargs)
+        secrets = forms.SecretsGroupAssociationFormSet(data=self.request.POST, instance=form.instance)
 
-    def get_extra_context(self, request, instance):
-        return {"secrets_group_associations": SecretsGroupAssociation.objects.filter(secrets_group=instance)}
-
-
-class SecretsGroupEditView(generic.ObjectEditView):
-    queryset = SecretsGroup.objects.all()
-    model_form = forms.SecretsGroupForm
-    template_name = "extras/secretsgroup_edit.html"
-
-    def get_extra_context(self, request, instance):
-        ctx = super().get_extra_context(request, instance)
-
-        if request.POST:
-            ctx["secrets"] = forms.SecretsGroupAssociationFormSet(data=request.POST, instance=instance)
+        if secrets.is_valid():
+            secrets.save()
         else:
-            ctx["secrets"] = forms.SecretsGroupAssociationFormSet(instance=instance)
+            raise ValidationError(secrets.errors)
 
-        return ctx
-
-    def post(self, request, *args, **kwargs):
-        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
-        form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
-        restrict_form_fields(form, request.user)
-
-        if form.is_valid():
-            logger.debug("Form validation was successful")
-
-            try:
-                with transaction.atomic():
-                    object_created = not form.instance.present_in_database
-                    obj = form.save()
-
-                    # Check that the new object conforms with any assigned object-level permissions
-                    self.queryset.get(pk=obj.pk)
-
-                    # Process the formsets for secrets
-                    ctx = self.get_extra_context(request, obj)
-                    secrets = ctx["secrets"]
-                    if secrets.is_valid():
-                        secrets.save()
-                    else:
-                        raise RuntimeError(secrets.errors)
-                verb = "Created" if object_created else "Modified"
-                msg = f"{verb} {self.queryset.model._meta.verbose_name}"
-                logger.info(f"{msg} {obj} (PK: {obj.pk})")
-                try:
-                    msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
-                except AttributeError:
-                    msg = format_html("{} {}", msg, obj)
-                messages.success(request, msg)
-
-                if "_addanother" in request.POST:
-                    # If the object has clone_fields, pre-populate a new instance of the form
-                    if hasattr(obj, "clone_fields"):
-                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
-                        return redirect(url)
-
-                    return redirect(request.get_full_path())
-
-                return_url = form.cleaned_data.get("return_url")
-                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(iri_to_uri(return_url))
-                else:
-                    return redirect(self.get_return_url(request, obj))
-
-            except ObjectDoesNotExist:
-                msg = "Object save failed due to object-level permissions violation."
-                logger.debug(msg)
-                form.add_error(None, msg)
-            except RuntimeError:
-                msg = "Errors encountered when saving secrets group associations. See below."
-                logger.debug(msg)
-                form.add_error(None, msg)
-            except ProtectedError as err:
-                # e.g. Trying to delete a choice that is in use.
-                err_msg = err.args[0]
-                protected_obj = err.protected_objects[0]
-                msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
-                logger.debug(msg)
-                form.add_error(None, msg)
-
-        else:
-            logger.debug("Form validation failed")
-
-        return render(
-            request,
-            self.template_name,
-            {
-                "obj": obj,
-                "obj_type": self.queryset.model._meta.verbose_name,
-                "form": form,
-                "return_url": self.get_return_url(request, obj),
-                "editing": obj.present_in_database,
-                **self.get_extra_context(request, obj),
-            },
-        )
-
-
-class SecretsGroupDeleteView(generic.ObjectDeleteView):
-    queryset = SecretsGroup.objects.all()
-
-
-class SecretsGroupBulkDeleteView(generic.BulkDeleteView):
-    queryset = SecretsGroup.objects.all()
-    filterset = filters.SecretsGroupFilterSet
-    table = tables.SecretsGroupTable
+        return obj
 
 
 #
@@ -2946,6 +2950,25 @@ class TagUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.TagSerializer
     table_class = tables.TagTable
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                table_class=tables.TaggedItemTable,
+                table_title="Tagged Objects",
+                table_filter="tag",
+                select_related_fields=["content_type"],
+                prefetch_related_fields=["content_object"],
+            ),
+        ),
+    )
+
     def alter_queryset(self, request):
         queryset = super().alter_queryset(request)
 
@@ -2954,29 +2977,6 @@ class TagUIViewSet(NautobotUIViewSet):
             queryset = queryset.annotate(items=count_related(TaggedItem, "tag"))
 
         return queryset
-
-    def get_extra_context(self, request, instance):
-        # Only run this logic when retrieving a single object
-        if instance is None or self.action != "retrieve":
-            return super().get_extra_context(request, instance)
-        tagged_items = (
-            TaggedItem.objects.filter(tag=instance).select_related("content_type").prefetch_related("content_object")
-        )
-
-        # Generate a table of all items tagged with this Tag
-        items_table = tables.TaggedItemTable(tagged_items)
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(items_table)
-
-        return {
-            "items_count": tagged_items.count(),
-            "items_table": items_table,
-            "content_types": instance.content_types.order_by("app_label", "model"),
-            **super().get_extra_context(request, instance),
-        }
 
 
 #

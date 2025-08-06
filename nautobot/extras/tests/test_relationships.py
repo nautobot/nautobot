@@ -482,10 +482,12 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
                 # Assert that the cache is used when calling method a second time
                 with self.assertNumQueries(0):
                     manager_method(Location)
+                with self.assertNumQueries(0):
+                    manager_method(Location, get_queryset=False)
 
                 # Assert that different models are cached separately
                 with self.assertNumQueries(expected_queries):
-                    manager_method(Rack)
+                    manager_method(Rack, get_queryset=False)
                 with self.assertNumQueries(0):
                     manager_method(Rack)
                 with self.assertNumQueries(0):
@@ -507,6 +509,8 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
                         manager_method(Location)
                     with self.assertNumQueries(0):
                         manager_method(Location)
+                    with self.assertNumQueries(0):
+                        manager_method(Location, get_queryset=False)
                 finally:
                     # Assert that the cache is invalidated on object delete
                     relationship.delete()
@@ -514,6 +518,8 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
                     manager_method(Location)
                 with self.assertNumQueries(0):
                     manager_method(Location)
+                with self.assertNumQueries(0):
+                    manager_method(Location, get_queryset=False)
 
     def test_required_related_object_errors(self):
         """

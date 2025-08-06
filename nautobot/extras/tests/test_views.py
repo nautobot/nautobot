@@ -1137,7 +1137,7 @@ class ExportTemplateTestCase(
 
 class ExternalIntegrationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = ExternalIntegration
-    bulk_edit_data = {"timeout": 10, "verify_ssl": True, "extra_config": r"{}", "headers": r"{}"}
+    bulk_edit_data = {"timeout": 10, "verify_ssl": True, "extra_config": '{"baz": "quux"}', "headers": '{"a": "b"}'}
     form_data = {
         "name": "Test External Integration",
         "remote_url": "https://example.com/test1/",
@@ -1850,8 +1850,18 @@ class SecretTestCase(
         }
 
 
-class SecretsGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class SecretsGroupTestCase(
+    ViewTestCases.OrganizationalObjectViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
+):
     model = SecretsGroup
+    custom_test_permissions = [
+        "extras.view_secret",
+        "extras.add_secretsgroup",
+        "extras.view_secretsgroup",
+        "extras.add_secretsgroupassociation",
+        "extras.change_secretsgroupassociation",
+    ]
 
     @classmethod
     def setUpTestData(cls):
@@ -1895,6 +1905,108 @@ class SecretsGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "secrets_group_associations-MIN_NUM_FORMS": "0",
             "secrets_group_associations-MAX_NUM_FORMS": "1000",
         }
+        cls.bulk_edit_data = {
+            "description": "This is a very detailed new description",
+        }
+
+    def test_create_group_with_valid_secret_association(self):
+        """Test that a SecretsGroup with a valid Secret association saves correctly via the formset."""
+        self.add_permissions(*self.custom_test_permissions)
+        # Create a secret to associate
+        secret = Secret.objects.create(
+            name="AWS_Secret",
+            provider="text-file",
+            parameters={"path": "/tmp"},  # noqa: S108  # hardcoded-temp-file -- false positive
+        )
+
+        form_data = {
+            "name": "test",
+            "description": "test bulk edits",
+            "secrets_group_associations-TOTAL_FORMS": "1",
+            "secrets_group_associations-INITIAL_FORMS": "0",
+            "secrets_group_associations-MIN_NUM_FORMS": "0",
+            "secrets_group_associations-MAX_NUM_FORMS": "1000",
+            "secrets_group_associations-0-secret": secret.pk,
+            "secrets_group_associations-0-access_type": SecretsGroupAccessTypeChoices.TYPE_HTTP,
+            "secrets_group_associations-0-secret_type": SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
+        }
+
+        # Submit the form to the "add SecretsGroup" view
+        response = self.client.post(reverse("extras:secretsgroup_add"), data=form_data, follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(SecretsGroup.objects.filter(name="test").exists())
+
+        # Checks that the association was created correctly
+        group = SecretsGroup.objects.get(name="test")
+        self.assertEqual(group.secrets_group_associations.count(), 1)
+
+        association = group.secrets_group_associations.first()
+        self.assertEqual(association.secret, secret)
+        self.assertEqual(association.access_type, SecretsGroupAccessTypeChoices.TYPE_HTTP)
+        self.assertEqual(association.secret_type, SecretsGroupSecretTypeChoices.TYPE_PASSWORD)
+
+    def test_create_group_with_invalid_secret_association(self):
+        """Test that invalid Secret association formset raises validation error and does not save."""
+        self.add_permissions(*self.custom_test_permissions)
+        url = reverse("extras:secretsgroup_add")
+
+        form_data = {
+            "name": "Invalid Secrets Group",
+            "description": "Missing required fields",
+            "secrets_group_associations-TOTAL_FORMS": "1",
+            "secrets_group_associations-INITIAL_FORMS": "0",
+            "secrets_group_associations-MIN_NUM_FORMS": "0",
+            "secrets_group_associations-MAX_NUM_FORMS": "1000",
+            "secrets_group_associations-0-secret": "",  # invalid
+            "secrets_group_associations-0-access_type": SecretsGroupAccessTypeChoices.TYPE_HTTP,
+            "secrets_group_associations-0-secret_type": "",  # invalid
+        }
+
+        response = self.client.post(url, data=form_data)
+
+        self.assertEqual(response.status_code, 200)
+
+        # Checks that no new SecretsGroup was created
+        self.assertFalse(SecretsGroup.objects.filter(name="Invalid Secrets Group").exists())
+
+        # Checks that formset errors are raised in the context
+        self.assertFormsetError(
+            response.context["secrets"], form_index=0, field="secret", errors=["This field is required."]
+        )
+
+    def test_create_group_with_deleted_secret_fails_cleanly(self):
+        """
+        Creating a SecretsGroup with a deleted Secret should fail with a formset error.
+        """
+        self.add_permissions(*self.custom_test_permissions)
+
+        secret = Secret.objects.create(name="TempSecret", provider="text-file", parameters={"path": "/tmp"})  # noqa: S108  # hardcoded-temp-file -- false positive
+        secret_pk = secret.pk
+        secret.delete()
+
+        form_data = {
+            "name": "Test Group",
+            "description": "This should not be created",
+            "secrets_group_associations-TOTAL_FORMS": "1",
+            "secrets_group_associations-INITIAL_FORMS": "0",
+            "secrets_group_associations-MIN_NUM_FORMS": "0",
+            "secrets_group_associations-MAX_NUM_FORMS": "1000",
+            "secrets_group_associations-0-secret": secret_pk,
+            "secrets_group_associations-0-access_type": SecretsGroupAccessTypeChoices.TYPE_HTTP,
+            "secrets_group_associations-0-secret_type": SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
+        }
+
+        response = self.client.post(reverse("extras:secretsgroup_add"), data=form_data)
+        self.assertEqual(response.status_code, 200)
+
+        self.assertFormsetError(
+            response.context["secrets"],
+            form_index=0,
+            field="secret",
+            errors=["Select a valid choice. That choice is not one of the available choices."],
+        )
+        self.assertFalse(SecretsGroup.objects.filter(name="Test Group").exists())
 
 
 class GraphQLQueriesTestCase(
@@ -1956,21 +2068,21 @@ class ScheduledJobTestCase(
         user = User.objects.create(username="user1", is_active=True)
         ScheduledJob.objects.create(
             name="test1",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test2",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_DAILY,
             user=user,
             start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test3",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_CUSTOM,
             user=user,
             start_time=timezone.now(),
@@ -1984,7 +2096,7 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             enabled=False,
             name="test4",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             start_time=timezone.now(),
@@ -2001,7 +2113,7 @@ class ScheduledJobTestCase(
             ScheduledJob.objects.create(
                 enabled=True,
                 name=name,
-                task="pass.TestPassJob",
+                task="pass_job.TestPassJob",
                 interval=JobExecutionType.TYPE_CUSTOM,
                 user=self.user,
                 start_time=timezone.now(),
@@ -2032,7 +2144,7 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             enabled=True,
             name="test11",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_CUSTOM,
             user=self.user,
             start_time=timezone.now(),
@@ -2092,7 +2204,7 @@ class ApprovalQueueTestCase(
 
         ScheduledJob.objects.create(
             name="test4",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
@@ -2483,7 +2595,7 @@ class JobResultTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        JobResult.objects.create(name="pass.TestPassJob")
+        JobResult.objects.create(name="pass_job.TestPassJob")
         JobResult.objects.create(name="fail.TestFailJob")
         JobLogEntry.objects.create(
             log_level=LogLevelChoices.LOG_INFO,
@@ -3676,6 +3788,43 @@ class RelationshipAssociationTestCase(
         self.assertNotIn(instance2.source.name, content, msg=content)
         self.assertNotIn(instance2.destination.name, content, msg=content)
 
+    def test_get_object_with_advanced_relationships(self):
+        device_type = ContentType.objects.get_for_model(Device)
+        vlan_type = ContentType.objects.get_for_model(VLAN)
+        Relationship.objects.create(
+            label="Device VLANs 4",
+            key="device_vlans_4",
+            type="one-to-many",
+            source_type=device_type,
+            source_label="Device VLANs Advanced",
+            destination_type=vlan_type,
+            destination_label="VLANs",
+            advanced_ui=True,
+        )
+        Relationship.objects.create(
+            label="Device VLANs 5",
+            key="device_vlans_5",
+            type="one-to-many",
+            source_type=device_type,
+            source_label="Device VLANs Main",
+            destination_type=vlan_type,
+            destination_label="VLANs",
+            advanced_ui=False,
+        )
+
+        device = Device.objects.first()
+        # Add model-level permission
+        self.add_permissions(f"{Device._meta.app_label}.view_{Device._meta.model_name}")
+        # Try GET the main tab
+        response = self.client.get(device.get_absolute_url())
+        response_content = extract_page_body(response.content.decode(response.charset))
+        # The relationship's source label should be in the advanced tab since advance_ui=True
+        # a.k.a its index should be greater than the index of the advanced tab
+        self.assertGreater(response_content.find("Device VLANs Advanced"), response_content.find('id="advanced"'))
+        # The relationship's source label should not be in the advanced tab since advance_ui=False
+        # a.k.a its index should be smaller than the index of the advanced tab
+        self.assertGreater(response_content.find('id="advanced"'), response_content.find("Device VLANs Main"))
+
 
 class StaticGroupAssociationTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
@@ -3939,8 +4088,7 @@ class WebhookTestCase(
             "http_content_type": "application/json",
         }
         cls.bulk_edit_data = {
-            "name": "webhook-4",
-            "enabled": True,
+            "enabled": False,
             "type_create": True,
             "type_update": True,
             "type_delete": False,

@@ -3,27 +3,26 @@ from django.urls import path
 from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras import views
 from nautobot.extras.models import (
-    ConfigContextSchema,
     CustomField,
     DynamicGroup,
     GitRepository,
-    GraphQLQuery,
     Job,
     Note,
     Relationship,
-    SecretsGroup,
 )
 
 app_name = "extras"
 
 router = NautobotUIViewSetRouter()
 router.register("computed-fields", views.ComputedFieldUIViewSet)
+router.register("config-context-schemas", views.ConfigContextSchemaUIViewSet)
 router.register("config-contexts", views.ConfigContextUIViewSet)
 router.register("contacts", views.ContactUIViewSet)
 router.register("contact-associations", views.ContactAssociationUIViewSet)
 router.register("custom-links", views.CustomLinkUIViewSet)
 router.register("export-templates", views.ExportTemplateUIViewSet)
 router.register("external-integrations", views.ExternalIntegrationUIViewSet)
+router.register("graphql-queries", views.GraphQLQueryUIViewSet)
 router.register("job-buttons", views.JobButtonUIViewSet)
 router.register("job-hooks", views.JobHookUIViewSet)
 router.register("job-queues", views.JobQueueUIViewSet)
@@ -34,6 +33,7 @@ router.register("relationships", views.RelationshipUIViewSet)
 router.register("roles", views.RoleUIViewSet)
 router.register("saved-views", views.SavedViewUIViewSet)
 router.register("secrets", views.SecretUIViewSet)
+router.register("secrets-groups", views.SecretsGroupUIViewSet)
 router.register("static-group-associations", views.StaticGroupAssociationUIViewSet)
 router.register("statuses", views.StatusUIViewSet)
 router.register("tags", views.TagUIViewSet)
@@ -46,56 +46,9 @@ urlpatterns = [
     path("object-changes/<uuid:pk>/", views.ObjectChangeView.as_view(), name="objectchange"),
     # Config context schema
     path(
-        "config-context-schemas/",
-        views.ConfigContextSchemaListView.as_view(),
-        name="configcontextschema_list",
-    ),
-    path(
-        "config-context-schemas/add/",
-        views.ConfigContextSchemaEditView.as_view(),
-        name="configcontextschema_add",
-    ),
-    path(
-        "config-context-schemas/edit/",
-        views.ConfigContextSchemaBulkEditView.as_view(),
-        name="configcontextschema_bulk_edit",
-    ),
-    path(
-        "config-context-schemas/delete/",
-        views.ConfigContextSchemaBulkDeleteView.as_view(),
-        name="configcontextschema_bulk_delete",
-    ),
-    path(
-        "config-context-schemas/<uuid:pk>/",
-        views.ConfigContextSchemaView.as_view(),
-        name="configcontextschema",
-    ),
-    path(
         "config-context-schemas/<uuid:pk>/validation/",
         views.ConfigContextSchemaObjectValidationView.as_view(),
         name="configcontextschema_object_validation",
-    ),
-    path(
-        "config-context-schemas/<uuid:pk>/edit/",
-        views.ConfigContextSchemaEditView.as_view(),
-        name="configcontextschema_edit",
-    ),
-    path(
-        "config-context-schemas/<uuid:pk>/delete/",
-        views.ConfigContextSchemaDeleteView.as_view(),
-        name="configcontextschema_delete",
-    ),
-    path(
-        "config-context-schemas/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="configcontextschema_changelog",
-        kwargs={"model": ConfigContextSchema},
-    ),
-    path(
-        "config-context-schemas/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="configcontextschema_notes",
-        kwargs={"model": ConfigContextSchema},
     ),
     # contacts
     path("contact-associations/add-new-contact/", views.ObjectNewContactView.as_view(), name="object_contact_add"),
@@ -228,37 +181,6 @@ urlpatterns = [
         views.GitRepositoryDryRunView.as_view(),
         name="gitrepository_dryrun",
     ),
-    # GraphQL Queries
-    path("graphql-queries/", views.GraphQLQueryListView.as_view(), name="graphqlquery_list"),
-    path("graphql-queries/add/", views.GraphQLQueryEditView.as_view(), name="graphqlquery_add"),
-    path(
-        "graphql-queries/delete/",
-        views.GraphQLQueryBulkDeleteView.as_view(),
-        name="GraphQLQuery_bulk_delete",
-    ),
-    path("graphql-queries/<uuid:pk>/", views.GraphQLQueryView.as_view(), name="graphqlquery"),
-    path(
-        "graphql-queries/<uuid:pk>/edit/",
-        views.GraphQLQueryEditView.as_view(),
-        name="graphqlquery_edit",
-    ),
-    path(
-        "graphql-queries/<uuid:pk>/delete/",
-        views.GraphQLQueryDeleteView.as_view(),
-        name="graphqlquery_delete",
-    ),
-    path(
-        "graphql-queries/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="graphqlquery_changelog",
-        kwargs={"model": GraphQLQuery},
-    ),
-    path(
-        "graphql-queries/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="graphqlquery_notes",
-        kwargs={"model": GraphQLQuery},
-    ),
     # Image attachments
     path(
         "image-attachments/<uuid:pk>/edit/",
@@ -357,24 +279,6 @@ urlpatterns = [
         "secrets/provider/<str:provider_slug>/form/",
         views.SecretProviderParametersFormView.as_view(),
         name="secret_provider_parameters_form",
-    ),
-    path("secrets-groups/", views.SecretsGroupListView.as_view(), name="secretsgroup_list"),
-    path("secrets-groups/add/", views.SecretsGroupEditView.as_view(), name="secretsgroup_add"),
-    path("secrets-groups/delete/", views.SecretsGroupBulkDeleteView.as_view(), name="secretsgroup_bulk_delete"),
-    path("secrets-groups/<uuid:pk>/", views.SecretsGroupView.as_view(), name="secretsgroup"),
-    path("secrets-groups/<uuid:pk>/edit/", views.SecretsGroupEditView.as_view(), name="secretsgroup_edit"),
-    path("secrets-groups/<uuid:pk>/delete/", views.SecretsGroupDeleteView.as_view(), name="secretsgroup_delete"),
-    path(
-        "secrets-groups/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="secretsgroup_changelog",
-        kwargs={"model": SecretsGroup},
-    ),
-    path(
-        "secrets-groups/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="secretsgroup_notes",
-        kwargs={"model": SecretsGroup},
     ),
 ]
 

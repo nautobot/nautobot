@@ -1,3 +1,4 @@
+from collections import defaultdict
 import logging
 
 from django import forms
@@ -422,31 +423,38 @@ class RelationshipModel(models.Model):
 class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
-    def get_for_model(self, model, hidden=None):
+    def get_for_model(self, model, hidden=None, get_queryset=True):
         """
         Return all Relationships assigned to the given model.
 
         Args:
             model (Model): The django model to which relationships are registered
             hidden (bool): Filter based on the value of the hidden flag, or None to not apply this filter
+            get_queryset (bool): Whether to return querysets or object lists.
 
-        Returns a tuple of source and destination scoped relationship querysets.
+        Returns a tuple of source and destination scoped relationship record querysets/lists.
         """
         return (
-            self.get_for_model_source(model, hidden=hidden),
-            self.get_for_model_destination(model, hidden=hidden),
+            self.get_for_model_source(model, hidden=hidden, get_queryset=get_queryset),
+            self.get_for_model_destination(model, hidden=hidden, get_queryset=get_queryset),
         )
 
-    def get_for_model_source(self, model, hidden=None):
+    def get_for_model_source(self, model, hidden=None, get_queryset=True):
         """
         Return all Relationships assigned to the given model for the source side only.
 
         Args:
             model (Model): The django model to which relationships are registered
             hidden (bool): Filter based on the value of the hidden flag, or None to not apply this filter
+            get_queryset (bool): Whether to return a queryset or an object list.
         """
         concrete_model = model._meta.concrete_model
         cache_key = f"{self.get_for_model_source.cache_key_prefix}.{concrete_model._meta.label_lower}.{hidden}"
+        list_cache_key = f"{cache_key}.list"
+        if not get_queryset:
+            listing = cache.get(list_cache_key)
+            if listing is not None:
+                return listing
         queryset = cache.get(cache_key)
         if queryset is None:
             content_type = ContentType.objects.get_for_model(concrete_model)
@@ -456,20 +464,30 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             if hidden is not None:
                 queryset = queryset.filter(source_hidden=hidden)
             cache.set(cache_key, queryset)
+        if not get_queryset:
+            listing = list(queryset)
+            cache.set(list_cache_key, listing)
+            return listing
         return queryset
 
     get_for_model_source.cache_key_prefix = "nautobot.extras.relationship.get_for_model_source"
 
-    def get_for_model_destination(self, model, hidden=None):
+    def get_for_model_destination(self, model, hidden=None, get_queryset=True):
         """
         Return all Relationships assigned to the given model for the destination side only.
 
         Args:
             model (Model): The django model to which relationships are registered
             hidden (bool): Filter based on the value of the hidden flag, or None to not apply this filter
+            get_queryset (bool): Whether to return a queryset or an object list.
         """
         concrete_model = model._meta.concrete_model
         cache_key = f"{self.get_for_model_destination.cache_key_prefix}.{concrete_model._meta.label_lower}.{hidden}"
+        list_cache_key = f"{cache_key}.list"
+        if not get_queryset:
+            listing = cache.get(list_cache_key)
+            if listing is not None:
+                return listing
         queryset = cache.get(cache_key)
         if queryset is None:
             content_type = ContentType.objects.get_for_model(concrete_model)
@@ -481,6 +499,10 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             if hidden is not None:
                 queryset = queryset.filter(destination_hidden=hidden)
             cache.set(cache_key, queryset)
+        if not get_queryset:
+            listing = list(queryset)
+            cache.set(list_cache_key, listing)
+            return listing
         return queryset
 
     get_for_model_destination.cache_key_prefix = "nautobot.extras.relationship.get_for_model_destination"
@@ -494,6 +516,33 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             Q(source_type=content_type, required_on=RelationshipRequiredSideChoices.SOURCE_SIDE_REQUIRED)
             | Q(destination_type=content_type, required_on=RelationshipRequiredSideChoices.DESTINATION_SIDE_REQUIRED)
         )
+
+    def populate_list_caches(self):
+        """Populate all relevant caches for `get_for_model(..., get_queryset=False)` and related lookups."""
+        queryset = self.all().select_related("source_type", "destination_type")
+        listings = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+        for rel in queryset:
+            listings["source"][f"{rel.source_type.app_label}.{rel.source_type.model}"]["None"].append(rel)
+            listings["source"][f"{rel.source_type.app_label}.{rel.source_type.model}"][str(rel.source_hidden)].append(
+                rel
+            )
+            listings["destination"][f"{rel.destination_type.app_label}.{rel.destination_type.model}"]["None"].append(
+                rel
+            )
+            listings["destination"][f"{rel.destination_type.app_label}.{rel.destination_type.model}"][
+                str(rel.destination_hidden)
+            ].append(rel)
+        for ct in ContentType.objects.all():
+            label = f"{ct.app_label}.{ct.model}"
+            for hidden in ["None", "True", "False"]:
+                cache.set(
+                    f"{self.get_for_model_source.cache_key_prefix}.{label}.{hidden}.list",
+                    listings["source"][label][hidden],
+                )
+                cache.set(
+                    f"{self.get_for_model_destination.cache_key_prefix}.{label}.{hidden}.list",
+                    listings["destination"][label][hidden],
+                )
 
 
 class Relationship(

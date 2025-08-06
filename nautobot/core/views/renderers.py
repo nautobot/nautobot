@@ -228,7 +228,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     if view.filterset is not None:
                         filterset_filters = view.filterset.filters
                     else:
-                        filterset_filters = view.filterset.get_filters()
+                        filterset_filters = view.filterset_class.get_filters()
                     display_filter_params = [
                         check_filter_for_display(filterset_filters, field_name, values)
                         for field_name, values in view.filter_params.items()
@@ -236,7 +236,8 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     if view.filterset_form_class is not None:
                         filter_form = view.filterset_form_class(view.filter_params, label_suffix="")
                 table = self.construct_table(view, request=request, permissions=permissions)
-                search_form = SearchForm(data=view.filter_params)
+                q_placeholder = "Search " + bettertitle(model._meta.verbose_name_plural)
+                search_form = SearchForm(data=view.filter_params, q_placeholder=q_placeholder)
             elif view.action == "destroy":
                 form = form_class(initial=request.GET)
             elif view.action in ["create", "update"]:

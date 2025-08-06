@@ -52,6 +52,7 @@ from nautobot.dcim.models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     Platform,
     PowerFeed,
@@ -1390,15 +1391,18 @@ class ModuleBayTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.B
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
+        cls.module_family = ModuleFamily.objects.create(name="Test Module Family")
 
         cls.create_data = [
             {
                 "device_type": cls.device_type.pk,
                 "name": "Test1",
+                "module_family": cls.module_family.pk,
             },
             {
                 "module_type": cls.module_type.pk,
                 "name": "Test2",
+                "module_family": cls.module_family.pk,
             },
             {
                 "device_type": cls.device_type.pk,
@@ -3812,3 +3816,34 @@ class InterfaceVDCAssignmentTestCase(APIViewTestCases.APIViewTestCase):
     def test_docs(self):
         """Skip: InterfaceVDCAssignment has no docs yet"""
         # TODO(timizuo): Add docs for Interface VDC Assignment
+
+
+class ModuleFamilyTest(APIViewTestCases.APIViewTestCase):
+    """Test the ModuleFamily API."""
+
+    model = ModuleFamily
+    brief_fields = ["display", "id", "name", "url"]
+    create_data = [
+        {
+            "name": "Module Family 4",
+            "description": "Fourth family",
+        },
+        {
+            "name": "Module Family 5",
+            "description": "Fifth family",
+        },
+        {
+            "name": "Module Family 6",
+            "description": "Sixth family",
+        },
+    ]
+    bulk_update_data = {
+        "description": "New description",
+    }
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create test data for API tests."""
+        ModuleFamily.objects.create(name="Module Family 1", description="First family")
+        ModuleFamily.objects.create(name="Module Family 2", description="Second family")
+        ModuleFamily.objects.create(name="Module Family 3", description="Third family")

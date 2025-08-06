@@ -17,6 +17,7 @@ from nautobot.core.models import fields as core_fields, utils as models_utils, v
 from nautobot.core.testing import TestCase
 from nautobot.core.utils import data as data_utils, filtering, lookup, querysets, requests
 from nautobot.core.utils.migrations import update_object_change_ct_for_replaced_models
+from nautobot.core.utils.module_loading import check_name_safe_to_import_privately
 from nautobot.dcim import filters as dcim_filters, forms as dcim_forms, models as dcim_models, tables
 from nautobot.extras import models as extras_models, utils as extras_utils
 from nautobot.extras.choices import ObjectChangeActionChoices, RelationshipTypeChoices
@@ -957,6 +958,22 @@ class TestMigrationUtils(TestCase):
             )
             self.assertEqual(ObjectChange.objects.get(request_id=request_id).changed_object_type, location_ct)
             self.assertEqual(ObjectChange.objects.get(request_id=request_id).related_object_type, location_ct)
+
+
+class TestModuleLoadingUtils(TestCase):
+    def test_check_name_safe_to_import_privately(self):
+        for invalid in (
+            "foo.bar",  # not a valid identifier
+            "😂",  # not a valid identifier
+            "from",  # reserved keyword
+            "sys",  # Python builtin
+            "nautobot",  # installed package
+            "tkinter",  # system library
+        ):
+            with self.subTest(f"Invalid name: {invalid}"):
+                permitted, reason = check_name_safe_to_import_privately(invalid)
+                self.assertFalse(permitted)
+                self.assertIsInstance(reason, str)
 
 
 class TestQuerySetUtils(TestCase):

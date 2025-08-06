@@ -2,6 +2,7 @@ import re
 
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models, transaction
@@ -124,7 +125,7 @@ class ModularComponentModel(ComponentModel):
 
     class Meta:
         abstract = True
-        ordering = ("device", "module", "_name")
+        ordering = ("device", "module__id", "_name")  # Module.ordering is complex/expensive so don't order by module
         constraints = [
             models.UniqueConstraint(
                 fields=("device", "name"),
@@ -665,7 +666,7 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
     )
 
     class Meta(ModularComponentModel.Meta):
-        ordering = ("device", "module", CollateAsChar("_name"))
+        ordering = ("device", "module__id", CollateAsChar("_name"))  # Module.ordering is complex; don't order by module
 
     def clean(self):
         super().clean()
@@ -1237,6 +1238,18 @@ class ModuleBay(PrimaryModel):
         blank=True,
         null=True,
     )
+    module_family = models.ForeignKey(
+        to="dcim.ModuleFamily",
+        on_delete=models.PROTECT,
+        related_name="module_bays",
+        blank=True,
+        null=True,
+        help_text="Module family that can be installed in this bay",
+    )
+    requires_first_party_modules = models.BooleanField(
+        default=False,
+        help_text="This bay will only accept modules from the same manufacturer as the parent device or module",
+    )
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
     _name = NaturalOrderingField(target_field="name", max_length=CHARFIELD_MAX_LENGTH, blank=True, db_index=True)
     position = models.CharField(
@@ -1247,7 +1260,7 @@ class ModuleBay(PrimaryModel):
     label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Physical label")
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
-    clone_fields = ["parent_device", "parent_module"]
+    clone_fields = ["parent_device", "parent_module", "module_family", "requires_first_party_modules"]
 
     # The recursive nature of this model combined with the fact that it can be a child of a
     # device or location makes our natural key implementation unusable, so just use the pk
@@ -1318,3 +1331,10 @@ class ModuleBay(PrimaryModel):
             self.position = self.name
 
     clean.alters_data = True
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
+        if self.parent_device is not None:
+            # Set the has_module_bays cache key on the parent device - see Device.has_module_bays()
+            cache.set(f"nautobot.dcim.device.{self.parent_device.pk}.has_module_bays", True, timeout=5)
