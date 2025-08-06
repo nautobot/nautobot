@@ -481,7 +481,7 @@ class ApprovalWorkflowStageTest(
 
                 scheduled_job = case["object"]
                 scheduled_job.refresh_from_db()
-                self.assertIsNone(scheduled_job.decision_date)
+                self.assertEqual(scheduled_job.decision_date, approval_workflow.decision_date)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_deny_approval_workflow_stage_in_approval_workflow_with_more_than_one_stage(self):
@@ -517,12 +517,11 @@ class ApprovalWorkflowStageTest(
                 self.assertEqual(approval_workflow_stage_2.approval_workflow_stage_responses.count(), 0)
                 self.assertEqual(approval_workflow_stage_2.state, ApprovalWorkflowStateChoices.PENDING)
 
-                # approval workflow should still be in pending state because user already approve 1 stage but are 2
                 self.assertEqual(approval_workflow.current_state, ApprovalWorkflowStateChoices.DENIED)
 
                 scheduled_job = case["object"]
                 scheduled_job.refresh_from_db()
-                self.assertIsNone(scheduled_job.decision_date)
+                self.assertEqual(scheduled_job.decision_date, approval_workflow.decision_date)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_deny_with_approval_workflow_stage_in_approval_workflow_with_one_stage(self):
@@ -549,7 +548,7 @@ class ApprovalWorkflowStageTest(
 
                 scheduled_job = case["object"]
                 scheduled_job.refresh_from_db()
-                self.assertIsNone(scheduled_job.decision_date)
+                self.assertEqual(scheduled_job.decision_date, approval_workflow.decision_date)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approval_workflow_stage_comment_without_permission(self):
