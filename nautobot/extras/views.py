@@ -852,7 +852,7 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
             for child_form in children.forms:
                 if child_form.errors:
                     for field, errors in child_form.errors.items():
-                        form.add_error(None, "Errors encountered when saving Dynamic Group associations. See below.")
+                        form.add_error(None, f"{field}: {', '.join(errors)}")
 
             return None
 
