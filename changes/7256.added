@@ -1,1 +1,2 @@
-Added new API actions under `api/extras/approval-workflow-stages/`: approve, deny, comment and pending-approvals
+Added new API actions under `api/extras/approval-workflow-stages/`: `approve`, `deny`, `comment` and filterset parameter `pending_approvals` on the regular list endpoint.
+Added `users_that_already_denied` property to `ApprovalWorkflowStage` model.

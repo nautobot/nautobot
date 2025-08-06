@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 import tempfile
 from unittest import mock, skip
+from urllib.parse import urlencode
 import uuid
 from zoneinfo import ZoneInfo
 
@@ -273,6 +274,98 @@ class ApprovalWorkflowStageTest(
         self._test_approval_workflow_stage_action_without_approver_group_membership("deny")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def _test_approval_workflow_stage_with_dismatch_constraints(self, action):
+        for case in self.approval_workflow_content_type_cases:
+            content_type = case["content_type"]
+            with self.subTest(case=content_type, action=action):
+                url = reverse(f"extras-api:approvalworkflowstage-{action}", kwargs={"pk": case["stage"].pk})
+                self.add_permissions(
+                    "extras.change_approvalworkflowstage",
+                    f"extras.change_{content_type.lower()}",
+                    constraints={"pk": self.approval_workflow_stages[1].pk},
+                )
+                self.user.groups.add(self.approver_group_1)
+                response = self.client.post(url, **self.header)
+                self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approve_approval_workflow_stage_with_dismatch_contraints(self):
+        self._test_approval_workflow_stage_with_dismatch_constraints("approve")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_deny_approval_workflow_stage_with_dismatch_contraints(self):
+        self._test_approval_workflow_stage_with_dismatch_constraints("deny")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def _test_approval_workflow_stage_with_match_constraints(self, action):
+        for case in self.approval_workflow_content_type_cases:
+            content_type = case["content_type"]
+            with self.subTest(case=content_type, action=action):
+                url = reverse(f"extras-api:approvalworkflowstage-{action}", kwargs={"pk": case["stage"].pk})
+                self.add_permissions(
+                    "extras.change_approvalworkflowstage",
+                    f"extras.change_{content_type.lower()}",
+                    constraints={"pk": case["stage"].pk},
+                )
+                self.user.groups.add(self.approver_group_1)
+                response = self.client.post(url, **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approve_approval_workflow_stage_with_match_contraints(self):
+        self._test_approval_workflow_stage_with_match_constraints("approve")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_deny_approval_workflow_stage_with_match_contraints(self):
+        self._test_approval_workflow_stage_with_match_constraints("deny")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def _test_approval_workflow_stage_with_dismatch_content_type_constraints(self, action):
+        for case in self.approval_workflow_content_type_cases:
+            content_type = case["content_type"]
+            with self.subTest(case=content_type, action=action):
+                url = reverse(f"extras-api:approvalworkflowstage-{action}", kwargs={"pk": case["stage"].pk})
+                self.add_permissions(
+                    "extras.change_approvalworkflowstage",
+                    f"extras.change_{content_type.lower()}",
+                    constraints={"approval_workflow__object_under_review_object_id": self.scheduled_jobs[1].pk},
+                )
+                self.user.groups.add(self.approver_group_1)
+                response = self.client.post(url, **self.header)
+                self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approve_approval_workflow_stage_with_dismatch_content_type_contraints(self):
+        self._test_approval_workflow_stage_with_dismatch_content_type_constraints("approve")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_deny_approval_workflow_stage_with_dismatch_content_type_contraints(self):
+        self._test_approval_workflow_stage_with_dismatch_content_type_constraints("deny")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def _test_approval_workflow_stage_with_match_content_type_constraints(self, action):
+        for case in self.approval_workflow_content_type_cases:
+            content_type = case["content_type"]
+            with self.subTest(case=content_type, action=action):
+                url = reverse(f"extras-api:approvalworkflowstage-{action}", kwargs={"pk": case["stage"].pk})
+                self.add_permissions(
+                    "extras.change_approvalworkflowstage",
+                    f"extras.change_{content_type.lower()}",
+                    constraints={"approval_workflow__object_under_review_object_id": self.scheduled_jobs[0].pk},
+                )
+                self.user.groups.add(self.approver_group_1)
+                response = self.client.post(url, **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approve_approval_workflow_stage_with_match_content_type_contraints(self):
+        self._test_approval_workflow_stage_with_match_content_type_constraints("approve")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_deny_approval_workflow_stage_with_match_content_type_contraints(self):
+        self._test_approval_workflow_stage_with_match_content_type_constraints("deny")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approve_approval_workflow_stage_in_approval_workflow_with_one_stage(self):
         for case in self.approval_workflow_content_type_cases:
             content_type = case["content_type"]
@@ -530,17 +623,24 @@ class ApprovalWorkflowStageTest(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approval_workflow_stage_pending_approvals(self):
-        url = reverse("extras-api:approvalworkflowstage-pending-approvals")
+        base_url = reverse("extras-api:approvalworkflowstage-list")
+        query_params = urlencode({"pending_approvals": "true"})
+        url = f"{base_url}?{query_params}"
         self.add_permissions(
             "extras.view_approvalworkflowstage",
         )
         self.user.groups.add(self.approver_group_1)
 
-        # Set stages to approved for different approval workflows
+        # Set all stages as approved except for the first one.
         for stage in ApprovalWorkflowStage.objects.all():
             if stage.approval_workflow != self.approval_workflows[0]:
+                ApprovalWorkflowStageResponse.objects.create(
+                    approval_workflow_stage=stage, user=self.user, state=ApprovalWorkflowStateChoices.APPROVED
+                )
                 stage.state = ApprovalWorkflowStateChoices.APPROVED
                 stage.save()
+
+        self.assertEqual(ApprovalWorkflowStage.objects.filter(state=ApprovalWorkflowStateChoices.APPROVED).count(), 2)
 
         # Create 1 pending stage, but in different approver group
         approver_group_2 = Group.objects.create(name="Approver Group 2")
@@ -558,16 +658,34 @@ class ApprovalWorkflowStageTest(
             state=ApprovalWorkflowStateChoices.PENDING,
         )
 
-        response = self.client.get(url, **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
         # user is approver in 2 approval workflows, but second one is approved
         self.assertTrue(self.approval_workflow_stage_definitions[1].approver_group in self.user.groups.all())
         # user is not an approver
         self.assertTrue(
             approval_workflow_stage_definition_approver_group_2.approver_group not in self.user.groups.all()
         )
-        self.assertEqual(len(response.data["results"]), 1)
-        self.assertEqual(response.data["results"][0]["id"], str(self.approval_workflow_stages[0].id))
+
+        test_cases = [
+            ("true", 1),  # Should list pending approvals for specific user in this case 1
+            ("false", 2),  # Should list done approvals for specific user
+            (None, 4),  # Should return all visible stages (no filter applied)
+        ]
+
+        for param_value, expected_count in test_cases:
+            with self.subTest(pending_approvals=param_value):
+                if param_value is not None:
+                    query_params = urlencode({"pending_approvals": param_value})
+                    url = f"{base_url}?{query_params}"
+                else:
+                    url = base_url  # no filter param
+
+                response = self.client.get(url, **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                self.assertEqual(len(response.data["results"]), expected_count)
+
+                if param_value == "true":
+                    # Confirm correct object is returned
+                    self.assertEqual(response.data["results"][0]["id"], str(self.approval_workflow_stages[0].id))
 
 
 #

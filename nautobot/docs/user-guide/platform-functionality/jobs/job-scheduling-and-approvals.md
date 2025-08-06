@@ -58,7 +58,7 @@ The queue of jobs that need approval can be found under `Approvals > Approval Da
 
 ### Approval via the API
 
-Approvals can also be given via the REST API. The endpoints to approve, deny, comment and pending-approvals are found on the approval workflow stage endpoint under `approve`, `deny`, `comment` and `pending-workflows` respectively. You may also include a comment in the request data when approving or denying a workflow.
+Approvals can also be given via the REST API. The endpoints to approve, deny, comment are found on the approval workflow stage endpoint under `approve`, `deny`, `comment` respectively. You can list pending or completed approvals using the `pending_approvals` filter. Additionally, you may include a comment in the request body when approving or denying a workflow.
 
 #### Approve/Deny a Workflow
 
@@ -97,13 +97,26 @@ curl -X POST \
 http://nautobot/api/extras/approval-workflow-stages/$APPROVAL_WORKFLOW_STAGE_ID/comment
 ```
 
-#### List Pending Approvals
+#### List Pending/Done Approvals
 
-Retrieves a list of approval workflow stages that are pending approval for the current user. This can be done through the `pending-approvals` endpoint, which returns all workflow stages that are awaiting approval from the authenticated user.
+Retrieves a list of approval workflow stages filtered by their status relative to the current user using the `pending_approvals` query parameter on the standard list endpoint:
+
+- `?pending_approvals=true` — Returns stages pending approval by the current user.
 
 ```no-highlight
 curl -X GET \
 -H "Authorization: Token $TOKEN" \
 -H "Accept: application/json; version=1.3; indent=4" \
-http://nautobot/api/extras/approval-workflow-stages/pending-approvals
+http://nautobot/api/extras/approval-workflow-stages/?pending_approvals=true
 ```
+
+- `?pending_approvals=false` — Returns stages the current user has already approved/denied.
+
+```no-highlight
+curl -X GET \
+-H "Authorization: Token $TOKEN" \
+-H "Accept: application/json; version=1.3; indent=4" \
+http://nautobot/api/extras/approval-workflow-stages/?pending_approvals=false
+```
+
+If the parameter is omitted, all stages are returned regardless of approval status.

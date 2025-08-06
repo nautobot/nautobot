@@ -85,7 +85,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.secrets.exceptions import SecretError
-from nautobot.extras.utils import get_job_queue, get_pending_approval_workflow_stages, get_worker_count
+from nautobot.extras.utils import get_job_queue, get_worker_count
 
 from . import serializers
 
@@ -310,21 +310,20 @@ class ApprovalWorkflowStageViewSet(NautobotModelViewSet):
     def _is_user_approver(self, user, stage):
         """Checks if the user belongs to the group allowed to approve the current stage."""
         approver_group = stage.approval_workflow_stage_definition.approver_group
-        return approver_group in user.groups.all()
+        return user in approver_group.user_set.all()
 
-    def _user_already_responded(self, user, stage):
-        """Checks if the user has already responded to the current stage."""
-        return user in stage.users_that_already_approved
+    def _user_already_approved_or_denied(self, user, stage, action_type):
+        """Checks if the user has already approved/denied to the current stage."""
+        if action_type == "approve":
+            return user in stage.users_that_already_approved
+        elif action_type == "deny":
+            return user in stage.users_that_already_denied
+        else:
+            return False
 
-    def _handle_response(self, request, action_type):
+    def _handle_approve_deny_response(self, request, action_type):
         """Common logic for approve/deny actions."""
-        try:
-            stage = self.get_object()
-        except ApprovalWorkflowStage.DoesNotExist:
-            return Response(
-                {"detail": "ApprovalWorkflowStage not found."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+        stage = self.get_object()
         user = request.user
         if not self._validate_stage(stage):
             return Response(
@@ -347,9 +346,10 @@ class ApprovalWorkflowStageViewSet(NautobotModelViewSet):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        if self._user_already_responded(user, stage):
+        if self._user_already_approved_or_denied(user, stage, action_type):
+            past_tense = {"approve": "approved", "deny": "denied"}.get(action_type, action_type)
             return Response(
-                {"detail": "You have already responded to this stage."},
+                {"detail": f"You have already {past_tense} to this stage."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -398,7 +398,7 @@ class ApprovalWorkflowStageViewSet(NautobotModelViewSet):
     )
     def approve(self, request, pk=None):
         """Approve the approval workflow stage."""
-        return self._handle_response(request, action_type="approve")
+        return self._handle_approve_deny_response(request, action_type="approve")
 
     @extend_schema(
         methods=["post"],
@@ -412,7 +412,7 @@ class ApprovalWorkflowStageViewSet(NautobotModelViewSet):
     )
     def deny(self, request, pk=None):
         """Deny the approval workflow stage."""
-        return self._handle_response(request, action_type="deny")
+        return self._handle_approve_deny_response(request, action_type="deny")
 
     @extend_schema(
         methods=["post"],
@@ -422,13 +422,7 @@ class ApprovalWorkflowStageViewSet(NautobotModelViewSet):
     @action(detail=True, methods=["post"], permission_classes=[ApprovalWorkflowStageChangePermission])
     def comment(self, request, pk=None):
         """Add a comment to the specific stage (without approving or denying)."""
-        try:
-            stage = self.get_object()
-        except ApprovalWorkflowStage.DoesNotExist:
-            return Response(
-                {"detail": "ApprovalWorkflowStage not found."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+        stage = self.get_object()
 
         comment = request.data.get("comments", "")
         if not comment:
@@ -443,20 +437,6 @@ class ApprovalWorkflowStageViewSet(NautobotModelViewSet):
 
         serializer = serializers.ApprovalWorkflowStageSerializer(stage, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-    @extend_schema(
-        methods=["get"],
-        responses={200: serializers.ApprovalWorkflowStageSerializer(many=True)},
-    )
-    @action(detail=False, methods=["get"], url_path="pending-approvals")
-    def pending_approvals(self, request):
-        """List approval workflow stages pending current user's approval."""
-        pending_stages = get_pending_approval_workflow_stages(
-            request.user, ApprovalWorkflowStage.objects.select_related("approval_workflow")
-        )
-        pending_stages = self.paginate_queryset(pending_stages)
-        serializer = self.get_serializer(pending_stages, many=True)
-        return self.get_paginated_response(serializer.data)
 
 
 class ApprovalWorkflowStageResponseViewSet(ModelViewSet):
