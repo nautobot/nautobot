@@ -166,7 +166,7 @@ class CustomFieldDataMigrationTest(NautobotDataMigrationTest):
 class TestFailingApprovalMigration(TestCase):
     def setUp(self):
         self.migrator = Migrator(database="default")
-        old_state = self.migrator.apply_initial_migration(("extras", "0123_alter_joblogentry_created"))
+        old_state = self.migrator.apply_initial_migration(("extras", "0124_add_joblogentry_index"))
 
         Job = old_state.apps.get_model("extras", "Job")
         ScheduledJob = old_state.apps.get_model("extras", "ScheduledJob")
@@ -199,7 +199,7 @@ class TestFailingApprovalMigration(TestCase):
 
     def test_migration_fails_if_scheduled_jobs_have_approval_required(self):
         with self.assertRaises(ApprovalRequiredScheduledJobsError) as cm:
-            self.migrator.apply_tested_migration(("extras", "0126_remove_job_approval_required_and_more"))
+            self.migrator.apply_tested_migration(("extras", "0127_remove_job_approval_required_and_more"))
 
         self.assertIn("Migration aborted", str(cm.exception))
         self.assertIn(self.scheduled_job.name, str(cm.exception))
@@ -210,7 +210,7 @@ class TestFailingApprovalMigration(TestCase):
 
         f = io.StringIO()
         with redirect_stdout(f):
-            self.migrator.apply_tested_migration(("extras", "0126_remove_job_approval_required_and_more"))
+            self.migrator.apply_tested_migration(("extras", "0127_remove_job_approval_required_and_more"))
 
         output = f.getvalue()
 
@@ -226,7 +226,7 @@ class TestFailingApprovalMigration(TestCase):
 
         f = io.StringIO()
         with redirect_stdout(f):
-            self.migrator.apply_tested_migration(("extras", "0126_remove_job_approval_required_and_more"))
+            self.migrator.apply_tested_migration(("extras", "0127_remove_job_approval_required_and_more"))
 
         output = f.getvalue()
 
