@@ -1,0 +1,1 @@
+Fixed a regression in which the `contacts__n`, `dynamic_groups__n`, `role__n`, `status__n`, and `teams__n` filterset filters would not accept multiple values or names, instead only accepting a single UUID.

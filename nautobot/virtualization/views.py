@@ -242,54 +242,58 @@ class ClusterRemoveDevicesView(generic.ObjectEditView):
 #
 
 
-class VirtualMachineListView(generic.ObjectListView):
-    queryset = VirtualMachine.objects.all()
-    filterset = filters.VirtualMachineFilterSet
-    filterset_form = forms.VirtualMachineFilterForm
-    table = tables.VirtualMachineDetailTable
-    template_name = "virtualization/virtualmachine_list.html"
-
-
-class VirtualMachineView(generic.ObjectView):
-    queryset = VirtualMachine.objects.select_related("software_version", "tenant__tenant_group")
+class VirtualMachineUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.VirtualMachineBulkEditForm
+    filterset_class = filters.VirtualMachineFilterSet
+    filterset_form_class = forms.VirtualMachineFilterForm
+    form_class = forms.VirtualMachineForm
+    serializer_class = serializers.VirtualMachineSerializer
+    table_class = tables.VirtualMachineDetailTable
+    queryset = VirtualMachine.objects.select_related("tenant__tenant_group")
 
     def get_extra_context(self, request, instance):
-        # Interfaces
-        vminterfaces = (
-            VMInterface.objects.restrict(request.user, "view")
-            .filter(virtual_machine=instance)
-            .prefetch_related(Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)))
-        )
-        vminterface_table = tables.VirtualMachineVMInterfaceTable(vminterfaces, user=request.user, orderable=False)
-        if request.user.has_perm("virtualization.change_vminterface") or request.user.has_perm(
-            "virtualization.delete_vminterface"
-        ):
-            vminterface_table.columns.show("pk")
+        context = super().get_extra_context(request, instance)
 
-        # Services
-        services = (
-            Service.objects.restrict(request.user, "view")
-            .filter(virtual_machine=instance)
-            .prefetch_related(Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)))
-        )
+        if self.action == "retrieve":
+            # Interfaces
+            vminterfaces = (
+                VMInterface.objects.restrict(request.user, "view")
+                .filter(virtual_machine=instance)
+                .prefetch_related(Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)))
+            )
+            vminterface_table = tables.VirtualMachineVMInterfaceTable(vminterfaces, user=request.user, orderable=False)
+            if request.user.has_perm("virtualization.change_vminterface") or request.user.has_perm(
+                "virtualization.delete_vminterface"
+            ):
+                vminterface_table.columns.show("pk")
 
-        # VRF assignments
-        vrf_assignments = instance.vrf_assignments.restrict(request.user, "view")
-        vrf_table = VRFDeviceAssignmentTable(vrf_assignments)
+            # Services
+            services = (
+                Service.objects.restrict(request.user, "view")
+                .filter(virtual_machine=instance)
+                .prefetch_related(Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)))
+            )
 
-        # Software images
-        if instance.software_version is not None:
-            software_version_images = instance.software_version.software_image_files.restrict(request.user, "view")
-        else:
-            software_version_images = []
+            # VRF assignments
+            vrf_assignments = instance.vrf_assignments.restrict(request.user, "view")
+            vrf_table = VRFDeviceAssignmentTable(vrf_assignments)
 
-        return {
-            "vminterface_table": vminterface_table,
-            "services": services,
-            "software_version_images": software_version_images,
-            "vrf_table": vrf_table,
-            **super().get_extra_context(request, instance),
-        }
+            # Software images
+            if instance.software_version is not None:
+                software_version_images = instance.software_version.software_image_files.restrict(request.user, "view")
+            else:
+                software_version_images = []
+
+            context.update(
+                {
+                    "vminterface_table": vminterface_table,
+                    "services": services,
+                    "software_version_images": software_version_images,
+                    "vrf_table": vrf_table,
+                }
+            )
+
+        return context
 
 
 class VirtualMachineConfigContextView(ObjectConfigContextView):
@@ -301,34 +305,6 @@ class VirtualMachineConfigContextView(ObjectConfigContextView):
         A cached_property rather than a class attribute because annotate_config_context_data() is unsafe at import time.
         """
         return VirtualMachine.objects.annotate_config_context_data()
-
-
-class VirtualMachineEditView(generic.ObjectEditView):
-    queryset = VirtualMachine.objects.all()
-    model_form = forms.VirtualMachineForm
-    template_name = "virtualization/virtualmachine_edit.html"
-
-
-class VirtualMachineDeleteView(generic.ObjectDeleteView):
-    queryset = VirtualMachine.objects.all()
-
-
-class VirtualMachineBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = VirtualMachine.objects.all()
-    table = tables.VirtualMachineTable
-
-
-class VirtualMachineBulkEditView(generic.BulkEditView):
-    queryset = VirtualMachine.objects.select_related("cluster", "role", "status", "tenant")
-    filterset = filters.VirtualMachineFilterSet
-    table = tables.VirtualMachineTable
-    form = forms.VirtualMachineBulkEditForm
-
-
-class VirtualMachineBulkDeleteView(generic.BulkDeleteView):
-    queryset = VirtualMachine.objects.select_related("cluster", "role", "status", "tenant")
-    filterset = filters.VirtualMachineFilterSet
-    table = tables.VirtualMachineTable
 
 
 #
