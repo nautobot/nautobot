@@ -70,7 +70,6 @@ class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):
         needed, this implementation calls `without_tree_fields` before issuing the count query and `with_tree_fields`
         afterwards when applicable.
         """
-        return super().count()
         should_have_tree_fields = isinstance(self.query, TreeQuery)
         if should_have_tree_fields:
             self.without_tree_fields()
