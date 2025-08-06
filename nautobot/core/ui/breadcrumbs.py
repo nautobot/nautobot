@@ -53,7 +53,7 @@ class BaseBreadcrumbItem:
         Returns:
             Optional[str]: The URL as a string, or None.
         """
-        raise NotImplementedError
+        return None
 
     def get_label(self, context: Context) -> str:
         """
@@ -201,12 +201,12 @@ class ModelBreadcrumbItem(BaseBreadcrumbItem):
     If `label` is set explicitly, it's returned as-is or called if callable.
 
     Attributes:
-        model (Union[str, Type[Model], None]): Django model class, instance, or dotted path string.
+        model (Union[str, Type[Model], None, Callable[[Context], Union[str, Type[Model], None]]): Django model class, instance, or dotted path string or callable that returns one of this.
         model_key (Optional[str]): Context key to fetch a model class, instance or dotted path string.
         action (str): Action to use when resolving a model-based route (default: "list").
         label_type (Literal["singular", "plural"]): Whether to use `verbose_name` or `verbose_name_plural`.
-        reverse_kwargs (nion[dict[str, Any], Callable[[Context], dict[str, Any]], None]): Keyword arguments passed to `reverse()`.
-        reverse_query_params (nion[dict[str, Any], Callable[[Context], dict[str, Any]], None]): Keyword arguments added to the url.
+        reverse_kwargs (Union[dict[str, Any], Callable[[Context], dict[str, Any]], None]): Keyword arguments passed to `reverse()`.
+        reverse_query_params (Union[dict[str, Any], Callable[[Context], dict[str, Any]], None]): Keyword arguments added to the url.
         should_render (Callable[[Context], bool]): Callable to decide whether this item should be rendered or not.
         label (Union[Callable[[Context], str], WithStr, None]): Optional override for the display label in the breadcrumb.
         label_key (Optional[str]): Optional key to take label from the context.
@@ -220,7 +220,7 @@ class ModelBreadcrumbItem(BaseBreadcrumbItem):
         ("/dcim/devices/add", "Device")
     """
 
-    model: ModelType = None
+    model: Union[ModelType, Callable[[Context], ModelType]] = None
     model_key: Optional[str] = None
     action: str = "list"
     label_type: ModelLabelType = "plural"
@@ -237,7 +237,7 @@ class ModelBreadcrumbItem(BaseBreadcrumbItem):
         Returns:
             Optional[str]: The URL as a string, or None.
         """
-        model_obj = self.model or context.get(self.model_key)
+        model_obj = self.get_model(context)
         if not model_obj:
             return None
         view_name = lookup.get_route_for_model(model_obj, self.action)
@@ -259,7 +259,7 @@ class ModelBreadcrumbItem(BaseBreadcrumbItem):
         if self.label or self.label_key:
             return super().get_label(context)
 
-        model_obj = self.model or context.get(self.model_key)
+        model_obj = self.get_model(context)
         name_attr = "verbose_name" if self.label_type == "singular" else "verbose_name_plural"
 
         if model_obj is not None:
@@ -268,6 +268,15 @@ class ModelBreadcrumbItem(BaseBreadcrumbItem):
                 return getattr(model_cls._meta, name_attr)
             return getattr(model_obj._meta, name_attr)
         return ""
+
+    def get_model(self, context: Context) -> ModelType:
+        if self.model_key:
+            return context.get(self.model_key)
+        if self.model:
+            if callable(self.model):
+                return self.model(context)
+            return self.model
+        return None
 
 
 @dataclass
@@ -280,6 +289,7 @@ class InstanceBreadcrumbItem(BaseBreadcrumbItem):
 
     Attributes:
         instance_key (Optional[str]): Context key to fetch a Django model instance for building the breadcrumb.
+        instance (Callable[[Context], Optional[Model]): Callable to fetch the instance from context. If
         should_render (Callable[[Context], bool]): Callable to decide whether this item should be rendered or not.
         label (Union[Callable[[Context], str], WithStr, None]): Optional override for the display label in the breadcrumb.
         label_key (Optional[str]): Optional key to take label from the context.
@@ -292,6 +302,7 @@ class InstanceBreadcrumbItem(BaseBreadcrumbItem):
     """
 
     instance_key: str = "object"
+    instance: Optional[Callable[[Context], Optional[Model]]] = None
     label: Union[Callable[[Context], str], WithStr, None] = None
 
     def get_url(self, context: Context) -> Optional[str]:
@@ -304,7 +315,7 @@ class InstanceBreadcrumbItem(BaseBreadcrumbItem):
         Returns:
             Optional[str]: The URL as a string, or None.
         """
-        instance = context.get(self.instance_key)
+        instance = self.get_instance(context)
         return get_absolute_url(instance) if instance else None
 
     def get_label(self, context: Context) -> str:
@@ -319,10 +330,25 @@ class InstanceBreadcrumbItem(BaseBreadcrumbItem):
         """
         if self.label or self.label_key:
             return super().get_label(context)
-        instance = context.get(self.instance_key)
+        instance = self.get_instance(context)
         if not instance:
             return ""
         return getattr(instance, "display", str(instance))
+
+    def get_instance(self, context: Context) -> Optional[Model]:
+        """
+        Get the instance depending on the settings.
+
+        Args:
+            context (Context): The current template context.
+
+        Returns:
+            Optional[Model]: Instance from context.
+        """
+        if self.instance:
+            return self.instance(context)
+
+        return context.get(self.instance_key)
 
 
 DEFAULT_MODEL_BREADCRUMBS = [
@@ -422,7 +448,8 @@ class Breadcrumbs:
     @staticmethod
     def get_items_for_action(items: BreadcrumbItemsType, action: str, detail: bool) -> list[BaseBreadcrumbItem]:
         """
-        Get the breadcrumb items for a specific action, with fallback to 'detail' if not found.
+        Get the breadcrumb items for a specific action, with fallback to 'detail' if not found
+        and to asterisk (*) if present.
 
         Args:
             items (BreadcrumbItemsType): Dictionary mapping action names to breadcrumb item lists.
@@ -439,7 +466,7 @@ class Breadcrumbs:
         if detail:
             return items.get("detail", [])
 
-        return []
+        return items.get("*", [])
 
     def render(self, context):
         """

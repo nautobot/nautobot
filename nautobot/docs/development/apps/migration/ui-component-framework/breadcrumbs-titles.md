@@ -9,7 +9,7 @@ or using callables.
 There are new simple tags in `{% load ui_framework %}` that allows you to automatically render breadcrumbs and title:
 
 - `{% render_breadcrumbs %}` - expects `Breadcrumbs` instance in `context["breadcrumbs"]`
-- `{% render_title page_heading %}` - expects `Titles` instance in `context["view_titles"]`
+- `{% render_title %}` - expects `Titles` instance in `context["view_titles"]` - you can pass rendering mode `plain | html (default)`
 
 ## `NautobotUIViewSet` views
 

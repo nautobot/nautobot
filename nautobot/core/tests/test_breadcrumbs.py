@@ -2,6 +2,7 @@
 Unit tests for the updated breadcrumbs.py following Nautobot testing conventions.
 """
 
+from operator import itemgetter
 from unittest.mock import patch
 
 from django.template import Context
@@ -50,6 +51,21 @@ class BreadcrumbItemsTestCase(TestCase):
         self.assertEqual(url, f"/dcim/location-types/{self.location_type.pk}/?name=test")
         self.assertEqual(label, "Filtered Locations Types")
 
+    def test_view_name_item_with_kwargs_and_query_params_callable(self):
+        """Test breadcrumb view name item and kwargs."""
+        item = ViewNameBreadcrumbItem(
+            view_name="dcim:locationtype",
+            reverse_kwargs=lambda c: {"pk": c["object"].pk},
+            reverse_query_params=lambda c: {"name": c["object"].name},
+            label="Filtered Locations Types",
+        )
+        context = Context({"object": self.location_type})
+
+        url, label = item.as_pair(context)
+
+        self.assertEqual(url, f"/dcim/location-types/{self.location_type.pk}/?name={self.location_type.name}")
+        self.assertEqual(label, "Filtered Locations Types")
+
     def test_callable_label_and_view_name(self):
         """Test label and view_name as callables."""
         item = ViewNameBreadcrumbItem(
@@ -73,6 +89,12 @@ class BreadcrumbItemsTestCase(TestCase):
             {
                 "name": "model_instance",
                 "kwargs": {"model": self.location_type},
+                "expected_url": "/dcim/location-types/",
+                "expected_label": "Location Types",
+            },
+            {
+                "name": "model_instance_callable",
+                "kwargs": {"model": itemgetter("object")},
                 "expected_url": "/dcim/location-types/",
                 "expected_label": "Location Types",
             },
@@ -105,11 +127,20 @@ class BreadcrumbItemsTestCase(TestCase):
                 "expected_url": "/dcim/devices/?filter=abc",
                 "expected_label": "Devices",
             },
+            {
+                "name": "model_class_with_query_params_callable",
+                "kwargs": {
+                    "model": itemgetter("model_type"),
+                    "reverse_query_params": lambda c: {"name": c["device_name"]},
+                },
+                "expected_url": "/dcim/devices/?filter=abc",
+                "expected_label": "Devices",
+            },
         ]
         for test_case in test_cases:
             with self.subTest(action=test_case["name"]):
                 item = ModelBreadcrumbItem(**test_case["kwargs"])
-                context = Context({})
+                context = Context({"object": self.location_type, "model_type": Device, "device_name": "abc"})
 
                 url, label = item.as_pair(context)
 
@@ -118,8 +149,8 @@ class BreadcrumbItemsTestCase(TestCase):
 
     def test_model_item_from_context(self):
         """Test breadcrumb item with model from context."""
-        item = ModelBreadcrumbItem(model_key="location_type")
-        context = Context({"location_type": self.location_type})
+        item = ModelBreadcrumbItem(model_key="object")
+        context = Context({"object": self.location_type})
 
         url, label = item.as_pair(context)
 

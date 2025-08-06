@@ -114,22 +114,35 @@ object_detail_content = ObjectDetailContent(
 
 The Titles component provides a flexible system for generating page titles and headings based on the current view action and context.
 
-- **DocumentTitles**: Strips HTML tags for browser title bars
-- **PageHeadings**: Preserves HTML for rich heading display
-
 ```python
-from nautobot.core.ui.components import DocumentTitles, PageHeadings
+from nautobot.apps.ui import Titles
 
 # Create a document title instance
-doc_titles = DocumentTitles(titles={"list": "{{obj_type_plural}}"})
+titles = Titles(titles={"list": "{{obj_type_plural}}"})
 
 # Render title for a list view
 context = Context({
     'view_action': 'list',
-    'obj_type_plural': 'devices'
+    'obj_type_plural': 'devices',
+    'view_titles': titles,
 })
-title = doc_titles.render(context)  # Returns: "Devices"
+
+title = titles.render(context)  # Returns: "Devices"
 ```
+
+In HTML there is available `render_title` helper that use the `Title` instance from `context['view_titles']` and properly renders the page heading and document title.
+
+```html
+{% block title %}{% render_title "plain" %}{% endblock %}
+
+{% block content %}
+    <h1>{% render_title %}</h1>
+{% endblock %}
+```
+
+!!! important
+    Remember to pass "plain" to the `render_title` to strip any HTML tags when rendering the document title (browser / tab title).
+
 
 ## Breadcrumbs Component
 
