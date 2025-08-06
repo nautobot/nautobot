@@ -347,19 +347,20 @@ class LocationImagesTablePanel(object_detail.ObjectsTablePanel):
 
 class LocationHierarchyPanel(object_detail.ObjectFieldsPanel):
     def get_data(self, context):
+        data = super().get_data(context)
         obj = get_obj_from_context(context, self.context_object_key)
 
-        data = {}
-        if obj:
-            data["location_type"] = obj.location_type
-            data["status"] = obj.status
-            data["Hierarchy"] = obj
-            data["tenant"] = obj.tenant
-            data["facility"] = obj.facility
-            data["asn"] = obj.asn
-            data["time_zone"] = obj.time_zone
-            data["description"] = obj.description
-        return data
+        if not obj:
+            return data
+
+        # Insert "Hierarchy" after "status"
+        new_data = {}
+        for key, value in data.items():
+            new_data[key] = value
+            if key == "status":
+                new_data["Hierarchy"] = obj  # Insert right after "status"
+
+        return new_data
 
     def render_value(self, key, value, context):
         if key == "Hierarchy" and value:
@@ -395,6 +396,7 @@ class LocationUIViewSet(NautobotUIViewSet):
                     "time_zone",
                     "description",
                 ],
+                ignore_nonexistent_fields=True,  # ✅ this is to prevent AttributeError
                 value_transforms={
                     "location_type": [partial(helpers.hyperlinked_object, field="name")],
                     "time_zone": [helpers.format_timezone],
