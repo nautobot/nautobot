@@ -280,11 +280,14 @@ def extras_features(*features):
     """
 
     def wrapper(model_class):
-        # Initialize the model_features store if not already defined
+        # Initialize the model_features and feature_models stores if not already defined
         if "model_features" not in registry:
             registry["model_features"] = {f: collections.defaultdict(list) for f in EXTRAS_FEATURES}
+        if "feature_models" not in registry:
+            registry["feature_models"] = {f: [] for f in EXTRAS_FEATURES}
         for feature in features:
             if feature in EXTRAS_FEATURES:
+                registry["feature_models"][feature].append(model_class)
                 app_label, model_name = model_class._meta.label_lower.split(".")
                 registry["model_features"][feature][app_label].append(model_name)
             else:

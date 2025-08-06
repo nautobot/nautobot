@@ -123,7 +123,7 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
             from nautobot.extras.choices import CustomFieldTypeChoices
             from nautobot.extras.models import CustomField
 
-            cfs = CustomField.objects.get_for_model(serializer_class.Meta.model)
+            cfs = CustomField.objects.get_for_model(serializer_class.Meta.model, get_queryset=False)
             for cf in cfs:
                 cf_form_field = cf.to_form_field(set_initial=False)
                 field_info = {

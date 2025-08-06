@@ -33,6 +33,9 @@ class ModuleBayPositionTestCase(SeleniumTestCase, ObjectsListMixin):
         self.assertEqual(position_field.value, "new pattern", "Position field value has unexpectedly changed")
 
         # Regenerate position
+        self.browser.execute_script(
+            "document.querySelector('button[title=\"Regenerate position\"]').scrollIntoView({ behavior: 'instant', block: 'start' })"
+        )
         self.browser.find_by_css('button[title="Regenerate position"]').click()
         self.assertEqual(position_field.value, f"{name_pattern_value}v2", "Position field value is not re-populated")
 
