@@ -307,7 +307,7 @@ class FilterFormsTestCase(TestCase):
                 </a>
             </li>
             <li class="nav-item" role="presentation">
-                <a class="nav-link" data-bs-toggle="tab" href="#advanced-filter" role="tab">
+                <a class="nav-link position-relative" data-bs-toggle="tab" href="#advanced-filter" role="tab">
                     Advanced
                 </a>
             </li>
