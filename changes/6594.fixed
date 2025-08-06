@@ -1,2 +1,0 @@
-Changed the default `ordering` of `Interface` (and similar device components) to a less expensive query to improve performance of default list views of these components.
-Improved the performance of `Device.all_interfaces`, `.all_console_ports`, etc. in the case where the Device has no module bays.
