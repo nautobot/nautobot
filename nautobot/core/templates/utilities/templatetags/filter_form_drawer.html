@@ -20,20 +20,7 @@
                 <li role="presentation" class="nav-item">
                     <a class="nav-link position-relative{% if not filter_form %} active{% endif %}" href="#advanced-filter" role="tab" data-bs-toggle="tab">
                         Advanced
-                        {% if filter_form and filter_params %}
-                            {% with filter_form_field_names=filter_form.visible_fields|pluck:'name' %}
-                                {% for filter_param in filter_params %}
-                                    {% if filter_param.name not in filter_form_field_names or filter_param.name == 'q' %}
-                                        <span
-                                            aria-hidden="true"
-                                            class="end-0 me-2 mt-2 top-0 nb-btn-indicator"
-                                            data-bs-toggle="tooltip"
-                                            data-bs-title="Some of the applied filters can only be viewed in Advanced"
-                                        ></span>
-                                    {% endif %}
-                                {% endfor %}
-                            {% endwith %}
-                        {% endif %}
+                        {% advanced_filter_indicator basic_filter_form=filter_form filter_params=filter_params %}
                     </a>
                 </li>
             {% endif %}
