@@ -7,6 +7,13 @@ from nautobot.extras.models import Job, ScheduledJob
 class ApprovalRequiredScheduledJobsError(ValidationError):
     """Raised when scheduled jobs requiring approval are found during managment command."""
 
+    def __init__(self, message_lines):
+        self.message_lines = message_lines
+        super().__init__(message_lines)
+
+    def __str__(self):
+        return "\n".join(self.message_lines)
+
 
 class Command(BaseCommand):
     help = "Checks for scheduled jobs and jobs that require approval."
@@ -16,13 +23,13 @@ class Command(BaseCommand):
 
         if approval_required_scheduled_jobs:
             message_lines = [
-                "There are scheduled jobs that still require approval.",
-                "Please clear, approve or deny the job in approval queue.",
+                "These need to be approved (and run) or denied before upgrading to Nautobot v3, as the introduction of the approval workflows feature means that future scheduled-job approvals will be handled differently.",
+                "Refer to the documentation: https://docs.nautobot.com/projects/core/en/stable/user-guide/platform-functionality/jobs/job-scheduling-and-approvals/#approval-via-the-ui",
                 "Below is a list of affected scheduled jobs:",
             ]
             for schedule_job_id, scheduled_job_name in approval_required_scheduled_jobs:
                 message_lines.append(f"    - ID: {schedule_job_id}, Name: {scheduled_job_name}")
-            raise ApprovalRequiredScheduledJobsError("\n".join(message_lines))
+            raise ApprovalRequiredScheduledJobsError(message_lines)
 
         approval_required_jobs = Job.objects.filter(approval_required=True).values_list("name", flat=True)
         if approval_required_jobs:
