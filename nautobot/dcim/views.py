@@ -345,6 +345,28 @@ class LocationImagesTablePanel(object_detail.ObjectsTablePanel):
         return None
 
 
+class LocationHierarchyPanel(object_detail.ObjectFieldsPanel):
+    def get_data(self, context):
+        obj = get_obj_from_context(context, self.context_object_key)
+
+        data = {}
+        if obj:
+            data["location_type"] = obj.location_type
+            data["status"] = obj.status
+            data["Hierarchy"] = obj
+            data["tenant"] = obj.tenant
+            data["facility"] = obj.facility
+            data["asn"] = obj.asn
+            data["time_zone"] = obj.time_zone
+            data["description"] = obj.description
+        return data
+
+    def render_value(self, key, value, context):
+        if key == "Hierarchy" and value:
+            return helpers.render_ancestor_hierarchy(value)
+        return super().render_value(key, value, context)
+
+
 class LocationUIViewSet(NautobotUIViewSet):
     # We aren't accessing tree fields anywhere so this is safe (note that `parent` itself is a normal foreign
     # key, not a tree field). If we ever do access tree fields, this will perform worse, because django will
@@ -360,12 +382,13 @@ class LocationUIViewSet(NautobotUIViewSet):
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            object_detail.ObjectFieldsPanel(
+            LocationHierarchyPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields=[
                     "location_type",
                     "status",
+                    "Hierarchy",
                     "tenant",
                     "facility",
                     "asn",
