@@ -688,6 +688,11 @@ class ScheduledJobSerializer(BaseModelSerializer):
     # queue is added to maintain backward compatibility with versions pre v2.4.
     queue = serializers.CharField(read_only=True, required=False)
     time_zone = TimeZoneSerializerField(required=False)
+    approval_workflows = ApprovalWorkflowSerializer(
+        source='associated_approval_workflows',
+        many=True,
+        read_only=True
+    )
 
     class Meta:
         model = ScheduledJob
