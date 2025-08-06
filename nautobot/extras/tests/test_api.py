@@ -388,7 +388,7 @@ class ApprovalWorkflowStageTest(
 
                 scheduled_job = case["object"]
                 scheduled_job.refresh_from_db()
-                self.assertEqual(scheduled_job.approved_at, approval_workflow.decision_date)
+                self.assertEqual(scheduled_job.decision_date, approval_workflow.decision_date)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approve_approval_workflow_stage_in_approval_workflow_with_more_than_one_stage(self):
@@ -429,7 +429,7 @@ class ApprovalWorkflowStageTest(
 
                 scheduled_job = case["object"]
                 scheduled_job.refresh_from_db()
-                self.assertIsNone(scheduled_job.approved_at)
+                self.assertIsNone(scheduled_job.decision_date)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approve_with_comment_approval_workflow_stage_in_approval_workflow_with_one_stage(self):
@@ -457,7 +457,7 @@ class ApprovalWorkflowStageTest(
 
                 scheduled_job = case["object"]
                 scheduled_job.refresh_from_db()
-                self.assertEqual(scheduled_job.approved_at, approval_workflow.decision_date)
+                self.assertEqual(scheduled_job.decision_date, approval_workflow.decision_date)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_deny_approval_workflow_stage_in_approval_workflow_with_one_stage(self):
@@ -481,7 +481,7 @@ class ApprovalWorkflowStageTest(
 
                 scheduled_job = case["object"]
                 scheduled_job.refresh_from_db()
-                self.assertIsNone(scheduled_job.approved_at)
+                self.assertIsNone(scheduled_job.decision_date)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_deny_approval_workflow_stage_in_approval_workflow_with_more_than_one_stage(self):
@@ -522,7 +522,7 @@ class ApprovalWorkflowStageTest(
 
                 scheduled_job = case["object"]
                 scheduled_job.refresh_from_db()
-                self.assertIsNone(scheduled_job.approved_at)
+                self.assertIsNone(scheduled_job.decision_date)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_deny_with_approval_workflow_stage_in_approval_workflow_with_one_stage(self):
@@ -549,7 +549,7 @@ class ApprovalWorkflowStageTest(
 
                 scheduled_job = case["object"]
                 scheduled_job.refresh_from_db()
-                self.assertIsNone(scheduled_job.approved_at)
+                self.assertIsNone(scheduled_job.decision_date)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approval_workflow_stage_comment_without_permission(self):

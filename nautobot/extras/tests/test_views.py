@@ -2466,7 +2466,7 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             enabled=True,
             approval_required=True,
-            approved_at=None,
+            decision_date=None,
             name="test4",
             task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
@@ -2488,7 +2488,7 @@ class ScheduledJobTestCase(
         self.assertIn("test5", extract_page_body(response.content.decode(response.charset)))
 
         scheduled_job = ScheduledJob.objects.get(name="test4")
-        scheduled_job.approved_at = timezone.now()
+        scheduled_job.decision_date = timezone.now()
         scheduled_job.save()
 
         response = self.client.get(self._get_url("list"))

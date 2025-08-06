@@ -17,4 +17,9 @@ class Migration(migrations.Migration):
             model_name="job",
             name="approval_required_override",
         ),
+        migrations.RenameField(
+            model_name="scheduledjob",
+            old_name="approved_at",
+            new_name="decision_date",
+        ),
     ]

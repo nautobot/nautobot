@@ -1192,11 +1192,11 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
     )
     # todoindex:
     approval_required = models.BooleanField(default=False)
-    approved_at = models.DateTimeField(
+    decision_date = models.DateTimeField(
         editable=False,
         blank=True,
         null=True,
-        verbose_name="Approval date/time",
+        verbose_name="Approval/Rejection date/time",
         help_text="Datetime that the schedule was approved",
     )
     crontab = models.CharField(
@@ -1252,7 +1252,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         if self.user and self.approved_by_user and self.user == self.approved_by_user:
             raise ValidationError("The requesting and approving users cannot be the same")
         # bitwise xor also works on booleans, but not on complex values
-        if bool(self.approved_by_user) ^ bool(self.approved_at):
+        if bool(self.approved_by_user) ^ bool(self.decision_date):
             raise ValidationError("Approval by user and approval time must either both be set or both be undefined")
 
     def on_workflow_initiated(self, approval_workflow):
@@ -1261,19 +1261,17 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         self.save()
 
     def on_workflow_approved(self, approval_workflow):
-        """When approved, set approved_at to decision_date from approval workflow."""
-        self.approved_at = approval_workflow.decision_date
+        """When approved, set decision_date to decision_date from approval workflow."""
+        self.decision_date = approval_workflow.decision_date
         self.save()
 
         publish_event_payload = {"data": serialize_object_v2(self)}
         publish_event(topic="nautobot.jobs.approval.approved", payload=publish_event_payload)
 
     def on_workflow_denied(self, approval_workflow):
-        """When denied, set approved_at to None."""
-        # TBD: Should we change this name and also store date when scheduled job was denied ?
-        if self.approved_at:
-            self.approved_at = None
-            self.save()
+        """When denied, set decision_date to decision_date from approval workflow."""
+        self.decision_date = approval_workflow.decision_date
+        self.save()
 
         publish_event_payload = {"data": serialize_object_v2(self)}
         publish_event(topic="nautobot.jobs.approval.denied", payload=publish_event_payload)
