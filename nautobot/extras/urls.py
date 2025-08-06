@@ -8,7 +8,6 @@ from nautobot.extras.models import (
     GitRepository,
     GraphQLQuery,
     Job,
-    Note,
     Relationship,
     SecretsGroup,
 )
@@ -280,13 +279,6 @@ urlpatterns = [
         "job-results/<uuid:pk>/delete/",
         views.JobResultDeleteView.as_view(),
         name="jobresult_delete",
-    ),
-    # Notes
-    path(
-        "notes/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="note_changelog",
-        kwargs={"model": Note},
     ),
     # Custom relationships
     path(
