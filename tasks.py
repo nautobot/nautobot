@@ -1012,7 +1012,7 @@ def migration_test(context, dataset, db_engine="postgres", db_name="nautobot_mig
         # dropdb: error: could not connect to database template1: could not connect to server: No such file or directory
         start(context, service="db")
         source_file = os.path.basename(dataset)
-        context.run(f"docker cp '{dataset}' nautobot-db-1:/tmp/{source_file}")
+        docker_compose(context, f"cp '{dataset}' db:/tmp/{source_file}")
         run_command(context, command=f"tar zxvf /tmp/{source_file}", service="db")
 
     if db_engine == "postgres":
