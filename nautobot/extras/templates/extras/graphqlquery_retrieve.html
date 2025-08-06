@@ -1,0 +1,97 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block content_left_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Query</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Name</td>
+                    <td><span>{{ object.name }}</span></td>
+                </tr>
+                <tr>
+                    <td>Query</td>
+                    <td><pre id="query"><code class="language-graphql">{{ object.query }}</code></pre></td>
+                </tr>
+                <tr>
+                    <td>Query Variables</td>
+                    <td><pre>{{ object.variables|render_json }}</pre></td>
+                </tr>
+            </table>
+        </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Response</strong>
+                <button class="btn btn-primary btn-xs pull-right" onclick="test_query()">Execute</button>
+            </div>
+            {% if object.variables %}
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Variables:</td>
+                        <td><textarea id="query_variables" class="form-control">{{ object.variables|render_json:False }}</textarea></td>
+                    </tr>
+                </table>
+            {% endif %}
+            <div class="panel-footer">
+                <pre id="query_output">
+
+                </pre>
+            </div>
+        </div>
+{% endblock content_right_page %}
+
+{% block javascript %}
+{{ block.super }}
+<script>
+    function fillQueryOutput(data) {
+        const queryOutput = document.querySelector('#query_output');
+
+        [...queryOutput.childNodes].forEach(childNode => childNode.remove());
+
+        const code = document.createElement('code');
+        code.classList.add('language-json');
+        code.textContent = JSON.stringify(data, undefined, 2);
+
+        queryOutput.appendChild(code);
+
+        hljs.highlightElement(code);
+    }
+
+    function test_query() {
+        const variables = document.querySelector('#query_variables')?.value;
+
+        $.ajax({
+            url: "{% url 'graphql' %}",
+            method: "POST",
+            headers: {"X-CSRFTOKEN": "{{ csrf_token }}"},
+            dataType: "json",
+            data: {
+                "query": `{{ object.query | escapejs }}`,
+                "variables": variables,
+            },
+            success: function(data) {
+                fillQueryOutput(data);
+            },
+            error: function(error) {
+                console.log(error);
+                fillQueryOutput(error.responseJSON);
+            }
+        });
+    };
+
+    textarea = document.querySelector("#query_variables");
+    textarea.addEventListener('input', autoResize, false);
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+
+    function autoResize() {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
+    }
+</script>
+{% endblock javascript %}
