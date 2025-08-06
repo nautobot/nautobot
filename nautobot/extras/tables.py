@@ -1194,6 +1194,11 @@ class ObjectChangeTable(BaseTable):
             "request_id",
         )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # The `object_repr` column also uses the `changed_object` generic-foreign-key value
+        self.add_conditional_prefetch("object_repr", "changed_object")
+
 
 #
 # Relationship
