@@ -836,7 +836,8 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
             if filter_form.is_valid():
                 obj.set_filter(filter_form.cleaned_data)
             else:
-                raise RuntimeError(filter_form.errors)
+                form.add_error(None, "Errors encountered when saving Dynamic Group associations. See below.")
+                return None
 
         # After filters have been set, now we save the object to the database.
         obj.save()
@@ -844,13 +845,24 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
         form.save_m2m()
 
         # Process the formsets for children
-        children = context["children"]
-        if children.is_valid():
+        children = context.get("children")
+        if children and children.is_valid():
             children.save()
-        else:
-            raise RuntimeError(children.errors)
+        elif children:
+            for child_form in children.forms:
+                if child_form.errors:
+                    for field, errors in child_form.errors.items():
+                        form.add_error(None, "Errors encountered when saving Dynamic Group associations. See below.")
+
+            return None
 
         return obj
+
+    def form_valid(self, form):
+        obj = self.form_save(form)
+        if obj is None:
+            return self.form_invalid(form)
+        return super().form_valid(form)
 
 
 class ObjectDynamicGroupsView(generic.GenericView):
