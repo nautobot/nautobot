@@ -81,14 +81,14 @@ class BaseTable(django_tables2.Table):
                 reverse_lookup="static_group_associations__associated_object_id",
             )
 
-        for cf in models.CustomField.objects.get_for_model(model):
+        for cf in models.CustomField.objects.get_for_model(model, get_queryset=False):
             name = cf.add_prefix_to_cf_key()
             self.base_columns[name] = CustomFieldColumn(cf)
 
-        for cpf in models.ComputedField.objects.get_for_model(model):
+        for cpf in models.ComputedField.objects.get_for_model(model, get_queryset=False):
             self.base_columns[f"cpf_{cpf.key}"] = ComputedFieldColumn(cpf)
 
-        for relationship in models.Relationship.objects.get_for_model_source(model):
+        for relationship in models.Relationship.objects.get_for_model_source(model, get_queryset=False):
             if not relationship.symmetric:
                 self.base_columns[f"cr_{relationship.key}_src"] = RelationshipColumn(
                     relationship, side=choices.RelationshipSideChoices.SIDE_SOURCE
@@ -98,7 +98,7 @@ class BaseTable(django_tables2.Table):
                     relationship, side=choices.RelationshipSideChoices.SIDE_PEER
                 )
 
-        for relationship in models.Relationship.objects.get_for_model_destination(model):
+        for relationship in models.Relationship.objects.get_for_model_destination(model, get_queryset=False):
             if not relationship.symmetric:
                 self.base_columns[f"cr_{relationship.key}_dst"] = RelationshipColumn(
                     relationship, side=choices.RelationshipSideChoices.SIDE_DESTINATION
