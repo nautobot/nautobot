@@ -858,12 +858,6 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
 
         return obj
 
-    def form_valid(self, form):
-        obj = self.form_save(form)
-        if obj is None:
-            return self.form_invalid(form)
-        return super().form_valid(form)
-
 
 class ObjectDynamicGroupsView(generic.GenericView):
     """
