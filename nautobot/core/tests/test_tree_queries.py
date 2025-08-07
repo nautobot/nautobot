@@ -65,7 +65,8 @@ class QuerySetCountTests(TestCase):
     def test_basic(self):
         """Test that `TreeQuerySet.count` doesn't include the CTE in the query even with tree fields in the qs."""
         with CaptureQueriesContext(connection) as ctx:
-            Location.objects.with_tree_fields().count()
+            qs = Location.objects.with_tree_fields()
+            qs.count()
         for query in ctx.captured_queries:
             # Guard clause in case there are ever any queries in this capture that are not the query corresponding to
             # the `count`.
@@ -73,3 +74,13 @@ class QuerySetCountTests(TestCase):
                 continue
             if "WITH RECURSIVE __tree" in query["sql"] or "WITH RECURSIVE __rank_table" in query["sql"]:
                 self.fail(f"`TreeQuerySet.count` should not include the CTE in the query. Query:\n{query['sql']}")
+
+        # Finally, we also want to make sure that tree fields are still present in the queryset after we have run count
+        with CaptureQueriesContext(connection) as ctx:
+            list(qs.all())
+        found_cte = False
+        for query in ctx.captured_queries:
+            if "WITH RECURSIVE __tree" in query["sql"] or "WITH RECURSIVE __rank_table" in query["sql"]:
+                found_cte = True
+        if not found_cte:
+            self.fail("`TreeQuerySet.count` failed to re-add tree fields ot the queryset after removing them")
