@@ -166,6 +166,90 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.14 (2025-08-04)
+
+### Added in v2.4.14
+
+- [#7278](https://github.com/nautobot/nautobot/issues/7278) - Added `range_start` and `range_end` parameters for `/api/ipam/prefixes/<id>/available-ips/`. This replaces the use of the `offset` parameter in this particular case.
+- [#7479](https://github.com/nautobot/nautobot/issues/7479) - Added Bulk Edit functionality for the SecretsGroup model.
+- [#7566](https://github.com/nautobot/nautobot/issues/7566) - Added Eaton and Raritan C39 power outlet type.
+- [#7574](https://github.com/nautobot/nautobot/issues/7574) - Added 4 new choices in the Secret Type category of Secret Groups: "Authentication Key", "Authentication Protocol", "Private Key" and "Private Algorithm".
+- [#7625](https://github.com/nautobot/nautobot/issues/7625) - Added an index to JobLogEntry to improve performance of Job Result logs.
+- [#7633](https://github.com/nautobot/nautobot/issues/7633) - Added support for optional `get_queryset` boolean parameter to `CustomField.objects.get_for_model()`, `ComputedField.objects.get_for_model()`, and `Relationship.objects.get_for_model()` APIs. If set to `False` these APIs will return a (potentially cached) list of records instead of a QuerySet.
+- [#7633](https://github.com/nautobot/nautobot/issues/7633) - Added `populate_list_caches()` method to `CustomField.objects`, `ComputedField.objects`, and `Relationship.objects`, which can be called to efficiently populate the caches used by the `get_for_model()` methods when `get_queryset=False` for all content-types.
+- [#7633](https://github.com/nautobot/nautobot/issues/7633) - Added `feature_models` dict to the Nautobot registry for more efficient GraphQL schema generation.
+- [#7633](https://github.com/nautobot/nautobot/issues/7633) - Added caching of generated search parameters for more efficient GraphQL schema generation.
+
+### Changed in v2.4.14
+
+- [#7601](https://github.com/nautobot/nautobot/issues/7601) - Made network driver mappings dynamically find network driver keys.
+- [#7611](https://github.com/nautobot/nautobot/issues/7611) - Added more verbose default output to `nautobot-server migrate` command.
+
+### Fixed in v2.4.14
+
+- [#3609](https://github.com/nautobot/nautobot/issues/3609) - Fixed `cluster_count` not showing up on the API of `/tenancy/tenants/`.
+- [#7577](https://github.com/nautobot/nautobot/issues/7577) - Fixed incorrect reference to Inventory Items under the Module documentation.
+- [#7616](https://github.com/nautobot/nautobot/issues/7616) - Fixed a data-loss bug in the v1.x-to-v2.0 migration `extras.0062_collect_roles_from_related_apps_roles` in which custom-field data on `dcim.DeviceRole`, `dcim.RackRole`, and `ipam.Role` records was not correctly copied to the corresponding created `extras.Role` records.
+- [#7633](https://github.com/nautobot/nautobot/issues/7633) - Greatly reduced the number of database queries made when generating the GraphQL schema.
+
+### Dependencies in v2.4.14
+
+- [#7584](https://github.com/nautobot/nautobot/issues/7584) - Updated `GitPython` dependency to `~3.1.45`.
+- [#7584](https://github.com/nautobot/nautobot/issues/7584) - Updated `nh3` dependency to `~0.2.22`.
+- [#7584](https://github.com/nautobot/nautobot/issues/7584) - Updated `pyuwsgi` dependency to `2.0.30`.
+- [#7601](https://github.com/nautobot/nautobot/issues/7601) - Updated dependency `netutils` minimum version to support ability for dynamic network driver mappings.
+
+### Housekeeping in v2.4.14
+
+- [#7419](https://github.com/nautobot/nautobot/issues/7419) - Refactored GraphQLQuery model related UI views to use `NautobotUIViewSet`.
+- [#7479](https://github.com/nautobot/nautobot/issues/7479) - Refactored SecretsGroup model related UI views to use `NautobotUIViewSet`.
+- [#7500](https://github.com/nautobot/nautobot/issues/7500) - Refactored Rack model related UI views to use `NautobotUIViewSet`.
+- [#7584](https://github.com/nautobot/nautobot/issues/7584) - Updated development dependency `pymarkdownlnt` to `~0.9.31`.
+- [#7584](https://github.com/nautobot/nautobot/issues/7584) - Updated documentation dependency `mkdocs-material` to `~9.6.16`.
+
+## v2.4.13 (2025-07-21)
+
+### Added in v2.4.13
+
+- [#6594](https://github.com/nautobot/nautobot/issues/6594) - Added additional database indices to `IPAddress`, `Prefix`, and `VRF` models to improve the default list view performance for these models.
+
+### Changed in v2.4.13
+
+- [#6608](https://github.com/nautobot/nautobot/issues/6608) - Updated branding hyperlinks on bottom of UI to open in new tab.
+- [#7484](https://github.com/nautobot/nautobot/issues/7484) - Add the Show Device Full Name button to the `Elevations` list view.
+
+### Fixed in v2.4.13
+
+- [#6594](https://github.com/nautobot/nautobot/issues/6594) - Changed the default `ordering` of `Interface` (and similar device components) to a less expensive query to improve performance of default list views of these components.
+- [#6594](https://github.com/nautobot/nautobot/issues/6594) - Improved the performance of `Device.all_interfaces`, `.all_console_ports`, etc. in the case where the Device has no module bays.
+- [#7590](https://github.com/nautobot/nautobot/issues/7590) - Improved performance of Device detail view when many devices belong to many dynamic-groups.
+
+## v2.4.12 (2025-07-17)
+
+### Changed in v2.4.12
+
+- [#7194](https://github.com/nautobot/nautobot/issues/7194) - Moved `job_results` field from Job Panel to a separate `JobResults` table panel using ObjectsTablePanel from UI framework.
+
+### Fixed in v2.4.12
+
+- [#5056](https://github.com/nautobot/nautobot/issues/5056) - Fixed broken link pointing to Nautobot Golden Config Git Settings.
+- [#7143](https://github.com/nautobot/nautobot/issues/7143) - Fixed filtering on custom relationships for component models.
+- [#7547](https://github.com/nautobot/nautobot/issues/7547) - Fixed worker-status page failing with a KeyError.
+- [#7552](https://github.com/nautobot/nautobot/issues/7552) - Fixed formatting issue in rendering Config Context data.
+- [#7556](https://github.com/nautobot/nautobot/issues/7556) - Fixed Cloud, Devices, and Wireless NavMenuTabs all had the same weight of 200. Updated the Cloud weight to 150 and the Wireless weight to 250.
+- [#7558](https://github.com/nautobot/nautobot/issues/7558) - Improved logic in `LogsCleanup` system Job to avoid an infinite recursion possibility.
+- [#7559](https://github.com/nautobot/nautobot/issues/7559) - Reverted some of the changes introduced in v2.4.11 to Job loading from `JOBS_ROOT` and Git repositories, due to reports of regressions in behavior.
+
+### Housekeeping in v2.4.12
+
+- [#7194](https://github.com/nautobot/nautobot/issues/7194) - Refactored Jobs detail view to use `UI component framework`.
+- [#7194](https://github.com/nautobot/nautobot/issues/7194) - Added `jobs_ui.py` to `nautobot.extras.views` with classes: `JobRunScheduleButton`, `JobKeyValueOverrideValueTablePanel` and `JobObjectFieldsPanel`.
+- [#7217](https://github.com/nautobot/nautobot/issues/7217) - Refactored Controller model related UI views to use `UI component framework`.
+- [#7291](https://github.com/nautobot/nautobot/issues/7291) - Refactored VirtualChassis model related UI views to use `NautobotUIViewSet`.
+- [#7323](https://github.com/nautobot/nautobot/issues/7323) - Refactored CircuitTermination model related UI views to use `UI component framework`.
+- [#7490](https://github.com/nautobot/nautobot/issues/7490) - Refactored Tag model related UI views to use `UI component framework`.
+- [#7537](https://github.com/nautobot/nautobot/issues/7537) - Updated documentation dependency `mkdocs-material` to `~9.6.15`.
+
 ## v2.4.11 (2025-07-07)
 
 ### Security in v2.4.11

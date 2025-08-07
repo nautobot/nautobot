@@ -17,7 +17,7 @@ class CheckFilterForDisplayTest(TestCase):
     def test_check_filter_for_display(self):
         """Validate the operation of check_filter_for_display()."""
 
-        device_filter_set_filters = DeviceFilterSet().get_filters()
+        device_filter_set_filters = DeviceFilterSet().filters
 
         with self.subTest("Test invalid filter case (field_name not found)"):
             expected_output = {

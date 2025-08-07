@@ -59,7 +59,9 @@ from nautobot.core.views.utils import get_obj_from_context
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
+from nautobot.dcim.utils import get_all_network_driver_mappings
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
+from nautobot.extras.tables import DynamicGroupTable
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable, VRFTable
@@ -71,8 +73,8 @@ from nautobot.wireless.models import (
     ControllerManagedDeviceGroupWirelessNetworkAssignment,
 )
 from nautobot.wireless.tables import (
+    BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
     ControllerManagedDeviceGroupRadioProfileAssignmentTable,
-    ControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
     DeviceGroupWirelessNetworkTable,
     RadioProfileTable,
 )
@@ -524,11 +526,41 @@ class RackGroupUIViewSet(NautobotUIViewSet):
 #
 
 
-class RackListView(generic.ObjectListView):
-    queryset = Rack.objects.all()
-    filterset = filters.RackFilterSet
-    filterset_form = forms.RackFilterForm
-    table = tables.RackDetailTable
+class RackUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.RackBulkEditForm
+    filterset_class = filters.RackFilterSet
+    filterset_form_class = forms.RackFilterForm
+    form_class = forms.RackForm
+    serializer_class = serializers.RackSerializer
+    table_class = tables.RackDetailTable
+    queryset = Rack.objects.select_related("location", "tenant__tenant_group", "rack_group", "role")
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+
+        if self.action == "retrieve":
+            # Get 0U and child devices located within the rack
+            context["nonracked_devices"] = Device.objects.filter(rack=instance, position__isnull=True).select_related(
+                "device_type__manufacturer"
+            )
+
+            peer_racks = Rack.objects.restrict(request.user, "view").filter(location=instance.location)
+
+            if instance.rack_group:
+                peer_racks = peer_racks.filter(rack_group=instance.rack_group)
+            else:
+                peer_racks = peer_racks.filter(rack_group__isnull=True)
+
+            context["next_rack"] = peer_racks.filter(name__gt=instance.name).order_by("name").first()
+            context["prev_rack"] = peer_racks.filter(name__lt=instance.name).order_by("-name").first()
+
+            context["reservations"] = RackReservation.objects.restrict(request.user, "view").filter(rack=instance)
+            context["power_feeds"] = (
+                PowerFeed.objects.restrict(request.user, "view").filter(rack=instance).select_related("power_panel")
+            )
+            context["device_count"] = Device.objects.restrict(request.user, "view").filter(rack=instance).count()
+
+        return context
 
 
 class RackElevationListView(generic.ObjectListView):
@@ -582,70 +614,6 @@ class RackElevationListView(generic.ObjectListView):
             "title": "Rack Elevation",
             "list_url": "dcim:rack_elevation_list",
         }
-
-
-class RackView(generic.ObjectView):
-    queryset = Rack.objects.select_related("location", "tenant__tenant_group", "rack_group", "role")
-
-    def get_extra_context(self, request, instance):
-        # Get 0U and child devices located within the rack
-        nonracked_devices = Device.objects.filter(rack=instance, position__isnull=True).select_related(
-            "device_type__manufacturer"
-        )
-
-        peer_racks = Rack.objects.restrict(request.user, "view").filter(location=instance.location)
-
-        if instance.rack_group:
-            peer_racks = peer_racks.filter(rack_group=instance.rack_group)
-        else:
-            peer_racks = peer_racks.filter(rack_group__isnull=True)
-        next_rack = peer_racks.filter(name__gt=instance.name).order_by("name").first()
-        prev_rack = peer_racks.filter(name__lt=instance.name).order_by("-name").first()
-
-        reservations = RackReservation.objects.restrict(request.user, "view").filter(rack=instance)
-        power_feeds = (
-            PowerFeed.objects.restrict(request.user, "view").filter(rack=instance).select_related("power_panel")
-        )
-
-        device_count = Device.objects.restrict(request.user, "view").filter(rack=instance).count()
-
-        return {
-            "device_count": device_count,
-            "reservations": reservations,
-            "power_feeds": power_feeds,
-            "nonracked_devices": nonracked_devices,
-            "next_rack": next_rack,
-            "prev_rack": prev_rack,
-            **super().get_extra_context(request, instance),
-        }
-
-
-class RackEditView(generic.ObjectEditView):
-    queryset = Rack.objects.all()
-    model_form = forms.RackForm
-    template_name = "dcim/rack_edit.html"
-
-
-class RackDeleteView(generic.ObjectDeleteView):
-    queryset = Rack.objects.all()
-
-
-class RackBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Rack.objects.all()
-    table = tables.RackTable
-
-
-class RackBulkEditView(generic.BulkEditView):
-    queryset = Rack.objects.all()
-    filterset = filters.RackFilterSet
-    table = tables.RackTable
-    form = forms.RackBulkEditForm
-
-
-class RackBulkDeleteView(generic.BulkDeleteView):
-    queryset = Rack.objects.all()
-    filterset = filters.RackFilterSet
-    table = tables.RackTable
 
 
 #
@@ -2279,6 +2247,8 @@ class PlatformUIViewSet(NautobotUIViewSet):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
             context["network_driver_tool_names"] = instance.fetch_network_driver_mappings()
+        if self.action in ["create", "update"]:
+            context["network_driver_names"] = sorted(get_all_network_driver_mappings().keys())
         return context
 
 
@@ -2315,7 +2285,39 @@ class DeviceView(generic.ObjectView):
         "tenant__tenant_group",
     ).prefetch_related("images", "software_image_files")
 
-    object_detail_content = object_detail.ObjectDetailContent(
+    class DeviceDetailContent(object_detail.ObjectDetailContent):
+        """
+        Override base ObjectDetailContent to render dynamic-groups table as a separate view/tab instead of inline.
+        """
+
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            # Remove inline tab definition
+            for tab in list(self._tabs):
+                if isinstance(tab, object_detail._ObjectDetailGroupsTab):
+                    self._tabs.remove(tab)
+            # Add distinct-view tab definition
+            self._tabs.append(
+                object_detail.DistinctViewTab(
+                    weight=object_detail.Tab.WEIGHT_GROUPS_TAB,
+                    tab_id="dynamic_groups",
+                    label="Dynamic Groups",
+                    url_name="dcim:device_dynamicgroups",
+                    related_object_attribute="dynamic_groups",
+                    panels=(
+                        object_detail.ObjectsTablePanel(
+                            weight=100,
+                            table_class=DynamicGroupTable,
+                            table_attribute="dynamic_groups",
+                            exclude_columns=["content_type"],
+                            add_button_route=None,
+                            related_field_name="member_id",
+                        ),
+                    ),
+                )
+            )
+
+    object_detail_content = DeviceDetailContent(
         extra_buttons=(
             object_detail.DropdownButton(
                 weight=100,
@@ -2802,7 +2804,7 @@ class DeviceChangeLogView(ObjectChangeLogView):
     base_template = "dcim/device/base.html"
 
 
-class DeviceDynamicGroupsView(ObjectDynamicGroupsView):  # 3.0 TODO: remove, deprecated in 2.3
+class DeviceDynamicGroupsView(ObjectDynamicGroupsView):
     base_template = "dcim/device/base.html"
 
 
@@ -2852,7 +2854,7 @@ class DeviceWirelessView(generic.ObjectView):
         wireless_networks = ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
             controller_managed_device_group=controller_managed_device_group
         ).select_related("wireless_network", "controller_managed_device_group", "vlan")
-        wireless_networks_table = ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
+        wireless_networks_table = BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
             data=wireless_networks, user=request.user, orderable=False
         )
         wireless_networks_table.columns.hide("controller_managed_device_group")
@@ -4521,151 +4523,102 @@ class InterfaceConnectionsListView(ConnectionsListView):
 #
 
 
-class VirtualChassisListView(generic.ObjectListView):
-    queryset = VirtualChassis.objects.all()
-    table = tables.VirtualChassisTable
-    filterset = filters.VirtualChassisFilterSet
-    filterset_form = forms.VirtualChassisFilterForm
-
-
-class VirtualChassisView(generic.ObjectView):
+class VirtualChassisUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.VirtualChassisBulkEditForm
+    filterset_class = filters.VirtualChassisFilterSet
+    filterset_form_class = forms.VirtualChassisFilterForm
+    form_class = forms.VirtualChassisCreateForm
+    serializer_class = serializers.VirtualChassisSerializer
+    table_class = tables.VirtualChassisTable
     queryset = VirtualChassis.objects.all()
 
     def get_extra_context(self, request, instance):
-        members = Device.objects.restrict(request.user).filter(virtual_chassis=instance)
+        context = super().get_extra_context(request, instance)
 
-        return {"members": members, **super().get_extra_context(request, instance)}
+        if self.action == "update":
+            VCMemberFormSet = modelformset_factory(
+                model=Device,
+                form=forms.DeviceVCMembershipForm,
+                formset=forms.BaseVCMemberFormSet,
+                extra=0,
+            )
+            members_queryset = instance.members.select_related("rack").order_by("vc_position")
 
+            if request.method == "POST":
+                formset = VCMemberFormSet(request.POST, queryset=members_queryset)
+            else:
+                formset = VCMemberFormSet(queryset=members_queryset)
 
-class VirtualChassisCreateView(generic.ObjectEditView):
-    queryset = VirtualChassis.objects.all()
-    model_form = forms.VirtualChassisCreateForm
-    template_name = "dcim/virtualchassis_add.html"
+            vc_form = forms.VirtualChassisForm(instance=instance)
+            vc_form.fields["master"].queryset = members_queryset
 
+            context.update(
+                {
+                    "formset": formset,
+                    "vc_form": vc_form,
+                    "return_url": self.get_return_url(request, instance),
+                }
+            )
 
-class VirtualChassisEditView(ObjectPermissionRequiredMixin, GetReturnURLMixin, View):
-    queryset = VirtualChassis.objects.all()
+        elif self.action == "retrieve":
+            members = Device.objects.restrict(request.user).filter(virtual_chassis=instance)
+            context.update({"members": members})
 
-    def get_required_permission(self):
-        return "dcim.change_virtualchassis"
+        return context
 
-    def get(self, request, pk):
-        virtual_chassis = get_object_or_404(self.queryset, pk=pk)
-        VCMemberFormSet = modelformset_factory(
-            model=Device,
-            form=forms.DeviceVCMembershipForm,
-            formset=forms.BaseVCMemberFormSet,
-            extra=0,
-        )
-        members_queryset = virtual_chassis.members.select_related("rack").order_by("vc_position")
+    def form_save(self, form, **kwargs):
+        obj = super().form_save(form, **kwargs)
 
-        vc_form = forms.VirtualChassisForm(instance=virtual_chassis)
-        vc_form.fields["master"].queryset = members_queryset
-        formset = VCMemberFormSet(queryset=members_queryset)
+        if self.action == "update":
+            context = self.get_extra_context(self.request, obj)
+            formset = context.get("formset")
 
-        return render(
-            request,
-            "dcim/virtualchassis_edit.html",
-            {
-                "vc_form": vc_form,
-                "formset": formset,
-                "return_url": self.get_return_url(request, virtual_chassis),
-            },
-        )
+            if formset.is_valid():
+                with transaction.atomic():
+                    members = formset.save(commit=False)
+                    # Nullify the vc_position of each member first to allow reordering without raising an IntegrityError on
+                    # duplicate positions. Then save each member instance.
+                    Device.objects.filter(pk__in=[m.pk for m in members]).update(vc_position=None)
+                    for member in members:
+                        member.save()
+            else:
+                raise ValidationError(formset.errors)
 
-    def post(self, request, pk):
-        virtual_chassis = get_object_or_404(self.queryset, pk=pk)
-        VCMemberFormSet = modelformset_factory(
-            model=Device,
-            form=forms.DeviceVCMembershipForm,
-            formset=forms.BaseVCMemberFormSet,
-            extra=0,
-        )
-        members_queryset = virtual_chassis.members.select_related("rack").order_by("vc_position")
+        return obj
 
-        vc_form = forms.VirtualChassisForm(request.POST, instance=virtual_chassis)
-        vc_form.fields["master"].queryset = members_queryset
-        formset = VCMemberFormSet(request.POST, queryset=members_queryset)
+    @action(
+        detail=True,
+        methods=["get", "post"],
+        url_path="add-member",
+        url_name="add_member",
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.change_virtualchassis"],
+    )
+    def add_member(self, request, pk=None):
+        virtual_chassis = self.get_object()
 
-        if vc_form.is_valid() and formset.is_valid():
-            with transaction.atomic():
-                # Save the VirtualChassis
-                vc_form.save()
+        if request.method == "POST":
+            member_select_form = forms.VCMemberSelectForm(request.POST)
+            if member_select_form.is_valid():
+                device = member_select_form.cleaned_data["device"]
+                device.virtual_chassis = virtual_chassis
+                data = {k: request.POST[k] for k in ["vc_position", "vc_priority"]}
+                membership_form = forms.DeviceVCMembershipForm(data=data, validate_vc_position=True, instance=device)
 
-                # Nullify the vc_position of each member first to allow reordering without raising an IntegrityError on
-                # duplicate positions. Then save each member instance.
-                members = formset.save(commit=False)
-                devices = Device.objects.filter(pk__in=[m.pk for m in members])
-                for device in devices:
-                    device.vc_position = None
-                    device.save()
-                for member in members:
-                    member.save()
+                if membership_form.is_valid():
+                    membership_form.save()
+                    msg = format_html('Added member <a href="{}">{}</a>', device.get_absolute_url(), device)
+                    messages.success(request, msg)
 
-            return redirect(virtual_chassis.get_absolute_url())
-
-        return render(
-            request,
-            "dcim/virtualchassis_edit.html",
-            {
-                "vc_form": vc_form,
-                "formset": formset,
-                "return_url": self.get_return_url(request, virtual_chassis),
-            },
-        )
-
-
-class VirtualChassisDeleteView(generic.ObjectDeleteView):
-    queryset = VirtualChassis.objects.all()
-
-
-class VirtualChassisAddMemberView(ObjectPermissionRequiredMixin, GetReturnURLMixin, View):
-    queryset = VirtualChassis.objects.all()
-
-    def get_required_permission(self):
-        return "dcim.change_virtualchassis"
-
-    def get(self, request, pk):
-        virtual_chassis = get_object_or_404(self.queryset, pk=pk)
-
-        initial_data = {k: request.GET[k] for k in request.GET}
-        member_select_form = forms.VCMemberSelectForm(initial=initial_data)
-        membership_form = forms.DeviceVCMembershipForm(initial=initial_data)
-
-        return render(
-            request,
-            "dcim/virtualchassis_add_member.html",
-            {
-                "virtual_chassis": virtual_chassis,
-                "member_select_form": member_select_form,
-                "membership_form": membership_form,
-                "return_url": self.get_return_url(request, virtual_chassis),
-            },
-        )
-
-    def post(self, request, pk):
-        virtual_chassis = get_object_or_404(self.queryset, pk=pk)
-
-        member_select_form = forms.VCMemberSelectForm(request.POST)
-
-        if member_select_form.is_valid():
-            device = member_select_form.cleaned_data["device"]
-            device.virtual_chassis = virtual_chassis
-            data = {k: request.POST[k] for k in ["vc_position", "vc_priority"]}
-            membership_form = forms.DeviceVCMembershipForm(data=data, validate_vc_position=True, instance=device)
-
-            if membership_form.is_valid():
-                membership_form.save()
-                msg = format_html('Added member <a href="{}">{}</a>', device.get_absolute_url(), device)
-                messages.success(request, msg)
-
-                if "_addanother" in request.POST:
-                    return redirect(request.get_full_path())
-
-                return redirect(self.get_return_url(request, device))
-
+                    if "_addanother" in request.POST:
+                        return redirect(request.get_full_path())
+                    return redirect(self.get_return_url(request, device))
+            else:
+                membership_form = forms.DeviceVCMembershipForm(data=request.POST)
         else:
-            membership_form = forms.DeviceVCMembershipForm(data=request.POST)
+            initial_data = {k: request.GET[k] for k in request.GET}
+            member_select_form = forms.VCMemberSelectForm(initial=initial_data)
+            membership_form = forms.DeviceVCMembershipForm(initial=initial_data)
 
         return render(
             request,
@@ -4732,24 +4685,6 @@ class VirtualChassisRemoveMemberView(ObjectPermissionRequiredMixin, GetReturnURL
                 "return_url": self.get_return_url(request, device),
             },
         )
-
-
-class VirtualChassisBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = VirtualChassis.objects.all()
-    table = tables.VirtualChassisTable
-
-
-class VirtualChassisBulkEditView(generic.BulkEditView):
-    queryset = VirtualChassis.objects.all()
-    filterset = filters.VirtualChassisFilterSet
-    table = tables.VirtualChassisTable
-    form = forms.VirtualChassisBulkEditForm
-
-
-class VirtualChassisBulkDeleteView(generic.BulkDeleteView):
-    queryset = VirtualChassis.objects.all()
-    filterset = filters.VirtualChassisFilterSet
-    table = tables.VirtualChassisTable
 
 
 #
@@ -5301,25 +5236,69 @@ class ControllerUIViewSet(NautobotUIViewSet):
     table_class = tables.ControllerTable
     template_name = "dcim/controller_create.html"
 
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-
-        if self.action == "retrieve" and instance:
-            devices = Device.objects.restrict(request.user).filter(controller_managed_device_group__controller=instance)
-            devices_table = tables.DeviceTable(devices)
-            devices_table.columns.show("controller_managed_device_group")
-            devices_table.columns.show("capabilities")
-            devices_table.sequence = ("name", "controller_managed_device_group", "capabilities", "...")
-
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(devices_table)
-
-            context["devices_table"] = devices_table
-
-        return context
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+                value_transforms={
+                    "capabilities": [helpers.label_list],
+                },
+                exclude_fields=[
+                    "external_integration",
+                    "controller_device",
+                    "controller_device_redundancy_group",
+                ],
+            ),
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                label="Integration",
+                fields=[
+                    "external_integration",
+                    "controller_device",
+                    "controller_device_redundancy_group",
+                ],
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=100,
+                table_class=tables.DeviceTable,
+                table_title="Managed Devices",
+                table_filter="controller_managed_device_group__controller",
+                include_columns=[
+                    "capabilities",
+                    "controller_managed_device_group",
+                    "manufacturer",
+                ],
+                related_field_name="controller",
+                add_button_route=None,
+            ),
+        ),
+        extra_tabs=(
+            object_detail.DistinctViewTab(
+                weight=700,
+                tab_id="wireless_networks",
+                url_name="dcim:controller_wirelessnetworks",
+                label="Wireless Networks",
+                related_object_attribute="wireless_network_assignments",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Wireless Networks",
+                        table_class=BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
+                        table_filter="controller_managed_device_group__controller",
+                        tab_id="wireless_networks",
+                        add_button_route=None,
+                        select_related_fields=["wireless_network"],
+                        exclude_columns=["controller"],
+                    ),
+                ),
+            ),
+        ),
+    )
 
     @action(
         detail=True,
@@ -5330,28 +5309,7 @@ class ControllerUIViewSet(NautobotUIViewSet):
         custom_view_additional_permissions=["wireless.view_controllermanageddevicegroupwirelessnetworkassignment"],
     )
     def wirelessnetworks(self, request, *args, **kwargs):
-        instance = self.get_object()
-        controller_managed_device_groups = instance.controller_managed_device_groups.restrict(
-            request.user, "view"
-        ).values_list("pk", flat=True)
-        wireless_networks = ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
-            controller_managed_device_group__in=list(controller_managed_device_groups)
-        ).select_related("wireless_network")
-        wireless_networks_table = ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
-            data=wireless_networks, user=request.user, orderable=False
-        )
-        wireless_networks_table.columns.hide("controller")
-
-        RequestConfig(
-            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-        ).configure(wireless_networks_table)
-
-        return Response(
-            {
-                "wireless_networks_table": wireless_networks_table,
-                "active_tab": "wireless-networks",
-            }
-        )
+        return Response({})
 
 
 class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):

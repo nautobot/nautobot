@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -41,6 +42,7 @@ from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_dri
 from nautobot.extras.models import ChangeLoggedModel, ConfigContextModel, RoleField, StatusField
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
+from nautobot.wireless.models import ControllerManagedDeviceGroupWirelessNetworkAssignment
 
 from .device_components import (
     ConsolePort,
@@ -942,6 +944,8 @@ class Device(PrimaryModel, ConfigContextModel):
         instantiated_components = []
         for model, templates in component_models:
             model.objects.bulk_create([x.instantiate(device=self) for x in templates])
+        cache_key = f"nautobot.dcim.device.{self.pk}.has_module_bays"
+        cache.delete(cache_key)
         return instantiated_components
 
     create_components.alters_data = True
@@ -1035,6 +1039,18 @@ class Device(PrimaryModel, ConfigContextModel):
         return Device.objects.filter(parent_bay__device=self.pk)
 
     @property
+    def has_module_bays(self) -> bool:
+        """
+        Cacheable property for determining whether this Device has any ModuleBays, and therefore may contain Modules.
+        """
+        cache_key = f"nautobot.dcim.device.{self.pk}.has_module_bays"
+        module_bays_exists = cache.get(cache_key)
+        if module_bays_exists is None:
+            module_bays_exists = self.module_bays.exists()
+            cache.set(cache_key, module_bays_exists, timeout=5)
+        return module_bays_exists
+
+    @property
     def all_modules(self):
         """
         Return all child Modules installed in ModuleBays within this Device.
@@ -1044,6 +1060,9 @@ class Device(PrimaryModel, ConfigContextModel):
         # We artificially limit the recursion to 4 levels or we would be stuck in an infinite loop.
         recursion_depth = MODULE_RECURSION_DEPTH_LIMIT
         qs = Module.objects.all()
+        if not self.has_module_bays:
+            # Short-circuit to avoid an expensive nested query
+            return qs.none()
         query = Q()
         for level in range(recursion_depth):
             recursive_query = "parent_module_bay__parent_module__" * level
@@ -1502,6 +1521,15 @@ class Controller(PrimaryModel):
         if not self.capabilities:
             return format_html('<span class="text-muted">&mdash;</span>')
         return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in self.capabilities))
+
+    @property
+    def wireless_network_assignments(self):
+        """
+        Returns all Controller Managed Device Group Wireless Network Assignment linked to this controller.
+        """
+        return ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
+            controller_managed_device_group__controller=self
+        )
 
 
 @extras_features(

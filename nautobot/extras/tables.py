@@ -908,7 +908,7 @@ class JobResultTable(BaseTable):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Only calculate log counts for "summary" column if it's actually visible.
-        if self.columns["summary"].visible and isinstance(self.data.data, QuerySet):
+        if "summary" in self.columns and self.columns["summary"].visible and isinstance(self.data.data, QuerySet):
             self.data = TableData.from_data(
                 self.data.data.annotate(
                     debug_log_count=count_related(
@@ -1192,6 +1192,11 @@ class ObjectChangeTable(BaseTable):
             "object_repr",
             "request_id",
         )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # The `object_repr` column also uses the `changed_object` generic-foreign-key value
+        self.add_conditional_prefetch("object_repr", "changed_object")
 
 
 #
