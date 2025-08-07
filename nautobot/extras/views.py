@@ -2186,16 +2186,19 @@ class JobResultUIViewSet(
 
         return queryset
 
+    @action(
+        detail=True,
+        url_path="log-table",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["extras.view_jobresult"],
+    )
+    def log_table(self, request, pk=None):
+        """
+        Custom action to return a rendered JobLogEntry table for a JobResult.
+        """
 
-class JobLogEntryTableView(generic.GenericView):
-    """
-    Display a table of `JobLogEntry` objects for a given `JobResult` instance.
-    """
-
-    queryset = JobResult.objects.all()
-
-    def get(self, request, pk=None):
         instance = get_object_or_404(self.queryset.restrict(request.user, "view"), pk=pk)
+
         filter_q = request.GET.get("q")
         if filter_q:
             queryset = instance.job_log_entries.filter(
@@ -2203,14 +2206,15 @@ class JobLogEntryTableView(generic.GenericView):
             )
         else:
             queryset = instance.job_log_entries.all()
+
         log_table = tables.JobLogEntryTable(data=queryset, user=request.user)
         paginate = {
             "paginator_class": EnhancedPaginator,
             "per_page": get_paginate_count(request),
         }
         RequestConfig(request, paginate).configure(log_table)
-        table = log_table.as_html(request)
-        return HttpResponse(table)
+
+        return HttpResponse(log_table.as_html(request))
 
 
 #
