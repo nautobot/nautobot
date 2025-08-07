@@ -877,7 +877,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                 tab_id="interfaces",
                 label="Interfaces",
                 url_name="dcim:devicetype_interfaces",
-                related_object_attribute="interfaces",
+                related_object_attribute="interface_templates",
                 panels=(
                     object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
@@ -928,7 +928,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                 tab_id="frontports",
                 label="Front Ports",
                 url_name="dcim:devicetype_frontports",
-                related_object_attribute="frontports",
+                related_object_attribute="front_port_templates",
                 panels=(
                     object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
@@ -979,7 +979,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                 tab_id="rearports",
                 label="Rear Ports",
                 url_name="dcim:devicetype_rearports",
-                related_object_attribute="rearports",
+                related_object_attribute="rear_port_templates",
                 panels=(
                     object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
@@ -1030,7 +1030,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                 tab_id="consoleports",
                 label="Console Ports",
                 url_name="dcim:devicetype_consoleports",
-                related_object_attribute="consoleports",
+                related_object_attribute="console_port_templates",
                 panels=(
                     object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
@@ -1081,7 +1081,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                 tab_id="consoleserverports",
                 label="Console Server Ports",
                 url_name="dcim:devicetype_consoleserverports",
-                related_object_attribute="consoleserverports",
+                related_object_attribute="console_server_port_templates",
                 panels=(
                     object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
@@ -1132,7 +1132,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                 tab_id="powerports",
                 label="Power Ports",
                 url_name="dcim:devicetype_powerports",
-                related_object_attribute="powerports",
+                related_object_attribute="power_port_templates",
                 panels=(
                     object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
@@ -1183,7 +1183,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                 tab_id="poweroutlets",
                 label="Power Outlets",
                 url_name="dcim:devicetype_poweroutlets",
-                related_object_attribute="poweroutlets",
+                related_object_attribute="power_outlet_templates",
                 panels=(
                     object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
@@ -1234,7 +1234,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                 tab_id="devicebays",
                 label="Device Bays",
                 url_name="dcim:devicetype_devicebays",
-                related_object_attribute="devicebays",
+                related_object_attribute="device_bay_templates",
                 panels=(
                     object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
@@ -1285,7 +1285,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                 tab_id="modulebays",
                 label="Module Bays",
                 url_name="dcim:devicetype_modulebays",
-                related_object_attribute="modulebays",
+                related_object_attribute="module_bay_templates",
                 panels=(
                     object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,

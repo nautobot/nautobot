@@ -27,17 +27,6 @@ from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.constants import MODULE_RECURSION_DEPTH_LIMIT
-from nautobot.dcim.models.device_component_templates import (
-    ConsolePortTemplate,
-    ConsoleServerPortTemplate,
-    DeviceBayTemplate,
-    FrontPortTemplate,
-    InterfaceTemplate,
-    ModuleBayTemplate,
-    PowerOutletTemplate,
-    PowerPortTemplate,
-    RearPortTemplate,
-)
 from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_driver_mapping_tool_names
 from nautobot.extras.models import ChangeLoggedModel, ConfigContextModel, RoleField, StatusField
 from nautobot.extras.querysets import ConfigContextModelQuerySet
@@ -404,42 +393,6 @@ class DeviceType(PrimaryModel):
     @property
     def is_child_device(self):
         return self.subdevice_role == SubdeviceRoleChoices.ROLE_CHILD
-
-    @property
-    def consoleports(self):
-        return ConsolePortTemplate.objects.filter(device_type=self)
-
-    @property
-    def consoleserverports(self):
-        return ConsoleServerPortTemplate.objects.filter(device_type=self)
-
-    @property
-    def devicebays(self):
-        return DeviceBayTemplate.objects.filter(device_type=self)
-
-    @property
-    def frontports(self):
-        return FrontPortTemplate.objects.filter(device_type=self)
-
-    @property
-    def interfaces(self):
-        return InterfaceTemplate.objects.filter(device_type=self)
-
-    @property
-    def modulebays(self):
-        return ModuleBayTemplate.objects.filter(device_type=self)
-
-    @property
-    def poweroutlets(self):
-        return PowerOutletTemplate.objects.filter(device_type=self)
-
-    @property
-    def powerports(self):
-        return PowerPortTemplate.objects.filter(device_type=self)
-
-    @property
-    def rearports(self):
-        return RearPortTemplate.objects.filter(device_type=self)
 
 
 #
