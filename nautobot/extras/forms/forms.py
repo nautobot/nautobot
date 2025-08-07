@@ -198,6 +198,7 @@ __all__ = (
     "SecretFilterForm",
     "SecretForm",
     "SecretsGroupAssociationFormSet",
+    "SecretsGroupBulkEditForm",
     "SecretsGroupFilterForm",
     "SecretsGroupForm",
     "StaticGroupAssociationFilterForm",
@@ -2095,6 +2096,14 @@ class RoleFilterForm(NautobotFilterForm):
 #
 # Secrets
 #
+
+
+class SecretsGroupBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=SecretsGroup.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    class Meta:
+        model = SecretsGroup
 
 
 def provider_choices():
