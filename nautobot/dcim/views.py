@@ -358,7 +358,7 @@ class LocationHierarchyPanel(object_detail.ObjectFieldsPanel):
         return super().render_key(key, value, context)
 
     def render_value(self, key, value, context):
-        if key == "ancestors" and value:
+        if key == "ancestors":
             return helpers.render_ancestor_hierarchy(value)
         return super().render_value(key, value, context)
 
