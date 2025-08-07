@@ -95,7 +95,7 @@ class CustomFieldModelFilterFormMixin(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        custom_fields = CustomField.objects.get_for_model(self.model, exclude_filter_disabled=True)
+        custom_fields = CustomField.objects.get_for_model(self.model, exclude_filter_disabled=True, get_queryset=False)
         self.custom_fields = []
         for cf in custom_fields:
             field_name = cf.add_prefix_to_cf_key()
@@ -714,7 +714,9 @@ class RelationshipModelFilterFormMixin(forms.Form):
         """
         Append form fields for all Relationships assigned to this model.
         """
-        src_relationships, dst_relationships = Relationship.objects.get_for_model(model=self.model, hidden=False)
+        src_relationships, dst_relationships = Relationship.objects.get_for_model(
+            model=self.model, hidden=False, get_queryset=False
+        )
 
         for rel in src_relationships:
             self._append_relationships_side([rel], RelationshipSideChoices.SIDE_SOURCE)
