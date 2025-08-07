@@ -2432,7 +2432,7 @@ class NoteUIViewSet(
     queryset = Note.objects.all()
     serializer_class = serializers.NoteSerializer
     table_class = tables.NoteTable
-    action_buttons = None
+    action_buttons = ()
 
     def alter_obj(self, obj, request, url_args, url_kwargs):
         obj.user = request.user
