@@ -1,1 +1,1 @@
-Refactored Location model related UI views to use `NautobotUIViewSet`.
+Refactored Location model related UI views to use `UI component framework`.

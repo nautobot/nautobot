@@ -260,7 +260,7 @@ class LocationTypeUIViewSet(NautobotUIViewSet):
 #
 
 
-class CustomLocationFieldsPanel(object_detail.ObjectFieldsPanel):
+class LocationFieldsPanel(object_detail.ObjectFieldsPanel):
     def get_data(self, context):
         data = super().get_data(context)
         obj = get_obj_from_context(context, self.context_object_key)
@@ -281,7 +281,7 @@ class CustomLocationFieldsPanel(object_detail.ObjectFieldsPanel):
         return super().render_value(key, value, context)
 
 
-class CustomRackGroupsPanel(object_detail.ObjectFieldsPanel):
+class RackGroupsFieldsPanel(object_detail.ObjectFieldsPanel):
     def render(self, context):
         obj = get_obj_from_context(context, self.context_object_key or "object")
         if not obj:
@@ -386,14 +386,13 @@ class LocationUIViewSet(NautobotUIViewSet):
                     "time_zone",
                     "description",
                 ],
-                ignore_nonexistent_fields=True,  # ✅ this is to prevent AttributeError
                 value_transforms={
                     "location_type": [partial(helpers.hyperlinked_object, field="name")],
                     "time_zone": [helpers.format_timezone],
                     "ancestors": [helpers.render_ancestor_hierarchy],
                 },
             ),
-            CustomLocationFieldsPanel(
+            LocationFieldsPanel(
                 weight=110,
                 section=SectionChoices.LEFT_HALF,
                 label="Geographical Info",
@@ -427,7 +426,7 @@ class LocationUIViewSet(NautobotUIViewSet):
                     (VirtualMachine, "cluster__location__in"),
                 ],
             ),
-            CustomRackGroupsPanel(
+            RackGroupsFieldsPanel(
                 label="Rack Groups",
                 section=SectionChoices.RIGHT_HALF,
                 weight=200,
