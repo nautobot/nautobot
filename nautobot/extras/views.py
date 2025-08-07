@@ -2181,8 +2181,8 @@ class JobResultUIViewSet(
     @action(
         detail=True,
         url_path="log-table",
+        url_name="log-table",
         custom_view_base_action="view",
-        custom_view_additional_permissions=["extras.view_jobresult"],
     )
     def log_table(self, request, pk=None):
         """
