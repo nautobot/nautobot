@@ -357,11 +357,6 @@ class LocationHierarchyPanel(object_detail.ObjectFieldsPanel):
             return "Hierarchy"
         return super().render_key(key, value, context)
 
-    def render_value(self, key, value, context):
-        if key == "ancestors":
-            return helpers.render_ancestor_hierarchy(value)
-        return super().render_value(key, value, context)
-
 
 class LocationUIViewSet(NautobotUIViewSet):
     # We aren't accessing tree fields anywhere so this is safe (note that `parent` itself is a normal foreign
@@ -395,6 +390,7 @@ class LocationUIViewSet(NautobotUIViewSet):
                 value_transforms={
                     "location_type": [partial(helpers.hyperlinked_object, field="name")],
                     "time_zone": [helpers.format_timezone],
+                    "ancestors": [helpers.render_ancestor_hierarchy],
                 },
             ),
             CustomLocationFieldsPanel(
