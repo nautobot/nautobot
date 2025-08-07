@@ -1122,6 +1122,21 @@ def modal_form_as_dialog(form, editing=False, form_name=None, obj=None, obj_type
     }
 
 
+@register.inclusion_tag("utilities/templatetags/advanced_filter_indicator.html")
+def advanced_filter_indicator(basic_filter_form, filter_params):
+    """
+    Display Advanced filter indicator if there are filters applied which are not visible in Basic filter form.
+    """
+    is_visible = False
+    if basic_filter_form and filter_params:
+        basic_filter_form_field_names = [field.name for field in basic_filter_form.visible_fields()]
+        for filter_param in filter_params:
+            if filter_param["name"] not in basic_filter_form_field_names or filter_param["name"] == "q":
+                is_visible = True
+                break
+    return {"is_visible": is_visible}
+
+
 @register.simple_tag
 def custom_branding_or_static(branding_asset, static_asset):
     """
