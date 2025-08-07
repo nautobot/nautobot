@@ -760,7 +760,7 @@ class ManufacturerUIViewSet(NautobotUIViewSet):
 #
 
 
-class DeviceTypeCustomFieldsPanel(object_detail.ObjectFieldsPanel):
+class DeviceTypeFieldsPanel(object_detail.ObjectFieldsPanel):
     """
     Custom panel for DeviceType that renders front_image and rear_image
     as image previews with links, and falls back to normal rendering for other fields.
@@ -773,15 +773,12 @@ class DeviceTypeCustomFieldsPanel(object_detail.ObjectFieldsPanel):
             image = getattr(obj, key, None)
             if image:
                 return format_html(
-                    f'<a href="{image.url}" target="_blank">'
-                    f'<img src="{image.url}" alt="{image.name}" class="img-responsive" />'
-                    f"</a>"
+                    '<a href="{}" target="_blank"><img src="{}" alt="{}" class="img-responsive"></a>',
+                    image.url,
+                    image.url,
+                    image.name,
                 )
             return format_html('<span class="text-muted">&mdash;</span>')
-
-        if key == "manufacturer" and obj.manufacturer:
-            url = f"{reverse('dcim:devicetype_list')}?manufacturer={obj.manufacturer.name}"
-            return format_html(f'<a href="{url}">{obj.manufacturer}</a>')
 
         return super().render_value(key, value, context)
 
@@ -797,7 +794,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            DeviceTypeCustomFieldsPanel(
+            DeviceTypeFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields="__all__",
