@@ -692,6 +692,12 @@ $nautobot-chevron-svg: "<svg viewBox='0 0 17 20' fill='none' xmlns='http://www.w
   }
 }
 
+@mixin nb-firefox-only {
+  @supports (-moz-appearance: none) {
+    @content;
+  }
+}
+
 /* Links */
 a,
 button {
@@ -1503,6 +1509,21 @@ body {
     width: max-content;
     z-index: -1;
     min-width: $sidenav-link-width;
+
+    /*
+     * FIXME(norbert-mieczkowski-codilime): remove this Firefox hack when it fixes its bug: https://bugzilla.mozilla.org/show_bug.cgi?id=995020.
+     *   Workaround based on: https://www.answeroverflow.com/m/1353731321620598945.
+     */
+    @include nb-firefox-only {
+      flex-direction: row;
+      padding-block: map.get($spacers, 0);
+      padding-inline: map.get($spacers, 20);
+      writing-mode: vertical-lr;
+
+      > * {
+        writing-mode: horizontal-tb;
+      }
+    }
   }
 
   .nb-sidenav-link {
