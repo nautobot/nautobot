@@ -1,0 +1,155 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+{% load custom_links %}
+{% load form_helpers %}
+{% load log_levels %}
+{% load plugins %}
+{% load static %}
+{% load buttons %}
+
+{% block breadcrumbs %}
+    <li><a href="{% url 'extras:jobresult_list' %}">Job Results</a></li>
+    {% if result.job_model is not None %}
+        <li>{{ result.job_model.grouping }}</li>
+        <li><a href="{% url 'extras:jobresult_list' %}?job_model={{ result.job_model.name }}">
+            {{ result.job_model }}
+        </a></li>
+    {% elif associated_record %}
+        {% if associated_record.name %}
+            <li><a href="{% url 'extras:jobresult_list' %}?name={{ associated_record.name|urlencode }}">
+                {{ associated_record.name }}
+            </a></li>
+        {% else %}
+            <li>{{ associated_record }}</li>
+        {% endif %}
+    {% elif job %}
+        <li><a href="{% url 'extras:jobresult_list' %}?name={{ job.class_path|urlencode }}">
+            {{ job.class_path }}
+        </a></li>
+    {% else %}
+        <li>{{ result.name }}</li>
+    {% endif %}
+    <li>{{ result.created }}</li>
+{% endblock breadcrumbs %}
+
+{% block buttons %}
+    {% if perms.extras.run_job %}
+        {% if result.job_model and result.task_kwargs %}
+            <a href="{% url 'extras:job_run' pk=result.job_model.pk %}?kwargs_from_job_result={{ result.pk }}"
+               class="btn btn-success">
+                <span class="mdi mdi-repeat" aria-hidden="true"></span> Re-Run
+            </a>
+        {% elif result.job_model is not None %}
+            <a href="{% url 'extras:job_run' pk=result.job_model.pk %}"
+               class="btn btn-primary">
+                <span class="mdi mdi-play" aria-hidden="true"></span> Run
+            </a>
+        {% endif %}
+    {% endif %}
+    <a href="{% url 'extras-api:joblogentry-list' %}?job_result={{ result.pk }}&format=csv" class="btn btn-success">
+        <span class="mdi mdi-database-export" aria-hidden="true"></span> Export
+    </a>
+    {{ block.super }}
+{% endblock buttons %}
+
+{% block title %}
+    Job Result:
+    {% if result.job_model is not None %}
+        {{ result.job_model }}
+    {% elif associated_record %}
+        {{ associated_record }}
+    {% elif job %}
+        {{ job }}
+    {% else %}
+        {{ result.name }}
+    {% endif %}
+{% endblock %}
+
+{% block extra_nav_tabs %}
+    {% if result.data.output %}
+        <li role="presentation">
+            <a href="#output" role="tab" data-toggle="tab">Output</a>
+        </li>
+    {% endif %}
+{% endblock %}
+
+{% block content_full_width_page %}
+    {% include 'extras/inc/jobresult.html' with result=result log_table=log_table %}
+{% endblock content_full_width_page %}
+
+{% block advanced_content_left_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Job Keyword Arguments</strong>
+        </div>
+        <div class="panel-body">
+            {% include 'extras/inc/json_data.html' with data=result.task_kwargs format="json" %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Job Positional Arguments</strong>
+        </div>
+        <div class="panel-body">
+            {% include 'extras/inc/json_data.html' with data=result.task_args format="json" %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Job Celery Keyword Arguments</strong>
+        </div>
+        <div class="panel-body">
+            {% include 'extras/inc/json_data.html' with data=result.celery_kwargs format="json" %}
+        </div>
+    </div>
+{% endblock advanced_content_left_page %}
+{% block advanced_content_right_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Worker</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tbody>
+                <tr>
+                    <td>Worker Hostname</td>
+                    <td>{{ result.worker }}</td>
+                </tr>
+                <tr>
+                    <td>Queue Name</td>
+                    <td>{{ result.celery_kwargs.queue}}</td>
+                </tr>
+                <tr>
+                    <td>Task Name</td>
+                    <td>{{ result.task_name }}</td>
+                </tr>
+                <tr>
+                    <td>Meta</td>
+                    <td>{% include 'extras/inc/json_data.html' with data=result.meta format="json" %}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Traceback</strong>
+        </div>
+        <div class="panel-body">
+            {% include 'extras/inc/json_data.html' with data=result.traceback format="python" %}
+        </div>
+    </div>
+{% endblock advanced_content_right_page %}
+{% block extra_tab_content %}
+    {% if result.data.output %}
+        <div role="tabpanel" class="tab-pane" id="output">
+            <pre>{{ result.data.output }}</pre>
+        </div>
+    {% endif %}
+{% endblock extra_tab_content %}
+
+
+{% block javascript %}
+    {{ block.super }}
+    {% include 'extras/inc/jobresult_js.html' with result=result %}
+    <script src="{% versioned_static 'js/tableconfig.js' %}"></script>
+    <script src="{% versioned_static 'js/log_level_filtering.js' %}"></script>
+{% endblock %}

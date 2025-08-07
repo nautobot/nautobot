@@ -26,6 +26,7 @@ router.register("graphql-queries", views.GraphQLQueryUIViewSet)
 router.register("job-buttons", views.JobButtonUIViewSet)
 router.register("job-hooks", views.JobHookUIViewSet)
 router.register("job-queues", views.JobQueueUIViewSet)
+router.register("job-results", views.JobResultUIViewSet)
 router.register("metadata-types", views.MetadataTypeUIViewSet)
 router.register("object-metadata", views.ObjectMetadataUIViewSet)
 router.register("relationship-associations", views.RelationshipAssociationUIViewSet)
@@ -235,20 +236,6 @@ urlpatterns = [
     path("jobs/<str:class_path>/run/", views.JobRunView.as_view(), name="job_run_by_class_path"),
     path("jobs/edit/", views.JobBulkEditView.as_view(), name="job_bulk_edit"),
     path("jobs/delete/", views.JobBulkDeleteView.as_view(), name="job_bulk_delete"),
-    # Generic job results
-    path("job-results/", views.JobResultListView.as_view(), name="jobresult_list"),
-    path("job-results/<uuid:pk>/", views.JobResultView.as_view(), name="jobresult"),
-    path("job-results/<uuid:pk>/log-table/", views.JobLogEntryTableView.as_view(), name="jobresult_log-table"),
-    path(
-        "job-results/delete/",
-        views.JobResultBulkDeleteView.as_view(),
-        name="jobresult_bulk_delete",
-    ),
-    path(
-        "job-results/<uuid:pk>/delete/",
-        views.JobResultDeleteView.as_view(),
-        name="jobresult_delete",
-    ),
     # Notes
     path("notes/", views.NoteListView.as_view(), name="note_list"),
     path("notes/add/", views.NoteEditView.as_view(), name="note_add"),
