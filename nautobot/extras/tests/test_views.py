@@ -83,6 +83,7 @@ from nautobot.extras.models import (
     UserSavedViewAssociation,
     Webhook,
 )
+from nautobot.extras.models.customfields import CustomFieldChoice
 from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_jobs import get_job_class_and_model
@@ -723,6 +724,161 @@ class CustomFieldTestCase(
         self.form_data = self.form_data.copy()
         self.form_data["key"] = "custom_field_boolean_2"
         super().test_create_object_with_constrained_permission()
+
+    def test_create_custom_field_with_choices(self):
+        """Ensure a select-type CustomField can be created with multiple valid choices.."""
+        self.add_permissions("extras.add_customfield", "extras.view_customfield")
+
+        content_type = ContentType.objects.get_for_model(Location)
+
+        form_data = {
+            "content_types": [content_type.pk],
+            "type": CustomFieldTypeChoices.TYPE_SELECT,
+            "key": "select_with_choices",
+            "label": "Select Field with Choices",
+            "default": "",
+            "filter_logic": "loose",
+            "weight": 100,
+            "custom_field_choices-TOTAL_FORMS": "2",
+            "custom_field_choices-INITIAL_FORMS": "0",
+            "custom_field_choices-MIN_NUM_FORMS": "0",
+            "custom_field_choices-MAX_NUM_FORMS": "1000",
+            "custom_field_choices-0-value": "Option A",
+            "custom_field_choices-0-weight": "100",
+            "custom_field_choices-1-value": "Option B",
+            "custom_field_choices-1-weight": "200",
+        }
+
+        response = self.client.post(reverse("extras:customfield_add"), data=form_data, follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(CustomField.objects.filter(key="select_with_choices").exists())
+
+        field = CustomField.objects.get(key="select_with_choices")
+        self.assertEqual(field.custom_field_choices.count(), 2)
+        self.assertSetEqual(
+            set(field.custom_field_choices.values_list("value", flat=True)),
+            {"Option A", "Option B"},
+        )
+
+    def test_update_select_custom_field_add_choice(self):
+        """Test that submitting the edit form with both existing and new choices
+        results in the new choice being saved correctly."""
+        self.add_permissions("extras.change_customfield", "extras.view_customfield")
+
+        content_type = ContentType.objects.get_for_model(Location)
+        field = CustomField.objects.create(
+            type=CustomFieldTypeChoices.TYPE_SELECT,
+            label="Editable Select Field",
+            key="editable_select_field",
+        )
+        field.content_types.set([content_type])
+
+        # Added initial choice
+        initial_choice = CustomFieldChoice.objects.create(
+            custom_field=field,
+            value="Initial Option",
+            weight=100,
+        )
+
+        url = reverse("extras:customfield_edit", args=[field.pk])
+        form_data = {
+            "content_types": [content_type.pk],
+            "type": field.type,
+            "key": field.key,
+            "label": field.label,
+            "default": "",
+            "filter_logic": "loose",
+            "weight": 100,
+            "custom_field_choices-TOTAL_FORMS": "2",
+            "custom_field_choices-INITIAL_FORMS": "1",
+            "custom_field_choices-MIN_NUM_FORMS": "0",
+            "custom_field_choices-MAX_NUM_FORMS": "1000",
+            "custom_field_choices-0-id": initial_choice.pk,
+            "custom_field_choices-0-value": "Initial Option",
+            "custom_field_choices-0-weight": "100",
+            "custom_field_choices-1-value": "New Option",
+            "custom_field_choices-1-weight": "200",
+        }
+
+        response = self.client.post(url, data=form_data, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(field.custom_field_choices.count(), 2)
+        self.assertTrue(field.custom_field_choices.filter(value="New Option").exists())
+
+    def test_update_select_custom_field_remove_choice(self):
+        """Test removing a choice from a select field."""
+        self.add_permissions("extras.change_customfield", "extras.view_customfield")
+
+        content_type = ContentType.objects.get_for_model(Location)
+        field = CustomField.objects.create(
+            type=CustomFieldTypeChoices.TYPE_SELECT,
+            label="Deletable Select Field",
+            key="deletable_select_field",
+        )
+        field.content_types.set([content_type])
+
+        choice = CustomFieldChoice.objects.create(
+            custom_field=field,
+            value="Choice To Delete",
+            weight=100,
+        )
+
+        url = reverse("extras:customfield_edit", args=[field.pk])
+        form_data = {
+            "content_types": [content_type.pk],
+            "type": field.type,
+            "key": field.key,
+            "label": field.label,
+            "default": "",
+            "filter_logic": "loose",
+            "weight": 100,
+            "custom_field_choices-TOTAL_FORMS": "1",
+            "custom_field_choices-INITIAL_FORMS": "1",
+            "custom_field_choices-MIN_NUM_FORMS": "0",
+            "custom_field_choices-MAX_NUM_FORMS": "1000",
+            "custom_field_choices-0-id": choice.pk,
+            "custom_field_choices-0-value": choice.value,
+            "custom_field_choices-0-weight": choice.weight,
+            "custom_field_choices-0-DELETE": "on",
+        }
+
+        response = self.client.post(url, data=form_data, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(field.custom_field_choices.count(), 0)
+
+    def test_create_custom_field_with_invalid_choice_data(self):
+        """Ensure invalid choice formset blocks saving."""
+        self.add_permissions("extras.add_customfield", "extras.view_customfield")
+
+        content_type = ContentType.objects.get_for_model(Location)
+
+        form_data = {
+            "content_types": [content_type.pk],
+            "type": CustomFieldTypeChoices.TYPE_SELECT,
+            "key": "invalid_choice_field",
+            "label": "Field with Invalid Choice",
+            "default": "",
+            "filter_logic": "loose",
+            "weight": 100,
+            "custom_field_choices-TOTAL_FORMS": "1",
+            "custom_field_choices-INITIAL_FORMS": "0",
+            "custom_field_choices-MIN_NUM_FORMS": "0",
+            "custom_field_choices-MAX_NUM_FORMS": "1000",
+            # Invalid: missing weight, empty value
+            "custom_field_choices-0-value": "",
+        }
+
+        response = self.client.post(reverse("extras:customfield_add"), data=form_data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(CustomField.objects.filter(key="invalid_choice_field").exists())
+        self.assertFormsetError(
+            response.context["choices"], form_index=0, field="value", errors=["This field is required."]
+        )
+        self.assertFormsetError(
+            response.context["choices"], form_index=0, field="weight", errors=["This field is required."]
+        )
 
 
 class CustomLinkRenderingTestCase(TestCase):
