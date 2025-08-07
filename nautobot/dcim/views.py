@@ -349,21 +349,16 @@ class LocationHierarchyPanel(object_detail.ObjectFieldsPanel):
     def get_data(self, context):
         data = super().get_data(context)
         obj = get_obj_from_context(context, self.context_object_key)
+        data["ancestors"] = obj
+        return data
 
-        if not obj:
-            return data
-
-        # Insert "Hierarchy" after "status"
-        new_data = {}
-        for key, value in data.items():
-            new_data[key] = value
-            if key == "status":
-                new_data["Hierarchy"] = obj  # Insert right after "status"
-
-        return new_data
+    def render_key(self, key, value, context):
+        if key == "ancestors":
+            return "Hierarchy"
+        return super().render_key(key, value, context)
 
     def render_value(self, key, value, context):
-        if key == "Hierarchy" and value:
+        if key == "ancestors" and value:
             return helpers.render_ancestor_hierarchy(value)
         return super().render_value(key, value, context)
 
@@ -389,7 +384,7 @@ class LocationUIViewSet(NautobotUIViewSet):
                 fields=[
                     "location_type",
                     "status",
-                    "Hierarchy",
+                    "ancestors",
                     "tenant",
                     "facility",
                     "asn",
