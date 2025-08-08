@@ -54,7 +54,7 @@ Scheduled jobs can be approved or denied via the UI and API by any user that has
 
 ### Approval via the UI
 
-The queue of jobs that need approval can be found under `Jobs > Job Approval Queue`. This view lists all currently requested jobs that need approval before they are run. To approve a job, select it and click the button to approve. Please note that you will be  asked for confirmation if a job is being approved that is past its scheduled date and time.
+The queue of jobs that need approval can be found under `Jobs > Job Approval Queue`. This view lists all currently requested jobs that need approval before they are run. To approve a job, select it and click the button to approve. Please note that you will be asked for confirmation if a job is being approved that is past its scheduled date and time.
 
 If the approver is unsure what a job would do, a dry run can also be started via that same view.
 
