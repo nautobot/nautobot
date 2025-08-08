@@ -43,7 +43,7 @@ urlpatterns = [
         "prefixes/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="prefix_changelog",
-        kwargs={"model": Prefix, "list_url": "ipam:prefix_list"},
+        kwargs={"model": Prefix},
     ),
     path(  # 3.0 TODO: remove, no longer needed/used since 2.3
         "prefixes/<uuid:pk>/dynamic-groups/",
@@ -55,7 +55,7 @@ urlpatterns = [
         "prefixes/<uuid:pk>/notes/",
         ObjectNotesView.as_view(),
         name="prefix_notes",
-        kwargs={"model": Prefix, "list_url": "ipam:prefix_list"},
+        kwargs={"model": Prefix},
     ),
     path(
         "prefixes/<uuid:pk>/prefixes/",
