@@ -1101,9 +1101,9 @@ class DeprecatedAliasesTestCase(TestCase):
 
     def test_deprecated_form_mixin_classes(self):
         # Importing these mixin classes doesn't directly warn, but subclassing them does.
-        from nautobot.extras.forms import (
+        from nautobot.extras.forms import CustomFieldBulkCreateForm
+        from nautobot.extras.forms.mixins import (
             AddRemoveTagsForm,
-            CustomFieldBulkCreateForm,
             CustomFieldBulkEditForm,
             CustomFieldModelForm,
             RelationshipModelForm,

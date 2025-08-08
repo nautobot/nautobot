@@ -96,12 +96,13 @@ class CustomFieldTestCase(SeleniumTestCase):
 
     def test_fail_create_invalid_type_with_choices(self):
         """Test fail type!=select with choices."""
+        cf_label = "Test Text"
         with self.assertRaises(AssertionError):
-            self._create_custom_field(field_label="Test Text", field_type="text", choices=["bad1"])
+            self._create_custom_field(field_label=cf_label, field_type="text", choices=["bad1"])
 
         # Assert error state
-        self.assertTrue(self.browser.is_text_present("Editing custom field"))
-        self.assertTrue(self.browser.is_text_present("Errors encountered when saving custom field choices"))
+        self.assertTrue(self.browser.is_text_present("Add a new custom field"))
+        self.assertTrue(self.browser.is_text_present(f"{cf_label} failed validation"))
         self.assertTrue(self.browser.is_text_present("Custom field choices can only be assigned to selection fields"))
 
     def test_create_type_select_with_choices_adding_dynamic_row(self):
@@ -133,7 +134,8 @@ class CustomFieldTestCase(SeleniumTestCase):
         choices = ["replace_me"]
 
         # Create the field
-        self._create_custom_field(field_label="Test Select", field_type="select", choices=choices)
+        cf_label = "Test Select"
+        self._create_custom_field(field_label=cf_label, field_type="select", choices=choices)
         detail_url = self.browser.url
 
         #
@@ -148,7 +150,8 @@ class CustomFieldTestCase(SeleniumTestCase):
         self.browser.fill("custom_field_choices-0-value", "")
         self.assertEqual(self.browser.find_by_name("custom_field_choices-0-value").value, "")
         self.browser.find_by_text("Update").click()
-        self.assertTrue(self.browser.is_text_present("Errors encountered when saving custom field choices"))
+        self.assertTrue(self.browser.is_text_present(f"{cf_label} failed validation"))
+        self.assertTrue(self.browser.is_text_present("This field is required."))
 
         #
         # Pass updating existing choice (changing value of existing choice)

@@ -1,0 +1,108 @@
+{% extends 'generic/object_create.html' %}
+{% load static %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Custom Field</strong></div>
+        <div class="panel-body">
+            {% render_field form.label %}
+            {% render_field form.grouping %}
+            {% render_field form.key %}
+            {% render_field form.type %}
+            {% render_field form.weight %}
+            {% render_field form.description %}
+            {% render_field form.required %}
+            {% render_field form.default %}
+            {% render_field form.filter_logic %}
+            {% render_field form.advanced_ui %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Assignment</strong></div>
+        <div class="panel-body">
+            {% render_field form.content_types %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Validation Rules</strong></div>
+        <div class="panel-body">
+            {% render_field form.validation_minimum %}
+            {% render_field form.validation_maximum %}
+            {% render_field form.validation_regex %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Custom Field Choices</strong></div>
+        <div class="panel-body">
+            {% if choices.errors %}
+                <div class="text-danger">
+                    Please correct the error(s) below:
+
+                    {% for choice in choices.forms %}
+                        {% if choice.errors %}
+                            {% for error in choice.errors.values %}{{ error }}{% endfor %}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+            {{ choices.non_field_errors }}
+            <table class="table" id="custom-field-choices">
+              {{ choices.management_form }}
+              {% for choice in choices.forms %}
+                    {% if forloop.first %}
+                        <thead>
+                        <tr>
+                            {% for field in choice.visible_fields %}
+                                <th>{{ field.label|capfirst }}</th>
+                            {% endfor %}
+                        </tr>
+                        </thead>
+                    {% endif %}
+                    <tr class="formset_row-{{ choices.prefix }}">
+                        {% for field in choice.visible_fields %}
+                            <td>
+                                {# Include the hidden fields in the form #}
+                                {% if forloop.first %}
+                                    {% for hidden in choice.hidden_fields %}
+                                        {{ hidden }}
+                                    {% endfor %}
+                                {% endif %}
+                                {{ field }}
+                                {% if field.errors %}
+                                    <ul>
+                                        {% for error in field.errors %}
+                                            {# Embed an HTML comment indicating the error for extraction by tests #}
+                                            <!-- FORM-ERROR {{ field.name }}: {{ error }} -->
+                                            <li class="text-danger">{{ error }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+               {% endfor %}
+            </table>
+        </div>
+    </div>
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+
+{% endblock form %}
+
+{% block javascript %}
+{{ block.super }}
+<script src="{% static 'jquery/jquery.formset.js' %}"></script>
+<script type="text/javascript">
+    const slugify_prefer_underscores = true; // Custom fields work better in GraphQL (etc.) with underscore-based slugs
+    $('.formset_row-{{ choices.prefix }}').formset({
+        addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Custom Field Choice',
+        addCssClass: 'btn btn-primary add-row',
+        deleteText: '<span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>',
+        deleteCssClass: 'btn btn-danger delete-row',
+        prefix: '{{ choices.prefix }}',
+        formCssClass: 'dynamic-formset-{{ choices.prefix }}',
+        keepFieldValues: 'input[type="number"]',
+        added: jsify_form
+    });
+</script>
+{% endblock javascript %}
