@@ -254,5 +254,5 @@ class ScheduledJobExtendedQuerySet(RestrictedQuerySet):
         Return only ScheduledJob instances that are enabled and approved (if approval required)
         """
         return self.filter(
-            Q(enabled=True) & Q(Q(approval_required=True, approved_at__isnull=False) | Q(approval_required=False))
+            Q(enabled=True) & Q(Q(approval_required=True, decision_date__isnull=False) | Q(approval_required=False))
         )

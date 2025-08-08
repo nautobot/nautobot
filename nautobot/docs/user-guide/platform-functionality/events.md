@@ -141,7 +141,7 @@ The data payload associated with events of any of the above topics has the follo
                 "date_changed": "2024-10-28T08:25:32.640275Z",
                 "description": "",
                 "approval_required": true,
-                "approved_at": null,
+                "decision_date": null,
                 "crontab": "",
                 "job_model": {
                     "id": "d56857d7-d0b5-42e2-8bc5-b93c3cee4da9",
