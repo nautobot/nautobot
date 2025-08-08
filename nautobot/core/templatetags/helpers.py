@@ -762,6 +762,21 @@ def render_address(address):
     return HTML_NONE
 
 
+@register.filter()
+def render_m2m(value, link_to_redirect, model, max_visible=5):
+    if not value:
+        return HTML_NONE
+
+    items = [hyperlinked_object(val) for val in value[:max_visible]]
+
+    remaining = len(value) - max_visible
+    if remaining > 0:
+        link = format_html('<a href="{}">... View {} more {}</a>', link_to_redirect, remaining, model)
+        items.append(link)
+
+    return format_html_join("", "<div>{}</div>", ((item,) for item in items)) if items else HTML_NONE
+
+
 @library.filter()
 @register.filter()
 def render_button_class(value):
