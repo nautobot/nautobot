@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from copy import deepcopy
+from functools import partial
 import logging
 import re
 import uuid
@@ -17,10 +18,10 @@ from django.forms import (
 )
 from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
 from django.template.loader import render_to_string
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 from django.utils.encoding import iri_to_uri
 from django.utils.functional import cached_property
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import View
 from django_tables2 import RequestConfig
@@ -55,12 +56,15 @@ from nautobot.core.views.mixins import (
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.views.utils import (
+    get_obj_from_context,
+)
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.dcim.utils import get_all_network_driver_mappings
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
-from nautobot.extras.tables import DynamicGroupTable
+from nautobot.extras.tables import DynamicGroupTable, ImageAttachmentTable
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable, VRFTable
@@ -256,6 +260,104 @@ class LocationTypeUIViewSet(NautobotUIViewSet):
 #
 
 
+class LocationFieldsPanel(object_detail.ObjectFieldsPanel):
+    def get_data(self, context):
+        data = super().get_data(context)
+        obj = get_obj_from_context(context, self.context_object_key)
+
+        if obj and obj.latitude and obj.longitude:
+            data["GPS Coordinates"] = f"{obj.latitude}, {obj.longitude}"
+        else:
+            data["GPS Coordinates"] = "Not available"
+
+        return data
+
+    def render_value(self, key, value, context):
+        if key == "GPS Coordinates":
+            if value != "Not available":
+                return helpers.render_address(value)
+            return helpers.HTML_NONE
+
+        return super().render_value(key, value, context)
+
+
+class RackGroupsFieldsPanel(object_detail.ObjectFieldsPanel):
+    def render(self, context):
+        obj = get_obj_from_context(context, self.context_object_key or "object")
+        if not obj:
+            return ""
+
+        rack_groups = context.get("rack_groups", [])
+        stats = context.get("stats", {})
+
+        rows = []
+        for rg in rack_groups:
+            rows.append(
+                helpers.render_rack_row(
+                    getattr(rg, "tree_depth", 0) * 8,
+                    rg.get_absolute_url(),
+                    str(rg),
+                    rg.rack_count,
+                    f"{reverse('dcim:rack_elevation_list')}?rack_group={rg.pk}",
+                )
+            )
+
+        rows.append(
+            helpers.render_rack_row(
+                10,
+                "#",
+                "All racks",
+                stats.get("rack_count", 0),
+                f"{reverse('dcim:rack_elevation_list')}?location={obj.pk}",
+            )
+        )
+
+        return format_html(
+            """
+            <div class="panel panel-default">
+                <div class="panel-heading"><strong>Rack Groups</strong></div>
+                <table class="table table-hover panel-body">{}</table>
+            </div>
+            """,
+            format_html_join("", "{}", ((row,) for row in rows)),
+        )
+
+
+class LocationImagesTablePanel(object_detail.ObjectsTablePanel):
+    """
+    Custom table panel for Location Images that correctly passes `object_id` to reverse().
+    """
+
+    def _get_table_add_url(self, context):
+        obj = get_obj_from_context(context)
+        request = context["request"]
+        return_url = context.get("return_url", obj.get_absolute_url())
+        if self.tab_id:
+            return_url += f"?tab={self.tab_id}"
+
+        if self.add_button_route and request.user.has_perms(self.add_permissions or []):
+            try:
+                add_route = reverse(self.add_button_route, kwargs={"object_id": str(obj.pk)})
+                return f"{add_route}?return_url={return_url}"
+            except NoReverseMatch:
+                logger.warning(f"Add route `{self.add_button_route}` could not be reversed with object_id={obj.pk}.")
+
+        return None
+
+
+class LocationHierarchyPanel(object_detail.ObjectFieldsPanel):
+    def get_data(self, context):
+        data = super().get_data(context)
+        obj = get_obj_from_context(context, self.context_object_key)
+        data["ancestors"] = obj
+        return data
+
+    def render_key(self, key, value, context):
+        if key == "ancestors":
+            return "Hierarchy"
+        return super().render_key(key, value, context)
+
+
 class LocationUIViewSet(NautobotUIViewSet):
     # We aren't accessing tree fields anywhere so this is safe (note that `parent` itself is a normal foreign
     # key, not a tree field). If we ever do access tree fields, this will perform worse, because django will
@@ -269,62 +371,104 @@ class LocationUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.LocationBulkEditForm
     serializer_class = serializers.LocationSerializer
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            LocationHierarchyPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=[
+                    "location_type",
+                    "status",
+                    "ancestors",
+                    "tenant",
+                    "facility",
+                    "asn",
+                    "time_zone",
+                    "description",
+                ],
+                value_transforms={
+                    "location_type": [partial(helpers.hyperlinked_object, field="name")],
+                    "time_zone": [helpers.format_timezone],
+                    "ancestors": [helpers.render_ancestor_hierarchy],
+                },
+            ),
+            LocationFieldsPanel(
+                weight=110,
+                section=SectionChoices.LEFT_HALF,
+                label="Geographical Info",
+                fields=["physical_address", "shipping_address"],
+                value_transforms={
+                    "physical_address": [helpers.render_address],
+                },
+            ),
+            object_detail.ObjectFieldsPanel(
+                weight=120,
+                section=SectionChoices.LEFT_HALF,
+                label="Contact Info",
+                fields=["contact_name", "contact_phone", "contact_email"],
+                value_transforms={
+                    "contact_phone": [helpers.hyperlinked_phone_number],
+                    "contact_email": [helpers.hyperlinked_email],
+                },
+                footer_content_template_path="components/panel/footer_convert_to_contact_or_team_record.html",
+            ),
+            object_detail.StatsPanel(
+                weight=100,
+                label="Stats",
+                section=SectionChoices.RIGHT_HALF,
+                filter_name="location",
+                related_models=[
+                    Rack,
+                    Device,
+                    Prefix,
+                    VLAN,
+                    (Circuit, "circuit_terminations__location__in"),
+                    (VirtualMachine, "cluster__location__in"),
+                ],
+            ),
+            RackGroupsFieldsPanel(
+                label="Rack Groups",
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                context_object_key="object",
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=100,
+                table_title="Children",
+                table_class=tables.FlatLocationTable,
+                table_attribute="children",
+                related_field_name="parent",
+                order_by_fields=["name"],
+            ),
+            LocationImagesTablePanel(
+                table_title="Images",
+                section=SectionChoices.RIGHT_HALF,
+                table_class=ImageAttachmentTable,
+                table_attribute="image_attachments",
+                related_field_name="object_id",
+                weight=300,
+                add_button_route="dcim:location_add_image",
+                add_permissions=["extras.add_imageattachment"],
+            ),
+        )
+    )
+
     def get_extra_context(self, request, instance):
         if instance is None:
             return super().get_extra_context(request, instance)
+
         related_locations = (
             instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
         )
-        stats = {
-            "rack_count": Rack.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
-            "device_count": Device.objects.restrict(request.user, "view")
-            .filter(location__in=related_locations)
-            .count(),
-            "prefix_count": Prefix.objects.restrict(request.user, "view")
-            .filter(locations__in=related_locations)
-            .count(),
-            "vlan_count": VLAN.objects.restrict(request.user, "view")
-            .filter(locations__in=related_locations)
-            .distinct()
-            .count(),
-            "circuit_count": Circuit.objects.restrict(request.user, "view")
-            .filter(circuit_terminations__location__in=related_locations)
-            .count(),
-            "vm_count": VirtualMachine.objects.restrict(request.user, "view")
-            .filter(cluster__location__in=related_locations)
-            .count(),
-        }
-        rack_groups = (
-            RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group"))
-            .restrict(request.user, "view")
-            .filter(location__in=related_locations)
-        )
-        children = (
-            Location.objects.restrict(request.user, "view")
-            # We aren't accessing tree fields anywhere so this is safe (note that `parent` itself is a normal foreign
-            # key, not a tree field). If we ever do access tree fields, this will perform worse, because django will
-            # automatically issue a second query (similar to behavior for
-            # https://docs.djangoproject.com/en/3.2/ref/models/querysets/#django.db.models.query.QuerySet.only)
-            .without_tree_fields()
-            .filter(parent=instance)
-            .select_related("parent", "location_type")
-        )
-
-        children_table = tables.LocationTable(children, hide_hierarchy_ui=True)
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(children_table)
 
         return {
-            "children_table": children_table,
-            "rack_groups": rack_groups,
-            "stats": stats,
-            "contact_association_permission": ["extras.add_contactassociation"],
-            # show the button if any of these fields have non-empty value.
-            "show_convert_to_contact_button": instance.contact_name or instance.contact_phone or instance.contact_email,
-            **super().get_extra_context(request, instance),
+            "rack_groups": RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group"))
+            .restrict(request.user, "view")
+            .filter(location__in=related_locations),
+            "stats": {
+                "rack_count": Rack.objects.restrict(request.user, "view").filter(location__in=related_locations).count()
+            },
         }
 
 

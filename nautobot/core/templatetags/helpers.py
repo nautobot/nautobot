@@ -3,6 +3,7 @@ import json
 import logging
 import re
 from urllib.parse import parse_qs, quote_plus
+from zoneinfo import ZoneInfo
 
 from django import template
 from django.conf import settings
@@ -12,6 +13,7 @@ from django.contrib.staticfiles.finders import find
 from django.core.exceptions import ObjectDoesNotExist
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
+from django.utils.formats import date_format
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
 from django.utils.text import slugify as django_slugify
@@ -810,6 +812,61 @@ def label_list(value, suffix=""):
         " ",
         '<span class="label label-default">{0}{1}</span>',
         ((item, suffix) for item in value),
+    )
+
+
+@library.filter()
+@register.filter()
+def format_timezone(value):
+    if not value:
+        return HTML_NONE
+
+    try:
+        tz = ZoneInfo(str(value))
+        now_utc = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+        now_local = now_utc.astimezone(tz)
+
+        offset = now_local.utcoffset()
+        if offset is None:
+            return format_html("{}", value)
+
+        total_minutes = offset.total_seconds() / 60
+        sign = "+" if total_minutes >= 0 else "-"
+        hours, minutes = divmod(abs(int(total_minutes)), 60)
+        offset_str = f"{sign}{hours:02}{minutes:02}"
+        local_time_str = date_format(now_local, "SHORT_DATETIME_FORMAT")
+
+        return format_html(
+            "{} (UTC {})<br /><small class='text-muted'>Local time: {}</small>",
+            value,
+            offset_str,
+            local_time_str,
+        )
+    except Exception:
+        return format_html("{}", value)
+
+
+def render_rack_row(indent_px, url, name, count, elevation_url):
+    return format_html(
+        """
+        <tr>
+            <td style="padding-left: {}px">
+                <i class="mdi mdi-folder-open"></i>
+                <a href="{}">{}</a>
+            </td>
+            <td>{}</td>
+            <td class="text-right noprint">
+                <a href="{}" class="btn btn-xs btn-primary" title="View elevations">
+                    <i class="mdi mdi-server"></i>
+                </a>
+            </td>
+        </tr>
+        """,
+        indent_px,
+        url,
+        name,
+        count,
+        elevation_url,
     )
 
 
