@@ -132,3 +132,12 @@ def validate_interface_tagged_vlans(instance, model, pk_set):
                 )
             }
         )
+
+
+def convert_watts_to_va(watts, power_factor):
+    """
+    Convert watts to VA using power factor.
+    """
+    if not watts:
+        return 0
+    return int(watts / power_factor)

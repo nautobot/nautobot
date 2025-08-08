@@ -11,4 +11,4 @@ Cables can connect power outlets only to downstream power ports. (Pass-through p
 
 ## Example Power Topology
 
-![Power distribution model](../../../media/power_distribution.png)
+![Power distribution model](../../../media/power_distribution.png){: style="width: 50%"}

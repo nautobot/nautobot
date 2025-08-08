@@ -88,11 +88,14 @@ from .choices import (
     InterfaceTypeChoices,
     LocationDataToContactActionChoices,
     PortTypeChoices,
+    PowerFeedBreakerPoleChoices,
     PowerFeedPhaseChoices,
+    PowerFeedPowerPathChoices,
     PowerFeedSupplyChoices,
     PowerFeedTypeChoices,
     PowerOutletFeedLegChoices,
     PowerOutletTypeChoices,
+    PowerPanelTypeChoices,
     PowerPortTypeChoices,
     RackDimensionUnitChoices,
     RackTypeChoices,
@@ -1292,6 +1295,7 @@ class PowerPortTemplateForm(ModularComponentTemplateForm):
             "type",
             "maximum_draw",
             "allocated_draw",
+            "power_factor",
             "description",
         ]
 
@@ -1300,6 +1304,15 @@ class PowerPortTemplateCreateForm(ModularComponentTemplateCreateForm):
     type = forms.ChoiceField(choices=add_blank_choice(PowerPortTypeChoices), required=False)
     maximum_draw = forms.IntegerField(min_value=1, required=False, help_text="Maximum power draw (watts)")
     allocated_draw = forms.IntegerField(min_value=1, required=False, help_text="Allocated power draw (watts)")
+    power_factor = forms.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        min_value=0.01,
+        max_value=1.00,
+        required=False,
+        initial=0.95,
+        help_text="Power factor (0.01-1.00) for converting between watts (W) and volt-amps (VA).",
+    )
     field_order = (
         "device_type",
         "module_family",
@@ -1309,7 +1322,9 @@ class PowerPortTemplateCreateForm(ModularComponentTemplateCreateForm):
         "type",
         "maximum_draw",
         "allocated_draw",
+        "power_factor",
         "description",
+        "tags",
     )
 
 
@@ -1323,6 +1338,14 @@ class PowerPortTemplateBulkEditForm(NautobotBulkEditForm):
     )
     maximum_draw = forms.IntegerField(min_value=1, required=False, help_text="Maximum power draw (watts)")
     allocated_draw = forms.IntegerField(min_value=1, required=False, help_text="Allocated power draw (watts)")
+    power_factor = forms.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        min_value=0.01,
+        max_value=1.00,
+        required=False,
+        help_text="Power factor (0.01-1.00) for converting between watts and VA.",
+    )
     description = forms.CharField(required=False)
 
     class Meta:
@@ -1898,6 +1921,7 @@ class PowerPortTemplateImportForm(ComponentTemplateImportForm):
             "type",
             "maximum_draw",
             "allocated_draw",
+            "power_factor",
         ]
 
 
@@ -2906,6 +2930,7 @@ class PowerPortForm(ModularComponentEditForm):
             "type",
             "maximum_draw",
             "allocated_draw",
+            "power_factor",
             "description",
             "tags",
         ]
@@ -2919,6 +2944,15 @@ class PowerPortCreateForm(ModularComponentCreateForm):
     )
     maximum_draw = forms.IntegerField(min_value=1, required=False, help_text="Maximum draw in watts")
     allocated_draw = forms.IntegerField(min_value=1, required=False, help_text="Allocated draw in watts")
+    power_factor = forms.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        min_value=0.01,
+        max_value=1.00,
+        required=False,
+        initial=0.95,
+        help_text="Power factor (0.01-1.00) for converting between watts and VA.",
+    )
     field_order = (
         "device",
         "module_family",
@@ -2928,43 +2962,68 @@ class PowerPortCreateForm(ModularComponentCreateForm):
         "type",
         "maximum_draw",
         "allocated_draw",
+        "power_factor",
         "description",
         "tags",
     )
 
 
 class PowerPortBulkCreateForm(
-    form_from_model(PowerPort, ["type", "maximum_draw", "allocated_draw", "tags"]),
+    form_from_model(PowerPort, ["type", "maximum_draw", "allocated_draw", "power_factor", "tags"]),
     DeviceBulkAddComponentForm,
 ):
+    # Override the auto-generated power_factor field to make it properly optional
+    power_factor = forms.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        min_value=0.01,
+        max_value=1.00,
+        required=False,
+        initial=0.95,
+        help_text="Power factor (0.01-1.00) for converting between watts and VA.",
+    )
+
     field_order = (
         "name_pattern",
         "label_pattern",
         "type",
         "maximum_draw",
         "allocated_draw",
+        "power_factor",
         "description",
         "tags",
     )
 
 
 class ModulePowerPortBulkCreateForm(
-    form_from_model(PowerPort, ["type", "maximum_draw", "allocated_draw", "tags"]),
+    form_from_model(PowerPort, ["type", "maximum_draw", "allocated_draw", "power_factor", "tags"]),
     ModuleBulkAddComponentForm,
 ):
+    # Override the auto-generated power_factor field to make it properly optional
+    power_factor = forms.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        min_value=0.01,
+        max_value=1.00,
+        required=False,
+        initial=0.95,
+        help_text="Power factor (0.01-1.00) for converting between watts and VA.",
+    )
+
     field_order = (
         "name_pattern",
         "label_pattern",
         "type",
         "maximum_draw",
         "allocated_draw",
+        "power_factor",
         "description",
         "tags",
     )
 
 
 class PowerPortBulkEditForm(
-    form_from_model(PowerPort, ["label", "type", "maximum_draw", "allocated_draw", "description"]),
+    form_from_model(PowerPort, ["label", "type", "maximum_draw", "allocated_draw", "power_factor", "description"]),
     TagsBulkEditFormMixin,
     NautobotBulkEditForm,
 ):
@@ -4638,8 +4697,13 @@ class PowerPanelForm(LocatableModelFormMixin, NautobotModelForm):
             "location",
             "rack_group",
             "name",
+            "panel_type",
+            "breaker_position_count",
             "tags",
         ]
+        widgets = {
+            "panel_type": StaticSelect2(),
+        }
 
 
 class PowerPanelBulkEditForm(
@@ -4653,10 +4717,16 @@ class PowerPanelBulkEditForm(
         required=False,
         query_params={"location": "$location"},
     )
+    panel_type = forms.ChoiceField(
+        choices=add_blank_choice(PowerPanelTypeChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
+    breaker_position_count = forms.IntegerField(required=False, min_value=1)
 
     class Meta:
         model = PowerPanel
-        nullable_fields = ["rack_group"]
+        nullable_fields = ["rack_group", "panel_type", "breaker_position_count"]
 
 
 class PowerPanelFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
@@ -4669,6 +4739,12 @@ class PowerPanelFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
         null_option="None",
         query_params={"location": "$location"},
     )
+    panel_type = forms.MultipleChoiceField(
+        choices=add_blank_choice(PowerPanelTypeChoices),
+        required=False,
+        widget=StaticSelect2Multiple(),
+    )
+    breaker_position_count = forms.IntegerField(required=False, min_value=1)
     tags = TagFilterField(model)
 
 
@@ -4683,44 +4759,59 @@ class PowerFeedForm(NautobotModelForm):
         required=False,
         initial_params={"power_panels": "$power_panel"},
     )
-    power_panel = DynamicModelChoiceField(queryset=PowerPanel.objects.all(), query_params={"location": "$location"})
-    rack = DynamicModelChoiceField(
-        queryset=Rack.objects.all(),
-        required=False,
+    power_panel = DynamicModelChoiceField(
+        queryset=PowerPanel.objects.all(),
         query_params={"location": "$location"},
     )
-    comments = CommentField()
+    destination_panel = DynamicModelChoiceField(
+        queryset=PowerPanel.objects.all(), required=False, query_params={"location": "$location"}
+    )
+    rack = DynamicModelChoiceField(queryset=Rack.objects.all(), required=False, query_params={"location": "$location"})
+    comments = CommentField(label="Comments")
 
     class Meta:
         model = PowerFeed
         fields = [
             "location",
             "power_panel",
+            "destination_panel",
             "rack",
             "name",
             "status",
             "type",
+            "power_path",
             "supply",
             "phase",
             "voltage",
             "amperage",
             "max_utilization",
+            "breaker_position",
+            "breaker_pole_count",
             "comments",
             "tags",
         ]
         widgets = {
             "type": StaticSelect2(),
+            "power_path": StaticSelect2(),
             "supply": StaticSelect2(),
             "phase": StaticSelect2(),
+            "breaker_pole_count": StaticSelect2(),
         }
 
 
 class PowerFeedBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=PowerFeed.objects.all(), widget=forms.MultipleHiddenInput)
     power_panel = DynamicModelChoiceField(queryset=PowerPanel.objects.all(), required=False)
+    destination_panel = DynamicModelChoiceField(queryset=PowerPanel.objects.all(), required=False)
     rack = DynamicModelChoiceField(queryset=Rack.objects.all(), required=False)
     type = forms.ChoiceField(
         choices=add_blank_choice(PowerFeedTypeChoices),
+        required=False,
+        initial="",
+        widget=StaticSelect2(),
+    )
+    power_path = forms.ChoiceField(
+        choices=add_blank_choice(PowerFeedPowerPathChoices),
         required=False,
         initial="",
         widget=StaticSelect2(),
@@ -4740,22 +4831,37 @@ class PowerFeedBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin,
     voltage = forms.IntegerField(required=False)
     amperage = forms.IntegerField(required=False)
     max_utilization = forms.IntegerField(required=False)
+    breaker_position = forms.IntegerField(required=False, min_value=1)
+    breaker_pole_count = forms.ChoiceField(
+        choices=add_blank_choice(PowerFeedBreakerPoleChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
     comments = CommentField(widget=SmallTextarea, label="Comments")
 
     class Meta:
         nullable_fields = [
+            "power_path",
+            "breaker_position",
+            "breaker_pole_count",
             "comments",
         ]
 
 
-class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
+class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, LocatableModelFilterFormMixin):
     model = PowerFeed
     q = forms.CharField(required=False, label="Search")
-    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     power_panel = DynamicModelMultipleChoiceField(
         queryset=PowerPanel.objects.all(),
         required=False,
         label="Power panel",
+        null_option="None",
+        query_params={"location": "$location"},
+    )
+    destination_panel = DynamicModelMultipleChoiceField(
+        queryset=PowerPanel.objects.all(),
+        required=False,
+        label="Destination panel",
         null_option="None",
         query_params={"location": "$location"},
     )
@@ -4764,11 +4870,16 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
         required=False,
         label="Rack",
         null_option="None",
-        query_params={"location": "$location"},
     )
     type = forms.ChoiceField(
         choices=add_blank_choice(PowerFeedTypeChoices),
         required=False,
+        widget=StaticSelect2(),
+    )
+    power_path = forms.ChoiceField(
+        choices=add_blank_choice(PowerFeedPowerPathChoices),
+        required=False,
+        initial="",
         widget=StaticSelect2(),
     )
     supply = forms.ChoiceField(
@@ -4784,6 +4895,12 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
     voltage = forms.IntegerField(required=False)
     amperage = forms.IntegerField(required=False)
     max_utilization = forms.IntegerField(required=False)
+    breaker_position = forms.IntegerField(required=False, min_value=1)
+    breaker_pole_count = forms.ChoiceField(
+        choices=add_blank_choice(PowerFeedBreakerPoleChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
     tags = TagFilterField(model)
 
 

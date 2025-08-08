@@ -16,6 +16,7 @@ from nautobot.dcim.filters import (
     PlatformFilterSet,
     PowerFeedFilterSet,
     PowerOutletFilterSet,
+    PowerPanelFilterSet,
     PowerPortFilterSet,
     RackFilterSet,
     RearPortFilterSet,
@@ -35,6 +36,7 @@ from nautobot.dcim.models import (
     Platform,
     PowerFeed,
     PowerOutlet,
+    PowerPanel,
     PowerPort,
     Rack,
     RearPort,
@@ -269,6 +271,14 @@ class PowerOutletType(OptimizedNautobotObjectType, CableTerminationMixin, PathEn
     # Resolver Definitions
     resolve_cable_peer_power_port = construct_resolver("PowerPort", "cable_peer")
     resolve_connected_power_port = construct_resolver("PowerPort", "connected_endpoint")
+
+
+class PowerPanelType(OptimizedNautobotObjectType):
+    """Graphql Type Object for PowerPanel model."""
+
+    class Meta:
+        model = PowerPanel
+        filterset_class = PowerPanelFilterSet
 
 
 class PowerPortType(OptimizedNautobotObjectType, CableTerminationMixin, PathEndpointMixin):

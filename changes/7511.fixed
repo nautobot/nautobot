@@ -1,0 +1,1 @@
+Fixed bug in device detail template where `object.powerports` and `object.poweroutlets` were incorrectly referenced instead of `object.power_ports` and `object.power_outlets`, preventing the Power Utilization panel from being displayed on the device detail page.
