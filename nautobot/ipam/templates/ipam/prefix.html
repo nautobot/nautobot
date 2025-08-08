@@ -4,7 +4,7 @@
 {% block breadcrumbs %}
     <li class="breadcrumb-item"><a href="{% url 'ipam:namespace_list' %}">Namespaces</a></li>
     <li class="breadcrumb-item">{{ object.namespace | hyperlinked_object }}</li>
-    <li class="breadcrumb-item"><a href="{% url list_url %}?namespace={{ object.namespace.pk }}">{{ verbose_name_plural|bettertitle }}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'ipam:prefix_list' %}?namespace={{ object.namespace.pk }}">{{ verbose_name_plural|bettertitle }}</a></li>
     {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
     <li class="breadcrumb-item">{{ object|hyperlinked_object }}</li>
 {% endblock breadcrumbs %}
