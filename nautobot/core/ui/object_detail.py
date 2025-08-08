@@ -406,6 +406,7 @@ class Tab(Component):
                 "tab_id": self.tab_id,
                 "label": self.render_label(context),
                 "include_plugin_content": self.tab_id == "main",
+                "include_timestamps_and_buttons": self.tab_id == "main",
                 "left_half_panels": self.panels_for_section(SectionChoices.LEFT_HALF),
                 "right_half_panels": self.panels_for_section(SectionChoices.RIGHT_HALF),
                 "full_width_panels": self.panels_for_section(SectionChoices.FULL_WIDTH),

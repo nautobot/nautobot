@@ -1,3 +1,25 @@
+{% load buttons %}
+{% load custom_links %}
+{% load job_buttons %}
+{% load plugins %}
+{% load ui_framework %}
+
 <div id="{{ tab_id }}" role="tabpanel" class="tab-pane fade{% if active_tab == tab_id or request.GET.tab == tab_id %} show active{% endif %}">
+    {% if include_timestamps_and_buttons %}
+        <div class="align-items-center d-flex flex-wrap mb-16">
+            {% include 'inc/created_updated.html' %}
+            <div class="flex-grow-0 flex-shrink-0 d-print-none">
+                {% block buttons %}
+                    {% plugin_buttons object %}
+                    {% render_detail_view_extra_buttons %}
+                    {% block extra_buttons %}{% endblock extra_buttons %}
+                    {% consolidate_detail_view_action_buttons %}
+                {% endblock buttons %}
+                {% custom_links object %}
+                {% job_buttons object %}
+                {% block panel_buttons %}{% endblock panel_buttons %}
+            </div>
+        </div>
+    {% endif %}
     {{ tab_content }}
 </div>
