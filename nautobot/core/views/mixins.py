@@ -1,3 +1,4 @@
+from copy import deepcopy
 import logging
 from typing import ClassVar, Optional
 
@@ -1387,3 +1388,106 @@ class ObjectNotesViewMixin(NautobotViewSetMixin):
             "active_tab": "notes",
         }
         return Response(data)
+
+
+class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
+    create_form_class: type[Form]
+    form_class: type[Form]
+
+    def create(self, request, *args, **kwargs):
+        if request.method == "POST":
+            return self.process_form(request, *args, **kwargs)
+
+        create_form = self.create_form_class(  # pylint: disable=not-callable
+            initial=normalize_querydict(request.GET, form_class=self.create_form_class)
+        )
+        model_form = self.form_class(initial=normalize_querydict(request.GET, form_class=self.form_class))  # pylint: disable=not-callable
+
+        return Response(
+            {
+                "template": self.create_template_name,
+                "component_type": self.queryset.model._meta.verbose_name,
+                "model_form": model_form,
+                "form": create_form,
+                "return_url": self.get_return_url(request),
+            },
+        )
+
+    def process_form(self, request, *args, **kwargs):
+        create_form = self.create_form_class(  # pylint: disable=not-callable
+            request.POST,
+            initial=normalize_querydict(request.GET, form_class=self.create_form_class),
+        )
+        if create_form.is_valid():
+            new_components = []
+            data = deepcopy(request.POST)
+
+            # Support for bulk creation using name_pattern and label_pattern
+            names = create_form.cleaned_data["name_pattern"]
+            labels = create_form.cleaned_data.get("label_pattern")
+
+            # Create multiple objects based on the name_pattern
+            for i, name in enumerate(names):
+                label = labels[i] if labels else None
+                # Initialize the individual component form
+                data["name"] = name
+                data["label"] = label
+                if hasattr(create_form, "get_iterative_data"):
+                    data.update(create_form.get_iterative_data(i))
+
+                # Recreate the form for each iteration with updated data
+                component_form = self.form_class(  # pylint: disable=not-callable
+                    data,
+                    initial=normalize_querydict(request.GET, form_class=self.form_class),
+                )
+                if component_form.is_valid():
+                    new_components.append(component_form)
+                else:
+                    for field, errors in component_form.errors.as_data().items():
+                        # Assign errors on the child form's name/label field to name_pattern/label_pattern on the parent form
+                        if field == "name":
+                            field = "name_pattern"
+                        elif field == "label":
+                            field = "label_pattern"
+                        for e in errors:
+                            err_str = ", ".join(e)
+                            create_form.add_error(field, f"{name}: {err_str}")
+
+            if not create_form.errors:
+                try:
+                    with transaction.atomic():
+                        # Create the new components
+                        new_objs = []
+                        for component_form in new_components:
+                            obj = component_form.save()
+                            new_objs.append(obj)
+
+                        # Enforce object-level permissions
+                        if self.get_queryset().filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):
+                            raise ObjectDoesNotExist
+
+                    messages.success(
+                        request,
+                        f"Added {len(new_components)} {self.queryset.model._meta.verbose_name_plural}",
+                    )
+                    if "_addanother" in request.POST:
+                        return redirect(request.get_full_path())
+                    else:
+                        return redirect(self.get_return_url(request))
+
+                except ObjectDoesNotExist:
+                    msg = "Component creation failed due to object-level permissions violation"
+                    create_form.add_error(None, msg)
+        model_form = self.form_class(  # pylint: disable=not-callable
+            request.POST,
+            initial=normalize_querydict(request.GET, form_class=self.form_class),
+        )
+        return Response(
+            {
+                "template": self.create_template_name,
+                "component_type": self.queryset.model._meta.verbose_name,
+                "form": create_form,
+                "model_form": model_form,
+                "return_url": self.get_return_url(request),
+            },
+        )
