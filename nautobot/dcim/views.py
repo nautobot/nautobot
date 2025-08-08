@@ -30,7 +30,7 @@ from rest_framework.response import Response
 
 from nautobot.circuits.models import Circuit
 from nautobot.cloud.tables import CloudAccountTable
-from nautobot.core.choices import ButtonColorChoices
+from nautobot.core.choices import ButtonActionColorChoices, ButtonColorChoices
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
@@ -55,6 +55,7 @@ from nautobot.core.views.mixins import (
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.views.utils import get_obj_from_context
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
@@ -725,6 +726,31 @@ class ManufacturerUIViewSet(NautobotUIViewSet):
 #
 # Device types
 #
+
+
+class DeviceTypeFieldsPanel(object_detail.ObjectFieldsPanel):
+    """
+    Custom panel for DeviceType that renders front_image and rear_image
+    as image previews with links, and falls back to normal rendering for other fields.
+    """
+
+    def render_value(self, key, value, context):
+        obj = get_obj_from_context(context, self.context_object_key)
+
+        if key in ["front_image", "rear_image"]:
+            image = getattr(obj, key, None)
+            if image:
+                return format_html(
+                    '<a href="{}" target="_blank"><img src="{}" alt="{}" class="img-responsive"></a>',
+                    image.url,
+                    image.url,
+                    image.name,
+                )
+            return format_html('<span class="text-muted">&mdash;</span>')
+
+        return super().render_value(key, value, context)
+
+
 class DeviceTypeUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.DeviceTypeBulkEditForm
     filterset_class = filters.DeviceTypeFilterSet
@@ -734,81 +760,669 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
     table_class = tables.DeviceTypeTable
     queryset = DeviceType.objects.select_related("manufacturer").prefetch_related("software_image_files")
 
-    def get_extra_context(self, request, instance):
-        if self.action != "retrieve":
-            return {}
-        instance_count = Device.objects.restrict(request.user).filter(device_type=instance).count()
-
-        # Component tables
-        consoleport_table = tables.ConsolePortTemplateTable(
-            ConsolePortTemplate.objects.restrict(request.user, "view").filter(device_type=instance),
-            orderable=False,
-        )
-        consoleserverport_table = tables.ConsoleServerPortTemplateTable(
-            ConsoleServerPortTemplate.objects.restrict(request.user, "view").filter(device_type=instance),
-            orderable=False,
-        )
-        powerport_table = tables.PowerPortTemplateTable(
-            PowerPortTemplate.objects.restrict(request.user, "view").filter(device_type=instance),
-            orderable=False,
-        )
-        poweroutlet_table = tables.PowerOutletTemplateTable(
-            PowerOutletTemplate.objects.restrict(request.user, "view").filter(device_type=instance),
-            orderable=False,
-        )
-        interface_table = tables.InterfaceTemplateTable(
-            list(InterfaceTemplate.objects.restrict(request.user, "view").filter(device_type=instance)),
-            orderable=False,
-        )
-        front_port_table = tables.FrontPortTemplateTable(
-            FrontPortTemplate.objects.restrict(request.user, "view").filter(device_type=instance),
-            orderable=False,
-        )
-        rear_port_table = tables.RearPortTemplateTable(
-            RearPortTemplate.objects.restrict(request.user, "view").filter(device_type=instance),
-            orderable=False,
-        )
-        devicebay_table = tables.DeviceBayTemplateTable(
-            DeviceBayTemplate.objects.restrict(request.user, "view").filter(device_type=instance),
-            orderable=False,
-        )
-        modulebay_table = tables.ModuleBayTemplateTable(
-            ModuleBayTemplate.objects.restrict(request.user, "view").filter(device_type=instance),
-            orderable=False,
-        )
-        if request.user.has_perm("dcim.change_devicetype"):
-            consoleport_table.columns.show("pk")
-            consoleserverport_table.columns.show("pk")
-            powerport_table.columns.show("pk")
-            poweroutlet_table.columns.show("pk")
-            interface_table.columns.show("pk")
-            front_port_table.columns.show("pk")
-            rear_port_table.columns.show("pk")
-            devicebay_table.columns.show("pk")
-            modulebay_table.columns.show("pk")
-
-        software_image_files_table = tables.SoftwareImageFileTable(
-            instance.software_image_files.restrict(request.user, "view").annotate(
-                device_type_count=count_related(DeviceType, "software_image_files"),
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            DeviceTypeFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
             ),
-            orderable=False,
-            exclude=["actions", "tags"],
-        )
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                table_class=tables.SoftwareImageFileTable,
+                table_filter="device_types",
+                select_related_fields=["software_version", "status"],
+                exclude_columns=["actions", "tags"],
+                related_field_name="device_types",
+                add_button_route=None,
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=300,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.DeviceTable,
+                table_filter="device_type",
+                related_field_name="device_type",
+                table_title="Device Instances",
+                exclude_columns=["actions", "tags"],
+            ),
+        ),
+        extra_buttons=(
+            object_detail.DropdownButton(
+                weight=100,
+                color=ButtonColorChoices.BLUE,
+                label="Add Components",
+                attributes={"id": "device-type-add-components-button"},
+                icon="mdi-plus-thick",
+                required_permissions=["dcim.change_devicetype"],
+                children=(
+                    object_detail.Button(
+                        weight=100,
+                        link_name="dcim:consoleporttemplate_add",
+                        label="Console Ports",
+                        icon="mdi-console",
+                        required_permissions=["dcim.add_consoleporttemplate"],
+                        link_includes_pk=False,
+                    ),
+                    object_detail.Button(
+                        weight=200,
+                        link_name="dcim:consoleserverporttemplate_add",
+                        label="Console Server Ports",
+                        icon="mdi-console-network-outline",
+                        required_permissions=["dcim.add_consoleserverporttemplate"],
+                        link_includes_pk=False,
+                    ),
+                    object_detail.Button(
+                        weight=300,
+                        link_name="dcim:powerporttemplate_add",
+                        label="Power Ports",
+                        icon="mdi-power-plug-outline",
+                        required_permissions=["dcim.add_powerporttemplate"],
+                        link_includes_pk=False,
+                    ),
+                    object_detail.Button(
+                        weight=400,
+                        link_name="dcim:poweroutlettemplate_add",
+                        label="Power Outlets",
+                        icon="mdi-power-socket",
+                        required_permissions=["dcim.add_poweroutlettemplate"],
+                        link_includes_pk=False,
+                    ),
+                    object_detail.Button(
+                        weight=500,
+                        link_name="dcim:interfacetemplate_add",
+                        label="Interfaces",
+                        icon="mdi-ethernet",
+                        required_permissions=["dcim.add_interfacetemplate"],
+                        link_includes_pk=False,
+                    ),
+                    object_detail.Button(
+                        weight=600,
+                        link_name="dcim:frontporttemplate_add",
+                        label="Front Ports",
+                        icon="mdi-square-rounded-outline",
+                        required_permissions=["dcim.add_frontporttemplate"],
+                        link_includes_pk=False,
+                    ),
+                    object_detail.Button(
+                        weight=700,
+                        link_name="dcim:rearporttemplate_add",
+                        label="Rear Ports",
+                        icon="mdi-square-rounded-outline",
+                        required_permissions=["dcim.add_rearporttemplate"],
+                        link_includes_pk=False,
+                    ),
+                    object_detail.Button(
+                        weight=800,
+                        link_name="dcim:devicebaytemplate_add",
+                        label="Device Bays",
+                        icon="mdi-circle-outline",
+                        required_permissions=["dcim.add_devicebaytemplate"],
+                        link_includes_pk=False,
+                    ),
+                    object_detail.Button(
+                        weight=900,
+                        link_name="dcim:modulebaytemplate_add",
+                        label="Module Bays",
+                        icon="mdi-tray",
+                        required_permissions=["dcim.add_modulebaytemplate"],
+                        link_includes_pk=False,
+                    ),
+                ),
+            ),
+        ),
+        extra_tabs=(
+            object_detail.DistinctViewTab(
+                weight=100,
+                tab_id="interfaces",
+                label="Interfaces",
+                url_name="dcim:devicetype_interfaces",
+                related_object_attribute="interface_templates",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Interfaces",
+                        table_class=tables.InterfaceTemplateTable,
+                        table_filter="device_type",
+                        tab_id="interfaces",
+                        enable_bulk_actions=True,
+                        form_id="interfacetemplate_form",
+                        footer_buttons=[
+                            object_detail.FormButton(
+                                link_name="dcim:interfacetemplate_bulk_rename",
+                                link_includes_pk=False,
+                                label="Rename",
+                                color=ButtonActionColorChoices.RENAME,
+                                icon="mdi-pencil",
+                                size="xs",
+                                form_id="interfacetemplate_form",
+                                weight=200,
+                            ),
+                            object_detail.FormButton(
+                                link_name="dcim:interfacetemplate_bulk_edit",
+                                link_includes_pk=False,
+                                label="Edit",
+                                color=ButtonActionColorChoices.EDIT,
+                                icon="mdi-pencil",
+                                size="xs",
+                                form_id="interfacetemplate_form",
+                                weight=300,
+                            ),
+                            object_detail.FormButton(
+                                link_name="dcim:interfacetemplate_bulk_delete",
+                                link_includes_pk=False,
+                                label="Delete",
+                                color=ButtonActionColorChoices.DELETE,
+                                icon="mdi-trash-can-outline",
+                                size="xs",
+                                form_id="interfacetemplate_form",
+                                weight=400,
+                            ),
+                        ],
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=200,
+                tab_id="frontports",
+                label="Front Ports",
+                url_name="dcim:devicetype_frontports",
+                related_object_attribute="front_port_templates",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Front Ports",
+                        table_class=tables.FrontPortTemplateTable,
+                        table_filter="device_type",
+                        tab_id="frontports",
+                        enable_bulk_actions=True,
+                        form_id="frontporttemplate_form",
+                        footer_buttons=[
+                            object_detail.FormButton(
+                                link_name="dcim:frontporttemplate_bulk_rename",
+                                link_includes_pk=False,
+                                label="Rename",
+                                color=ButtonActionColorChoices.RENAME,
+                                icon="mdi-pencil",
+                                size="xs",
+                                form_id="frontporttemplate_form",
+                                weight=200,
+                            ),
+                            object_detail.FormButton(
+                                link_name="dcim:frontporttemplate_bulk_edit",
+                                link_includes_pk=False,
+                                label="Edit",
+                                color=ButtonActionColorChoices.EDIT,
+                                icon="mdi-pencil",
+                                size="xs",
+                                form_id="frontporttemplate_form",
+                                weight=300,
+                            ),
+                            object_detail.FormButton(
+                                link_name="dcim:frontporttemplate_bulk_delete",
+                                link_includes_pk=False,
+                                label="Delete",
+                                color=ButtonActionColorChoices.DELETE,
+                                icon="mdi-trash-can-outline",
+                                size="xs",
+                                form_id="frontporttemplate_form",
+                                weight=400,
+                            ),
+                        ],
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=300,
+                tab_id="rearports",
+                label="Rear Ports",
+                url_name="dcim:devicetype_rearports",
+                related_object_attribute="rear_port_templates",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Rear Ports",
+                        table_class=tables.RearPortTemplateTable,
+                        table_filter="device_type",
+                        tab_id="rearports",
+                        enable_bulk_actions=True,
+                        form_id="rearporttemplate_form",
+                        footer_buttons=[
+                            object_detail.FormButton(
+                                link_name="dcim:rearporttemplate_bulk_rename",
+                                link_includes_pk=False,
+                                label="Rename",
+                                color=ButtonActionColorChoices.RENAME,
+                                icon="mdi-pencil",
+                                size="xs",
+                                form_id="rearporttemplate_form",
+                                weight=200,
+                            ),
+                            object_detail.FormButton(
+                                link_name="dcim:rearporttemplate_bulk_edit",
+                                link_includes_pk=False,
+                                label="Edit",
+                                color=ButtonActionColorChoices.EDIT,
+                                icon="mdi-pencil",
+                                size="xs",
+                                form_id="rearporttemplate_form",
+                                weight=300,
+                            ),
+                            object_detail.FormButton(
+                                link_name="dcim:rearporttemplate_bulk_delete",
+                                link_includes_pk=False,
+                                label="Delete",
+                                color=ButtonActionColorChoices.DELETE,
+                                icon="mdi-trash-can-outline",
+                                size="xs",
+                                form_id="rearporttemplate_form",
+                                weight=400,
+                            ),
+                        ],
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=400,
+                tab_id="consoleports",
+                label="Console Ports",
+                url_name="dcim:devicetype_consoleports",
+                related_object_attribute="console_port_templates",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Console Ports",
+                        table_class=tables.ConsolePortTemplateTable,
+                        table_filter="device_type",
+                        tab_id="consoleports",
+                        enable_bulk_actions=True,
+                        form_id="consoleporttemplate_form",
+                        footer_buttons=[
+                            object_detail.FormButton(
+                                link_name="dcim:consoleporttemplate_bulk_rename",
+                                link_includes_pk=False,
+                                label="Rename",
+                                color=ButtonActionColorChoices.RENAME,
+                                icon="mdi-pencil",
+                                size="xs",
+                                form_id="consoleporttemplate_form",
+                                weight=200,
+                            ),
+                            object_detail.FormButton(
+                                link_name="dcim:consoleporttemplate_bulk_edit",
+                                link_includes_pk=False,
+                                label="Edit",
+                                color=ButtonActionColorChoices.EDIT,
+                                icon="mdi-pencil",
+                                size="xs",
+                                form_id="consoleporttemplate_form",
+                                weight=300,
+                            ),
+                            object_detail.FormButton(
+                                link_name="dcim:consoleporttemplate_bulk_delete",
+                                link_includes_pk=False,
+                                label="Delete",
+                                color=ButtonActionColorChoices.DELETE,
+                                icon="mdi-trash-can-outline",
+                                size="xs",
+                                form_id="consoleporttemplate_form",
+                                weight=400,
+                            ),
+                        ],
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=500,
+                tab_id="consoleserverports",
+                label="Console Server Ports",
+                url_name="dcim:devicetype_consoleserverports",
+                related_object_attribute="console_server_port_templates",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Console Server Ports",
+                        table_class=tables.ConsoleServerPortTemplateTable,
+                        table_filter="device_type",
+                        tab_id="consoleserverports",
+                        enable_bulk_actions=True,
+                        form_id="consoleserverporttemplate_form",
+                        footer_buttons=[
+                            object_detail.FormButton(
+                                link_name="dcim:consoleserverporttemplate_bulk_rename",
+                                link_includes_pk=False,
+                                label="Rename",
+                                color=ButtonActionColorChoices.RENAME,
+                                icon="mdi-pencil",
+                                size="xs",
+                                form_id="consoleserverporttemplate_form",
+                                weight=200,
+                            ),
+                            object_detail.FormButton(
+                                link_name="dcim:consoleserverporttemplate_bulk_edit",
+                                link_includes_pk=False,
+                                label="Edit",
+                                color=ButtonActionColorChoices.EDIT,
+                                icon="mdi-pencil",
+                                size="xs",
+                                form_id="consoleserverporttemplate_form",
+                                weight=300,
+                            ),
+                            object_detail.FormButton(
+                                link_name="dcim:consoleserverporttemplate_bulk_delete",
+                                link_includes_pk=False,
+                                label="Delete",
+                                color=ButtonActionColorChoices.DELETE,
+                                icon="mdi-trash-can-outline",
+                                size="xs",
+                                form_id="consoleserverporttemplate_form",
+                                weight=400,
+                            ),
+                        ],
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=600,
+                tab_id="powerports",
+                label="Power Ports",
+                url_name="dcim:devicetype_powerports",
+                related_object_attribute="power_port_templates",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Power Ports",
+                        table_class=tables.PowerPortTemplateTable,
+                        table_filter="device_type",
+                        tab_id="powerports",
+                        enable_bulk_actions=True,
+                        form_id="powerporttemplate_form",
+                        footer_buttons=[
+                            object_detail.FormButton(
+                                link_name="dcim:powerporttemplate_bulk_rename",
+                                link_includes_pk=False,
+                                label="Rename",
+                                color=ButtonActionColorChoices.RENAME,
+                                icon="mdi-pencil",
+                                size="xs",
+                                form_id="powerporttemplate_form",
+                                weight=200,
+                            ),
+                            object_detail.FormButton(
+                                link_name="dcim:powerporttemplate_bulk_edit",
+                                link_includes_pk=False,
+                                label="Edit",
+                                color=ButtonActionColorChoices.EDIT,
+                                icon="mdi-pencil",
+                                size="xs",
+                                form_id="powerporttemplate_form",
+                                weight=300,
+                            ),
+                            object_detail.FormButton(
+                                link_name="dcim:powerporttemplate_bulk_delete",
+                                link_includes_pk=False,
+                                label="Delete",
+                                color=ButtonActionColorChoices.DELETE,
+                                icon="mdi-trash-can-outline",
+                                size="xs",
+                                form_id="powerporttemplate_form",
+                                weight=400,
+                            ),
+                        ],
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=700,
+                tab_id="poweroutlets",
+                label="Power Outlets",
+                url_name="dcim:devicetype_poweroutlets",
+                related_object_attribute="power_outlet_templates",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Power Outlets",
+                        table_class=tables.PowerOutletTemplateTable,
+                        table_filter="device_type",
+                        tab_id="poweroutlets",
+                        enable_bulk_actions=True,
+                        form_id="poweroutlettemplate_form",
+                        footer_buttons=[
+                            object_detail.FormButton(
+                                link_name="dcim:poweroutlettemplate_bulk_rename",
+                                link_includes_pk=False,
+                                label="Rename",
+                                color=ButtonActionColorChoices.RENAME,
+                                icon="mdi-pencil",
+                                size="xs",
+                                form_id="poweroutlettemplate_form",
+                                weight=200,
+                            ),
+                            object_detail.FormButton(
+                                link_name="dcim:poweroutlettemplate_bulk_edit",
+                                link_includes_pk=False,
+                                label="Edit",
+                                color=ButtonActionColorChoices.EDIT,
+                                icon="mdi-pencil",
+                                size="xs",
+                                form_id="poweroutlettemplate_form",
+                                weight=300,
+                            ),
+                            object_detail.FormButton(
+                                link_name="dcim:poweroutlettemplate_bulk_delete",
+                                link_includes_pk=False,
+                                label="Delete",
+                                color=ButtonActionColorChoices.DELETE,
+                                icon="mdi-trash-can-outline",
+                                size="xs",
+                                form_id="poweroutlettemplate_form",
+                                weight=400,
+                            ),
+                        ],
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=800,
+                tab_id="devicebays",
+                label="Device Bays",
+                url_name="dcim:devicetype_devicebays",
+                related_object_attribute="device_bay_templates",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Device Bays",
+                        table_class=tables.DeviceBayTemplateTable,
+                        table_filter="device_type",
+                        tab_id="devicebays",
+                        enable_bulk_actions=True,
+                        form_id="devicebaytemplate_form",
+                        footer_buttons=[
+                            object_detail.FormButton(
+                                link_name="dcim:devicebaytemplate_bulk_rename",
+                                link_includes_pk=False,
+                                label="Rename",
+                                color=ButtonActionColorChoices.RENAME,
+                                icon="mdi-pencil",
+                                size="xs",
+                                form_id="devicebaytemplate_form",
+                                weight=200,
+                            ),
+                            object_detail.FormButton(
+                                link_name="dcim:devicebaytemplate_bulk_edit",
+                                link_includes_pk=False,
+                                label="Edit",
+                                color=ButtonActionColorChoices.EDIT,
+                                icon="mdi-pencil",
+                                size="xs",
+                                form_id="devicebaytemplate_form",
+                                weight=300,
+                            ),
+                            object_detail.FormButton(
+                                link_name="dcim:devicebaytemplate_bulk_delete",
+                                link_includes_pk=False,
+                                label="Delete",
+                                color=ButtonActionColorChoices.DELETE,
+                                icon="mdi-trash-can-outline",
+                                size="xs",
+                                form_id="devicebaytemplate_form",
+                                weight=400,
+                            ),
+                        ],
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=900,
+                tab_id="modulebays",
+                label="Module Bays",
+                url_name="dcim:devicetype_modulebays",
+                related_object_attribute="module_bay_templates",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Module Bays",
+                        table_class=tables.ModuleBayTemplateTable,
+                        table_filter="device_type",
+                        tab_id="modulebays",
+                        enable_bulk_actions=True,
+                        form_id="modulebaytemplate_form",
+                        footer_buttons=[
+                            object_detail.FormButton(
+                                link_name="dcim:modulebaytemplate_bulk_rename",
+                                link_includes_pk=False,
+                                label="Rename",
+                                color=ButtonActionColorChoices.RENAME,
+                                icon="mdi-pencil",
+                                size="xs",
+                                form_id="modulebaytemplate_form",
+                                weight=200,
+                            ),
+                            object_detail.FormButton(
+                                link_name="dcim:modulebaytemplate_bulk_edit",
+                                link_includes_pk=False,
+                                label="Edit",
+                                color=ButtonActionColorChoices.EDIT,
+                                icon="mdi-pencil",
+                                size="xs",
+                                form_id="modulebaytemplate_form",
+                                weight=300,
+                            ),
+                            object_detail.FormButton(
+                                link_name="dcim:modulebaytemplate_bulk_delete",
+                                link_includes_pk=False,
+                                label="Delete",
+                                color=ButtonActionColorChoices.DELETE,
+                                icon="mdi-trash-can-outline",
+                                size="xs",
+                                form_id="modulebaytemplate_form",
+                                weight=400,
+                            ),
+                        ],
+                    ),
+                ),
+            ),
+        ),
+    )
 
-        return {
-            "instance_count": instance_count,
-            "consoleport_table": consoleport_table,
-            "consoleserverport_table": consoleserverport_table,
-            "powerport_table": powerport_table,
-            "poweroutlet_table": poweroutlet_table,
-            "interface_table": interface_table,
-            "front_port_table": front_port_table,
-            "rear_port_table": rear_port_table,
-            "devicebay_table": devicebay_table,
-            "modulebay_table": modulebay_table,
-            "software_image_files_table": software_image_files_table,
-            **super().get_extra_context(request, instance),
-        }
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="interfaces",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_interfacetemplate"],
+    )
+    def interfaces(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="frontports",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_frontporttemplate"],
+    )
+    def frontports(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="rearports",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_rearporttemplate"],
+    )
+    def rearports(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="consoleports",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_consoleporttemplate"],
+    )
+    def consoleports(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="consoleserverports",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_consoleserverporttemplate"],
+    )
+    def consoleserverports(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="powerports",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_powerporttemplate"],
+    )
+    def powerports(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="poweroutlets",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_poweroutlettemplate"],
+    )
+    def poweroutlets(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="devicebays",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_devicebaytemplate"],
+    )
+    def devicebays(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="modulebays",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_modulebaytemplate"],
+    )
+    def modulebays(self, request, *args, **kwargs):
+        return Response({})
 
 
 class DeviceTypeImportView(generic.ObjectImportView):
