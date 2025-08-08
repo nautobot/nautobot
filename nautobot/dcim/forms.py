@@ -1311,7 +1311,7 @@ class PowerPortTemplateCreateForm(ModularComponentTemplateCreateForm):
         max_value=1.00,
         required=False,
         initial=0.95,
-        help_text="Power factor (0.01-1.00) for converting between watts (W) to volt-amps (VA).",
+        help_text="Power factor (0.01-1.00) for converting between watts (W) and volt-amps (VA).",
     )
     field_order = (
         "device_type",
