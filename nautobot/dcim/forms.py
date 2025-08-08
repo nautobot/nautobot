@@ -1333,7 +1333,7 @@ class PowerPortTemplateBulkEditForm(NautobotBulkEditForm):
     label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     type = forms.ChoiceField(
         choices=add_blank_choice(PowerPortTypeChoices),
-        required=True,
+        required=False,
         widget=StaticSelect2(),
     )
     maximum_draw = forms.IntegerField(min_value=1, required=False, help_text="Maximum power draw (watts)")
@@ -1354,7 +1354,6 @@ class PowerPortTemplateBulkEditForm(NautobotBulkEditForm):
             "type",
             "maximum_draw",
             "allocated_draw",
-            "power_factor",
             "description",
         ]
 
