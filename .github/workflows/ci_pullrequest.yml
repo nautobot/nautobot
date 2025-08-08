@@ -159,6 +159,23 @@ jobs:
           python-version: "3.13"
       - name: "Run pylint"
         run: "poetry run invoke pylint"
+  ui-code-check:
+    name: "Check UI code style and formatting"
+    runs-on: "ubuntu-24.04"
+    defaults:
+      run:
+        working-directory: "nautobot/project-static"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v4"
+      - name: "Setup Node.js"
+        uses: "actions/setup-node@v4"
+        with:
+          node-version: "22"
+      - name: "Install npm dependencies"
+        run: "npm ci"
+      - name: "Run code-check"
+        run: "npm run code-check"
   ui-build-check:
     name: "Check UI src and dist files validity and integrity"
     runs-on: "ubuntu-24.04"

@@ -14,7 +14,7 @@ const getElement = (element) => (element instanceof Document || element instance
  * @returns {string|string[]} `string` value for single combobox, an array of `string` values for multiple combobox.
  */
 const getValue = (select) =>
-  select?.getAttribute('multiple') !== null ? [...select.selectedOptions].map((option) => option.value) : select?.value;
+  select?.getAttribute('multiple') === null ? select?.value : [...select.selectedOptions].map((option) => option.value);
 
 /**
  * Set Select2 combobox value(s).
@@ -25,12 +25,12 @@ const getValue = (select) =>
 export const setSelect2Value = (select2, value) => {
   $(select2).val(null);
 
-  (value ?? []).forEach(({ text, value }) => {
-    if (!select2.querySelector(`option[value="${value}"]`)) {
+  (value ?? []).forEach((attributes) => {
+    if (!select2.querySelector(`option[value="${attributes.value}"]`)) {
       const option = document.createElement('option');
-      option.innerText = text;
+      option.innerText = attributes.text;
       option.setAttribute('selected', 'true');
-      option.setAttribute('value', value);
+      option.setAttribute('value', attributes.value);
       select2.appendChild(option);
     }
   });
@@ -38,7 +38,7 @@ export const setSelect2Value = (select2, value) => {
   const nextValue = (() => {
     if (value.length > 0) {
       const isMultiple = select2?.getAttribute('multiple') !== null;
-      return isMultiple ? value.map(({ value }) => value) : value?.[0]?.value;
+      return isMultiple ? value.map((attributes) => attributes.value) : value?.[0]?.value;
     }
 
     return null;
@@ -55,7 +55,7 @@ export const setSelect2Value = (select2, value) => {
 const parseURL = (url) => {
   const filter_regex = /\{\{([a-z_]+)}}/g;
 
-  let match;
+  let match; // eslint-disable-line init-declarations
   let rendered_url = url;
 
   while ((match = filter_regex.exec(url))) {
@@ -82,8 +82,8 @@ const initializeSelect2 = (context, selector, options) =>
     $(element).select2({
       allowClear: true,
       placeholder: element.getAttribute('placeholder') || '---------',
-      theme: 'bootstrap-5',
       selectionCssClass: 'select2--small',
+      theme: 'bootstrap-5',
       width: 'off',
       ...options,
     }),
@@ -111,16 +111,8 @@ const initializeColorPicker = (context, dropdownParent = null) => {
 const initializeDynamicChoiceSelection = (context, dropdownParent = null) => {
   initializeSelect2(context, '.nautobot-select2-api', {
     ajax: {
-      delay: 500,
-      url: function () {
-        const element = this[0];
-        const url = parseURL(element.getAttribute('data-url'));
-
-        // If URL is not fully rendered yet, abort the request.
-        return !url.includes('{{') && url;
-      },
-      data: function (params) {
-        const element = this[0];
+      data: function data(params) {
+        const [element] = this;
 
         // Paging. Note that `params.page` indexes at 1.
         const offset = (params.page - 1) * 50 || 0;
@@ -148,6 +140,7 @@ const initializeDynamicChoiceSelection = (context, dropdownParent = null) => {
               const values = (() => {
                 try {
                   return JSON.parse(attribute.value);
+                  // eslint-disable-next-line no-unused-vars
                 } catch (exception) {
                   return [];
                 }
@@ -162,7 +155,7 @@ const initializeDynamicChoiceSelection = (context, dropdownParent = null) => {
                       const name = value.slice(1);
 
                       if (element.id.includes('id_form-')) {
-                        const id_prefix = element.id.match(/id_form-[0-9]+-/i, '')[0];
+                        const [id_prefix] = element.id.match(/id_form-[0-9]+-/i, '');
                         return document.querySelector(`#${id_prefix}${name}`);
                       }
 
@@ -214,8 +207,9 @@ const initializeDynamicChoiceSelection = (context, dropdownParent = null) => {
         // This will handle params with multiple values (i.e. for list filter forms).
         return new URLSearchParams(parameters).toString();
       },
-      processResults: function (data) {
-        const element = this.$element[0];
+      delay: 500,
+      processResults: function processResults(data) {
+        const [element] = this.$element;
         [...element.querySelectorAll('option')].forEach((child) => child.removeAttribute('disabled'));
 
         const results = [
@@ -224,7 +218,7 @@ const initializeDynamicChoiceSelection = (context, dropdownParent = null) => {
             ? [{ id: 'null', text: element.getAttribute('data-null-option') }]
             : []),
           ...Object.values(
-            data.results.reduce((results, record, index) => {
+            data.results.reduce((accumulator, record, index) => {
               // The disabled-indicator equated to true, so we disable this option.
               const disabled = Boolean(record?.[element.getAttribute('disabled-indicator')]);
               const id = get(record, element.getAttribute('value-field')) || record.id;
@@ -233,9 +227,11 @@ const initializeDynamicChoiceSelection = (context, dropdownParent = null) => {
               const item = { ...record, disabled, id, text };
               const { group, site, url } = item;
 
-              // DynamicGroupSerializer has a `children` field which fits an inappropriate if condition
-              // in select2.min.js, which will result in the incorrect rendering of DynamicGroup DynamicChoiceField.
-              // So we nullify the field here since we do not need this field.
+              /*
+               * `DynamicGroupSerializer` has a `children` field which fits an inappropriate if condition in
+               * `select2.min.js`, which will result in the incorrect rendering of `DynamicGroup` `DynamicChoiceField`.
+               * So we nullify the field here since we do not need this field.
+               */
               const should_nullify_children = Boolean(url?.includes('dynamic-groups'));
 
               const collection = (() => {
@@ -258,15 +254,15 @@ const initializeDynamicChoiceSelection = (context, dropdownParent = null) => {
               })();
 
               return {
-                ...results,
+                ...accumulator,
                 ...(collection
                   ? {
                       [collection.property]: {
-                        ...results[collection.property],
-                        ...(!results[collection.property] ? { text: collection.text } : undefined),
+                        ...accumulator[collection.property],
+                        ...(accumulator[collection.property] ? undefined : { text: collection.text }),
                         children: should_nullify_children
                           ? undefined
-                          : [...(results[collection.property]?.children ?? []), item],
+                          : [...(accumulator[collection.property]?.children ?? []), item],
                       },
                     }
                   : { [index]: item }),
@@ -277,7 +273,14 @@ const initializeDynamicChoiceSelection = (context, dropdownParent = null) => {
 
         // Check if there are more results to page.
         const has_next_page = data.next !== null;
-        return { results, pagination: { more: has_next_page } };
+        return { pagination: { more: has_next_page }, results };
+      },
+      url: function url() {
+        const [element] = this;
+        const dataUrl = parseURL(element.getAttribute('data-url'));
+
+        // If URL is not fully rendered yet, abort the request.
+        return !dataUrl.includes('{{') && dataUrl;
       },
     },
     dropdownParent,
