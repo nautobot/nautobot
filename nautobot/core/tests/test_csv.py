@@ -151,13 +151,13 @@ class CSVParsingRelatedTestCase(TestCase):
             self.assertEqual(lookup_querysets[0]["location__parent__parent__parent__name"], CSV_NO_OBJECT)
             self.assertEqual(lookup_querysets[0]["location__parent__parent__parent__parent__name"], CSV_NO_OBJECT)
 
+        expected_location_nested_lookup_values = {
+            f"location__{'parent__' * depth}name": CSV_NO_OBJECT
+            for depth in range(2, Location.objects.max_tree_depth() + 1)
+        }  # Location max_tree_depth is based on factory data so this has to be generated dynamically
         with self.subTest("Get the natural lookup field and its value"):
             # For Location
             location_lookup_value = serializer._get_natural_key_lookups_value_for_field("location", lookup_querysets[0])
-            expected_location_nested_lookup_values = {
-                f"location__{'parent__' * depth}name": CSV_NO_OBJECT
-                for depth in range(2, Location.objects.max_tree_depth() + 1)
-            }  # Location max_tree_depth is based on factory data so this has to be generated dynamically
             self.assertEqual(
                 location_lookup_value,
                 {

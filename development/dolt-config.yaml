@@ -4,6 +4,7 @@ log_level: "info"
 behavior:
   read_only: false
   autocommit: true
+  dolt_transaction_commit: true
 
 listener:
   host: "0.0.0.0"
