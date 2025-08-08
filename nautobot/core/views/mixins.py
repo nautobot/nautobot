@@ -41,6 +41,8 @@ from nautobot.core.forms import (
     restrict_form_fields,
 )
 from nautobot.core.jobs import BulkDeleteObjects, BulkEditObjects
+from nautobot.core.ui.breadcrumbs import Breadcrumbs
+from nautobot.core.ui.titles import Titles
 from nautobot.core.utils import filtering, lookup, permissions
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params, normalize_querydict
 from nautobot.core.views.renderers import NautobotHTMLRenderer
@@ -242,6 +244,22 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     # custom view attributes used for permission checks and handling
     custom_view_base_action = None
     custom_view_additional_permissions = None
+    view_titles = None
+    breadcrumbs = None
+
+    def get_view_titles(self):
+        return self.instantiate_if_needed(self.view_titles, Titles)
+
+    def get_breadcrumbs(self):
+        return self.instantiate_if_needed(self.breadcrumbs, Breadcrumbs)
+
+    @staticmethod
+    def instantiate_if_needed(attr, default_cls):
+        if attr is None:
+            return default_cls()
+        if isinstance(attr, type):
+            return attr()
+        return attr
 
     def get_permissions_for_model(self, model, actions):
         """

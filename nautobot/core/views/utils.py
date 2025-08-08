@@ -348,6 +348,7 @@ def common_detail_view_context(request, instance):
     created_by, last_updated_by = get_created_and_last_updated_usernames_for_model(instance)
     context["created_by"] = created_by
     context["last_updated_by"] = last_updated_by
+    context["detail"] = True
 
     if getattr(instance, "is_contact_associable_model", False):
         paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
