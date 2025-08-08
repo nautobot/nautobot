@@ -183,6 +183,8 @@ const initializeDynamicChoiceSelection = (context, dropdownParent = null) => {
                       if (ref_field.getAttribute('required') && ref_field.getAttribute('data-null-option')) {
                         return 'null';
                       }
+
+                      return undefined;
                     })()
                   : null;
 

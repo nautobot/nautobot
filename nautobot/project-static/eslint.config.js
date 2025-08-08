@@ -13,7 +13,6 @@ export default defineConfig([
     extends: [importPlugin.flatConfigs.recommended, 'js/all'],
     rules: {
       camelcase: 'off',
-      'consistent-return': 'off',
       'id-length': ['error', { exceptions: ['$', 'q'] }],
       'import/order': ['error', { alphabetize: { order: 'asc' }, 'newlines-between': 'never' }],
       'max-lines': 'off',
