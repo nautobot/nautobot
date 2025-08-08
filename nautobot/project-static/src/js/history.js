@@ -16,6 +16,7 @@ export const loadState = () => {
     try {
       const item = window.sessionStorage?.getItem(SESSION_STORAGE_KEY);
       return item ? JSON.parse(item) : undefined;
+      // eslint-disable-next-line no-unused-vars
     } catch (exception) {
       return undefined;
     }
@@ -42,7 +43,7 @@ export const loadState = () => {
  * @returns {void} Do not return any value, save current history entry state into `sessionStorage` instead.
  */
 export const saveState = (state) => {
-  const stateToSave = state !== undefined ? state : window.history?.state;
+  const stateToSave = state === undefined ? window.history?.state : state;
 
   if (stateToSave !== undefined) {
     window.sessionStorage?.setItem(SESSION_STORAGE_KEY, JSON.stringify(stateToSave));

@@ -20,6 +20,7 @@ export const initializeSearch = () => {
     try {
       const navMenu = document.getElementById('nav_menu');
       return navMenu ? JSON.parse(navMenu.textContent) : {};
+      // eslint-disable-next-line no-unused-vars
     } catch (exception) {
       return {};
     }
@@ -88,7 +89,7 @@ export const initializeSearch = () => {
     const { top: headerSearchInputTop } = headerSearchInput.getBoundingClientRect();
 
     const icon = createElement('span', {
-      ['aria-hidden']: 'true',
+      'aria-hidden': 'true',
       className:
         'mdi mdi-magnify d-inline-flex ms-12 mt-6 pe-none position-absolute start-0 text-secondary top-0 user-select-none',
       style: `height: ${ICON_SIZE}rem; width: ${ICON_SIZE}rem;`,
@@ -186,8 +187,15 @@ export const initializeSearch = () => {
       const removeButton = createElement(
         'button',
         { type: 'button' },
-        createElement('span', { ['aria-hidden']: 'true', class: 'mdi mdi-close' }),
+        createElement('span', { 'aria-hidden': 'true', class: 'mdi mdi-close' }),
         createElement('span', { class: 'visually-hidden' }, 'Remove'),
+      );
+
+      const badge = createElement(
+        'span',
+        { className: 'badge border', 'data-nb-link': link },
+        `in: ${name}`,
+        removeButton,
       );
 
       removeButton.addEventListener('click', () => {
@@ -195,20 +203,13 @@ export const initializeSearch = () => {
         input.focus();
       });
 
-      const badge = createElement(
-        'span',
-        { className: 'badge border', ['data-nb-link']: link },
-        `in: ${name}`,
-        removeButton,
-      );
-
       // Before adding a new badge, remove existing badges with the same `link` to prevent duplicates.
-      [...badges.querySelectorAll(`[data-nb-link="${link}"]`)].forEach((badge) => badge.remove());
+      [...badges.querySelectorAll(`[data-nb-link="${link}"]`)].forEach((existing) => existing.remove());
 
       badges.appendChild(badge);
 
       // Obey the `MAX_BADGE_COUNT` constraint.
-      [...badges.children].slice(0, -1 * MAX_BADGE_COUNT).forEach((badge) => badge.remove());
+      [...badges.children].slice(0, -1 * MAX_BADGE_COUNT).forEach((child) => child.remove());
     };
 
     // Recalculate search input left padding when badges container size changes, i.e. a badge is added or removed.
@@ -221,7 +222,7 @@ export const initializeSearch = () => {
 
     resizeObserver.observe(badges);
 
-    input.addEventListener('input', (event) => {
+    input.addEventListener('input', () => {
       const match = input.value.match(BADGE_REG_EXP);
 
       if (match) {

@@ -1,3 +1,5 @@
+/* eslint import/order: ['error', { alphabetize: { order: 'asc' }, 'newlines-between': 'ignore' }] */
+
 import '../scss/nautobot.scss';
 
 import * as bootstrap from 'bootstrap';
@@ -39,13 +41,12 @@ import { initializeSelect2Fields, setSelect2Value } from './select2.js';
 import { observeCollapseTabs } from './tabs.js';
 import { initializeTheme } from './theme.js';
 
-document.addEventListener('DOMContentLoaded', function () {
-  window.nb = window.nb ?? {};
+document.addEventListener('DOMContentLoaded', () => {
+  window.nb ??= {};
 
   // History
   loadState();
   window.nb.history = { saveState };
-
   // Tooltips
   // https://getbootstrap.com/docs/5.3/components/tooltips/#enable-tooltips
   [...document.querySelectorAll('[data-bs-toggle="tooltip"]')].forEach((tooltip) => new bootstrap.Tooltip(tooltip));
@@ -83,9 +84,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       };
 
-      expanded
-        ? document.removeEventListener('click', onClickDocument)
-        : document.addEventListener('click', onClickDocument);
+      if (expanded) {
+        document.removeEventListener('click', onClickDocument);
+      } else {
+        document.addEventListener('click', onClickDocument);
+      }
     });
   });
 
@@ -100,7 +103,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Form
   // TODO(norbert-mieczkowski-codilime): for htmx SPA-like behavior, re-initialize sticky footers like tabs below.
-  let unobserveFormStickyFooters = observeFormStickyFooters();
+  observeFormStickyFooters();
 
   // Search
   initializeSearch();
@@ -120,7 +123,7 @@ document.addEventListener('DOMContentLoaded', function () {
    *   });
    *   ```
    */
-  let unobserveCollapseTabs = observeCollapseTabs();
+  observeCollapseTabs();
 
   // Theme
   initializeTheme();

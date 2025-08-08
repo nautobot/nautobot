@@ -3,8 +3,6 @@
 import path from 'node:path';
 import autoprefixer from 'autoprefixer';
 import miniCssExtractPlugin from 'mini-css-extract-plugin'
-/* TODO: bootstrap 5 usage doesn't coexist well with stylelint defaults */
-// import stylelintPlugin from 'stylelint-webpack-plugin';
 
 const __dirname = import.meta.dirname;
 
@@ -26,12 +24,6 @@ export default [
             }
         },
         plugins: [
-            // TODO: add CSS/SCSS linting to the build
-            // new stylelintPlugin(
-            //     {
-            //         files: path.join('src', '**/*.s?(a|c)ss'),
-            //     }
-            // ),
             new miniCssExtractPlugin(
                 {
                     filename: 'css/[name].css'
@@ -40,16 +32,6 @@ export default [
         ],
         module: {
             rules: [
-                // TODO: add JS linting with eslint to the build
-                // {
-                //     test: /\.js$/,
-                //     include: path.resolve(__dirname, 'src', 'js'),
-                //     enforce: 'pre',
-                //     loader: 'eslint-loader',
-                //     options: {
-                //         emitWarning: true,
-                //     }
-                // },
                 {
                     test: /\.(s?css)$/,
                     use: [
