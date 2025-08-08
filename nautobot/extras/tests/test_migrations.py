@@ -1,9 +1,15 @@
+from contextlib import redirect_stdout
+import io
 from unittest import skip, skipIf
 
 from django.db import connection
+from django.test import tag, TestCase
+from django.utils.timezone import now
+from django_test_migrations.migrator import Migrator
 
 from nautobot.core.testing.migrations import NautobotDataMigrationTest
-from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.choices import CustomFieldTypeChoices, JobExecutionType, JobQueueTypeChoices
+from nautobot.extras.exceptions import ApprovalRequiredScheduledJobsError
 
 
 # https://github.com/nautobot/nautobot/issues/3435
@@ -154,3 +160,76 @@ class CustomFieldDataMigrationTest(NautobotDataMigrationTest):
                 "text_custom_field_4": None,
             },
         )
+
+
+@tag("migration_test")
+class TestFailingApprovalMigration(TestCase):
+    def setUp(self):
+        self.migrator = Migrator(database="default")
+        old_state = self.migrator.apply_initial_migration(("extras", "0124_add_joblogentry_index"))
+
+        Job = old_state.apps.get_model("extras", "Job")
+        ScheduledJob = old_state.apps.get_model("extras", "ScheduledJob")
+        JobQueue = old_state.apps.get_model("extras", "JobQueue")
+        User = old_state.apps.get_model("users", "User")
+
+        self.default_job_queue = JobQueue.objects.create(
+            name="Test Queue",
+            queue_type=JobQueueTypeChoices.TYPE_CELERY,
+        )
+        self.job = Job.objects.create(
+            module_name="test_migration_job",
+            job_class_name="TestMigrationJob",
+            grouping="test",
+            name="test_job",
+            default_job_queue=self.default_job_queue,
+            approval_required=True,
+        )
+
+        self.user = User.objects.create(username="user1", is_active=True)
+        self.scheduled_job = ScheduledJob.objects.create(
+            name="Scheduled Job",
+            task="test_migration_job.TestMigrationJob",
+            job_model=self.job,
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            approval_required=True,
+            start_time=now(),
+        )
+
+    def test_migration_fails_if_scheduled_jobs_have_approval_required(self):
+        with self.assertRaises(ApprovalRequiredScheduledJobsError) as cm:
+            self.migrator.apply_tested_migration(("extras", "0127_remove_job_approval_required_and_more"))
+
+        self.assertIn("Migration aborted", str(cm.exception))
+        self.assertIn(self.scheduled_job.name, str(cm.exception))
+
+    def test_warning_output_for_jobs_with_approval_required(self):
+        self.scheduled_job.approval_required = False
+        self.scheduled_job.save()
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            self.migrator.apply_tested_migration(("extras", "0127_remove_job_approval_required_and_more"))
+
+        output = f.getvalue()
+
+        self.assertIn("Migration passed", output)
+        self.assertIn(self.job.name, output)
+        self.assertNotIn(self.scheduled_job.name, output)
+
+    def test_migration_passes_cleanly_when_no_approval_required(self):
+        self.job.approval_required = False
+        self.job.save()
+        self.scheduled_job.approval_required = False
+        self.scheduled_job.save()
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            self.migrator.apply_tested_migration(("extras", "0127_remove_job_approval_required_and_more"))
+
+        output = f.getvalue()
+
+        self.assertIn("Migration passed: No approval_required jobs or scheduled jobs found.", output)
+        self.assertNotIn(self.job.name, output)
+        self.assertNotIn(self.scheduled_job.name, output)
