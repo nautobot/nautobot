@@ -66,6 +66,8 @@ from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable, VRFTable
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
+from nautobot.vpn.models import VPNTunnelEndpoint
+from nautobot.vpn.tables import VPNTunnelEndpointTable
 from nautobot.wireless.forms import ControllerManagedDeviceGroupWirelessNetworkFormSet
 from nautobot.wireless.models import (
     ControllerManagedDeviceGroupRadioProfileAssignment,
@@ -2283,6 +2285,23 @@ class DeviceWirelessView(generic.ObjectView):
             "wireless_networks_table": wireless_networks_table,
             "radio_profiles_table": radio_profiles_table,
             "active_tab": "wireless",
+        }
+
+
+class DeviceVpnEndpointView(generic.ObjectView):
+    queryset = Device.objects.all()
+    template_name = "dcim/device/vpn_endpoints.html"
+
+    def get_extra_context(self, request, instance):
+        vpn_endpoints = VPNTunnelEndpoint.objects.filter(device=instance).select_related("source_interface", "role")
+        vpn_endpoints_table = VPNTunnelEndpointTable(data=vpn_endpoints, user=request.user, orderable=False)
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(vpn_endpoints_table)
+
+        return {
+            "vpn_endpoints_table": vpn_endpoints_table,
+            "active_tab": "vpn-endpoints",
         }
 
 
