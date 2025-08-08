@@ -1,0 +1,49 @@
+{% extends 'dcim/device_component.html' %}
+{% load helpers %}
+
+{% block content_left_page %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Inventory Item</strong>
+                </div>
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Device</td>
+                        <td>{{ object.device|hyperlinked_object }}</td>
+                    </tr>
+                    <tr>
+                        <td>Parent Item</td>
+                        <td>{{ object.parent|hyperlinked_object }}</td>
+                    </tr>
+                    <tr>
+                        <td>Name</td>
+                        <td>{{ object.name }}</td>
+                    </tr>
+                    <tr>
+                        <td>Label</td>
+                        <td>{{ object.label|placeholder }}</td>
+                    </tr>
+                    <tr>
+                        <td>Manufacturer</td>
+                        <td>{{ object.manufacturer|hyperlinked_object }}</td>
+                    </tr>
+                    <tr>
+                        <td>Part ID</td>
+                        <td>{{ object.part_id|placeholder }}</td>
+                    </tr>
+                    <tr>
+                        <td>Serial</td>
+                        <td>{{ object.serial|placeholder }}</td>
+                    </tr>
+                    <tr>
+                        <td>Asset Tag</td>
+                        <td>{{ object.asset_tag|placeholder }}</td>
+                    </tr>
+                    {% include 'dcim/inc/detail_softwareversion_softwareimagefile_rows.html' %}
+                    <tr>
+                        <td>Description</td>
+                        <td>{{ object.description|placeholder }}</td>
+                    </tr>
+                </table>
+            </div>
+{% endblock content_left_page %}
