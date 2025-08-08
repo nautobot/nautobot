@@ -1,3 +1,4 @@
+from datetime import timedelta
 import json
 import os
 import re
@@ -9,9 +10,11 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.template.defaultfilters import date, timesince
 from django.test import override_settings, RequestFactory, tag
 from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
+from django.utils import timezone
 from prometheus_client.parser import text_string_to_metric_families
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
@@ -749,7 +752,6 @@ class ExampleViewWithCustomPermissionsTest(TestCase):
 
 
 class TestObjectDetailView(TestCase):
-    @tag("fix_in_v3")
     @override_settings(PAGINATE_COUNT=5)
     def test_object_table_panel(self):
         provider = Provider.objects.create(name="A Test Provider 1")
@@ -771,13 +773,13 @@ class TestObjectDetailView(TestCase):
 
         self.add_permissions("circuits.view_provider", "circuits.view_circuit")
         url = reverse("circuits:provider", args=(provider.pk,))
-        response = self.client.get(f"{url}?tab=main")
+        response = self.client.get(url)
         self.assertHttpStatus(response, 200)
         response_data = extract_page_body(response.content.decode(response.charset))
         view_move_url = reverse("circuits:circuit_list") + f"?provider={provider.id}"
 
         # Assert Badge Count in table panel header
-        panel_header = f"""<div class="card-header"><strong>Circuits</strong> <a href="{view_move_url}" class="badge bg-primary">10</a></div>"""
+        panel_header = f"""<strong>Circuits</strong> <a href="{view_move_url}" class="badge bg-primary">10</a>"""
         self.assertInHTML(panel_header, response_data)
 
         # Assert view X more btn
@@ -796,6 +798,51 @@ class TestObjectDetailView(TestCase):
         self.assertInHTML(name_copy, response_data)
         # ASN do not have a value, therefore no copy btn
         self.assertNotIn("#asn_copy", response_data)
+
+    def test_object_timestamps_and_buttons(self):
+        created = timezone.now() - timedelta(days=2)
+        updated = timezone.now() - timedelta(days=1, hours=12)
+        provider = Provider.objects.create(name="A Test Provider 2")
+        Provider.objects.filter(pk=provider.pk).update(created=created, last_updated=updated)
+
+        self.add_permissions(
+            "circuits.view_provider", "circuits.add_provider", "circuits.change_provider", "circuits.delete_provider"
+        )
+        url = reverse("circuits:provider", args=(provider.pk,))
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        response_data = extract_page_body(response.content.decode(response.charset))
+
+        timestamps = f"""
+            <p class="flex-grow-1 m-0">
+                <small class="align-items-center d-inline-flex gap-4 text-secondary">
+                    <i class="mdi mdi-bookmark-plus"></i> {date(created, "N j, Y, g:i a")}
+                    <span class="vr mx-4"></span>
+                    <i class="mdi mdi-clock"></i> {timesince(updated)} ago
+                </small>
+            </p>
+        """
+        self.assertInHTML(timestamps, response_data)
+
+        buttons = [
+            f"""
+                <a id="edit-button" class="btn btn-warning border-end-0" href="/circuits/providers/{provider.pk}/edit/">
+                    <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
+                </a>
+            """,
+            """
+                <a id="clone-button" class="dropdown-item" href="/circuits/providers/add/">
+                    <span class="mdi mdi-plus-thick text-muted" aria-hidden="true"></span> Clone Provider
+                </a>
+            """,
+            f"""
+                <a id="delete-button" class="dropdown-item text-danger" href="/circuits/providers/{provider.pk}/delete/">
+                    <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete Provider
+                </a>
+            """,
+        ]
+        for button in buttons:
+            self.assertInHTML(button, response_data)
 
 
 class SearchRobotsTestCase(TestCase):
