@@ -492,7 +492,7 @@ def task_queues_as_choices(task_queues):
             worker_count = celery_queues.get(settings.CELERY_TASK_DEFAULT_QUEUE, 0)
         else:
             worker_count = celery_queues.get(queue, 0)
-        description = f"{queue if queue else 'default queue'} ({worker_count} worker{'s'[:worker_count^1]})"
+        description = f"{queue if queue else 'default queue'} ({worker_count} worker{'s'[: worker_count ^ 1]})"
         choices.append((queue, description))
     return choices
 

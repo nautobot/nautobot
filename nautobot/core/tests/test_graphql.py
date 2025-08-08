@@ -527,18 +527,18 @@ class GraphQLAPIPermissionTest(GraphQLTestCaseBase):
         for i in range(2):
             # Rack permission
             rack_obj_permission = ObjectPermission.objects.create(
-                name=f"Permission Rack {i+1}",
+                name=f"Permission Rack {i + 1}",
                 actions=["view", "add", "change", "delete"],
-                constraints={"location__name": f"Location {i+1}"},
+                constraints={"location__name": f"Location {i + 1}"},
             )
             rack_obj_permission.object_types.add(rack_object_type)
             rack_obj_permission.groups.add(cls.groups[i])
             rack_obj_permission.users.add(cls.users[i])
 
             location_obj_permission = ObjectPermission.objects.create(
-                name=f"Permission Location {i+1}",
+                name=f"Permission Location {i + 1}",
                 actions=["view", "add", "change", "delete"],
-                constraints={"name": f"Location {i+1}"},
+                constraints={"name": f"Location {i + 1}"},
             )
             location_obj_permission.object_types.add(location_object_type)
             location_obj_permission.groups.add(cls.groups[i])
