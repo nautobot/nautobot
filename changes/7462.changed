@@ -1,0 +1,1 @@
+Changed dcim.Device.device_redundancy_group_priority from PositiveSmallIntegerField to PositiveIntegerField
