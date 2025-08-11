@@ -12,7 +12,7 @@ Updated dependency `django-storages` to `~1.14.6`.
 Updated dependency `django-structlog` to `~9.1.1`.
 Updated dependency `django-timezone-field` to `~7.1`.
 Updated dependency `django-tree-queries` to `~0.20.0`.
-Updated dependency `djangorestframework` to `~3.16.0`.
+Updated dependency `djangorestframework` to `~3.16.1`.
 Updated dependency `drf-spectacular` to `~0.28.0`.
 Updated dependency `emoji` to `~2.14.1`.
 Updated dependency `jsonschema` to `^4.25.0`.
