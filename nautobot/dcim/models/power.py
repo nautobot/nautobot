@@ -174,7 +174,6 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
         "voltage",
         "amperage",
         "max_utilization",
-        "breaker_position",
         "breaker_pole_count",
         "available_power",
     ]

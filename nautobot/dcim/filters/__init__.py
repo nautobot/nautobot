@@ -1629,10 +1629,6 @@ class PowerPanelFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet):
         to_field_name="name",
         label="Rack group (name or ID)",
     )
-    panel_type = django_filters.MultipleChoiceFilter(
-        choices=PowerPanelTypeChoices,
-        null_value=None,
-    )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     power_feeds = NaturalKeyOrPKMultipleChoiceFilter(
         prefers_id=True,
@@ -1651,7 +1647,7 @@ class PowerPanelFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet):
 
     class Meta:
         model = PowerPanel
-        fields = ["id", "name", "panel_type", "tags"]
+        fields = ["id", "name", "tags"]
 
 
 class PowerFeedFilterSet(
