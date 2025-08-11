@@ -1,4 +1,5 @@
 {% load form_helpers %}
+{% load helpers %}
 {% load static %}
 
 <section class="nb-drawer" tabindex="-1" id="{{ filter_form_name }}_drawer">
@@ -17,8 +18,9 @@
             {% endif %}
             {% if dynamic_filter_form %}
                 <li role="presentation" class="nav-item">
-                    <a class="nav-link{% if not filter_form %} active{% endif %}" href="#advanced-filter" role="tab" data-bs-toggle="tab">
+                    <a class="nav-link position-relative{% if not filter_form %} active{% endif %}" href="#advanced-filter" role="tab" data-bs-toggle="tab">
                         Advanced
+                        {% advanced_filter_indicator basic_filter_form=filter_form filter_params=filter_params %}
                     </a>
                 </li>
             {% endif %}
@@ -72,7 +74,7 @@
                             </div>
                         </div>
 
-                        <div class="d-print-none justify-content-between nb-form-sticky-footer">
+                        <div class="d-print-none justify-content-between mb-n20 nb-form-sticky-footer">
                             <button type="reset" class="btn btn-secondary">
                                 <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
                                 -->Clear All
@@ -437,18 +439,6 @@
                         [...dynamicFilterForm.querySelectorAll('input, select, textarea')].forEach((field) =>
                             field.closest('.nb-dynamic-filter-items') ? undefined : field.removeAttribute('name'),
                         );
-
-                        // Append search (`'q'`) field to dynamic filter form as hidden input.
-                        const q = document.querySelector('#header_search input[name="q"]');
-
-                        if (q) {
-                            const qInputHidden = document.createElement('input');
-                            qInputHidden.setAttribute('name', 'q');
-                            qInputHidden.setAttribute('type', 'hidden');
-                            qInputHidden.setAttribute('value', q.value);
-
-                            event.target.appendChild(qInputHidden);
-                        }
 
                         /*
                          * Get the serialized data from the forms and:
