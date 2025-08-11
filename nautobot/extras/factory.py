@@ -1,4 +1,4 @@
-from datetime import timedelta, timezone
+from datetime import timezone
 import json
 
 from django.contrib.auth import get_user_model
@@ -211,18 +211,21 @@ class JobResultFactory(BaseModelFactory):
             return faker.Faker().paragraph()
         return None
 
-    @factory.lazy_attribute
-    def date_created(self):
-        return faker.Faker().date_time_between(start_date="-1y", end_date="now", tzinfo=timezone.utc)
-
-    @factory.lazy_attribute
-    def date_started(self):
-        return self.date_created + timedelta(seconds=faker.Faker().random_int())
-
-    @factory.lazy_attribute
-    def date_done(self):
+    @factory.post_generation
+    def dates(self, created, extracted, **kwargs):  # pylint: disable=method-hidden
+        if not created:
+            return
+        if extracted:
+            return
+        # Create a date_created in the past, but not too far in the past
+        self.date_created = faker.Faker().date_time_between(start_date="-1y", end_date="-1w", tzinfo=timezone.utc)
+        self.date_started = faker.Faker().date_time_between(
+            start_date=self.date_created, end_date="-1d", tzinfo=timezone.utc
+        )
         # TODO, should we create "in progress" job results without a date_done value as well?
-        return self.date_started + timedelta(minutes=faker.Faker().random_int())
+        self.date_done = faker.Faker().date_time_between(
+            start_date=self.date_started, end_date="now", tzinfo=timezone.utc
+        )
 
 
 class MetadataChoiceFactory(BaseModelFactory):
