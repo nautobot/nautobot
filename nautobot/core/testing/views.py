@@ -251,16 +251,17 @@ class ViewTestCases:
 
             response = self.client.get(instance.get_absolute_url())
 
-            timestamps = f"""
-                <p class="flex-grow-1 m-0">
-                    <small class="align-items-center d-inline-flex gap-4 text-secondary">
-                        <i class="mdi mdi-bookmark-plus"></i> {date(instance.created, global_settings.DATETIME_FORMAT)}
-                        <span class="vr mx-4"></span>
-                        <i class="mdi mdi-clock"></i> {timesince(instance.last_updated)} ago
-                    </small>
-                </p>
-            """
-            self.assertBodyContains(response, timestamps, html=True)
+            if hasattr(instance, "created") and hasattr(instance, "last_updated"):
+                timestamps = f"""
+                    <p class="flex-grow-1 m-0">
+                        <small class="align-items-center d-inline-flex gap-4 text-secondary">
+                            <i class="mdi mdi-bookmark-plus"></i> {date(instance.created, global_settings.DATETIME_FORMAT)}
+                            <span class="vr mx-4"></span>
+                            <i class="mdi mdi-clock"></i> {timesince(instance.last_updated)} ago
+                        </small>
+                    </p>
+                """
+                self.assertBodyContains(response, timestamps, html=True)
 
             object_edit_url = buttons.edit_button(instance)["url"]
             object_delete_url = buttons.delete_button(instance)["url"]
