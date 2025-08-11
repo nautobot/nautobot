@@ -279,7 +279,7 @@ class ViewTestCases:
                     """,
                 )
             if render_delete_button:
-                is_consolidated = render_clone_button
+                is_consolidated = render_edit_button or render_clone_button
                 action_buttons.append(
                     f"""
                         <a id="delete-button" class="{'dropdown-item text-danger' if is_consolidated else 'btn btn-danger'}" href="{object_delete_url}">
