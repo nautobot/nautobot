@@ -227,14 +227,6 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
                 }
             )
 
-        if self.cable and self.destination_panel:
-            raise ValidationError(
-                {
-                    "__all__": "This power feed cannot be connected via cable when a destination panel is specified. "
-                    "Power feeds can either connect to a panel OR be cabled to an endpoint, but not both."
-                }
-            )
-
         # Breaker position and pole validation
         if self.breaker_position is not None:
             # Default to single pole breaker when breaker_position is specified but breaker_pole_count is not
