@@ -49,7 +49,7 @@ export const collapseTabs = (tabs) => {
    * most important thing about this step is to append dropdown with visible toggle button at the end of cloned tabs
    * list to reach maximum width (dropdown toggle has considerable size too) before starting to actually collapse tabs.
    */
-  const dropdownMenu = createElement('ul', { className: 'dropdown-menu' });
+  const dropdownMenu = createElement('ul', { className: 'dropdown-menu dropdown-menu-end' });
   const dropdownToggleIcon = createElement('span', { className: 'mdi mdi-menu' });
   const dropdownToggleLabel = createElement('span', { className: 'visually-hidden' }, 'Toggle Dropdown');
   const dropdownToggle = createElement(

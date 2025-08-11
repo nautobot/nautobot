@@ -32,7 +32,7 @@
         {% render_tabs_labels object_detail_content.tabs %}
       {% else %}
         <li class="nav-item" role="presentation">
-            <a class="nav-link{% if active_tab == 'main' or request.GET.tab == 'main' or not request.GET.tab %} active{% endif %}" href="{{ object.get_absolute_url }}#main" onclick="switch_tab(this.href)" aria-controls="main" role="tab" data-bs-toggle="tab">
+            <a class="nav-link{% if active_tab == 'main' or request.GET.tab == 'main' %} active{% endif %}" href="{{ object.get_absolute_url }}#main" onclick="switch_tab(this.href)" aria-controls="main" role="tab" data-bs-toggle="tab">
                 {{ verbose_name|bettertitle }}
             </a>
         </li>
@@ -109,7 +109,7 @@
       {% if object_detail_content %}
         {% render_components object_detail_content.tabs %}
       {% else %}
-        <div id="main" role="tabpanel" class="tab-pane {% if active_tab == "main" or request.GET.tab == "main" or not request.GET.tab %}active{% else %}fade{% endif %}">
+        <div id="main" role="tabpanel" class="tab-pane {% if active_tab == "main" or request.GET.tab == "main" %}active{% else %}fade{% endif %}">
             <div class="align-items-center d-flex flex-wrap mb-16">
                 {% include 'inc/created_updated.html' %}
                 <div class="flex-grow-0 flex-shrink-0 d-print-none">

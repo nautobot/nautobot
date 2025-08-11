@@ -692,6 +692,12 @@ $nautobot-chevron-svg: "<svg viewBox='0 0 17 20' fill='none' xmlns='http://www.w
   }
 }
 
+@mixin nb-firefox-only {
+  @supports (-moz-appearance: none) {
+    @content;
+  }
+}
+
 /* Links */
 a,
 button {
@@ -1318,6 +1324,11 @@ textarea {
 }
 
 /* Layout */
+$nb-drawer-closed-width: 0;
+$nb-drawer-open-width: 20rem; /* 320px */
+$sidenav-width-collapsed: 4rem; /* 64px */
+$sidenav-width-expanded: 15rem; /* 240px */
+
 * {
   margin: 0;
 }
@@ -1327,6 +1338,8 @@ html, body {
 }
 
 body {
+  /* Transition below is Bootstrap `$transition-collapse-width` with `width` replaced by `padding-inline`. */
+  @include transition(padding-inline .35s ease);
   display: grid;
   grid-template-areas:
     "sidenav header       drawer"
@@ -1355,6 +1368,22 @@ body {
   #footer {
     grid-area: footer;
   }
+
+  &:has( #sidenav) {
+    padding-inline-start: $sidenav-width-expanded;
+  }
+
+  &:has( #sidenav.nb-sidenav-collapsed) {
+    padding-inline-start: $sidenav-width-collapsed;
+  }
+
+  &:has( #drawer .nb-drawer) {
+    padding-inline-end: $nb-drawer-closed-width;
+  }
+
+  &:has( #drawer .nb-drawer.nb-drawer-open) {
+    padding-inline-end: $nb-drawer-open-width;
+  }
 }
 
 /* Sidenav (a.k.a. navbar, nav menu, sidebar) */
@@ -1368,7 +1397,7 @@ body {
   $sidenav-link-segment-icon-width: 1.25rem; /* 20px */
   $sidenav-link-segment-icon-svg: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='90' stroke='#{$nav-gray-3}'/><line x1='10' y1='45' x2='15' y2='45' stroke='#{$nav-gray-3}'/></svg>";
   $sidenav-link-segment-icon-svg-last: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='45.5' stroke='#{$nav-gray-3}'/><line x1='10' y1='45' x2='15' y2='45' stroke='#{$nav-gray-3}'/></svg>";
-  $sidenav-link-width: 15rem; /* 240px */
+  $sidenav-link-width: $sidenav-width-expanded;
 
   @mixin chevron($size) {
     @include transition($accordion-icon-transition, $transition-fade);
@@ -1406,12 +1435,14 @@ body {
   display: flex;
   flex-direction: column;
   height: 100%;
-  position: relative;
-  width: $sidenav-link-width;
+  left: 0;
+  position: fixed;
+  top: 0;
+  width: $sidenav-width-expanded;
   z-index: $zindex-fixed;
 
   &.nb-sidenav-collapsed {
-    width: 4rem; /* 64px */
+    width: $sidenav-width-collapsed;
 
     /* Transition between brand logo and icon when navbar expands/collapses. */
     .nb-sidenav-brand {
@@ -1478,6 +1509,21 @@ body {
     width: max-content;
     z-index: -1;
     min-width: $sidenav-link-width;
+
+    /*
+     * FIXME(norbert-mieczkowski-codilime): remove this Firefox hack when it fixes its bug: https://bugzilla.mozilla.org/show_bug.cgi?id=995020.
+     *   Workaround based on: https://www.answeroverflow.com/m/1353731321620598945.
+     */
+    @include nb-firefox-only {
+      flex-direction: row;
+      padding-block: map.get($spacers, 0);
+      padding-inline: map.get($spacers, 20);
+      writing-mode: vertical-lr;
+
+      > * {
+        writing-mode: horizontal-tb;
+      }
+    }
   }
 
   .nb-sidenav-link {
@@ -1667,15 +1713,16 @@ body {
 
 /* Drawer */
 $nb-drawer-open-box-shadow: 0 0 0.625rem 0 rgba(0, 0, 0, 0.25);
-$nb-drawer-open-width: 20rem; /* 320px */
 
 #drawer {
   @include box-shadow(none);
   @include transition($input-transition, $transition-collapse-width); /* Using `$input-transition` just for `box-shadow`. */
   height: 100%;
   overflow: hidden;
-  position: relative;
-  width: 0;
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: $nb-drawer-closed-width;
   z-index: $zindex-fixed;
 
   &:has(.nb-drawer-open) {
@@ -1721,6 +1768,7 @@ $nb-drawer-open-width: 20rem; /* 320px */
 /* Header */
 #header {
   background: var(--#{$prefix}secondary-bg);
+  position: relative;
 
   .alert {
     --bs-alert-border-radius: 0;
