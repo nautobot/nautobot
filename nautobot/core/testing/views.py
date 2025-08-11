@@ -262,23 +262,37 @@ class ViewTestCases:
             """
             self.assertBodyContains(response, timestamps, html=True)
 
-            action_buttons = [
-                f"""
-                    <a id="edit-button" class="btn btn-warning border-end-0" href="{buttons.edit_button(instance)['url']}">
-                        <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
-                    </a>
-                """,
-                f"""
-                    <a id="clone-button" class="dropdown-item" href="{buttons.clone_button(instance)['url']}">
-                        <span class="mdi mdi-plus-thick text-muted" aria-hidden="true"></span> Clone {helpers.bettertitle(self.model._meta.verbose_name)}
-                    </a>
-                """,
-                f"""
-                    <a id="delete-button" class="dropdown-item text-danger" href="{buttons.delete_button(instance)['url']}">
-                        <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete {helpers.bettertitle(self.model._meta.verbose_name)}
-                    </a>
-                """,
-            ]
+            object_edit_url = buttons.edit_button(instance)["url"]
+            object_delete_url = buttons.delete_button(instance)["url"]
+            object_clone_url = buttons.clone_button(instance)["url"]
+            render_edit_button = bool(object_edit_url)
+            render_delete_button = bool(object_delete_url)
+            render_clone_button = bool(hasattr(instance, "clone_fields") and object_clone_url)
+            action_buttons = []
+            if render_edit_button:
+                action_buttons.append(
+                    f"""
+                        <a id="edit-button" class="btn btn-warning border-end-0" href="{object_edit_url}">
+                            <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
+                        </a>
+                    """,
+                )
+            if render_delete_button:
+                action_buttons.append(
+                    f"""
+                        <a id="delete-button" class="dropdown-item text-danger" href="{object_delete_url}">
+                            <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete {helpers.bettertitle(self.model._meta.verbose_name)}
+                        </a>
+                    """,
+                )
+            if render_clone_button:
+                action_buttons.append(
+                    f"""
+                        <a id="clone-button" class="dropdown-item" href="{object_clone_url}">
+                            <span class="mdi mdi-plus-thick text-muted" aria-hidden="true"></span> Clone {helpers.bettertitle(self.model._meta.verbose_name)}
+                        </a>
+                    """,
+                )
             for button in action_buttons:
                 self.assertBodyContains(response, button, html=True)
 
