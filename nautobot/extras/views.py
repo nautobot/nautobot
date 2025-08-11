@@ -2742,7 +2742,7 @@ class ObjectChangeLogView(generic.GenericView):
 
     base_template: Optional[str] = None
 
-    def get(self, request, model, list_url=None, **kwargs):
+    def get(self, request, model, **kwargs):
         # Handle QuerySet restriction of parent object if needed
         if hasattr(model.objects, "restrict"):
             obj = get_object_or_404(model.objects.restrict(request.user, "view"), **kwargs)
@@ -2780,7 +2780,6 @@ class ObjectChangeLogView(generic.GenericView):
                 "table": objectchanges_table,
                 "base_template": base_template,
                 "active_tab": "changelog",
-                "list_url": list_url,
             },
         )
 
@@ -2904,7 +2903,7 @@ class ObjectNotesView(generic.GenericView):
 
     base_template: Optional[str] = None
 
-    def get(self, request, model, list_url=None, **kwargs):
+    def get(self, request, model, **kwargs):
         # Handle QuerySet restriction of parent object if needed
         if hasattr(model.objects, "restrict"):
             obj = get_object_or_404(model.objects.restrict(request.user, "view"), **kwargs)
@@ -2939,7 +2938,6 @@ class ObjectNotesView(generic.GenericView):
                 "base_template": base_template,
                 "active_tab": "notes",
                 "form": notes_form,
-                "list_url": list_url,
             },
         )
 
