@@ -213,8 +213,8 @@ class FilterTestCases:
             """Test all `RelatedMembershipBooleanFilter` filters found in `self.filterset.filters`
             except for the ones with custom filter logic defined in its `method` attribute.
 
-            This test asserts that `filter=True` matches `self.queryset.filter(field__isnull=False)` and
-            that `filter=False` matches `self.queryset.filter(field__isnull=True)`.
+            This test asserts that `filter=True` matches `self.queryset.filter(field__isnull=...)` and
+            that `filter=False` matches `self.queryset.exclude(field__isnull=...)`.
             """
             self.assertIsNotNone(self.filterset)
             for filter_name, filter_object in self.filterset().filters.items():  # pylint: disable=not-callable
