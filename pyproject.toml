@@ -160,7 +160,8 @@ sso = ["social-auth-core"]
 
 [tool.poetry.group.dev.dependencies]
 # Tool for debugging Django
-django-debug-toolbar = "~6.0.0"
+# Currently pinned to 5.2.0 due to https://github.com/django-commons/django-debug-toolbar/issues/2168
+django-debug-toolbar = "~5.2.0"
 # Nautobot example App used for testing
 example-app = {path = "examples/example_app", develop = true}
 # Nautobot test App used for testing core view overrides

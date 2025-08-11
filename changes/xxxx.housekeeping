@@ -1,4 +1,4 @@
-Updated development dependency `django-debug-toolbar` to `~6.0.0`.
+Updated development dependency `django-debug-toolbar` to `~5.2.0`.
 Updated development dependency `faker` to `^37.5.3`.
 Updated development dependency `rich` to `~14.1.0`.
 Updated development dependency `ruff` to `~0.12.7` and applied its recommendations.
