@@ -832,12 +832,11 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
 
         # Save filters
         if obj.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
-            filter_form = context["filter_form"]
-            if filter_form.is_valid():
-                obj.set_filter(filter_form.cleaned_data)
-            else:
+            filter_form = context.get("filter_form")
+            if not filter_form or not filter_form.is_valid():
                 form.add_error(None, "Errors encountered when saving Dynamic Group associations. See below.")
-                return None
+                raise ValidationError("invalid dynamic group filter_form")
+            obj.set_filter(filter_form.cleaned_data)
 
         # After filters have been set, now we save the object to the database.
         obj.save()
@@ -846,17 +845,25 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
 
         # Process the formsets for children
         children = context.get("children")
-        if children and children.is_valid():
-            children.save()
-        elif children:
-            for child_form in children.forms:
-                if child_form.errors:
-                    for field, errors in child_form.errors.items():
-                        form.add_error(None, f"{field}: {', '.join(errors)}")
+        if children and not children.is_valid():
+            form.add_error(None, "Errors encountered when saving Dynamic Group associations. See below.")
+            # dedupe only non-field errors to avoid duplicates in the banner
+            added_errors = set()
+            for f in children.forms:
+                for msg in f.non_field_errors():
+                    if msg not in added_errors:
+                        form.add_error(None, msg)
+                        added_errors.add(msg)
+            raise ValidationError("invalid DynamicGroupMembershipFormSet")
 
-            return None
+        if children:
+            children.save()
 
         return obj
+
+    # Suppress the global top banner when ValidationError happens
+    def _handle_validation_error(self, e):
+        self.has_error = True
 
 
 class ObjectDynamicGroupsView(generic.GenericView):
