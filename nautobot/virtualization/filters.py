@@ -353,7 +353,7 @@ class VMInterfaceFilterSet(
         queryset=VLAN.objects.all(),
         label="Untagged VLAN (VID or ID)",
     )
-    vlan_id = django_filters.CharFilter(method="filter_vlan_id", label="Assigned VLAN")
+    vlan_id = django_filters.CharFilter(method="filter_vlan_id", label="Any assigned VLAN (tagged or untagged)")
     ip_addresses = MultiValueCharFilter(
         method="filter_ip_addresses",
         label="IP addresses (address or ID)",
