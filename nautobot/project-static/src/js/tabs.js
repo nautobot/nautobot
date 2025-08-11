@@ -32,8 +32,11 @@ export const collapseTabs = (tabs) => {
   tabsClone.classList.add(...tabsCloneTemporaryClasses);
 
   // Append currently invisible cloned tabs to DOM right after the original tabs element.
-  tabs.nextSibling ? tabsParent.insertBefore(tabsClone, tabs.nextSibling) : tabsParent.appendChild(tabsClone);
-
+  if (tabs.nextSibling) {
+    tabsParent.insertBefore(tabsClone, tabs.nextSibling);
+  } else {
+    tabsParent.appendChild(tabsClone);
+  }
   // Excessive tabs should be collapsed if tabs clone is wider than the original. Remember - clone does not wrap.
   const shouldCollapseTabs = () => tabsClone.getBoundingClientRect().width > tabs.getBoundingClientRect().width;
 

@@ -159,6 +159,23 @@ jobs:
           python-version: "3.13"
       - name: "Run pylint"
         run: "poetry run invoke pylint"
+  ui-code-check:
+    name: "Check UI code style and formatting"
+    runs-on: "ubuntu-24.04"
+    defaults:
+      run:
+        working-directory: "nautobot/project-static"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v4"
+      - name: "Setup Node.js"
+        uses: "actions/setup-node@v4"
+        with:
+          node-version: "22"
+      - name: "Install npm dependencies"
+        run: "npm ci"
+      - name: "Run code-check"
+        run: "npm run code-check"
   ui-build-check:
     name: "Check UI src and dist files validity and integrity"
     runs-on: "ubuntu-24.04"
@@ -230,6 +247,7 @@ jobs:
       - "markdownlint"
       - "ruff"
       - "yamllint"
+      - "ui-code-check"
   tests-mysql:
     name: "Unit tests (MySQL and Python 3.13)"
     runs-on: "ubuntu-24.04"
@@ -273,6 +291,7 @@ jobs:
       - "markdownlint"
       - "ruff"
       - "yamllint"
+      - "ui-code-check"
   # tests-doltsql:
   #   name: "Unit tests (DoltSQL and Python 3.13)"
   #   runs-on: "ubuntu-24.04"
@@ -316,6 +335,7 @@ jobs:
   #     - "markdownlint"
   #     - "ruff"
   #     - "yamllint"
+  #     - "ui-code-check"
   migration-tests-mysql:
     name: "Run migrations against test dataset (MySQL and Python 3.10)"
     runs-on: "ubuntu-24.04"
@@ -357,6 +377,7 @@ jobs:
       - "markdownlint"
       - "ruff"
       - "yamllint"
+      - "ui-code-check"
   migration-tests-postgres:
     name: "Run migrations against test dataset (PostgreSQL and Python 3.13)"
     runs-on: "ubuntu-24.04"
@@ -395,6 +416,7 @@ jobs:
       - "markdownlint"
       - "ruff"
       - "yamllint"
+      - "ui-code-check"
   integration-test:
     runs-on: "ubuntu-24.04"
     env:
@@ -439,6 +461,7 @@ jobs:
       - "markdownlint"
       - "ruff"
       - "yamllint"
+      - "ui-code-check"
   changelog:
     if: ${{ (contains(fromJson('["develop","next"]'), github.base_ref)) || (startsWith(github.base_ref, 'ltm')) }}
     runs-on: "ubuntu-24.04"
@@ -467,6 +490,7 @@ jobs:
       - "markdownlint"
       - "ruff"
       - "yamllint"
+      - "ui-code-check"
     steps:
       - name: "Check out repository code"
         uses: "actions/checkout@v4"
