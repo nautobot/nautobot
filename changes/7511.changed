@@ -1,4 +1,4 @@
 Changed PowerFeed model validation to enforce mutual exclusivity between cable connections and destination panel connections.
 Changed PowerFeed model to validate breaker position conflicts and panel capacity constraints.
 Changed PowerFeed rack location validation to use location hierarchy instead of exact location match.
-Changed PowerFeed clone_fields to include destination_panel, breaker_position, and breaker_pole_count fields.
+Changed PowerFeed `clone_fields` to include `destination_panel`, `breaker_position`, and `breaker_pole_count` fields.
