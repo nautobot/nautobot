@@ -5,9 +5,7 @@ from nautobot.extras import views
 from nautobot.extras.models import (
     DynamicGroup,
     GitRepository,
-    GraphQLQuery,
     Job,
-    Note,
     Relationship,
 )
 
@@ -23,10 +21,12 @@ router.register("custom-fields", views.CustomFieldUIViewSet)
 router.register("custom-links", views.CustomLinkUIViewSet)
 router.register("export-templates", views.ExportTemplateUIViewSet)
 router.register("external-integrations", views.ExternalIntegrationUIViewSet)
+router.register("graphql-queries", views.GraphQLQueryUIViewSet)
 router.register("job-buttons", views.JobButtonUIViewSet)
 router.register("job-hooks", views.JobHookUIViewSet)
 router.register("job-queues", views.JobQueueUIViewSet)
 router.register("metadata-types", views.MetadataTypeUIViewSet)
+router.register("notes", views.NoteUIViewSet)
 router.register("object-metadata", views.ObjectMetadataUIViewSet)
 router.register("relationship-associations", views.RelationshipAssociationUIViewSet)
 router.register("relationships", views.RelationshipUIViewSet)
@@ -150,37 +150,6 @@ urlpatterns = [
         views.GitRepositoryDryRunView.as_view(),
         name="gitrepository_dryrun",
     ),
-    # GraphQL Queries
-    path("graphql-queries/", views.GraphQLQueryListView.as_view(), name="graphqlquery_list"),
-    path("graphql-queries/add/", views.GraphQLQueryEditView.as_view(), name="graphqlquery_add"),
-    path(
-        "graphql-queries/delete/",
-        views.GraphQLQueryBulkDeleteView.as_view(),
-        name="GraphQLQuery_bulk_delete",
-    ),
-    path("graphql-queries/<uuid:pk>/", views.GraphQLQueryView.as_view(), name="graphqlquery"),
-    path(
-        "graphql-queries/<uuid:pk>/edit/",
-        views.GraphQLQueryEditView.as_view(),
-        name="graphqlquery_edit",
-    ),
-    path(
-        "graphql-queries/<uuid:pk>/delete/",
-        views.GraphQLQueryDeleteView.as_view(),
-        name="graphqlquery_delete",
-    ),
-    path(
-        "graphql-queries/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="graphqlquery_changelog",
-        kwargs={"model": GraphQLQuery},
-    ),
-    path(
-        "graphql-queries/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="graphqlquery_notes",
-        kwargs={"model": GraphQLQuery},
-    ),
     # Image attachments
     path(
         "image-attachments/<uuid:pk>/edit/",
@@ -249,18 +218,6 @@ urlpatterns = [
         views.JobResultDeleteView.as_view(),
         name="jobresult_delete",
     ),
-    # Notes
-    path("notes/", views.NoteListView.as_view(), name="note_list"),
-    path("notes/add/", views.NoteEditView.as_view(), name="note_add"),
-    path("notes/<uuid:pk>/", views.NoteView.as_view(), name="note"),
-    path(
-        "notes/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="note_changelog",
-        kwargs={"model": Note},
-    ),
-    path("notes/<uuid:pk>/edit/", views.NoteEditView.as_view(), name="note_edit"),
-    path("notes/<uuid:pk>/delete/", views.NoteDeleteView.as_view(), name="note_delete"),
     # Custom relationships
     path(
         "relationships/<uuid:pk>/changelog/",

@@ -1143,30 +1143,22 @@ class GitRepositoryResultView(generic.ObjectView):
 #
 
 
-class GraphQLQueryListView(generic.ObjectListView):
+class GraphQLQueryUIViewSet(
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectEditViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectNotesViewMixin,
+):
+    filterset_form_class = forms.GraphQLQueryFilterForm
     queryset = GraphQLQuery.objects.all()
-    table = tables.GraphQLQueryTable
-    filterset = filters.GraphQLQueryFilterSet
-    filterset_form = forms.GraphQLQueryFilterForm
+    form_class = forms.GraphQLQueryForm
+    filterset_class = filters.GraphQLQueryFilterSet
+    serializer_class = serializers.GraphQLQuerySerializer
+    table_class = tables.GraphQLQueryTable
     action_buttons = ("add",)
-
-
-class GraphQLQueryView(generic.ObjectView):
-    queryset = GraphQLQuery.objects.all()
-
-
-class GraphQLQueryEditView(generic.ObjectEditView):
-    queryset = GraphQLQuery.objects.all()
-    model_form = forms.GraphQLQueryForm
-
-
-class GraphQLQueryDeleteView(generic.ObjectDeleteView):
-    queryset = GraphQLQuery.objects.all()
-
-
-class GraphQLQueryBulkDeleteView(generic.BulkDeleteView):
-    queryset = GraphQLQuery.objects.all()
-    table = tables.GraphQLQueryTable
 
 
 #
@@ -2344,33 +2336,20 @@ class ObjectMetadataUIViewSet(
 #
 
 
-class NoteView(generic.ObjectView):
+class NoteUIViewSet(
+    ObjectChangeLogViewMixin, ObjectDestroyViewMixin, ObjectDetailViewMixin, ObjectEditViewMixin, ObjectListViewMixin
+):
+    filterset_class = filters.NoteFilterSet
+    filterset_form_class = forms.NoteFilterForm
+    form_class = forms.NoteForm
     queryset = Note.objects.all()
-
-
-class NoteListView(generic.ObjectListView):
-    """
-    List Notes
-    """
-
-    queryset = Note.objects.all()
-    filterset = filters.NoteFilterSet
-    filterset_form = forms.NoteFilterForm
-    table = tables.NoteTable
+    serializer_class = serializers.NoteSerializer
+    table_class = tables.NoteTable
     action_buttons = ()
-
-
-class NoteEditView(generic.ObjectEditView):
-    queryset = Note.objects.all()
-    model_form = forms.NoteForm
 
     def alter_obj(self, obj, request, url_args, url_kwargs):
         obj.user = request.user
         return obj
-
-
-class NoteDeleteView(generic.ObjectDeleteView):
-    queryset = Note.objects.all()
 
 
 class ObjectNotesView(generic.GenericView):
