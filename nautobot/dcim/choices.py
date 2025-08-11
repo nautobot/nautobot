@@ -1437,12 +1437,12 @@ class PowerFeedTypeChoices(ChoiceSet):
 
 
 class PowerPathChoices(ChoiceSet):
-    SIDE_A = "a-side"
-    SIDE_B = "b-side"
+    PATH_A = "a"
+    PATH_B = "b"
 
     CHOICES = (
-        (SIDE_A, "A-Side"),
-        (SIDE_B, "B-Side"),
+        (PATH_A, "Path A"),
+        (PATH_B, "Path B"),
     )
 
 

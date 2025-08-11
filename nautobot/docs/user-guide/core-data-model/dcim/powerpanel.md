@@ -33,8 +33,8 @@ Each power panel must be assigned to a location, and may optionally be assigned 
 +++ 2.4.15
     The `power_path` field defines the physical path or source of the power panel. It represents which power distribution path the panel originates from, which is crucial for modeling fault tolerance:
 
-* **A-Side**: The power panel originates from the "A" power path
-* **B-Side**: The power panel originates from the "B" power path  
+* **Path A**: The power panel originates from the "A" power path
+* **Path B**: The power panel originates from the "B" power path  
 
 If a power panel is part of a single, non-redundant power system (as in a Tier I or Tier II data center), the `power_path` field can be left blank.
 

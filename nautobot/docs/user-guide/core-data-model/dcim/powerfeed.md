@@ -18,8 +18,8 @@ The interpretation of these types depends on the overall power design. For examp
 +++ 2.4.15
     The `power_path` field defines the physical path or source of the power feed. It represents which power distribution path the circuit originates from, which is crucial for modeling fault tolerance:
 
-* **A-Side**: The power feed originates from the "A" power path
-* **B-Side**: The power feed originates from the "B" power path  
+* **Path A**: The power feed originates from the "A" power path
+* **Path B**: The power feed originates from the "B" power path  
 
 If a power feed is part of a single, non-redundant power system (as in a Tier I or Tier II data center), the `power_path` field can be left blank.
 
@@ -102,8 +102,8 @@ By combining the `type` and `power_path` fields, you can model various industry-
 | Uptime Tier | Design | Feed 1 | Feed 2 |
 | :--- | :--- | :--- | :--- |
 | Tier I/II | Single Path (N) | `type=Primary`, `power_path=` (blank) | (none) |
-| Tier III | Active/Passive (N+1) | `type=Primary`, `power_path=A-Side` | `type=Redundant`, `power_path=B-Side` |
-| Tier IV | Active/Active (2N) | `type=Primary`, `power_path=A-Side` | `type=Primary`, `power_path=B-Side` |
+| Tier III | Active/Passive (N+1) | `type=Primary`, `power_path=a` | `type=Redundant`, `power_path=b` |
+| Tier IV | Active/Active (2N) | `type=Primary`, `power_path=a` | `type=Primary`, `power_path=b` |
 
 !!! info
     Cables can connect power feeds only to device power ports. Pass-through ports cannot be used to model power distribution. The power utilization of a rack is calculated when one or more power feeds are assigned to the rack and connected to devices that draw power.

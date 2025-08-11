@@ -3649,7 +3649,7 @@ class PowerFeedTestCase(PathEndpointModelTestMixin, FilterTestCases.FilterTestCa
             amperage=100,
             max_utilization=10,
             comments="PFA",
-            power_path=PowerPathChoices.SIDE_A,
+            power_path=PowerPathChoices.PATH_A,
             breaker_position=1,
             breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_1,
         )
@@ -3662,7 +3662,7 @@ class PowerFeedTestCase(PathEndpointModelTestMixin, FilterTestCases.FilterTestCa
             amperage=200,
             max_utilization=20,
             comments="PFB",
-            power_path=PowerPathChoices.SIDE_B,
+            power_path=PowerPathChoices.PATH_B,
             breaker_position=4,
             breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_2,
         )
@@ -3675,7 +3675,7 @@ class PowerFeedTestCase(PathEndpointModelTestMixin, FilterTestCases.FilterTestCa
             amperage=300,
             max_utilization=30,
             comments="PFC",
-            power_path=PowerPathChoices.SIDE_A,
+            power_path=PowerPathChoices.PATH_A,
             breaker_position=9,
             breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_3,
         )
@@ -3688,7 +3688,7 @@ class PowerFeedTestCase(PathEndpointModelTestMixin, FilterTestCases.FilterTestCa
             amperage=400,
             max_utilization=40,
             comments="PFD",
-            power_path=PowerPathChoices.SIDE_B,
+            power_path=PowerPathChoices.PATH_B,
             breaker_position=15,
             breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_2,
         )
@@ -3746,10 +3746,10 @@ class PowerFeedTestCase(PathEndpointModelTestMixin, FilterTestCases.FilterTestCa
         )
 
     def test_power_path(self):
-        params = {"power_path": [PowerPathChoices.SIDE_A]}
+        params = {"power_path": [PowerPathChoices.PATH_A]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(power_path=PowerPathChoices.SIDE_A),
+            self.queryset.filter(power_path=PowerPathChoices.PATH_A),
         )
 
 
