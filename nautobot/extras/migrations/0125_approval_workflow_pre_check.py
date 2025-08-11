@@ -9,7 +9,7 @@ This migration performs the following checks before proceeding:
    Users should define an approval workflow definition for such jobs going forward.
 
 Refer to documentation for migration to the new approval workflow system:
-https://docs.nautobot.com/projects/core/en/next/user-guide/platform-functionality/approval-workflow/
+https://docs.nautobot.com/projects/core/en/v3.0.0/user-guide/platform-functionality/approval-workflow/
 """
 
 from django.db import migrations
@@ -23,9 +23,9 @@ def _migrate_data(apps, *_):
 
     if approval_required_scheduled_jobs:
         message_lines = [
-            "Migration aborted: There are scheduled jobs that still require approval.",
-            "Please clear the job approval queue prior to the upgrade.",
-            "Below list of effected scheduled jobs:",
+            "Migration aborted: These need to be approved (and run) or denied before upgrading to Nautobot v3, as the introduction of the approval workflows feature means that future scheduled-job approvals will be handled differently.",
+            "Refer to the documentation: https://docs.nautobot.com/projects/core/en/v2.4.14/user-guide/platform-functionality/jobs/job-scheduling-and-approvals/#approval-via-the-ui",
+            "Below is a list of affected scheduled jobs:",
         ]
         for schedule_job_id, scheduled_job_name in approval_required_scheduled_jobs:
             message_lines.append(f"    - ID: {schedule_job_id}, Name: {scheduled_job_name}")
@@ -38,7 +38,7 @@ def _migrate_data(apps, *_):
             "Migration passed, but the following jobs still have `approval_required=True`.",
             "These jobs will no longer trigger approval automatically.",
             "After upgrading to Nautobot 3.x, you should add an approval workflow definition(s) covering these jobs.",
-            "Refer to the documentation: https://docs.nautobot.com/projects/core/en/next/user-guide/platform-functionality/approval-workflow/",
+            "Refer to the documentation: https://docs.nautobot.com/projects/core/en/v3.0.0/user-guide/platform-functionality/approval-workflow/",
             "Affected jobs (Names):",
         ]
         for job_name in approval_required_jobs:
