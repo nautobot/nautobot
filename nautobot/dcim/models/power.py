@@ -283,12 +283,6 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
                 "Power feeds can either connect to a panel OR be cabled to an endpoint, but not both."
             )
 
-        if self.cable and self.destination_panel:
-            raise ValidationError(
-                "This power feed cannot be connected via cable when a destination panel is specified. "
-                "Power feeds can either connect to a panel OR be cabled to an endpoint, but not both."
-            )
-
         # Cache the available_power property on the instance
         kva = abs(self.voltage) * self.amperage * (self.max_utilization / 100)
         if self.phase == PowerFeedPhaseChoices.PHASE_3PHASE:
