@@ -1,0 +1,1 @@
+Fixed a bug in `NoteFilterSet` where the `assigned_object_id` filter did not properly convert values to UUIDs, causing failed lookups when filtering by this field. Now applies a `UUID` preprocessor to ensure correct filtering.
