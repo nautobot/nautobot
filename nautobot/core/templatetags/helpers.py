@@ -764,12 +764,14 @@ def render_address(address):
 
 @register.filter()
 def render_m2m(value, link_to_redirect, model, max_visible=5):
-    if not value:
+    total_count = queryset.count()
+    display_count = min(total_count, max_visible)
+    if not display_count:
         return HTML_NONE
 
-    items = [hyperlinked_object(val) for val in value[:max_visible]]
+    items = [hyperlinked_object(val) for record in queryset[:display_count]]
 
-    remaining = len(value) - max_visible
+    remaining = total_count - display_count
     if remaining > 0:
         link = format_html('<a href="{}">... View {} more {}</a>', link_to_redirect, remaining, model)
         items.append(link)
