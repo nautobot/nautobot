@@ -1892,7 +1892,8 @@ class _ObjectDetailContactsTab(Tab):
             "{} {}",
             self.label,
             render_to_string(
-                "utilities/templatetags/badge.html", badge(get_obj_from_context(context).associated_contacts.count())
+                "utilities/templatetags/badge.html",
+                badge(get_obj_from_context(context).associated_contacts.count(), True),
             ),
         )
 
@@ -1936,7 +1937,7 @@ class _ObjectDetailGroupsTab(Tab):
             "{} {}",
             self.label,
             render_to_string(
-                "utilities/templatetags/badge.html", badge(get_obj_from_context(context).dynamic_groups.count())
+                "utilities/templatetags/badge.html", badge(get_obj_from_context(context).dynamic_groups.count(), True)
             ),
         )
 
@@ -1983,6 +1984,6 @@ class _ObjectDetailMetadataTab(Tab):
             self.label,
             render_to_string(
                 "utilities/templatetags/badge.html",
-                badge(get_obj_from_context(context).associated_object_metadata.count()),
+                badge(get_obj_from_context(context).associated_object_metadata.count(), True),
             ),
         )
