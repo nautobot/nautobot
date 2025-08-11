@@ -101,7 +101,7 @@ graphene-django-optimizer = "~0.8.0"
 # Template rendering engine
 Jinja2 = "~3.1.6"
 # Optional data validation of config contexts - loose dependency since our usage is light but apps may be more specific
-jsonschema = "^4.25.0"
+jsonschema = "^4.7.0"
 # Messaging library for Python - dependency of Celery
 # Included as an explicit dependency for now to require a version with https://github.com/celery/kombu/pull/2007
 # This can be removed once we increate the lower bound of permitted versions of Celery itself above.
