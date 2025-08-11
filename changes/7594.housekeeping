@@ -1,0 +1,1 @@
+Refactored Note model related UI views to use `NautobotUIViewSet`.
