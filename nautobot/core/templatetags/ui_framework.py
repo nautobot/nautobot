@@ -34,6 +34,9 @@ def render_title(context, mode="html"):
     title_obj = context.get("view_titles")
     if title_obj is not None and isinstance(title_obj, Titles):
         return title_obj.render(context, mode=mode)
+
+    if fallback_title := context.get("title"):
+        return fallback_title
     return ""
 
 
