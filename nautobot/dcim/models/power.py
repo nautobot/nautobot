@@ -180,8 +180,11 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
     ]
 
     class Meta:
-        ordering = ["power_panel", "name"]
-        unique_together = ["power_panel", "name"]
+        ordering = ["power_panel", "breaker_position", "name"]
+        unique_together = [
+            ["power_panel", "name"],
+            ["power_panel", "breaker_position"],
+        ]
         indexes = [
             models.Index(fields=["power_panel", "breaker_position"]),
         ]
@@ -217,7 +220,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
             # TODO: add loop detection when graph structure is implemented for path tracing
 
         # Enforce mutual exclusivity between cable connections and destination_panel
-        if self.destination_panel and self._path and self._path.destination:  # pylint: disable=no-member
+        if self.destination_panel and self.cable:
             raise ValidationError(
                 {
                     "destination_panel": "Cannot specify a destination panel when the power feed is connected via cable. "
@@ -225,7 +228,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
                 }
             )
 
-        if self._path and self._path.destination and self.destination_panel:  # pylint: disable=no-member
+        if self.cable and self.destination_panel:
             raise ValidationError(
                 {
                     "__all__": "This power feed cannot be connected via cable when a destination panel is specified. "
@@ -258,7 +261,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
             # Check for breaker position conflicts with other feeds
             conflicts = PowerFeed.objects.filter(
                 power_panel=self.power_panel, breaker_position__isnull=False, breaker_pole_count__isnull=False
-            ).exclude(pk=self.pk if self.pk else None)
+            ).exclude(pk=self.pk)
 
             for feed in conflicts:
                 if occupied_positions.intersection(feed.get_occupied_positions()):
@@ -275,13 +278,13 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
             self.breaker_pole_count = PowerFeedBreakerPoleChoices.POLE_1
 
         # Enforce mutual exclusivity between cable connections and destination_panel
-        if self.destination_panel and self._path and self._path.destination:  # pylint: disable=no-member
+        if self.destination_panel and self.cable:
             raise ValidationError(
                 "Cannot specify a destination panel when the power feed is connected via cable. "
                 "Power feeds can either connect to a panel OR be cabled to an endpoint, but not both."
             )
 
-        if self._path and self._path.destination and self.destination_panel:  # pylint: disable=no-member
+        if self.cable and self.destination_panel:
             raise ValidationError(
                 "This power feed cannot be connected via cable when a destination panel is specified. "
                 "Power feeds can either connect to a panel OR be cabled to an endpoint, but not both."

@@ -2972,17 +2972,6 @@ class PowerPortBulkCreateForm(
     form_from_model(PowerPort, ["type", "maximum_draw", "allocated_draw", "power_factor", "tags"]),
     DeviceBulkAddComponentForm,
 ):
-    # Override the auto-generated power_factor field to make it properly optional
-    power_factor = forms.DecimalField(
-        max_digits=4,
-        decimal_places=2,
-        min_value=0.01,
-        max_value=1.00,
-        required=False,
-        initial=0.95,
-        help_text="Power factor (0.01-1.00) for converting between watts and VA.",
-    )
-
     field_order = (
         "name_pattern",
         "label_pattern",
@@ -2999,17 +2988,6 @@ class ModulePowerPortBulkCreateForm(
     form_from_model(PowerPort, ["type", "maximum_draw", "allocated_draw", "power_factor", "tags"]),
     ModuleBulkAddComponentForm,
 ):
-    # Override the auto-generated power_factor field to make it properly optional
-    power_factor = forms.DecimalField(
-        max_digits=4,
-        decimal_places=2,
-        min_value=0.01,
-        max_value=1.00,
-        required=False,
-        initial=0.95,
-        help_text="Power factor (0.01-1.00) for converting between watts and VA.",
-    )
-
     field_order = (
         "name_pattern",
         "label_pattern",
@@ -4841,9 +4819,6 @@ class PowerFeedBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin,
 
     class Meta:
         nullable_fields = [
-            "power_path",
-            "breaker_position",
-            "breaker_pole_count",
             "comments",
         ]
 
@@ -4870,6 +4845,7 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, Locata
         required=False,
         label="Rack",
         null_option="None",
+        query_params={"location": "$location"},
     )
     type = forms.ChoiceField(
         choices=add_blank_choice(PowerFeedTypeChoices),

@@ -913,9 +913,11 @@ class ObjectsTablePanel(Panel):
         elif self.max_display_count is not None:
             # If not paginating but a cap is desired, slice the table's data source.
             try:
+                more_queryset_count = max(body_content_table.data.data.count() - self.max_display_count, 0)
                 body_content_table.data.data = body_content_table.data.data[: self.max_display_count]
             except TypeError:
                 # Non-queryset iterable; fall back to list slicing
+                more_queryset_count = max(len(body_content_table.data.data) - self.max_display_count, 0)
                 body_content_table.data.data = list(body_content_table.data.data)[: self.max_display_count]
 
         obj = get_obj_from_context(context)

@@ -9,7 +9,8 @@ Each power panel must be assigned to a location, and may optionally be assigned 
 
 ## Panel Types
 
-Power panels can be categorized by type to better represent different components in the power distribution hierarchy:
++++ 2.4.15
+    Power panels can be categorized by type to better represent different components in the power distribution hierarchy:
 
 * **Utility** - Main utility connection point
 * **Generator** - Emergency power generation equipment
@@ -24,7 +25,8 @@ Power panels can be categorized by type to better represent different components
 
 ## Breaker Positions
 
-Power panels can optionally specify the total number of breaker positions. This helps track breaker capacity and prevents overallocation when power feeds specify breaker positions. For example, a 42-position panelboard would have `breaker_position_count` set to 42.
++++ 2.4.15
+    Power panels can optionally specify the total number of breaker positions. This helps track breaker capacity and prevents overallocation when power feeds specify breaker positions. For example, a 42-position panelboard would have `breaker_position_count` set to 42.
 
 ## Panel-to-Panel Distribution
 
