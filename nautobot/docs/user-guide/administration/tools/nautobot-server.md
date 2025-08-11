@@ -204,9 +204,6 @@ Output (when pass):
 ```no-highlight
 No approval_required jobs or scheduled jobs found.
 ```
-
-
-
 ### `createsuperuser`
 
 `nautobot-server createsuperuser`

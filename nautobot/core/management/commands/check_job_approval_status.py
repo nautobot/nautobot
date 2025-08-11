@@ -24,7 +24,7 @@ class Command(BaseCommand):
         if approval_required_scheduled_jobs:
             message_lines = [
                 "These need to be approved (and run) or denied before upgrading to Nautobot v3, as the introduction of the approval workflows feature means that future scheduled-job approvals will be handled differently.",
-                "Refer to the documentation: https://docs.nautobot.com/projects/core/en/stable/user-guide/platform-functionality/jobs/job-scheduling-and-approvals/#approval-via-the-ui",
+                "Refer to the documentation: https://docs.nautobot.com/projects/core/en/v2.4.14/user-guide/platform-functionality/jobs/job-scheduling-and-approvals/#approval-via-the-ui",
                 "Below is a list of affected scheduled jobs:",
             ]
             for schedule_job_id, scheduled_job_name in approval_required_scheduled_jobs:
@@ -37,7 +37,7 @@ class Command(BaseCommand):
                 "Following jobs still have `approval_required=True`.",
                 "These jobs will no longer trigger approval automatically.",
                 "After upgrading to Nautobot 3.x, you should add an approval workflow definition(s) covering these jobs.",
-                "Refer to the documentation: https://docs.nautobot.com/projects/core/en/next/user-guide/platform-functionality/approval-workflow/",
+                "Refer to the documentation: https://docs.nautobot.com/projects/core/en/v3.0.0/user-guide/platform-functionality/approval-workflow/",
                 "Affected jobs (Names):",
             ]
             for job_name in approval_required_jobs:
