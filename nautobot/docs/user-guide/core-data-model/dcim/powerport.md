@@ -10,7 +10,7 @@ Cables can connect power ports only to power outlets or power feeds. (Pass-throu
 +/- 2.3.0
     This model has been updated to support being installed in [Modules](module.md). As a result, there are now two fields for assignment to a Device or Module. One of the `device` or `module` fields must be populated but not both. If a `module` is supplied, the `device` field must be null, and similarly the `module` field must be null if a `device` is supplied.
 
-+/- 2.4.15
++++ 2.4.15
     Power Ports include a `power_factor` field for converting between watts (W) and volt-amps (VA) in power calculations.
 
     The power factor represents the ratio of real power (watts) to apparent power (volt-amps) and defaults to 0.95, which is typical for modern server equipment. To find the power factor for your specific equipment, check:

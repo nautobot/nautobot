@@ -15,7 +15,7 @@ The interpretation of these types depends on the overall power design. For examp
 
 ## Power Path
 
-+/- 2.4.15
++++ 2.4.15
     The `power_path` field defines the physical path or source of the power feed. It represents which power distribution path the circuit originates from, which is crucial for modeling fault tolerance:
 
 * **A-Side**: The power feed originates from the "A" power path
@@ -34,7 +34,7 @@ Each power feed must be assigned an operational [`status`](../../platform-functi
 
 ## Panel-to-Panel Distribution
 
-+/- 2.4.15
++++ 2.4.15
     Power feeds can connect one power panel to another by specifying a `destination_panel`. This enables modeling of hierarchical power distribution where power flows from upstream panels to downstream panels.
 
 !!! note
@@ -60,7 +60,7 @@ Each power feed defines the electrical characteristics of the circuit:
 
 ## Breaker Configuration
 
-+/- 2.4.15
++++ 2.4.15
     Power feeds can specify their breaker configuration within the source power panel:
 
 * **Breaker position**: The starting circuit position number in the panel
