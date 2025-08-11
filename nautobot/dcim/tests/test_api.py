@@ -3168,7 +3168,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
 
 class PowerPanelTest(APIViewTestCases.APIViewTestCase):
     model = PowerPanel
-    choices_fields = ["panel_type"]
+    choices_fields = ["panel_type", "power_path"]
 
     @classmethod
     def setUpTestData(cls):

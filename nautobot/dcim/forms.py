@@ -90,12 +90,12 @@ from .choices import (
     PortTypeChoices,
     PowerFeedBreakerPoleChoices,
     PowerFeedPhaseChoices,
-    PowerFeedPowerPathChoices,
     PowerFeedSupplyChoices,
     PowerFeedTypeChoices,
     PowerOutletFeedLegChoices,
     PowerOutletTypeChoices,
     PowerPanelTypeChoices,
+    PowerPathChoices,
     PowerPortTypeChoices,
     RackDimensionUnitChoices,
     RackTypeChoices,
@@ -4704,7 +4704,7 @@ class PowerPanelBulkEditForm(
     )
     breaker_position_count = forms.IntegerField(required=False, min_value=1)
     power_path = forms.ChoiceField(
-        choices=add_blank_choice(PowerFeedPowerPathChoices),
+        choices=add_blank_choice(PowerPathChoices),
         required=False,
         initial="",
         widget=StaticSelect2(),
@@ -4712,9 +4712,7 @@ class PowerPanelBulkEditForm(
 
     class Meta:
         model = PowerPanel
-        nullable_fields = [
-            "rack_group",
-        ]
+        nullable_fields = ["rack_group"]
 
 
 class PowerPanelFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
@@ -4734,7 +4732,7 @@ class PowerPanelFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
     )
     breaker_position_count = forms.IntegerField(required=False, min_value=1)
     power_path = forms.ChoiceField(
-        choices=add_blank_choice(PowerFeedPowerPathChoices),
+        choices=add_blank_choice(PowerPathChoices),
         required=False,
         initial="",
         widget=StaticSelect2(),
@@ -4811,7 +4809,7 @@ class PowerFeedBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin,
         widget=StaticSelect2(),
     )
     power_path = forms.ChoiceField(
-        choices=add_blank_choice(PowerFeedPowerPathChoices),
+        choices=add_blank_choice(PowerPathChoices),
         required=False,
         initial="",
         widget=StaticSelect2(),
@@ -4875,7 +4873,7 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, Locata
         widget=StaticSelect2(),
     )
     power_path = forms.ChoiceField(
-        choices=add_blank_choice(PowerFeedPowerPathChoices),
+        choices=add_blank_choice(PowerPathChoices),
         required=False,
         initial="",
         widget=StaticSelect2(),

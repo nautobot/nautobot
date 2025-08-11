@@ -1436,7 +1436,7 @@ class PowerFeedTypeChoices(ChoiceSet):
     }
 
 
-class PowerFeedPowerPathChoices(ChoiceSet):
+class PowerPathChoices(ChoiceSet):
     SIDE_A = "a-side"
     SIDE_B = "b-side"
 
