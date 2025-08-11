@@ -975,6 +975,7 @@ class VirtualChassisSerializer(TaggedModelSerializerMixin, NautobotModelSerializ
 
 class PowerPanelSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     panel_type = ChoiceField(choices=PowerPanelTypeChoices, allow_blank=True, required=False)
+    power_path = ChoiceField(choices=PowerFeedPowerPathChoices, allow_blank=True, required=False)
     power_feed_count = serializers.IntegerField(read_only=True)
 
     class Meta:

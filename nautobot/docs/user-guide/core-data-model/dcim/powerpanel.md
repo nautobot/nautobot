@@ -28,6 +28,16 @@ Each power panel must be assigned to a location, and may optionally be assigned 
 +++ 2.4.15
     Power panels can optionally specify the total number of breaker positions. This helps track breaker capacity and prevents overallocation when power feeds specify breaker positions. For example, a 42-position panelboard would have `breaker_position_count` set to 42.
 
+## Power Path
+
++++ 2.4.15
+    The `power_path` field defines the physical path or source of the power panel. It represents which power distribution path the panel originates from, which is crucial for modeling fault tolerance:
+
+* **A-Side**: The power panel originates from the "A" power path
+* **B-Side**: The power panel originates from the "B" power path  
+
+If a power panel is part of a single, non-redundant power system (as in a Tier I or Tier II data center), the `power_path` field can be left blank.
+
 ## Panel-to-Panel Distribution
 
 Power panels can distribute power to other power panels through power feeds with a specified `destination_panel`. This enables modeling of hierarchical power distribution where power flows from upstream panels (like utility switchgear or MDPs) to downstream panels (like UPS systems or panelboards). This allows Nautobot to model complete power paths from utility sources through multiple distribution tiers down to rack-level devices.

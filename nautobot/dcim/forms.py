@@ -4677,10 +4677,12 @@ class PowerPanelForm(LocatableModelFormMixin, NautobotModelForm):
             "name",
             "panel_type",
             "breaker_position_count",
+            "power_path",
             "tags",
         ]
         widgets = {
             "panel_type": StaticSelect2(),
+            "power_path": StaticSelect2(),
         }
 
 
@@ -4701,10 +4703,18 @@ class PowerPanelBulkEditForm(
         widget=StaticSelect2(),
     )
     breaker_position_count = forms.IntegerField(required=False, min_value=1)
+    power_path = forms.ChoiceField(
+        choices=add_blank_choice(PowerFeedPowerPathChoices),
+        required=False,
+        initial="",
+        widget=StaticSelect2(),
+    )
 
     class Meta:
         model = PowerPanel
-        nullable_fields = ["rack_group", "panel_type", "breaker_position_count"]
+        nullable_fields = [
+            "rack_group",
+        ]
 
 
 class PowerPanelFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
@@ -4723,6 +4733,12 @@ class PowerPanelFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
         widget=StaticSelect2Multiple(),
     )
     breaker_position_count = forms.IntegerField(required=False, min_value=1)
+    power_path = forms.ChoiceField(
+        choices=add_blank_choice(PowerFeedPowerPathChoices),
+        required=False,
+        initial="",
+        widget=StaticSelect2(),
+    )
     tags = TagFilterField(model)
 
 

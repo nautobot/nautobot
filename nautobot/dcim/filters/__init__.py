@@ -1646,7 +1646,7 @@ class PowerPanelFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet):
 
     class Meta:
         model = PowerPanel
-        fields = ["id", "name", "tags"]
+        fields = ["id", "name", "panel_type", "power_path", "tags"]
 
 
 class PowerFeedFilterSet(

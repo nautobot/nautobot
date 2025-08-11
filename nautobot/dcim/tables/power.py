@@ -28,6 +28,7 @@ class PowerPanelTable(BaseTable):
     name = tables.LinkColumn()
     location = tables.Column(linkify=True)
     panel_type = tables.Column()
+    power_path = tables.Column()
     breaker_position_count = tables.Column(verbose_name="Total Breaker Positions")
     power_feed_count = LinkedCountColumn(
         viewname="dcim:powerfeed_list",
@@ -44,6 +45,7 @@ class PowerPanelTable(BaseTable):
             "location",
             "rack_group",
             "panel_type",
+            "power_path",
             "breaker_position_count",
             "power_feed_count",
             "tags",
@@ -54,6 +56,7 @@ class PowerPanelTable(BaseTable):
             "location",
             "rack_group",
             "panel_type",
+            "power_path",
             "power_feed_count",
         )
 

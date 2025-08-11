@@ -4098,6 +4098,7 @@ class PowerPanelUIViewSet(NautobotUIViewSet):
                     "location",
                     "rack_group",
                     "panel_type",
+                    "power_path",
                     "breaker_position_count",
                 ],
             ),

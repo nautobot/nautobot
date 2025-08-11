@@ -57,6 +57,12 @@ class PowerPanel(PrimaryModel):
     breaker_position_count = models.PositiveIntegerField(
         null=True, blank=True, help_text="Total number of breaker positions in the panel (e.g., 42)"
     )
+    power_path = models.CharField(
+        max_length=20,
+        choices=PowerFeedPowerPathChoices,
+        help_text="Physical power distribution redundancy path.",
+        blank=True,
+    )
 
     natural_key_field_names = ["name", "location"]
 
