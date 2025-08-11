@@ -78,6 +78,7 @@ from nautobot.wireless.tables import (
     RadioProfileTable,
 )
 
+from ..core.ui.breadcrumbs import BaseBreadcrumbItem, Breadcrumbs, InstanceBreadcrumbItem, ViewNameBreadcrumbItem
 from . import filters, forms, tables
 from .api import serializers
 from .choices import DeviceFaceChoices
@@ -1641,6 +1642,27 @@ class PlatformUIViewSet(NautobotUIViewSet):
 #
 # Devices
 #
+
+
+class DeviceBreadcrumbsMixin:
+    breadcrumbs = Breadcrumbs(
+        items={
+            "*": [
+                ViewNameBreadcrumbItem(
+                    view_name="dcim:device_list",
+                    label=lambda c: c["object"].location,
+                    reverse_query_params=lambda c: {"location": c["object"].location.pk},
+                ),
+                InstanceBreadcrumbItem(
+                    instance=lambda c: c["object"].parent_bay.device,
+                    should_render=lambda c: hasattr(c["object"], "parent_bay"),
+                ),
+                BaseBreadcrumbItem(
+                    label=lambda c: c["object"].parent_bay, should_render=lambda c: hasattr(c["object"], "parent_bay")
+                ),
+            ]
+        }
+    )
 
 
 class DeviceListView(generic.ObjectListView):

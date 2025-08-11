@@ -351,19 +351,15 @@ class InstanceBreadcrumbItem(BaseBreadcrumbItem):
         return context.get(self.instance_key)
 
 
-DEFAULT_MODEL_BREADCRUMBS = [
+DEFAULT_LIST_BREADCRUMBS = [
     ViewNameBreadcrumbItem(
         view_name_key="list_url", label_key="title", should_render=lambda context: context.get("list_url") is not None
     ),  # Default breadcrumb if view defines `list_url` in the Context
     ModelBreadcrumbItem(model_key="model", should_render=lambda context: context.get("list_url") is None),
     # Fallback if there is no `list_url` in the Context
 ]
-DEFAULT_INSTANCE_BREADCRUMBS = [*DEFAULT_MODEL_BREADCRUMBS, InstanceBreadcrumbItem()]
 
-DEFAULT_BREADCRUMBS = {
-    "list": DEFAULT_MODEL_BREADCRUMBS,
-    "detail": DEFAULT_INSTANCE_BREADCRUMBS,
-}
+DEFAULT_INSTANCE_BREADCRUMB = [InstanceBreadcrumbItem()]
 
 
 class Breadcrumbs:
@@ -373,17 +369,32 @@ class Breadcrumbs:
     This class supports flexible breadcrumb configuration through:
     - `items`: Default breadcrumb items per view action.
 
-    You can override all or parts of the breadcrumb trail by passing appropriate
-    `BreadcrumbItem` objects grouped by view action (e.g., "list", "add", "edit").
+    You can add more informations to the breadcrumbs trail by passing appropriate
+    `BreadcrumbItem` objects grouped by view action (e.g., "*", "list", "add", "edit").
 
-    `detail` action is special case, used when there is no dedicated action for given request.
-    In such case breadcrumbs logic will be using `context['detail']: bool` to determine whether to show
-    `list` version of breadcrumbs or `detail`.
+    Special breadcrumb item actions:
+         - `*` - if no other action was found, items from `*` will be used
+         - `detail` action is used when there is no dedicated action for given request
+         and there is `context['detail'] = True` set in context
+
+    !!! important
+        This class automatically adds the:
+        - `InstanceBreadcrumbItem` at the end of `detail` breadcrumbs
+        - `ModelBreadcrumbItem` at the beginning of `list` and `detail` breadcrumbs
+
+        You can override this behavior by subclassing this class and updating
+        the `list_breadcrumb_item` or `detail_breadcrumb_item` attributes.
+
+        If you're using custom action other than `list` / `detail` you need to remember to add above breadcrumbs
+        if you need them in your custom action.
 
     Attributes:
         template (str): Path to the template used to render the breadcrumb component.
         items (dict[str, list[BreadcrumbItem]]): Default breadcrumb items per view action.
     """
+
+    list_breadcrumb_items: list[BaseBreadcrumbItem] = DEFAULT_LIST_BREADCRUMBS
+    detail_breadcrumb_items: list[BaseBreadcrumbItem] = DEFAULT_INSTANCE_BREADCRUMB
 
     def __init__(
         self,
@@ -398,9 +409,13 @@ class Breadcrumbs:
             template (str): The template used to render the breadcrumbs.
         """
         self.template = template
-        self.items: BreadcrumbItemsType = copy.deepcopy(DEFAULT_BREADCRUMBS)
         if items:
-            self.items.update(items)
+            self.items = items
+            list_items = self.items.get("list", [])
+            self.items["list"] = [*self.list_breadcrumb_items, list_items]
+
+            detail_items = self.items.get("detail", [])
+            self.items["detail"] = [*self.detail_breadcrumb_items, detail_items, *self.detail_breadcrumb_items]
 
     def get_breadcrumbs_items(self, context: Context):
         """
