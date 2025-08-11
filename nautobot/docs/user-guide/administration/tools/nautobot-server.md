@@ -181,6 +181,7 @@ nautobot-server check_job_approval_status
 ```
 
 Output (when failed):
+
 ```no-highlight
 nautobot.core.management.commands.check_job_approval_status.ApprovalRequiredScheduledJobsError: These need to be approved (and run) or denied before upgrading to Nautobot v3, as the introduction of the approval workflows feature means that future scheduled-job approvals will be handled differently.
 Refer to the documentation: https://docs.nautobot.com/projects/core/en/stable/user-guide/platform-functionality/jobs/job-scheduling-and-approvals/#approval-via-the-ui
@@ -189,6 +190,7 @@ Below is a list of affected scheduled jobs:
 ```
 
 Output (with warning):
+
 ```no-highlight
 Following jobs still have `approval_required=True`.
 These jobs will no longer trigger approval automatically.
@@ -201,9 +203,11 @@ Affected jobs (Names):
 ```
 
 Output (when pass):
+
 ```no-highlight
 No approval_required jobs or scheduled jobs found.
 ```
+
 ### `createsuperuser`
 
 `nautobot-server createsuperuser`
