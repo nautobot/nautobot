@@ -6,7 +6,7 @@
 {% load static %}
 {% load ui_framework %}
 
-{%  block title %}{% render_title "plain" %}{% saved_view_title "plain" %}{% endblock %}
+{% block document_title %}{% render_title "plain" %}{% saved_view_title "plain" %}{% endblock %}
 
 {% block header %}
     <div class="row noprint">
@@ -154,7 +154,7 @@
         {% endblock export_button %}
     {% endif %}
 </div>
-<h1>{% render_title %}{% saved_view_title %}</h1>
+<h1>{% block page_heading %}{% block title %}{% render_title %}{% saved_view_title %}{% endblock %}{% endblock %}</h1>
 {% block header_extra %}{% endblock %}
 {% if filter_params %}
 <div class="filters-applied">

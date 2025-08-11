@@ -57,7 +57,7 @@
 </style>
 {% endblock %}
 
-{% block title %}{% render_title "plain" %}{% endblock %}
+{% block document_title %}{% render_title "plain" %}{% endblock %}
 
 {% block content %}
     <div class="row noprint">
@@ -70,7 +70,7 @@
         <a class="btn btn-primary" href="{% url 'apps:apps_list' %}">See Installed Apps</a>
     </div>
 
-    <h1>{% render_title %}</h1>
+    <h1>{% block page_heading %}{% render_title %}{% block page_heading %}</h1>
 
     <div class="row">
         <div class="col-md-12">

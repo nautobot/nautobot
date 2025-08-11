@@ -5,7 +5,7 @@
 <!DOCTYPE html>
 <html lang="en"{% if request.COOKIES|get_item:"theme" == 'dark' %} data-theme="dark"{% endif %}>
 <head>
-    <title>{% block title %}Home{% endblock %} - {{ settings.BRANDING_TITLE }}</title>
+    <title>{% block document_title %}{% block title %}Home{% endblock %}{% endblock %} - {{ settings.BRANDING_TITLE }}</title>
     {% include 'inc/media.html' %}
     {% block extra_styles %}{% endblock %}
 </head>
