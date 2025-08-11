@@ -1,0 +1,1 @@
+Fixed the Children section in `location_retrieve.html` to properly display child locations of the same Location Type (e.g., sites within sites, rooms within rooms).
