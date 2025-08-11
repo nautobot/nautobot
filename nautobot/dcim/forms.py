@@ -4758,9 +4758,15 @@ class PowerFeedForm(NautobotModelForm):
         query_params={"location": "$location"},
     )
     destination_panel = DynamicModelChoiceField(
-        queryset=PowerPanel.objects.all(), required=False, query_params={"location": "$location"}
+        queryset=PowerPanel.objects.all(),
+        required=False,
+        query_params={"location": "$location"},
     )
-    rack = DynamicModelChoiceField(queryset=Rack.objects.all(), required=False, query_params={"location": "$location"})
+    rack = DynamicModelChoiceField(
+        queryset=Rack.objects.all(),
+        required=False,
+        query_params={"location": "$location"},
+    )
     comments = CommentField(label="Comments")
 
     class Meta:
