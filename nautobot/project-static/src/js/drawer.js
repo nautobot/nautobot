@@ -76,7 +76,8 @@ export const initializeDrawers = () => {
     }
   });
 
-  document.addEventListener('nb-drawer:closed', (event) => {
+  document.addEventListener('nb-drawer:closed', () => {
+    // eslint-disable-next-line no-unused-vars
     const { drawer, ...restState } =
       typeof window.history?.state === 'object' && window.history.state !== null ? window.history.state : {};
     const nextState = Object.keys(restState).length > 0 ? restState : null;
