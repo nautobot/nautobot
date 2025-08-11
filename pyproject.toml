@@ -47,6 +47,10 @@ django-ajax-tables = "~1.1.1"
 # LDAP Support
 django-auth-ldap = {version = "~5.2.0", optional = true}
 # Base functionality for task scheduling with Celery
+# Not yet upgrading to v2.8.x due to numerous reported issues, including:
+# https://github.com/celery/django-celery-beat/issues/894
+# https://github.com/celery/django-celery-beat/issues/922
+# https://github.com/celery/django-celery-beat/issues/927
 django-celery-beat = "~2.7.0"
 # Provides a database backend & models for Celery task results
 django-celery-results = "~2.6.0"
@@ -123,7 +127,7 @@ netutils = "^1.14.0"
 # HTML sanitization
 nh3 = "~0.3.0"
 # Handling of version numbers
-packaging = ">=25.0"
+packaging = ">=23.1"
 # Image processing library
 Pillow = "~11.3.0"
 # Custom prometheus metrics
@@ -214,7 +218,7 @@ pylint-django = "~2.6.1"
 # Python implementation of markdownlint
 pymarkdownlnt = "~0.9.31"
 # Combination linter and code formatter
-ruff = "~0.12.7"
+ruff = "~0.12.8"
 # YAML linting
 yamllint = "~1.37.1"
 

@@ -19,7 +19,6 @@ Updated dependency `jsonschema` to `^4.25.0`.
 Updated dependency `kubernetes` to `~33.1.0`.
 Updated dependency `Markdown` to `~3.8.2`.
 Updated dependency `nh3` to `~0.3.0`.
-Updated dependency `packaging` to `>=25.0`.
 Updated dependency `Pillow` to `~11.3.0`.
 Updated dependency `prometheus-client` to `~0.22.0`.
 Updated dependency `social-auth-core` to `~4.7.0`.

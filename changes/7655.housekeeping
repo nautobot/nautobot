@@ -1,7 +1,7 @@
 Updated development dependency `django-debug-toolbar` to `~5.2.0`.
 Updated development dependency `faker` to `^37.5.3`.
 Updated development dependency `rich` to `~14.1.0`.
-Updated development dependency `ruff` to `~0.12.7` and applied its recommendations.
+Updated development dependency `ruff` to `~0.12.8` and applied its recommendations.
 Updated development dependency `selenium` to `~4.34.2`.
 Updated development dependency `tblib` to `~3.1.0`.
 Updated development dependency `time-machine` to `~2.17.0`.
