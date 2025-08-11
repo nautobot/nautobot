@@ -52,6 +52,7 @@ from nautobot.extras.models import (
     Contact,
     ContactAssociation,
     CustomField,
+    CustomFieldChoice,
     CustomLink,
     DynamicGroup,
     ExportTemplate,
@@ -83,7 +84,6 @@ from nautobot.extras.models import (
     UserSavedViewAssociation,
     Webhook,
 )
-from nautobot.extras.models.customfields import CustomFieldChoice
 from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_jobs import get_job_class_and_model
