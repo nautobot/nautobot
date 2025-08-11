@@ -214,7 +214,6 @@ The data payload associated with events of any of the above topics has the follo
                     "date_joined": "2024-10-28T08:25:32.617444Z",
                     "config_data": {}
                 },
-                "approved_by_user": null
             }
         }
      ```

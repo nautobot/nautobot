@@ -22,4 +22,8 @@ class Migration(migrations.Migration):
             old_name="approved_at",
             new_name="decision_date",
         ),
+        migrations.RemoveField(
+            model_name="scheduledjob",
+            name="approved_by_user",
+        ),
     ]

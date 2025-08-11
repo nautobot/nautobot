@@ -1188,14 +1188,6 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         null=True,
         help_text="User that requested the schedule",
     )
-    approved_by_user = models.ForeignKey(
-        to=settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        related_name="+",
-        blank=True,
-        null=True,
-        help_text="User that approved the schedule",
-    )
     # todoindex:
     approval_required = models.BooleanField(default=False)
     decision_date = models.DateTimeField(
@@ -1250,16 +1242,6 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         super().save(*args, **kwargs)
         if is_new:
             self.begin_approval_workflow()
-
-    def clean(self):
-        """
-        Model Validation
-        """
-        if self.user and self.approved_by_user and self.user == self.approved_by_user:
-            raise ValidationError("The requesting and approving users cannot be the same")
-        # bitwise xor also works on booleans, but not on complex values
-        if bool(self.approved_by_user) ^ bool(self.decision_date):
-            raise ValidationError("Approval by user and approval time must either both be set or both be undefined")
 
     def on_workflow_initiated(self, approval_workflow):
         """When initiated, set approval required to True."""
