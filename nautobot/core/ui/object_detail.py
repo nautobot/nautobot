@@ -182,6 +182,7 @@ class Button(Component):
         attributes=None,
         size=None,
         link_includes_pk=True,
+        context_object_key=None,
         **kwargs,
     ):
         """
@@ -194,6 +195,7 @@ class Button(Component):
                 This link will be reversed and will automatically include the current object's PK as a parameter to the
                 `reverse()` call when the button is rendered. For more complex link construction, you can subclass this
                 and override the `get_link()` method.
+            context_object_key (str, optional): The key in the render context that will contain the linked object.
             icon (str, optional): Material Design Icons icon, to include on the button, for example `"mdi-plus-bold"`.
             template_path (str): Template to render for this button.
             required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
@@ -213,6 +215,7 @@ class Button(Component):
         self.attributes = attributes
         self.size = size
         self.link_includes_pk = link_includes_pk
+        self.context_object_key = context_object_key
         super().__init__(**kwargs)
 
     def should_render(self, context: Context):
@@ -227,7 +230,7 @@ class Button(Component):
         more advanced link construction.
         """
         if self.link_name and self.link_includes_pk:
-            obj = get_obj_from_context(context)
+            obj = get_obj_from_context(context, self.context_object_key)
             return reverse(self.link_name, kwargs={"pk": obj.pk})
         elif self.link_name:
             return reverse(self.link_name)
