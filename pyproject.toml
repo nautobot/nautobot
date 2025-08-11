@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.4.14b1"
+version = "2.4.15b1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -92,7 +92,7 @@ drf-spectacular = {version = "~0.27.2", extras = ["sidecar"]}
 # Emoji terminal output for Python.
 emoji = "~2.12.1"
 # Git integrations for Python
-GitPython = "~3.1.44"
+GitPython = "~3.1.45"
 # GraphQL support
 # NOTE: graphene-django 3.x is available but includes breaking changes. Will address in a future release.
 graphene-django = "~2.16.0"
@@ -120,9 +120,9 @@ netaddr = "~1.3.0"
 # Library of network related utilities including network driver mappings and Jinja Filters
 # Note: netutils is limited in scope, dependencies, and observes semver, as such
 #       we permit a looser (^) version constraint here.
-netutils = "^1.6.0"
+netutils = "^1.14.0"
 # HTML sanitization
-nh3 = "~0.2.21"
+nh3 = "~0.2.22"
 # Handling of version numbers
 packaging = ">=23.1"
 # Image processing library
@@ -135,7 +135,7 @@ psycopg2-binary = "~2.9.10"
 # A Python slugify application that handles unicode.
 python-slugify = "~8.0.3"
 # The uWSGI WSGI HTTP server as a Python module
-pyuwsgi = "~2.0.29"
+pyuwsgi = "~2.0.30"
 # YAML parsing and rendering
 PyYAML = "~6.0.2"
 # Social authentication core
@@ -196,7 +196,7 @@ mkdocs-include-markdown-plugin = ">=4.0.4"
 # Use Jinja2 templating in docs - see settings.md
 mkdocs-macros-plugin = "~1.3.7"
 # Material for mkdocs theme
-mkdocs-material = "~9.6.15"
+mkdocs-material = "~9.6.16"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.2"
 # Automatically handle index pages for docs sections
@@ -212,7 +212,7 @@ pylint = "~3.3.7"
 # Pylint extensions for Django
 pylint-django = "~2.6.1"
 # Python implementation of markdownlint
-pymarkdownlnt = "~0.9.30"
+pymarkdownlnt = "~0.9.31"
 # Combination linter and code formatter
 ruff = "~0.8.6"
 # YAML linting
