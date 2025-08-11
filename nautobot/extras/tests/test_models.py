@@ -15,7 +15,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
-from django.test import override_settings, tag as test_tag
+from django.test import override_settings
 from django.test.utils import isolate_apps
 from django.utils.timezone import get_default_timezone, now
 from django_celery_beat.tzcrontab import TzAwareCrontab
@@ -3120,7 +3120,6 @@ class StatusTest(ModelTestCases.BaseModelTestCase):
         with self.assertRaises(IntegrityError):
             Status.objects.create(name=self.status.name)
 
-    @test_tag("doltdb_stuck")
     def test_delete_protection(self):
         # Protected delete will fail
         with self.assertRaises(ProtectedError):

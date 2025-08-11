@@ -239,7 +239,9 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
             }
             case_query[lookup_field] = models.Case(
                 models.When(**when_case),
-                default=models.Value(constants.CSV_NO_OBJECT),
+                default=models.Value(constants.CSV_NO_OBJECT.encode("utf-8"))
+                if output_field == VarbinaryIPField
+                else models.Value(constants.CSV_NO_OBJECT),
                 output_field=output_field(),
             )
         return case_query

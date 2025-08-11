@@ -1790,12 +1790,25 @@ class ObjectMetadataTestCase(FilterTestCases.FilterTestCase):
         ct_1_pk, ct_2_pk = self.queryset.values_list("assigned_object_type", flat=True)[:2]
         ct_1 = ContentType.objects.get(pk=ct_1_pk)
         ct_2 = ContentType.objects.get(pk=ct_2_pk)
-        oms = self.queryset.filter(assigned_object_type=ct_1_pk).distinct()
+        # Default ordering for the model is just by metadata_type, so if we have multiple records it's nondeterministic
+        oms = (
+            self.queryset.filter(assigned_object_type=ct_1_pk)
+            .distinct()
+            .order_by("metadata_type", "assigned_object_id")
+        )
         params = {"assigned_object_type": [f"{ct_1.app_label}.{ct_1.model}"]}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, oms)
-        oms = self.queryset.filter(assigned_object_type=ct_2_pk).distinct()
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs.order_by("metadata_type", "assigned_object_id"), oms
+        )
+        oms = (
+            self.queryset.filter(assigned_object_type=ct_2_pk)
+            .distinct()
+            .order_by("metadata_type", "assigned_object_id")
+        )
         params = {"assigned_object_type": [f"{ct_2.app_label}.{ct_2.model}"]}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, oms)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs.order_by("metadata_type", "assigned_object_id"), oms
+        )
 
 
 class RelationshipTestCase(FilterTestCases.FilterTestCase):
