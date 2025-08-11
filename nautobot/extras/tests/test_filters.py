@@ -124,6 +124,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
+from nautobot.extras.utils import get_pending_approval_workflow_stages
 from nautobot.ipam.filters import VLANFilterSet
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant, TenantGroup
@@ -493,6 +494,39 @@ class ApprovalWorkflowStageFilterTestCase(ApprovalWorkflowTestMixin, FilterTestC
         ("state",),
         ("decision_date",),
     )
+
+    def setUp(self):
+        super().setUp()
+        self.factory = RequestFactory(SERVER_NAME="nautobot.example.com")
+
+    def test_pending_my_approvals(self):
+        """Test filtering approval stages by pending_my_approvals query param."""
+        test_user = self.users[0]
+        request = self.factory.get("/api/extras/approval-workflow-stages/")
+        request.user = test_user
+
+        params = {"pending_my_approvals": "false"}
+        pending_qs = get_pending_approval_workflow_stages(test_user, self.queryset)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset, request=request).qs,
+            self.queryset.filter(approval_workflow_stage_responses__user=test_user).exclude(
+                id__in=pending_qs.values_list("id", flat=True)
+            ),
+            ordered=False,
+        )
+
+        params = {"pending_my_approvals": "true"}
+        # set pending state for active workflow
+        for approval_workflow_stage in self.queryset:
+            if approval_workflow_stage.approval_workflow.active_stage:
+                approval_workflow_stage.state = ApprovalWorkflowStateChoices.PENDING
+                approval_workflow_stage.save()
+
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset, request=request).qs,
+            get_pending_approval_workflow_stages(test_user, self.queryset),
+            ordered=False,
+        )
 
 
 class ApprovalWorkflowStageResponseFilterTestCase(ApprovalWorkflowTestMixin, FilterTestCases.FilterTestCase):

@@ -327,7 +327,7 @@ class ApprovalWorkflowStageViewSet(NautobotModelViewSet):
         user = request.user
         if not self._validate_stage(stage):
             return Response(
-                {"detail": "Approval workflow stage in not active."},
+                {"detail": "Approval workflow stage is not active."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         workflow = stage.approval_workflow

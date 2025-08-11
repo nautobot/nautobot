@@ -132,5 +132,4 @@ When a Job is submitted for execution or scheduling, Nautobot checks for any rel
 | Assign Job Queues          | `extras.change_job` + permissions on specific Job Queues |
 | Delete Job                 | `extras.delete_job`                                      |
 | Run Job                    | `extras.run_job`                                         |
-| Approve scheduled Job (UI) | `extras.change_approvalworkflowstage` + `extras.view_approvalworkflowstage` + `extras.change_scheduledjob`|
-| Approve scheduled Job (API)| `extras.change_approvalworkflowstage` + `extras.view_approvalworkflowstage` + `extras.change_scheduledjob`|
+| Approve scheduled Job      | `extras.change_approvalworkflowstage` + `extras.view_approvalworkflowstage` + `extras.change_scheduledjob`|

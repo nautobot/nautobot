@@ -621,9 +621,9 @@ class ApprovalWorkflowStageTest(
                 self.assertEqual(stage.approval_workflow_stage_responses.count(), 2)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_approval_workflow_stage_pending_approvals(self):
+    def test_approval_workflow_stage_pending_my_approvals(self):
         base_url = reverse("extras-api:approvalworkflowstage-list")
-        query_params = urlencode({"pending_approvals": "true"})
+        query_params = urlencode({"pending_my_approvals": "true"})
         url = f"{base_url}?{query_params}"
         self.add_permissions(
             "extras.view_approvalworkflowstage",
@@ -671,9 +671,9 @@ class ApprovalWorkflowStageTest(
         ]
 
         for param_value, expected_count in test_cases:
-            with self.subTest(pending_approvals=param_value):
+            with self.subTest(pending_my_approvals=param_value):
                 if param_value is not None:
-                    query_params = urlencode({"pending_approvals": param_value})
+                    query_params = urlencode({"pending_my_approvals": param_value})
                     url = f"{base_url}?{query_params}"
                 else:
                     url = base_url  # no filter param

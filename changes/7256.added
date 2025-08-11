@@ -1,3 +1,3 @@
-Added new API actions under `api/extras/approval-workflow-stages/`: `approve`, `deny`, `comment` and filterset parameter `pending_approvals` on the regular list endpoint.
+Added new API actions under `api/extras/approval-workflow-stages/`: `approve`, `deny`, `comment` and filterset parameter `pending_my_approvals` on the regular list endpoint.
 Added `users_that_already_denied` property to `ApprovalWorkflowStage` model.
-Added `approval_workflows` to the `ScheduledJobSerializer` as a read-only list.
+Added `associated_approval_workflows` to the `ScheduledJobSerializer` as a read-only list.

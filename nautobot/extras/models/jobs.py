@@ -1203,7 +1203,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         blank=True,
         null=True,
         verbose_name="Approval/Rejection date/time",
-        help_text="Datetime that the schedule was approved",
+        help_text="Datetime that the schedule was approved or denied",
     )
     crontab = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
