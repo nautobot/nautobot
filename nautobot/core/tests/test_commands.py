@@ -65,5 +65,5 @@ class ManagementCommandTestCase(TestCase):
         with self.assertRaises(ApprovalRequiredScheduledJobsError) as cm:
             call_command("check_job_approval_status")
 
-        self.assertIn("There are scheduled jobs that still require approval.", str(cm.exception))
+        self.assertIn("These need to be approved (and run) or denied before upgrading to Nautobot v3", str(cm.exception))
         self.assertIn(scheduled_job.name, str(cm.exception))
