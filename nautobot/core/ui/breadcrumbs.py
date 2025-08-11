@@ -414,7 +414,7 @@ class Breadcrumbs:
             self.items["list"] = [*self.list_breadcrumb_items, list_items]
 
             detail_items = self.items.get("detail", [])
-            self.items["detail"] = [*self.detail_breadcrumb_items, detail_items, *self.detail_breadcrumb_items]
+            self.items["detail"] = [*self.list_breadcrumb_items, detail_items, *self.detail_breadcrumb_items]
 
     def get_breadcrumbs_items(self, context: Context):
         """

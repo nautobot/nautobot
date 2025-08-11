@@ -9,7 +9,7 @@ or using callables.
 There are new simple tags in `{% load ui_framework %}` that allows you to automatically render breadcrumbs and title:
 
 - `{% render_breadcrumbs %}` - expects `Breadcrumbs` instance in `context["breadcrumbs"]`
-- `{% render_title %}` - expects `Titles` instance in `context["view_titles"]` - you can pass rendering mode `plain | html (default)`
+- `{% render_title %}` - expects `Titles` instance in `context["view_titles"]` - you can pass rendering mode `plain (default) | html`
 
 ## `NautobotUIViewSet` views
 
@@ -26,17 +26,13 @@ class ExampleView:
 
 Refer to the [Nautobot UI Framework Documentation](../../../core/ui-component-framework.md) if you need to update some of the default values.
 
-- Remove custom html code from `{% block breadcrumbs %}` and `{% block title %}`. Use the built-in template tags to render the breadcrumbs and title.
-
-- Make sure that page heading and document title (`{% block title %}`) are separated. Move `{% block title %}` outside of `{% block content %}` and render this as plain text.
+- Remove custom html code from `{% block breadcrumbs %}` and `{% block title %}`.
+- Use the built-in template tags to render the breadcrumbs and title: `{% render_breadcrumbs %}` and `{% render_title %}`
 
 Complete example:
 
 ```html
 {% load ui_framework %}
-
-<!-- rendered outside of context to properly put plaintext title only inside <head><title>...</title></head> HTML tags. -->
-{% block title %}{% render_title "plain" %}{% endblock %}
 
 {% block content %}
 <div class="row noprint">
@@ -46,7 +42,7 @@ Complete example:
     </div>
 </div>
 
-<h1>{% render_title %}</h1>
+<h1>{% block title %}{% render_title %}{% endblock %}</h1>
 {% endblock %}
 ```
 
@@ -135,8 +131,6 @@ class SomeGenericView(GenericView):
 {% load static %}
 {% load ui_framework %}
 
-{% block title %}{% render_title "plain" %}{% endblock %}
-
 {% block content %}
     <div class="row noprint">
         <div class="col-md-12">
@@ -145,7 +139,7 @@ class SomeGenericView(GenericView):
         </div>
     </div>
 
-    <h1>{% render_title %}</h1>
+    <h1>{% block title %}{% render_title %}{% endblock %}</h1>
 
     <div class="row">
         Some data
@@ -153,10 +147,6 @@ class SomeGenericView(GenericView):
 {% endblock %}
 ```
 
-## Important notes
-
 !!! info
     Default `{% render_breadcrumbs %}` template will add the `<ol class="breadcrumbs">` tag, and both `{% block breadcrumbs %}` and `{% block extra_breadcrumbs %}` blocks.
 
-!!! warning
-    You need to use `{% render_title "plain" %}` when rendering inside of `{% block title %}` to not cause browser issues.

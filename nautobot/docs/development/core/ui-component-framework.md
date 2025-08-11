@@ -133,15 +133,10 @@ title = titles.render(context)  # Returns: "Devices"
 In HTML there is available `render_title` helper that use the `Title` instance from `context['view_titles']` and properly renders the page heading and document title.
 
 ```html
-{% block title %}{% render_title "plain" %}{% endblock %}
-
 {% block content %}
-    <h1>{% render_title %}</h1>
+    <h1>{% block title %}{% render_title %}{% endblock %}</h1>
 {% endblock %}
 ```
-
-!!! important
-    Remember to pass "plain" to the `render_title` to strip any HTML tags when rendering the document title (browser / tab title).
 
 
 ## Breadcrumbs Component
@@ -152,16 +147,17 @@ There are 3 main breadcrumb items classes:
 - `ViewNameBreadcrumbItem` - Handles breadcrumbs that are generated from Django view names using URL reversing.
 - `ModelBreadcrumbItem` - Generates breadcrumbs from Django model metadata, automatically creating appropriate URLs and labels.
 - `InstanceBreadcrumbItem` - Creates detail breadcrumbs for specific object instances, generating URLs to the object's detail page.
+- `BaseBreadcrumbItem` - Can be used to create custom breadcrumb items or to show just empty "label" within the breadcrumbs path.
+
+By default, breadcrumbs class will add to the breadcrumbs path following items:
+- link to the `list_url` at the beginning
+- link to view the `object` details at the end
 
 ```python
 from nautobot.apps.ui import Breadcrumbs, ViewNameBreadcrumbItem, ModelBreadcrumbItem, InstanceBreadcrumbItem
 
 # Use default breadcrumbs
-breadcrumbs = Breadcrumbs(items={"detail": [
-    ViewNameBreadcrumbItem(viewname_str="home", label="Home"),
-    ModelBreadcrumbItem(model_key="object"),
-    InstanceBreadcrumbItem(), # Default breadcrumb item will generate link to the instance taken from context["object"]
-]})
+breadcrumbs = Breadcrumbs()
 
 # Render for a device detail view
 context = Context({
@@ -176,8 +172,41 @@ It will generate:
 
 ```html
 <ol class="breadcrumb">
-    <li><a href="/">Home</a></li>
     <li><a href="/dcim/devices">Devices</a></li>
+    <li><a href="/dcim/devices/<uuid>">Device name</a></li>
+</ol>
+```
+
+!!! important
+    By adding custom items you're actually extending the default paths.
+
+
+```python
+from nautobot.apps.ui import Breadcrumbs, ViewNameBreadcrumbItem, ModelBreadcrumbItem, InstanceBreadcrumbItem
+
+# Use default breadcrumbs
+breadcrumbs = Breadcrumbs(items={"detail": [
+    ViewNameBreadcrumbItem(viewname_str="home", label="Home"),
+    ModelBreadcrumbItem(model_key="location"),
+]})
+
+# Render for a device detail view
+context = Context({
+    'view_action': 'retrieve',
+    'detail': True,  # Indicates this is a detail view
+    'object': device,
+    'location': device.location,
+})
+html = breadcrumbs.render(context)
+```
+
+It will generate:
+
+```html
+<ol class="breadcrumb">
+    <li><a href="/dcim/devices">Devices</a></li>
+    <li><a href="/">Home</a></li>
+    <li><a href="/dcim/locations">Locations</a></li>
     <li><a href="/dcim/devices/<uuid>">Device name</a></li>
 </ol>
 ```
