@@ -1,0 +1,1 @@
+Added `test_has_timestamps_and_buttons` generic test case to `GetObjectViewTestCase` base test class.
