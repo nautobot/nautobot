@@ -338,7 +338,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     "fields": get_csv_form_fields_from_serializer_class(view.serializer_class),
                 }
             )
-        elif view.action == "retrieve":
+        elif view.action in ["retrieve", "destroy"]:
             # Ensure the proper inheritance of context variables is applied: the view's returned data takes priority over the viewset's get_extra_context
             context.update(view.get_extra_context(request, instance))
             context.update(self.get_template_context(data, renderer_context))
