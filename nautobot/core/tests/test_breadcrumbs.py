@@ -230,11 +230,11 @@ class BreadcrumbsTestCase(TestCase):
         new_item = BaseBreadcrumbItem()
         breadcrumbs = Breadcrumbs(items={"detail": [new_item], "list": [new_item], "custom_action": [new_item]})
 
-        self.assertEqual(len(breadcrumbs.items["list"]), 3)
-        self.assertEqual(breadcrumbs.items["list"][2], new_item)
+        self.assertEqual(len(breadcrumbs.items["list"]), 1)
+        self.assertEqual(breadcrumbs.items["list"][0], new_item)
 
-        self.assertEqual(len(breadcrumbs.items["detail"]), 4)
-        self.assertEqual(breadcrumbs.items["detail"][2], new_item)
+        self.assertEqual(len(breadcrumbs.items["detail"]), 2)
+        self.assertEqual(breadcrumbs.items["detail"][0], new_item)
 
         self.assertEqual(len(breadcrumbs.items["custom_action"]), 1)
         self.assertEqual(breadcrumbs.items["custom_action"][0], new_item)
@@ -247,11 +247,12 @@ class BreadcrumbsTestCase(TestCase):
         }
         breadcrumbs = Breadcrumbs(items=custom_items)
 
-        self.assertEqual(len(breadcrumbs.items["list"]), 3)
-        self.assertEqual(breadcrumbs.items["list"][2], custom_list_item)
+        self.assertEqual(len(breadcrumbs.items["list"]), 1)
+        self.assertEqual(breadcrumbs.items["list"][0], custom_list_item)
 
         # Other defaults should still exist
         self.assertIn("detail", breadcrumbs.items)
+        self.assertEqual(len(breadcrumbs.items["detail"]), 3)
 
     def test_get_items_from_action_static_method(self):
         """Test the _get_items_from_action static method."""

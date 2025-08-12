@@ -10,7 +10,7 @@ from django.urls import NoReverseMatch, reverse
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui.utils import get_absolute_url, render_component_template
 from nautobot.core.utils import lookup
-from nautobot.core.utils.lookup import get_model_from_name, get_model_for_view_name
+from nautobot.core.utils.lookup import get_model_for_view_name, get_model_from_name
 
 logger = logging.getLogger(__name__)
 
@@ -364,19 +364,6 @@ class InstanceBreadcrumbItem(BaseBreadcrumbItem):
             return self.instance(context)
 
         return context.get(self.instance_key)
-
-
-DEFAULT_LIST_BREADCRUMBS = [
-    ViewNameBreadcrumbItem(
-        view_name_key="list_url",
-        label_from_view_name=True,
-        should_render=lambda context: context.get("list_url") is not None,
-    ),  # Default breadcrumb if view defines `list_url` in the Context
-    ModelBreadcrumbItem(model_key="model", should_render=lambda context: context.get("list_url") is None),
-    # Fallback if there is no `list_url` in the Context
-]
-
-DEFAULT_INSTANCE_BREADCRUMB = [InstanceBreadcrumbItem()]
 
 
 class Breadcrumbs:
