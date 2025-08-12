@@ -9,8 +9,8 @@ from django.template import Context
 
 from nautobot.core.testing import TestCase
 from nautobot.core.ui.breadcrumbs import (
+    BaseBreadcrumbItem,
     Breadcrumbs,
-    DEFAULT_BREADCRUMBS,
     InstanceBreadcrumbItem,
     ModelBreadcrumbItem,
     ViewNameBreadcrumbItem,
@@ -219,12 +219,22 @@ class BreadcrumbsTestCase(TestCase):
         """Test that Breadcrumbs initializes with default values."""
         breadcrumbs = Breadcrumbs()
 
-        # Should have deep copy of defaults
-        self.assertEqual(breadcrumbs.items.keys(), DEFAULT_BREADCRUMBS.keys())
+        # Should have defaults for list and details
+        self.assertEqual(len(breadcrumbs.items["list"]), 1)
+        self.assertEqual(len(breadcrumbs.items["detail"]), 2)
 
-        # Verify deep copy by modifying
-        breadcrumbs.items["list"] = []
-        self.assertNotEqual(DEFAULT_BREADCRUMBS.get("list"), [])
+        # Verify adding items
+        new_item = BaseBreadcrumbItem()
+        breadcrumbs = Breadcrumbs(items={"detail": [new_item], "list": [new_item], "custom_action": [new_item]})
+
+        self.assertEqual(len(breadcrumbs.items["list"]), 2)
+        self.assertEqual(breadcrumbs.items["list"][1], new_item)
+
+        self.assertEqual(len(breadcrumbs.items["detail"]), 3)
+        self.assertEqual(breadcrumbs.items["detail"][1], new_item)
+
+        self.assertEqual(len(breadcrumbs.items["custom_action"]), 1)
+        self.assertEqual(breadcrumbs.items["custom_action"][0], new_item)
 
     def test_custom_items(self):
         """Test Breadcrumbs with custom items."""
@@ -316,20 +326,6 @@ class BreadcrumbsTestCase(TestCase):
 
         # Check that custom context was passed
         self.assertEqual(render_context.get("custom_key"), "custom_value")
-
-    def test_deep_copy_behavior(self):
-        """Verify that modifications don't affect the original DEFAULT_BREADCRUMBS."""
-        breadcrumbs1 = Breadcrumbs()
-        breadcrumbs2 = Breadcrumbs()
-
-        # Modify the first instance
-        breadcrumbs1.items["list"] = [ViewNameBreadcrumbItem(view_name="", label="Modified")]
-
-        # Second instance should not be affected
-        self.assertNotEqual(breadcrumbs1.items["list"], breadcrumbs2.items["list"])
-
-        # Original defaults should not be affected
-        self.assertEqual(DEFAULT_BREADCRUMBS.get("list")[0].view_name_key, "list_url")
 
     def test_should_render_skips_items(self):
         """Breadcrumbs should skip items where should_render(context) is False."""
