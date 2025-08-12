@@ -413,12 +413,11 @@ def get_celery_queues():
             except redis.exceptions.ConnectionError as err:
                 logger.error("Repeated ConnectionError from Celery/Redis: %s", err)
                 active_queues = None
-        if active_queues is None:
-            return celery_queues
-        for task_queue_list in active_queues.values():
-            distinct_queues = {q["name"] for q in task_queue_list}
-            for queue in distinct_queues:
-                celery_queues[queue] = celery_queues.get(queue, 0) + 1
+        if active_queues is not None:
+            for task_queue_list in active_queues.values():
+                distinct_queues = {q["name"] for q in task_queue_list}
+                for queue in distinct_queues:
+                    celery_queues[queue] = celery_queues.get(queue, 0) + 1
         with contextlib.suppress(redis.exceptions.ConnectionError):
             cache.set("nautobot.extras.utils.get_celery_queues", celery_queues, timeout=5)
 

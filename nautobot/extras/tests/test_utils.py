@@ -35,10 +35,12 @@ class UtilsTestCase(TestCase):
     @mock.patch("celery.app.control.Inspect.active_queues")
     def test_get_celery_queues(self, mock_active_queues):
         with self.subTest("No queues"):
+            cache.clear()
             mock_active_queues.return_value = None
             self.assertDictEqual(get_celery_queues(), {})
 
         with self.subTest("1 worker 1 queue"):
+            cache.clear()
             mock_active_queues.return_value = {"celery@worker": [{"name": "queue1"}]}
             self.assertDictEqual(get_celery_queues(), {"queue1": 1})
 
