@@ -10,7 +10,7 @@ from django.urls import NoReverseMatch, reverse
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui.utils import get_absolute_url, render_component_template
 from nautobot.core.utils import lookup
-from nautobot.core.utils.lookup import get_model_from_name
+from nautobot.core.utils.lookup import get_model_from_name, get_model_for_view_name
 
 logger = logging.getLogger(__name__)
 
@@ -159,6 +159,7 @@ class ViewNameBreadcrumbItem(BaseBreadcrumbItem):
         should_render (Callable[[Context], bool]): Callable to decide whether this item should be rendered or not.
         label (Union[Callable[[Context], str], WithStr, None]): Optional override for the display label in the breadcrumb.
         label_key (Optional[str]): Optional key to take label from the context.
+        label_from_view_name (bool): Try to resolve given view name and get the label from assosiacted model.
 
     Examples:
         >>> ViewNameBreadcrumbItem(view_name="dcim:device_list")
@@ -171,6 +172,7 @@ class ViewNameBreadcrumbItem(BaseBreadcrumbItem):
     view_name_key: Optional[str] = None
     reverse_kwargs: ReverseParams = None
     reverse_query_params: ReverseParams = None
+    label_from_view_name: bool = False
 
     def get_url(self, context: Context) -> Optional[str]:
         """
@@ -182,15 +184,26 @@ class ViewNameBreadcrumbItem(BaseBreadcrumbItem):
         Returns:
             Optional[str]: The URL as a string, or None.
         """
-        view_name = self.view_name
-        if self.view_name_key:
-            view_name = context.get(self.view_name_key, self.view_name)
-        if callable(view_name):
-            view_name = view_name(context)
+        view_name = self.get_view_name(context)
         if not view_name:
             return None
 
         return self.reverse_view_name(view_name, context, self.reverse_kwargs, self.reverse_query_params)
+
+    def get_label(self, context: Context) -> str:
+        if self.label_from_view_name:
+            model = get_model_for_view_name(self.get_view_name(context))
+            if model is not None:
+                return model._meta.verbose_name_plural
+        return super().get_label(context)
+
+    def get_view_name(self, context: Context) -> Optional[str]:
+        if self.view_name_key:
+            return context.get(self.view_name_key, self.view_name)
+        if callable(self.view_name):
+            return self.view_name(context)
+
+        return self.view_name
 
 
 @dataclass
@@ -355,7 +368,9 @@ class InstanceBreadcrumbItem(BaseBreadcrumbItem):
 
 DEFAULT_LIST_BREADCRUMBS = [
     ViewNameBreadcrumbItem(
-        view_name_key="list_url", label_key="title", should_render=lambda context: context.get("list_url") is not None
+        view_name_key="list_url",
+        label_from_view_name=True,
+        should_render=lambda context: context.get("list_url") is not None,
     ),  # Default breadcrumb if view defines `list_url` in the Context
     ModelBreadcrumbItem(model_key="model", should_render=lambda context: context.get("list_url") is None),
     # Fallback if there is no `list_url` in the Context
@@ -395,8 +410,16 @@ class Breadcrumbs:
         items (dict[str, list[BreadcrumbItem]]): Default breadcrumb items per view action.
     """
 
-    list_breadcrumb_items: list[BaseBreadcrumbItem] = DEFAULT_LIST_BREADCRUMBS
-    detail_breadcrumb_items: list[BaseBreadcrumbItem] = DEFAULT_INSTANCE_BREADCRUMB
+    breadcrumb_items: list[BaseBreadcrumbItem] = [
+        # Default breadcrumb if view defines `list_url` in the Context
+        ViewNameBreadcrumbItem(
+            view_name_key="list_url",
+            label_from_view_name=True,
+            should_render=lambda context: context.get("list_url") is not None,
+        ),
+        # Fallback if there is no `list_url` in the Context
+        ModelBreadcrumbItem(model_key="model", should_render=lambda context: context.get("list_url") is None),
+    ]
 
     def __init__(
         self,
@@ -411,20 +434,21 @@ class Breadcrumbs:
             template (str): The template used to render the breadcrumbs.
         """
         self.template = template
+
+        # Set the default breadcrumbs
         self.items = {
-            "list": [*self.list_breadcrumb_items],
-            "detail": [*self.list_breadcrumb_items, *self.detail_breadcrumb_items],
+            "list": [*self.breadcrumb_items],
+            "detail": [*self.breadcrumb_items],
         }
+
+        # If custom items are present, merge with defaults
         if items:
-            self.items = items
+            self.items = {**self.items, **items}
 
-            list_items = self.items.get("list", [])
-            self.items["list"] = [*self.list_breadcrumb_items, *list_items]
+        # Built-in feature: always add the instance details at the end of breadcrumbs path
+        self.items["detail"].append(InstanceBreadcrumbItem())
 
-            detail_items = self.items.get("detail", [])
-            self.items["detail"] = [*self.list_breadcrumb_items, *detail_items, *self.detail_breadcrumb_items]
-
-    def get_breadcrumbs_items(self, context: Context):
+    def get_breadcrumbs_items(self, context: Context) -> list[tuple[str, str]]:
         """
         Compute the list of breadcrumb items for the given context.
 
@@ -508,7 +532,8 @@ class Breadcrumbs:
             }
         ):
             breadcrumbs_items = self.get_breadcrumbs_items(context)
-            return render_component_template(self.template, context, breadcrumbs_items=breadcrumbs_items)
+            filtered_items = self.filter_breadcrumbs_items(breadcrumbs_items, context)
+            return render_component_template(self.template, context, breadcrumbs_items=filtered_items)
 
     def get_extra_context(self, context: Context):
         """
