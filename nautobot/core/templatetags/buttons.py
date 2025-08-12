@@ -203,7 +203,7 @@ def consolidate_bulk_action_buttons(context):
                 attrs=render_tag_attrs(
                     {
                         "class": edit_button_classes,
-                        "formaction": reverse(context["bulk_edit_url"]) + params,
+                        "formaction": reverse(context["bulk_edit_url"]),
                         "type": "submit",
                     }
                 ),
