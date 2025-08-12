@@ -1,0 +1,1 @@
+Added new management command `check_job_approval_status` to detect scheduled jobs and jobs that still require approval. This command helps during upgrade to Nautobot 3.x.
