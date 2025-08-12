@@ -13,7 +13,7 @@ from django.db.models import ManyToManyField, Model, QuerySet
 from django.template.defaultfilters import date, timesince
 from django.test import override_settings, tag, TestCase as _TestCase
 from django.urls import NoReverseMatch, reverse
-from django.utils.html import escape
+from django.utils.html import escape, format_html
 from django.utils.http import urlencode
 from django.utils.text import slugify
 from tree_queries.models import TreeNode
@@ -272,27 +272,39 @@ class ViewTestCases:
             action_buttons = []
             if render_edit_button:
                 action_buttons.append(
-                    f"""
-                        <a id="edit-button" class="btn btn-warning border-end-0" href="{object_edit_url}">
-                            <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit {helpers.bettertitle(self.model._meta.verbose_name)}
-                        </a>
-                    """,
+                    format_html(
+                        """
+                            <a id="edit-button" class="btn btn-warning border-end-0" href="{}">
+                                <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit {}
+                            </a>
+                        """,
+                        object_edit_url,
+                        helpers.bettertitle(self.model._meta.verbose_name),
+                    )
                 )
             if render_delete_button:
                 action_buttons.append(
-                    f"""
-                        <a id="delete-button" class="dropdown-item text-danger" href="{object_delete_url}">
-                            <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete {helpers.bettertitle(self.model._meta.verbose_name)}
-                        </a>
-                    """,
+                    format_html(
+                        """
+                            <a id="delete-button" class="dropdown-item text-danger" href="{}">
+                                <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete {}
+                            </a>
+                        """,
+                        object_delete_url,
+                        helpers.bettertitle(self.model._meta.verbose_name),
+                    )
                 )
             if render_clone_button:
                 action_buttons.append(
-                    f"""
-                        <a id="clone-button" class="dropdown-item" href="{object_clone_url}">
-                            <span class="mdi mdi-plus-thick text-muted" aria-hidden="true"></span> Clone {helpers.bettertitle(self.model._meta.verbose_name)}
-                        </a>
-                    """,
+                    format_html(
+                        """
+                            <a id="clone-button" class="dropdown-item" href="{}">
+                                <span class="mdi mdi-plus-thick text-muted" aria-hidden="true"></span> Clone {}
+                            </a>
+                        """,
+                        object_clone_url,
+                        helpers.bettertitle(self.model._meta.verbose_name),
+                    )
                 )
             for button in action_buttons:
                 self.assertBodyContains(response, button, html=True)
