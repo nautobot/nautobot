@@ -283,14 +283,16 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
         # don't do import here, just doing to demonstrate the fix
         from jsonschema import Draft7Validator, SchemaError
 
-
         try:
-            validator = Draft7Validator(record.config_context_schema.data_schema)
+            if hasattr(record, "local_config_context_schema"):
+                validator = Draft7Validator(record.local_config_context_schema.data_schema)
+            else:
+                validator = Draft7Validator(record.config_context_schema.data_schema)
+
         except SchemaError:
             validator = {}
 
         try:
-
             validator.validate(data)
 
         except JSONSchemaValidationError as e:

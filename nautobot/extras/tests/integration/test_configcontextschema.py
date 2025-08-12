@@ -171,11 +171,12 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         for row in self.browser.find_by_xpath(xpath_query):
             self.assertEqual(
                 row.find_by_tag("td")[-2].html,
-                '<span class="text-danger"><i class="mdi mdi-close-thick" title="" data-original-title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
+                '<span class="text-danger"><i class="mdi mdi-close-thick" title="" data-original-title="No"></i></span><span class="text-danger"> 123 is not of type \'string\'</span>',
             )
 
         # Edit the device local context data and redirect back to the validation tab
-        self.browser.find_by_xpath(xpath_query)[1].find_by_tag("td")[-1].find_by_tag("a").click()
+        self.browser.find_by_xpath(xpath_query)[1].find_by_tag("td")[-1].find_by_css('a[data-original-title="Edit"]').first.click()
+        # breakpoint()
         # Update the property "a" to be a string
         self.browser.fill("local_config_context_data", '{"a": "foo", "b": 456, "c": 777}')
         self.browser.find_by_text("Update").click()
@@ -187,7 +188,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         # Config context still fails
         self.assertEqual(
             self.browser.find_by_xpath(xpath_query)[0].find_by_tag("td")[-2].html,
-            '<span class="text-danger"><i class="mdi mdi-close-thick" title="" data-original-title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
+            '<span class="text-danger"><i class="mdi mdi-close-thick" title="" data-original-title="No"></i></span><span class="text-danger"> 123 is not of type \'string\'</span>',
         )
         # Device now passes
         self.assertEqual(
@@ -197,5 +198,5 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         # Virtual machine still fails
         self.assertEqual(
             self.browser.find_by_xpath(xpath_query)[2].find_by_tag("td")[-2].html,
-            '<span class="text-danger"><i class="mdi mdi-close-thick" title="" data-original-title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
+            '<span class="text-danger"><i class="mdi mdi-close-thick" title="" data-original-title="No"></i></span><span class="text-danger"> 123 is not of type \'string\'</span>',
         )
