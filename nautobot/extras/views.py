@@ -745,6 +745,7 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
     queryset = DynamicGroup.objects.all()
     serializer_class = serializers.DynamicGroupSerializer
     table_class = tables.DynamicGroupTable
+    action_buttons = ("add",)
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
