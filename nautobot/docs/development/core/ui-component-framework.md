@@ -138,7 +138,6 @@ In HTML there is available `render_title` helper that use the `Title` instance f
 {% endblock %}
 ```
 
-
 ## Breadcrumbs Component
 
 The Breadcrumbs component creates navigation trails that help users understand their location within the application hierarchy.
@@ -179,7 +178,6 @@ It will generate:
 
 !!! important
     By adding custom items you're actually extending the default paths.
-
 
 ```python
 from nautobot.apps.ui import Breadcrumbs, ViewNameBreadcrumbItem, ModelBreadcrumbItem, InstanceBreadcrumbItem

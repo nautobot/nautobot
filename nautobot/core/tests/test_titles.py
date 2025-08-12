@@ -172,7 +172,7 @@ class TitlesTestCase(TestCase):
         self.assertEqual(extra_context, {})
 
     def test_get_extra_context_is_used_during_render(self):
-        """Test that get_extra_context returns empty dict by default."""
+        """Test that get_extra_context is being used to extend the context."""
         context = Context({})
 
         class TitlesSubClass(Titles):

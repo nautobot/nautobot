@@ -299,8 +299,8 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "detail": False,
         }
 
-        self._set_if_present(view, "get_view_titles", context, "view_titles")
-        self._set_if_present(view, "get_breadcrumbs", context, "breadcrumbs")
+        self._set_context_from_method(view, "get_view_titles", context, "view_titles")
+        self._set_context_from_method(view, "get_breadcrumbs", context, "breadcrumbs")
 
         if view.detail:
             # If we are in a retrieve related detail view (retrieve and custom actions).
@@ -372,7 +372,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         return super().render(data, accepted_media_type=accepted_media_type, renderer_context=renderer_context)
 
     @staticmethod
-    def _set_if_present(
+    def _set_context_from_method(
         view,
         view_function,
         context,

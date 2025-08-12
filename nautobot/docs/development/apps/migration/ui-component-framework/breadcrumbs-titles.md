@@ -149,4 +149,3 @@ class SomeGenericView(GenericView):
 
 !!! info
     Default `{% render_breadcrumbs %}` template will add the `<ol class="breadcrumbs">` tag, and both `{% block breadcrumbs %}` and `{% block extra_breadcrumbs %}` blocks.
-

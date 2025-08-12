@@ -94,9 +94,12 @@ class BaseBreadcrumbItem:
             return None
 
         try:
+            # TODO: refactor after Django 5.2 upgrade
+            # query params can be passed directly to the `reverse` function instead of merging two strings
+            # reverse(view_name, query=query_params, kwargs=...)
+            # https://docs.djangoproject.com/en/5.2/ref/urlresolvers/#reverse
             url = reverse(view_name, kwargs=self.resolve_reverse_params(reverse_kwargs, context))
             if query_params := self.resolve_reverse_params(reverse_query_params, context):
-                # TODO: refactor after Django 5.2 upgrade
                 return f"{url}?{urlencode(query_params)}"
             return url
         except NoReverseMatch as err:
@@ -368,7 +371,7 @@ class Breadcrumbs:
     This class supports flexible breadcrumb configuration through:
     - `items`: Default breadcrumb items per view action.
 
-    You can add more informations to the breadcrumbs trail by passing appropriate
+    You can add more information to the breadcrumbs trail by passing appropriate
     `BreadcrumbItem` objects grouped by view action (e.g., "*", "list", "add", "edit").
 
     Special breadcrumb item actions:
