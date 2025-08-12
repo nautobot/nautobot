@@ -1012,10 +1012,12 @@ class DynamicGroupBulkDeleteView(generic.BulkDeleteView):
     filterset = filters.DynamicGroupFilterSet
 
 
-# 3.0 TODO: remove, deprecated since 2.3 (#5845)
 class ObjectDynamicGroupsView(generic.GenericView):
     """
     Present a list of dynamic groups associated to a particular object.
+
+    Note that this isn't currently widely used, as most object detail views currently render the table inline
+    rather than using this separate view. This may change in the future.
 
     base_template: Specify to explicitly identify the base object detail template to render.
         If not provided, "<app>/<model>.html", "<app>/<model>_retrieve.html", or "generic/object_retrieve.html"
@@ -1036,7 +1038,6 @@ class ObjectDynamicGroupsView(generic.GenericView):
             data=obj.dynamic_groups.restrict(request.user, "view"), orderable=False
         )
         dynamicgroups_table.columns.hide("content_type")
-        dynamicgroups_table.columns.hide("members")
 
         # Apply the request context
         paginate = {
@@ -1296,30 +1297,22 @@ class GitRepositoryResultView(generic.ObjectView):
 #
 
 
-class GraphQLQueryListView(generic.ObjectListView):
+class GraphQLQueryUIViewSet(
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectEditViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectNotesViewMixin,
+):
+    filterset_form_class = forms.GraphQLQueryFilterForm
     queryset = GraphQLQuery.objects.all()
-    table = tables.GraphQLQueryTable
-    filterset = filters.GraphQLQueryFilterSet
-    filterset_form = forms.GraphQLQueryFilterForm
+    form_class = forms.GraphQLQueryForm
+    filterset_class = filters.GraphQLQueryFilterSet
+    serializer_class = serializers.GraphQLQuerySerializer
+    table_class = tables.GraphQLQueryTable
     action_buttons = ("add",)
-
-
-class GraphQLQueryView(generic.ObjectView):
-    queryset = GraphQLQuery.objects.all()
-
-
-class GraphQLQueryEditView(generic.ObjectEditView):
-    queryset = GraphQLQuery.objects.all()
-    model_form = forms.GraphQLQueryForm
-
-
-class GraphQLQueryDeleteView(generic.ObjectDeleteView):
-    queryset = GraphQLQuery.objects.all()
-
-
-class GraphQLQueryBulkDeleteView(generic.BulkDeleteView):
-    queryset = GraphQLQuery.objects.all()
-    table = tables.GraphQLQueryTable
 
 
 #
@@ -2497,33 +2490,20 @@ class ObjectMetadataUIViewSet(
 #
 
 
-class NoteView(generic.ObjectView):
+class NoteUIViewSet(
+    ObjectChangeLogViewMixin, ObjectDestroyViewMixin, ObjectDetailViewMixin, ObjectEditViewMixin, ObjectListViewMixin
+):
+    filterset_class = filters.NoteFilterSet
+    filterset_form_class = forms.NoteFilterForm
+    form_class = forms.NoteForm
     queryset = Note.objects.all()
-
-
-class NoteListView(generic.ObjectListView):
-    """
-    List Notes
-    """
-
-    queryset = Note.objects.all()
-    filterset = filters.NoteFilterSet
-    filterset_form = forms.NoteFilterForm
-    table = tables.NoteTable
+    serializer_class = serializers.NoteSerializer
+    table_class = tables.NoteTable
     action_buttons = ()
-
-
-class NoteEditView(generic.ObjectEditView):
-    queryset = Note.objects.all()
-    model_form = forms.NoteForm
 
     def alter_obj(self, obj, request, url_args, url_kwargs):
         obj.user = request.user
         return obj
-
-
-class NoteDeleteView(generic.ObjectDeleteView):
-    queryset = Note.objects.all()
 
 
 class ObjectNotesView(generic.GenericView):
@@ -2811,123 +2791,37 @@ class SecretProviderParametersFormView(generic.GenericView):
         )
 
 
-class SecretsGroupListView(generic.ObjectListView):
+class SecretsGroupUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.SecretsGroupBulkEditForm
+    filterset_class = filters.SecretsGroupFilterSet
+    filterset_form_class = forms.SecretsGroupFilterForm
+    form_class = forms.SecretsGroupForm
+    serializer_class = serializers.SecretsGroupSerializer
+    table_class = tables.SecretsGroupTable
+    template_name = "extras/secretsgroup_update.html"
     queryset = SecretsGroup.objects.all()
-    filterset = filters.SecretsGroupFilterSet
-    filterset_form = forms.SecretsGroupFilterForm
-    table = tables.SecretsGroupTable
-    action_buttons = ("add",)
 
+    def get_extra_context(self, request, instance=None):
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve" and instance:
+            context["secrets_group_associations"] = SecretsGroupAssociation.objects.filter(secrets_group=instance)
+        if self.action in ("create", "update"):
+            if request.method == "POST":
+                context["secrets"] = forms.SecretsGroupAssociationFormSet(data=request.POST, instance=instance)
+            else:
+                context["secrets"] = forms.SecretsGroupAssociationFormSet(instance=instance)
+        return context
 
-class SecretsGroupView(generic.ObjectView):
-    queryset = SecretsGroup.objects.all()
+    def form_save(self, form, **kwargs):
+        obj = super().form_save(form, **kwargs)
+        secrets = forms.SecretsGroupAssociationFormSet(data=self.request.POST, instance=form.instance)
 
-    def get_extra_context(self, request, instance):
-        return {"secrets_group_associations": SecretsGroupAssociation.objects.filter(secrets_group=instance)}
-
-
-class SecretsGroupEditView(generic.ObjectEditView):
-    queryset = SecretsGroup.objects.all()
-    model_form = forms.SecretsGroupForm
-    template_name = "extras/secretsgroup_edit.html"
-
-    def get_extra_context(self, request, instance):
-        ctx = super().get_extra_context(request, instance)
-
-        if request.POST:
-            ctx["secrets"] = forms.SecretsGroupAssociationFormSet(data=request.POST, instance=instance)
+        if secrets.is_valid():
+            secrets.save()
         else:
-            ctx["secrets"] = forms.SecretsGroupAssociationFormSet(instance=instance)
+            raise ValidationError(secrets.errors)
 
-        return ctx
-
-    def post(self, request, *args, **kwargs):
-        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
-        form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
-        restrict_form_fields(form, request.user)
-
-        if form.is_valid():
-            logger.debug("Form validation was successful")
-
-            try:
-                with transaction.atomic():
-                    object_created = not form.instance.present_in_database
-                    obj = form.save()
-
-                    # Check that the new object conforms with any assigned object-level permissions
-                    self.queryset.get(pk=obj.pk)
-
-                    # Process the formsets for secrets
-                    ctx = self.get_extra_context(request, obj)
-                    secrets = ctx["secrets"]
-                    if secrets.is_valid():
-                        secrets.save()
-                    else:
-                        raise RuntimeError(secrets.errors)
-                verb = "Created" if object_created else "Modified"
-                msg = f"{verb} {self.queryset.model._meta.verbose_name}"
-                logger.info(f"{msg} {obj} (PK: {obj.pk})")
-                try:
-                    msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
-                except AttributeError:
-                    msg = format_html("{} {}", msg, obj)
-                messages.success(request, msg)
-
-                if "_addanother" in request.POST:
-                    # If the object has clone_fields, pre-populate a new instance of the form
-                    if hasattr(obj, "clone_fields"):
-                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
-                        return redirect(url)
-
-                    return redirect(request.get_full_path())
-
-                return_url = form.cleaned_data.get("return_url")
-                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(iri_to_uri(return_url))
-                else:
-                    return redirect(self.get_return_url(request, obj))
-
-            except ObjectDoesNotExist:
-                msg = "Object save failed due to object-level permissions violation."
-                logger.debug(msg)
-                form.add_error(None, msg)
-            except RuntimeError:
-                msg = "Errors encountered when saving secrets group associations. See below."
-                logger.debug(msg)
-                form.add_error(None, msg)
-            except ProtectedError as err:
-                # e.g. Trying to delete a choice that is in use.
-                err_msg = err.args[0]
-                protected_obj = err.protected_objects[0]
-                msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
-                logger.debug(msg)
-                form.add_error(None, msg)
-
-        else:
-            logger.debug("Form validation failed")
-
-        return render(
-            request,
-            self.template_name,
-            {
-                "obj": obj,
-                "obj_type": self.queryset.model._meta.verbose_name,
-                "form": form,
-                "return_url": self.get_return_url(request, obj),
-                "editing": obj.present_in_database,
-                **self.get_extra_context(request, obj),
-            },
-        )
-
-
-class SecretsGroupDeleteView(generic.ObjectDeleteView):
-    queryset = SecretsGroup.objects.all()
-
-
-class SecretsGroupBulkDeleteView(generic.BulkDeleteView):
-    queryset = SecretsGroup.objects.all()
-    filterset = filters.SecretsGroupFilterSet
-    table = tables.SecretsGroupTable
+        return obj
 
 
 #

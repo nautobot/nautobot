@@ -1,0 +1,2 @@
+Fixed missing support for "exclude" filters in `ContentTypeFilter`, `ContentTypeChoiceFilter`, and `ContentTypeMultipleChoiceFilter`. This allows filters like `/extras/roles/?content_types__n=ipam.ipaddress` to work properly.
+Fixed incorrect extended filter types presented for `ContentTypeFilter`, `ContentTypeChoiceFilter`, and `ContentTypeMultipleChoiceFilter`. These filters only support the `__n` filter extension at present, not various character-based extensions like `__ic`, `__nic`, etc.

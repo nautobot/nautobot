@@ -1,0 +1,252 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+{% load static %}
+
+{% block extra_buttons %}
+        {% if perms.virtualization.add_vminterface %}
+            <a href="{% url 'virtualization:vminterface_add' %}?virtual_machine={{ object.pk }}&return_url={{ object.get_absolute_url }}" class="btn btn-primary">
+                <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Interfaces
+            </a>
+        {% endif %}
+{% endblock extra_buttons %}
+
+
+{% block extra_nav_tabs %}
+        {% if perms.extras.view_configcontext %}
+            <li role="presentation"{% if active_tab == 'config-context' %} class="active"{% endif %}>
+                <a href="{% url 'virtualization:virtualmachine_configcontext' pk=object.pk %}">Config Context</a>
+            </li>
+        {% endif %}
+{% endblock extra_nav_tabs %}
+
+
+{% block content_left_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Virtual Machine</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Name</td>
+                    <td>{{ object }}</td>
+                </tr>
+                <tr>
+                    <td>Status</td>
+                    <td>
+                        {{ object.status| hyperlinked_object_with_color }}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Role</td>
+                    <td>
+                        {{ object.role | hyperlinked_object_with_color }}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Platform</td>
+                    <td>
+                        {% if object.platform %}
+                            <a href="{% url 'virtualization:virtualmachine_list' %}?platform={{ object.platform.name }}">{{ object.platform }}</a>
+                        {% else %}
+                            <span class="text-muted">None</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% include 'inc/tenant_table_row.html' %}
+                <tr>
+                    <td>Primary IPv4</td>
+                    <td>
+                        {% if object.primary_ip4 %}
+                            <span class="hover_copy">
+                                {{ object.primary_ip4|hyperlinked_object|add_html_id:"ipv4" }} ({{ object.primary_ip4.parent.namespace|hyperlinked_object }})
+                                {% if object.primary_ip4.nat_inside %}
+                                    <span>(NAT for {{ object.primary_ip4.nat_inside.address.ip }})</span>
+                                {% elif object.primary_ip4.nat_outside_list.exists %}
+                                    <br /><span>NAT: </span>
+                                    <ul>
+                                        {% for nat in object.primary_ip4.nat_outside_list.all %}
+                                            <li>{{ nat|hyperlinked_object }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                                <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#ipv4">
+                                    <span class="mdi mdi-content-copy"></span>
+                                </button>
+                            </span>
+                        {% else %}
+                            <span class="text-muted">&mdash;</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Primary IPv6</td>
+                    <td>
+                        {% if object.primary_ip6 %}
+                            <span class="hover_copy">
+                                {{ object.primary_ip6|hyperlinked_object|add_html_id:"ipv6" }} ({{ object.primary_ip6.parent.namespace|hyperlinked_object }})
+                                {% if object.primary_ip6.nat_inside %}
+                                    <span>(NAT for {{ object.primary_ip6.nat_inside.address.ip }})</span>
+                                {% elif object.primary_ip6.nat_outside_list.exists %}
+                                    <br /><span>NAT: </span>
+                                    <ul>
+                                        {% for nat in object.primary_ip6.nat_outside_list.all %}
+                                            <li>{{ nat|hyperlinked_object }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                                <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#ipv6">
+                                    <span class="mdi mdi-content-copy"></span>
+                                </button>
+                            </span>
+                        {% else %}
+                            <span class="text-muted">&mdash;</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% include 'dcim/inc/detail_softwareversion_softwareimagefile_rows.html' %}
+            </table>
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Comments</strong>
+            </div>
+            <div class="panel-body rendered-markdown">
+                {% if object.comments %}
+                    {{ object.comments|render_markdown }}
+                {% else %}
+                    <span class="text-muted">None</span>
+                {% endif %}
+            </div>
+        </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+        {% include 'panel_table.html' with table=vrf_table heading="Assigned VRFs" %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Cluster</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Cluster</td>
+                    <td>
+                        {% if object.cluster.cluster_group %}
+                            {{ object.cluster.cluster_group|hyperlinked_object }} /
+                        {% endif %}
+                        {{ object.cluster|hyperlinked_object }}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Cluster Type</td>
+                    <td>{{ object.cluster.cluster_type }}</td>
+                </tr>
+            </table>
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Resources</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td><i class="mdi mdi-gauge"></i> Virtual CPUs</td>
+                    <td>{{ object.vcpus|placeholder }}</td>
+                </tr>
+                <tr>
+                    <td><i class="mdi mdi-chip"></i> Memory</td>
+                    <td>
+                        {% if object.memory %}
+                            {{ object.memory }} MB
+                        {% else %}
+                            <span class="text-muted">&mdash;</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td><i class="mdi mdi-harddisk"></i> Disk Space</td>
+                    <td>
+                        {% if object.disk %}
+                            {{ object.disk }} GB
+                        {% else %}
+                            <span class="text-muted">&mdash;</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Services</strong>
+            </div>
+            {% if services %}
+                <table class="table table-hover panel-body">
+                    {% for service in services %}
+                        {% include 'ipam/inc/service.html' %}
+                    {% endfor %}
+                </table>
+            {% else %}
+                <div class="panel-body text-muted">
+                    None
+                </div>
+            {% endif %}
+            {% if perms.ipam.add_service %}
+                <div class="panel-footer text-right noprint">
+                    <a href="{% url 'virtualization:virtualmachine_service_assign' virtualmachine=object.pk %}" class="btn btn-xs btn-primary">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Assign service
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+{% endblock content_right_page %}
+
+{% block content_full_width_page %}
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="virtual_machine" value="{{ object.pk }}" />
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Interfaces</strong>
+                    <div class="pull-right noprint">
+                        {% if request.user.is_authenticated %}
+                            {% table_config_button_small vminterface_table %}
+                        {% endif %}
+                    </div>
+                    <div class="pull-right col-md-2 noprint">
+                        <input class="form-control interface-filter" type="text" placeholder="Filter" title="Filter text (regular expressions supported)" style="height: 23px" />
+                    </div>
+                </div>
+                {% include 'responsive_table.html' with table=vminterface_table %}
+                {% if perms.virtualization.add_vminterface or perms.virtualization.delete_vminterface %}
+                    <div class="panel-footer noprint">
+                        {% if interfaces and perms.virtualization.change_vminterface %}
+                            <button type="submit" name="_rename" formaction="{% url 'virtualization:vminterface_bulk_rename' %}?return_url={{ object.get_absolute_url }}" class="btn btn-warning btn-xs">
+                                <span class="mdi mdi-pencil" aria-hidden="true"></span> Rename
+                            </button>
+                            <button type="submit" name="_edit" formaction="{% url 'virtualization:vminterface_bulk_edit' %}?return_url={{ object.get_absolute_url }}" class="btn btn-warning btn-xs">
+                                <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
+                            </button>
+                        {% endif %}
+                        {% if interfaces and perms.virtualization.delete_vminterface %}
+                            <button type="submit" name="_delete" formaction="{% url 'virtualization:vminterface_bulk_delete' %}?return_url={{ object.get_absolute_url }}" class="btn btn-danger btn-xs">
+                                <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete
+                            </button>
+                        {% endif %}
+                        {% if perms.virtualization.add_vminterface %}
+                            <div class="pull-right">
+                                <a href="{% url 'virtualization:vminterface_add' %}?virtual_machine={{ object.pk }}&return_url={{ object.get_absolute_url }}" class="btn btn-primary btn-xs">
+                                    <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add interfaces
+                                </a>
+                            </div>
+                            <div class="clearfix"></div>
+                        {% endif %}
+                     </div>
+                {% endif %}
+            </div>
+        </form>
+        {% table_config_form vminterface_table %}
+{% endblock content_full_width_page %}
+
+{% block javascript %}
+    <script src="{% versioned_static 'js/interface_filtering.js' %}"></script>
+    <script src="{% versioned_static 'js/tableconfig.js' %}"></script>
+    {{ block.super }}
+{% endblock javascript %}
