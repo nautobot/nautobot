@@ -1,6 +1,7 @@
 from django.core.cache import cache
 from django.db.models import Case, When
 from django.db.models.signals import post_delete, post_save
+from tree_queries.compiler import TreeQuery
 from tree_queries.models import TreeNode
 from tree_queries.query import TreeManager as TreeManager_, TreeQuerySet as TreeQuerySet_
 
@@ -60,6 +61,22 @@ class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):
         if deepest is not None:
             return deepest.tree_depth
         return 0
+
+    def count(self):
+        """Custom count method for optimization purposes.
+
+        TreeQuerySet instances in Nautobot are by default with tree fields. So if somewhere tree fields aren't
+        explicitly removed from the queryset and count is called, the whole tree is calculated. Since this is not
+        needed, this implementation calls `without_tree_fields` before issuing the count query and `with_tree_fields`
+        afterwards when applicable.
+        """
+        should_have_tree_fields = isinstance(self.query, TreeQuery)
+        if should_have_tree_fields:
+            self.without_tree_fields()
+        count = super().count()
+        if should_have_tree_fields:
+            self.with_tree_fields()
+        return count
 
 
 class TreeManager(TreeManager_, BaseManager.from_queryset(TreeQuerySet)):
