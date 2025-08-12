@@ -689,10 +689,10 @@ class LogsCleanupTestCase(TransactionTestCase):
                 cleanup_types=[CleanupTypes.JOB_RESULT],
                 max_age=60,
             )
-        self.assertFalse(JobResult.objects.filter(date_done__lt=cutoff).exists())
-        self.assertTrue(JobResult.objects.filter(date_done__gte=cutoff).exists())
-        self.assertTrue(ObjectChange.objects.filter(time__lt=cutoff).exists())
-        self.assertTrue(ObjectChange.objects.filter(time__gte=cutoff).exists())
+        self.assertFalse(JobResult.objects.filter(date_done__lt=cutoff).exists(), cm.output)
+        self.assertTrue(JobResult.objects.filter(date_done__gte=cutoff).exists(), cm.output)
+        self.assertTrue(ObjectChange.objects.filter(time__lt=cutoff).exists(), cm.output)
+        self.assertTrue(ObjectChange.objects.filter(time__gte=cutoff).exists(), cm.output)
 
         started_logs = {
             "job_result_id": str(job_result.id),
@@ -839,6 +839,22 @@ class BulkEditTestCase(TransactionTestCase):
             username=self.user.username,
         )
         self._common_no_error_test_assertion(Role, job_result, Role.objects.all().count(), color="aa1409")
+
+    def test_bulk_edit_objects_nullify(self):
+        """
+        Bulk edit Role instances to nullify their weight.
+        """
+        self.add_permissions("extras.change_role", "extras.view_role")
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkEditObjects",
+            content_type=self.role_ct.id,
+            edit_all=True,
+            filter_query_params={},
+            form_data={"_nullify": ["weight"]},
+            username=self.user.username,
+        )
+        self._common_no_error_test_assertion(Role, job_result, Role.objects.all().count(), weight__isnull=True)
 
     def test_bulk_edit_select_some(self):
         """

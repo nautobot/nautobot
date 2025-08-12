@@ -137,7 +137,7 @@ class WirelessNetworkTable(BaseTable):
         )
 
 
-class ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(BaseTable):
+class BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable(BaseTable):
     controller_managed_device_group = tables.Column(linkify=True, verbose_name="Device Group")
     wireless_network = tables.Column(linkify=True, verbose_name="Wireless Network")
     vlan = tables.Column(linkify=True)
@@ -154,7 +154,6 @@ class ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(BaseTable):
         verbose_name="Prefixes",
         reverse_lookup="vlan__controller_managed_device_group_wireless_network_assignments",
     )
-    list_url = "dcim:controllermanageddevicegroup_list"
 
     class Meta(BaseTable.Meta):
         model = ControllerManagedDeviceGroupWirelessNetworkAssignment
@@ -183,8 +182,24 @@ class ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(BaseTable):
         )
 
 
+class ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
+    BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable
+):
+    list_url = "dcim:controllermanageddevicegroup_list"
+
+    class Meta(BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable.Meta):
+        pass
+
+
+class DeviceGroupWirelessNetworkTable(BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable):
+    list_url = "wireless:wirelessnetwork_list"
+
+    class Meta(BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable.Meta):
+        pass
+
+
 class ControllerControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
-    ControllerManagedDeviceGroupWirelessNetworkAssignmentTable
+    BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable
 ):
     class Meta(ControllerManagedDeviceGroupWirelessNetworkAssignmentTable.Meta):
         default_columns = (
