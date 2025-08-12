@@ -175,7 +175,9 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
             )
 
         # Edit the device local context data and redirect back to the validation tab
-        self.browser.find_by_xpath(xpath_query)[1].find_by_tag("td")[-1].find_by_css('a[data-original-title="Edit"]').first.click()
+        self.browser.find_by_xpath(xpath_query)[1].find_by_tag("td")[-1].find_by_css(
+            'a[data-original-title="Edit"]'
+        ).first.click()
         # breakpoint()
         # Update the property "a" to be a string
         self.browser.fill("local_config_context_data", '{"a": "foo", "b": 456, "c": 777}')
