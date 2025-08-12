@@ -6,6 +6,7 @@ from operator import itemgetter
 from unittest.mock import patch
 
 from django.template import Context
+from django.utils.http import urlencode
 
 from nautobot.core.testing import TestCase
 from nautobot.core.ui.breadcrumbs import (
@@ -63,7 +64,9 @@ class BreadcrumbItemsTestCase(TestCase):
 
         url, label = item.as_pair(context)
 
-        self.assertEqual(url, f"/dcim/location-types/{self.location_type.pk}/?name={self.location_type.name}")
+        self.assertEqual(
+            url, f"/dcim/location-types/{self.location_type.pk}/?{urlencode({'name': self.location_type.name})}"
+        )
         self.assertEqual(label, "Filtered Locations Types")
 
     def test_callable_label_and_view_name(self):
@@ -133,7 +136,7 @@ class BreadcrumbItemsTestCase(TestCase):
                     "model": itemgetter("model_type"),
                     "reverse_query_params": lambda c: {"name": c["device_name"]},
                 },
-                "expected_url": "/dcim/devices/?filter=abc",
+                "expected_url": "/dcim/devices/?name=abc",
                 "expected_label": "Devices",
             },
         ]
@@ -220,18 +223,18 @@ class BreadcrumbsTestCase(TestCase):
         breadcrumbs = Breadcrumbs()
 
         # Should have defaults for list and details
-        self.assertEqual(len(breadcrumbs.items["list"]), 1)
-        self.assertEqual(len(breadcrumbs.items["detail"]), 2)
+        self.assertEqual(len(breadcrumbs.items["list"]), 2)
+        self.assertEqual(len(breadcrumbs.items["detail"]), 3)
 
         # Verify adding items
         new_item = BaseBreadcrumbItem()
         breadcrumbs = Breadcrumbs(items={"detail": [new_item], "list": [new_item], "custom_action": [new_item]})
 
-        self.assertEqual(len(breadcrumbs.items["list"]), 2)
-        self.assertEqual(breadcrumbs.items["list"][1], new_item)
+        self.assertEqual(len(breadcrumbs.items["list"]), 3)
+        self.assertEqual(breadcrumbs.items["list"][2], new_item)
 
-        self.assertEqual(len(breadcrumbs.items["detail"]), 3)
-        self.assertEqual(breadcrumbs.items["detail"][1], new_item)
+        self.assertEqual(len(breadcrumbs.items["detail"]), 4)
+        self.assertEqual(breadcrumbs.items["detail"][2], new_item)
 
         self.assertEqual(len(breadcrumbs.items["custom_action"]), 1)
         self.assertEqual(breadcrumbs.items["custom_action"][0], new_item)
@@ -244,8 +247,8 @@ class BreadcrumbsTestCase(TestCase):
         }
         breadcrumbs = Breadcrumbs(items=custom_items)
 
-        self.assertEqual(len(breadcrumbs.items["list"]), 1)
-        self.assertEqual(breadcrumbs.items["list"][0], custom_list_item)
+        self.assertEqual(len(breadcrumbs.items["list"]), 3)
+        self.assertEqual(breadcrumbs.items["list"][2], custom_list_item)
 
         # Other defaults should still exist
         self.assertIn("detail", breadcrumbs.items)
@@ -274,10 +277,7 @@ class BreadcrumbsTestCase(TestCase):
 
     def test_detail_fallback_behavior(self):
         """Test that detail fallback works correctly in get_breadcrumbs_items."""
-        custom_items = {
-            "detail": [ModelBreadcrumbItem(model_key="model"), InstanceBreadcrumbItem(instance_key="object")]
-        }
-        breadcrumbs = Breadcrumbs(items=custom_items)
+        breadcrumbs = Breadcrumbs()
         expected_items = [
             ("/dcim/location-types/", "Location Types"),
             (f"/dcim/location-types/{self.location_type.pk}/", str(self.location_type)),
@@ -332,8 +332,8 @@ class BreadcrumbsTestCase(TestCase):
 
         item_visible = ViewNameBreadcrumbItem(view_name="home", label="Visible", should_render=lambda _: True)
         item_hidden = ViewNameBreadcrumbItem(view_name="home", label="Hidden", should_render=lambda _: False)
-        breadcrumbs = Breadcrumbs(items={"list": [item_visible, item_hidden]})
-        context = Context({})
+        breadcrumbs = Breadcrumbs(items={"custom_action": [item_visible, item_hidden]})
+        context = Context({"view_action": "custom_action"})
 
         items = breadcrumbs.get_breadcrumbs_items(context)
         self.assertEqual(len(items), 1)
