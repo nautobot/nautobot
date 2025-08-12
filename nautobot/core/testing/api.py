@@ -378,7 +378,6 @@ class APIViewTestCases:
                     self.assertNotIn(field, response_data)
                 # TODO: we should assert that all other fields are still present, but there's a few corner cases...
 
-        @tag("doltdb_stuck")
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_depth_1(self):
             """

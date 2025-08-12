@@ -30,7 +30,12 @@ export const initializeCollapseToggleAll = () => {
       getCollapseToggleAllTargets(collapseToggleAll).forEach((collapse) => {
         const collapseInstance = window.bootstrap.Collapse.getOrCreateInstance(collapse);
         const shouldCollapse = collapseToggleAll.getAttribute('aria-expanded') === 'true';
-        shouldCollapse ? collapseInstance.hide() : collapseInstance.show();
+
+        if (shouldCollapse) {
+          collapseInstance.hide();
+        } else {
+          collapseInstance.show();
+        }
       });
     }
   };

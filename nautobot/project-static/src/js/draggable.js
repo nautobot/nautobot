@@ -76,6 +76,7 @@ export const initializeDraggable = () => {
               return true;
             }
           }
+          return false;
         });
       })();
 
