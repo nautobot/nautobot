@@ -274,16 +274,15 @@ class ViewTestCases:
                 action_buttons.append(
                     f"""
                         <a id="edit-button" class="btn btn-warning border-end-0" href="{object_edit_url}">
-                            <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
+                            <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit {helpers.bettertitle(self.model._meta.verbose_name)}
                         </a>
                     """,
                 )
             if render_delete_button:
-                is_consolidated = render_edit_button or render_clone_button
                 action_buttons.append(
                     f"""
-                        <a id="delete-button" class="{'dropdown-item text-danger' if is_consolidated else 'btn btn-danger'}" href="{object_delete_url}">
-                            <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete {helpers.bettertitle(self.model._meta.verbose_name) if is_consolidated else ''}
+                        <a id="delete-button" class="dropdown-item text-danger" href="{object_delete_url}">
+                            <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete {helpers.bettertitle(self.model._meta.verbose_name)}
                         </a>
                     """,
                 )
