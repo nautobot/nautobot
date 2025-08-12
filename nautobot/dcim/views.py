@@ -359,10 +359,11 @@ class LocationHierarchyPanel(object_detail.ObjectFieldsPanel):
 
 
 class LocationUIViewSet(NautobotUIViewSet):
-    # We aren't accessing tree fields anywhere so this is safe (note that `parent` itself is a normal foreign
-    # key, not a tree field). If we ever do access tree fields, this will perform worse, because django will
+    # We are only accessing the tree fields from the list view, where `with_tree_fields` is called dynamically
+    # depending on whether the hierarchy is shown in the UI (note that `parent` itself is a normal foreign key, not a
+    # tree field). If we ever do access tree fields elsewhere, this will perform worse, because django will
     # automatically issue a second query (similar to behavior for
-    # https://docs.djangoproject.com/en/3.2/ref/models/querysets/#django.db.models.query.QuerySet.only)
+    # https://docs.djangoproject.com/en/3.2/ref/models/querysets/#django.db.models.query.QuerySet.only).
     queryset = Location.objects.without_tree_fields().select_related("location_type", "parent", "tenant")
     filterset_class = filters.LocationFilterSet
     filterset_form_class = forms.LocationFilterForm
