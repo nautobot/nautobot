@@ -1085,13 +1085,10 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
     table_class = tables.GitRepositoryTable
 
     def get_extra_context(self, request, instance=None):
-        context = {
-            "datasource_contents": get_datasource_contents("extras.gitrepository"),
-        }
+        context = super().get_extra_context(request, instance)
+        context["datasource_contents"] = get_datasource_contents("extras.gitrepository")
 
-        if self.action == "retrieve":
-            context.update(super().get_extra_context(request, instance))
-        elif self.action == "list":
+        if self.action == "list":
             results = {
                 r.task_kwargs["repository"]: r
                 for r in JobResult.objects.filter(
@@ -1105,16 +1102,6 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
             context["job_results"] = results
 
         return context
-
-    # TODO(jathan): Align with changes for v2 where we're not stashing the user on the instance for
-    # magical calls and instead discretely calling `repo.sync(user=user, dry_run=dry_run)`, but
-    # again, this will be moved to the API calls, so just something to keep in mind.
-    def alter_obj(self, obj, request, url_args, url_kwargs):
-        # A GitRepository needs to know the originating request when it's saved so that it can enqueue using it
-        obj.user = request.user
-        # A GitRepository needs to know the originating request when it's saved so that it can enqueue using it
-        obj.request = request
-        return obj
 
     def form_valid(self, form):
         if hasattr(form, "instance") and form.instance is not None:
