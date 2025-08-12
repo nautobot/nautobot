@@ -89,7 +89,7 @@ django-tree-queries = "~0.20.0"
 # Run production webservers such as uWSGI/gunicorn as a Django management command.
 django-webserver = "~1.2.0"
 # REST API framework
-djangorestframework = "~3.16.1"
+djangorestframework = ">=3.15.2,<3.17.0"
 # OpenAPI 3.0 schema generation for the REST API
 drf-spectacular = {version = "~0.28.0", extras = ["sidecar"]}
 # Emoji terminal output for Python.
@@ -129,7 +129,7 @@ nh3 = "~0.3.0"
 # Handling of version numbers
 packaging = ">=23.1"
 # Image processing library
-Pillow = "~11.3.0"
+Pillow = "^11.0"
 # Custom prometheus metrics
 prometheus-client = "~0.22.0"
 # PostgreSQL database adapter
