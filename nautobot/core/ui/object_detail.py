@@ -1251,6 +1251,10 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         if isinstance(instance, TreeModel) and (self.fields == "__all__" or "_hierarchy" in self.fields):
             # using `_hierarchy` with the prepended `_` to try to archive a unique name, in cases where a model might have hierarchy field.
             data["_hierarchy"] = instance
+            if not hasattr(instance, "_hierarchy"):
+                instance._hierarchy = instance
+
+        ordered_data = {}
 
         for field_name in fields:
             if field_name in self.exclude_fields:
@@ -1264,13 +1268,13 @@ class ObjectFieldsPanel(KeyValueTablePanel):
                     continue
                 raise
 
-            data[field_name] = field_value
+            ordered_data[field_name] = field_value
 
         # Ensuring the `name` field is displayed first, if present.
-        if "name" in data:
-            data = {"name": data["name"], **{k: v for k, v in data.items() if k != "name"}}
+        if "name" in ordered_data:
+            ordered_data = {"name": ordered_data["name"], **{k: v for k, v in ordered_data.items() if k != "name"}}
 
-        return data
+        return ordered_data
 
     def render_key(self, key, value, context: Context):
         """Render the `verbose_name` of the model field whose name corresponds to the given key, if applicable."""
