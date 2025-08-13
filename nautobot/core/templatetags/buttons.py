@@ -242,7 +242,7 @@ def consolidate_bulk_action_buttons(context):
                         "class": delete_button_classes,
                         "type": "submit",
                         "name": "_delete",
-                        "formaction": reverse(context["bulk_delete_url"]) + params,
+                        "formaction": reverse(context["bulk_delete_url"]),
                     }
                 ),
                 icon="mdi mdi-trash-can-outline",
