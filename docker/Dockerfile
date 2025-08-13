@@ -100,7 +100,7 @@ RUN curl -Lo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/dow
 
 ################################ Stage: poetry (stub for poetry only)
 
-FROM python:${PYTHON_VER}-slim AS poetry
+FROM python:${PYTHON_VER}-slim-bookworm AS poetry
 # Install Poetry manually via its installer script;
 # if we instead used "pip install poetry" it would install its own dependencies globally which may conflict with ours.
 # https://python-poetry.org/docs/master/#installing-with-the-official-installer
