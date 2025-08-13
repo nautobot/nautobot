@@ -1639,10 +1639,14 @@ class PowerPanelFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet):
         field_name="power_feeds",
         label="Has power feeds",
     )
+    has_feeders = RelatedMembershipBooleanFilter(
+        field_name="feeders",
+        label="Has feeders",
+    )
 
     class Meta:
         model = PowerPanel
-        fields = ["id", "name", "tags"]
+        fields = ["id", "name", "panel_type", "power_path", "tags"]
 
 
 class PowerFeedFilterSet(
@@ -1652,8 +1656,7 @@ class PowerFeedFilterSet(
     StatusModelFilterSetMixin,
 ):
     q = SearchFilter(filter_predicates={"name": "icontains", "comments": "icontains"})
-    # TODO: Why is this not using TreeNodeMultiple...
-    location = NaturalKeyOrPKMultipleChoiceFilter(
+    location = TreeNodeMultipleChoiceFilter(
         prefers_id=True,
         field_name="power_panel__location",
         queryset=Location.objects.all(),
@@ -1666,6 +1669,12 @@ class PowerFeedFilterSet(
         queryset=PowerPanel.objects.all(),
         to_field_name="name",
         label="Power panel (name or ID)",
+    )
+    destination_panel = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
+        queryset=PowerPanel.objects.all(),
+        to_field_name="name",
+        label="Destination panel (name or ID)",
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     rack = NaturalKeyOrPKMultipleChoiceFilter(
@@ -1682,11 +1691,14 @@ class PowerFeedFilterSet(
             "name",
             "status",
             "type",
+            "power_path",
             "supply",
             "phase",
             "voltage",
             "amperage",
             "max_utilization",
+            "breaker_position",
+            "breaker_pole_count",
             "comments",
             "available_power",
             "tags",
