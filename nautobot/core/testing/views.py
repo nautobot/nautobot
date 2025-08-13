@@ -5,14 +5,15 @@ from unittest import mock, skipIf
 import uuid
 
 from django.apps import apps
-from django.conf import settings
+from django.conf import global_settings, settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import URLValidator
 from django.db.models import ManyToManyField, Model, QuerySet
+from django.template.defaultfilters import date, timesince
 from django.test import override_settings, tag, TestCase as _TestCase
 from django.urls import NoReverseMatch, reverse
-from django.utils.html import escape
+from django.utils.html import escape, format_html
 from django.utils.http import urlencode
 from django.utils.text import slugify
 from tree_queries.models import TreeNode
@@ -20,7 +21,7 @@ from tree_queries.models import TreeNode
 from nautobot.core.jobs.bulk_actions import BulkEditObjects
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
-from nautobot.core.templatetags import helpers
+from nautobot.core.templatetags import buttons, helpers
 from nautobot.core.testing import mixins, utils
 from nautobot.core.utils import lookup
 from nautobot.dcim.models.device_components import ComponentModel
@@ -235,6 +236,78 @@ class ViewTestCases:
             self.assertHttpStatus(self.client.get(instance2.get_absolute_url()), 404)
 
             return response  # for consumption by child test cases if desired
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_has_timestamps_and_buttons(self):
+            instance = self._get_queryset().first()
+
+            # Add model-level permission
+            obj_perm = users_models.ObjectPermission(
+                name="Test permission", actions=["view", "add", "change", "delete"]
+            )
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            response = self.client.get(instance.get_absolute_url())
+
+            if hasattr(instance, "created") and hasattr(instance, "last_updated"):
+                timestamps = f"""
+                    <p class="flex-grow-1 m-0">
+                        <small class="align-items-center d-inline-flex gap-4 text-secondary">
+                            <i class="mdi mdi-bookmark-plus"></i> {date(instance.created, global_settings.DATETIME_FORMAT)}
+                            <span class="vr mx-4"></span>
+                            <i class="mdi mdi-clock"></i> {timesince(instance.last_updated)} ago
+                        </small>
+                    </p>
+                """
+                self.assertBodyContains(response, timestamps, html=True)
+
+            object_edit_url = buttons.edit_button(instance)["url"]
+            object_delete_url = buttons.delete_button(instance)["url"]
+            object_clone_url = buttons.clone_button(instance)["url"]
+            render_edit_button = bool(object_edit_url)
+            render_delete_button = bool(object_delete_url)
+            render_clone_button = bool(hasattr(instance, "clone_fields") and object_clone_url)
+            action_buttons = []
+            if render_edit_button:
+                action_buttons.append(
+                    format_html(
+                        """
+                            <a id="edit-button" class="btn btn-warning border-end-0" href="{}">
+                                <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit {}
+                            </a>
+                        """,
+                        object_edit_url,
+                        helpers.bettertitle(self.model._meta.verbose_name),
+                    )
+                )
+            if render_delete_button:
+                action_buttons.append(
+                    format_html(
+                        """
+                            <a id="delete-button" class="dropdown-item text-danger" href="{}">
+                                <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete {}
+                            </a>
+                        """,
+                        object_delete_url,
+                        helpers.bettertitle(self.model._meta.verbose_name),
+                    )
+                )
+            if render_clone_button:
+                action_buttons.append(
+                    format_html(
+                        """
+                            <a id="clone-button" class="dropdown-item" href="{}">
+                                <span class="mdi mdi-plus-thick text-muted" aria-hidden="true"></span> Clone {}
+                            </a>
+                        """,
+                        object_clone_url,
+                        helpers.bettertitle(self.model._meta.verbose_name),
+                    )
+                )
+            for button in action_buttons:
+                self.assertBodyContains(response, button, html=True)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_has_advanced_tab(self):

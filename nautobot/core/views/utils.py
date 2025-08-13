@@ -263,7 +263,7 @@ def prepare_cloned_fields(instance):
     applicable.
     """
     form_class = get_form_for_model(instance)
-    form = form_class() if form_class is not None else None
+    form = form_class(instance=instance) if form_class is not None else None
     params = []
     for field_name in getattr(instance, "clone_fields", []):
         field = instance._meta.get_field(field_name)
