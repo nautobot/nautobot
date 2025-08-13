@@ -7,7 +7,7 @@ Updated dependency `django-extensions` to `~4.1`.
 Updated dependency `django-health-check` to `~3.20.0`.
 Updated dependency `django-prometheus` to `~2.4.1`.
 Updated dependency `django-redis` to `~6.0.0`.
-Updated dependency `django-silk` to `~5.4.0`.
+Updated dependency `django-silk` to `~5.4.1`.
 Updated dependency `django-storages` to `~1.14.6`.
 Updated dependency `django-structlog` to `~9.1.1`.
 Updated dependency `django-timezone-field` to `~7.1`.

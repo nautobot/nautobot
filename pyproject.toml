@@ -73,7 +73,7 @@ django-prometheus = "~2.4.1"
 # Redis cache for Django used for distributed locking
 django-redis = "~6.0.0"
 # Django silk for request profiling
-django-silk = "~5.4.0"
+django-silk = "~5.4.1"
 # External Storage support (i.e. S3)
 django-storages = {version = "~1.14.6", optional = true}
 # Structured logging for Django
