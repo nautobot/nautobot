@@ -1259,6 +1259,11 @@ class GraphQLQueryUIViewSet(
                     "variables": [lambda val: helpers.render_json(val, syntax_highlight=True, pretty_print=True)],
                 },
             ),
+            object_detail.Panel(
+                weight=100,
+                section=object_detail.SectionChoices.RIGHT_HALF,
+                body_content_template_path="extras/graphqlquery_execute.html",
+            ),
         )
     )
 
