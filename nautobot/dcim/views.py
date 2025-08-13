@@ -60,7 +60,7 @@ from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.dcim.utils import get_all_network_driver_mappings
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
-from nautobot.extras.tables import DynamicGroupTable
+from nautobot.extras.tables import DynamicGroupTable, ImageAttachmentTable
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable, VRFTable
@@ -534,6 +534,51 @@ class RackUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.RackSerializer
     table_class = tables.RackDetailTable
     queryset = Rack.objects.select_related("location", "tenant__tenant_group", "rack_group", "role")
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                label="Rack",
+                fields="__all__",
+                exclude_fields=[
+                    "type",
+                    "width",
+                    "u_height",
+                    "outer_width",
+                    "outer_depth",
+                ],
+            ),
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=200,
+                label="Dimensions",
+                fields=[
+                    "type",
+                    "width",
+                    "u_height",
+                    "outer_width",
+                    "outer_depth",
+                ],
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=300,
+                table_class=tables.PowerFeedTable,
+                table_filter="rack",
+            ),
+            object_detail.ObjectsTablePanel(
+                table_title="Images",
+                section=SectionChoices.LEFT_HALF,
+                table_class=ImageAttachmentTable,
+                table_filter="image",
+                weight=400,
+                add_button_route="dcim:rack_add_images",
+                add_permissions=["extras.add_imageattachment"],
+            ),
+        )
+    )
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
