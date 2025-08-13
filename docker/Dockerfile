@@ -178,8 +178,7 @@ COPY --from=build-nautobot --chown=nautobot:nautobot /source/nautobot/project-st
 
 ENV FNM_DIR="/usr/local/lib/fnm"
 
-# DL4006 - Set the SHELL option -o pipefail before RUN with a pipe in
-# hadolint ignore=DL4006
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl -fsSL https://fnm.vercel.app/install | bash -s -- --skip-shell --install-dir /tmp/fnm && \
     cp /tmp/fnm/fnm /usr/bin
 
