@@ -34,7 +34,7 @@ ARG ARCH=${TARGETARCH:-amd64}
 
 ################################ Stage: system-dependencies (intermediate build target; basis for all images herein)
 
-FROM python:${PYTHON_VER}-slim AS system-dependencies
+FROM python:${PYTHON_VER}-slim-bookworm AS system-dependencies
 
 ENV PYTHONUNBUFFERED=1 \
     NAUTOBOT_ROOT=/opt/nautobot \
