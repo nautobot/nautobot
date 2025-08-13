@@ -1,1 +1,1 @@
-Changed the system dependencies in the Dockerfile from `python:slim` to `python:slim-bookworm` to can still use `mime-support`, which was removed from Debian starting with version 13 “Trixie”.
+Pinned the Docker image to Debian 12 `bookworm` LTS to prevent unintended upgrades to Debian 13 `trixie`.
