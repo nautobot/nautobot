@@ -30,13 +30,18 @@ from rest_framework.response import Response
 
 from nautobot.circuits.models import Circuit
 from nautobot.cloud.tables import CloudAccountTable
-from nautobot.core.choices import ButtonActionColorChoices, ButtonColorChoices
+from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
 from nautobot.core.templatetags.helpers import has_perms
 from nautobot.core.ui import object_detail
+from nautobot.core.ui.bulk_buttons import (
+    BulkDeleteButton,
+    BulkEditButton,
+    BulkRenameButton,
+)
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
@@ -752,57 +757,6 @@ class DeviceTypeFieldsPanel(object_detail.ObjectFieldsPanel):
 
 
 # --- Bulk Action Button Base Class ---
-class BaseBulkButton(object_detail.FormButton):
-    """Base class for bulk action buttons."""
-
-    action = None
-    color = None
-    icon = None
-    label = None
-    weight = None
-
-    def __init__(self, *, form_id: str, model, **kwargs):
-        model_name = model.__name__.lower()
-        app_label = model._meta.app_label
-        link_name = f"{app_label}:{model_name}_bulk_{self.action}"
-
-        super().__init__(
-            link_name=link_name,
-            link_includes_pk=False,
-            label=self.label,
-            color=self.color,
-            icon=self.icon,
-            size="xs",
-            form_id=form_id,
-            weight=self.weight,
-            **kwargs,
-        )
-
-
-class BulkRenameButton(BaseBulkButton):
-    action = "rename"
-    color = ButtonActionColorChoices.RENAME
-    icon = "mdi-pencil"
-    label = "Rename"
-    weight = 200
-
-
-class BulkEditButton(BaseBulkButton):
-    action = "edit"
-    color = ButtonActionColorChoices.EDIT
-    icon = "mdi-pencil"
-    label = "Edit"
-    weight = 300
-
-
-class BulkDeleteButton(BaseBulkButton):
-    action = "delete"
-    color = ButtonActionColorChoices.DELETE
-    icon = "mdi-trash-can-outline"
-    label = "Delete"
-    weight = 400
-
-
 def bulk_footer_buttons(form_id: str, model):
     """Return all bulk action buttons for a given form+model."""
     return [
@@ -943,18 +897,6 @@ def make_bulk_tab(weight, tab_name, label, url_name, related_attr, table_class, 
     )
 
 
-def make_add_component_button(weight, link_name, label, icon, perms):
-    """Build a single add-component button."""
-    return object_detail.Button(
-        weight=weight,
-        link_name=link_name,
-        label=label,
-        icon=icon,
-        required_permissions=perms,
-        link_includes_pk=False,
-    )
-
-
 # --- DeviceType UI ViewSet ---
 class DeviceTypeUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.DeviceTypeBulkEditForm
@@ -1001,7 +943,17 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                 attributes={"id": "device-type-add-components-button"},
                 icon="mdi-plus-thick",
                 required_permissions=["dcim.change_devicetype"],
-                children=tuple(make_add_component_button(*cfg) for cfg in ADD_COMPONENTS_CONFIG),
+                children=tuple(
+                    object_detail.Button(
+                        weight=weight,
+                        link_name=link_name,
+                        label=label,
+                        icon=icon,
+                        required_permissions=perms,
+                        link_includes_pk=False,
+                    )
+                    for weight, link_name, label, icon, perms in ADD_COMPONENTS_CONFIG
+                ),
             ),
         ),
     )
