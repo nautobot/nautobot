@@ -95,7 +95,7 @@ ARG ARCH=${TARGETARCH:-amd64}
 
 ################################ Stage: base (intermediate build target; basis for all other images herein)
 
-FROM python:${PYTHON_VER}-slim as base
+FROM python:${PYTHON_VER}-slim-bookworm as base
 
 ENV PYTHONUNBUFFERED=1 \
     NAUTOBOT_ROOT=/opt/nautobot \
