@@ -1,5 +1,6 @@
 from copy import deepcopy
 import logging
+import re
 from typing import ClassVar, Optional
 
 from django.contrib import messages
@@ -13,7 +14,7 @@ from django.core.exceptions import (
     ValidationError,
 )
 from django.db import transaction
-from django.db.models import ManyToManyField, ProtectedError, Q
+from django.db.models import ManyToManyField, ProtectedError, Q, QuerySet
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -36,6 +37,7 @@ from nautobot.core import exceptions as core_exceptions
 from nautobot.core.api.views import BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.core.forms import (
     BootstrapMixin,
+    BulkRenameForm,
     ConfirmationForm,
     CSVDataField,
     CSVFileField,
@@ -1491,3 +1493,92 @@ class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
                 "return_url": self.get_return_url(request),
             },
         )
+
+
+class BulkRenameMixin(NautobotViewSetMixin):
+    queryset: QuerySet
+    template_name = "generic/object_bulk_rename.html"
+
+    @drf_action(detail=False, methods=["get", "post"], url_name="bulk_rename", url_path="bulk_rename")
+    def bulk_rename(self, request):
+        self.form_class = self._create_bulk_rename_form_class()
+        query_pks = request.POST.getlist("pk")
+        selected_objects = self.queryset.filter(pk__in=query_pks) if query_pks else None
+
+        # selected_objects would return False; if no query_pks or invalid query_pks
+        if not selected_objects:
+            messages.warning(request, f"No valid {self.queryset.model._meta.verbose_name_plural} were selected.")
+            return redirect(self.get_return_url(request))
+
+        if "_preview" in request.POST or "_apply" in request.POST:
+            form = self.form_class(request.POST, initial={"pk": query_pks})
+            if form.is_valid():
+                try:
+                    with transaction.atomic():
+                        renamed_pks = []
+                        for obj in selected_objects:
+                            find = form.cleaned_data["find"]
+                            replace = form.cleaned_data["replace"]
+                            if form.cleaned_data["use_regex"]:
+                                try:
+                                    obj.new_name = re.sub(find, replace, obj.name)
+                                # Catch regex group reference errors
+                                except re.error:
+                                    obj.new_name = obj.name
+                            else:
+                                obj.new_name = obj.name.replace(find, replace)
+                            renamed_pks.append(obj.pk)
+
+                        if "_apply" in request.POST:
+                            for obj in selected_objects:
+                                obj.name = obj.new_name
+                                obj.save()
+
+                            # Enforce constrained permissions
+                            if self.queryset.filter(pk__in=renamed_pks).count() != len(selected_objects):
+                                raise ObjectDoesNotExist
+
+                            messages.success(
+                                request,
+                                f"Renamed {len(selected_objects)} {self.queryset.model._meta.verbose_name_plural}",
+                            )
+                            return redirect(self.get_return_url(request))
+
+                except ObjectDoesNotExist:
+                    msg = "Object update failed due to object-level permissions violation"
+                    form.add_error(None, msg)
+
+        else:
+            form = self.form_class(initial={"pk": query_pks})
+
+        return Response(
+            {
+                "template": self.template_name,
+                "form": form,
+                "obj_type_plural": self.queryset.model._meta.verbose_name_plural,
+                "selected_objects": selected_objects,
+                "return_url": self.get_return_url(request),
+                "parent_name": self.get_selected_objects_parents_name(selected_objects),
+            },
+        )
+
+    def _create_bulk_rename_form_class(self):
+        class _Form(BulkRenameForm):
+            pk = ModelMultipleChoiceField(queryset=self.queryset, widget=MultipleHiddenInput())
+
+        return _Form
+
+    def get_selected_objects_parents_name(self, selected_objects):
+        """
+        Return selected_objects parent name.
+
+        This method is intended to be overridden by child classes to return the parent name of the selected objects.
+
+        Args:
+            selected_objects (list[BaseModel]): The objects being renamed
+
+        Returns:
+            (str): The parent name of the selected objects
+        """
+
+        return ""

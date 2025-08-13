@@ -84,12 +84,6 @@ urlpatterns = [
         views.DeviceTypeImportView.as_view(),
         name="devicetype_import",
     ),
-    # Console port templates
-    path(
-        "console-port-templates/rename/",
-        views.ConsolePortTemplateBulkRenameView.as_view(),
-        name="consoleporttemplate_bulk_rename",
-    ),
     # Console server port templates
     path(
         "console-server-port-templates/add/",
