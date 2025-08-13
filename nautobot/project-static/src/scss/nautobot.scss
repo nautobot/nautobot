@@ -2208,3 +2208,14 @@ pre code.hljs {
     }
   }
 }
+
+.progress {
+  position: relative;
+
+  span {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1em;
+  }
+}

@@ -718,7 +718,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Validate Power Utilization for PowerFeed 11 is displaying correctly on Rack View.
         power_feed_11_html = """
         <td><div title="Used: 1200&#13;Count: 3840" class="progress text-center">
-            <div class="progress-bar progress-bar-success"
+            <div class="progress-bar bg-success"
                 role="progressbar" aria-valuenow="31" aria-valuemin="0" aria-valuemax="100" style="width: 31%">
                 31%
             </div>
@@ -728,7 +728,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Validate Power Utilization for PowerFeed12 is displaying correctly on Rack View.
         power_feed_12_html = """
         <td><div title="Used: 2400&#13;Count: 3840" class="progress text-center">
-            <div class="progress-bar progress-bar-success"
+            <div class="progress-bar bg-success"
                 role="progressbar" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100" style="width: 62%">
                 62%
             </div>
@@ -738,7 +738,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Validate Rack Power Utilization for Combined powerfeeds is displaying correctly on the Rack View
         total_utilization_html = """
         <td><div title="Used: 3600&#13;Count: 7680" class="progress text-center">
-            <div class="progress-bar progress-bar-success"
+            <div class="progress-bar bg-success"
                 role="progressbar" aria-valuenow="46" aria-valuemin="0" aria-valuemax="100" style="width: 46%">
                 46%
             </div>

@@ -79,7 +79,7 @@ FROM system-dependencies AS system-dev-dependencies
 # Install development/install-time OS dependencies
 # hadolint ignore=DL3008
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y build-essential libssl-dev pkg-config libldap-dev libsasl2-dev libmariadb-dev mariadb-client && \
+    apt-get install --no-install-recommends -y build-essential libssl-dev pkg-config libldap-dev libsasl2-dev libmariadb-dev mariadb-client unzip && \
     apt-get autoremove -y && \
     apt-get clean all && \
     rm -rf /var/lib/apt/lists/*
@@ -172,6 +172,25 @@ FROM python-dev-dependencies AS dev
 COPY --chown=nautobot:nautobot nautobot /source/nautobot
 
 COPY --from=build-nautobot --chown=nautobot:nautobot /source/nautobot/project-static/docs /source/nautobot/project-static/docs
+
+# Node is a platform-specific (ARM/x86) dependency and using fnm simplifies the process of
+# installing it. It also allows us to manage Node versions more easily with .node-version files
+
+ENV FNM_DIR="/usr/local/lib/fnm"
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN curl -fsSL https://fnm.vercel.app/install | bash -s -- --skip-shell --install-dir /tmp/fnm && \
+    cp /tmp/fnm/fnm /usr/bin
+
+WORKDIR /source/nautobot/project-static
+
+# Instead of using fnm shell integration, we manually set the PATH to include the fnm directory
+ENV PATH="${FNM_DIR}/aliases/default/bin:${PATH}"
+
+RUN fnm install && \
+    npm ci
+
+WORKDIR /source
 
 RUN --mount=type=cache,target="/root/.cache",sharing=locked \
     poetry install --no-ansi --extras all && \
