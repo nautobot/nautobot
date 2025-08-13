@@ -78,7 +78,7 @@ from nautobot.wireless.tables import (
     RadioProfileTable,
 )
 
-from ..core.ui.breadcrumbs import BaseBreadcrumbItem, Breadcrumbs, InstanceBreadcrumbItem, ViewNameBreadcrumbItem
+from nautobot.core.ui.breadcrumbs import BaseBreadcrumbItem, Breadcrumbs, InstanceBreadcrumbItem, ViewNameBreadcrumbItem
 from . import filters, forms, tables
 from .api import serializers
 from .choices import DeviceFaceChoices
