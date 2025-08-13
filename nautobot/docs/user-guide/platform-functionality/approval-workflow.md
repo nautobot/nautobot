@@ -4,31 +4,74 @@ Approval Workflows allows for a multi-stage review and approval of processes bef
 
 ## Model Reference
 
+```mermaid
+---
+title: Approval Workflow Entity Relationship Diagram
+---
+erDiagram
+    "extras.ApprovalWorkflowDefinition" {
+        string name
+        ContentType model_content_type FK
+        json model_constraints
+        int priority
+    }
+    "extras.ApprovalWorkflowStageDefinition" {
+        ApprovalWorkflowDefinition approval_workflow_definition FK
+        int weight
+        string name
+        int min_approvers
+        string denial_message
+        Group approver_group FK
+    }
+    "extras.ApprovalWorkflow" {
+        ApprovalWorkflowDefinition approval_workflow_definition FK
+        GenericForeignKey object_under_review FK
+        ContentType object_under_review_content_type FK
+        uuid object_under_review_object_id
+        choices current_state
+        datetime decision_date
+        User user FK
+        string user_name
+    }
+    "extras.ApprovalWorkflowStage" {
+        ApprovalWorkflow approval_workflow FK
+        ApprovalWorkflowStageDefinition approval_workflow_stage_definition FK
+        choices state
+        datetime decision_date
+    }
+    "extras.ApprovalWorkflowStageResponse" {
+        ApprovalWorkflowStage approval_workflow_stage FK
+        User user FK
+        string comments
+        choices state
+    }
+
+    "contenttypes.ContentType"[ContentType] {}
+    "users.User"[User] {}
+    "users.Group"[Group] {}
+    "models.Model"[Model] {}
+
+    "extras.ApprovalWorkflowDefinition" }o--|| "contenttypes.ContentType": "applies to model"
+    "extras.ApprovalWorkflowDefinition" ||--o{ "extras.ApprovalWorkflowStageDefinition": "defines stages"
+    "extras.ApprovalWorkflowStageDefinition" }o--|| "users.Group": "approver group"
+    "extras.ApprovalWorkflowDefinition" ||--o{ "extras.ApprovalWorkflow": "creates instances"
+    "extras.ApprovalWorkflow" }o--|| "models.Model": "object under review"
+    "extras.ApprovalWorkflow" ||--o{ "extras.ApprovalWorkflowStage": "has stage instances"
+    "extras.ApprovalWorkflowStage" ||--o{ "extras.ApprovalWorkflowStageResponse": "has responses"
+    "extras.ApprovalWorkflowStageResponse" }o--|| "users.User": "submitted by"
+```
+
 ### ApprovalWorkflowDefinition
 
 The template for a workflow, specifying which model(s) it applies to, any constraints, and the ordered list of stages. Represents a reusable definition of an approval workflow.
 
 **Attributes:**
 
-- **name**: Unique name for the workflow.
-- **model_content_type**: The model to which this workflow applies.
-- **model_constraints**: Optional JSON constraints to further limit applicable objects.
-- **priority**: Determines selection when multiple workflows match. Lower means higher priority.
-- **approval_workflow_stage_definitions**: Related stages, ordered by weight.
 - **find_for_model(model_instance)** (manager) - Finds the best-matching workflow for a given object.
 
 ### ApprovalWorkflowStageDefinition
 
 A single approval stage within a workflow definition, specifying the approver group and required number of approvers.
-
-**Attributes:**
-
-- **name** - Stage name.
-- **approval_workflow_definition** - Parent workflow definition.
-- **weight** - Order in which the stage is processed. Lower weights come earlier.
-- **min_approvers** - Minimum number of approvals required for the stage to pass.
-- **denial_message** - Optional message shown when denied.
-- **approver_group** - Group of users eligible to approve this stage.
 
 ### ApprovalWorkflow
 
@@ -40,11 +83,6 @@ A concrete instance of a workflow triggered for a specific object under review.
 
 **Attributes:**
 
-- **approval_workflow_definition** - The definition it’s based on.
-- **object_under_review** - Generic foreign key to the object being reviewed.
-- **current_state** - Current workflow state (`Pending`, `Approved`, `Denied`).
-- **decision_date** - Date/time of final decision.
-- **user** - User who triggered the workflow.
 - **active_stage** (property) - The next stage that requires action.
 
 ### ApprovalWorkflowStage
@@ -57,10 +95,6 @@ A stage instance within a workflow execution. Progresses from `Pending` → `App
 
 **Attributes:**
 
-- **approval_workflow** - Parent workflow instance.
-- **approval_workflow_stage_definition** - Stage definition this instance is based on.
-- **state** - Stage state (`Pending`, `Approved`, `Denied`).
-- **decision_date** - Date/time when the stage reached a terminal state.
 - **remaining_approvals** (property) - How many more approvals are needed to pass.
 - **is_active_stage** (property) - Whether this stage is currently open for approvals.
 - **users_that_already_approved** (property) - List of users who have approved.
@@ -73,18 +107,15 @@ A single user's input on a specific stage - this may be an explicit decision (`a
 
 - Saving a response can trigger stage and workflow state updates.
 
-**Attributes:**
-
-- **approval_workflow_stage** - Stage being responded to.
-- **user** - Approving/denying or commenting user.
-- **comments** - Optional explanation.
-- **state** - `Pending`, `Approved`, or `Denied`.
-
 ## How-To Guides
+
+### Attach Workflow to a Model Instance
+
+Workflows are automatically attached after creating, running, or updating an object that complies with the workflow model and constraints. Manual attachment is not available.
 
 ### Using Approval Workflow via UI
 
-#### Create an Approval Workflow Definition
+#### Create an Approval Workflow Definition with stages
 
 1. Go to `Approvals > Workflow Definitions > Add Approval Workflow Definition`.
 2. Enter:
@@ -98,10 +129,6 @@ A single user's input on a specific stage - this may be an explicit decision (`a
     - **Minimum Approvers** (number of approvals required).
     - **Approver Group** (group of users eligible to approve)
     - **Denial Message** (optional message shown if denied).
-
-#### Attach Workflow to a Model Instance
-
-Workflows are automatically attached after creating, running, or updating an object that complies with the workflow model and constraints. Manual attachment is not available.
 
 #### Approve or Deny a Stage
 
@@ -154,15 +181,117 @@ Workflows are automatically attached after creating, running, or updating an obj
 
 #### Create an Approval Workflow Definition
 
-#### Attach Workflow to a Model Instance
+without `model_constraints`
 
-#### Approve or Deny a Stage
+```no-highlight
+curl -X POST \
+-H "Authorization: Token $TOKEN" \
+-H "Content-Type: application/json" \
+-H "Accept: application/json; version=1.3; indent=4" \
+-d '{
+    "name": "Scheduled Job Run Workflow",
+    "model_content_type": "extras.scheduledjob",
+    "priority": 0
+}' \
+http://nautobot/api/extras/approval-workflow-definitions/
+```
 
-#### Comment a Stage
+with `model_constraints`
 
-#### View My Requests
+```no-highlight
+curl -X POST \
+-H "Authorization: Token $TOKEN" \
+-H "Content-Type: application/json" \
+-H "Accept: application/json; version=1.3; indent=4" \
+-d '{
+    "name": "Scheduled Job Run Workflow",
+    "model_content_type": "extras.scheduledjob",
+    "model_constraints": {"name": "Bulk Delete Objects Scheduled Job"},
+    "priority": 0
+}' \
+http://nautobot/api/extras/approval-workflow-definitions/
+```
 
-#### Check Workflow State
+#### Create an Approval Workflow Stage Definition
+
+`denial_message` is optional
+
+```no-highlight
+curl -X POST \
+-H "Authorization: Token $TOKEN" \
+-H "Content-Type: application/json" \
+-H "Accept: application/json; version=1.3; indent=4" \
+-d '{
+    "approval_workflow_definition": "<APPROVAL-WORKFLOW-DEFINITION-ID>",
+    "weight": 0,
+    "name": "Initial Review",
+    "min_approvers": 1,
+    "denial_message": "Rejected during initial review.",
+    "approver_group": "initial-approval-group"
+}' \
+http://nautobot/api/extras/approval-workflow-stage-definitions/
+```
+
+#### Approve/Deny a Stage
+
+```no-highlight
+curl -X POST \
+-H "Authorization: Token $TOKEN" \
+-H "Content-Type: application/json" \
+-H "Accept: application/json; version=1.3; indent=4" \
+-d '{"comment": "Approved for deployment"}' \
+http://nautobot/api/extras/approval-workflow-stages/$APPROVAL_WORKFLOW_STAGE_ID/approve
+```
+
+```no-highlight
+curl -X POST \
+-H "Authorization: Token $TOKEN" \
+-H "Content-Type: application/json" \
+-H "Accept: application/json; version=1.3; indent=4" \
+-d '{"comment": "Deny reason"}' \
+http://nautobot/api/extras/approval-workflow-stages/$APPROVAL_WORKFLOW_STAGE_ID/deny
+```
+
+#### Comment on an Approval Workflow Stage
+
+The `comment` endpoint allows a user to attach a non-approval comment to a specific stage within an approval workflow. This endpoint does not change the state of the stage, and is intended for adding informational messages, questions, or updates related to the approval process.
+
+- This will attach a comment to the specified stage.
+- The stage state will remain unchanged.
+- The user must have the `change_approvalworkflowstage` permission.
+
+```no-highlight
+curl -X POST \
+-H "Authorization: Token $TOKEN" \
+-H "Content-Type: application/json" \
+-H "Accept: application/json; version=1.3; indent=4" \
+-d '{"comments": "Waiting for additional testing."}' \
+http://nautobot/api/extras/approval-workflow-stages/$APPROVAL_WORKFLOW_STAGE_ID/comment
+```
+
+#### List Pending/Done Approvals
+
+Retrieves a list of approval workflow stages filtered by their status relative to the current user using the `pending_my_approvals` query parameter on the standard list endpoint:
+
+- `?pending_my_approvals=true` — Returns stages pending approval by the current user.
+
+```no-highlight
+curl -X GET \
+-H "Authorization: Token $TOKEN" \
+-H "Accept: application/json; version=1.3; indent=4" \
+http://nautobot/api/extras/approval-workflow-stages/?pending_my_approvals=true
+```
+
+- `?pending_my_approvals=false` — Returns stages the current user has already approved/denied.
+
+```no-highlight
+curl -X GET \
+-H "Authorization: Token $TOKEN" \
+-H "Accept: application/json; version=1.3; indent=4" \
+http://nautobot/api/extras/approval-workflow-stages/?pending_my_approvals=false
+```
+
+If the parameter is omitted, all stages are returned regardless of approval status.
 
 ## Permissions and Group Setup
 
