@@ -54,6 +54,7 @@ from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic
 from nautobot.core.views.mixins import (
+    BulkRenameMixin,
     ComponentCreateViewMixin,
     GetReturnURLMixin,
     ObjectBulkDestroyViewMixin,
@@ -1325,6 +1326,7 @@ class ModuleTypeUIViewSet(
 
 
 class ConsolePortTemplateUIViewSet(
+    BulkRenameMixin,
     ComponentCreateViewMixin,
     ObjectEditViewMixin,
     ObjectDestroyViewMixin,
@@ -1340,9 +1342,13 @@ class ConsolePortTemplateUIViewSet(
     create_form_class = forms.ConsolePortTemplateCreateForm
     create_template_name = "dcim/device_component_add.html"
 
-
-class ConsolePortTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
-    queryset = ConsolePortTemplate.objects.all()
+    def get_selected_objects_parents_name(self, selected_objects):
+        selected_object = selected_objects.first()
+        if selected_object and selected_object.device_type:
+            return selected_object.device_type.display
+        if selected_object and selected_object.module_type:
+            return selected_object.module_type.display
+        return ""
 
 
 #
