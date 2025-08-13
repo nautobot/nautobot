@@ -6,13 +6,6 @@
 {% load plugins %}
 {% load tz %}
 
-{% block buttons %}
-    {% plugin_buttons object %}
-    {% if user|can_delete:object %}
-        {% delete_button object %}
-    {% endif %}
-{% endblock buttons %}
-
 {% block content %}
 {% if not job_class_found %}
 <div class="alert alert-danger">

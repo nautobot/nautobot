@@ -336,7 +336,7 @@ def consolidate_detail_view_action_buttons(context):
         detail_view_action_buttons.append(
             format_html(
                 primary_button_fragment,
-                label="Edit",
+                label=f"Edit {bettertitle(context['verbose_name'])}",
                 attrs=render_tag_attrs(attrs),
                 button_class=edit_button_classes,
                 icon="mdi mdi-pencil",
