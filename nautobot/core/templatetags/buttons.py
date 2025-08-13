@@ -176,8 +176,6 @@ def consolidate_bulk_action_buttons(context):
             "bulk_action_buttons": bulk_action_buttons,
         }
 
-    params = ("?" + context["request"].GET.urlencode()) if context["request"].GET else ""
-
     primary_button_fragment = child_button_fragment = """
         <button {attrs}>
             <span class="{icon}" aria-hidden="true"></span> {label}
