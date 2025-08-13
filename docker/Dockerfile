@@ -48,7 +48,7 @@ RUN --mount=type=cache,target="/var/cache/apt",sharing=locked \
     --mount=type=cache,target="/var/lib/apt/lists",sharing=locked \
     apt-get update && \
     apt-get upgrade -y && \
-    apt-get install --no-install-recommends -y curl git mime-support libxml2 libxmlsec1-dev libxmlsec1-openssl libmariadb3 openssl && \
+    apt-get install --no-install-recommends -y curl git media-types libxml2 libxmlsec1-dev libxmlsec1-openssl libmariadb3 openssl && \
     apt-get autoremove -y
 
 # DL3013 - pin all Python package versions
