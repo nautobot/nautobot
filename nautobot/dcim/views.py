@@ -37,6 +37,12 @@ from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
 from nautobot.core.templatetags.helpers import has_perms
 from nautobot.core.ui import object_detail
+from nautobot.core.ui.breadcrumbs import (
+    BaseBreadcrumbItem,
+    Breadcrumbs,
+    InstanceBreadcrumbItem,
+    ModelBreadcrumbItem,
+)
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
@@ -78,13 +84,6 @@ from nautobot.wireless.tables import (
     RadioProfileTable,
 )
 
-from nautobot.core.ui.breadcrumbs import (
-    BaseBreadcrumbItem,
-    Breadcrumbs,
-    InstanceBreadcrumbItem,
-    ViewNameBreadcrumbItem,
-    ModelBreadcrumbItem,
-)
 from . import filters, forms, tables
 from .api import serializers
 from .choices import DeviceFaceChoices
