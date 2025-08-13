@@ -263,10 +263,11 @@ class LocationTypeUIViewSet(NautobotUIViewSet):
 
 
 class LocationUIViewSet(NautobotUIViewSet):
-    # We aren't accessing tree fields anywhere so this is safe (note that `parent` itself is a normal foreign
-    # key, not a tree field). If we ever do access tree fields, this will perform worse, because django will
+    # We are only accessing the tree fields from the list view, where `with_tree_fields` is called dynamically
+    # depending on whether the hierarchy is shown in the UI (note that `parent` itself is a normal foreign key, not a
+    # tree field). If we ever do access tree fields elsewhere, this will perform worse, because django will
     # automatically issue a second query (similar to behavior for
-    # https://docs.djangoproject.com/en/3.2/ref/models/querysets/#django.db.models.query.QuerySet.only)
+    # https://docs.djangoproject.com/en/3.2/ref/models/querysets/#django.db.models.query.QuerySet.only).
     queryset = Location.objects.without_tree_fields().select_related("location_type", "parent", "tenant")
     filterset_class = filters.LocationFilterSet
     filterset_form_class = forms.LocationFilterForm
@@ -4335,16 +4336,32 @@ class PowerPanelUIViewSet(NautobotUIViewSet):
                     "name",
                     "location",
                     "rack_group",
+                    "panel_type",
+                    "power_path",
+                    "breaker_position_count",
                 ],
             ),
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.FULL_WIDTH,
                 weight=100,
                 table_class=tables.PowerFeedTable,
+                table_filter="destination_panel",
+                table_title="Incoming Feeders",
+                exclude_columns=["destination_panel", "cable", "cable_peer", "rack"],
+                add_button_route=None,
+                paginate=False,
+                show_table_config_button=False,
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=200,
+                table_class=tables.PowerFeedTable,
                 table_filter="power_panel",
                 table_title="Connected Feeds",
                 exclude_columns=["power_panel"],
                 add_button_route=None,
+                paginate=False,
+                show_table_config_button=False,
             ),
         )
     )
@@ -4396,12 +4413,21 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 weight=200,
                 label="Electrical Characteristics",
-                fields=["supply", "voltage", "amperage", "phase", "max_utilization"],
+                fields=["supply", "voltage", "amperage", "phase", "max_utilization", "available_power"],
                 value_transforms={
                     "voltage": [lambda v: f"{v}V" if v is not None else helpers.placeholder(v)],
                     "amperage": [lambda a: f"{a}A" if a is not None else helpers.placeholder(a)],
                     "max_utilization": [lambda p: f"{p}%" if p is not None else helpers.placeholder(p)],
+                    "available_power": [
+                        lambda p: f"{((p or 0) / 1000):.1f}kVA" if p is not None else helpers.placeholder(p)
+                    ],
                 },
+            ),
+            object_detail.KeyValueTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                label="Breaker Configuration",
+                context_data_key="breaker_config_data",
             ),
             object_detail.KeyValueTablePanel(
                 section=SectionChoices.RIGHT_HALF,
@@ -4417,13 +4443,22 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
         if not instance or self.action != "retrieve":
             return context
 
+        label, value = self._get_connected_target(instance)
         context["powerfeed_data"] = {
             "Power Panel": instance.power_panel,
             "Rack": instance.rack,
+            "Power Path": instance.get_power_path_display(),
             "Type": self._get_type_html(instance),  # Render Type with HTML label
             "Status": instance.status,
-            "Connected Device": self._get_connected_device_html(instance),
+            label: value,
             "Utilization (Allocated)": self._get_utilization_data(instance),
+        }
+
+        context["breaker_config_data"] = {
+            "Breaker Position": instance.breaker_position,
+            "Breaker Pole Count": instance.get_breaker_pole_count_display(),
+            "Occupied Positions": instance.occupied_positions,
+            "Phase Designation": instance.phase_designation,
         }
 
         context["connection_data"] = self._get_connection_data(request, instance)
@@ -4436,6 +4471,12 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
 
         type_class = instance.get_type_class()
         return format_html('<span class="label label-{}">{}</span>', type_class, instance.get_type_display())
+
+    def _get_connected_target(self, instance):
+        """Return (label, value) for the connected row."""
+        if getattr(instance, "destination_panel", None):
+            return "Connected Panel", helpers.hyperlinked_object(instance.destination_panel)
+        return "Connected Device", self._get_connected_device_html(instance)
 
     def _get_connected_device_html(self, instance):
         endpoint = getattr(instance, "connected_endpoint", None)
@@ -4458,6 +4499,12 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
     def _get_connection_data(self, request, instance):
         if not instance:
             return {}
+
+        if instance.destination_panel:
+            return {
+                "Power Panel": instance.destination_panel,
+                "Panel Type": instance.destination_panel.get_panel_type_display(),
+            }
 
         if instance.cable:
             trace_url = reverse("dcim:powerfeed_trace", kwargs={"pk": instance.pk})
