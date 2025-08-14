@@ -100,9 +100,10 @@
                 {% endfor %}
             {% endwith %}
         {% else %}
-            <li>
-                <a href="{% url settings.LOGIN_URL %}?next={{ request.get_full_path | urlencode }}">
-                    <i class="mdi mdi-login"></i> Log in
+            <li class="nb-sidenav-link-wrapper">
+                <a class="nb-sidenav-link flat" href="{% url settings.LOGIN_URL %}?next={{ request.get_full_path | urlencode }}">
+                    <span class="mdi mdi-login"></span>
+                    <span class="ms-10">Log in</span>
                 </a>
             </li>
         {% endif %}
