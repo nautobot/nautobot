@@ -11,15 +11,15 @@ window.ClipboardJS = ClipboardJS;
 import flatpickr from 'flatpickr';
 window.flatpickr = flatpickr;
 
-import htmx from 'htmx.org';
-window.htmx = htmx;
-
 import hljs from 'highlight.js/lib/core';
 import 'highlight.js/styles/github.css';
 import graphql from 'highlight.js/lib/languages/graphql';
 import json from 'highlight.js/lib/languages/json';
 import xml from 'highlight.js/lib/languages/xml';
 import yaml from 'highlight.js/lib/languages/yaml';
+
+import htmx from 'htmx.org';
+window.htmx = htmx;
 
 hljs.registerLanguage('graphql', graphql);
 hljs.registerLanguage('json', json);
