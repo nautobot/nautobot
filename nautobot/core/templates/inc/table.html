@@ -1,6 +1,6 @@
-{% load django_tables2 %}
+{% load querystring from django_tables2 %}
 
-<table{% if table.attrs %} {{ table.attrs.as_html }}{% endif %}>
+<table {% if table.attrs %} {{ table.attrs.as_html }}{% endif %}>
     {% if table.show_header %}
         <thead>
             <tr>
