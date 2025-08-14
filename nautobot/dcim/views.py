@@ -37,6 +37,12 @@ from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
 from nautobot.core.templatetags.helpers import has_perms
 from nautobot.core.ui import object_detail
+from nautobot.core.ui.breadcrumbs import (
+    BaseBreadcrumbItem,
+    Breadcrumbs,
+    InstanceBreadcrumbItem,
+    ModelBreadcrumbItem,
+)
 from nautobot.core.ui.bulk_buttons import (
     BulkDeleteButton,
     BulkEditButton,
@@ -1881,6 +1887,27 @@ class PlatformUIViewSet(NautobotUIViewSet):
 #
 # Devices
 #
+
+
+class DeviceBreadcrumbsMixin:
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(model=Device),
+                ModelBreadcrumbItem(
+                    model=Device,
+                    reverse_query_params=lambda c: {"location": c["object"].location.pk},
+                ),
+                InstanceBreadcrumbItem(
+                    instance=lambda c: c["object"].parent_bay.device,
+                    should_render=lambda c: hasattr(c["object"], "parent_bay"),
+                ),
+                BaseBreadcrumbItem(
+                    label=lambda c: c["object"].parent_bay, should_render=lambda c: hasattr(c["object"], "parent_bay")
+                ),
+            ]
+        }
+    )
 
 
 class DeviceListView(generic.ObjectListView):
