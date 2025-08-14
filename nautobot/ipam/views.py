@@ -13,9 +13,7 @@ from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.http import urlencode
-from django.views.generic import View
 from django_tables2 import RequestConfig
-import netaddr
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -26,7 +24,6 @@ from nautobot.core.models.querysets import count_related
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import handle_protectederror
@@ -675,13 +672,14 @@ class IPAddressUIViewSet(NautobotUIViewSet):
             RequestConfig(request, paginate).configure(parent_prefixes_table)
             RequestConfig(request, paginate).configure(related_ips_table)
 
-            context.update({
-                "parent_prefixes_table": parent_prefixes_table,
-                "related_ips_table": related_ips_table,
-            })
+            context.update(
+                {
+                    "parent_prefixes_table": parent_prefixes_table,
+                    "related_ips_table": related_ips_table,
+                }
+            )
 
         return context
-
 
     def dispatch(self, request, *args, **kwargs):
         if "interface" in request.GET or "vminterface" in request.GET:
@@ -693,15 +691,16 @@ class IPAddressUIViewSet(NautobotUIViewSet):
         return super().dispatch(request, *args, **kwargs)
 
     @action(
-    detail=False,
-    methods=["get", "post"],
-    url_path="assign",
-    url_name="assign",
-    custom_view_base_action="add",
-    custom_view_additional_permissions=[
-        "dcim.change_interface",
-        "virtualization.change_vminterface",
-    ],)
+        detail=False,
+        methods=["get", "post"],
+        url_path="assign",
+        url_name="assign",
+        custom_view_base_action="add",
+        custom_view_additional_permissions=[
+            "dcim.change_interface",
+            "virtualization.change_vminterface",
+        ],
+    )
     def assign(self, request):
         """
         Search for IPAddresses to assign to Interface or VMInterface.
@@ -733,9 +732,9 @@ class IPAddressUIViewSet(NautobotUIViewSet):
             )
             table = tables.IPAddressAssignTable(addresses)
             paginate = {
-                    "paginator_class": EnhancedPaginator,
-                    "per_page": get_paginate_count(request),
-                }
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
             RequestConfig(request, paginate).configure(table)
             max_page_size = get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT)
             if max_page_size and paginate["per_page"] > max_page_size:
@@ -753,14 +752,14 @@ class IPAddressUIViewSet(NautobotUIViewSet):
                 "return_url": self.get_return_url(request),
             },
         )
-    
+
     @action(
-    detail=False,
-    methods=["get", "post"],
-    url_path="merge",
-    url_name="merge",
-    custom_view_base_action="change",
-    custom_view_additional_permissions=["ipam.change_ipaddress"],
+        detail=False,
+        methods=["get", "post"],
+        url_path="merge",
+        url_name="merge",
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["ipam.change_ipaddress"],
     )
     def merge(self, request):
         if request.method == "GET":
@@ -825,8 +824,12 @@ class IPAddressUIViewSet(NautobotUIViewSet):
                         # Collapsed_ips can only be one of the two families v4/v6
                         # One of the querysets here is bound to be emtpy and one of the updates to Device's primary_ip field
                         # is going to be a no-op
-                        device_ip4 = list(Device.objects.filter(primary_ip4__in=collapsed_ips).values_list("pk", flat=True))
-                        device_ip6 = list(Device.objects.filter(primary_ip6__in=collapsed_ips).values_list("pk", flat=True))
+                        device_ip4 = list(
+                            Device.objects.filter(primary_ip4__in=collapsed_ips).values_list("pk", flat=True)
+                        )
+                        device_ip6 = list(
+                            Device.objects.filter(primary_ip6__in=collapsed_ips).values_list("pk", flat=True)
+                        )
                         vm_ip4 = list(
                             VirtualMachine.objects.filter(primary_ip4__in=collapsed_ips).values_list("pk", flat=True)
                         )
@@ -847,7 +850,9 @@ class IPAddressUIViewSet(NautobotUIViewSet):
                             ).first()
                             ip_to_interface_assignments.append(updated_attributes)
                         # Update Service m2m field with IPAddresses
-                        services = list(Service.objects.filter(ip_addresses__in=collapsed_ips).values_list("pk", flat=True))
+                        services = list(
+                            Service.objects.filter(ip_addresses__in=collapsed_ips).values_list("pk", flat=True)
+                        )
                         # Delete Collapsed IPs
                         try:
                             _, deleted_info = collapsed_ips.delete()
@@ -917,14 +922,13 @@ class IPAddressUIViewSet(NautobotUIViewSet):
             },
         )
 
-
     @action(
-    detail=True,
-    methods=["get"],
-    url_path="interfaces",
-    url_name="interfaces",
-    custom_view_base_action="view",
-    custom_view_additional_permissions=["dcim.view_interface"],
+        detail=True,
+        methods=["get"],
+        url_path="interfaces",
+        url_name="interfaces",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_interface"],
     )
     def interfaces(self, request, pk=None):
         """
@@ -985,7 +989,9 @@ class IPAddressUIViewSet(NautobotUIViewSet):
 
         vm_interface_table = tables.IPAddressVMInterfaceTable(data=vm_interfaces, user=request.user, orderable=False)
 
-        if request.user.has_perm("virtualization.change_vminterface") or request.user.has_perm("virtualization.delete_vminterface"):
+        if request.user.has_perm("virtualization.change_vminterface") or request.user.has_perm(
+            "virtualization.delete_vminterface"
+        ):
             vm_interface_table.columns.show("pk")
 
         paginate = {
@@ -1005,7 +1011,6 @@ class IPAddressUIViewSet(NautobotUIViewSet):
             },
         )
 
-        
 
 class IPAddressBulkCreateView(generic.BulkCreateView):
     queryset = IPAddress.objects.all()
