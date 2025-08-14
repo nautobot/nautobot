@@ -39,9 +39,9 @@ celery = "~5.5.3"
 # Cryptographic recipes and primitives.
 # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
 # Added as an explicit dependency to protect against various CVEs in older versions.
-cryptography = "~44.0.3"
+cryptography = "~45.0.0"
 # Fundamental web framework for Nautobot
-Django = "~4.2.23"
+Django = "~5.2.0"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -69,7 +69,7 @@ django-jinja = "~2.11.0"
 # Prometheus metrics for Django
 django-prometheus = "~2.3.1"
 # Redis cache for Django used for distributed locking
-django-redis = "~5.4.0"
+django-redis = "~6.0.0"
 # Django silk for request profiling
 django-silk = "~5.3.2"
 # External Storage support (i.e. S3)
@@ -104,7 +104,7 @@ Jinja2 = "~3.1.6"
 # Optional data validation of config contexts - loose dependency since our usage is light but apps may be more specific
 jsonschema = "^4.7.0"
 # Library to access Kubernetes API used to develop K8s integration
-kubernetes = "^32.0.1"
+kubernetes = "^33.0.0"
 # Rendering of markdown files to HTML
 Markdown = "~3.6"
 # MySQL database adapter
@@ -157,7 +157,7 @@ sso = ["social-auth-core"]
 
 [tool.poetry.group.dev.dependencies]
 # Tool for debugging Django
-django-debug-toolbar = "~5.0.1"
+django-debug-toolbar = "~6.0.0"
 # Nautobot example App used for testing
 example-app = {path = "examples/example_app", develop = true}
 # Nautobot test App used for testing core view overrides
@@ -165,11 +165,11 @@ example-app-with-view-override = {path = "examples/example_app_with_view_overrid
 # Random data generation
 factory-boy = "~3.3.3"
 # Factory Boy dependency.
-faker = "~36.1.1"
+faker = "~37.5.0"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.2.0"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
-rich = "~13.9.4"
+rich = "~14.1.0"
 # Change log management and generation
 towncrier = "~24.8.0"
 # Watch files for celery and mkdocs reload
