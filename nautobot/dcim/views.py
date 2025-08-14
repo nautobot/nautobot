@@ -37,6 +37,12 @@ from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
 from nautobot.core.templatetags.helpers import has_perms
 from nautobot.core.ui import object_detail
+from nautobot.core.ui.breadcrumbs import (
+    BaseBreadcrumbItem,
+    Breadcrumbs,
+    InstanceBreadcrumbItem,
+    ModelBreadcrumbItem,
+)
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
@@ -1642,6 +1648,27 @@ class PlatformUIViewSet(NautobotUIViewSet):
 #
 # Devices
 #
+
+
+class DeviceBreadcrumbsMixin:
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(model=Device),
+                ModelBreadcrumbItem(
+                    model=Device,
+                    reverse_query_params=lambda c: {"location": c["object"].location.pk},
+                ),
+                InstanceBreadcrumbItem(
+                    instance=lambda c: c["object"].parent_bay.device,
+                    should_render=lambda c: hasattr(c["object"], "parent_bay"),
+                ),
+                BaseBreadcrumbItem(
+                    label=lambda c: c["object"].parent_bay, should_render=lambda c: hasattr(c["object"], "parent_bay")
+                ),
+            ]
+        }
+    )
 
 
 class DeviceListView(generic.ObjectListView):
@@ -4097,16 +4124,32 @@ class PowerPanelUIViewSet(NautobotUIViewSet):
                     "name",
                     "location",
                     "rack_group",
+                    "panel_type",
+                    "power_path",
+                    "breaker_position_count",
                 ],
             ),
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.FULL_WIDTH,
                 weight=100,
                 table_class=tables.PowerFeedTable,
+                table_filter="destination_panel",
+                table_title="Incoming Feeders",
+                exclude_columns=["destination_panel", "cable", "cable_peer", "rack"],
+                add_button_route=None,
+                paginate=False,
+                show_table_config_button=False,
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=200,
+                table_class=tables.PowerFeedTable,
                 table_filter="power_panel",
                 table_title="Connected Feeds",
                 exclude_columns=["power_panel"],
                 add_button_route=None,
+                paginate=False,
+                show_table_config_button=False,
             ),
         )
     )
@@ -4158,12 +4201,21 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 weight=200,
                 label="Electrical Characteristics",
-                fields=["supply", "voltage", "amperage", "phase", "max_utilization"],
+                fields=["supply", "voltage", "amperage", "phase", "max_utilization", "available_power"],
                 value_transforms={
                     "voltage": [lambda v: f"{v}V" if v is not None else helpers.placeholder(v)],
                     "amperage": [lambda a: f"{a}A" if a is not None else helpers.placeholder(a)],
                     "max_utilization": [lambda p: f"{p}%" if p is not None else helpers.placeholder(p)],
+                    "available_power": [
+                        lambda p: f"{((p or 0) / 1000):.1f}kVA" if p is not None else helpers.placeholder(p)
+                    ],
                 },
+            ),
+            object_detail.KeyValueTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                label="Breaker Configuration",
+                context_data_key="breaker_config_data",
             ),
             object_detail.KeyValueTablePanel(
                 section=SectionChoices.RIGHT_HALF,
@@ -4179,13 +4231,22 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
         if not instance or self.action != "retrieve":
             return context
 
+        label, value = self._get_connected_target(instance)
         context["powerfeed_data"] = {
             "Power Panel": instance.power_panel,
             "Rack": instance.rack,
+            "Power Path": instance.get_power_path_display(),
             "Type": self._get_type_html(instance),  # Render Type with HTML label
             "Status": instance.status,
-            "Connected Device": self._get_connected_device_html(instance),
+            label: value,
             "Utilization (Allocated)": self._get_utilization_data(instance),
+        }
+
+        context["breaker_config_data"] = {
+            "Breaker Position": instance.breaker_position,
+            "Breaker Pole Count": instance.get_breaker_pole_count_display(),
+            "Occupied Positions": instance.occupied_positions,
+            "Phase Designation": instance.phase_designation,
         }
 
         context["connection_data"] = self._get_connection_data(request, instance)
@@ -4198,6 +4259,12 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
 
         type_class = instance.get_type_class()
         return format_html('<span class="label label-{}">{}</span>', type_class, instance.get_type_display())
+
+    def _get_connected_target(self, instance):
+        """Return (label, value) for the connected row."""
+        if getattr(instance, "destination_panel", None):
+            return "Connected Panel", helpers.hyperlinked_object(instance.destination_panel)
+        return "Connected Device", self._get_connected_device_html(instance)
 
     def _get_connected_device_html(self, instance):
         endpoint = getattr(instance, "connected_endpoint", None)
@@ -4220,6 +4287,12 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
     def _get_connection_data(self, request, instance):
         if not instance:
             return {}
+
+        if instance.destination_panel:
+            return {
+                "Power Panel": instance.destination_panel,
+                "Panel Type": instance.destination_panel.get_panel_type_display(),
+            }
 
         if instance.cable:
             trace_url = reverse("dcim:powerfeed_trace", kwargs={"pk": instance.pk})
