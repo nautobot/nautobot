@@ -842,7 +842,24 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             ip2.refresh_from_db()
             self.assertEqual(ip2.parent, self.parent)
 
-    # TODO: Negative tests where reparenting would orphan one or more IPs.
+    def test_clean_fails_if_would_orphan_ips(self):
+        """Test that clean() fails if reparenting would orphan IPs."""
+        self.ip = IPAddress.objects.create(address="101.102.1.1/32", status=self.status, namespace=self.namespace)
+        self.assertEqual(self.ip.parent, self.root)
+        with self.assertRaises(ValidationError) as cm:
+            self.root.prefix = "102.103.0.0/16"
+            self.root.clean()
+        self.assertIn(f"Existing IP address {self.ip.host} would no longer have a valid parent", str(cm.exception))
+        self.root.refresh_from_db()
+        self.ip2 = IPAddress.objects.create(address="101.102.1.2/32", status=self.status, namespace=self.namespace)
+        self.assertEqual(self.ip2.parent, self.root)
+        with self.assertRaises(ValidationError) as cm:
+            self.root.prefix = "102.103.0.0/16"
+            self.root.clean()
+        self.assertIn(
+            f"2 existing IP addresses (including {self.ip.host}) would no longer have a valid parent",
+            str(cm.exception),
+        )
 
     def test_descendants(self):
         prefixes = (
@@ -1568,7 +1585,19 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         ip.validated_save()
         self.assertEqual(ip.parent, prefixes[0])
 
-    # TODO test that changing host and/or mask_length results in correct reparenting
+    def test_change_host(self):
+        ip = IPAddress.objects.create(address="192.0.2.1/32", status=self.status, namespace=self.namespace)
+        self.assertEqual(ip.parent, self.prefix)
+
+        ip.host = "192.168.1.1"
+        with self.assertRaises(ValidationError) as cm:
+            ip.validated_save()
+        self.assertIn("No suitable parent Prefix", str(cm.exception))
+
+        prefix = Prefix.objects.create(prefix="192.168.1.0/24", status=self.status, namespace=self.namespace)
+        prefix.validated_save()
+        ip.validated_save()
+        self.assertEqual(ip.parent, prefix)
 
     def test_varbinary_ip_fields_with_empty_values_do_not_violate_not_null_constrains(self):
         # Assert that an error is triggered when the host is not provided.

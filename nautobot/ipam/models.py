@@ -758,7 +758,7 @@ class Prefix(PrimaryModel):
             elif orphaned_ips.count() == 1:
                 raise ValidationError(
                     {
-                        "__all__": f"Existing IP address {orphaned_ips.first()} "
+                        "__all__": f"Existing IP address {orphaned_ips.first().host} "
                         "would no longer have a valid parent Prefix after this change."
                     }
                 )
@@ -1293,11 +1293,23 @@ class IPAddress(PrimaryModel):
     def __init__(self, *args, address=None, namespace=None, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self._parent = None
+        self._cleaned = False
+
         if namespace is not None and not self.present_in_database:
             self._provided_namespace = namespace
 
         if address is not None and not self.present_in_database:
             self._deconstruct_address(address)
+
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        instance = super().from_db(db, field_names, values)
+        # These cached values are used to detect changes during save
+        for field_name, value in zip(field_names, values):
+            if field_name == "parent":
+                instance._parent = value
+        return instance
 
     def __str__(self):
         return str(self.address)
@@ -1332,22 +1344,20 @@ class IPAddress(PrimaryModel):
             raise ValidationError({"namespace": "No suitable parent Prefix exists in this Namespace"}) from e
 
     def clean(self):
-        self.address = self.address  # not a no-op - forces re-calling of self._deconstruct_address()
-
-        # Validate that host is not being modified
-        if self.present_in_database:
-            ip_address = IPAddress.objects.get(id=self.id)
-            if ip_address.host != self.host:
-                raise ValidationError({"address": "Host address cannot be changed once created"})
+        self._deconstruct_address(self.address)
 
         # Validate IP status selection
         if self.type == choices.IPAddressTypeChoices.TYPE_SLAAC and self.ip_version != 6:
             raise ValidationError({"type": "Only IPv6 addresses can be assigned SLAAC type"})
 
         closest_parent = self._get_closest_parent()
-        # Validate `parent` can be used as the parent for this ipaddress
         if closest_parent is not None:
-            if self.parent is not None and self.parent != closest_parent:
+            # If `parent` was explicitly set or changed, validate it and reject if invalid.
+            if (
+                self.parent is not None
+                and (self.parent != self._parent or not self.present_in_database)
+                and self.parent != closest_parent
+            ):
                 raise ValidationError(
                     {
                         "parent": (
@@ -1356,6 +1366,7 @@ class IPAddress(PrimaryModel):
                         )
                     }
                 )
+            # Otherwise, it was *implicitly* changed (e.g. by changing `namespace`), so just update it as appropriate.
             self.parent = closest_parent
             self._namespace = None
 
@@ -1365,12 +1376,18 @@ class IPAddress(PrimaryModel):
 
         super().clean()
 
+        self._cleaned = True
+
     clean.alters_data = True
 
     def save(self, *args, **kwargs):
-        self.clean()  # MUST do data fixup as above
+        if not self._cleaned:
+            self.clean()  # MUST do data fixup as above
 
         super().save(*args, **kwargs)
+
+        self._parent = self.parent
+        self._cleaned = False
 
     @property
     def address(self):

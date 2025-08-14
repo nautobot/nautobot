@@ -6,16 +6,13 @@ from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models, transaction
-from django.db.models import Prefetch, ProtectedError, Q
+from django.db.models import Prefetch, ProtectedError
 from django.forms.models import model_to_dict
 from django.shortcuts import get_object_or_404, redirect, render
-from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.html import format_html
-from django.utils.http import urlencode
 from django.views.generic import View
 from django_tables2 import RequestConfig
-import netaddr
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -33,7 +30,6 @@ from nautobot.core.views.utils import handle_protectederror
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import Role, SavedView, Status, Tag
-from nautobot.ipam import choices, constants
 from nautobot.ipam.api import serializers
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VirtualMachine, VMInterface
