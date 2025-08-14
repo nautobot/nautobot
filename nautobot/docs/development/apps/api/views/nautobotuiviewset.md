@@ -74,6 +74,9 @@ Templates can benefit from a very rich context passed down from the views and re
 * `table_config_form`: A TableConfigForm object for the associated `table`, providing the ability to customize the table
 * `verbose_name`: The singular form of the model's name
 * `verbose_name_plural`: The plural form of the model's name
+* `model`: The model class associated for given view
+* `view_action`: Current request action
+* `detail`: Boolean indicating whether request has given instance or not
 
 An example from editing a Provider object:
 
@@ -88,7 +91,10 @@ An example from editing a Provider object:
     'table': None,
     'table_config_form': None,
     'verbose_name': 'provider',
-    'verbose_name_plural': 'providers'
+    'verbose_name_plural': 'providers',
+    'model': <Provider>,
+    'view_action': 'retrieve',
+    'detail': True,
 }
 ```
 
