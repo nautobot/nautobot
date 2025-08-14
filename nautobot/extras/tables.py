@@ -220,6 +220,7 @@ class ConfigContextTable(BaseTable):
     name = tables.LinkColumn()
     owner = tables.LinkColumn()
     is_active = BooleanColumn(verbose_name="Active")
+    actions = ButtonsColumn(ConfigContext)
 
     class Meta(BaseTable.Meta):
         model = ConfigContext
@@ -238,6 +239,7 @@ class ConfigContextTable(BaseTable):
             "tenant_groups",
             "tenants",
             "dynamic_groups",
+            "actions",
         )
         default_columns = ("pk", "name", "weight", "is_active", "description")
 
@@ -266,19 +268,35 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
     """
 
     def __init__(self, validator, data_field, *args, **kwargs):
+        kwargs.setdefault("orderable", False)
+        kwargs.setdefault("accessor", None)
+        kwargs.setdefault("exclude_from_export", True)
+        kwargs.setdefault("empty_values", ())
+
         super().__init__(*args, **kwargs)
+
         self.validator = validator
         self.data_field = data_field
 
     def render(self, *, record):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
-        data = getattr(record, self.data_field)
-        try:
-            self.validator.validate(data)
-        except JSONSchemaValidationError as e:
-            # Return a red x (like a boolean column) and the validation error message
-            return render_boolean(False) + format_html('<span class="text-danger">{}</span>', e.message)
+        data = getattr(record, self.data_field, None)
+        # don't do import here, just doing to demonstrate the fix
+        from jsonschema import Draft7Validator, SchemaError
 
-        # Return a green check (like a boolean column)
+        try:
+            if hasattr(record, "local_config_context_schema"):
+                validator = Draft7Validator(record.local_config_context_schema.data_schema)
+            else:
+                validator = Draft7Validator(record.config_context_schema.data_schema)
+
+        except SchemaError:
+            validator = {}
+
+        try:
+            validator.validate(data)
+
+        except JSONSchemaValidationError as e:
+            return render_boolean(False) + format_html('<span class="text-danger"> {}</span>', e.message)
         return render_boolean(True)
 
 
