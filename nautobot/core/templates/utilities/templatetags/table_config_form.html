@@ -1,4 +1,5 @@
 {% load form_helpers %}
+{% load static %}
 
 <section class="nb-drawer" tabindex="-1" id="{{ table_name }}_config">
     <div class="nb-drawer-header">
@@ -10,7 +11,10 @@
             <div class="row align-content-start flex-fill">
                 <div class="col-12">
                     <div class="alert alert-warning">
-                        Adding columns may negatively affect loading times.
+                        Column choices may negatively affect loading times.
+                        <a href="{% static 'docs/user-guide/platform-functionality/configurablecolumns.html' %}" class="btn btn-link btn-sm" target="_blank" rel="noopener">
+                            <i class="mdi mdi-information"></i>
+                        </a>
                     </div>
                 </div>
                 <div class="col-12">
