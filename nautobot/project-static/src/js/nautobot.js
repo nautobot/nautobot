@@ -11,6 +11,9 @@ window.ClipboardJS = ClipboardJS;
 import flatpickr from 'flatpickr';
 window.flatpickr = flatpickr;
 
+import htmx from 'htmx.org';
+window.htmx = htmx;
+
 import hljs from 'highlight.js/lib/core';
 import 'highlight.js/styles/github.css';
 import graphql from 'highlight.js/lib/languages/graphql';

@@ -20,6 +20,7 @@
     "graphql": "16.10.0",
     "graphql-ws": "5.13.1",
     "highlight.js": "11.9.0",
+    "htmx.org": "^2.0.6",
     "jquery": "^3.7.1",
     "jquery-ui": "^1.14.1",
     "lodash.get": "^4.4.2",
