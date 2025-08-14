@@ -1,0 +1,1 @@
+The `approved_at` field from `extras.ScheduleJob` model has been changed to `decision_date`.

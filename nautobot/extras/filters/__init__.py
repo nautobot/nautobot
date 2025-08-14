@@ -107,6 +107,7 @@ from nautobot.extras.models import (
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
     FeatureQuery,
+    get_pending_approval_workflow_stages,
     RoleModelsQuery,
     TaggableClassesQuery,
 )
@@ -282,11 +283,27 @@ class ApprovalWorkflowStageFilterSet(BaseFilterSet):
     )
     decision_date = MultiValueDateTimeFilter()
 
+    pending_my_approvals = django_filters.BooleanFilter(
+        method="_pending_my_approvals", label="Filter by user's pending approvals (false returns completed approvals)"
+    )
+
     class Meta:
         """Meta attributes for filter."""
 
         model = ApprovalWorkflowStage
         fields = "__all__"
+
+    def _pending_my_approvals(self, queryset, name, value):
+        user = getattr(self.request, "user", None)
+        if not user:
+            return queryset
+        pending_qs = get_pending_approval_workflow_stages(user, queryset)
+        if value:
+            return pending_qs
+        else:
+            return queryset.filter(approval_workflow_stage_responses__user=user).exclude(
+                id__in=pending_qs.values_list("id", flat=True)
+            )
 
 
 class ApprovalWorkflowStageResponseFilterSet(BaseFilterSet):

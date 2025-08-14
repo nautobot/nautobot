@@ -359,6 +359,18 @@ class ApprovalWorkflowStage(OrganizationalModel):
         ]
 
     @property
+    def users_that_already_denied(self):
+        """
+        Get the users that have already denied this stage instance.
+        Returns:
+            list: List of users that have already denied this stage instance.
+        """
+        return [
+            response.user
+            for response in self.approval_workflow_stage_responses.filter(state=ApprovalWorkflowStateChoices.DENIED)
+        ]
+
+    @property
     def should_render_state(self):
         """
         Check if the stage state should be rendered in the UI.

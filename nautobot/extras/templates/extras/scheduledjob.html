@@ -6,13 +6,6 @@
 {% load plugins %}
 {% load tz %}
 
-{% block buttons %}
-    {% plugin_buttons object %}
-    {% if user|can_delete:object %}
-        {% delete_button object %}
-    {% endif %}
-{% endblock buttons %}
-
 {% block content %}
 {% if not job_class_found %}
 <div class="alert alert-danger">
@@ -73,15 +66,9 @@
                   <td>{{ object.approval_required | render_boolean }}</td>
               </tr>
               <tr>
-                  <td>Approver</td>
+                  <td>Decision Date</td>
                   <td>
-                      {{ object.approved_by_user | placeholder }}
-                  </td>
-              </tr>
-              <tr>
-                  <td>Approved At</td>
-                  <td>
-                      {{ object.approved_at | placeholder }}
+                      {{ object.decision_date | placeholder }}
                   </td>
               </tr>
           </table>
