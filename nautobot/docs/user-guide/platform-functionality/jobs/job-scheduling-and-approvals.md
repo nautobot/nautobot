@@ -47,8 +47,7 @@ Scheduled jobs that have `approval_required` set to `True` require approval from
 !!! warning
     Requiring approval for the execution of Job Hooks on a `JobHookReceiver` subclass is not currently supported. Support for approval of Job Hooks may be added in a future release.
 
-Scheduled jobs can be approved or denied via the UI by user that has the `extras.change_approvalworkflowstage` and `extras.view_approvalworkflowstage` permission
-and API by any user that has the `extras.approve_job` permission for the job in question, as well as the appropriate `extras.change_scheduledjob` and/or `extras.delete_scheduledjob` permissions.
+Scheduled jobs can be approved or denied via the UI/API by user that has the `extras.change_approvalworkflowstage` and `extras.view_approvalworkflowstage` permission for the job in question, as well as the appropriate `extras.change_scheduledjob` permissions.
 
 !!! note
     Scheduled jobs that are past their scheduled run date can still be approved, but the approver will be asked to confirm the operation.
@@ -59,14 +58,65 @@ The queue of jobs that need approval can be found under `Approvals > Approval Da
 
 ### Approval via the API
 
-Approvals can also be given via the REST API. The endpoints to approve, deny, and dry run a scheduled job are found on the scheduled job endpoint under `approve`, `deny`, and `dry-run`, respectively.
+Approvals can also be given via the REST API. The endpoints to approve, deny, comment are found on the approval workflow stage endpoint under `approve`, `deny`, `comment` respectively. You can list pending or completed approvals using the `pending_my_approvals` filter. Additionally, you may include a comment in the request body when approving or denying a workflow.
+
+#### Approve/Deny a Workflow
 
 ```no-highlight
 curl -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
 -H "Accept: application/json; version=1.3; indent=4" \
-http://nautobot/api/extras/scheduled-jobs/$JOB_ID/approve?force=true
+-d '{"comment": "Approved for deployment"}' \
+http://nautobot/api/extras/approval-workflow-stages/$APPROVAL_WORKFLOW_STAGE_ID/approve
 ```
 
-The approval endpoint additionally provides a `force` query parameter that needs to be set if a job is past its scheduled datetime.
+```no-highlight
+curl -X POST \
+-H "Authorization: Token $TOKEN" \
+-H "Content-Type: application/json" \
+-H "Accept: application/json; version=1.3; indent=4" \
+-d '{"comment": "Deny reason"}' \
+http://nautobot/api/extras/approval-workflow-stages/$APPROVAL_WORKFLOW_STAGE_ID/deny
+```
+
+#### Comment on an Approval Workflow Stage
+
+The `comment` endpoint allows a user to attach a non-approval comment to a specific stage within an approval workflow. This endpoint does not change the state of the stage, and is intended for adding informational messages, questions, or updates related to the approval process.
+
+- This will attach a comment to the specified stage.
+- The stage state will remain unchanged.
+- The user must have the `change_approvalworkflowstage` permission.
+
+```no-highlight
+curl -X POST \
+-H "Authorization: Token $TOKEN" \
+-H "Content-Type: application/json" \
+-H "Accept: application/json; version=1.3; indent=4" \
+-d '{"comments": "Waiting for additional testing."}' \
+http://nautobot/api/extras/approval-workflow-stages/$APPROVAL_WORKFLOW_STAGE_ID/comment
+```
+
+#### List Pending/Done Approvals
+
+Retrieves a list of approval workflow stages filtered by their status relative to the current user using the `pending_my_approvals` query parameter on the standard list endpoint:
+
+- `?pending_my_approvals=true` — Returns stages pending approval by the current user.
+
+```no-highlight
+curl -X GET \
+-H "Authorization: Token $TOKEN" \
+-H "Accept: application/json; version=1.3; indent=4" \
+http://nautobot/api/extras/approval-workflow-stages/?pending_my_approvals=true
+```
+
+- `?pending_my_approvals=false` — Returns stages the current user has already approved/denied.
+
+```no-highlight
+curl -X GET \
+-H "Authorization: Token $TOKEN" \
+-H "Accept: application/json; version=1.3; indent=4" \
+http://nautobot/api/extras/approval-workflow-stages/?pending_my_approvals=false
+```
+
+If the parameter is omitted, all stages are returned regardless of approval status.
