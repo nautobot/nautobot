@@ -1194,9 +1194,6 @@ class ObjectFieldsPanel(KeyValueTablePanel):
                 display = transform(display)
             return display
 
-        if key == "_hierarchy":
-            return render_ancestor_hierarchy(value)
-
         if isinstance(field_instance, URLField):
             return hyperlinked_field(value)
 
@@ -1245,11 +1242,6 @@ class ObjectFieldsPanel(KeyValueTablePanel):
                 fields.append(field.name)
             # TODO: apply a default ordering "smarter" than declaration order? Alphabetical? By field type?
             # TODO: allow model to specify an alternative field ordering?
-
-        if isinstance(instance, TreeModel) and (self.fields == "__all__" or "_hierarchy" in self.fields):
-            # using `_hierarchy` with the prepended `_` to try to archive a unique name, in cases where a model might have hierarchy field.
-            if not hasattr(instance, "_hierarchy"):
-                instance._hierarchy = instance
 
         data = {}
 

@@ -366,7 +366,7 @@ class LocationUIViewSet(NautobotUIViewSet):
                 fields=[
                     "location_type",
                     "status",
-                    "_hierarchy",
+                    "parent",
                     "tenant",
                     "facility",
                     "asn",
