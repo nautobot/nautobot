@@ -1,0 +1,2 @@
+Removed actions from `api/extras/scheduled-job/`: approve, deny
+Removed `approved_by_user` field from `extras.ScheduleJob` model. Now this information is stored in `ApprovalWorkflowStageResponse` model.
