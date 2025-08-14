@@ -3682,18 +3682,15 @@ class DeviceBulkAddInventoryItemView(generic.BulkComponentCreateView):
 #
 # Cables
 #
-
-
-class CableListView(generic.ObjectListView):
-    queryset = Cable.objects.all()
-    filterset = filters.CableFilterSet
-    filterset_form = forms.CableFilterForm
-    table = tables.CableTable
+class CableUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.CableBulkEditForm
+    filterset_class = filters.CableFilterSet
+    filterset_form_class = forms.CableFilterForm
+    form_class = forms.CableForm
+    serializer_class = serializers.CableSerializer
+    table_class = tables.CableTable
+    queryset = Cable.objects.prefetch_related("termination_a", "termination_b")
     action_buttons = ("import", "export")
-
-
-class CableView(generic.ObjectView):
-    queryset = Cable.objects.all()
 
 
 class PathTraceView(generic.ObjectView):
@@ -3823,31 +3820,8 @@ class CableCreateView(generic.ObjectEditView):
         )
 
 
-class CableEditView(generic.ObjectEditView):
-    queryset = Cable.objects.all()
-    model_form = forms.CableForm
-    template_name = "dcim/cable_edit.html"
-
-
-class CableDeleteView(generic.ObjectDeleteView):
-    queryset = Cable.objects.all()
-
-
 class CableBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Cable.objects.all()
-    table = tables.CableTable
-
-
-class CableBulkEditView(generic.BulkEditView):
-    queryset = Cable.objects.prefetch_related("termination_a", "termination_b")
-    filterset = filters.CableFilterSet
-    table = tables.CableTable
-    form = forms.CableBulkEditForm
-
-
-class CableBulkDeleteView(generic.BulkDeleteView):
-    queryset = Cable.objects.prefetch_related("termination_a", "termination_b")
-    filterset = filters.CableFilterSet
     table = tables.CableTable
 
 
