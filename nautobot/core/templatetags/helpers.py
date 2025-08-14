@@ -836,17 +836,7 @@ def querystring(request, **kwargs):
         "that operates differently. You may find that `django_querystring` is more appropriate for your use case "
         "and is a replica of Django 5.2's `querystring` templatetag."
     )
-    querydict = request.GET.copy()
-    for k, v in kwargs.items():
-        if v is not None:
-            querydict[k] = str(v)
-        elif k in querydict:
-            querydict.pop(k)
-    query_string = querydict.urlencode(safe="/")
-    if query_string:
-        return "?" + query_string
-    else:
-        return ""
+    return legacy_querystring(request, **kwargs)
 
 
 @register.simple_tag()
