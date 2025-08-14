@@ -2,6 +2,13 @@
 
 Approval Workflows allows for a multi-stage review and approval of processes before making changes, running or creating specific objects in the system. They are defined in advance and attached to specific models based on certain constraints.
 
+## Use cases
+
+- Preventing accidental deletion of critical data by requiring manager approval before deletion jobs run.
+- Requiring security team sign-off before enabling network changes in production.
+- Ensuring multiple stakeholders approve large-scale bulk edits.
+- Mandating peer review for scheduled jobs that affect multiple systems.
+
 ## Model Reference
 
 ```mermaid
@@ -65,10 +72,6 @@ erDiagram
 
 The template for a workflow, specifying which model(s) it applies to, any constraints, and the ordered list of stages. Represents a reusable definition of an approval workflow.
 
-**Attributes:**
-
-- **find_for_model(model_instance)** (manager) - Finds the best-matching workflow for a given object.
-
 ### ApprovalWorkflowStageDefinition
 
 A single approval stage within a workflow definition, specifying the approver group and required number of approvers.
@@ -81,10 +84,6 @@ A concrete instance of a workflow triggered for a specific object under review.
 - Automatically changes to `Approved` if all stages are approved.
 - Calls object’s `on_workflow_approved()` or `on_workflow_denied()` when final state is reached.
 
-**Attributes:**
-
-- **active_stage** (property) - The next stage that requires action.
-
 ### ApprovalWorkflowStage
 
 A stage instance within a workflow execution. Progresses from `Pending` → `Approved`/`Denied`.
@@ -92,14 +91,6 @@ A stage instance within a workflow execution. Progresses from `Pending` → `App
 - Approves automatically when minimum approvals are met.
 - Denies immediately if any denial is submitted.
 - Triggers parent workflow state updates.
-
-**Attributes:**
-
-- **remaining_approvals** (property) - How many more approvals are needed to pass.
-- **is_active_stage** (property) - Whether this stage is currently open for approvals.
-- **users_that_already_approved** (property) - List of users who have approved.
-- **users_that_already_denied** (property) - List of users who have denied.
-- **should_render_state** (property) - Whether to display the stage state in the UI.
 
 ### ApprovalWorkflowStageResponse
 
@@ -179,59 +170,6 @@ Workflows are automatically attached after creating, running, or updating an obj
 
 ### Using Approval Workflow via API
 
-#### Create an Approval Workflow Definition
-
-without `model_constraints`
-
-```no-highlight
-curl -X POST \
--H "Authorization: Token $TOKEN" \
--H "Content-Type: application/json" \
--H "Accept: application/json; version=1.3; indent=4" \
--d '{
-    "name": "Scheduled Job Run Workflow",
-    "model_content_type": "extras.scheduledjob",
-    "priority": 0
-}' \
-http://nautobot/api/extras/approval-workflow-definitions/
-```
-
-with `model_constraints`
-
-```no-highlight
-curl -X POST \
--H "Authorization: Token $TOKEN" \
--H "Content-Type: application/json" \
--H "Accept: application/json; version=1.3; indent=4" \
--d '{
-    "name": "Scheduled Job Run Workflow",
-    "model_content_type": "extras.scheduledjob",
-    "model_constraints": {"name": "Bulk Delete Objects Scheduled Job"},
-    "priority": 0
-}' \
-http://nautobot/api/extras/approval-workflow-definitions/
-```
-
-#### Create an Approval Workflow Stage Definition
-
-`denial_message` is optional
-
-```no-highlight
-curl -X POST \
--H "Authorization: Token $TOKEN" \
--H "Content-Type: application/json" \
--H "Accept: application/json; version=1.3; indent=4" \
--d '{
-    "approval_workflow_definition": "<APPROVAL-WORKFLOW-DEFINITION-ID>",
-    "weight": 0,
-    "name": "Initial Review",
-    "min_approvers": 1,
-    "denial_message": "Rejected during initial review.",
-    "approver_group": "initial-approval-group"
-}' \
-http://nautobot/api/extras/approval-workflow-stage-definitions/
-```
-
 #### Approve/Deny a Stage
 
 ```no-highlight
@@ -250,23 +188,6 @@ curl -X POST \
 -H "Accept: application/json; version=1.3; indent=4" \
 -d '{"comment": "Deny reason"}' \
 http://nautobot/api/extras/approval-workflow-stages/$APPROVAL_WORKFLOW_STAGE_ID/deny
-```
-
-#### Comment on an Approval Workflow Stage
-
-The `comment` endpoint allows a user to attach a non-approval comment to a specific stage within an approval workflow. This endpoint does not change the state of the stage, and is intended for adding informational messages, questions, or updates related to the approval process.
-
-- This will attach a comment to the specified stage.
-- The stage state will remain unchanged.
-- The user must have the `change_approvalworkflowstage` permission.
-
-```no-highlight
-curl -X POST \
--H "Authorization: Token $TOKEN" \
--H "Content-Type: application/json" \
--H "Accept: application/json; version=1.3; indent=4" \
--d '{"comments": "Waiting for additional testing."}' \
-http://nautobot/api/extras/approval-workflow-stages/$APPROVAL_WORKFLOW_STAGE_ID/comment
 ```
 
 #### List Pending/Done Approvals
@@ -293,31 +214,33 @@ http://nautobot/api/extras/approval-workflow-stages/?pending_my_approvals=false
 
 If the parameter is omitted, all stages are returned regardless of approval status.
 
-## Permissions and Group Setup
+## Permissions by Persona
 
-### Dashboard Access
+### Object Operator
 
-- **My Approvals tab only** - `extras.view_approvalworkflowstage`  
-  Allows viewing assigned approvals but not making decisions.
-- **Make approval/denial decisions** - `extras.change_approvalworkflowstage`  
-  Allows approving or denying stages.
-- **My Requests tab and workflow details** - `extras.view_approvalworkflow`  
-  Allows viewing workflows initiated by the user and their details.
-- **View responses in workflow details** - `extras.view_approvalworkflowstageresponse`  
-  Allows viewing individual user responses in the details view.
+Responsible for creating, updating, or running objects, which may trigger an approval workflow. Cannot approve workflows.
 
-### Workflow and Definition Management
+**Required permissions:**
+- `extras.view_approvalworkflow` - to view created approval workflows after creating, updating, or running an object.
+- `extras.view_approvalworkflowstage` - to view the **My Requests** tab on the Dashboard.
+- `extras.view_approvalworkflowstageresponse` - to view responses for each stage.
 
-- **View Approval Workflows** – `extras.view_approvalworkflow`
-- **View Workflow Definitions** – `extras.view_approvalworkflowdefinition`
-- **Add Workflow Definitions** – `extras.add_approvalworkflowdefinition`
+### Approver
 
-### Stage and Stage Definition Management
+Responsible for reviewing and making decisions on approval workflow stages assigned to them. Must be a member of one or more approver groups (see [Approval Groups](#approver-groups)).
 
-- **View Workflow Stages** – `extras.view_approvalworkflowstage`
-- **Modify Workflow Stages** – `extras.change_approvalworkflowstage`
-- **View Stage Definitions** – `extras.view_approvalworkflowstagedefinition`
-- **View Stage Responses** – `extras.view_approvalworkflowstageresponse`
+**Required permissions:**
+- `extras.view_approvalworkflowstage` and `extras.change_approvalworkflowstage` - to view the **My Approvals** tab on the Dashboard and take actions such as approve or deny.
+
+### Workflow Architect
+
+Responsible for designing, managing, and configuring approval workflow definitions and their stages.
+
+**Required permissions:**
+- All permissions required by the **Object Operator** role.
+- Additional permissions:
+    - `extras.view/add/change/delete_approvalworkflowdefinition`
+    - `extras.view/add/change/delete_approvalworkflowstagedefinition`
 
 ### Approver Groups
 
