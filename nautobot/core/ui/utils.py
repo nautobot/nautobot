@@ -1,3 +1,6 @@
+from typing import Optional
+
+from django.db.models import Model
 from django.template import Context
 from django.template.loader import get_template
 
@@ -34,3 +37,25 @@ def render_component_template(template_path: str, context: Context, **kwargs) ->
     """
     with context.update(kwargs):
         return get_template(template_path).render(flatten_context(context))
+
+
+def get_absolute_url(value: Optional[Model]) -> str:
+    """
+    Function to retrieve just absolute url to the given model instance.
+
+    Args:
+        value (Optional[django.db.models.Model]): Instance of a Django model or None.
+
+    Returns:
+        (str): url to the object if it defines get_absolute_url(), empty string otherwise.
+    """
+    if value is None:
+        return ""
+
+    if hasattr(value, "get_absolute_url"):
+        try:
+            return value.get_absolute_url()
+        except AttributeError:
+            return ""
+
+    return ""

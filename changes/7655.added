@@ -1,0 +1,1 @@
+Added `JobResult.date_started` field, corresponding to the feature enhancement in `django-celery-results` 2.6.0.

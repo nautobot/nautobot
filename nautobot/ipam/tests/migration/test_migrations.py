@@ -93,9 +93,9 @@ class AggregateToPrefixMigrationTestCase(MigratorTestCase):
         # self.prefix12(10.12.0.0)
         for i in range(8):
             prefix = Prefix.objects.create(
-                network=f"10.{i+5}.0.0", broadcast=f"10.{i+5}.0.15", prefix_length=28, status=self.prefix_status
+                network=f"10.{i + 5}.0.0", broadcast=f"10.{i + 5}.0.15", prefix_length=28, status=self.prefix_status
             )
-            setattr(self, f"prefix{i+5}", prefix)
+            setattr(self, f"prefix{i + 5}", prefix)
 
         # Create 16 aggregates that will be migrated to new Prefixes
         # self.aggregate5(8.5.0.0)
@@ -103,13 +103,13 @@ class AggregateToPrefixMigrationTestCase(MigratorTestCase):
         # self.aggregate20(8.20.0.0)
         for i in range(16):
             aggregate = Aggregate.objects.create(
-                network=f"8.{i+5}.0.0",
-                broadcast=f"8.{i+5}.0.7",
+                network=f"8.{i + 5}.0.0",
+                broadcast=f"8.{i + 5}.0.7",
                 rir=self.rir2,
                 prefix_length=29,
                 description="AggregateDesc",
             )
-            setattr(self, f"aggregate{i+5}", aggregate)
+            setattr(self, f"aggregate{i + 5}", aggregate)
 
         # tags
         self.prefix_tag_a = Tag.objects.create(name="PrefixTagA", slug="prefixtaga")
@@ -255,7 +255,7 @@ class AggregateToPrefixMigrationTestCase(MigratorTestCase):
         with self.subTest("network"):
             for i in range(16):
                 self.assertTrue(
-                    Prefix.objects.filter(network=f"8.{i+5}.0.0", prefix_length=29, rir_id=self.rir2.id).exists()
+                    Prefix.objects.filter(network=f"8.{i + 5}.0.0", prefix_length=29, rir_id=self.rir2.id).exists()
                 )
 
         with self.subTest("rir"):
@@ -266,11 +266,11 @@ class AggregateToPrefixMigrationTestCase(MigratorTestCase):
                 self.assertEqual(Prefix.objects.get(network="10.4.0.0").rir_id, self.rir1.id)
             with self.subTest(f"prefix.rir = {self.rir2.name}"):
                 for i in range(16):
-                    prefix = Prefix.objects.get(network=f"8.{i+5}.0.0")
+                    prefix = Prefix.objects.get(network=f"8.{i + 5}.0.0")
                     self.assertEqual(prefix.rir_id, self.rir2.id)
             with self.subTest("prefix.rir is None"):
                 for i in range(8):
-                    prefix = Prefix.objects.get(network=f"10.{i+5}.0.0")
+                    prefix = Prefix.objects.get(network=f"10.{i + 5}.0.0")
                     self.assertIsNone(prefix.rir_id)
 
         with self.subTest("description"):

@@ -47,7 +47,7 @@ class Command(BaseCommand):
         Draw a simple progress bar 20 increments wide illustrating the specified percentage.
         """
         bar_size = int(percentage / 5)
-        self.stdout.write(f"\r  [{'#' * bar_size}{' ' * (20-bar_size)}] {int(percentage)}%", ending="")
+        self.stdout.write(f"\r  [{'#' * bar_size}{' ' * (20 - bar_size)}] {int(percentage)}%", ending="")
 
     def handle(self, *model_names, **options):
         # If --force was passed, first delete all existing CablePaths

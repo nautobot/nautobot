@@ -3,6 +3,8 @@ import logging
 from django import template
 from django.utils.html import format_html_join
 
+from nautobot.core.ui.breadcrumbs import Breadcrumbs
+from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.lookup import get_view_for_model
 from nautobot.core.views.utils import get_obj_from_context
 
@@ -24,6 +26,25 @@ def render_components(context, components):
     """Render each component in the given `components` with the given `context`."""
     if components is not None:
         return format_html_join("\n", "{}", ([component.render(context)] for component in components))
+    return ""
+
+
+@register.simple_tag(takes_context=True)
+def render_title(context, mode="plain"):
+    title_obj = context.get("view_titles")
+    if title_obj is not None and isinstance(title_obj, Titles):
+        return title_obj.render(context, mode=mode)
+
+    if fallback_title := context.get("title"):
+        return fallback_title
+    return ""
+
+
+@register.simple_tag(takes_context=True)
+def render_breadcrumbs(context):
+    breadcrumbs_obj = context.get("breadcrumbs")
+    if breadcrumbs_obj is not None and isinstance(breadcrumbs_obj, Breadcrumbs):
+        return breadcrumbs_obj.render(context)
     return ""
 
 

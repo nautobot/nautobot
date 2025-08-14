@@ -110,6 +110,105 @@ object_detail_content = ObjectDetailContent(
 
 </div>
 
+### Page headings and document titles
+
+The Titles component provides a flexible system for generating page titles and headings based on the current view action and context.
+
+```python
+from nautobot.apps.ui import Titles
+
+# Create a document title instance
+titles = Titles(titles={"list": "{{obj_type_plural}}"})
+
+# Render title for a list view
+context = Context({
+    'view_action': 'list',
+    'obj_type_plural': 'devices',
+    'view_titles': titles,
+})
+
+title = titles.render(context)  # Returns: "Devices"
+```
+
+In HTML there is available `render_title` helper that use the `Title` instance from `context['view_titles']` and properly renders the page heading and document title.
+
+```html
+{% block content %}
+    <h1>{% block title %}{% render_title %}{% endblock %}</h1>
+{% endblock %}
+```
+
+## Breadcrumbs Component
+
+The Breadcrumbs component creates navigation trails that help users understand their location within the application hierarchy.
+
+There are 3 main breadcrumb items classes:
+- `ViewNameBreadcrumbItem` - Handles breadcrumbs that are generated from Django view names using URL reversing.
+- `ModelBreadcrumbItem` - Generates breadcrumbs from Django model metadata, automatically creating appropriate URLs and labels.
+- `InstanceBreadcrumbItem` - Creates detail breadcrumbs for specific object instances, generating URLs to the object's detail page.
+- `BaseBreadcrumbItem` - Can be used to create custom breadcrumb items or to show just empty "label" within the breadcrumbs path.
+
+By default, breadcrumbs class will add to the breadcrumbs path following items:
+- link to the `list_url` at the beginning
+- link to view the `object` details at the end
+
+```python
+from nautobot.apps.ui import Breadcrumbs, ViewNameBreadcrumbItem, ModelBreadcrumbItem, InstanceBreadcrumbItem
+
+# Use default breadcrumbs
+breadcrumbs = Breadcrumbs()
+
+# Render for a device detail view
+context = Context({
+    'view_action': 'retrieve',
+    'detail': True,  # Indicates this is a detail view
+    'object': device,
+})
+html = breadcrumbs.render(context)
+```
+
+It will generate:
+
+```html
+<ol class="breadcrumb">
+    <li><a href="/dcim/devices">Devices</a></li>
+    <li><a href="/dcim/devices/<uuid>">Device name</a></li>
+</ol>
+```
+
+!!! important
+    By adding custom items you're actually extending the default paths.
+
+```python
+from nautobot.apps.ui import Breadcrumbs, ViewNameBreadcrumbItem, ModelBreadcrumbItem, InstanceBreadcrumbItem
+
+# Use default breadcrumbs
+breadcrumbs = Breadcrumbs(items={"detail": [
+    ViewNameBreadcrumbItem(viewname_str="home", label="Home"),
+    ModelBreadcrumbItem(model_key="location"),
+]})
+
+# Render for a device detail view
+context = Context({
+    'view_action': 'retrieve',
+    'detail': True,  # Indicates this is a detail view
+    'object': device,
+    'location': device.location,
+})
+html = breadcrumbs.render(context)
+```
+
+It will generate:
+
+```html
+<ol class="breadcrumb">
+    <li><a href="/dcim/devices">Devices</a></li>
+    <li><a href="/">Home</a></li>
+    <li><a href="/dcim/locations">Locations</a></li>
+    <li><a href="/dcim/devices/<uuid>">Device name</a></li>
+</ol>
+```
+
 ## Panel Types
 
 ### Base Panel
@@ -567,6 +666,174 @@ class DeviceView(generic.ObjectView):
 - ![DropdownButton Example](../../media/development/core/ui-component-framework/dropdown-button-example.png){ .on-glb }
 
 </div>
+
+## Breadcrumbs and titles overview
+
+High-level data flow diagram:
+
+<!-- pyml disable-num-lines 5 no-inline-html -->
+<div class="grid cards example-images" markdown>
+
+- ![Breadcrumbs and titles data flow](../../media/development/core/ui-component-framework/breadcrumbs-titles-data-flow.png){ .on-glb }
+
+</div>
+
+### BreadcrumbItem Configuration
+
+Breadcrumb items has three main type of items.
+
+- `ViewNameBreadcrumbItem`: Creates a breadcrumb from a Django view name (string or callable), with optional URL kwargs and query params. The label can be static or dynamic.
+- `ModelBreadcrumbItem`: Generates a breadcrumb based on a Django model class, instance, or dotted model string. Supports resolving list/detail URLs and model verbose names for the label.
+- `InstanceBreadcrumbItem`: Represents a breadcrumb for a specific object instance (fetched from context). The URL and label are resolved from the object’s absolute URL and display/name.
+
+All breadcrumb items accept a `should_render` callable to control visibility based on context, and are automatically filtered out if both their URL and label are empty.
+Labels can be rendered either by using simple str, passing object that has `__str__` method, passing callable that accepts context or by taking it from context via `label_key`.
+
+#### `ViewNameBreadcrumbItem` Class
+
+```python
+# Basic view name breadcrumb
+item = ViewNameBreadcrumbItem(
+    view_name="dcim:device_list",
+    label="All Devices",
+)
+# Will generate: ("/dcim/devices/", "All Devices")
+
+# Basic view name from context breadcrumb
+item = ViewNameBreadcrumbItem(
+    view_name_key="list_url",
+    label="All Devices",
+)
+# Will generate: ("/dcim/devices/", "All Devices"); assuming there is "dcim:device_list" in context["list_url"]
+
+# With reverse parameters
+item = ViewNameBreadcrumbItem(
+    view_name="dcim:device",
+    reverse_kwargs={"pk": 123},
+    label="Device Details",
+)
+# Will generate: ("/dcim/devices/123", "Device Details")
+
+# With query parameters
+item = ViewNameBreadcrumbItem(
+    view_name="dcim:device_list",
+    reverse_query_params={"status": "active"},
+    label="Active Devices",
+)
+# Will generate: ("/dcim/devices/?status=active", "Active Devices")
+
+# With dynamic parameters from context
+item = ViewNameBreadcrumbItem(
+    view_name="dcim:device_detail",
+    reverse_kwargs=lambda ctx: {"pk": ctx["object"].pk},
+    label=lambda ctx: f"Device: {ctx['object'].name}",
+)
+```
+
+[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.ViewNameBreadcrumbItem)
+
+#### `ModelBreadcrumbItem` Class
+
+```python
+# Basic model breadcrumb (uses plural verbose_name)
+item = ModelBreadcrumbItem(model=Device)
+# Will generate: ("/dcim/devices/", "Devices")
+
+# Singular form
+item = ModelBreadcrumbItem(
+    model=Device,
+    model_label_type="singular",
+)
+# Will generate: ("/dcim/devices/", "Device")
+
+# Different URL action
+item = ModelBreadcrumbItem(
+    model=Device,
+    model_url_action="add",
+)
+# Will generate: ("/dcim/devices/add/", "Devices")
+
+item = ModelKeyBreadcrumbItem(
+    model_key="parent_model",
+    model_label_type="singular",
+)
+# Will generate: ("/dcim/devices/", "Device") - assuming that "parent model" is Device
+
+# Using dotted model path
+item = ModelBreadcrumbItem(model="dcim.device")
+# Will generate: ("/dcim/devices/", "Devices")
+```
+
+[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.ModelBreadcrumbItem)
+
+#### `InstanceBreadcrumbItem` Class
+
+```python
+# Basic usage - looks for instance in context["object"]
+item = InstanceBreadcrumbItem()
+# Uses default instance_key="object"
+
+# Custom context key
+item = InstanceBreadcrumbItem(instance_key="device")
+
+# Custom label
+item = InstanceBreadcrumbItem(
+    instance_key="object",
+    label="Current Item"
+)
+
+# Dynamic label from context
+item = InstanceBreadcrumbItem(
+    label=lambda ctx: f"Editing {ctx['object'].name}"
+)
+```
+
+[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.InstanceBreadcrumbItem)
+
+### Customizing Breadcrumbs
+
+By default `Breadcrumbs` class uses two actions: `list` and `detail`. However, you can specify your custom action,
+or just pass to the items one built-in action to override default only for the chosen view actions.
+
+If there is no `view_action` in the context it will use `list` by default.
+
+If there is no `detail` in the context it will assume `detail=False` by default.
+
+[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.Breadcrumbs)
+
+#### Example 1: Simple Override
+
+```python
+# Replace default breadcrumbs for create action
+custom_breadcrumbs = Breadcrumbs(
+    items={
+        'create': [
+            ViewNameBreadcrumbItem(view_name="home", label="Home"),
+            ModelBreadcrumbItem(model_key="model"),
+            ModelBreadcrumbItem(model_key="model", action="add", label="Add New")
+        ]
+    }
+)
+```
+
+#### Example 2: Complex Navigation
+
+```python
+# Multi-level hierarchy for nested objects
+nested_breadcrumbs = Breadcrumbs(
+    items={
+        'retrieve': [
+            ModelBreadcrumbItem(model="dcim.location", model_label_type="plural"),
+            InstanceBreadcrumbItem(
+                instance_key="object.location",
+                label=lambda ctx: f"Site: {ctx['object'].location.name}"
+            ),
+            ModelBreadcrumbItem(model="dcim.device", model_label_type="plural"),
+            InstanceBreadcrumbItem(),
+        ]
+    }
+)
+```
 
 ## Complete Example
 

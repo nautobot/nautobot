@@ -987,6 +987,7 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
     filterset = JobResultFilterSet
     generic_filter_tests = (
         ("date_created",),
+        ("date_started",),
         ("date_done",),
         ("job_model", "job_model__id"),
         ("job_model", "job_model__name"),

@@ -455,7 +455,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         for location in locations:
             location.location_type.content_types.add(ContentType.objects.get_for_model(Prefix))
         for i in range(10):
-            pfx = Prefix.objects.create(prefix=f"1.1.1.{4*i}/30", status=self.status, namespace=self.namespace)
+            pfx = Prefix.objects.create(prefix=f"1.1.1.{4 * i}/30", status=self.status, namespace=self.namespace)
             if i > 4:
                 pfx.locations.set(locations)
 

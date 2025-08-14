@@ -92,6 +92,6 @@ class Command(_Command):
 
                 for key, value in self.affected_models_count.items():
                     if value:
-                        self.stdout.write(f"    Affected {key:<38} {value: 8} rows {elapsed/value:6.3f}s/record")
+                        self.stdout.write(f"    Affected {key:<38} {value: 8} rows {elapsed / value:6.3f}s/record")
                     else:
                         self.stdout.write(f"    Affected {key:<38} {value: 8} rows")

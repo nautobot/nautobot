@@ -1,4 +1,4 @@
-from datetime import timedelta, timezone
+from datetime import timezone
 import json
 
 from django.contrib.auth import get_user_model
@@ -137,8 +137,10 @@ class JobLogEntryFactory(BaseModelFactory):
     def created(self):
         if self.job_result.date_done:
             return faker.Faker().date_time_between_dates(
-                datetime_start=self.job_result.date_created, datetime_end=self.job_result.date_done, tzinfo=timezone.utc
+                datetime_start=self.job_result.date_started, datetime_end=self.job_result.date_done, tzinfo=timezone.utc
             )
+        elif self.job_result.date_started:
+            return faker.Faker().past_datetime(start_date=self.job_result.date_started, tzinfo=timezone.utc)
         return faker.Faker().past_datetime(start_date=self.job_result.date_created, tzinfo=timezone.utc)
 
 
@@ -183,7 +185,7 @@ class JobResultFactory(BaseModelFactory):
     job_model = factory.Maybe("has_job_model", random_instance(Job), None)
     name = factory.Faker("word")
     task_name = factory.Faker("word")
-    # date_created and date_done are handled below
+    # date_created, date_started, and date_done are handled below
     user = factory.Maybe("has_user", random_instance(get_user_model()), None)
     status = factory.Iterator(
         [
@@ -210,23 +212,20 @@ class JobResultFactory(BaseModelFactory):
         return None
 
     @factory.post_generation
-    def date_created(self, created, extracted, **kwargs):  # pylint: disable=method-hidden
-        if created:
-            if extracted:
-                self.date_created = extracted
-            else:
-                self.date_created = faker.Faker().date_time_between(
-                    start_date="-1y", end_date="now", tzinfo=timezone.utc
-                )
-
-    @factory.post_generation
-    def date_done(self, created, extracted, **kwargs):  # pylint: disable=method-hidden
-        if created:
-            if extracted:
-                self.date_done = extracted
-            else:
-                # TODO, should we create "in progress" job results without a date_done value as well?
-                self.date_done = self.date_created + timedelta(minutes=faker.Faker().random_int())
+    def dates(self, created, extracted, **kwargs):  # pylint: disable=method-hidden
+        if not created:
+            return
+        if extracted:
+            return
+        # Create a date_created in the past, but not too far in the past
+        self.date_created = faker.Faker().date_time_between(start_date="-1y", end_date="-1w", tzinfo=timezone.utc)
+        self.date_started = faker.Faker().date_time_between(
+            start_date=self.date_created, end_date="-1d", tzinfo=timezone.utc
+        )
+        # TODO, should we create "in progress" job results without a date_done value as well?
+        self.date_done = faker.Faker().date_time_between(
+            start_date=self.date_started, end_date="now", tzinfo=timezone.utc
+        )
 
 
 class MetadataChoiceFactory(BaseModelFactory):
