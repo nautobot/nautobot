@@ -50,15 +50,6 @@ An IP address can be designated as the network address translation (NAT) inside 
 
 The `ipam.IPAddress` model has been modified to have a foreign key to `ipam.Prefix` as the `parent` field. Parenting of IP addresses is now automatically managed at the database level to greatly improve performance especially when calculating tree hierarchy and utilization.
 
-The following guidance has been added for the `IPAddress.parent` field:
-
-* An `IPAddress` should have a parent `Prefix` of type `Network`
-* An `IPAddress` should not be created if a suitable parent `Prefix` of type `Network` does not exist
-* An `IPAddress` can be a member of a `Pool` but only if the `Pool` is a child of a `Network` prefix
-
-!!! warning
-    In a future Nautobot release, this guidance will become an enforced constraint on `IPAddress` creation and modification.
-
 ## De-duplicating IPAddresses
 
 +++ 2.0.0

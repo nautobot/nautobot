@@ -1176,85 +1176,9 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         Prefix.objects.create(
             prefix="11.0.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
         )
-        # 3.0 TODO: replace with the commented below once type enforcement is enabled
-        # pool_prefix = Prefix.objects.create(
         Prefix.objects.create(
             prefix="12.0.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
         )
-
-        # 3.0 TODO: uncomment the below tests once type enforcement is enabled
-
-        # with self.assertRaises(ValidationError, msg="Network prefix parent cannot be a network"):
-        #     Prefix.objects.create(
-        #         prefix="11.0.0.0/30", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
-        #     )
-
-        # with self.assertRaises(ValidationError, msg="Network prefix parent cannot be a pool"):
-        #     Prefix.objects.create(
-        #         prefix="12.0.0.0/30", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
-        #     )
-
-        # with self.assertRaises(ValidationError, msg="Container prefix parent cannot be a network"):
-        #     Prefix.objects.create(
-        #         prefix="11.0.0.0/30", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
-        #     )
-
-        # with self.assertRaises(ValidationError, msg="Container prefix parent cannot be a pool"):
-        #     Prefix.objects.create(
-        #         prefix="12.0.0.0/30", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
-        #     )
-
-        # with self.assertRaises(ValidationError, msg="Pool prefix parent cannot be a container"):
-        #     Prefix.objects.create(
-        #         prefix="10.0.0.0/30", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
-        #     )
-
-        # with self.assertRaises(ValidationError, msg="Pool prefix parent cannot be a pool"):
-        #     Prefix.objects.create(
-        #         prefix="12.0.0.0/30", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
-        #     )
-
-        # with self.assertRaises(
-        #     ValidationError, msg="Test that an invalid parent cannot be created (network parenting container)"
-        # ):
-        #     Prefix.objects.create(
-        #         prefix="10.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
-        #     )
-
-        # with self.assertRaises(
-        #     ValidationError, msg="Test that an invalid parent cannot be created (pool parenting container)"
-        # ):
-        #     Prefix.objects.create(
-        #         prefix="10.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
-        #     )
-
-        # with self.assertRaises(
-        #     ValidationError, msg="Test that an invalid parent cannot be created (network parenting network)"
-        # ):
-        #     Prefix.objects.create(
-        #         prefix="11.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
-        #     )
-
-        # with self.assertRaises(
-        #     ValidationError, msg="Test that an invalid parent cannot be created (pool parenting network)"
-        # ):
-        #     Prefix.objects.create(
-        #         prefix="11.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
-        #     )
-
-        # with self.assertRaises(
-        #     ValidationError, msg="Test that an invalid parent cannot be created (container parenting pool)"
-        # ):
-        #     Prefix.objects.create(
-        #         prefix="12.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
-        #     )
-
-        # with self.assertRaises(
-        #     ValidationError, msg="Test that an invalid parent cannot be created (pool parenting pool)"
-        # ):
-        #     Prefix.objects.create(
-        #         prefix="12.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
-        #     )
 
         with self.subTest("Test that valid parents can be created"):
             Prefix.objects.create(
@@ -1274,14 +1198,6 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             Prefix.objects.create(
                 prefix="10.0.0.0/26", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
             )
-
-        # 3.0 TODO: uncomment once type enforcement is enabled
-        # with self.assertRaises(
-        #     ValidationError,
-        #     msg="Test that modifying a prefix's type fails if it would result in an invalid parent/child relationship",
-        # ):
-        #     pool_prefix.type = PrefixTypeChoices.TYPE_NETWORK
-        #     pool_prefix.validated_save()
 
         with self.subTest(
             "Test that modifying a prefix's type is allowed if it does not create an invalid relationship"
@@ -1309,13 +1225,6 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             prefix="10.0.0.0/26", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
         )
 
-        # 3.0 TODO: uncomment once type enforcement is enabled
-        # with self.assertRaises(
-        #     ProtectedError,
-        #     msg="Test that deleting a network prefix that would make a pool prefix's parent a container raises a ProtectedError",
-        # ):
-        #     network.delete()
-
         with self.subTest("Test that deleting a parent prefix properly reparents the child prefixes"):
             container.delete()
             root.refresh_from_db()
@@ -1328,17 +1237,10 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         ip = IPAddress.objects.create(address="10.0.0.1/32", status=self.status, namespace=namespace)
 
         with self.subTest("Test that deleting a pool prefix containing IPs succeeds"):
-            self.assertEqual(ip.parent, pool)  # 3.0 TODO: change this to ", network)" once IP-to-pool is disallowed
+            self.assertEqual(ip.parent, pool)
             pool.delete()
             ip.refresh_from_db()
             self.assertEqual(ip.parent, network)
-
-        # 3.0 TODO: uncomment once type enforcement is enabled
-        # with self.assertRaises(
-        #     ProtectedError,
-        #     msg="Test that deleting a network prefix that would make an IP's parent a container raises a ProtectedError",
-        # ):
-        #     network.delete()
 
         with self.subTest("Test that deleting the root prefix succeeds"):
             root.delete()
@@ -1582,13 +1484,6 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         Prefix.objects.create(
             prefix="12.0.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
         )
-
-        # 3.0 TODO: uncomment once type enforcement is enabled
-        # with self.assertRaises(ValidationError, msg="IP Address parent cannot be a container"):
-        #     IPAddress.objects.create(address="10.0.0.1/32", status=self.status, namespace=namespace)
-
-        # with self.assertRaises(Prefix.DoesNotExist, msg="IP Address parent cannot be a pool"):
-        #     IPAddress.objects.create(address="12.0.0.1/32", status=self.status, namespace=namespace)
 
         with self.assertRaises(ValidationError) as err:
             IPAddress.objects.create(address="13.0.0.1/32", status=self.status, namespace=namespace)

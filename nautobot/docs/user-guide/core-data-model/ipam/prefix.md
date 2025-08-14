@@ -52,17 +52,3 @@ The `get_utilization` method on the `ipam.Prefix` model has been updated in 2.0 
 * If the `Prefix.type` is `Network`:
     * The utilization is calculated as the sum of the total address space of all child `Pool` prefixes plus the total number of child IP addresses.
     * For IPv4 networks larger than /31, if neither the first or last address is occupied by either a pool or an IP address, they are subtracted from the total size of the prefix.
-
-## Prefix hierarchy
-
-+++ 2.0.0
-
-Prefixes and IP addresses within a namespace are organized into a hierarchy using the `parent` field. There is guidance for the types of prefixes that can be assigned as parents:
-
-* A `Prefix` of type `Container` should only have a parent (if any) of type `Container`
-* A `Prefix` of type `Network` should only have a parent (if any) of type `Container`
-* A `Prefix` of type `Pool` should only have a parent (if any) of type `Network`
-* Any `Prefix` can be a root prefix (i.e. have no parent)
-
-!!! warning
-    In a future release of Nautobot, this guidance will become an enforced data constraint.

@@ -751,13 +751,15 @@ class Prefix(PrimaryModel):
             if orphaned_ips.count() > 1:
                 raise ValidationError(
                     {
-                        "__all__": f"{orphaned_ips.count()} existing IP addresses (including {orphaned_ips.first().host}) would no longer have a valid parent Prefix after this change."
+                        "__all__": f"{orphaned_ips.count()} existing IP addresses (including "
+                        f"{orphaned_ips.first().host}) would no longer have a valid parent Prefix after this change."
                     }
                 )
             elif orphaned_ips.count() == 1:
                 raise ValidationError(
                     {
-                        "__all__": f"Existing IP address {orphaned_ips.first()} would no longer have a valid parent Prefix after this change."
+                        "__all__": f"Existing IP address {orphaned_ips.first()} "
+                        "would no longer have a valid parent Prefix after this change."
                     }
                 )
 
@@ -771,36 +773,6 @@ class Prefix(PrimaryModel):
         """
         if not self._cleaned:  # avoid double-cleaning
             self.clean()
-
-        # Validate that creation of this prefix does not create an invalid parent/child relationship
-        # 3.0 TODO: uncomment this to enforce this constraint
-        # if self.parent and self.parent.type != constants.PREFIX_ALLOWED_PARENT_TYPES[self.type]:
-        #     err_msg = f"{self.type.title()} prefixes cannot be children of {self.parent.type.title()} prefixes"
-        #     raise ValidationError({"type": err_msg})
-
-        # This is filtering on prefixes that share my parent and will be reparented to me
-        # but are not the correct type for this parent/child relationship
-        # 3.0 TODO: uncomment the below to enforce this constraint
-        # invalid_children = Prefix.objects.filter(
-        #     ~models.Q(id=self.id),
-        #     ~models.Q(type__in=constants.PREFIX_ALLOWED_CHILD_TYPES[self.type]),
-        #     parent_id=self.parent_id,
-        #     prefix_length__gt=self.prefix_length,
-        #     ip_version=self.ip_version,
-        #     network__gte=self.network,
-        #     broadcast__lte=self.broadcast,
-        #     namespace=self.namespace,
-        # )
-        #
-        # if invalid_children.exists():
-        #     invalid_child_prefixes = [
-        #         f"{child.cidr_str} ({child.type})" for child in invalid_children.only("network", "prefix_length")
-        #     ]
-        #     err_msg = (
-        #         f'Creating prefix "{self.prefix}" in namespace "{self.namespace}" with type "{self.type}" '
-        #         f"would create an invalid parent/child relationship with prefixes {invalid_child_prefixes}"
-        #     )
-        #     raise ValidationError({"__all__": err_msg})
 
         # cache the value of present_in_database; because after `super().save()`
         # `self.present_in_database` would always return True`
@@ -1154,10 +1126,9 @@ class Prefix(PrimaryModel):
     def get_utilization(self):
         """Return the utilization of this prefix as a UtilizationData object.
 
-        For prefixes containing other prefixes, all direct child prefixes are considered fully utilized.
+        For CONTAINER and NETWORK prefixes, all child prefixes are considered fully utilized.
 
-        For prefixes containing IP addresses and/or pools, pools are considered fully utilized while
-        only IP addresses that are not contained within pools are added to the utilization.
+        For NETWORK and POOL prefixes, individual IP addresses not already covered by a child prefix are also counted.
 
         It is recommended that when using this method you add the following prefetch to the queryset when dealing with
         multiple prefixes to ensure good performance:
@@ -1177,9 +1148,7 @@ class Prefix(PrimaryModel):
         child_ips = netaddr.IPSet()
         child_prefixes = netaddr.IPSet()
 
-        # 3.0 TODO: In the long term, TYPE_POOL prefixes will be disallowed from directly containing IPAddresses,
-        # and the addresses will instead be parented to the containing TYPE_NETWORK prefix. It should be possible to
-        # change this when that is the case, see #3873 for historical context.
+        # NETWORK and POOL prefixes, but not CONTAINER prefixes, count contained IPAddresses towards utilization.
         if self.type != choices.PrefixTypeChoices.TYPE_CONTAINER:
             pool_ips = IPAddress.objects.filter(
                 parent__namespace_id=self.namespace_id,
@@ -1189,6 +1158,7 @@ class Prefix(PrimaryModel):
             ).values_list("host", flat=True)
             child_ips = netaddr.IPSet(pool_ips)
 
+        # CONTAINER and NETWORK prefixes, but not POOL prefixes, count contained Prefixes towards utilization.
         if self.type != choices.PrefixTypeChoices.TYPE_POOL:
             # Using self.children.all over self.children.iterator (with chunk_size given or not) consistently shaves
             # off around 200 extra SQL queries and shows better performance.
@@ -1198,7 +1168,7 @@ class Prefix(PrimaryModel):
 
         numerator_set = child_ips | child_prefixes
 
-        # Exclude network and broadcast address from the denominator unless they've been assigned to an IPAddress or child pool.
+        # Exclude network and broadcast IPs from the denominator unless they're assigned to an IPAddress or child pool.
         # Only applies to IPv4 network prefixes with a prefix length of /30 or shorter
         if all(
             [
@@ -1354,11 +1324,8 @@ class IPAddress(PrimaryModel):
         if self.host in empty_values or self.mask_length in empty_values:
             return None
         try:
-            closest_parent = (
-                Prefix.objects.filter(namespace=self._namespace)
-                # 3.0 TODO: disallow IPAddress from parenting to a TYPE_POOL prefix, instead pick closest TYPE_NETWORK
-                # .exclude(type=choices.PrefixTypeChoices.TYPE_POOL)
-                .get_closest_parent(self.host, include_self=True)
+            closest_parent = Prefix.objects.filter(namespace=self._namespace).get_closest_parent(
+                self.host, include_self=True
             )
             return closest_parent
         except Prefix.DoesNotExist as e:
@@ -1391,11 +1358,6 @@ class IPAddress(PrimaryModel):
                 )
             self.parent = closest_parent
             self._namespace = None
-
-        # 3.0 TODO: uncomment the below to enforce this constraint
-        # if self.parent.type != choices.PrefixTypeChoices.TYPE_NETWORK:
-        #     err_msg = f"IP addresses cannot be created in {self.parent.type} prefixes. You must create a network prefix first."
-        #     raise ValidationError({"address": err_msg})
 
         # Force dns_name to lowercase
         if not self.dns_name.islower:
