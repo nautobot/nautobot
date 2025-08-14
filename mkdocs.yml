@@ -514,6 +514,7 @@ nav:
           - Approval Workflows: "user-guide/platform-functionality/approval-workflow.md"
           - Change Logging: "user-guide/platform-functionality/change-logging.md"
           - Computed Fields: "user-guide/platform-functionality/computedfield.md"
+          - Configurable Columns: "user-guide/platform-functionality/configurablecolumns.md"
           - Custom Fields: "user-guide/platform-functionality/customfield.md"
           - Custom Links: "user-guide/platform-functionality/customlink.md"
           - Data Validation: "user-guide/platform-functionality/data-validation.md"
