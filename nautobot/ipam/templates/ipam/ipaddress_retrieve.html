@@ -1,0 +1,150 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+{% load render_table from django_tables2 %}
+
+{% block extra_breadcrumbs %}
+                    <li>{{ object.parent.namespace|hyperlinked_object }}</li>
+{% endblock extra_breadcrumbs %}
+
+{% block extra_nav_tabs %}
+        {% with interface_count=object.interfaces.count %}
+            {% if interface_count %}
+                <li role="presentation" {% if active_tab == 'interfaces' %} class="active"{% endif %}>
+                    <a href="{% url 'ipam:ipaddress_interfaces' pk=object.pk %}">Interfaces {% badge interface_count %}</a>
+                </li>
+            {% endif %}
+        {% endwith %}
+        {% with vm_interface_count=object.vm_interfaces.count %}
+            {% if vm_interface_count %}
+                <li role="presentation" {% if active_tab == 'vm_interfaces' %} class="active"{% endif %}>
+                    <a href="{% url 'ipam:ipaddress_vm_interfaces' pk=object.pk %}">VM Interfaces {% badge vm_interface_count %}</a>
+                </li>
+            {% endif %}
+        {% endwith %}
+{% endblock extra_nav_tabs %}
+
+{% block content_left_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>IP Address</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Namespace</td>
+                    <td>{{ object.parent.namespace|hyperlinked_object }}</td>
+                </tr>
+                <tr>
+                    <td>IP Version</td>
+                    <td>IPv{{ object.ip_version }}</td>
+                </tr>
+                <tr>
+                    <td>Type</td>
+                    <td>{{ object.type|hyperlinked_object }}</td>
+                </tr>
+                <tr>
+                    <td>Status</td>
+                    <td>
+                        {{ object.status| hyperlinked_object_with_color }}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Role</td>
+                    <td>
+                        {{ object.role | hyperlinked_object_with_color }}
+                    </td>
+                </tr>
+                <tr>
+                    <td>VRFs</td>
+                    <td>
+                        {% if object.parent.vrfs.exists %}
+                        <ul class="list-unstyled">
+                            {% for vrf in object.parent.vrfs.all %}
+                            <li>{{ vrf|hyperlinked_object }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>DNS Name</td>
+                    <td>{{ object.dns_name|placeholder }}</td>
+                </tr>
+                <tr>
+                    <td>Description</td>
+                    <td>{{ object.description|placeholder }}</td>
+                </tr>
+            </table>
+        </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Operational Details</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                {% include 'inc/tenant_table_row.html' %}
+                <tr>
+                    <td>Assignment</td>
+                    <td>
+                        {% with interface_count=object.interfaces.count vm_interface_count=object.vm_interfaces.count %}
+                            {% if interface_count == 1 and vm_interface_count == 0 %}
+                                {{ object.interfaces.first.parent|hyperlinked_object }} ({{ object.interfaces.first|hyperlinked_object }})
+                            {% elif interface_count == 0 and vm_interface_count == 1 %}
+                                {{ object.vm_interfaces.first.parent|hyperlinked_object }} ({{ object.vm_interfaces.first|hyperlinked_object }})
+                            {% elif interface_count == 0 and vm_interface_count == 0 %}
+                                <span class="text-muted">&mdash;</span>
+                            {% else %}
+                                {% if interface_count > 0 %}
+                                    <a href="{% url 'ipam:ipaddress_interfaces' pk=object.pk %}">
+                                        {{ interface_count }} interface{{ interface_count|pluralize }}
+                                    </a>
+                                    {% if vm_interface_count > 0 %}
+                                        <br>
+                                    {% endif %}
+                                {% endif %}
+                                {% if vm_interface_count > 0 %}
+                                    <a href="{% url 'ipam:ipaddress_vm_interfaces' pk=object.pk %}">
+                                        {{ vm_interface_count }} VM interface{{ vm_interface_count|pluralize }}
+                                    </a>
+                                {% endif %}
+                            {% endif %}
+                        {% endwith %}
+                    </td>
+                </tr>
+                <tr>
+                    <!-- TODO: update to work with interface M2M -->
+                    <td>NAT (inside)</td>
+                    <td>
+                        {% if object.nat_inside %}
+                            {{ object.nat_inside|hyperlinked_object }}
+                            {% if object.nat_inside.assigned_object %}
+                                ({{ object.nat_inside.assigned_object.parent|hyperlinked_object }})
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted">None</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>NAT (outside)</td>
+                    <td>
+                        {% if object.nat_outside_list.exists %}
+                            <ul class="list-unstyled">
+                                {% for nat in object.nat_outside_list.all %}
+                                    <li>{{ nat|hyperlinked_object }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <span class="text-muted">None</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            </table>
+        </div>
+{% endblock content_right_page %}
+
+{% block content_full_width_page %}
+    {% include 'utilities/obj_table.html' with table=parent_prefixes_table table_template='panel_table.html' heading='Parent Prefixes' %}
+    {% include 'utilities/obj_table.html' with table=related_ips_table table_template='panel_table.html' heading='Related IP Addresses' %}
+{% endblock content_full_width_page %}

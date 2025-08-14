@@ -1,0 +1,52 @@
+{% extends 'generic/object_create.html' %}
+{% load static %}
+{% load form_helpers %}
+{% load helpers %}
+
+{% block tabs %}
+    {% if not editing %}
+        {% include 'ipam/inc/ipadress_edit_header.html' with active_tab='add' %}
+    {% endif %}
+{% endblock %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>IP Address</strong></div>
+        <div class="panel-body">
+            {% render_field form.address %}
+            {% render_field form.namespace %}
+            {% render_field form.type %}
+            {% render_field form.status %}
+            {% render_field form.role %}
+            {% render_field form.dns_name %}
+            {% render_field form.description %}
+        </div>
+    </div>
+    {% include 'inc/tenancy_form_panel.html' %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>NAT IP (Inside)</strong></div>
+        <div class="panel-body">
+            <ul class="nav nav-tabs" role="tablist">
+                <li role="presentation" class="active"><a href="#by_device" aria-controls="home" role="tab" data-toggle="tab">By Device</a></li>
+                <li role="presentation"><a href="#by_vm" aria-controls="search" role="tab" data-toggle="tab">By VM</a></li>
+                <li role="presentation"><a href="#by_vrf" aria-controls="search" role="tab" data-toggle="tab">By IP</a></li>
+            </ul>
+            <div class="tab-content">
+                <div class="tab-pane active" id="by_device">
+                    {% render_field form.nat_location %}
+                    {% render_field form.nat_rack %}
+                    {% render_field form.nat_device %}
+                </div>
+                <div class="tab-pane" id="by_vm">
+                    {% render_field form.nat_cluster %}
+                    {% render_field form.nat_virtual_machine %}
+                </div>
+                <div class="tab-pane" id="by_vrf">
+                  {% render_field form.nat_vrf %}
+                </div>
+            </div>
+            {% render_field form.nat_inside %}
+        </div>
+    </div>
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+{% endblock %}
