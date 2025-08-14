@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 import datetime
 import json
 import logging
@@ -840,8 +841,33 @@ def get_attr(obj, attr, default=None):
     return getattr(obj, attr, default)
 
 
+# TODO: Remove this tag in Nautobot 3.0.
 @register.simple_tag()
 def querystring(request, **kwargs):
+    """
+    Append or update the page number in a querystring.
+    """
+    logger.warning(
+        "Leverage `legacy_querystring` instead of `querystring` if this templatetag is required. In Nautobot 3.0, "
+        "`querystring` will be removed in preparation for Django 5.2 in which there is a built-in querystring tag "
+        "that operates differently. You may find that `django_querystring` is more appropriate for your use case "
+        "and is a replica of Django 5.2's `querystring` templatetag."
+    )
+    querydict = request.GET.copy()
+    for k, v in kwargs.items():
+        if v is not None:
+            querydict[k] = str(v)
+        elif k in querydict:
+            querydict.pop(k)
+    query_string = querydict.urlencode(safe="/")
+    if query_string:
+        return "?" + query_string
+    else:
+        return ""
+
+
+@register.simple_tag()
+def legacy_querystring(request, **kwargs):
     """
     Append or update the page number in a querystring.
     """
@@ -856,6 +882,47 @@ def querystring(request, **kwargs):
         return "?" + query_string
     else:
         return ""
+
+
+# Note: This is vendored from Django 5.2
+@register.simple_tag(name="django_querystring", takes_context=True)
+def django_querystring(context, query_dict=None, **kwargs):
+    """
+    Add, remove, and change parameters of a ``QueryDict`` and return the result
+    as a query string. If the ``query_dict`` argument is not provided, default
+    to ``request.GET``.
+
+    For example::
+
+        {% django_querystring foo=3 %}
+
+    To remove a key::
+
+        {% django_querystring foo=None %}
+
+    To use with pagination::
+
+        {% django_querystring page=page_obj.next_page_number %}
+
+    A custom ``QueryDict`` can also be used::
+
+        {% django_querystring my_query_dict foo=3 %}
+    """
+    if query_dict is None:
+        query_dict = context.request.GET
+    params = query_dict.copy()
+    for key, value in kwargs.items():
+        if value is None:
+            if key in params:
+                del params[key]
+        elif isinstance(value, Iterable) and not isinstance(value, str):
+            params.setlist(key, value)
+        else:
+            params[key] = value
+    if not params and not query_dict:
+        return ""
+    query_string = params.urlencode()
+    return f"?{query_string}"
 
 
 @register.simple_tag()
