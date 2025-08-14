@@ -749,7 +749,6 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
-
         if self.action in ("create", "update"):
             filterform_class = instance.generate_filter_form()
             if filterform_class is None:
