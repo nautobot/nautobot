@@ -714,21 +714,72 @@ class Prefix(PrimaryModel):
 
     def clean(self):
         """
-        Enforce that the `network`/`broadcast`/`prefix_length`/`ip_version` fields are set correctly and are immutable.
-        """
-        if self._networking_values_changed:
-            raise ValidationError(
-                {"__all__": "Network, broadcast, prefix_length, and/or ip_version cannot be changed once created"}
-            )
+        Perform various data sanitization and validation.
 
+        - Prevent simultaneously changing network fields and namespace (too complex to handle)
+        - Ensure that `network`/`broadcast`/`prefix_length`/`ip_version` are set and self-consistent.
+          This includes clearing any host bits from the `prefix` or `network` based on the `prefix_length`.
+        - (Re)calculate `self.parent` if any networking fields have changed or if this is a new record.
+        - Raise a `ValidationError` if changes would orphan any existing child IPAddresses.
+        """
         if self.prefix is not None:  # skip if missing a network/prefix_length; that will be caught by super().clean()
             self._deconstruct_prefix(self.prefix)
 
             # Determine correct `parent` from `namespace`/`prefix` if needed
-            if self._namespace_id != self.namespace_id or not self.present_in_database:
+            if (
+                self._networking_values_changed
+                or self._namespace_id != self.namespace_id
+                or not self.present_in_database
+            ):
                 self.parent = self.get_parent()
 
         super().clean()
+
+        if self._networking_values_changed and self._namespace_id != self.namespace_id:
+            raise ValidationError(
+                {
+                    "__all__": "Cannot change network and namespace in the same update. "
+                    "Consider creating a new Prefix instead."
+                }
+            )
+
+        if self._networking_values_changed and self._parent_id is None:
+            orphaned_ips = self.ip_addresses.exclude(
+                ip_version=self.ip_version,
+                host__gte=self.network,
+                host__lte=self.broadcast,
+            )
+            if orphaned_ips_count := orphaned_ips.count():
+                raise ValidationError(
+                    {
+                        "__all__": f"{orphaned_ips_count} existing IP addresses (including "
+                        f"{orphaned_ips.first().host}) would no longer have a valid parent Prefix after this change."
+                    }
+                )
+
+        if self.present_in_database and self._namespace_id != self.namespace_id:
+            if self.vrfs.exists():
+                raise ValidationError(
+                    {
+                        "namespace": "Cannot move to a different Namespace while associated to VRFs in the current "
+                        "Namespace. Remove all VRFs from this Prefix and descendants before making this change."
+                    }
+                )
+            if VRFPrefixAssignment.objects.filter(
+                prefix__ip_version=self.ip_version,
+                prefix__network__gte=self.network,
+                prefix__broadcast__lte=self.broadcast,
+                prefix__prefix_length__gt=self.prefix_length,
+                prefix__namespace_id=self._namespace_id,
+            ).exists():
+                raise ValidationError(
+                    {
+                        "namespace": "Cannot move to a different Namespace with descendant Prefixes associated to VRFs "
+                        "in the current Namespace. Remove all VRFs from all descendants before making this change."
+                    }
+                )
+
+        self._cleaned = True
 
     clean.alters_data = True
 
@@ -736,7 +787,8 @@ class Prefix(PrimaryModel):
         """
         If not already cleaned, clean automatically before saving, and after saving, update related IPs and Prefixes.
         """
-        self.clean()
+        if not self._cleaned:
+            self.clean()
 
         # cache the value of present_in_database; because after `super().save()`
         # `self.present_in_database` would always return True`
@@ -783,8 +835,8 @@ class Prefix(PrimaryModel):
                     # Nothing to merge, much more efficient:
                     subnets.update(namespace_id=self.namespace_id)
 
-            if self._namespace_id != self.namespace_id or not present_in_database:
-                # Claim child prefixes and IPs
+            if self._networking_values_changed or self._namespace_id != self.namespace_id or not present_in_database:
+                # Claim and/or un-claim child prefixes and IPs
                 self.reparent_subnets()
                 self.reparent_ips()
 
@@ -794,6 +846,7 @@ class Prefix(PrimaryModel):
         self._ip_version = self.ip_version
         self._namespace_id = self.namespace_id
         self._parent_id = self.parent_id
+        self._cleaned = False
 
     @property
     def cidr_str(self) -> str | None:
@@ -810,6 +863,7 @@ class Prefix(PrimaryModel):
     @prefix.setter
     def prefix(self, prefix: str | netaddr.IPNetwork | None):
         self._deconstruct_prefix(prefix)
+        self._cleaned = False
 
     @property
     def location(self):
@@ -829,38 +883,81 @@ class Prefix(PrimaryModel):
 
     def reparent_subnets(self):
         """
-        As part of creating a new Prefix, claim as children any Prefixes that we are now the closest parent to.
+        Handle changes to the parentage of other Prefixes as a consequence of this Prefix's creation or update.
+
+        - Former child Prefixes of ours that are no longer our descendants can be reparented to our former parent.
+        - Subnets that we are now the closest parent of can be reparented to us.
+        - Former children that we are no longer the closest parent of can be reparented to one of our new descendants.
 
         Called automatically by save(); generally not intended for use outside of that context.
         """
-        query = Prefix.objects.filter(
-            ~models.Q(id=self.id),  # Don't include yourself...
-            models.Q(parent__isnull=True) | models.Q(parent__prefix_length__lt=self.prefix_length),
-            prefix_length__gt=self.prefix_length,
-            ip_version=self.ip_version,
-            network__gte=self.network,
-            broadcast__lte=self.broadcast,
-            namespace_id=self.namespace_id,
-        )
+        if self._networking_values_changed:
+            # Former child Prefixes of ours that are no longer our descendants can be reparented to our former parent.
+            self.children.exclude(
+                ip_version=self.ip_version,
+                network__gte=self.network,
+                broadcast__lte=self.broadcast,
+                prefix_length__gt=self.prefix_length,
+                namespace_id=self.namespace_id,
+            ).update(parent_id=self._parent_id)
 
-        return query.update(parent=self)
+        # Subnets that we are now the closest parent of can be reparented to us.
+        self.subnets().filter(
+            models.Q(parent__isnull=True)  # No parent
+            | models.Q(parent__prefix_length__lt=self.prefix_length)  # We're closer than the current parent
+        ).update(parent=self)
+
+        if self._networking_values_changed:
+            # Former children that we are no longer the closest parent can be reparented to one of our new descendants.
+            for child in self.children.filter(prefix_length__gt=self.prefix_length + 1):
+                try:
+                    closest_parent = self.children.get_closest_parent(child.prefix)
+                except Prefix.DoesNotExist:
+                    closest_parent = self
+                if closest_parent != self:
+                    child.parent = closest_parent
+                    child.save()
 
     reparent_subnets.alters_data = True
 
     def reparent_ips(self):
         """
-        As part of creating a new Prefix, claim as children any IPAddresses that we are now the closest parent to.
+        Handle changes to the parentage of IPAddresses as a consequence of this Prefix's creation or update.
+
+        - Former child IPs of ours that are no longer our descendants can be reparented to our former parent.
+        - Former child IPs that we are no longer the closest parent of can be reparented to one of our new descendants.
+        - IPs that we are now the closest parent of can be reparented to us.
 
         Called automatically by save(); generally not intended for use outside of that context.
         """
-        query = IPAddress.objects.select_for_update().filter(
-            ip_version=self.ip_version,
-            parent__prefix_length__lt=self.prefix_length,
-            host__gte=self.network,
-            host__lte=self.broadcast,
-        )
+        # Former child IPs of ours that are no longer our descendants can be reparented to our former parent.
+        if self._networking_values_changed:
+            reparentable_ips = self.ip_addresses.exclude(
+                ip_version=self.ip_version,
+                host__gte=self.network,
+                host__lte=self.broadcast,
+            )
+            if self._parent_id is None and reparentable_ips.exists():
+                raise ValidationError(
+                    {
+                        "__all__": f"{reparentable_ips.count()} existing IP addresses would no longer have "
+                        "a valid parent Prefix after this change."
+                    }
+                )
+            reparentable_ips.update(parent_id=self._parent_id)
 
-        return query.update(parent=self)
+            # Former child IPs that we are no longer closest parent of can be reparented to one of our new descendants.
+            for ip in self.ip_addresses.all():
+                try:
+                    closest_parent = self.children.get_closest_parent(ip.host, include_self=True)
+                except Prefix.DoesNotExist:
+                    closest_parent = self
+                if closest_parent != self:
+                    ip.parent = closest_parent
+                    ip.save()
+
+        # IPs that we are now the closest parent of can be reparented to us.
+        self.get_all_ips().select_for_update().filter(parent__prefix_length__lt=self.prefix_length).update(parent=self)
 
     reparent_ips.alters_data = True
 

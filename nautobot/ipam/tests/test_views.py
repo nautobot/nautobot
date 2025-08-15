@@ -203,6 +203,10 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             "tags": [t.pk for t in Tag.objects.get_for_model(Prefix)],
         }
 
+        cls.update_data = cls.form_data.copy()
+        # Can't update `prefix` and `namespace` in the same edit request
+        cls.update_data["namespace"] = Prefix.objects.first().namespace.pk
+
         cls.bulk_edit_data = {
             "tenant": None,
             "status": cls.statuses[1].pk,

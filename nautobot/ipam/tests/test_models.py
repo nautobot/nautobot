@@ -406,17 +406,20 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         self.status = self.statuses.first()
         self.status.content_types.add(ContentType.objects.get_for_model(IPAddress))
         self.root = Prefix.objects.create(
-            prefix="101.102.0.0/24", status=self.status, namespace=self.namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+            prefix="101.102.0.0/16", status=self.status, namespace=self.namespace, type=PrefixTypeChoices.TYPE_CONTAINER
         )
         self.parent = Prefix.objects.create(
-            prefix="101.102.0.0/25", status=self.status, namespace=self.namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+            prefix="101.102.103.0/24",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_CONTAINER,
         )
-        self.child1 = Prefix.objects.create(prefix="101.102.0.0/26", status=self.status, namespace=self.namespace)
-        self.child2 = Prefix.objects.create(prefix="101.102.0.64/26", status=self.status, namespace=self.namespace)
+        self.child1 = Prefix.objects.create(prefix="101.102.103.0/26", status=self.status, namespace=self.namespace)
+        self.child2 = Prefix.objects.create(prefix="101.102.103.104/32", status=self.status, namespace=self.namespace)
 
     def test_parent_exists_after_model_clean(self):
         prefix = Prefix(
-            prefix="101.102.0.128/26",
+            prefix="101.102.1.0/24",
             status=self.status,
             namespace=self.namespace,
             type=PrefixTypeChoices.TYPE_CONTAINER,
@@ -626,7 +629,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         # siblings()
         self.assertEqual(list(self.child1.siblings()), [self.child2])
         self.assertEqual(list(self.child1.siblings(include_self=True)), [self.child1, self.child2])
-        parent2 = Prefix.objects.create(prefix="101.102.0.128/25", status=self.status, namespace=self.namespace)
+        parent2 = Prefix.objects.create(prefix="101.102.128.0/24", status=self.status, namespace=self.namespace)
         self.assertEqual(list(self.parent.siblings()), [parent2])
         self.assertEqual(list(self.parent.siblings(include_self=True)), [self.parent, parent2])
 
@@ -637,7 +640,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.parent.parent, self.root)
         self.assertEqual(self.child1.parent, self.parent)
 
-        # Delete the parent (/25); child1/child2 now have root (/24) as their parent.
+        # Delete the parent (/24); child1/child2 now have root (/16) as their parent.
         num_deleted, _ = self.parent.delete()
         self.assertEqual(num_deleted, 1)
 
@@ -648,10 +651,10 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.child2.parent, self.root)
         self.assertEqual(list(self.child1.ancestors()), [self.root])
 
-        # Add /25 back in as a parent and assert that child1/child2 now have it as their parent, and
-        # /24 is its parent.
+        # Add /24 back in as a parent and assert that child1/child2 now have it as their parent, and
+        # /16 is its parent.
         self.parent = Prefix.objects.create(
-            prefix="101.102.0.0/25",
+            prefix="101.102.103.0/24",
             status=self.status,
             namespace=self.namespace,
             type=PrefixTypeChoices.TYPE_CONTAINER,
@@ -701,12 +704,176 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         self.assertEqual(child2.parent, parent)
         self.assertEqual(list(child1.ancestors()), [root, parent])
 
+    def test_reparenting_on_field_updates(self):
+        """Test that reparenting occurs when network, prefix_length, etc. are updated."""
+        self.assertIsNone(self.root.parent)
+        self.assertEqual(self.parent.parent, self.root)
+        self.assertEqual(self.child1.parent, self.parent)
+        self.assertEqual(self.child2.parent, self.parent)
+
+        ip1 = IPAddress.objects.create(address="101.102.103.127/32", status=self.status, namespace=self.namespace)
+        ip2 = IPAddress.objects.create(address="101.102.103.128/32", status=self.status, namespace=self.namespace)
+        self.assertEqual(ip1.parent, self.parent)
+        self.assertEqual(ip2.parent, self.parent)
+
+        with self.subTest("Decrease prefix_length, gaining children"):
+            self.child1.prefix_length = 25
+            self.child1.save()
+            self.child1.refresh_from_db()
+            self.child2.refresh_from_db()
+            self.assertEqual(self.child2.parent, self.child1)
+            ip1.refresh_from_db()
+            self.assertEqual(ip1.parent, self.child1)
+
+        with self.subTest("Increase prefix_length, losing children"):
+            self.child1.prefix_length = 26
+            self.child1.save()
+            self.child1.refresh_from_db()
+            self.child2.refresh_from_db()
+            self.assertEqual(self.child2.parent, self.parent)
+            ip1.refresh_from_db()
+            self.assertEqual(ip1.parent, self.parent)
+
+        with self.subTest("Broaden prefix, becoming parent of former parent"):
+            self.parent.prefix = "101.0.0.0/8"
+            self.parent.save()
+            self.assertIsNone(self.parent.parent)
+            # Former root is now a child of parent
+            self.root.refresh_from_db()
+            self.assertEqual(self.root.parent, self.parent)
+            # Former children are now children of former root
+            self.child1.refresh_from_db()
+            self.assertEqual(self.child1.parent, self.root)
+            self.child2.refresh_from_db()
+            self.assertEqual(self.child2.parent, self.root)
+            ip1.refresh_from_db()
+            self.assertEqual(ip1.parent, self.root)
+            ip2.refresh_from_db()
+            self.assertEqual(ip2.parent, self.root)
+
+        with self.subTest("Narrow prefix, becoming child of former child"):
+            self.parent.prefix = "101.102.103.0/24"
+            self.parent.save()
+            self.assertEqual(self.parent.parent, self.root)
+            # Former root is now again root
+            self.root.refresh_from_db()
+            self.assertIsNone(self.root.parent)
+            # Former children are again children of parent
+            self.child1.refresh_from_db()
+            self.assertEqual(self.child1.parent, self.parent)
+            self.child2.refresh_from_db()
+            self.assertEqual(self.child2.parent, self.parent)
+            ip1.refresh_from_db()
+            self.assertEqual(ip1.parent, self.parent)
+            ip2.refresh_from_db()
+            self.assertEqual(ip2.parent, self.parent)
+
+        with self.subTest("Change former root on multiple dimensions"):
+            self.root.network = "101.102.103.0"
+            self.root.prefix_length = 25
+            self.root.save()
+            self.assertEqual(self.root.parent, self.parent)
+            self.parent.refresh_from_db()
+            self.assertEqual(self.parent.parent, None)
+            self.child1.refresh_from_db()
+            self.assertEqual(self.child1.parent, self.root)
+            self.child2.refresh_from_db()
+            self.assertEqual(self.child2.parent, self.root)
+            ip1.refresh_from_db()
+            self.assertEqual(ip1.parent, self.root)
+            ip2.refresh_from_db()
+            self.assertEqual(ip2.parent, self.parent)
+
+        with self.subTest("Reclaim root position"):
+            self.root.network = "101.0.0.0"
+            self.root.prefix_length = 8
+            self.root.save()
+            self.assertIsNone(self.root.parent)
+            self.parent.refresh_from_db()
+            self.assertEqual(self.parent.parent, self.root)
+            self.child1.refresh_from_db()
+            self.assertEqual(self.child1.parent, self.parent)
+            self.child2.refresh_from_db()
+            self.assertEqual(self.child2.parent, self.parent)
+            ip1.refresh_from_db()
+            self.assertEqual(ip1.parent, self.parent)
+            ip2.refresh_from_db()
+            self.assertEqual(ip2.parent, self.parent)
+
+    def test_clean_fails_if_would_orphan_ips(self):
+        """Test that clean() fails if reparenting would orphan IPs."""
+        self.ip = IPAddress.objects.create(address="101.102.1.1/32", status=self.status, namespace=self.namespace)
+        self.assertEqual(self.ip.parent, self.root)
+        with self.assertRaises(ValidationError) as cm:
+            self.root.prefix = "102.103.0.0/16"
+            self.root.clean()
+        self.assertIn(
+            f"1 existing IP addresses (including {self.ip.host}) would no longer have a valid parent", str(cm.exception)
+        )
+        self.root.refresh_from_db()
+        self.ip2 = IPAddress.objects.create(address="101.102.1.2/32", status=self.status, namespace=self.namespace)
+        self.assertEqual(self.ip2.parent, self.root)
+        with self.assertRaises(ValidationError) as cm:
+            self.root.prefix = "102.103.0.0/16"
+            self.root.clean()
+        self.assertIn(
+            f"2 existing IP addresses (including {self.ip.host}) would no longer have a valid parent",
+            str(cm.exception),
+        )
+
+    def test_clean_fails_if_namespace_changed_and_vrfs_involved(self):
+        vrf = VRF.objects.create(name="VRF Red", namespace=self.namespace)
+        vrf.add_prefix(self.root)
+
+        new_namespace = Namespace.objects.exclude(id=self.namespace.id).first()
+
+        self.root.namespace = new_namespace
+        with self.assertRaises(ValidationError) as cm:
+            self.root.clean()
+        self.assertIn("Cannot move to a different Namespace while associated to VRFs", str(cm.exception))
+
+        vrf.remove_prefix(self.root)
+        self.root.clean()
+
+        vrf.add_prefix(self.parent)
+        with self.assertRaises(ValidationError) as cm:
+            self.root.clean()
+        self.assertIn(
+            "Cannot move to a different Namespace with descendant Prefixes associated to VRFs", str(cm.exception)
+        )
+
     def test_namespace_change_success_updates_descendants_and_claims_new_children(self):
         new_namespace = Namespace.objects.exclude(id=self.namespace.id).first()
         new_catchall = Prefix.objects.create(prefix="0.0.0.0/0", status=self.status, namespace=new_namespace)
-        new_child = Prefix.objects.create(prefix="101.102.0.128/26", status=self.status, namespace=new_namespace)
-        new_grandchild = Prefix.objects.create(prefix="101.102.0.0/27", status=self.status, namespace=new_namespace)
-        new_ip = IPAddress.objects.create(address="101.102.0.200/32", status=self.status, namespace=new_namespace)
+        new_parent = Prefix.objects.create(prefix="101.102.200.0/24", status=self.status, namespace=new_namespace)
+        new_child = Prefix.objects.create(prefix="101.102.103.64/26", status=self.status, namespace=new_namespace)
+        new_grandchild = Prefix.objects.create(prefix="101.102.103.0/27", status=self.status, namespace=new_namespace)
+        new_ip = IPAddress.objects.create(address="101.102.150.200/32", status=self.status, namespace=new_namespace)
+
+        # Before:
+        # self.namespace
+        #   self.root        101.102.0.0/16
+        #     self.parent    101.102.103.0/24
+        #       self.child1  101.102.103.0/26
+        #       self.child2  101.102.103.104/32
+        # new_namespace
+        #   new_catchall      0.0.0.0/0
+        #     new_grandchild  101.102.103.0/27
+        #     new_child       101.102.103.64/26
+        #     new_ip          101.102.150.200/32
+        #     new_parent      101.102.200.0/24
+        #
+        # After:
+        # new_namespace
+        #   new_catchall            0.0.0.0/0
+        #     self.root             101.102.0.0/16
+        #       self.parent         101.102.103.0/24
+        #         self.child1       101.102.103.0/26
+        #           new_grandchild  101.102.103.0/27
+        #         new_child         101.102.103.64/26
+        #           self.child2     101.102.103.104/32
+        #       new_ip              101.102.150.200/32
+        #       new_parent          101.102.200.0/24
 
         self.root.namespace = new_namespace
         self.root.save()
@@ -720,10 +887,13 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.child1.parent, self.parent)  # unchanged
         self.child2.refresh_from_db()
         self.assertEqual(self.child2.namespace, new_namespace)  # automatically updated
-        self.assertEqual(self.child2.parent, self.parent)  # unchanged
+        self.assertEqual(self.child2.parent, new_child)  # automatically updated
+        new_parent.refresh_from_db()
+        self.assertEqual(new_parent.namespace, new_namespace)  # unchanged
+        self.assertEqual(new_parent.parent, self.root)  # automatically updated
         new_child.refresh_from_db()
         self.assertEqual(new_child.namespace, new_namespace)  # unchanged
-        self.assertEqual(new_child.parent, self.root)  # automatically updated
+        self.assertEqual(new_child.parent, self.parent)  # automatically updated
         new_grandchild.refresh_from_db()
         self.assertEqual(new_grandchild.namespace, new_namespace)  # unchanged
         self.assertEqual(new_grandchild.parent, self.child1)  # automatically updated
@@ -732,7 +902,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
 
     def test_namespace_change_results_in_merge_collisions(self):
         new_namespace = Namespace.objects.exclude(id=self.namespace.id).first()
-        new_root = Prefix.objects.create(prefix="101.102.0.0/24", status=self.status, namespace=new_namespace)
+        new_root = Prefix.objects.create(prefix="101.102.0.0/16", status=self.status, namespace=new_namespace)
 
         self.root.namespace = new_namespace
         with self.assertRaises(IntegrityError):
@@ -747,7 +917,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.child2.namespace, self.namespace)
 
         new_root.delete()
-        new_parent = Prefix.objects.create(prefix="101.102.0.0/25", status=self.status, namespace=new_namespace)
+        new_parent = Prefix.objects.create(prefix="101.102.103.0/24", status=self.status, namespace=new_namespace)
 
         self.root.namespace = new_namespace
         with self.assertRaises(IntegrityError):
@@ -763,9 +933,9 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
 
         new_parent.delete()
 
-        existing_ip = IPAddress.objects.create(address="101.102.0.1/32", status=self.status, namespace=self.namespace)
+        existing_ip = IPAddress.objects.create(address="101.102.103.1/32", status=self.status, namespace=self.namespace)
         new_prefix = Prefix.objects.create(prefix="0.0.0.0/0", status=self.status, namespace=new_namespace)
-        new_ip = IPAddress.objects.create(address="101.102.0.1/32", status=self.status, namespace=new_namespace)
+        new_ip = IPAddress.objects.create(address="101.102.103.1/32", status=self.status, namespace=new_namespace)
         self.assertEqual(new_ip.parent, new_prefix)
 
         self.root.namespace = new_namespace
@@ -784,21 +954,6 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         self.assertEqual(existing_ip.parent, self.child1)
         new_ip.refresh_from_db()
         self.assertEqual(new_ip.parent, new_prefix)
-
-    def test_networking_field_updates_forbidden(self):
-        for field, value in [
-            ("network", "101.102.103.0"),
-            ("prefix_length", 32),
-            ("prefix", "101.0.0.0/8"),
-        ]:
-            pfx = Prefix.objects.get(id=self.parent.id)
-            setattr(pfx, field, value)
-            with self.assertRaises(ValidationError) as cm:
-                pfx.clean()
-            self.assertIn("cannot be changed", str(cm.exception))
-            with self.assertRaises(ValidationError) as cm:
-                pfx.save()
-            self.assertIn("cannot be changed", str(cm.exception))
 
     def test_descendants(self):
         prefixes = (

@@ -5,7 +5,12 @@ An IP address comprises a single `host` address (either IPv4 or IPv6) and its as
 !!! tip "Host is immutable"
     The `host` value for a given IP address record cannot be changed once it is created and saved to the database. It is however permissible to change the `mask_length` as needed. For scenarios such as re-allocation of network space, the recommended workflow is to create a new record for the new `host` value, then delete the old record.
 
-IP addresses are automatically arranged under their `parent` [Prefixes](prefix.md) according to the IP hierarchy. IP addresses are not directly assigned to [Namespaces](namespace.md) or [VRFs](vrf.md) in the database on an individual basis, but instead derive their namespace and VRF(s) from their parent prefix. For convenience, the Nautobot UI, REST API, and Django ORM do present a virtual `namespace` field on IP addresses, as (especially when creating a new IP address record) it is often more straightforward to specify the `namespace` of an IP address, and let Nautobot automatically determine the correct `parent` in that namespace, than to specify the `parent` directly.
+IP addresses are automatically arranged under their `parent` [Prefixes](prefix.md) according to the IP hierarchy.
+
++++ 2.0.0 "IP Address to Prefix is now a concrete foreign-key relationship"
+    Parenting of IP addresses under Prefixes is now automatically managed at the database level to greatly improve performance especially when calculating tree hierarchy and utilization. Refer to the [Prefix](prefix.md) documentation for more details about this functionality.
+
+IP addresses are not directly assigned to [Namespaces](namespace.md) or [VRFs](vrf.md) in the database on an individual basis, but instead derive their namespace and VRF(s) from their parent prefix. For convenience, the Nautobot UI, REST API, and Django ORM do present a virtual `namespace` field on IP addresses, as (especially when creating a new IP address record) it is often more straightforward to specify the `namespace` of an IP address, and let Nautobot automatically determine the correct `parent` in that namespace, than to specify the `parent` directly.
 
 +/- 2.0.0 "All IP addresses must belong to a parent Prefix"
     In Nautobot 1.x, IP addresses were only loosely associated to prefixes, and it was possible to create "orphan" IP addresses that had no corresponding prefix record. In Nautobot 2.0 this is no longer the case; each IP address has a parent prefix, and you can no longer create IP addresses that do not belong to a defined prefix and namespace. When migrating existing data from Nautobot 1.x, parent prefixes will be automatically created where needed, but you may need to do some additional cleanup of your IPAM data after the migration in order to ensure its accuracy and correctness.
@@ -44,14 +49,8 @@ An IP address can be assigned to device or virtual machine interfaces, and an in
 
 An IP address can be designated as the network address translation (NAT) inside IP address for one or more other IP addresses. This is useful primarily to denote a translation between public and private IP addresses. This relationship is followed in both directions: For example, if 10.0.0.1 is assigned as the inside IP for 192.0.2.1, 192.0.2.1 will be displayed as the outside IP for 10.0.0.1.
 
-## IPAddress Parenting Concrete Relationship
-
-+++ 2.0.0
-
-The `ipam.IPAddress` model has been modified to have a foreign key to `ipam.Prefix` as the `parent` field. Parenting of IP addresses is now automatically managed at the database level to greatly improve performance especially when calculating tree hierarchy and utilization.
-
 ## De-duplicating IPAddresses
 
 +++ 2.0.0
 
-After upgrading to Nautobot v2.0, in order to satisfy new uniqueness constraints, the data migrations may duplicate `IP Addresses` across different `Namespaces`. Check out this [IP Address Merge tool](../../feature-guides/ip-address-merge-tool.md) to collapse unnecessarily duplicated `IP Addresses`.
+In Nautobot 2.0.0 and later, IP Addresses must now be unique per Namespace. As a consequence, data migrations from Nautobot 1.x (where in some cases IP Addresses were permitted to be duplicated) will, as needed, move duplicate IP Addresses to a number of "cleanup" Namespaces in order to avoid uniqueness violations within the global Namespace. In many cases these duplicate IP Address records can be collapsed into single records (in particular, because Nautobot 2.x permits assignment of a single IP Address to multiple Interfaces, whereas Nautobot 1.x did not permit this). To assist with such efforts, Nautobot provides an [IP Address Merge tool](../../feature-guides/ip-address-merge-tool.md).
