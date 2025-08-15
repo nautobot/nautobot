@@ -1,0 +1,8 @@
+Added `power_factor` field to PowerPort and PowerPortTemplate models to track the power factor ratio for electrical devices.
+Added `panel_type` and `breaker_position_count` fields to PowerPanel model to specify panel type and total number of breaker positions.
+Added `power_path` field to PowerPanel model to track physical power distribution redundancy path.
+Added `destination_panel` field to PowerFeed model to specify destination panel that receives power from the feed.
+Added `power_path` field to PowerFeed model to track physical power distribution redundancy path.
+Added `breaker_position` and `breaker_pole_count` fields to PowerFeed model to specify circuit breaker position and pole count.
+Added `occupied_positions` and `phase_designation` properties to PowerFeed model to display breaker positions and calculate phase designation.
+Added `paginate` and `show_table_config_button` bools to ObjectsTablePanel to provide an option to hide the paginator and configure button UI.

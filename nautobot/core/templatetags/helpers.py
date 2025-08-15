@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import re
+from typing import Literal
 from urllib.parse import parse_qs, quote_plus
 from zoneinfo import ZoneInfo
 
@@ -14,7 +15,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
 from django.utils.formats import date_format
-from django.utils.html import format_html, format_html_join
+from django.utils.html import format_html, format_html_join, strip_tags
 from django.utils.safestring import mark_safe
 from django.utils.text import slugify as django_slugify
 from django_jinja import library
@@ -27,10 +28,9 @@ from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.utils import color, config, data, logging as nautobot_logging, lookup
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
-# S308 is suspicious-mark-safe-usage, but these are all using static strings that we know to be safe
-HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')  # noqa: S308
-HTML_FALSE = mark_safe('<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>')  # noqa: S308
-HTML_NONE = mark_safe('<span class="text-muted">&mdash;</span>')  # noqa: S308
+HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')
+HTML_FALSE = mark_safe('<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>')
+HTML_NONE = mark_safe('<span class="text-muted">&mdash;</span>')
 
 DEFAULT_SUPPORT_MESSAGE = (
     "If further assistance is required, please join the `#nautobot` channel "
@@ -1181,7 +1181,7 @@ def custom_branding_or_static(branding_asset, static_asset):
     branding has been configured in settings, else it returns stock branding via static.
     """
     if settings.BRANDING_FILEPATHS.get(branding_asset):
-        url = f"{ settings.MEDIA_URL }{ settings.BRANDING_FILEPATHS.get(branding_asset) }"
+        url = f"{settings.MEDIA_URL}{settings.BRANDING_FILEPATHS.get(branding_asset)}"
     else:
         url = StaticNode.handle_simple(static_asset)
     return add_nautobot_version_query_param_to_url(url)
@@ -1312,3 +1312,26 @@ def _build_hyperlink(value, field="", target="", rel=""):
         except AttributeError:
             pass
     return format_html("{}", display)
+
+
+@register.simple_tag(takes_context=True)
+def saved_view_title(context, mode: Literal["html", "plain"] = "html"):
+    """
+    Creates a formatted title that includes saved view information.
+    Usage: <h1>{{ title }}{% saved_view_title "html" %}</h1>
+    """
+    new_changes_not_applied = context.get("new_changes_not_applied", False)
+    current_saved_view = context.get("current_saved_view")
+
+    if not current_saved_view:
+        return ""
+
+    if new_changes_not_applied:
+        title = format_html(' — <i title="Pending changes not saved">{}</i>', current_saved_view.name)
+    else:
+        title = format_html(" — {}", current_saved_view.name)
+
+    if mode == "plain":
+        return strip_tags(title)
+
+    return title
