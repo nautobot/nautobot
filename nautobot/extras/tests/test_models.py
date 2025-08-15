@@ -153,6 +153,10 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
             secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
         )
 
+        # Template strings for validation testing (cannot be saved due to syntax errors)
+        self.invalid_template_unclosed_bracket = "{{ obj.name }"
+        self.invalid_template_unknown_tag = "{% unknowntag %}{{ obj.name }}{% endunknowntag %}"
+
     def test_render_method(self):
         rendered_value = self.good_computed_field.render(context={"obj": self.location1})
         self.assertEqual(rendered_value, f"{self.location1.name} is awesome!")
@@ -213,6 +217,47 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
             "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
             str(error.exception),
         )
+
+    def test_template_validation_invalid_syntax(self):
+        """
+        Test that ComputedField with invalid Jinja2 template syntax raises ValidationError.
+        """
+        # Invalid template with syntax error - unclosed bracket
+        invalid_computed_field = ComputedField(
+            label="Invalid Template Test",
+            key="invalid_template_test",
+            template=self.invalid_template_unclosed_bracket,
+            content_type=ContentType.objects.get_for_model(Device),
+        )
+
+        with self.assertRaises(ValidationError) as context:
+            invalid_computed_field.full_clean()
+
+        # Check that the error message contains template-specific information
+        error_dict = context.exception.error_dict
+        self.assertIn("template", error_dict)
+        self.assertIn("Template syntax error", str(error_dict["template"][0]))
+        self.assertIn("line", str(error_dict["template"][0]))
+
+    def test_template_validation_invalid_tag(self):
+        """
+        Test that ComputedField with invalid Jinja2 tag raises ValidationError.
+        """
+        # Invalid template with unknown tag
+        invalid_computed_field = ComputedField(
+            label="Invalid Tag Test",
+            key="invalid_tag_test",
+            template=self.invalid_template_unknown_tag,
+            content_type=ContentType.objects.get_for_model(Device),
+        )
+
+        with self.assertRaises(ValidationError) as context:
+            invalid_computed_field.full_clean()
+
+        # Check that the error message contains template-specific information
+        error_dict = context.exception.error_dict
+        self.assertIn("template", error_dict)
+        self.assertIn("Template syntax error", str(error_dict["template"][0]))
 
 
 class ConfigContextTest(ModelTestCases.BaseModelTestCase):

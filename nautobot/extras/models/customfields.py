@@ -13,6 +13,7 @@ from django.core.validators import RegexValidator, ValidationError
 from django.db import models, transaction
 from django.forms.widgets import TextInput
 from django.utils.html import format_html
+from jinja2 import TemplateError, TemplateSyntaxError
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
@@ -35,7 +36,7 @@ from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.validators import validate_regex
 from nautobot.core.settings_funcs import is_truthy
 from nautobot.core.templatetags.helpers import render_markdown
-from nautobot.core.utils.data import render_jinja2
+from nautobot.core.utils.data import parse_jinja2, render_jinja2
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
@@ -162,8 +163,25 @@ class ComputedField(
 
     def clean(self):
         super().clean()
+
+        self.validate_template()
+
         if self.key != "":
             check_if_key_is_graphql_safe(self.__class__.__name__, self.key)
+
+    def validate_template(self):
+        """
+        Validate that the template contains valid Jinja2 syntax.
+        """
+        try:
+            parse_jinja2(self.template)
+        except TemplateSyntaxError as exc:
+            raise ValidationError({"template": f"Template syntax error on line {exc.lineno}: {exc.message}"})
+        except TemplateError as exc:
+            raise ValidationError({"template": f"Template error: {exc}"})
+        except Exception as exc:
+            # System-level exceptions (very rare) - memory, recursion, encoding issues
+            raise ValidationError(f"Template validation failed: {exc}")
 
 
 class CustomFieldModel(models.Model):

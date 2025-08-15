@@ -92,6 +92,15 @@ def merge_dicts_without_collision(d1, d2):
     return {**d1, **d2}
 
 
+def parse_jinja2(template_code):
+    """Parse a Jinja2 template to validate its syntax."""
+    rendering_engine = engines["jinja"]
+
+    #
+    # The returned value will almost always be ignored, but returning doesn't hurt.
+    return rendering_engine.env.parse(template_code)
+
+
 def render_jinja2(template_code, context):
     """
     Render a Jinja2 template with the provided context. Return the rendered content.
