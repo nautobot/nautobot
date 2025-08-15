@@ -4,6 +4,7 @@
     "next"
   ],
   "enabledManagers": [
+    "npm",
     "pip_requirements",
     "poetry"
   ],
@@ -13,6 +14,10 @@
   "labels": [
     "dependencies"
   ],
+  "lockFileMaintenance": {
+    "description": "Update poetry.lock to keep transitive dependencies up-to-date once a week as well.",
+    "enabled": true
+  },
   "packageRules": [
     {
       "description": "Group patch-only updates to develop weekly to cut down on PR noise.",
@@ -37,10 +42,9 @@
         "next"
       ],
       "schedule": [
-        "before 2am on Friday"
-      ],
-      "rangeStrategy": "bump"
+        "before 2am on Tuesday"
+      ]
     }
   ],
-  "rangeStrategy": "in-range-only"
+  "rangeStrategy": "bump"
 }
