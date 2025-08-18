@@ -2,20 +2,20 @@
 {% load helpers %}
 
 {% block content %}
-<div class="row" style="margin-top: 150px;">
+<div class="row justify-content-center" style="margin-top: 9.375rem;">
     <div class="col-sm-4 col-sm-offset-4">
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <strong>{% block icon %}{% endblock %} {% block title %}{% endblock %}</strong>
+        <div class="card">
+            <div class="card-header">
+                <strong class="hstack gap-4">{% block icon %}{% endblock %}{% block title %}{% endblock %}</strong>
             </div>
-            <div class="panel-body">
+            <div class="card-body">
                 <p>
                     {% block message %}{% endblock %}
                 </p>
                 {% support_message %}
             </div>
-            <div class="panel-footer text-right">
-                <a href="{% url 'home' %}" class="btn btn-xs btn-primary">Home Page</a>
+            <div class="card-footer bg-body text-center">
+                <a href="{% url 'home' %}" class="btn btn-primary">Home Page</a>
             </div>
         </div>
     </div>
