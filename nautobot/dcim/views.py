@@ -291,6 +291,29 @@ class LocationFieldsPanel(object_detail.ObjectFieldsPanel):
 
 
 class RackGroupsFieldsPanel(object_detail.ObjectFieldsPanel):
+    def render_rack_row(self, indent_px, url, name, count, elevation_url):
+        return format_html(
+            """
+            <tr>
+                <td style="padding-left: {}px">
+                    <i class="mdi mdi-folder-open"></i>
+                    <a href="{}">{}</a>
+                </td>
+                <td>{}</td>
+                <td class="text-right noprint">
+                    <a href="{}" class="btn btn-xs btn-primary" title="View elevations">
+                        <i class="mdi mdi-server"></i>
+                    </a>
+                </td>
+            </tr>
+            """,
+            indent_px,
+            url,
+            name,
+            count,
+            elevation_url,
+        )
+
     def render(self, context):
         obj = get_obj_from_context(context, self.context_object_key or "object")
         if not obj:
@@ -302,7 +325,7 @@ class RackGroupsFieldsPanel(object_detail.ObjectFieldsPanel):
         rows = []
         for rg in rack_groups:
             rows.append(
-                helpers.render_rack_row(
+                self.render_rack_row(
                     getattr(rg, "tree_depth", 0) * 8,
                     rg.get_absolute_url(),
                     str(rg),
@@ -312,7 +335,7 @@ class RackGroupsFieldsPanel(object_detail.ObjectFieldsPanel):
             )
 
         rows.append(
-            helpers.render_rack_row(
+            self.render_rack_row(
                 10,
                 "#",
                 "All racks",

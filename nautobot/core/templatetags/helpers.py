@@ -846,30 +846,6 @@ def format_timezone(value):
         return format_html("{}", value)
 
 
-def render_rack_row(indent_px, url, name, count, elevation_url):
-    return format_html(
-        """
-        <tr>
-            <td style="padding-left: {}px">
-                <i class="mdi mdi-folder-open"></i>
-                <a href="{}">{}</a>
-            </td>
-            <td>{}</td>
-            <td class="text-right noprint">
-                <a href="{}" class="btn btn-xs btn-primary" title="View elevations">
-                    <i class="mdi mdi-server"></i>
-                </a>
-            </td>
-        </tr>
-        """,
-        indent_px,
-        url,
-        name,
-        count,
-        elevation_url,
-    )
-
-
 #
 # Tags
 #
