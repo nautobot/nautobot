@@ -1,1 +1,2 @@
 Added dependency on `htmx` npm package.
+Removed `django-htmx` from the python dependencies.

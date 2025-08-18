@@ -896,21 +896,6 @@ docs = ["sphinx"]
 test = ["boto3", "celery", "django-storages", "pytest", "pytest-cov", "pytest-django", "redis"]
 
 [[package]]
-name = "django-htmx"
-version = "1.23.0"
-description = "Extensions for using Django with htmx."
-optional = false
-python-versions = ">=3.9"
-files = [
-    {file = "django_htmx-1.23.0-py3-none-any.whl", hash = "sha256:bca2d7590f3df8611a32a436b9f098d8bccb9762b99b01c08dc42336966700a0"},
-    {file = "django_htmx-1.23.0.tar.gz", hash = "sha256:71e6242ac6bd32a0e14fcb12b340f901c9a924f0b4e9b461a5e6a6eea8d9c6dd"},
-]
-
-[package.dependencies]
-asgiref = ">=3.6"
-django = ">=4.2"
-
-[[package]]
 name = "django-ipware"
 version = "7.0.1"
 description = "A Django application to retrieve user's IP address"
@@ -4491,4 +4476,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.14"
-content-hash = "7b7d113c6957b9d02ea5c0672b04b98100fe1fcf7c671aa3e37fa045adfacdad"
+content-hash = "b216f34fb126cd6c397fc14a52ec801eb8fdf762d59256d7219187b604403dbd"
