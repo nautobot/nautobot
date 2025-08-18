@@ -1,3 +1,5 @@
+{% load helpers %}
+
 <ol class="breadcrumb">
     {% block breadcrumbs %}
         {% for url, title in breadcrumbs_items %}
@@ -9,6 +11,5 @@
             {% endif %}
             </li>
         {% endfor %}
-        {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
     {% endblock %}
 </ol>

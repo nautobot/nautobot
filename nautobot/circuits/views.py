@@ -16,6 +16,7 @@ from nautobot.core.views import generic
 from nautobot.core.views.utils import get_obj_from_context
 from nautobot.core.views.viewsets import NautobotUIViewSet
 
+from nautobot.core.ui.breadcrumbs import Breadcrumbs, InstanceBreadcrumbItem, ModelBreadcrumbItem
 from . import filters, forms, tables
 from .api import serializers
 from .choices import CircuitTerminationSideChoices
@@ -92,6 +93,20 @@ class CircuitTerminationUIViewSet(NautobotUIViewSet):
     queryset = CircuitTermination.objects.all()
     serializer_class = serializers.CircuitTerminationSerializer
     table_class = tables.CircuitTerminationTable
+
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(model=Circuit),
+                ModelBreadcrumbItem(
+                    model=Circuit,
+                    label=lambda c: c["object"].circuit.provider,
+                    reverse_query_params=lambda c: {"provider": c["object"].circuit.provider.pk},
+                ),
+                InstanceBreadcrumbItem(instance=lambda c: c["object"].circuit),
+            ]
+        }
+    )
 
     object_detail_content = ObjectDetailContent(
         panels=(

@@ -4,14 +4,6 @@
 {% load perms %}
 {% load helpers %}
 
-{% block breadcrumbs %}
-    <li><a href="{% url 'extras:note_list' %}">Notes</a></li>
-    {% if object.assigned_object.get_absolute_url %}
-        <li><a href="{{ object.assigned_object.get_absolute_url }}notes/">{{ object.assigned_object }}</a></li>
-    {% endif %}
-    <li>{{ object }}</li>
-{% endblock breadcrumbs %}
-
 {% block content %}
     <div class="row">
         <div class="col-md-5">
