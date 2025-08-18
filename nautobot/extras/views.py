@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import IntegrityError, transaction
-from django.db.models import ProtectedError, Q
+from django.db.models import Q
 from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
@@ -681,6 +681,7 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
             model = instance.model
             table_class = get_table_for_model(model)
             if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
+                # Ensure that members cache is up-to-date for this specific group
                 members = instance.update_cached_members()
                 messages.success(request, f"Refreshed cached members list for {instance}")
             else:
@@ -749,7 +750,14 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
             if not filter_form or not filter_form.is_valid():
                 form.add_error(None, "Errors encountered when saving Dynamic Group associations. See below.")
                 raise ValidationError("invalid dynamic group filter_form")
-            obj.set_filter(filter_form.cleaned_data)
+            try:
+                obj.set_filter(filter_form.cleaned_data)
+            except ValidationError as err:
+                form.add_error(None, "Invalid filter detected in existing DynamicGroup filter data.")
+                for msg in getattr(err, "messages", [str(err)]):
+                    if msg:
+                        form.add_error(None, msg)
+                raise
 
         # After filters have been set, now we save the object to the database.
         obj.save()
