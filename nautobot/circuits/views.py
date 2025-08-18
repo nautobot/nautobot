@@ -5,6 +5,7 @@ from django.utils.html import format_html, format_html_join
 
 from nautobot.core.forms import ConfirmationForm
 from nautobot.core.templatetags import helpers
+from nautobot.core.ui.breadcrumbs import Breadcrumbs, InstanceBreadcrumbItem, ModelBreadcrumbItem
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import (
     ObjectDetailContent,
@@ -16,7 +17,6 @@ from nautobot.core.views import generic
 from nautobot.core.views.utils import get_obj_from_context
 from nautobot.core.views.viewsets import NautobotUIViewSet
 
-from nautobot.core.ui.breadcrumbs import Breadcrumbs, InstanceBreadcrumbItem, ModelBreadcrumbItem
 from . import filters, forms, tables
 from .api import serializers
 from .choices import CircuitTerminationSideChoices
