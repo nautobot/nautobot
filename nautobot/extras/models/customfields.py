@@ -170,14 +170,7 @@ class ComputedField(
 
     def render(self, context):
         try:
-            rendered = render_jinja2(self.template, context)
-            # If there is an undefined variable within a template, it returns nothing
-            # Doesn't raise an exception either most likely due to using Undefined rather
-            # than StrictUndefined, but return fallback_value if None is returned
-            if rendered is None:
-                logger.warning("Failed to render computed field %s", self.key)
-                return self.fallback_value
-            return rendered
+            return render_jinja2(self.template, context)
         except Exception as exc:
             logger.warning("Failed to render computed field %s: %s", self.key, exc)
             return self.fallback_value
