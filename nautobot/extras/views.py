@@ -63,7 +63,7 @@ from nautobot.core.views.mixins import (
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.views.utils import prepare_cloned_fields
+from nautobot.core.views.utils import get_obj_from_context, prepare_cloned_fields
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Controller, Device, Interface, Module, Rack, VirtualDeviceContext
 from nautobot.dcim.tables import (
@@ -576,6 +576,63 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
     table_class = tables.CustomFieldTable
     template_name = "extras/customfield_update.html"
     action_buttons = ("add",)
+
+    class CustomFieldObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+        def render_value(self, key, value, context):
+            obj = get_obj_from_context(context, self.context_object_key)
+            type = getattr(obj, "type", None)
+
+            if key == "default" and type:
+                if not value:
+                    return helpers.HTML_NONE
+                if type == "markdown":
+                    return helpers.render_markdown(value)
+                elif type == "json":
+                    return helpers.render_json(value)
+                else:
+                    return helpers.placeholder(value)
+            return super().render_value(key, value, context)
+
+    class AssignmentObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+        def render_key(self, key, value, context):
+            if key == "content_types":
+                return "Content Types"
+            return super().render_key(key, value, context)
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            CustomFieldObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                exclude_fields=["content_types", "validation_minimum", "validation_maximum", "validation_regex"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                table_class=tables.CustomFieldChoiceTable,
+                table_filter="custom_field",
+                add_button_route=None,
+            ),
+            AssignmentObjectFieldsPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                label="Assignment",
+                fields=[
+                    "content_types",
+                ],
+            ),
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=300,
+                label="Validation Rules",
+                fields=["validation_minimum", "validation_maximum", "validation_regex"],
+                value_transforms={
+                    "validation_regex": [helpers.render_code],
+                },
+            ),
+        ]
+    )
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
