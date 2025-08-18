@@ -1,5 +1,6 @@
 import logging
 import operator
+from typing import Optional
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import MultipleObjectsReturned, ValidationError
@@ -849,19 +850,19 @@ class Prefix(PrimaryModel):
         self._cleaned = False
 
     @property
-    def cidr_str(self) -> str | None:
+    def cidr_str(self) -> Optional[str]:
         if self.network is not None and self.prefix_length is not None:
             return f"{self.network}/{self.prefix_length}"
         return None
 
     @property
-    def prefix(self) -> netaddr.IPNetwork | None:
+    def prefix(self) -> Optional[netaddr.IPNetwork]:
         if self.cidr_str:
             return netaddr.IPNetwork(self.cidr_str)
         return None
 
     @prefix.setter
-    def prefix(self, prefix: str | netaddr.IPNetwork | None):
+    def prefix(self, prefix):
         self._deconstruct_prefix(prefix)
         self._cleaned = False
 
@@ -911,7 +912,7 @@ class Prefix(PrimaryModel):
             # Former children that we are no longer the closest parent can be reparented to one of our new descendants.
             for child in self.children.filter(prefix_length__gt=self.prefix_length + 1):
                 try:
-                    closest_parent = self.children.get_closest_parent(child.prefix)
+                    closest_parent = self.children.get_closest_parent(child.prefix)  # pylint: disable=no-member
                 except Prefix.DoesNotExist:
                     closest_parent = self
                 if closest_parent != self:
@@ -949,7 +950,7 @@ class Prefix(PrimaryModel):
             # Former child IPs that we are no longer closest parent of can be reparented to one of our new descendants.
             for ip in self.ip_addresses.all():
                 try:
-                    closest_parent = self.children.get_closest_parent(ip.host, include_self=True)
+                    closest_parent = self.children.get_closest_parent(ip.host, include_self=True)  # pylint: disable=no-member
                 except Prefix.DoesNotExist:
                     closest_parent = self
                 if closest_parent != self:
