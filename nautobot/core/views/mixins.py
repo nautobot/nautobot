@@ -1499,15 +1499,14 @@ class BulkRenameMixin(NautobotViewSetMixin):
     queryset: QuerySet
     template_name = "generic/object_bulk_rename.html"
 
-    @drf_action(detail=False, methods=["get", "post"], url_name="bulk_rename", url_path="bulk_rename")
-    def bulk_rename(self, request):
+    def _bulk_rename(self, request):
         self.form_class = self._create_bulk_rename_form_class()
         query_pks = request.POST.getlist("pk")
-        selected_objects = self.queryset.filter(pk__in=query_pks) if query_pks else None
+        selected_objects = self.get_queryset().filter(pk__in=query_pks) if query_pks else None
 
         # selected_objects would return False; if no query_pks or invalid query_pks
         if not selected_objects:
-            messages.warning(request, f"No valid {self.queryset.model._meta.verbose_name_plural} were selected.")
+            messages.warning(request, f"No valid {self.get_queryset().model._meta.verbose_name_plural} were selected.")
             return redirect(self.get_return_url(request))
 
         if "_preview" in request.POST or "_apply" in request.POST:
@@ -1535,12 +1534,12 @@ class BulkRenameMixin(NautobotViewSetMixin):
                                 obj.save()
 
                             # Enforce constrained permissions
-                            if self.queryset.filter(pk__in=renamed_pks).count() != len(selected_objects):
+                            if self.get_queryset().filter(pk__in=renamed_pks).count() != len(selected_objects):
                                 raise ObjectDoesNotExist
 
                             messages.success(
                                 request,
-                                f"Renamed {len(selected_objects)} {self.queryset.model._meta.verbose_name_plural}",
+                                f"Renamed {len(selected_objects)} {self.get_queryset().model._meta.verbose_name_plural}",
                             )
                             return redirect(self.get_return_url(request))
 
@@ -1555,7 +1554,7 @@ class BulkRenameMixin(NautobotViewSetMixin):
             {
                 "template": self.template_name,
                 "form": form,
-                "obj_type_plural": self.queryset.model._meta.verbose_name_plural,
+                "obj_type_plural": self.get_queryset().model._meta.verbose_name_plural,
                 "selected_objects": selected_objects,
                 "return_url": self.get_return_url(request),
                 "parent_name": self.get_selected_objects_parents_name(selected_objects),
@@ -1564,7 +1563,7 @@ class BulkRenameMixin(NautobotViewSetMixin):
 
     def _create_bulk_rename_form_class(self):
         class _Form(BulkRenameForm):
-            pk = ModelMultipleChoiceField(queryset=self.queryset, widget=MultipleHiddenInput())
+            pk = ModelMultipleChoiceField(queryset=self.get_queryset(), widget=MultipleHiddenInput())
 
         return _Form
 
