@@ -2052,59 +2052,57 @@ class JobHookUIViewSet(NautobotUIViewSet):
 #
 
 
-class JobResultListView(generic.ObjectListView):
-    """
-    List JobResults
-    """
-
-    queryset = JobResult.objects.defer("result").select_related("job_model", "user")
-    filterset = filters.JobResultFilterSet
-    filterset_form = forms.JobResultFilterForm
-    table = tables.JobResultTable
+class JobResultUIViewSet(
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+):
+    filterset_class = filters.JobResultFilterSet
+    filterset_form_class = forms.JobResultFilterForm
+    serializer_class = serializers.JobResultSerializer
+    table_class = tables.JobResultTable
+    queryset = JobResult.objects.all()
     action_buttons = ()
 
-
-class JobResultDeleteView(generic.ObjectDeleteView):
-    queryset = JobResult.objects.all()
-
-
-class JobResultBulkDeleteView(generic.BulkDeleteView):
-    queryset = JobResult.objects.defer("result").select_related("job_model", "user")
-    table = tables.JobResultTable
-    filterset = filters.JobResultFilterSet
-
-
-class JobResultView(generic.ObjectView):
-    """
-    Display a JobResult and its Job data.
-    """
-
-    queryset = JobResult.objects.prefetch_related("job_model", "user")
-    template_name = "extras/jobresult.html"
-
     def get_extra_context(self, request, instance):
-        associated_record = None
-        job_class = None
-        if instance.job_model is not None:
-            job_class = instance.job_model.job_class
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            job_class = None
+            if instance and instance.job_model:
+                job_class = instance.job_model.job_class
 
-        return {
-            "job": job_class,
-            "associated_record": associated_record,
-            "result": instance,
-            **super().get_extra_context(request, instance),
-        }
+            context.update(
+                {
+                    "job": job_class,
+                    "associated_record": None,
+                    "result": instance,
+                }
+            )
 
+        return context
 
-class JobLogEntryTableView(generic.GenericView):
-    """
-    Display a table of `JobLogEntry` objects for a given `JobResult` instance.
-    """
+    def get_queryset(self):
+        queryset = super().get_queryset().select_related("job_model", "user")
 
-    queryset = JobResult.objects.all()
+        if not self.detail:
+            queryset = queryset.defer("result", "task_args", "task_kwargs", "celery_kwargs", "traceback", "meta")
 
-    def get(self, request, pk=None):
+        return queryset
+
+    @action(
+        detail=True,
+        url_path="log-table",
+        url_name="log-table",
+        custom_view_base_action="view",
+    )
+    def log_table(self, request, pk=None):
+        """
+        Custom action to return a rendered JobLogEntry table for a JobResult.
+        """
+
         instance = get_object_or_404(self.queryset.restrict(request.user, "view"), pk=pk)
+
         filter_q = request.GET.get("q")
         if filter_q:
             queryset = instance.job_log_entries.filter(
@@ -2112,14 +2110,15 @@ class JobLogEntryTableView(generic.GenericView):
             )
         else:
             queryset = instance.job_log_entries.all()
+
         log_table = tables.JobLogEntryTable(data=queryset, user=request.user)
         paginate = {
             "paginator_class": EnhancedPaginator,
             "per_page": get_paginate_count(request),
         }
         RequestConfig(request, paginate).configure(log_table)
-        table = log_table.as_html(request)
-        return HttpResponse(table)
+
+        return HttpResponse(log_table.as_html(request))
 
 
 #
