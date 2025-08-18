@@ -284,9 +284,9 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
         from jsonschema import Draft7Validator, SchemaError
 
         try:
-            if hasattr(record, "local_config_context_schema"):
+            if hasattr(record, "local_config_context_schema") and record.local_config_context_schema is not None:
                 validator = Draft7Validator(record.local_config_context_schema.data_schema)
-            else:
+            elif hasattr(record, "config_context_schema") and record.config_context_schema is not None:
                 validator = Draft7Validator(record.config_context_schema.data_schema)
 
         except SchemaError:
