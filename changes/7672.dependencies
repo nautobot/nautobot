@@ -1,0 +1,1 @@
+Pinned the Docker image to Debian 12 `bookworm` LTS to prevent unintended upgrades to Debian 13 `trixie`.
