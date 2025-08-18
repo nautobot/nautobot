@@ -580,14 +580,14 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
     class CustomFieldObjectFieldsPanel(object_detail.ObjectFieldsPanel):
         def render_value(self, key, value, context):
             obj = get_obj_from_context(context, self.context_object_key)
-            type = getattr(obj, "type", None)
+            _type = getattr(obj, "type", None)
 
-            if key == "default" and type:
+            if key == "default" and _type:
                 if not value:
                     return helpers.HTML_NONE
-                if type == "markdown":
+                if _type == "markdown":
                     return helpers.render_markdown(value)
-                elif type == "json":
+                elif _type == "json":
                     return helpers.render_json(value)
                 else:
                     return helpers.placeholder(value)
