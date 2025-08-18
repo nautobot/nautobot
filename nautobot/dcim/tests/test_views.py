@@ -2138,8 +2138,9 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         devicetypes[0].software_image_files.set(software_image_files[:2])
         devicetypes[1].software_image_files.set(software_image_files[2:])
         # Only valid software image files are those that belong to the device type or default images
-        valid_software_image_files = software_image_files[2:] + [
-            SoftwareImageFile.objects.filter(default_image=True).first()
+        valid_software_image_files = [
+            *software_image_files[2:],
+            SoftwareImageFile.objects.filter(default_image=True).first(),
         ]
 
         cls.custom_fields = (
