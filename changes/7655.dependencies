@@ -1,0 +1,23 @@
+Updated dependency `cryptography` to `~45.0.6`.
+Updated optional dependency `django-auth-ldap` to `~5.2.0`.
+Updated dependency `django-celery-beat` to `~2.7.0`.
+Updated dependency `django-celery-results` to `~2.6.0`.
+Updated dependency `django-cors-headers` to `~4.7.0`.
+Updated dependency `django-extensions` to `~4.1`.
+Updated dependency `django-health-check` to `~3.20.0`.
+Updated dependency `django-prometheus` to `~2.4.1`.
+Updated dependency `django-redis` to `~6.0.0`.
+Updated dependency `django-silk` to `~5.4.1`.
+Updated dependency `django-storages` to `~1.14.6`.
+Updated dependency `django-structlog` to `~9.1.1`.
+Updated dependency `django-timezone-field` to `~7.1`.
+Updated dependency `django-tree-queries` to `~0.20.0`.
+Widened range of permitted versions for dependency `djangorestframework` to also permit `3.16.x` versions. Note that depending on your environment this may result in either version 3.15.2 or 3.16.1 being installed after upgrading Nautobot.
+Updated dependency `drf-spectacular` to `~0.28.0`.
+Updated dependency `emoji` to `~2.14.1`.
+Updated dependency `kubernetes` to `~33.1.0`.
+Updated dependency `Markdown` to `~3.8.2`.
+Updated dependency `nh3` to `~0.3.0`.
+Widened range of permitted versions for dependency `Pillow` to permit any `11.x.y` versions.
+Updated dependency `prometheus-client` to `~0.22.0`.
+Updated dependency `social-auth-core` to `~4.7.0`.
