@@ -288,7 +288,8 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
                 validator = Draft7Validator(record.local_config_context_schema.data_schema)
             elif hasattr(record, "config_context_schema") and record.config_context_schema is not None:
                 validator = Draft7Validator(record.config_context_schema.data_schema)
-
+            else:
+                validator = {}
         except SchemaError:
             validator = {}
 
