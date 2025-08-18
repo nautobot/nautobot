@@ -85,6 +85,31 @@ class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
             label = f"{ct.app_label}.{ct.model}"
             cache.set(f"{self.get_for_model.cache_key_prefix}.{label}.list", listings[label])
 
+    def bulk_create(self, objs, **kwargs):
+        """Validate templates before saving."""
+        self._validate_templates_bulk(objs)
+        return super().bulk_create(objs, **kwargs)
+
+    def bulk_update(self, objs, fields, **kwargs):
+        """Validate templates before updating if template field is being modified."""
+        if "template" in fields:
+            self._validate_templates_bulk(objs)
+
+        return super().bulk_update(objs, fields, **kwargs)
+
+    def _validate_templates_bulk(self, objs):
+        """Helper method to validate templates for multiple objects."""
+        errors = []
+        for obj in objs:
+            try:
+                obj.validate_template()
+            except ValidationError as exc:
+                message_list = [f"'{obj.label}': {x}" for x in exc.messages]
+                errors.extend(message_list)
+
+        if errors:
+            raise ValidationError(f"Template validation failed - {'; '.join(errors)}")
+
 
 @extras_features("graphql")
 class ComputedField(
