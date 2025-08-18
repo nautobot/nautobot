@@ -350,6 +350,7 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
             ),
         )
 
+        # Bail out early if no usable schema
         if instance is None or not isinstance(instance.data_schema, dict):
             return object_detail.ObjectDetailContent(panels=panels_common)
 
