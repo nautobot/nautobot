@@ -125,7 +125,6 @@ from .models import (
     ScheduledJob,
     Secret,
     SecretsGroup,
-    SecretsGroupAssociation,
     StaticGroupAssociation,
     Status,
     Tag,
@@ -2767,8 +2766,6 @@ class SecretsGroupUIViewSet(NautobotUIViewSet):
 
     def get_extra_context(self, request, instance=None):
         context = super().get_extra_context(request, instance)
-        if self.action == "retrieve" and instance:
-            context["secrets_group_associations"] = SecretsGroupAssociation.objects.filter(secrets_group=instance)
         if self.action in ("create", "update"):
             if request.method == "POST":
                 context["secrets"] = forms.SecretsGroupAssociationFormSet(data=request.POST, instance=instance)
