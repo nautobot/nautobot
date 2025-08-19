@@ -890,6 +890,8 @@ class JobResultTable(BaseTable):
     pk = ToggleColumn()
     job_model = tables.Column(linkify=True)
     date_created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
+    date_started = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
+    date_done = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
     status = tables.TemplateColumn(
         template_code="{% include 'extras/inc/job_label.html' with result=record %}",
     )
@@ -961,6 +963,8 @@ class JobResultTable(BaseTable):
         fields = (
             "pk",
             "date_created",
+            "date_started",
+            "date_done",
             "name",
             "job_model",
             "scheduled_job",
@@ -1192,6 +1196,11 @@ class ObjectChangeTable(BaseTable):
             "object_repr",
             "request_id",
         )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # The `object_repr` column also uses the `changed_object` generic-foreign-key value
+        self.add_conditional_prefetch("object_repr", "changed_object")
 
 
 #
