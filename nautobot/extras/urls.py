@@ -58,8 +58,6 @@ urlpatterns = [
         views.ObjectAssignContactOrTeamView.as_view(),
         name="object_contact_team_assign",
     ),
-    # Dynamic Groups
-    path("dynamic-groups/assign-members/", views.DynamicGroupBulkAssignView.as_view(), name="dynamicgroup_bulk_assign"),
     # Git repositories
     path(
         "git-repositories/",
