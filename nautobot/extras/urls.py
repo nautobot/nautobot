@@ -113,17 +113,6 @@ urlpatterns = [
         name="dynamicgroup_notes",
         kwargs={"model": DynamicGroup},
     ),
-    # Git repositories
-    path(
-        "git-repositories/<uuid:pk>/sync/",
-        views.GitRepositorySyncView.as_view(),
-        name="gitrepository_sync",
-    ),
-    path(
-        "git-repositories/<uuid:pk>/dry-run/",
-        views.GitRepositoryDryRunView.as_view(),
-        name="gitrepository_dryrun",
-    ),
     # Image attachments
     path(
         "image-attachments/<uuid:pk>/edit/",

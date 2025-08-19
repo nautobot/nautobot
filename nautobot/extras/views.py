@@ -1075,6 +1075,30 @@ class ExternalIntegrationUIViewSet(NautobotUIViewSet):
 #
 
 
+def check_and_call_git_repository_function(request, pk, func):
+    """Helper for checking Git permissions and worker availability, then calling provided function if all is well
+    Args:
+        request (HttpRequest): request object.
+        pk (UUID): GitRepository pk value.
+        func (function): Enqueue git repo function.
+    Returns:
+        (Union[HttpResponseForbidden,redirect]): HttpResponseForbidden if user does not have permission to run the job,
+            otherwise redirect to the job result page.
+    """
+    if not request.user.has_perm("extras.change_gitrepository"):
+        return HttpResponseForbidden()
+
+    # Allow execution only if a worker process is running.
+    if not get_worker_count():
+        messages.error(request, "Unable to run job: Celery worker process not running.")
+        return redirect(reverse("extras:gitrepository", args=(pk,)), permanent=False)
+    else:
+        repository = get_object_or_404(GitRepository.objects.restrict(request.user, "change"), pk=pk)
+        job_result = func(repository, request.user)
+
+    return redirect(job_result.get_absolute_url())
+
+
 class GitRepositoryUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.GitRepositoryBulkEditForm
     filterset_form_class = forms.GitRepositoryFilterForm
@@ -1118,8 +1142,8 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
     @action(
         detail=True,
         url_path="result",
+        url_name="result",
         custom_view_base_action="view",
-        custom_view_additional_permissions=["extras.view_jobresult"],
     )
     def result(self, request, pk=None):
         instance = self.get_object()
@@ -1135,38 +1159,26 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
 
         return render(request, "extras/gitrepository_result.html", context)
 
-
-def check_and_call_git_repository_function(request, pk, func):
-    """Helper for checking Git permissions and worker availability, then calling provided function if all is well
-    Args:
-        request (HttpRequest): request object.
-        pk (UUID): GitRepository pk value.
-        func (function): Enqueue git repo function.
-    Returns:
-        (Union[HttpResponseForbidden,redirect]): HttpResponseForbidden if user does not have permission to run the job,
-            otherwise redirect to the job result page.
-    """
-    if not request.user.has_perm("extras.change_gitrepository"):
-        return HttpResponseForbidden()
-
-    # Allow execution only if a worker process is running.
-    if not get_worker_count():
-        messages.error(request, "Unable to run job: Celery worker process not running.")
-        return redirect(reverse("extras:gitrepository", args=(pk,)), permanent=False)
-    else:
-        repository = get_object_or_404(GitRepository.objects.restrict(request.user, "change"), pk=pk)
-        job_result = func(repository, request.user)
-
-    return redirect(job_result.get_absolute_url())
-
-
-class GitRepositorySyncView(generic.GenericView):
-    def post(self, request, pk):
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="sync",
+        url_name="sync",
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["extras.change_gitrepository"],
+    )
+    def sync(self, request, pk=None):
         return check_and_call_git_repository_function(request, pk, enqueue_pull_git_repository_and_refresh_data)
 
-
-class GitRepositoryDryRunView(generic.GenericView):
-    def post(self, request, pk):
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="dry-run",
+        url_name="dryrun",
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["extras.change_gitrepository"],
+    )
+    def dry_run(self, request, pk=None):
         return check_and_call_git_repository_function(request, pk, enqueue_git_repository_diff_origin_and_local)
 
 
