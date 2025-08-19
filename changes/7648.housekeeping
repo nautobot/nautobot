@@ -1,3 +1,0 @@
-Adjusted Renovate configuration for `develop` and `next`.
-Added management of `npm` dependencies via Renovate.
-Added automatic refresh of `poetry.lock` and `package-lock.json` to Renovate configuration.
