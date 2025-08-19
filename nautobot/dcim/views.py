@@ -17,11 +17,11 @@ from django.forms import (
 )
 from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
 from django.template.loader import render_to_string
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 from django.utils.encoding import iri_to_uri
 from django.utils.functional import cached_property
 from django.utils.html import format_html
-from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views.generic import View
 from django_tables2 import RequestConfig
 from rest_framework.decorators import action
@@ -4185,6 +4185,34 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
     table_class = tables.VirtualChassisTable
     queryset = VirtualChassis.objects.all()
 
+    class MembersObjectsTablePanel(object_detail.ObjectsTablePanel):
+        def _get_table_add_url(self, context):
+            obj = get_obj_from_context(context)
+            request = context["request"]
+            return_url = context.get("return_url", obj.get_absolute_url())
+
+            if not request.user.has_perm("dcim.change_virtualchassis"):
+                return None
+
+            params = []
+            master = getattr(obj, "master", None)
+
+            if master:
+                location = getattr(master, "location", None)
+                if location:
+                    params.append(("location", location.pk))
+
+                rack = getattr(master, "rack", None)
+                if rack:
+                    params.append(("rack", rack.pk))
+
+            params.append(("return_url", return_url))
+
+            try:
+                return reverse("dcim:virtualchassis_add_member", kwargs={"pk": obj.pk}) + "?" + urlencode(params)
+            except NoReverseMatch:
+                return None
+
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[
             object_detail.ObjectFieldsPanel(
@@ -4192,14 +4220,12 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
                 weight=100,
                 fields="__all__",
             ),
-            object_detail.DataTablePanel(
+            MembersObjectsTablePanel(
                 section=SectionChoices.RIGHT_HALF,
                 weight=100,
-                label="Members",
-                context_data_key="members_data",
-                context_columns_key="columns",
-                context_column_headers_key="header",
-                footer_content_template_path="dcim/inc/virtualchassis_footer.html",
+                table_class=tables.MembersTable,
+                table_filter="virtual_chassis",
+                table_title="Members",
             ),
         ]
     )
@@ -4229,32 +4255,6 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
                     "formset": formset,
                     "vc_form": vc_form,
                     "return_url": self.get_return_url(request, instance),
-                }
-            )
-
-        elif self.action == "retrieve":
-            members = Device.objects.restrict(request.user).filter(virtual_chassis=instance)
-            context.update(
-                {
-                    "columns": ["device", "position", "master", "priority"],
-                    "header": ["Device", "Position", "Master", "Priority"],
-                    "members_data": [
-                        {
-                            "device": helpers.hyperlinked_object(vc_member),
-                            "position": render_to_string(
-                                "utilities/templatetags/badge.html",
-                                {
-                                    "value": vc_member.vc_position,
-                                    "show_empty": False,
-                                },
-                            ),
-                            "master": helpers.render_boolean(True)
-                            if instance.master == vc_member
-                            else helpers.HTML_NONE,
-                            "priority": helpers.placeholder(vc_member.vc_priority),
-                        }
-                        for vc_member in members
-                    ],
                 }
             )
 
