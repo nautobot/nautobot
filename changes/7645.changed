@@ -1,1 +1,0 @@
-Implemented custom TreeQuerySet.count method. Note that this impacts all tree models calling count everywhere, but should be transparent.
