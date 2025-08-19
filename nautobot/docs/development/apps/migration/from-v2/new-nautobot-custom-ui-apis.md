@@ -330,7 +330,7 @@ Nautobot extends Bootstrap utilities with its own subset of CSS classes, propert
 
 ## Extended Icon Library
 
-On top of MDI icons shipped with Nautobot by default, v3 Nautobot introduces its own small internal custom icon library.
+On top of the [Material Design Icons](https://pictogrammers.com/library/mdi/) packaged with Nautobot by default, v3 Nautobot introduces its own small internal custom icon library.
 
 1. Nautobot icons are standard `.svg` static files located in `nautobot/project-static/icon` directory.
 2. All icons are inherently white but their color can be customized with CSS `filter` or `color`, depending on the way they are imported into the document.
