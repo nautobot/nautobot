@@ -17,7 +17,7 @@ from django.forms import (
 )
 from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
 from django.template.loader import render_to_string
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 from django.utils.encoding import iri_to_uri
 from django.utils.functional import cached_property
 from django.utils.html import format_html
@@ -547,6 +547,17 @@ class RackUIViewSet(NautobotUIViewSet):
     table_class = tables.RackDetailTable
     queryset = Rack.objects.select_related("location", "tenant__tenant_group", "rack_group", "role")
 
+    class ImageAttachmentObjectsTablePanel(object_detail.ObjectsTablePanel):
+        def _get_table_add_url(self, context):
+            obj = get_obj_from_context(context)
+            request = context["request"]
+            if request.user.has_perms(self.add_permissions or []):
+                try:
+                    return reverse("dcim:rack_add_image", kwargs={"object_id": obj.pk})
+                except NoReverseMatch:
+                    return None
+            return None
+
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
@@ -580,14 +591,16 @@ class RackUIViewSet(NautobotUIViewSet):
                 table_class=tables.PowerFeedTable,
                 table_filter="rack",
             ),
-            object_detail.ObjectsTablePanel(
+            ImageAttachmentObjectsTablePanel(
                 table_title="Images",
                 section=SectionChoices.LEFT_HALF,
                 table_class=ImageAttachmentTable,
-                table_filter="image",
+                table_attribute="image_attachments",
+                related_field_name="object_id",
                 weight=400,
-                add_button_route="dcim:rack_add_images",
-                add_permissions=["extras.add_imageattachment"],
+                add_permissions=[
+                    "extras.add_imageattachment",
+                ],
             ),
         )
     )
