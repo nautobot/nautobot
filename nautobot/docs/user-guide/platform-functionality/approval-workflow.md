@@ -56,14 +56,14 @@ erDiagram
     "contenttypes.ContentType"[ContentType] {}
     "users.User"[User] {}
     "users.Group"[Group] {}
-    "models.Model"[Model] {}
+    "models.GenericForeignKey"[GenericForeignKey] {}
 
     "extras.ApprovalWorkflowDefinition" }o--|| "contenttypes.ContentType": "applies to model"
     "extras.ApprovalWorkflowDefinition" ||--o{ "extras.ApprovalWorkflowStageDefinition": "defines stages"
     "extras.ApprovalWorkflowStageDefinition" }o--|| "users.Group": "approver group"
     "extras.ApprovalWorkflowDefinition" ||--o{ "extras.ApprovalWorkflow": "creates instances"
-    "extras.ApprovalWorkflow" }o--|| "models.Model": "object under review"
-    "extras.ApprovalWorkflow" ||--o{ "extras.ApprovalWorkflowStage": "has stage instances"
+    "extras.ApprovalWorkflow" }o--|| "models.GenericForeignKey": "object under review"
+    "extras.ApprovalWorkflow" ||--o{ "extras.ApprovalWorkflowStage": "has stages"
     "extras.ApprovalWorkflowStage" ||--o{ "extras.ApprovalWorkflowStageResponse": "has responses"
     "extras.ApprovalWorkflowStageResponse" }o--|| "users.User": "submitted by"
 ```
@@ -71,6 +71,38 @@ erDiagram
 ### ApprovalWorkflowDefinition
 
 The template for a workflow, specifying which model(s) it applies to, any constraints, and the ordered list of stages. Represents a reusable definition of an approval workflow.
+
+#### Constraints
+
+Constraints define when a workflow definition should apply to a particular model instance.
+
+- Constraints are stored as a dictionary of field lookups → values (e.g. `{"status": "active"}`).
+- Only **exact field-value matches** are supported, using Django’s `filter(**constraints)` under the hood.
+- If the instance matches those exact values, the workflow applies.
+- If no constraints are defined, the workflow applies to all instances of the model.
+
+**Planned in 3.1 (not yet supported):**
+- Wants to support various filtering options besides exact-match. Should be filterset based.
+
+#### Priority
+
+When multiple workflow definitions exist for the same model, only **one** will apply to any given object under review.
+The workflow with the **lowest priority value** (i.e., highest priority) that matches the object’s constraints is selected.
+
+##### Example 1: Specific scheduled job
+
+- Workflow Definition A:
+    - Model: `Scheduled Job`
+    - Constraints: `{"name": "Bulk Delete Objects Scheduled Job"}`
+    - Priority: **10**
+- Workflow Definition B:
+    - Model: `Scheduled Job`
+    - Constraints: none (applies to all scheduled jobs)
+    - Priority: **20**
+
+Result:
+If the object under review is the *Bulk Delete Objects Scheduled Job*, Workflow A applies (priority 10 wins).
+For all other scheduled jobs, Workflow B applies (priority 20).
 
 ### ApprovalWorkflowStageDefinition
 
@@ -86,7 +118,7 @@ A concrete instance of a workflow triggered for a specific object under review.
 
 ### ApprovalWorkflowStage
 
-A stage instance within a workflow execution. Progresses from `Pending` → `Approved`/`Denied`.
+A concrete instance of stage within a workflow execution. Progresses from `Pending` → `Approved`/`Denied`.
 
 - Approves automatically when minimum approvals are met.
 - Denies immediately if any denial is submitted.
@@ -109,13 +141,19 @@ Workflows are automatically attached after creating, running, or updating an obj
 #### Create an Approval Workflow Definition with stages
 
 1. Go to `Approvals > Workflow Definitions > Add Approval Workflow Definition`.
+    |   |   |
+    |---|---|
+    | ![Navigation](../../media/development/approval-workflows/nav-approval-workflow-definition.png) | ![Workflow Definition](../../media/development/approval-workflows/approval-workflow-definition.png) |
+
+    ![Add Approval Workflow Definition](../../media/development/approval-workflows/add-approval-workflow-definition.png)
+
 2. Enter:
     - **Name** (e.g., "Scheduled Job Run Workflow").
     - **Model** (e.g., `extras|scheduled job`).
-    - **Constraints** (optional JSON filter, e.g., `{"name": "Bulk Delete Objects Scheduled Job"}`).
-    - **Priority** (lower means higher priority).
+    - **Constraints** (optional JSON filter, e.g., `{"name": "Bulk Delete Objects Scheduled Job"}`, see [Contraints](#constraints)).
+    - **Priority** (only one workflow definition (the highest, i.e. smallest priority one) will apply to any given object under review, see [Priority](#priority)).
 3. In the **Approval Workflow Stage Definitions** section, define one or more stages:
-    - **Stage Name** (e.g, "Stage1").
+    - **Stage Name** (a descriptive name for the approval step (e.g., "Finance Approval", "Security Review", "Management Approval")).
     - **Weight** (order in which the stage is executed).
     - **Minimum Approvers** (number of approvals required).
     - **Approver Group** (group of users eligible to approve)
@@ -124,19 +162,28 @@ Workflows are automatically attached after creating, running, or updating an obj
 #### Approve or Deny a Stage
 
 1. Go to `Approvals > Approval Dashboard` or on the right `User dropdown menu > Approval Dashboard` and select the **My Approvals** tab.
+    |   |   |
+    |---|---|
+    | ![Navigation1 Dashboard](../../media/development/approval-workflows/nav-approval-dashboard1.png) | ![Navigation2 Dashboard](../../media/development/approval-workflows/nav-approval-dashboard2.png) |
+
+    ![Approval Dashboard](../../media/development/approval-workflows/approval-dashboard-approvals.png)
 2. Locate the relevant object under review in the table. The table displays:
     - **Object under review** - Linked to the object’s detail view.
     - **Workflow** - Name of the workflow definition (linked to the workflow detail view).
     - **Current Stage** - Stage awaiting action.
     - **Actions Needed** - Remaining approvals required.
     - **State** - Current workflow state.
-3. To approve the stage, select the green button.  
-4. To deny the stage, select the red button.
+3. To approve the stage, select the ![Approve button](../../media/development/approval-workflows/approve-icon.png) button.
+4. To deny the stage, select the ![Deny button](../../media/development/approval-workflows/deny-icon.png) button.
 5. After the decision action, a confirmation window appears where a comment can be added before confirming the action.
+    |   |   |
+    |---|---|
+    | ![Approve Window](../../media/development/approval-workflows/approve-window.png) | ![Deny Window](../../media/development/approval-workflows/deny-window.png) |
 
 #### View My Requests
 
 1. Open the **Approval Dashboard** and select the **My Requests** tab.
+    ![Approval Dashboard Requests](../../media/development/approval-workflows/approval-dashboard-requests.png)
 2. The table lists all workflows initiated by the current user. The columns include:
     - **Approval Workflow Definition** - Linked to the workflow definition.
     - **Object Type Under Review** - Model and object type for the request.
@@ -146,10 +193,24 @@ Workflows are automatically attached after creating, running, or updating an obj
 
 #### Check Workflow State
 
+There are 2 ways to check the state of a workflow, depending on whether user is a object operator/approver or a workflow architect.
+
+##### Check State as Object Operator/Approver**
+
+1. Go to `Approvals > Approval Dashboard` or on the right `User dropdown menu > Approval Dashboard`
+2. Select **My Approvals** or **My Requests** tab.
+3. Click the workflow (in My Approvals view) or details button (in My Requests view) for specific workflow.
+    ![My Approvals Workflow](../../media/development/approval-workflows/my-approvals-workflow.png)
+    ![My Requests Workflow](../../media/development/approval-workflows/my-requests-workflow.png)
+
+##### Check State as Workflow Architect**
+
 1. Go to `Approvals > Approval Workflow Definition`
 2. Select the required workflow definition.
+    ![Select Approval Workflow Definition](../../media/development/approval-workflows/select-approval-workflow-definition.png)
 3. In the **Workflows** list, all workflows for this definition are displayed.
 4. Select the details button for a specific workflow.
+    ![Approval Workflow Definition details](../../media/development/approval-workflows/approval-workflow-definition-details.png)
 5. View **Approval Workflow** details view contains:
     - **Approval Workflow** panel:
         - **Approval Workflow Definition** - Linked definition for the workflow.
@@ -167,6 +228,8 @@ Workflows are automatically attached after creating, running, or updating an obj
         - **User** - Responding user.
         - **Comments** - Submitted comment.
         - **State** - Decision state (`Pending`, `Approved`, `Denied`).
+
+    ![Approval Workflow details](../../media/development/approval-workflows/approval-workflow-details.png)
 
 ### Using Approval Workflow via API
 
@@ -230,7 +293,10 @@ Responsible for creating, updating, or running objects, which may trigger an app
 Responsible for reviewing and making decisions on approval workflow stages assigned to them. Must be a member of one or more approver groups (see [Approval Groups](#approver-groups)).
 
 **Required permissions:**
-- `extras.view_approvalworkflowstage` and `extras.change_approvalworkflowstage` - to view the **My Approvals** tab on the Dashboard and take actions such as approve or deny.
+- All permissions required by the **Object Operator** role.
+- Additional permissions:
+    - `extras.view_approvalworkflowstage`
+    - `extras.change_approvalworkflowstage` - to view the **My Approvals** tab on the Dashboard and take actions such as approve or deny.
 
 ### Workflow Architect
 
@@ -246,7 +312,7 @@ Responsible for designing, managing, and configuring approval workflow definitio
 
 Approval actions are controlled not only by permissions but also by **approver group membership** defined in each workflow definition:
 
-- Each **Approval Workflow Stage Definition** specifies an **Approver Group** (user group authorized to act on that stage).
+- Each **Approval Workflow Stage Definition** specifies an **Approver Group** (user group authorized to act on that stage, how to create user group via the admin UI check [here](users/groups.md)).
 - A user must belong to the stage’s approver group to:
     - See the stage in the **My Approvals** tab.
     - Perform approval or denial actions.
@@ -254,7 +320,26 @@ Approval actions are controlled not only by permissions but also by **approver g
 
 ## Upgrade Considerations
 
-**From Nautobot 2.x**
-If upgrading from Nautobot 2.x, the management command `check_job_approval_status` is available to identify Jobs and Scheduled Jobs that have `approval_required=True`. Running this command prior to upgrading helps detect and address these cases by:
-- Approving (and running) or denying scheduled jobs that require approval.
-- Defining approval workflows for Jobs where appropriate.
+### From Nautobot 2.x
+
+If upgrading from Nautobot 2.x, the management command `check_job_approval_status` is available to identify Jobs and Scheduled Jobs that have `approval_required=True`.
+
+- Running the command doesn't approve/run/deny jobs, it just identifies the ones that need such action to be performed as a separate step.
+- Before upgrading, approval workflows aren't a thing, defining those needs to be done after the upgrade.
+
+**Example**: User running command `check_job_approval_status` get output like
+
+```no-highlight
+Following jobs still have `approval_required=True`.
+These jobs will no longer trigger approval automatically.
+After upgrading to Nautobot 3.x, you should add an approval workflow definition(s) covering these jobs.
+Refer to the documentation: https://docs.nautobot.com/projects/core/en/next/user-guide/platform-functionality/approval-workflow/
+Affected jobs (Names):
+    - ExampleDryRunJob
+    - Example Job of Everything
+    - Export Object List
+```
+
+- User will need to create separate `ApprovalWorkflowDefinition`s for each of these jobs, since constraints currently only support **exact matches** (e.g., `{"name": "ExampleDryRunJob"}`). See [Create an Approval Workflow Definition with stages](#create-an-approval-workflow-definition-with-stages)
+- At present, user cannot define one workflow definition with `name=A OR name=B OR name=C`. That requires multiple definitions, one for each job.
+- Support for more advanced filters (such as `{"name__in": ["ExampleDryRunJob", "Example Job of Everything", "Export Object List"]}`) is planned for Nautobot **3.1**.
