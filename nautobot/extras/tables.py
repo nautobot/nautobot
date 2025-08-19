@@ -292,6 +292,9 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
                 validator = {}
         except SchemaError:
             validator = {}
+        # only call validate if this is a real validator
+        if not isinstance(validator, Draft7Validator):
+            return render_boolean(False) + format_html('<span class="text-danger"> {}</span>', "No schema available")
 
         try:
             validator.validate(data)
