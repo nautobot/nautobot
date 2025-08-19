@@ -4185,6 +4185,25 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
     table_class = tables.VirtualChassisTable
     queryset = VirtualChassis.objects.all()
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+            object_detail.DataTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                label="Members",
+                context_data_key="members_data",
+                context_columns_key="columns",
+                context_column_headers_key="header",
+                footer_content_template_path="dcim/inc/virtualchassis_footer.html",
+            ),
+        ]
+    )
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
 
@@ -4215,7 +4234,29 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
 
         elif self.action == "retrieve":
             members = Device.objects.restrict(request.user).filter(virtual_chassis=instance)
-            context.update({"members": members})
+            context.update(
+                {
+                    "columns": ["device", "position", "master", "priority"],
+                    "header": ["Device", "Position", "Master", "Priority"],
+                    "members_data": [
+                        {
+                            "device": helpers.hyperlinked_object(vc_member),
+                            "position": render_to_string(
+                                "utilities/templatetags/badge.html",
+                                {
+                                    "value": vc_member.vc_position,
+                                    "show_empty": False,
+                                },
+                            ),
+                            "master": helpers.render_boolean(True)
+                            if instance.master == vc_member
+                            else helpers.HTML_NONE,
+                            "priority": helpers.placeholder(vc_member.vc_priority),
+                        }
+                        for vc_member in members
+                    ],
+                }
+            )
 
         return context
 
