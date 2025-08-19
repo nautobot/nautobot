@@ -8,6 +8,7 @@ from nautobot.core.apps import (
 menu_items = (
     NavMenuTab(
         name="Approvals",
+        icon="checkbox-circle",
         groups=(
             NavMenuGroup(
                 name="Approval Workflows",
@@ -139,6 +140,7 @@ menu_items = (
     ),
     NavMenuTab(
         name="Secrets",
+        icon="secrets",
         weight=700,
         groups=(
             NavMenuGroup(
@@ -167,6 +169,7 @@ menu_items = (
     ),
     NavMenuTab(
         name="Jobs",
+        icon="share",
         weight=800,
         groups=(
             NavMenuGroup(
@@ -529,6 +532,7 @@ menu_items = (
     ),
     NavMenuTab(
         name="Apps",
+        icon="elements",
         weight=5000,
         groups=(
             NavMenuGroup(

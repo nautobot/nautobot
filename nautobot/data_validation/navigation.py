@@ -5,6 +5,7 @@ from nautobot.apps.ui import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMen
 menu_items = (
     NavMenuTab(
         name="Extensibility",
+        icon="airplay",
         groups=(
             NavMenuGroup(
                 name="Data Validation",

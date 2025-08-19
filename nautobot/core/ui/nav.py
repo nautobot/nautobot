@@ -46,6 +46,7 @@ class NavMenuTab(NavMenuBase, PermissionsMixin):
     def initial_dict(self) -> dict:
         """Attributes to be stored when adding this item to the nav menu data for the first time."""
         return {
+            "icon": self.icon,
             "weight": self.weight,
             "groups": {},
             "permissions": set(),
@@ -56,7 +57,7 @@ class NavMenuTab(NavMenuBase, PermissionsMixin):
         """Tuple of (name, attribute) entries describing fields that may not be altered after declaration."""
         return ()
 
-    def __init__(self, name, permissions=None, groups=None, weight=1000):
+    def __init__(self, name, permissions=None, groups=None, weight=1000, icon=None):
         """
         Ensure tab properties.
 
@@ -65,10 +66,35 @@ class NavMenuTab(NavMenuBase, PermissionsMixin):
             permissions (list): The permissions required to view this tab.
             groups (list): List of groups to be rendered in this tab.
             weight (int): The weight of this tab.
+            icon (str): The name of the Nautobot icon representing this tab or an SVG static file URL. Randomized if not explicitly specified.
         """
         super().__init__(permissions)
         self.name = name
         self.weight = weight
+
+        if icon:
+            self.icon = icon
+        else:
+            icons_pool = [
+                "arrows-expand-rec",
+                "arrows-move-rec",
+                "arrows-move-2-rec",
+                "atom",
+                "cloud-check",
+                "cloud-lightning",
+                "compass",
+                "credit-card",
+                "direction",
+                "rocket-2",
+                "server",
+                "server-2",
+                "transform",
+            ]
+            randomized_index = sum([ord(char) for char in name]) % len(
+                icons_pool
+            )  # Randomize index based on sum of ASCII codes of tab name characters.
+            self.icon = icons_pool[randomized_index]
+
         if groups is not None:
             if not isinstance(groups, (list, tuple)):
                 raise TypeError("Groups must be passed as a tuple or list.")

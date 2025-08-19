@@ -327,3 +327,29 @@ Nautobot extends Bootstrap utilities with its own subset of CSS classes, propert
 | `nb-z-popover`            | `z-index: 1070;`                   |
 | `nb-z-tooltip`            | `z-index: 1080;`                   |
 | `nb-z-toast`              | `z-index: 1090;`                   |
+
+## Extended Icon Library
+
+On top of MDI icons shipped with Nautobot by default, v3 Nautobot introduces its own small internal custom icon library.
+
+1. Nautobot icons are standard `.svg` static files located in `nautobot/project-static/icon` directory.
+2. All icons are inherently white but their color can be customized with CSS `filter` or `color`, depending on the way they are imported into the document.
+3. We suggest using `nb-icon` CSS classes for icon sizing, ranging from `1rem`/`16px` (`nb-icon-xs`) up to `2rem/32px` (`nb-icon-xl`).
+4. It is recommended to use one of two ways of importing Nautobot icons, either via `<img src="...">` or `<svg><use src="..." /></svg>`.
+
+```html
+<!-- Default white icon. -->
+<img alt="wifi icon" class="nb-icon" src="{% static 'icon/wifi.svg' %}" />
+
+<!-- CSS `filter` changes icon color from the default white to Nautobot orange. -->
+<img alt="wifi icon" class="nb-icon" src="{% static 'icon/wifi.svg' %}" style="filter: invert(50%) sepia(99%) saturate(1810%) hue-rotate(3deg) brightness(93%) contrast(94%);" />
+
+<!-- Icon using inherited CSS `color`. -->
+<svg class="nb-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><use href="{% static 'icon/wifi.svg' %}#vector" /></svg>
+
+<!-- `text-success` sets icon color to success green. -->
+<svg class="nb-icon text-success" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><use href="{% static 'icon/wifi.svg' %}#vector" /></svg>
+```
+
+!!! note
+    With all that's said above, it is also possible to import your own `.svg` icons.
