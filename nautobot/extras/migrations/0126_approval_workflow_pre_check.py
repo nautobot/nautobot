@@ -50,7 +50,7 @@ def _migrate_data(apps, *_):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0124_add_joblogentry_index"),
+        ("extras", "0125_jobresult_date_started"),
     ]
 
     operations = [

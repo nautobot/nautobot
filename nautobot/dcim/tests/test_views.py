@@ -715,32 +715,33 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Test the view
         response = self.client.get(reverse("dcim:rack", args=[self.racks[0].pk]))
         self.assertHttpStatus(response, 200)
+
         # Validate Power Utilization for PowerFeed 11 is displaying correctly on Rack View.
         power_feed_11_html = """
-        <td><div title="Used: 1200&#13;Count: 3840" class="progress text-center">
+        <td><div title="Used: 1263&#13;Count: 3840" class="progress text-center">
             <div class="progress-bar bg-success"
-                role="progressbar" aria-valuenow="31" aria-valuemin="0" aria-valuemax="100" style="width: 31%">
-                31%
+                role="progressbar" aria-valuenow="32" aria-valuemin="0" aria-valuemax="100" style="width: 32%">
+                32%
             </div>
         </div></td>
         """
         self.assertContains(response, power_feed_11_html, html=True)
         # Validate Power Utilization for PowerFeed12 is displaying correctly on Rack View.
         power_feed_12_html = """
-        <td><div title="Used: 2400&#13;Count: 3840" class="progress text-center">
+        <td><div title="Used: 2526&#13;Count: 3840" class="progress text-center">
             <div class="progress-bar bg-success"
-                role="progressbar" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100" style="width: 62%">
-                62%
+                role="progressbar" aria-valuenow="65" aria-valuemin="0" aria-valuemax="100" style="width: 65%">
+                65%
             </div>
         </div></td>
         """
         self.assertContains(response, power_feed_12_html, html=True)
         # Validate Rack Power Utilization for Combined powerfeeds is displaying correctly on the Rack View
         total_utilization_html = """
-        <td><div title="Used: 3600&#13;Count: 7680" class="progress text-center">
+        <td><div title="Used: 3789&#13;Count: 7680" class="progress text-center">
             <div class="progress-bar bg-success"
-                role="progressbar" aria-valuenow="46" aria-valuemin="0" aria-valuemax="100" style="width: 46%">
-                46%
+                role="progressbar" aria-valuenow="49" aria-valuemin="0" aria-valuemax="100" style="width: 49%">
+                49%
             </div>
         </div></td>
         """
@@ -1657,6 +1658,7 @@ class PowerPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "type": PowerPortTypeChoices.TYPE_IEC_C14,
             "maximum_draw": 100,
             "allocated_draw": 50,
+            "power_factor": Decimal("0.95"),
         }
 
         cls.bulk_create_data = {
@@ -1666,6 +1668,7 @@ class PowerPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "type": PowerPortTypeChoices.TYPE_IEC_C14,
             "maximum_draw": 100,
             "allocated_draw": 50,
+            "power_factor": Decimal("0.95"),
         }
 
         cls.bulk_edit_data = {
@@ -1679,6 +1682,7 @@ class PowerPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "name": test_instance.name,
             "device_type": getattr(getattr(test_instance, "device_type", None), "pk", None),
             "module_type": getattr(getattr(test_instance, "module_type", None), "pk", None),
+            "power_factor": Decimal("0.95"),
             "label": "new test label",
             "description": "new test description",
         }
@@ -2135,8 +2139,9 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         devicetypes[0].software_image_files.set(software_image_files[:2])
         devicetypes[1].software_image_files.set(software_image_files[2:])
         # Only valid software image files are those that belong to the device type or default images
-        valid_software_image_files = software_image_files[2:] + [
-            SoftwareImageFile.objects.filter(default_image=True).first()
+        valid_software_image_files = [
+            *software_image_files[2:],
+            SoftwareImageFile.objects.filter(default_image=True).first(),
         ]
 
         cls.custom_fields = (
@@ -2886,16 +2891,18 @@ class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "type": PowerPortTypeChoices.TYPE_IEC_C14,
             "maximum_draw": 100,
             "allocated_draw": 50,
+            "power_factor": Decimal("0.95"),
             "description": "A power port",
             "tags": [t.pk for t in Tag.objects.get_for_model(PowerPort)],
         }
 
         cls.bulk_create_data = {
             "device": device.pk,
-            "name_pattern": "Power Port [4-6]]",
+            "name_pattern": "Power Port [4-6]",
             "type": PowerPortTypeChoices.TYPE_IEC_C14,
             "maximum_draw": 100,
             "allocated_draw": 50,
+            "power_factor": Decimal("0.95"),
             "description": "A power port",
             "tags": [t.pk for t in Tag.objects.get_for_model(PowerPort)],
         }
@@ -2912,6 +2919,7 @@ class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "name": test_instance.name,
             "device": getattr(getattr(test_instance, "device", None), "pk", None),
             "module": getattr(getattr(test_instance, "module", None), "pk", None),
+            "power_factor": Decimal("0.95"),
             "label": "new test label",
             "description": "new test description",
         }

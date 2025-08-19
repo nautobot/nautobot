@@ -59,7 +59,7 @@
             <tr>
                 <td>Children</td>
                 <td>
-                    {% if object.location_type.children.all %}
+                    {% if object.children.all %}
                         <a href="{% url 'dcim:location_list' %}?parent={{ object.pk }}">{{ children_table.rows|length }}</a>
                     {% else %}
                         {{ None|placeholder }}
@@ -230,7 +230,7 @@
 {% endblock content_right_page %}
 
 {% block content_full_width_page %}
-    {% if object.location_type.children.all %}
+    {% if object.children.all %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Children</strong>

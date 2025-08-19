@@ -1,4 +1,6 @@
 {% load static %}
+{% load helpers %}
+{% load ui_framework %}
 
 <div>
     <h1 class="align-items-center d-flex fs-2 gap-8 lh-sm py-6">
@@ -11,18 +13,20 @@
         />
         {% if copy_title %}
         <span class="d-flex gap-4">
-            <span id="copy_title">{{ title }}</span>
+            <span id="copy_title">{{ title }}</span>{% saved_view_title %}
             <button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-text="{{ title }}">
                 <span aria-hidden="true" class="mdi mdi-content-copy"></span>
                 <span class="visually-hidden">Copy</span>
             </button>
         </span>
         {% else %}
-            {{ title }}
+            {{ title }}{% saved_view_title %}
         {% endif %}
     </h1>
 
-    {% if crumbs %}
+    {% if breadcrumbs is not None %}
+        {% render_breadcrumbs %}
+    {% elif crumbs %}
         <nav aria-label="Breadcrumbs" class="mt-4">
             <ol class="breadcrumb">
                 {% for url, title in crumbs %}
