@@ -1,10 +1,11 @@
 from django.db import models
 
 from nautobot.core.choices import ChoiceSet
-from nautobot.extras.jobs import DryRunVar, IPNetworkVar, Job, MultiChoiceVar
-from nautobot.ipam.models import IPAddress, Namespace, Prefix
+from nautobot.extras.jobs import DryRunVar, IPNetworkVar, Job, MultiChoiceVar, ObjectVar
+from nautobot.ipam.models import get_default_namespace_pk, IPAddress, Namespace, Prefix
 
 name = "System Jobs"
+
 
 class CleanupTypes(ChoiceSet):
     IPADDRESS = "ipam.IPAddress"
@@ -32,7 +33,8 @@ class FixIPAMParents(Job):
         has_sensitive_variables = False
 
     def run(self, *, cleanup_types, restrict_to_namespace=None, restrict_to_network=None, dryrun=False):
-        all_relevant_prefixes = Prefix.objects.all()
+        all_relevant_prefixes = Prefix.objects.restrict(self.user, "change")
+
         if restrict_to_namespace is not None:
             self.logger.info("Inspecting only records in namespace %s", restrict_to_namespace.name)
             all_relevant_prefixes = all_relevant_prefixes.filter(namespace=restrict_to_namespace)
@@ -41,6 +43,9 @@ class FixIPAMParents(Job):
             all_relevant_prefixes = all_relevant_prefixes.net_contained_or_equal(restrict_to_network)
 
         if CleanupTypes.PREFIX in cleanup_types:
+            if not self.user.has_perm("ipam.change_prefix"):
+                self.fail("User %r does not have permission to update Prefix records", self.user)
+
             self.logger.info("Inspecting Prefix records...")
 
             self.logger.info("Beginning with a quick check for obviously wrong `parent` values...")
@@ -75,8 +80,8 @@ class FixIPAMParents(Job):
                     self.logger.debug(
                         "Parent for %s should be corrected from %s to %s",
                         pfx.prefix,
-                        pfx.parent.display if pfx.parent is not None else None ,
-                        parent.display,
+                        pfx.parent.display if pfx.parent is not None else None,
+                        parent.display if parent is not None else None,
                     )
                     pfx.parent = parent
                     fixed_prefixes.append(pfx)
@@ -128,7 +133,9 @@ class FixIPAMParents(Job):
             #    - parent is set but a more specific parent Prefix also exists
             fixed_prefixes = []
             processed_pfx_count = 0
-            for pfx in all_relevant_prefixes.filter(parent__prefix_length__lt=models.F("prefix_length") - 1).select_related("parent"):
+            for pfx in all_relevant_prefixes.filter(
+                parent__prefix_length__lt=models.F("prefix_length") - 1
+            ).select_related("parent"):
                 parent = pfx.parent.subnets(include_self=True).get_closest_parent(pfx.prefix, include_self=False)
                 if parent != pfx.parent:
                     self.logger.debug(
@@ -142,7 +149,7 @@ class FixIPAMParents(Job):
                 processed_pfx_count += 1
 
             self.logger.info(
-                "Inspected %d Prefixes to check whether a more specific parent Prefix exists", 
+                "Inspected %d Prefixes to check whether a more specific parent Prefix exists",
                 processed_pfx_count,
             )
 
@@ -153,9 +160,12 @@ class FixIPAMParents(Job):
                 self.logger.success("Corrected imprecise `parent` for %d Prefixes", update_count)
 
         if CleanupTypes.IPADDRESS in cleanup_types:
+            if not self.user.has_perm("ipam.change_ipaddress"):
+                self.fail("User %r does not have permission to update IP Address records", self.user)
+
             self.logger.info("Inspecting IP Address records...")
 
-            all_relevant_ips = IPAddress.objects.all()
+            all_relevant_ips = IPAddress.objects.restrict(self.user, "change")
             if restrict_to_namespace is not None:
                 self.logger.info("Inspecting only records in namespace %s", restrict_to_namespace.name)
                 all_relevant_ips = all_relevant_ips.filter(parent__namespace=restrict_to_namespace)
@@ -218,10 +228,10 @@ class FixIPAMParents(Job):
                 self.logger.success("No IP Address records had null or clearly invalid `parent` values")
 
             self.logger.info("Continuing with a more involved check for more subtly incorrect `parent` values...")
-            # 4. More subtly wrong IPAddress parents
+            # 5. More subtly wrong IPAddress parents
             #    - parent is set and contains the IP, but is not the most specific such Prefix
-            prefixes_with_both_prefixes_and_ips = (
-                all_relevant_prefixes.exclude(ip_addresses__isnull=True).exclude(children__isnull=True)
+            prefixes_with_both_prefixes_and_ips = all_relevant_prefixes.exclude(ip_addresses__isnull=True).exclude(
+                children__isnull=True
             )
             fixed_ips = []
             processed_ip_count = 0
@@ -241,7 +251,7 @@ class FixIPAMParents(Job):
                     processed_ip_count += 1
 
             self.logger.info(
-                "Inspected %d IP Addresses to check whether a more specific parent Prefix exists", 
+                "Inspected %d IP Addresses to check whether a more specific parent Prefix exists",
                 processed_ip_count,
             )
 

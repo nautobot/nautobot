@@ -112,7 +112,10 @@ def create_prefixes_and_ips(initial_subnet: str, apps=apps, seed="Nautobot"):  #
     print(f"Seeding the PRNG with seed {seed}")
     random.seed(seed)  # suspicious-non-cryptographic-random-usage
 
-    status_active, _ = Status.objects.get_or_create(name="Active", defaults={"slug": "active"})
+    if hasattr(Status, "slug"):
+        status_active, _ = Status.objects.get_or_create(name="Active", defaults={"slug": "active"})
+    else:
+        status_active, _ = Status.objects.get_or_create(name="Active")
 
     for i in range(1, 11):
         Tenant.objects.get_or_create(name=f"{initial_subnet} Tenant {i}")
