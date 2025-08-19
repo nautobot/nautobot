@@ -101,6 +101,9 @@ def validate_jinja2(template_code):
 
     Returns:
         bool: True if the template is valid. An exception will be raised if the template fails to parse.
+
+    Raises:
+        jinja2.TemplateSyntaxError: If the template is syntactically invalid.
     """
     rendering_engine = engines["jinja"]
     rendering_engine.env.parse(template_code)
