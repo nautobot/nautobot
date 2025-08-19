@@ -195,7 +195,6 @@ class MinMaxValidationRule(ValidationRule):
             )
 
         allowed_field_types = (
-            models.DecimalField,
             models.FloatField,
             models.IntegerField,
         )
@@ -203,6 +202,7 @@ class MinMaxValidationRule(ValidationRule):
         excluded_field_types = (
             models.AutoField,
             models.BigAutoField,
+            models.DecimalField,
         )
 
         model_field = self.content_type.model_class()._meta.get_field(self.field)
