@@ -1888,29 +1888,6 @@ $nb-drawer-open-box-shadow: 0 0 0.625rem 0 rgba(0, 0, 0, 0.25);
   }
 }
 
-/* Icons */
-.nb-icon,
-.nb-icon-md {
-  height: 1.5rem; /* 24px */
-  width: 1.5rem; /* 24px */
-}
-.nb-icon-xl {
-  height: 2rem; /* 32px */
-  width: 2rem; /* 32px */
-}
-.nb-icon-lg {
-  height: 1.75rem; /* 28px */
-  width: 1.75rem; /* 28px */
-}
-.nb-icon-sm {
-  height: 1.25rem; /* 20px */
-  width: 1.25rem; /* 20px */
-}
-.nb-icon-xs {
-  height: 1rem; /* 16px */
-  width: 1rem; /* 16px */
-}
-
 /* Tiles */
 .nb-tiles {
   $tile-width: 27rem; /* 432px */
