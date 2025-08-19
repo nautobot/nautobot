@@ -1,0 +1,53 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load buttons %}
+{% load plugins %}
+{% load perms %}
+{% load helpers %}
+
+{% block breadcrumbs %}
+    <li><a href="{% url 'extras:note_list' %}">Notes</a></li>
+    {% if object.assigned_object.get_absolute_url %}
+        <li><a href="{{ object.assigned_object.get_absolute_url }}notes/">{{ object.assigned_object }}</a></li>
+    {% endif %}
+    <li>{{ object }}</li>
+{% endblock breadcrumbs %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-5">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Note</strong>
+                </div>
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>User</td>
+                        <td>
+                            {{ object.user|default:object.user_name }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Object Type</td>
+                        <td>
+                            {{ object.assigned_object_type }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Object</td>
+                        <td>
+                            {{ object.assigned_object | hyperlinked_object }}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Text</strong>
+                </div>
+                <div class="panel-body rendered-markdown">
+                    {{ object.note|render_markdown }}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
