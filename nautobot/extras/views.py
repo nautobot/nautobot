@@ -360,90 +360,90 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
             validator = {}
 
         extra_tabs = ()
-        if validator:
-            extra_tabs = (
-                object_detail.DistinctViewTab(
-                    weight=300,
-                    tab_id="validation",
-                    label="Validation",
-                    url_name="extras:configcontextschema_validation",
-                    panels=(
-                        ValidationObjectsTablePanel(
-                            section=SectionChoices.FULL_WIDTH,
-                            weight=100,
-                            table_title="Config Contexts",
-                            table_class=tables.ConfigContextTable,
-                            table_filter="config_context_schema",
-                            related_field_name="schema",
-                            tab_id="validation",
-                            add_button_route=None,
-                            extra_columns=[
-                                (
-                                    "validation_state",
-                                    tables.ConfigContextSchemaValidationStateColumn(validator, "data", empty_values=()),
-                                ),
-                            ],
-                            include_columns=["validation_state", "actions"],
-                        ),
-                        ValidationObjectsTablePanel(
-                            section=SectionChoices.FULL_WIDTH,
-                            weight=100,
-                            table_title="Devices",
-                            table_class=DeviceTable,
-                            table_filter="local_config_context_schema",
-                            tab_id="validation",
-                            add_button_route=None,
-                            extra_columns=[
-                                (
-                                    "validation_state",
-                                    tables.ConfigContextSchemaValidationStateColumn(
-                                        validator, "local_config_context_data", empty_values=()
-                                    ),
-                                ),
-                            ],
-                            include_columns=["validation_state"],
-                        ),
-                        ValidationObjectsTablePanel(
-                            section=SectionChoices.FULL_WIDTH,
-                            weight=100,
-                            table_title="Virtual Machines",
-                            table_class=VirtualMachineTable,
-                            table_filter="local_config_context_schema",
-                            tab_id="validation",
-                            add_button_route=None,
-                            extra_columns=[
-                                (
-                                    "dynamic_group_count",
-                                    tables.LinkedCountColumn(
-                                        viewname="extras:dynamicgroup_list",
-                                        url_params={"member_id": "pk"},
-                                        verbose_name="Dynamic Groups",
-                                        reverse_lookup="static_group_associations__associated_object_id",
-                                    ),
-                                ),
-                                (
-                                    "validation_state",
-                                    tables.ConfigContextSchemaValidationStateColumn(
-                                        validator, "local_config_context_data", empty_values=()
-                                    ),
-                                ),
-                            ],
-                            include_columns=[
-                                "name",
-                                "status",
-                                "cluster",
-                                "role",
-                                "tenant",
-                                "vcpus",
-                                "memory",
-                                "disk",
-                                "dynamic_group_count",
+
+        extra_tabs = (
+            object_detail.DistinctViewTab(
+                weight=300,
+                tab_id="validation",
+                label="Validation",
+                url_name="extras:configcontextschema_validation",
+                panels=(
+                    ValidationObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Config Contexts",
+                        table_class=tables.ConfigContextTable,
+                        table_filter="config_context_schema",
+                        related_field_name="schema",
+                        tab_id="validation",
+                        add_button_route=None,
+                        extra_columns=[
+                            (
                                 "validation_state",
-                            ],
-                        ),
+                                tables.ConfigContextSchemaValidationStateColumn(validator, "data", empty_values=()),
+                            ),
+                        ],
+                        include_columns=["validation_state", "actions"],
+                    ),
+                    ValidationObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Devices",
+                        table_class=DeviceTable,
+                        table_filter="local_config_context_schema",
+                        tab_id="validation",
+                        add_button_route=None,
+                        extra_columns=[
+                            (
+                                "validation_state",
+                                tables.ConfigContextSchemaValidationStateColumn(
+                                    validator, "local_config_context_data", empty_values=()
+                                ),
+                            ),
+                        ],
+                        include_columns=["validation_state"],
+                    ),
+                    ValidationObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Virtual Machines",
+                        table_class=VirtualMachineTable,
+                        table_filter="local_config_context_schema",
+                        tab_id="validation",
+                        add_button_route=None,
+                        extra_columns=[
+                            (
+                                "dynamic_group_count",
+                                tables.LinkedCountColumn(
+                                    viewname="extras:dynamicgroup_list",
+                                    url_params={"member_id": "pk"},
+                                    verbose_name="Dynamic Groups",
+                                    reverse_lookup="static_group_associations__associated_object_id",
+                                ),
+                            ),
+                            (
+                                "validation_state",
+                                tables.ConfigContextSchemaValidationStateColumn(
+                                    validator, "local_config_context_data", empty_values=()
+                                ),
+                            ),
+                        ],
+                        include_columns=[
+                            "name",
+                            "status",
+                            "cluster",
+                            "role",
+                            "tenant",
+                            "vcpus",
+                            "memory",
+                            "disk",
+                            "dynamic_group_count",
+                            "validation_state",
+                        ],
                     ),
                 ),
-            )
+            ),
+        )
 
         return object_detail.ObjectDetailContent(
             panels=panels_common,
