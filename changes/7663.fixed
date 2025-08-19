@@ -1,0 +1,1 @@
+Fixed namespace issues when using bulk edit form was auto setting a bulk edit field based on a filter param that was carried over.
