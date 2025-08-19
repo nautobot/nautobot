@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db.models import QuerySet
+from django.template.defaultfilters import filesizeformat
 from django.utils.html import format_html, format_html_join
 import django_tables2 as tables
 from django_tables2.data import TableData
@@ -739,8 +740,9 @@ class ImageAttachmentTable(BaseTable):
         default_columns = ("pk", "name", "size", "created", "actions")
 
     def render_size(self, value, record):
+        """Render file size in a human-readable format (e.g., 117.7 MB)."""
         try:
-            return f"{record.image.size / 1024:.1f} KB"
+            return filesizeformat(record.image.size)
         except Exception:
             return format_html('<span class="text-danger">Unavailable</span>')
 

@@ -323,14 +323,14 @@ class RackGroupsFieldsPanel(object_detail.ObjectFieldsPanel):
         stats = context.get("stats", {})
 
         rows = []
-        for rg in rack_groups:
+        for rack_group in rack_groups:
             rows.append(
                 self.render_rack_row(
-                    getattr(rg, "tree_depth", 0) * 8,
-                    rg.get_absolute_url(),
-                    str(rg),
-                    rg.rack_count,
-                    f"{reverse('dcim:rack_elevation_list')}?rack_group={rg.pk}",
+                    getattr(rack_group, "tree_depth", 0) * 8,
+                    rack_group.get_absolute_url(),
+                    str(rack_group),
+                    rack_group.rack_count,
+                    f"{reverse('dcim:rack_elevation_list')}?rack_group={rack_group.pk}",
                 )
             )
 
