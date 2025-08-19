@@ -62,7 +62,6 @@ django-extensions = "~3.2.3"
 django-filter = "~25.1"
 # Health check endpoint
 django-health-check = "~3.18.3"
-# Utility tools to support HTMX requests within a Django framework.
 # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
 django-jinja = "~2.11.0"
 # Prometheus metrics for Django
