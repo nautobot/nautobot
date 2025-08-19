@@ -554,6 +554,7 @@ nav:
           - Tags: "user-guide/platform-functionality/tag.md"
           - Template Filters: "user-guide/platform-functionality/template-filters.md"
           - Users:
+              - Groups: "user-guide/platform-functionality/users/groups.md"
               - Object Permission: "user-guide/platform-functionality/users/objectpermission.md"
               - Token: "user-guide/platform-functionality/users/token.md"
           - Webhooks: "user-guide/platform-functionality/webhook.md"
