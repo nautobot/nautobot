@@ -209,7 +209,7 @@ class UserConfigView(GenericView):
 
 class UserNavbarFavoritesAddView(GetReturnURLMixin, GenericView):
     def post(self, request):
-        if request.htmx:
+        if request.headers.get("HX-Request", False):
             form = NavbarFavoritesAddForm(request.POST)
             if form.is_valid():
                 navbar_favorites = request.user.get_config("navbar_favorites", [])
@@ -228,7 +228,7 @@ class UserNavbarFavoritesAddView(GetReturnURLMixin, GenericView):
 
 class UserNavbarFavoritesDeleteView(GetReturnURLMixin, GenericView):
     def post(self, request):
-        if request.htmx:
+        if request.headers.get("HX-Request", False):
             form = NavbarFavoritesRemoveForm(request.POST)
             if form.is_valid():
                 navbar_favorites = request.user.get_config("navbar_favorites", [])
