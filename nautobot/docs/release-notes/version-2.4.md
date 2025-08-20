@@ -166,6 +166,16 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.16 (2025-08-19)
+
+### Fixed in v2.4.16
+
+- [#7699](https://github.com/nautobot/nautobot/issues/7699) - Fixed breakage of the "Apps Marketplace" view in Nautobot v2.4.15.
+
+### Housekeeping in v2.4.16
+
+- [#7643](https://github.com/nautobot/nautobot/issues/7643) - Refactored SecretsGroup model related UI views to use `UI component framework`.
+
 ## v2.4.15 (2025-08-18)
 
 ### Added in v2.4.15
