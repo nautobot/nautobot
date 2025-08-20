@@ -8,6 +8,7 @@ from nautobot.core.apps import (
 menu_items = (
     NavMenuTab(
         name="IPAM",
+        icon="ip",
         weight=300,
         groups=(
             NavMenuGroup(

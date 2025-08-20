@@ -8,6 +8,7 @@ from nautobot.core.apps import (
 menu_items = (
     NavMenuTab(
         name="Virtualization",
+        icon="cloud-upload",
         weight=400,
         groups=(
             NavMenuGroup(

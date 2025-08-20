@@ -401,6 +401,18 @@ class PluginDetailViewTest(TestCase):
         self.assertIn("For testing purposes only", response_body, msg=response_body)
 
 
+class MarketplaceViewTest(TestCase):
+    def test_view_anonymous(self):
+        self.client.logout()
+        response = self.client.get(reverse("apps:apps_marketplace"))
+        # Redirects to the login page
+        self.assertHttpStatus(response, 302)
+
+    def test_view_authenticated(self):
+        response = self.client.get(reverse("apps:apps_marketplace"))
+        self.assertHttpStatus(response, 200)
+
+
 class AppAPITest(APIViewTestCases.APIViewTestCase):
     model = ExampleModel
     bulk_update_data = {
