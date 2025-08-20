@@ -1,9 +1,2 @@
 {% extends 'generic/object_retrieve.html' %}
-{% load helpers %}
-
-{% block breadcrumbs %}
-    <li><a href="{% url 'circuits:circuit_list' %}">Circuits</a></li>
-    <li><a href="{% url 'circuits:circuit_list' %}?provider={{ object.circuit.provider.pk }}">{{ object.circuit.provider }}</a></li>
-    <li>{{ object.circuit|hyperlinked_object }}</li>
-    <li>{{ object|hyperlinked_object }}</li>
-{% endblock breadcrumbs %}
+{% comment %}3.0 TODO: remove this template, which only exists for backward compatibility with 2.4 and earlier{% endcomment %}

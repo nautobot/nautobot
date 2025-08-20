@@ -41,6 +41,8 @@ from nautobot.core.forms import (
 )
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
+from nautobot.core.ui.breadcrumbs import Breadcrumbs
+from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
@@ -82,6 +84,8 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
     queryset: ClassVar[Optional[QuerySet]] = None  # TODO: required, declared Optional only to avoid breaking change
     template_name: ClassVar[Optional[str]] = None
     object_detail_content = None
+    breadcrumbs = Breadcrumbs()
+    view_titles = Titles()
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
@@ -122,6 +126,8 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
             "verbose_name": self.queryset.model._meta.verbose_name,
             "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
             "object_detail_content": self.object_detail_content,
+            "breadcrumbs": self.breadcrumbs,
+            "view_titles": self.view_titles,
             **common_detail_view_context(request, instance),
             **self.get_extra_context(request, instance),
         }
@@ -158,6 +164,8 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         "all_filters_removed",  # indicator for if all filters have been removed from the saved view
         "clear_view",  # indicator for if the clear view button is clicked or not
     )
+    breadcrumbs = Breadcrumbs()
+    view_titles = Titles()
 
     def get_filter_params(self, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
@@ -383,6 +391,8 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "current_saved_view": current_saved_view,
             "saved_views": saved_views,
             "model": model,
+            "breadcrumbs": self.breadcrumbs,
+            "view_titles": self.view_titles,
         }
 
         # `extra_context()` would require `request` access, however `request` parameter cannot simply be

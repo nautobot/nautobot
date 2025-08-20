@@ -81,6 +81,8 @@ from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
 
+from ..core.ui.breadcrumbs import Breadcrumbs, ModelBreadcrumbItem
+from ..core.ui.titles import Titles
 from . import filters, forms, jobs_ui, tables
 from .api import serializers
 from .choices import (
@@ -870,6 +872,8 @@ class ObjectDynamicGroupsView(generic.GenericView):
     """
 
     base_template: Optional[str] = None
+    breadcrumbs = Breadcrumbs()
+    view_titles = Titles()
 
     def get(self, request, model, **kwargs):
         # Handle QuerySet restriction of parent object if needed
@@ -903,6 +907,9 @@ class ObjectDynamicGroupsView(generic.GenericView):
                 "table": dynamicgroups_table,
                 "base_template": base_template,
                 "active_tab": "dynamic-groups",
+                "breadcrumbs": self.breadcrumbs,
+                "view_titles": self.view_titles,
+                "detail": True,
             },
         )
 
@@ -2212,6 +2219,8 @@ class ObjectChangeLogView(generic.GenericView):
     """
 
     base_template: Optional[str] = None
+    breadcrumbs = Breadcrumbs()
+    view_titles = Titles()
 
     def get(self, request, model, **kwargs):
         # Handle QuerySet restriction of parent object if needed
@@ -2251,6 +2260,9 @@ class ObjectChangeLogView(generic.GenericView):
                 "table": objectchanges_table,
                 "base_template": base_template,
                 "active_tab": "changelog",
+                "breadcrumbs": self.breadcrumbs,
+                "view_titles": self.view_titles,
+                "detail": True,
             },
         )
 
@@ -2344,6 +2356,20 @@ class NoteUIViewSet(
     serializer_class = serializers.NoteSerializer
     table_class = tables.NoteTable
     action_buttons = ()
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(model=Note),
+                ModelBreadcrumbItem(
+                    model=lambda c: c["object"].assigned_object,
+                    action="notes",
+                    reverse_kwargs=lambda c: {"pk": c["object"].assigned_object.pk},
+                    label=lambda c: c["object"].assigned_object,
+                    should_render=lambda c: c["object"].assigned_object,
+                ),
+            ]
+        }
+    )
 
     def alter_obj(self, obj, request, url_args, url_kwargs):
         obj.user = request.user
@@ -2360,6 +2386,8 @@ class ObjectNotesView(generic.GenericView):
     """
 
     base_template: Optional[str] = None
+    breadcrumbs = Breadcrumbs()
+    view_titles = Titles()
 
     def get(self, request, model, **kwargs):
         # Handle QuerySet restriction of parent object if needed
@@ -2396,6 +2424,9 @@ class ObjectNotesView(generic.GenericView):
                 "base_template": base_template,
                 "active_tab": "notes",
                 "form": notes_form,
+                "breadcrumbs": self.breadcrumbs,
+                "view_titles": self.view_titles,
+                "detail": True,
             },
         )
 

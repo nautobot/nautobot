@@ -1,21 +1,2 @@
 {% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
-
-{% block breadcrumbs %}
-                {% if object.device %}
-                    <li><a href="{% url 'dcim:device_list' %}">Devices</a></li>
-                    <li>{{ object.device|hyperlinked_object }}</li>
-                    {% if device_breadcrumb_url %}
-                        <li><a href="{% url device_breadcrumb_url pk=object.device.pk %}">{{ object|meta:"verbose_name_plural"|bettertitle }}</a></li>
-                    {% endif %}
-                {% else %}
-                    <li><a href="{% url 'dcim:module_list' %}">Modules</a></li>
-                    <li>{{ object.module|hyperlinked_object }}</li>
-                    {% if module_breadcrumb_url %}
-                        <li><a href="{% url module_breadcrumb_url pk=object.module.pk %}">{{ object|meta:"verbose_name_plural"|bettertitle }}</a></li>
-                    {% endif %}
-                {% endif %}
-                <li>{{ object|hyperlinked_object }}</li>
-{% endblock breadcrumbs %}
-
-{% block title %}{% if object.device %}{{ object.device }}{% else %}{{ object.module.display }}{% endif %} / {{ object }}{% endblock title %}

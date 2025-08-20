@@ -411,7 +411,7 @@ class Breadcrumbs:
     def __init__(
         self,
         items: BreadcrumbItemsType = None,
-        template: str = "inc/breadcrumbs.html",
+        template: str = "components/breadcrumbs.html",
     ):
         """
         Initialize the Breadcrumbs configuration.
@@ -481,8 +481,7 @@ class Breadcrumbs:
     @staticmethod
     def get_items_for_action(items: BreadcrumbItemsType, action: str, detail: bool) -> list[BaseBreadcrumbItem]:
         """
-        Get the breadcrumb items for a specific action, with fallback to 'detail' if not found
-        and to asterisk (*) if present.
+        Get the breadcrumb items for a specific action, 'detail' or to asterisk (*) if present.
 
         Args:
             items (BreadcrumbItemsType): Dictionary mapping action names to breadcrumb item lists.
@@ -492,12 +491,12 @@ class Breadcrumbs:
         Returns:
             list[BaseBreadcrumbItem]: List of breadcrumb items for the action.
         """
+        if detail:
+            return items.get("detail", [])
+
         breadcrumbs_list = items.get(action, [])
         if breadcrumbs_list:
             return breadcrumbs_list
-
-        if detail:
-            return items.get("detail", [])
 
         return items.get("*", [])
 
@@ -518,6 +517,7 @@ class Breadcrumbs:
                 **self.get_extra_context(context),
             }
         ):
+            print(self.items)
             breadcrumbs_items = self.get_breadcrumbs_items(context)
             filtered_items = self.filter_breadcrumbs_items(breadcrumbs_items, context)
             return render_component_template(self.template, context, breadcrumbs_items=filtered_items)

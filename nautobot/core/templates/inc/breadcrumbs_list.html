@@ -1,0 +1,10 @@
+{% load helpers %}
+
+<ol class="breadcrumb">
+    {% block breadcrumbs %}
+        {% if list_url %}
+            <li><a href="{% url list_url %}">{{ title }}</a></li>
+        {% endif %}
+        {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
+    {% endblock breadcrumbs %}
+</ol>

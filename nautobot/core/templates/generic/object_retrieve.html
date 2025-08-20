@@ -14,17 +14,11 @@
     <div class="row noprint">
         {% with list_url=object|validated_viewname:"list" %}
         <div class="col-sm-8 col-md-9">
-            <ol class="breadcrumb">
-            {% block breadcrumbs %}
-                {% if list_url %}
-                <li><a href="{% url list_url %}">
-                    {{ verbose_name_plural|bettertitle }}
-                </a></li>
-                {% endif %}
-                {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
-                <li>{{ object|hyperlinked_object }}</li>
-            {% endblock breadcrumbs %}
-            </ol>
+            {% if breadcrumbs %}
+                {% render_breadcrumbs %}
+            {% else %}
+                {% include 'inc/breadcrumbs_detail.html' %}
+            {% endif %}
         </div>
         {% if list_url %}
         <div class="col-sm-4 col-md-3">
@@ -55,7 +49,7 @@
     {% block masthead %}
         <h1>
             <span class="hover_copy">
-                <span id="copy_title">{% block title %}{{object.display|default:object}}{% endblock %}</span>
+                <span id="copy_title">{% block title %}{% render_title %}{% endblock %}</span>
                 <button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-text="{{ object.display | default:object }}">
                     <span class="mdi mdi-content-copy"></span>
                 </button>

@@ -1,0 +1,11 @@
+{% load helpers %}
+
+<ol class="breadcrumb">
+    {% block breadcrumbs %}
+        {% with list_url=object|validated_viewname:"list" %}
+            <li><a href="{% url list_url %}">{{ verbose_name_plural|bettertitle }}</a></li>
+        {% endwith %}
+        {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
+        <li>{{ object|hyperlinked_object }}</li>
+    {% endblock %}
+</ol>
