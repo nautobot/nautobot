@@ -438,6 +438,13 @@ class DistinctViewTab(Tab):
     ):
         self.url_name = url_name
         self.related_object_attribute = related_object_attribute
+
+        # Ensure include_paginator is enabled for ObjectsTablePanels
+        if kwargs.get("panels"):
+            for panel in kwargs["panels"]:
+                if isinstance(panel, ObjectsTablePanel):
+                    panel.include_paginator = True
+
         super().__init__(label_wrapper_template_path=label_wrapper_template_path, **kwargs)
 
     def get_extra_context(self, context: Context):
