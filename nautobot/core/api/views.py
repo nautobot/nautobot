@@ -524,6 +524,8 @@ class StatusView(NautobotAPIVersionMixin, APIView):
             if version:
                 if isinstance(version, tuple):
                     version = ".".join(str(n) for n in version)
+                else:
+                    version = str(version)
             installed_apps[app_config.name] = version
         installed_apps = dict(sorted(installed_apps.items()))
 

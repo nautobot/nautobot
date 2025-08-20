@@ -19,8 +19,58 @@ from nautobot.core.utils import lookup
 from nautobot.dcim import choices as dcim_choices, filters as dcim_filters, models as dcim_models
 from nautobot.dcim.models import Controller, Device
 from nautobot.extras import models as extras_models
-from nautobot.extras.utils import FeatureQuery
+from nautobot.extras.utils import FeatureQuery, RoleModelsQuery
 from nautobot.ipam import models as ipam_models
+
+
+class ContentTypeMultipleChoiceFilterTest(testing.TestCase):
+    class RoleFilterSet(filters.BaseFilterSet):
+        content_types = filters.ContentTypeMultipleChoiceFilter(
+            choices=RoleModelsQuery().get_choices,
+            conjoined=False,
+        )
+
+        class Meta:
+            model = extras_models.Role
+            fields = ["content_types"]
+
+    def test_filter_variations(self):
+        with self.subTest("single label"):
+            filterset = self.RoleFilterSet({"content_types": ["ipam.ipaddress"]}, extras_models.Role.objects.all())
+            qs = extras_models.Role.objects.filter(
+                content_types__in=[ContentType.objects.get_for_model(ipam_models.IPAddress)]
+            )
+            self.assertQuerysetEqualAndNotEmpty(filterset.qs, qs)
+
+        with self.subTest("multiple labels"):
+            filterset = self.RoleFilterSet(
+                {"content_types": ["ipam.ipaddress", "dcim.rack"]}, extras_models.Role.objects.all()
+            )
+            # remember, conjoined=False
+            qs = extras_models.Role.objects.filter(
+                django_models.Q(content_types__in=[ContentType.objects.get_for_model(ipam_models.IPAddress)])
+                | django_models.Q(content_types__in=[ContentType.objects.get_for_model(dcim_models.Rack)])
+            ).distinct()
+            self.assertQuerysetEqualAndNotEmpty(filterset.qs, qs)
+
+        with self.subTest("exclude single label"):
+            filterset = self.RoleFilterSet({"content_types__n": ["ipam.ipaddress"]}, extras_models.Role.objects.all())
+            qs = extras_models.Role.objects.exclude(
+                content_types__in=[ContentType.objects.get_for_model(ipam_models.IPAddress)]
+            )
+            self.assertQuerysetEqualAndNotEmpty(filterset.qs, qs)
+
+        with self.subTest("exclude multiple labels"):
+            filterset = self.RoleFilterSet(
+                {"content_types__n": ["ipam.ipaddress", "dcim.rack"]}, extras_models.Role.objects.all()
+            )
+            self.assertTrue(filterset.is_valid(), filterset.errors)
+            # remember, conjoined=False
+            qs = extras_models.Role.objects.exclude(
+                django_models.Q(content_types__in=[ContentType.objects.get_for_model(ipam_models.IPAddress)])
+                | django_models.Q(content_types__in=[ContentType.objects.get_for_model(dcim_models.Rack)])
+            ).distinct()
+            self.assertQuerysetEqualAndNotEmpty(filterset.qs, qs)
 
 
 class TreeNodeMultipleChoiceFilterTest(TestCase):

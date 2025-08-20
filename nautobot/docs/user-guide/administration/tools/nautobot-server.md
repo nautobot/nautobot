@@ -170,6 +170,44 @@ Output:
 !!! note
     This is a built-in Django command. Please see the [official documentation on `collectstatic`](https://docs.djangoproject.com/en/stable/ref/django-admin/#collectstatic) for more information.
 
+### `check_job_approval_status`
+
+`nautobot-server check_job_approval_status`
+
+Checks for scheduled jobs and jobs that require approval.
+
+```no-highlight
+nautobot-server check_job_approval_status
+```
+
+Output (when failed):
+
+```no-highlight
+nautobot.core.management.commands.check_job_approval_status.ApprovalRequiredScheduledJobsError: These need to be approved (and run) or denied before upgrading to Nautobot v3, as the introduction of the approval workflows feature means that future scheduled-job approvals will be handled differently.
+Refer to the documentation: https://docs.nautobot.com/projects/core/en/stable/user-guide/platform-functionality/jobs/job-scheduling-and-approvals/#approval-via-the-ui
+Below is a list of affected scheduled jobs:
+    - ID: 0f8a0670-459b-430f-8c5e-a631888509d4, Name: test2
+```
+
+Output (with warning):
+
+```no-highlight
+Following jobs still have `approval_required=True`.
+These jobs will no longer trigger approval automatically.
+After upgrading to Nautobot 3.x, you should add an approval workflow definition(s) covering these jobs.
+Refer to the documentation: https://docs.nautobot.com/projects/core/en/next/user-guide/platform-functionality/approval-workflow/
+Affected jobs (Names):
+    - ExampleDryRunJob
+    - Example Job of Everything
+    - Export Object List
+```
+
+Output (when pass):
+
+```no-highlight
+No approval_required jobs or scheduled jobs found.
+```
+
 ### `createsuperuser`
 
 `nautobot-server createsuperuser`
