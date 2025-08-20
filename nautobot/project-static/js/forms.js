@@ -66,6 +66,10 @@ function initializeStaticChoiceSelection(context, dropdownParent=null){
 // Static choice selection
 function initializeCheckboxes(context){
     this_context = $(context);
+
+    // Track last selected checkbox for range selection
+    let lastSelectedIndex = null;
+
     // "Toggle" checkbox for object lists (PK column)
     this_context.find('input:checkbox.toggle').click(function() {
         $(this).closest('table').find('input:checkbox[name=pk]:visible').prop('checked', $(this).prop('checked'));
@@ -76,14 +80,56 @@ function initializeCheckboxes(context){
         } else {
             $('#select_all').prop('checked', false);
         }
+
+        // Reset last selected index when using toggle all
+        lastSelectedIndex = null;
     });
 
-    // Uncheck the "toggle" and "select all" checkboxes if an item is unchecked
+
+    // Enhanced checkbox click handler with shift-click range selection
     this_context.find('input:checkbox[name=pk]').click(function (event) {
-        if (!$(this).attr('checked')) {
+        const $checkbox = $(this);
+        const $table = $checkbox.closest('table');
+        const $allCheckboxes = $table.find('input:checkbox[name=pk]:visible');
+        const currentIndex = $allCheckboxes.index($checkbox);
+
+        // Handle shift-click for range selection/deselection
+        if (event.shiftKey && lastSelectedIndex !== null) {
+            if (lastSelectedIndex === currentIndex) {
+                // Shift+clicking the anchor point - no-op to prevent accidental anchor loss
+                event.preventDefault();
+                return;
+            }
+
+            // Different checkbox - proceed with range selection
+            const startIndex = Math.min(lastSelectedIndex, currentIndex);
+            const endIndex = Math.max(lastSelectedIndex, currentIndex);
+
+            // Base the operation on the anchor point's current state
+            // If anchor is selected, we'll select the range. If anchor is unselected, we'll deselect the range.
+            const anchorCheckbox = $allCheckboxes.eq(lastSelectedIndex);
+            const shouldSelect = anchorCheckbox.prop('checked');
+
+            // Apply selection/deselection to the entire range based on anchor state
+            for (let i = startIndex; i <= endIndex; i++) {
+                $allCheckboxes.eq(i).prop('checked', shouldSelect);
+            }
+
+            // Don't update lastSelectedIndex on range selection - keep the anchor point
+        } else {
+            // Normal click - update last selected index
+            lastSelectedIndex = currentIndex;
+        }
+
+        // Uncheck the "toggle" and "select all" checkboxes if any item is unchecked
+        const hasUnchecked = $allCheckboxes.filter(':not(:checked)').length > 0;
+        if (hasUnchecked) {
             $('input:checkbox.toggle, #select_all').prop('checked', false);
         }
     });
+
+
+
 }
 
 function repopulateAutoField(context, targetField, sourceFields, maxLength, transformValue = null){
