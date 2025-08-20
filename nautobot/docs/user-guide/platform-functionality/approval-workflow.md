@@ -76,13 +76,13 @@ The template for a workflow, specifying which model(s) it applies to, any constr
 
 Constraints define when a workflow definition should apply to a particular model instance.
 
-- Constraints are stored as a dictionary of field lookups → values (e.g. `{"status": "active"}`).
-- Only **exact field-value matches** are supported, using Django’s `filter(**constraints)` under the hood.
-- If the instance matches those exact values, the workflow applies.
+- Constraints are stored as a dictionary of **field lookups → values** (e.g. `{"status": "active"}`).
+- Any valid Django ORM lookup can be used (e.g. `{"name__in": ["A", "B"]}`, `{"status__icontains": "active"}`, `{"priority__gte": 10}`), since constraints are passed directly into `.filter(**constraints)`.
+- If the instance matches the constraints, the workflow applies.
 - If no constraints are defined, the workflow applies to all instances of the model.
 
 **Planned in 3.1 (not yet supported):**
-- Wants to support various filtering options besides exact-match. Should be filterset based.
+- Migration to a **FilterSet-based implementation**, which will support more complex logic
 
 #### Priority
 
@@ -150,7 +150,7 @@ Workflows are automatically attached after creating, running, or updating an obj
 2. Enter:
     - **Name** (e.g., "Scheduled Job Run Workflow").
     - **Model** (e.g., `extras|scheduled job`).
-    - **Constraints** (optional JSON filter, e.g., `{"name": "Bulk Delete Objects Scheduled Job"}`, see [Contraints](#constraints)).
+    - **Constraints** (optional JSON filter, e.g., `{"job_model__name": "Bulk Delete Objects"}`, see [Contraints](#constraints)).
     - **Priority** (only one workflow definition (the highest, i.e. smallest priority one) will apply to any given object under review, see [Priority](#priority)).
 3. In the **Approval Workflow Stage Definitions** section, define one or more stages:
     - **Stage Name** (a descriptive name for the approval step (e.g., "Finance Approval", "Security Review", "Management Approval")).
@@ -340,6 +340,6 @@ Affected jobs (Names):
     - Export Object List
 ```
 
-- User will need to create separate `ApprovalWorkflowDefinition`s for each of these jobs, since constraints currently only support **exact matches** (e.g., `{"name": "ExampleDryRunJob"}`). See [Create an Approval Workflow Definition with stages](#create-an-approval-workflow-definition-with-stages)
-- At present, user cannot define one workflow definition with `name=A OR name=B OR name=C`. That requires multiple definitions, one for each job.
-- Support for more advanced filters (such as `{"name__in": ["ExampleDryRunJob", "Example Job of Everything", "Export Object List"]}`) is planned for Nautobot **3.1**.
+- User can create an `ApprovalWorkflowDefinition` using constraints such as `{"job_model__name__in": ["ExampleDryRunJob", "Example Job of Everything", "Export Object List"]}`. See [Create an Approval Workflow Definition with stages](#create-an-approval-workflow-definition-with-stages)
+- However, constraints today are limited to what can be expressed as a single dictionary of field lookups. More complex logic (e.g., `name=A OR (name=B AND status=active)`) is not possible yet.
+- Support for combining multiple conditions with **Q objects** and richer filtering logic is planned for **Nautobot 3.1**.
