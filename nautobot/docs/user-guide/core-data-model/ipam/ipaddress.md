@@ -54,3 +54,13 @@ An IP address can be designated as the network address translation (NAT) inside 
 +++ 2.0.0
 
 In Nautobot 2.0.0 and later, IP Addresses must now be unique per Namespace. As a consequence, data migrations from Nautobot 1.x (where in some cases IP Addresses were permitted to be duplicated) will, as needed, move duplicate IP Addresses to a number of "cleanup" Namespaces in order to avoid uniqueness violations within the global Namespace. In many cases these duplicate IP Address records can be collapsed into single records (in particular, because Nautobot 2.x permits assignment of a single IP Address to multiple Interfaces, whereas Nautobot 1.x did not permit this). To assist with such efforts, Nautobot provides an [IP Address Merge tool](../../feature-guides/ip-address-merge-tool.md).
+
+## Repairing Prefix and IP Address Hierarchy
+
++++ 2.4.17 "Added system Job for repairing incorrect `parent` values"
+
+It is possible in some cases, particularly due to insufficient validation in earlier Nautobot 2.x releases, but also due to incorrect logic in custom Jobs and the like, for `parent` values to become incorrectly set on some IP Address and Prefix records.
+
+If you encounter or suspect an issue of this sort, Nautobot provides a system [Job](../../platform-functionality/jobs/index.md) named "Check/Fix IPAM Parents" which can be run to efficiently detect and repair various problems of this sort.
+
+If, after running this Job, you later find that this issue recurs, we recommend reviewing any Apps and Jobs that are making programmatic updates to Prefix and IP Address data, as this should not recur during normal Nautobot UI or REST API updates in v2.4.17 and later.

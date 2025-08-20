@@ -47,6 +47,9 @@ In most cases, you will not need to ever explicitly specify the `parent` value y
 
 ### Hierarchy Updates when Editing Prefixes
 
++++ 2.4.17 "Added support and validation for changing `prefix` and `namespace` values"
+    Prior to Nautobot v2.4.17, Nautobot lacked some essential logic for handling changes to these fields on an existing Prefix, and as a result, changing these fields could result in incorrect data in some cases. Refer to [Repairing Prefix and IP Address Hierarchy](#repairing-prefix-and-ip-address-hierarchy) below for details.
+
 When editing a Prefix and changing its `prefix` value (`network`, `prefix_length`, etc.), or `namespace`, Nautobot will automatically update the `parent` field of the record and related Prefix and IP Address records as needed to preserve the correct hierarchy. **Such edits to a Prefix do _not_ "renumber" or "re-IP" the descendant Prefixes and IP Addresses below this Prefix.** For example, if the aforementioned 10.1.1.0/24 Prefix were edited to have a `network` of 10.**0**.1.0/24, IP address 10.1.1.1/24 would be updated such that its `parent` was now the 10.0.0.0/8 Prefix, as 10.0.1.0/24 does not contain host 10.1.1.1, but 10.0.0.0/8 does. Similarly, IP address 10.0.1.0/32 would be updated to have its `parent` become the newly updated 10.0.1.0/24 Prefix:
 
 * Prefix 10.0.0.0/8 (with no `parent`)
@@ -56,6 +59,8 @@ When editing a Prefix and changing its `prefix` value (`network`, `prefix_length
 
 ??? warning "Orphaned IP addresses"
     If editing an existing Prefix would result in some of its child IP Addresses becoming "orphans" with no valid `parent` Prefix, Nautobot will raise a validation error and reject the change with an appropriate explanation.
+
++/- 2.4.17 "Cascading `namespace` updates"
 
 Additionally, when changing a Prefix's `namespace`, not only the specified Prefix record, but *also all of its descendant Prefix records* will be moved into the new Namespace. This is in service of the "principle of least surprise", because IP Address records do not have their own individual Namespaces but instead derive their namespace from their `parent` Prefixes, and it would be surprising to most users if only IPs directly under a given Prefix were brought along, while IPs under a nested subnet Prefix were left behind in the original Namespace.
 
@@ -70,6 +75,16 @@ Additionally, when changing a Prefix's `namespace`, not only the specified Prefi
     3. Create and/or associate VRFs in the target Namespace to the Prefix(es) as desired.
 
     If you find yourself needing to perform this workflow frequently, consider implementing a simple Nautobot [Job](../../platform-functionality/jobs/index.md) to consolidate these three steps into a single repeatable task.
+
+### Repairing Prefix and IP Address Hierarchy
+
++++ 2.4.17 "Added system Job for repairing incorrect `parent` values"
+
+It is possible in some cases, particularly due to insufficient validation in earlier Nautobot 2.x releases, but also due to incorrect logic in custom Jobs and the like, for `parent` values to become incorrectly set on some Prefix and IP Address records. One symptom of such an issue can be seen when a Prefix's reported ["utilization"](#prefix-utilization-calculation-by-prefix-type) value is reported as an incorrect value, such as in some cases showing greater than 100% utilization.
+
+If you encounter or suspect an issue of this sort, Nautobot provides a system [Job](../../platform-functionality/jobs/index.md) named "Check/Fix IPAM Parents" which can be run to efficiently detect and repair various problems of this sort.
+
+If, after running this Job, you later find that this issue recurs, we recommend reviewing any Apps and Jobs that are making programmatic updates to Prefix and IP Address data, as this should not recur during normal Nautobot UI or REST API updates in v2.4.17 and later.
 
 ## Prefix Types
 
