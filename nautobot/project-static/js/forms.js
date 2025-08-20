@@ -85,7 +85,6 @@ function initializeCheckboxes(context){
         lastSelectedIndex = null;
     });
 
-
     // Enhanced checkbox click handler with shift-click range selection
     this_context.find('input:checkbox[name=pk]').click(function (event) {
         const $checkbox = $(this);
@@ -127,9 +126,6 @@ function initializeCheckboxes(context){
             $('input:checkbox.toggle, #select_all').prop('checked', false);
         }
     });
-
-
-
 }
 
 function repopulateAutoField(context, targetField, sourceFields, maxLength, transformValue = null){
