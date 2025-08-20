@@ -58,6 +58,7 @@ from .models import (
     ScheduledJob,
     Secret,
     SecretsGroup,
+    SecretsGroupAssociation,
     StaticGroupAssociation,
     Status,
     Tag,
@@ -1369,6 +1370,17 @@ class SecretsGroupTable(BaseTable):
             "name",
             "description",
         )
+
+
+class SecretsGroupAssociationTable(BaseTable):
+    secret = tables.Column(linkify=True)
+
+    class Meta:
+        model = SecretsGroupAssociation
+        fields = ("access_type", "secret_type", "secret")
+        default_columns = ("access_type", "secret_type", "secret")
+        # Avoid extra UI clutter
+        attrs = {"class": "table table-condensed"}
 
 
 #
