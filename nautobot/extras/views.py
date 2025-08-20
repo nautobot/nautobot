@@ -1250,7 +1250,7 @@ class GraphQLQueryUIViewSet(
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
-                label="GraphQL Query",
+                label="Query",
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields=["name", "query", "variables"],
