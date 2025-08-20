@@ -386,7 +386,7 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
                     ),
                     ValidationObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
-                        weight=100,
+                        weight=200,
                         table_title="Devices",
                         table_class=DeviceTable,
                         table_filter="local_config_context_schema",
@@ -404,7 +404,7 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
                     ),
                     ValidationObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
-                        weight=100,
+                        weight=300,
                         table_title="Virtual Machines",
                         table_class=VirtualMachineTable,
                         table_filter="local_config_context_schema",
