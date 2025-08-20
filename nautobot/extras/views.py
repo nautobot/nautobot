@@ -854,7 +854,8 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
                                     logger.debug("Created %s", association)
 
                         # Enforce object-level permissions
-                        if self.queryset.filter(pk__in=[assoc.pk for assoc in associations]).count() != len(
+                        permitted_associations = StaticGroupAssociation.objects.restrict(request.user, "add")
+                        if permitted_associations.filter(pk__in=[assoc.pk for assoc in associations]).count() != len(
                             associations
                         ):
                             raise StaticGroupAssociation.DoesNotExist
