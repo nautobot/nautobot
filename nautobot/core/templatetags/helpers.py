@@ -277,6 +277,8 @@ def render_yaml(value, syntax_highlight=True):
 @library.filter()
 @register.filter()
 def render_code(value):
+    if not value:
+        return HTML_NONE
     return format_html("<code>{}</code>", value)
 
 
