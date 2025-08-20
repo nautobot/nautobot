@@ -4,72 +4,97 @@ In many cases, an app may wish to make use of Nautobot's various extensibility f
 
 Furthermore, sometimes apps might want to create a baseline of available data. This could, for example, be a baseline of circuit providers for a [Single Source of Truth](https://docs.nautobot.com/projects/ssot/en/latest/) integration that synchronizes circuit data or creating new default [statuses](https://docs.nautobot.com/projects/core/en/stable/user-guide/platform-functionality/status/) and/or [roles](https://docs.nautobot.com/projects/core/en/stable/user-guide/platform-functionality/role/), or adding to the allowed content types for existing statuses and roles.
 
-## Overview
+## Comparison of Options
 
 Multiple options for the population of base state are available, each with their own trade-offs. There is no single best option, you have to choose the one has the best properties for your specific need.
 
-- Signal Handlers on `nautobot_database_ready`
-- [Django Onboard Tooling](https://docs.djangoproject.com/en/4.2/howto/initial-data/)
-    - [Django Data Migrations](https://docs.djangoproject.com/en/4.2/topics/migrations/#data-migrations)
-    - [Django Fixtures](https://docs.djangoproject.com/en/4.2/topics/db/fixtures/#fixtures)
-- [Design Builder Jobs](https://docs.nautobot.com/projects/design-builder/en/latest/)
+- Signal handlers on `nautobot_database_ready`
+- Django built-in features:
+    - Django Data Migrations
+    - Django Fixtures
+- Jobs using the Nautobot Design Builder App
 - Creating data in-place where needed
 
-Some of these methods are explained in further detail at the bottom of this page.
+The below table provides a comparison between these options on a number of factors; additional factors are detailed in the following subsections.
 
-The following table details points that are somewhat easily comparable between the different options.
+|                                  | `nautobot_database_ready` Signal Handler         | Data Migration                                    | Django Fixture                 | Design Builder Job            | Creating Data In-Place         |
+|----------------------------------|--------------------------------------------------|---------------------------------------------------|--------------------------------|-------------------------------|--------------------------------|
+| **Startup Impact**               | ⚠️ Exceptions can occur after database migrations | ⚠️ Exceptions can occur during database migrations | ✅ None                        | ✅ None                       | ✅ None                        |
+| **Execution**                    | ✅ Automatic                                     | ✅ Automatic                                      | ⚠️ Manual                       | ⚠️ Manual                      | ✅ Automatic                   |
+| **Performance Impact**           | ⚠️ Each time migrations are run                   | ✅ Once when migrations are first run             | ✅ Once when fixture is loaded | ⚠️ Each time design job is run | ⚠️ Each time the data is needed |
+| **Re-running / Idempotence**     | ⚠️ Required¹                                      | ⚠️ One-time only                                   | ✅ Possible¹                   | ✅ Possible¹                  | ✅ Possible¹                   |
+| **App Required**                 | ⚠️ Yes                                            | ⚠️ Yes                                             | ✅ No                          | ✅ No                         | ✅ No                          |
+| **Ongoing Maintenance Required** | ⚠️ Moderate                                       | ✅ None                                           | ⚠️ Moderate                     | ⚠️ Moderate                    | ⚠️ High                         |
 
-| Feature                        | Signal Handlers on `nautobot_database_ready`             | Django Data Migrations                      | Django Fixtures                                          | Design Builder Jobs                                      | Creating Data In-place Where Needed                      |
-|--------------------------------|----------------------------------------------------------|---------------------------------------------|----------------------------------------------------------|----------------------------------------------------------|----------------------------------------------------------|
-| Startup Impact                 | Exceptions occur after database migrations               | Exceptions occur during database migrations | N/A                                                      | N/A                                                      | N/A                                                      |
-| Execution                      | Automatic                                                | Automatic                                   | Manual                                                   | Manual                                                   | Automatic                                                |
-| Performance Impact             | Each time migrations are rerun                           | Once when migrations are first run          | Once when fixture is loaded                              | Each time design job is run                              | Each time the data is needed                             |
-| Re-running / Idempotence       | Possible, modified data may be overwritten/cause crashes | Impossible                                  | Possible, modified data may be overwritten/cause crashes | Possible, modified data may be overwritten/cause crashes | Possible, modified data may be overwritten/cause crashes |
-| Custom App Needed              | Yes                                                      | Yes                                         | No                                                       | No                                                       | No                                                       |
-| Maintenance required over time | Moderate                                                 | None                                        | Moderate                                                 | Moderate                                                 | High                                                     |
-
-The following sections detail additional points that weren't possible to fit.
+<!-- pyml disable-next-line no-inline-html -->
+<ul>
+    <li style="list-style-type: '¹'">Rerunning needs to account for the possibility of user modification of the data in the interim in order to avoid errors or inadvertent overwriting of user-modified data.</li>
+</ul>
 
 ### Signal Handlers On `nautobot_database_ready`
 
-- ➕ Can be updated in-place in later App releases
-- Re-runs every time `nautobot-server migrate` or `nautobot-server post_upgrade` is run
-    - ➖ Must be idempotent, as such it mustn't introduce duplicate records or errors if run repeatedly
-    - ➖ May recreate or revert records that a user intentionally deleted or altered - if this is not desired it has to be accounted for and handled in the code
-- ➖ Impacts Nautobot startup and upgrade performance, care needs to be taken
+<!-- pyml disable-num-lines 10 no-inline-html,proper-names -->
+<ul>
+    <li style="list-style-type: '✅'">Can be updated in-place in later App releases</li>
+    <li style="list-style-type: '⚠️'">Re-runs every time <code>nautobot-server migrate</code> or <code>nautobot-server post_upgrade</code> is run
+        <ul>
+            <li style="list-style-type: '⚠️'">Must be idempotent, as such it mustn't introduce duplicate records or errors if run repeatedly</li>
+            <li style="list-style-type: '⚠️'">May recreate or revert records that a user intentionally deleted or altered - if this is not desired it has to be accounted for and handled in the code</li>
+        </ul>
+    </li>
+    <li style="list-style-type: '⚠️'">Impacts Nautobot startup and upgrade performance, care needs to be taken
+</ul>
+
+Refer to the [implementation guide below](#writing-a-nautobot_database_ready-signal-handler) if you choose to proceed with this option.
 
 ### Django Data Migrations
 
-- ➕ Provide a clean way to delete any associated objects when uninstalling the app
-- ➖ Immutable - if you add new objects, you need to add a new migration
-- ➖ Can't easily be feature-toggled (if you include settings lookups in your migration and later change those settings, the migrations will _not_ run again)
+<!-- pyml disable-next-line no-inline-html -->
+<ul>
+    <li style="list-style-type: '✅'">Provides a clean way to delete any associated objects when uninstalling the app</li>
+    <li style="list-style-type: '⚠️'">Immutable - if you later need to add new objects, you need to add a new migration</li>
+    <li style="list-style-type: '⚠️'">Can't easily be feature-toggled (if you include settings lookups in your migration and later change those settings, the migrations will _not_ run again)</li>
+</ul>
+
+Refer to the [implementation guide below](#writing-data-migrations) if you choose to proceed with this option.
 
 ### Django Fixtures
 
-- ➕ Have good support for usage in unit tests
-- ➖ Creating/updating them is not straight-forward, especially for big data sets
+<!-- pyml disable-next-line no-inline-html -->
+<ul>
+    <li style="list-style-type: '✅'">Have good support for usage in unit tests</li>
+    <li style="list-style-type: '⚠️'">Creating/updating them is not straight-forward, especially for big data sets</li>
+</ul>
 
-### Design Builder Jobs
+Refer to the [Django documentation](https://docs.djangoproject.com/en/4.2/topics/db/fixtures/#fixtures) if you choose to proceed with this option.
 
-Another option to easily create data within Nautobot is the [Design Builder App](https://docs.nautobot.com/projects/design-builder/en/latest/).
+### Nautobot Design Builder Jobs
 
-- ➖ The possibility of later user modifications to data must be accounted for and handled in the design
+<!-- pyml disable-next-line no-inline-html -->
+<ul>
+    <li style="list-style-type: '⚠️'"> The possibility of later user modifications to data must be accounted for and handled in the design</li>
+</ul>
+
+Refer to the [Nautobot Design Builder App documentation](https://docs.nautobot.com/projects/design-builder/en/latest/) if you choose to proceed with this option.
 
 ### Creating Data In-Place Where Needed
 
 This approach means to, for example, use `Status.objects.get_or_create(...)` in the place when you need it, such as a job.
 
-- ➕ Unnecessary/unused records are not created automatically
-- ➖ Data is not available in the DB/API/GUI until the process that uses it runs
-- ➖ Some care has to be taken to not duplicate information if multiple things depend on this data
-- ➖ Later modifications may be error-prone if a given record/set of attributes is created/referenced in many locations
-- ➖ User modifications to the data may result in side effects (renaming a status may result in a new status with the original name being recreated next time the code runs, etc.)
+<!-- pyml disable-next-line no-inline-html -->
+<ul>
+    <li style="list-style-type: '✅'">Unnecessary/unused records are not created automatically</li>
+    <li style="list-style-type: '⚠️'">Data is not available in the DB/API/GUI until the process that uses it runs</li>
+    <li style="list-style-type: '⚠️'">Some care has to be taken to not duplicate information if multiple things depend on this data</li>
+    <li style="list-style-type: '⚠️'">Later modifications may be error-prone if a given record/set of attributes is created/referenced in many locations</li>
+    <li style="list-style-type: '⚠️'">User modifications to the data may result in side effects (renaming a status may result in a new status with the original name being recreated next time the code runs, etc.)</li>
+</ul>
 
-## Specific Guides
+## Implementation Guides
 
 The following sections highlight how to implement some of these approaches.
 
-### Using A Signal Handler
+### Writing a `nautobot_database_ready` Signal Handler
 
 +++ 1.2.0
 
@@ -125,11 +150,11 @@ config = AnimalSoundsConfig
 ```
 
 !!! warning
-It is crucial that you add the `sender=self` parameter to the `connect` method call - otherwise your signal handler will run as many times as the `NautobotAppConfig.ready` method is called, which may be a lot of times.
+    It is crucial that you add the `sender=self` parameter to the `connect` method call - otherwise your signal handler will run as many times as the `NautobotAppConfig.ready` method is called, which may be a lot of times.
 
 After writing this code, run `nautobot-server migrate` or `nautobot-server post_upgrade`, then restart the Nautobot server, and you should see that this custom Relationship has now been automatically created.
 
-### Data Migrations
+### Writing Data Migrations
 
 Generally, documentation on this approach can be found in [the corresponding docs section of Django](https://docs.djangoproject.com/en/4.2/topics/migrations/#data-migrations).
 
@@ -154,7 +179,8 @@ def add_content_types_to_default_statuses(apps, schema_editor):
     for model, statuses in status_content_type_mapping.items():
         model_class = apps.get_model(model)
         for status in statuses:
-            Status.objects.get(name=status).content_types.add(
+            status_record, _ = Status.objects.get_or_create(name=status)
+            status_record.content_types.add(
                 ContentType.objects.get_for_model(model_class)
             )
 
@@ -165,7 +191,8 @@ def remove_content_types_from_default_statuses(apps, schema_editor):
     for model, statuses in status_content_type_mapping.items():
         model_class = apps.get_model(model)
         for status in statuses:
-            Status.objects.get(name=status).content_types.remove(
+            status_record, _ = Status.objects.get_or_create(name=status)
+            status_record.content_types.remove(
                 ContentType.objects.get_for_model(model_class)
             )
 
@@ -177,7 +204,8 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(code=add_content_types_to_default_statuses, reverse_code=remove_content_types_from_default_statuses)
+        migrations.RunPython(
+            code=add_content_types_to_default_statuses, reverse_code=remove_content_types_from_default_statuses
+        )
     ]
-
 ```
